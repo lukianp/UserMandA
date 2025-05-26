@@ -35,23 +35,32 @@ param(
     [switch]$Force
 )
 
-# Get the script directory
+# Set up location-independent environment
 $scriptPath = Split-Path $MyInvocation.MyCommand.Path -Parent
-$rootPath = Split-Path $scriptPath -Parent
-$orchestratorPath = Join-Path $rootPath "Core\MandA-Orchestrator.ps1"
+$suiteRoot = Split-Path $scriptPath -Parent
+
+# Source the environment setup
+$envSetupPath = Join-Path $scriptPath "Set-SuiteEnvironment.ps1"
+if (Test-Path $envSetupPath) {
+    . $envSetupPath -SuiteRoot $suiteRoot
+} else {
+    # Fallback to manual setup if environment script is missing
+    $global:MandASuiteRoot = $suiteRoot
+    $global:MandAOrchestratorPath = Join-Path $suiteRoot "Core\MandA-Orchestrator.ps1"
+}
 
 # Check if orchestrator exists
-if (-not (Test-Path $orchestratorPath)) {
-    Write-Host "ERROR: MandA Orchestrator not found at: $orchestratorPath" -ForegroundColor Red
+if (-not (Test-Path $global:MandAOrchestratorPath)) {
+    Write-Host "ERROR: MandA Orchestrator not found at: $global:MandAOrchestratorPath" -ForegroundColor Red
     Write-Host "Please ensure the MandA Discovery Suite is properly installed." -ForegroundColor Yellow
     exit 1
 }
 
 # Check if configuration file exists
-$configPath = if ([System.IO.Path]::IsPathRooted($ConfigFile)) { 
-    $ConfigFile 
-} else { 
-    Join-Path $rootPath $ConfigFile 
+$configPath = if ([System.IO.Path]::IsPathRooted($ConfigFile)) {
+    $ConfigFile
+} else {
+    Join-Path $global:MandASuiteRoot $ConfigFile
 }
 
 if (-not (Test-Path $configPath)) {
@@ -104,7 +113,7 @@ try {
     Write-Host "Launching MandA Discovery Suite..." -ForegroundColor Green
     
     # Build command line for display
-    $commandParts = @("$orchestratorPath")
+    $commandParts = @("$global:MandAOrchestratorPath")
     foreach ($key in $arguments.Keys) {
         if ($arguments[$key] -is [bool] -and $arguments[$key]) {
             $commandParts += "-$key"
@@ -116,7 +125,7 @@ try {
     Write-Host "Command: $commandLine" -ForegroundColor Gray
     Write-Host ""
     
-    & $orchestratorPath @arguments
+    & $global:MandAOrchestratorPath @arguments
     
     $exitCode = $LASTEXITCODE
     

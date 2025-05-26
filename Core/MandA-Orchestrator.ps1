@@ -41,6 +41,9 @@ param(
     [switch]$ValidateOnly
 )
 
+# Get the script root directory for location-independent paths
+$script:SuiteRoot = Split-Path $PSScriptRoot -Parent
+
 # Global script variables
 $script:Config = $null
 $script:StartTime = Get-Date
@@ -55,13 +58,13 @@ $script:ExecutionMetrics = @{
     Modules = @{}
 }
 
-# Import required modules
+# Import required modules using absolute paths relative to suite root
 $ModulePaths = @(
-    ".\Modules\Utilities\Logging.psm1",
-    ".\Modules\Utilities\ErrorHandling.psm1",
-    ".\Modules\Utilities\ValidationHelpers.psm1",
-    ".\Modules\Authentication\Authentication.psm1",
-    ".\Modules\Connectivity\ConnectionManager.psm1"
+    (Join-Path $script:SuiteRoot "Modules\Utilities\Logging.psm1"),
+    (Join-Path $script:SuiteRoot "Modules\Utilities\ErrorHandling.psm1"),
+    (Join-Path $script:SuiteRoot "Modules\Utilities\ValidationHelpers.psm1"),
+    (Join-Path $script:SuiteRoot "Modules\Authentication\Authentication.psm1"),
+    (Join-Path $script:SuiteRoot "Modules\Connectivity\ConnectionManager.psm1")
 )
 
 foreach ($ModulePath in $ModulePaths) {
@@ -113,39 +116,47 @@ function Get-RequiredModules {
     $modules = @()
     
     # Always required
-    $modules += ".\Modules\Utilities\ProgressTracking.psm1"
-    $modules += ".\Modules\Utilities\FileOperations.psm1"
+    $modules += Join-Path $script:SuiteRoot "Modules\Utilities\ProgressTracking.psm1"
+    $modules += Join-Path $script:SuiteRoot "Modules\Utilities\FileOperations.psm1"
     
     # Mode-specific modules
     switch ($Mode) {
         "Discovery" {
-            $modules += Get-ChildItem ".\Modules\Discovery\*.psm1" | ForEach-Object { $_.FullName }
+            $discoveryPath = Join-Path $script:SuiteRoot "Modules\Discovery"
+            $modules += Get-ChildItem "$discoveryPath\*.psm1" | ForEach-Object { $_.FullName }
         }
         "Processing" {
-            $modules += Get-ChildItem ".\Modules\Processing\*.psm1" | ForEach-Object { $_.FullName }
+            $processingPath = Join-Path $script:SuiteRoot "Modules\Processing"
+            $modules += Get-ChildItem "$processingPath\*.psm1" | ForEach-Object { $_.FullName }
         }
         "Export" {
-            $modules += Get-ChildItem ".\Modules\Export\*.psm1" | ForEach-Object { $_.FullName }
+            $exportPath = Join-Path $script:SuiteRoot "Modules\Export"
+            $modules += Get-ChildItem "$exportPath\*.psm1" | ForEach-Object { $_.FullName }
         }
         "Full" {
-            $modules += Get-ChildItem ".\Modules\Discovery\*.psm1" | ForEach-Object { $_.FullName }
-            $modules += Get-ChildItem ".\Modules\Processing\*.psm1" | ForEach-Object { $_.FullName }
-            $modules += Get-ChildItem ".\Modules\Export\*.psm1" | ForEach-Object { $_.FullName }
+            $discoveryPath = Join-Path $script:SuiteRoot "Modules\Discovery"
+            $processingPath = Join-Path $script:SuiteRoot "Modules\Processing"
+            $exportPath = Join-Path $script:SuiteRoot "Modules\Export"
+            $modules += Get-ChildItem "$discoveryPath\*.psm1" | ForEach-Object { $_.FullName }
+            $modules += Get-ChildItem "$processingPath\*.psm1" | ForEach-Object { $_.FullName }
+            $modules += Get-ChildItem "$exportPath\*.psm1" | ForEach-Object { $_.FullName }
         }
     }
     
     # Authentication modules
-    $modules += Get-ChildItem ".\Modules\Authentication\*.psm1" | ForEach-Object { $_.FullName }
+    $authPath = Join-Path $script:SuiteRoot "Modules\Authentication"
+    $modules += Get-ChildItem "$authPath\*.psm1" | ForEach-Object { $_.FullName }
     
     # Connectivity modules based on enabled sources
+    $connectivityPath = Join-Path $script:SuiteRoot "Modules\Connectivity"
     if ($Configuration.discovery.enabledSources -contains "Graph") {
-        $modules += ".\Modules\Connectivity\GraphConnection.psm1"
+        $modules += Join-Path $connectivityPath "GraphConnection.psm1"
     }
     if ($Configuration.discovery.enabledSources -contains "Azure") {
-        $modules += ".\Modules\Connectivity\AzureConnection.psm1"
+        $modules += Join-Path $connectivityPath "AzureConnection.psm1"
     }
     if ($Configuration.discovery.enabledSources -contains "Exchange") {
-        $modules += ".\Modules\Connectivity\ExchangeConnection.psm1"
+        $modules += Join-Path $connectivityPath "ExchangeConnection.psm1"
     }
     
     return $modules | Where-Object { Test-Path $_ }
@@ -314,8 +325,15 @@ function Complete-MandADiscovery {
 
 # Main execution
 try {
+    # Resolve configuration file path relative to suite root if not absolute
+    $resolvedConfigFile = if ([System.IO.Path]::IsPathRooted($ConfigurationFile)) {
+        $ConfigurationFile
+    } else {
+        Join-Path $script:SuiteRoot $ConfigurationFile
+    }
+    
     # Load configuration
-    $script:Config = Get-Content $ConfigurationFile | ConvertFrom-Json
+    $script:Config = Get-Content $resolvedConfigFile | ConvertFrom-Json
     
     # Override configuration with parameters
     if ($OutputPath) { $script:Config.environment.outputPath = $OutputPath }

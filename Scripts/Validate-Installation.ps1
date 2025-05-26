@@ -10,6 +10,9 @@
 [CmdletBinding()]
 param()
 
+# Get the script root directory for location-independent paths
+$script:SuiteRoot = Split-Path $PSScriptRoot -Parent
+
 function Write-ValidationResult {
     param(
         [string]$Test,
@@ -50,8 +53,9 @@ function Test-ModuleStructure {
     
     $allModulesExist = $true
     foreach ($module in $requiredModules) {
-        $exists = Test-Path $module
-        Write-ValidationResult -Test "Module: $module" -Passed $exists
+        $modulePath = Join-Path $script:SuiteRoot $module
+        $exists = Test-Path $modulePath
+        Write-ValidationResult -Test "Module: $module" -Passed ([bool]$exists)
         if (-not $exists) { $allModulesExist = $false }
     }
     
@@ -70,8 +74,9 @@ function Test-CoreComponents {
     
     $allCoreExist = $true
     foreach ($component in $coreComponents) {
-        $exists = Test-Path $component
-        Write-ValidationResult -Test "Core: $component" -Passed $exists
+        $componentPath = Join-Path $script:SuiteRoot $component
+        $exists = Test-Path $componentPath
+        Write-ValidationResult -Test "Core: $component" -Passed ([bool]$exists)
         if (-not $exists) { $allCoreExist = $false }
     }
     
@@ -84,7 +89,7 @@ function Test-PowerShellVersion {
     $version = $PSVersionTable.PSVersion
     $isValid = $version.Major -ge 5
     
-    Write-ValidationResult -Test "PowerShell Version" -Passed $isValid -Details "Version: $version (Required: 5.1+)"
+    Write-ValidationResult -Test "PowerShell Version" -Passed ([bool]$isValid) -Details "Version: $version (Required: 5.1+)"
     
     return $isValid
 }
@@ -113,10 +118,10 @@ function Test-RequiredModules {
             }
             
             $status = if ($module.Required) { "Required" } else { "Optional" }
-            Write-ValidationResult -Test "$($module.Name) ($status)" -Passed $exists
+            Write-ValidationResult -Test "$($module.Name) ($status)" -Passed ([bool]$exists)
         }
         catch {
-            Write-ValidationResult -Test "$($module.Name) (Error)" -Passed $false -Details "Error checking module: $($_.Exception.Message)"
+            Write-ValidationResult -Test "$($module.Name) (Error)" -Passed ([bool]$false) -Details "Error checking module: $($_.Exception.Message)"
             if ($module.Required) {
                 $criticalMissing++
             }
@@ -140,10 +145,10 @@ function Test-NetworkConnectivity {
         try {
             $result = Test-NetConnection -ComputerName $endpoint.Host -Port $endpoint.Port -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction Stop
             $connected = [bool]$result.TcpTestSucceeded
-            Write-ValidationResult -Test "Connectivity: $($endpoint.Name)" -Passed $connected -Details "$($endpoint.Host):$($endpoint.Port)"
+            Write-ValidationResult -Test "Connectivity: $($endpoint.Name)" -Passed ([bool]$connected) -Details "$($endpoint.Host):$($endpoint.Port)"
             if (-not $connected) { $allConnected = $false }
         } catch {
-            Write-ValidationResult -Test "Connectivity: $($endpoint.Name)" -Passed $false -Details "Test failed: $($_.Exception.Message)"
+            Write-ValidationResult -Test "Connectivity: $($endpoint.Name)" -Passed ([bool]$false) -Details "Test failed: $($_.Exception.Message)"
             $allConnected = $false
         }
     }
@@ -154,16 +159,16 @@ function Test-NetworkConnectivity {
 function Test-ConfigurationFile {
     Write-Host "`nTesting Configuration File..." -ForegroundColor Cyan
     
-    $configFile = "Configuration/default-config.json"
+    $configFile = Join-Path $script:SuiteRoot "Configuration/default-config.json"
     
     if (-not (Test-Path $configFile)) {
-        Write-ValidationResult -Test "Configuration file exists" -Passed $false
+        Write-ValidationResult -Test "Configuration file exists" -Passed ([bool]$false)
         return $false
     }
     
     try {
         $config = Get-Content $configFile | ConvertFrom-Json
-        Write-ValidationResult -Test "Configuration file format" -Passed $true -Details "Valid JSON format"
+        Write-ValidationResult -Test "Configuration file format" -Passed ([bool]$true) -Details "Valid JSON format"
         
         # Test required sections
         $requiredSections = @("metadata", "environment", "authentication", "discovery", "processing", "export")
@@ -171,14 +176,14 @@ function Test-ConfigurationFile {
         
         foreach ($section in $requiredSections) {
             $exists = $config.PSObject.Properties.Name -contains $section
-            Write-ValidationResult -Test "Config section: $section" -Passed $exists
+            Write-ValidationResult -Test "Config section: $section" -Passed ([bool]$exists)
             if (-not $exists) { $allSectionsExist = $false }
         }
         
         return $allSectionsExist
         
     } catch {
-        Write-ValidationResult -Test "Configuration file format" -Passed $false -Details "Invalid JSON: $($_.Exception.Message)"
+        Write-ValidationResult -Test "Configuration file format" -Passed ([bool]$false) -Details "Invalid JSON: $($_.Exception.Message)"
         return $false
     }
 }
@@ -195,22 +200,22 @@ function Test-ModuleImports {
     $allImportable = $true
     foreach ($module in $testModules) {
         try {
-            # Convert to absolute path
-            $absolutePath = Resolve-Path $module -ErrorAction Stop
+            # Convert to absolute path using suite root
+            $absolutePath = Join-Path $script:SuiteRoot $module
             
             if (-not (Test-Path $absolutePath)) {
-                Write-ValidationResult -Test "Import: $module" -Passed $false -Details "Module file not found"
+                Write-ValidationResult -Test "Import: $module" -Passed ([bool]$false) -Details "Module file not found"
                 $allImportable = $false
                 continue
             }
             
             Import-Module $absolutePath -Force -ErrorAction Stop
-            Write-ValidationResult -Test "Import: $module" -Passed $true
+            Write-ValidationResult -Test "Import: $module" -Passed ([bool]$true)
             
             $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($module)
             Remove-Module $moduleName -Force -ErrorAction SilentlyContinue
         } catch {
-            Write-ValidationResult -Test "Import: $module" -Passed $false -Details $_.Exception.Message
+            Write-ValidationResult -Test "Import: $module" -Passed ([bool]$false) -Details $_.Exception.Message
             $allImportable = $false
         }
     }
@@ -221,19 +226,19 @@ function Test-ModuleImports {
 function Test-OrchestratorSyntax {
     Write-Host "`nTesting Orchestrator Syntax..." -ForegroundColor Cyan
     
-    $orchestratorFile = "Core/MandA-Orchestrator.ps1"
+    $orchestratorFile = Join-Path $script:SuiteRoot "Core/MandA-Orchestrator.ps1"
     
     if (-not (Test-Path $orchestratorFile)) {
-        Write-ValidationResult -Test "Orchestrator file exists" -Passed $false
+        Write-ValidationResult -Test "Orchestrator file exists" -Passed ([bool]$false)
         return $false
     }
     
     try {
         $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content $orchestratorFile -Raw), [ref]$null)
-        Write-ValidationResult -Test "Orchestrator syntax" -Passed $true -Details "PowerShell syntax is valid"
+        Write-ValidationResult -Test "Orchestrator syntax" -Passed ([bool]$true) -Details "PowerShell syntax is valid"
         return $true
     } catch {
-        Write-ValidationResult -Test "Orchestrator syntax" -Passed $false -Details $_.Exception.Message
+        Write-ValidationResult -Test "Orchestrator syntax" -Passed ([bool]$false) -Details $_.Exception.Message
         return $false
     }
 }
