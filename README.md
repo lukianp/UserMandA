@@ -1,72 +1,113 @@
-# M&A Discovery Suite v4.0 - Modular Architecture
+# M&A Discovery Suite v4.0 - Enhanced Modular Architecture
 
-A comprehensive PowerShell-based solution for M&A environment discovery, analysis, and migration planning. This modular architecture replaces the previous monolithic approach with maintainable, scalable components.
+A comprehensive PowerShell-based solution for enterprise M&A environment discovery, analysis, and migration planning. This enhanced modular architecture provides intelligent data collection, correlation, and migration wave generation with advanced error handling and visual feedback.
+
+## 🚀 Key Features
+
+### **Enhanced Capabilities**
+- 🔐 **Secure Credential Management** - DPAPI and certificate-based encryption
+- 🌐 **Multi-Service Discovery** - AD, Azure AD, Exchange Online, Intune, and more
+- 📊 **Intelligent Wave Generation** - Department or complexity-based grouping
+- 🎯 **Complexity Analysis** - Automated user migration complexity scoring
+- 📈 **Quality Validation** - Built-in data quality checks and reporting
+- 🔄 **Robust Connectivity** - Enhanced connection manager with fallback methods
+- 📝 **Visual Progress Tracking** - Emoji-enhanced logging and progress bars
+- 🛠️ **PowerApps Integration** - Optimized JSON export for Power Platform
 
 ## 🏗️ Architecture Overview
 
-### **Before (Legacy)**
-- 3 monolithic scripts (6,289 lines total)
-- Difficult maintenance and updates
-- Limited error handling
-- No modularity
-
-### **After (New Architecture)**
-- 1 orchestrator + 24 specialized modules
-- ~6,500 lines organized by function
-- Comprehensive error handling
-- Configuration-driven behavior
-- Automated deployment
+### **Modular Design**
+- **1 Orchestrator** - Central execution engine
+- **24+ Specialized Modules** - Focused, maintainable components
+- **Enhanced Modules** - Advanced versions with improved capabilities
+- **Configuration-Driven** - JSON-based behavior control
+- **Comprehensive Error Handling** - Retry logic and graceful degradation
 
 ## 📁 Project Structure
 
 ```
 M&A Discovery Suite/
 ├── Core/
-│   └── MandA-Orchestrator.ps1          # Main execution engine
+│   └── MandA-Orchestrator.ps1              # Main execution engine
 ├── Modules/
-│   ├── Authentication/                  # Authentication & credentials
+│   ├── Authentication/                      # Authentication & credential management
 │   │   ├── Authentication.psm1
 │   │   └── CredentialManagement.psm1
-│   ├── Connectivity/                    # Service connections
-│   │   └── ConnectionManager.psm1
-│   ├── Discovery/                       # Data collection
+│   ├── Connectivity/                        # Service connection management
+│   │   ├── ConnectionManager.psm1
+│   │   └── EnhancedConnectionManager.psm1  # 🆕 Advanced connection handling
+│   ├── Discovery/                           # Data collection modules
 │   │   ├── ActiveDirectoryDiscovery.psm1
-│   │   └── GraphDiscovery.psm1
-│   ├── Processing/                      # Data analysis
+│   │   ├── GraphDiscovery.psm1
+│   │   ├── ExchangeDiscovery.psm1
+│   │   ├── AzureDiscovery.psm1
+│   │   ├── IntuneDiscovery.psm1
+│   │   ├── GPODiscovery.psm1
+│   │   └── EnhancedGPODiscovery.psm1      # 🆕 Improved XML parsing
+│   ├── Processing/                          # Data analysis & transformation
 │   │   ├── DataAggregation.psm1
 │   │   ├── UserProfileBuilder.psm1
 │   │   ├── WaveGeneration.psm1
 │   │   └── DataValidation.psm1
-│   ├── Export/                          # Data export
+│   ├── Export/                              # Export formats
 │   │   ├── CSVExport.psm1
-│   │   └── JSONExport.psm1
-│   └── Utilities/                       # Core utilities
+│   │   ├── JSONExport.psm1
+│   │   └── ExcelExport.psm1
+│   └── Utilities/                           # Core utilities
 │       ├── Logging.psm1
+│       ├── EnhancedLogging.psm1            # 🆕 Visual logging with emojis
 │       ├── ErrorHandling.psm1
 │       ├── ValidationHelpers.psm1
 │       ├── ProgressTracking.psm1
 │       └── FileOperations.psm1
 ├── Configuration/
-│   └── default-config.json             # Default configuration
+│   └── default-config.json                  # Default configuration template
 ├── Scripts/
-│   └── QuickStart.ps1                  # Simplified launcher
-└── README.md                           # This file
+│   ├── QuickStart.ps1                      # Simplified launcher
+│   └── Validate-Installation.ps1            # 🆕 Installation validator
+└── README.md                                # This file
 ```
 
-## 🚀 Quick Start
+## 🚀 Quick Start Guide
 
 ### **Prerequisites**
-- PowerShell 5.1 or higher
-- Required PowerShell modules:
-  - Microsoft.Graph
-  - Microsoft.Graph.Authentication
-  - ExchangeOnlineManagement
-  - ActiveDirectory (for on-premises discovery)
-  - ImportExcel (optional, for Excel export)
+
+#### Required Software
+- ✅ PowerShell 5.1 or higher
+- ✅ .NET Framework 4.7.2 or higher
+- ✅ Internet connectivity to Microsoft services
+
+#### Required PowerShell Modules
+```powershell
+# Install required modules
+Install-Module -Name Microsoft.Graph -Force -Scope CurrentUser
+Install-Module -Name Microsoft.Graph.Authentication -Force -Scope CurrentUser
+Install-Module -Name ExchangeOnlineManagement -Force -Scope CurrentUser
+
+# Optional modules for enhanced functionality
+Install-Module -Name ActiveDirectory -Force -Scope CurrentUser      # For on-premises AD
+Install-Module -Name ImportExcel -Force -Scope CurrentUser          # For Excel export
+Install-Module -Name Az.Accounts -Force -Scope CurrentUser          # For Azure resources
+```
+
+### **Installation Validation**
+
+Run the installation validator to ensure everything is properly configured:
+
+```powershell
+.\Scripts\Validate-Installation.ps1
+```
+
+This will check:
+- ✅ PowerShell version
+- ✅ Module availability
+- ✅ File structure integrity
+- ✅ Network connectivity
+- ✅ Configuration validity
 
 ### **Basic Usage**
 
-1. **Quick validation:**
+1. **First-time setup with validation:**
    ```powershell
    .\Scripts\QuickStart.ps1 -Operation Validate
    ```
@@ -76,274 +117,368 @@ M&A Discovery Suite/
    .\Scripts\QuickStart.ps1 -Operation Full
    ```
 
-3. **Discovery only:**
+3. **Discovery only (collect data):**
    ```powershell
    .\Scripts\QuickStart.ps1 -Operation Discovery
    ```
 
-4. **Custom output path:**
+4. **Processing only (analyze existing data):**
    ```powershell
-   .\Scripts\QuickStart.ps1 -Operation Full -OutputPath "D:\CustomOutput"
+   .\Scripts\QuickStart.ps1 -Operation Processing
+   ```
+
+5. **Export only (generate reports):**
+   ```powershell
+   .\Scripts\QuickStart.ps1 -Operation Export
    ```
 
 ### **Advanced Usage**
 
-1. **Direct orchestrator execution:**
+1. **Custom configuration file:**
    ```powershell
-   .\Core\MandA-Orchestrator.ps1 -Mode Full -ConfigurationFile ".\Configuration\default-config.json"
+   .\Core\MandA-Orchestrator.ps1 -Mode Full -ConfigurationFile ".\Configuration\custom-config.json"
    ```
 
-2. **Force reprocessing:**
+2. **Override output path:**
    ```powershell
-   .\Core\MandA-Orchestrator.ps1 -Mode Full -Force
+   .\Core\MandA-Orchestrator.ps1 -Mode Full -OutputPath "D:\M&A_Analysis" -Force
    ```
 
-3. **Validation only:**
+3. **Validation only mode:**
    ```powershell
    .\Core\MandA-Orchestrator.ps1 -ValidateOnly
    ```
 
 ## ⚙️ Configuration
 
-### **Configuration File Structure**
+### **Configuration Structure**
 
 ```json
 {
   "metadata": {
     "version": "4.0.0",
-    "companyName": "Your Company"
+    "created": "2025-01-26",
+    "description": "M&A Discovery Suite Configuration",
+    "companyName": "Your Company Name"
   },
   "environment": {
     "domainController": "ad.company.com",
     "outputPath": "C:\\MandADiscovery\\Output",
-    "logLevel": "INFO"
+    "tempPath": "%TEMP%\\MandADiscovery",
+    "logLevel": "INFO",
+    "maxRetries": 3,
+    "timeoutSeconds": 300
   },
   "authentication": {
-    "credentialStorePath": "C:\\MandADiscovery\\Output\\credentials.config"
+    "credentialStorePath": "C:\\MandADiscovery\\Output\\credentials.config",
+    "certificateThumbprint": null,
+    "useInteractiveAuth": false,
+    "tokenRefreshThreshold": 300
   },
   "discovery": {
-    "enabledSources": ["ActiveDirectory", "Exchange", "Graph", "Azure", "Intune"],
-    "skipExistingFiles": true
+    "parallelThreads": 5,
+    "batchSize": 100,
+    "enabledSources": [
+      "ActiveDirectory",
+      "Exchange",
+      "Graph",
+      "Azure",
+      "Intune"
+    ],
+    "skipExistingFiles": true,
+    "compressionEnabled": true
   },
   "processing": {
+    "chunkSize": 100,
+    "includeDisabledUsers": false,
     "generateWavesByDepartment": true,
-    "maxWaveSize": 50
+    "maxWaveSize": 50,
+    "complexityThresholds": {
+      "low": 3,
+      "medium": 7,
+      "high": 10
+    }
   },
   "export": {
     "formats": ["CSV", "Excel", "JSON"],
-    "powerAppsOptimized": true
+    "excelEnabled": true,
+    "powerAppsOptimized": true,
+    "includeMetadata": true,
+    "archiveResults": true
+  },
+  "performance": {
+    "memoryThresholdMB": 4096,
+    "diskSpaceThresholdGB": 5,
+    "progressUpdateInterval": 10,
+    "enableGarbageCollection": true
   }
 }
 ```
 
-### **Key Configuration Options**
+### **Configuration Parameters**
 
-- **enabledSources**: Choose which data sources to discover
-- **skipExistingFiles**: Skip discovery if files already exist
-- **generateWavesByDepartment**: Group migration waves by department
-- **maxWaveSize**: Maximum users per migration wave
-- **powerAppsOptimized**: Generate PowerApps-compatible export
+#### Environment Settings
+- **domainController** - On-premises AD domain controller
+- **outputPath** - Root directory for all outputs
+- **logLevel** - DEBUG, INFO, WARN, ERROR
+- **maxRetries** - Retry attempts for failed operations
 
-## 📊 Data Sources
+#### Authentication Settings
+- **credentialStorePath** - Encrypted credential storage location
+- **certificateThumbprint** - Optional certificate for authentication
+- **useInteractiveAuth** - Enable interactive authentication prompts
 
-### **Supported Sources**
-- **Active Directory**: On-premises user, group, and computer data
-- **Microsoft Graph**: Azure AD users, groups, applications, devices
-- **Exchange Online**: Mailbox data and configurations
-- **Azure**: Infrastructure and resource information
-- **Intune**: Device management and compliance data
+#### Discovery Settings
+- **enabledSources** - Data sources to collect from
+- **skipExistingFiles** - Skip if data already exists
+- **parallelThreads** - Concurrent discovery operations
 
-### **Discovery Outputs**
-- `ADUsers.csv` - Active Directory users
-- `SecurityGroups.csv` - Security groups
-- `GraphUsers.csv` - Azure AD users
-- `GraphGroups.csv` - Azure AD groups
-- `GraphDevices.csv` - Azure AD devices
-- `GraphLicenses.csv` - License information
+#### Processing Settings
+- **generateWavesByDepartment** - Group by department vs complexity
+- **maxWaveSize** - Maximum users per migration wave
+- **complexityThresholds** - Score ranges for complexity categories
 
-## 🔄 Processing Pipeline
+## 🔐 Authentication Setup
 
-### **1. Data Aggregation**
-- Correlates data from multiple sources
-- Identifies orphaned accounts
-- Detects data inconsistencies
+### **Service Principal Creation**
 
-### **2. User Profile Building**
-- Creates comprehensive user profiles
-- Calculates complexity scores
-- Assesses migration readiness
+1. **Create Azure AD App Registration:**
+   ```powershell
+   # Connect to Azure AD
+   Connect-AzureAD
+   
+   # Create app registration
+   $app = New-AzureADApplication -DisplayName "M&A Discovery Suite"
+   $sp = New-AzureADServicePrincipal -AppId $app.AppId
+   
+   # Create client secret
+   $secret = New-AzureADApplicationPasswordCredential -ObjectId $app.ObjectId
+   
+   Write-Host "Client ID: $($app.AppId)"
+   Write-Host "Tenant ID: $(Get-AzureADTenantDetail).ObjectId"
+   Write-Host "Client Secret: $($secret.Value)"
+   ```
 
-### **3. Migration Wave Generation**
-- Groups users into migration waves
-- Optimizes wave sizes and composition
-- Considers department and complexity factors
+2. **Grant Required Permissions:**
+   
+   **Microsoft Graph API:**
+   - User.Read.All
+   - Group.Read.All
+   - Device.Read.All
+   - Application.Read.All
+   - Organization.Read.All
+   - AuditLog.Read.All
+   - Directory.Read.All
+   
+   **Exchange Online:**
+   - Exchange.ManageAsApp
+   - full_access_as_app
 
-### **4. Data Validation**
-- Validates data quality
-- Generates quality reports
-- Identifies issues requiring attention
+### **First-Time Authentication**
 
-## 📈 Analysis & Reporting
+The suite will prompt for credentials on first run:
 
-### **Complexity Analysis**
-- **Simple**: Low complexity, standard migration
-- **Standard**: Moderate complexity, some considerations
-- **Complex**: High complexity, requires planning
-- **High Risk**: Requires special handling
+```
+═══════════════════════════════════════════════════════════════════
+       M&A Discovery Suite - Credential Input Required             
+═══════════════════════════════════════════════════════════════════
 
-### **Readiness Assessment**
-- **Ready**: Can migrate immediately
-- **Minor Issues**: Quick fixes needed
-- **Needs Attention**: Requires investigation
-- **Not Ready**: Blocking issues present
+Please provide Azure AD service principal credentials:
 
-### **Migration Waves**
-- Intelligent grouping by department or complexity
-- Optimized wave sizes
-- Risk assessment per wave
-- Time estimation
+Client ID (GUID format): xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Tenant ID (GUID format): xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Client Secret: ********************************
 
-## 📤 Export Formats
+✅ Credentials collected successfully
 
-### **CSV Export**
-- `UserProfiles.csv` - Complete user analysis
-- `MigrationWaves.csv` - Wave assignments
-- `ComplexityAnalysis.csv` - Analysis summary
-- `SummaryStatistics.csv` - High-level metrics
+Save credentials securely for future use? (y/N): y
+```
 
-### **JSON Export**
-- `UserProfiles.json` - Structured user data
-- `MigrationWaves.json` - Wave definitions
-- `ComprehensiveSummary.json` - Complete analysis
-- `PowerApps_Export.json` - PowerApps-optimized format
+## 📊 Discovery Sources & Outputs
 
-### **Excel Export** (Optional)
-- Multi-worksheet workbook
-- Formatted tables and charts
-- Summary dashboard
-- Detailed analysis sheets
+### **Data Sources**
 
-## 🔐 Security Features
+| Source | Description | Output Files |
+|--------|-------------|--------------|
+| **Active Directory** | On-premises AD users, groups, computers | ADUsers.csv, SecurityGroups.csv, ADComputers.csv |
+| **Microsoft Graph** | Azure AD users, groups, devices, licenses | GraphUsers.csv, GraphGroups.csv, GraphDevices.csv |
+| **Exchange Online** | Mailboxes, distribution lists, settings | ExchangeMailboxes.csv, DistributionLists.csv |
+| **Azure Resources** | Subscriptions, resource groups, VMs | AzureResources.csv, AzureVMs.csv |
+| **Intune** | Managed devices, compliance policies | IntuneDevices.csv, CompliancePolicies.csv |
+| **Group Policy** | GPOs, drive/printer mappings | GroupPolicies.csv, DriveMappingsGPO.csv |
 
-### **Credential Management**
-- DPAPI encryption for stored credentials
-- Certificate-based encryption support
-- Secure credential prompting
-- Automatic token refresh
+### **Processing Outputs**
 
-### **Authentication**
-- Azure AD service principal authentication
-- Multi-service connection management
-- Connection status monitoring
-- Graceful error handling
+| Output | Description | Location |
+|--------|-------------|----------|
+| **User Profiles** | Comprehensive user analysis | Processed/UserProfiles.csv |
+| **Migration Waves** | Wave assignments and timing | Processed/MigrationWaves.csv |
+| **Complexity Analysis** | User complexity breakdown | Processed/ComplexityAnalysis.csv |
+| **Quality Report** | Data validation results | Processed/DataQualityReport.csv |
+| **Summary Statistics** | High-level metrics | Processed/SummaryStatistics.csv |
+
+## 🎯 Migration Planning Features
+
+### **Complexity Scoring**
+
+Users are analyzed across multiple factors:
+- 📊 **Account Status** - Enabled/disabled, last logon
+- 📧 **Mailbox Size** - Storage requirements
+- 🔑 **Licensing** - Number and type of licenses
+- 🏢 **Service Presence** - AD, Azure AD, Exchange
+- 📅 **Account Age** - Legacy account considerations
+- 🔗 **Dependencies** - Group memberships, manager relationships
+
+### **Migration Categories**
+
+1. **🟢 Simple** (Score 0-3)
+   - Standard users with minimal complexity
+   - Estimated time: 30-45 minutes
+
+2. **🟡 Standard** (Score 4-7)
+   - Typical users with some considerations
+   - Estimated time: 45-90 minutes
+
+3. **🟠 Complex** (Score 8-10)
+   - Users requiring special attention
+   - Estimated time: 90-180 minutes
+
+4. **🔴 High Risk** (Score 11+)
+   - Critical users needing careful planning
+   - Estimated time: 180+ minutes
+
+### **Wave Generation Options**
+
+1. **Department-Based Waves**
+   - Groups users by department
+   - Maintains team cohesion
+   - Optimal for business continuity
+
+2. **Complexity-Based Waves**
+   - Groups by migration difficulty
+   - Balances workload across waves
+   - Optimal for resource planning
 
 ## 🛠️ Troubleshooting
 
-### **Common Issues**
+### **Common Issues & Solutions**
 
-1. **Authentication Failures**
-   ```powershell
-   # Clear stored credentials
-   Remove-Item ".\Output\credentials.config" -Force
-   .\Scripts\QuickStart.ps1 -Operation Validate
-   ```
+#### Authentication Failures
+```powershell
+# Clear stored credentials
+Remove-Item "C:\MandADiscovery\Output\credentials.config" -Force
 
-2. **Module Loading Issues**
-   ```powershell
-   # Install required modules
-   Install-Module Microsoft.Graph -Force -Scope CurrentUser
-   Install-Module ExchangeOnlineManagement -Force -Scope CurrentUser
-   ```
+# Re-run with fresh authentication
+.\Scripts\QuickStart.ps1 -Operation Validate
+```
 
-3. **Permission Issues**
-   - Ensure service principal has required permissions
-   - Check Azure AD app registration permissions
-   - Verify Exchange Online management permissions
+#### Module Not Found Errors
+```powershell
+# Verify module installation
+Get-Module -ListAvailable | Where-Object Name -like "*Graph*"
 
-### **Log Files**
-- Location: `{OutputPath}\Logs\`
-- Format: `MandA_Discovery_YYYYMMDD_HHMMSS.log`
-- Levels: DEBUG, INFO, WARN, ERROR, SUCCESS
+# Reinstall if needed
+Install-Module Microsoft.Graph -Force -AllowClobber
+```
 
-## 📋 Prerequisites Checklist
+#### Configuration Parsing Errors
+```powershell
+# Validate JSON syntax
+$config = Get-Content ".\Configuration\default-config.json" -Raw
+try { $config | ConvertFrom-Json } catch { $_.Exception.Message }
+```
 
-- [ ] PowerShell 5.1 or higher installed
-- [ ] Required PowerShell modules installed
-- [ ] Azure AD service principal created
-- [ ] Service principal permissions configured
-- [ ] Network connectivity to required endpoints
-- [ ] Sufficient disk space (5GB+ recommended)
-- [ ] Administrative permissions for on-premises discovery
+#### Exchange Connection Issues
+- Ensure WinRM service is running
+- Check proxy settings: `netsh winhttp show proxy`
+- Reset proxy if needed: `netsh winhttp reset proxy`
+- Verify Exchange permissions for service principal
 
-## 🔄 Migration from Legacy Scripts
+### **Enhanced Logging**
 
-### **Mapping Legacy to New Architecture**
+The suite includes visual logging with emoji indicators:
+- 🚀 **Startup/Initialization**
+- ✅ **Success Operations**
+- ⚠️ **Warnings**
+- ❌ **Errors**
+- 🔄 **Progress Updates**
+- 📊 **Statistics**
+- 🎯 **Section Headers**
 
-| Legacy Script | New Module(s) |
-|---------------|---------------|
-| `InfrastructureCreateAppReg.ps1` | `Authentication/AppRegistration.psm1` |
-| `InfrastructureDiscoveryInput.ps1` | `Discovery/*.psm1` |
-| `InfrastructureDiscoveryOutput.ps1` | `Processing/*.psm1` + `Export/*.psm1` |
+### **Log Locations**
+- **Main Log**: `{OutputPath}\Logs\MandA_Discovery_YYYYMMDD_HHMMSS.log`
+- **Progress Metrics**: `{OutputPath}\Logs\ProgressMetrics_YYYYMMDD_HHMMSS.json`
+- **Error Details**: Included in main log with full stack traces
 
-### **Migration Steps**
+## 📈 Performance Optimization
 
-1. **Backup existing scripts and data**
-2. **Install new modular architecture**
-3. **Configure authentication and settings**
-4. **Test with validation mode**
-5. **Run discovery and compare results**
-6. **Update any dependent processes**
+### **Configuration Tuning**
 
-## 📞 Support & Maintenance
+```json
+{
+  "discovery": {
+    "parallelThreads": 10,      // Increase for faster discovery
+    "batchSize": 200            // Larger batches for better performance
+  },
+  "performance": {
+    "memoryThresholdMB": 8192,  // Increase for large environments
+    "progressUpdateInterval": 30 // Less frequent updates
+  }
+}
+```
 
-### **Regular Maintenance**
-- Review and update service principal credentials
-- Monitor log files for errors or warnings
-- Update PowerShell modules regularly
-- Review and optimize configuration settings
+### **Best Practices**
+1. **Run during off-hours** for minimal impact
+2. **Start with discovery only** to assess data volume
+3. **Use skipExistingFiles** for incremental updates
+4. **Monitor memory usage** in Task Manager
+5. **Enable compression** for large datasets
 
-### **Performance Tuning**
-- Adjust `parallelThreads` for your environment
-- Optimize `batchSize` based on data volume
-- Configure `memoryThresholdMB` for available RAM
-- Set appropriate `timeoutSeconds` for network conditions
+## 🔄 Version History
 
-## 🎯 Benefits of New Architecture
+### **v4.0.0 (Current)**
+- 🆕 Enhanced modular architecture
+- 🆕 Visual logging with emojis
+- 🆕 Robust connection management with fallbacks
+- 🆕 PowerApps-optimized exports
+- 🆕 Installation validator script
+- 🆕 Enhanced GPO discovery with XML repair
 
-### **Maintainability**
-- ✅ Replace 4,000-line script edits with targeted 300-line module updates
-- ✅ Clear separation of concerns
-- ✅ Version control at module level
-
-### **Reliability**
-- ✅ Error isolation prevents cascade failures
-- ✅ Standardized retry logic
-- ✅ Graceful degradation with partial data
-
-### **Performance**
-- ✅ Lazy module loading
-- ✅ Better memory management
-- ✅ Parallel processing capabilities
-
-### **Scalability**
-- ✅ Plugin architecture for new data sources
-- ✅ Configuration-driven behavior
-- ✅ Multi-environment support
-
----
-
-## 📄 License
-
-This M&A Discovery Suite is provided as-is for internal use. Please ensure compliance with your organization's policies and Microsoft's terms of service when accessing cloud services.
+### **v3.0.0**
+- Initial modular design
+- Basic discovery and processing
+- CSV export functionality
 
 ## 🤝 Contributing
 
-To contribute improvements or report issues:
-1. Document the issue or enhancement
-2. Test changes thoroughly
-3. Update relevant documentation
-4. Follow PowerShell best practices
+### **Development Guidelines**
+1. **Module Structure** - One module per functional area
+2. **Error Handling** - Use Invoke-WithRetry for network operations
+3. **Logging** - Use Write-MandALog for consistent output
+4. **Documentation** - Update help comments in modules
+5. **Testing** - Validate with Validate-Installation.ps1
+
+### **Adding New Data Sources**
+1. Create new discovery module in `Modules\Discovery\`
+2. Add source to configuration enabledSources
+3. Update data aggregation logic
+4. Add export mappings
+
+## 📞 Support
+
+### **Getting Help**
+- Review logs in `{OutputPath}\Logs\`
+- Run validation script for diagnostics
+- Check README troubleshooting section
+- Verify service principal permissions
+
+### **Maintenance Tasks**
+- 📅 **Monthly** - Update PowerShell modules
+- 📅 **Quarterly** - Review and rotate credentials
+- 📅 **Annually** - Update complexity thresholds
 
 ---
 
-**M&A Discovery Suite v4.0** - Transforming M&A environment discovery through modular architecture.
+**M&A Discovery Suite v4.0** - Enterprise-ready discovery and migration planning through intelligent automation.
+
+*Built with ❤️ for IT professionals managing complex M&A transitions*

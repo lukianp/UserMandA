@@ -167,6 +167,16 @@ function Get-GPOData {
             ProcessingStats = @{
                 Total = $allGPOs.Count
                 Successful = $successfullyProcessed
+                Failed = $failedProcessing
+            }
+        }
+        
+    } catch {
+        Write-MandALog "❌ GPO analysis failed: $($_.Exception.Message)" -Level "ERROR"
+        throw
+    }
+}
+
 function Parse-GPOXMLReportEnhanced {
     param(
         [string]$XmlContent,
@@ -312,7 +322,7 @@ function Find-DriveMappingsEnhanced {
         $xpathExpressions = @(
             "//Drive",
             "//q1:Drive",
-            "//q6:Drive", 
+            "//q6:Drive",
             "//*[local-name()='Drive']",
             "//DriveMapSettings/Drive",
             "//DriveMapSettings//Drive",
@@ -646,15 +656,6 @@ function Find-LogonScriptsEnhanced {
     }
     
     return $logonScripts
-}
-                Failed = $failedProcessing
-            }
-        }
-        
-    } catch {
-        Write-MandALog "❌ GPO analysis failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
-    }
 }
 
 function Create-MinimalGPOXML {

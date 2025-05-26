@@ -42,8 +42,8 @@ $orchestratorPath = Join-Path $rootPath "Core\MandA-Orchestrator.ps1"
 
 # Check if orchestrator exists
 if (-not (Test-Path $orchestratorPath)) {
-    Write-Host "ERROR: M&A Orchestrator not found at: $orchestratorPath" -ForegroundColor Red
-    Write-Host "Please ensure the M&A Discovery Suite is properly installed." -ForegroundColor Yellow
+    Write-Host "ERROR: MandA Orchestrator not found at: $orchestratorPath" -ForegroundColor Red
+    Write-Host "Please ensure the MandA Discovery Suite is properly installed." -ForegroundColor Yellow
     exit 1
 }
 
@@ -62,10 +62,10 @@ if (-not (Test-Path $configPath)) {
 
 # Display banner
 Write-Host ""
-Write-Host "╔══════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║                    M&A Discovery Suite v4.0                     ║" -ForegroundColor Cyan
-Write-Host "║                     Quick Start Launcher                        ║" -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "+==================================================================+" -ForegroundColor Cyan
+Write-Host "|                    MandA Discovery Suite v4.0                   |" -ForegroundColor Cyan
+Write-Host "|                     Quick Start Launcher                        |" -ForegroundColor Cyan
+Write-Host "+==================================================================+" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Operation: $Operation" -ForegroundColor Yellow
 Write-Host "Configuration: $configPath" -ForegroundColor Yellow
@@ -77,32 +77,43 @@ if ($Force) {
 }
 Write-Host ""
 
-# Build command arguments
-$arguments = @(
-    "-ConfigurationFile", "`"$configPath`""
-)
+# Build command arguments as hashtable for splatting
+$arguments = @{
+    ConfigurationFile = $configPath
+}
 
 switch ($Operation) {
     "Validate" {
-        $arguments += "-ValidateOnly"
+        $arguments.ValidateOnly = $true
     }
     default {
-        $arguments += "-Mode", $Operation
+        $arguments.Mode = $Operation
     }
 }
 
 if ($OutputPath) {
-    $arguments += "-OutputPath", "`"$OutputPath`""
+    $arguments.OutputPath = $OutputPath
 }
 
 if ($Force) {
-    $arguments += "-Force"
+    $arguments.Force = $true
 }
 
 # Execute the orchestrator
 try {
-    Write-Host "Launching M&A Discovery Suite..." -ForegroundColor Green
-    Write-Host "Command: $orchestratorPath $($arguments -join ' ')" -ForegroundColor Gray
+    Write-Host "Launching MandA Discovery Suite..." -ForegroundColor Green
+    
+    # Build command line for display
+    $commandParts = @("$orchestratorPath")
+    foreach ($key in $arguments.Keys) {
+        if ($arguments[$key] -is [bool] -and $arguments[$key]) {
+            $commandParts += "-$key"
+        } else {
+            $commandParts += "-$key `"$($arguments[$key])`""
+        }
+    }
+    $commandLine = $commandParts -join " "
+    Write-Host "Command: $commandLine" -ForegroundColor Gray
     Write-Host ""
     
     & $orchestratorPath @arguments
@@ -111,15 +122,15 @@ try {
     
     Write-Host ""
     if ($exitCode -eq 0) {
-        Write-Host "✅ M&A Discovery Suite completed successfully!" -ForegroundColor Green
+        Write-Host "[SUCCESS] MandA Discovery Suite completed successfully!" -ForegroundColor Green
     } else {
-        Write-Host "❌ M&A Discovery Suite completed with errors (Exit Code: $exitCode)" -ForegroundColor Red
+        Write-Host "[ERROR] MandA Discovery Suite completed with errors (Exit Code: $exitCode)" -ForegroundColor Red
     }
     
     exit $exitCode
     
 } catch {
     Write-Host ""
-    Write-Host "❌ Failed to launch M&A Discovery Suite: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "[ERROR] Failed to launch MandA Discovery Suite: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
