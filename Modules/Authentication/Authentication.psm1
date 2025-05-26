@@ -50,13 +50,13 @@ function Test-AuthenticationStatus {
     # Check if token needs refresh
     if ((Get-Date) -gt $script:AuthContext.TokenExpiry) {
         Write-MandALog "Authentication token expired, refreshing..." -Level "WARN"
-        return Refresh-AuthenticationTokens -Configuration $Configuration
+        return Update-AuthenticationTokens -Configuration $Configuration
     }
     
     return $true
 }
 
-function Refresh-AuthenticationTokens {
+function Update-AuthenticationTokens {
     param([hashtable]$Configuration)
     
     try {
@@ -90,7 +90,7 @@ function Clear-AuthenticationContext {
 Export-ModuleMember -Function @(
     'Initialize-MandAAuthentication',
     'Test-AuthenticationStatus', 
-    'Refresh-AuthenticationTokens',
+    'Update-AuthenticationTokens',
     'Get-AuthenticationContext',
     'Clear-AuthenticationContext'
 )

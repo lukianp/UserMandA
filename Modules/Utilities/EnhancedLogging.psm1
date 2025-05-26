@@ -36,12 +36,12 @@ function Initialize-Logging {
         $script:LoggingConfig.LogFile = Join-Path $logPath $logFileName
         
         # Clean up old log files
-        Cleanup-OldLogFiles -LogPath $logPath
+        Clear-OldLogFiles -LogPath $logPath
         
         # Write initial log entry with enhanced formatting
-        Write-MandALog "🚀 M&A Discovery Suite logging initialized" -Level "SUCCESS"
-        Write-MandALog "📁 Log file: $($script:LoggingConfig.LogFile)" -Level "INFO"
-        Write-MandALog "📊 Log level: $($script:LoggingConfig.LogLevel)" -Level "INFO"
+        Write-MandALog "M&A Discovery Suite logging initialized" -Level "SUCCESS"
+        Write-MandALog "Log file: $($script:LoggingConfig.LogFile)" -Level "INFO"
+        Write-MandALog "Log level: $($script:LoggingConfig.LogLevel)" -Level "INFO"
         
         return $true
         
@@ -65,7 +65,7 @@ function Write-MandALog {
     )
     
     # Check if message should be logged based on level
-    if (-not (Should-LogMessage -Level $Level)) {
+    if (-not (Test-LogMessage -Level $Level)) {
         return
     }
     
@@ -81,9 +81,9 @@ function Write-MandALog {
         switch ($Level) {
             "HEADER" {
                 Write-Host ""
-                Write-Host "═" * 100 -ForegroundColor $color
+                Write-Host "=" * 100 -ForegroundColor $color
                 Write-Host "$emoji $Message" -ForegroundColor $color
-                Write-Host "═" * 100 -ForegroundColor $color
+                Write-Host "=" * 100 -ForegroundColor $color
                 Write-Host ""
             }
             "PROGRESS" {
@@ -116,7 +116,7 @@ function Write-MandALog {
             # Check log file size and rotate if necessary
             $logFile = Get-Item $script:LoggingConfig.LogFile -ErrorAction SilentlyContinue
             if ($logFile -and ($logFile.Length / 1MB) -gt $script:LoggingConfig.MaxLogSizeMB) {
-                Rotate-LogFile
+                Move-LogFile
             }
         } catch {
             Write-Warning "Failed to write to log file: $($_.Exception.Message)"
@@ -124,7 +124,7 @@ function Write-MandALog {
     }
 }
 
-function Should-LogMessage {
+function Test-LogMessage {
     param([string]$Level)
     
     $levelHierarchy = @{
@@ -172,15 +172,15 @@ function Get-LogEmoji {
     }
     
     switch ($Level) {
-        "DEBUG" { return "🔍" }
-        "INFO" { return "ℹ️" }
-        "WARN" { return "⚠️" }
-        "ERROR" { return "❌" }
-        "SUCCESS" { return "✅" }
-        "HEADER" { return "🎯" }
-        "PROGRESS" { return "🔄" }
-        "IMPORTANT" { return "🔧" }
-        default { return "📝" }
+        "DEBUG" { return "[DEBUG]" }
+        "INFO" { return "[INFO]" }
+        "WARN" { return "[WARN]" }
+        "ERROR" { return "[ERROR]" }
+        "SUCCESS" { return "[SUCCESS]" }
+        "HEADER" { return "[HEADER]" }
+        "PROGRESS" { return "[PROGRESS]" }
+        "IMPORTANT" { return "[IMPORTANT]" }
+        default { return "[LOG]" }
     }
 }
 
@@ -199,7 +199,7 @@ function Write-ProgressBar {
     $completed = [math]::Floor(($Current / $Total) * $Width)
     $remaining = $Width - $completed
     
-    $progressBar = "█" * $completed + "░" * $remaining
+    $progressBar = "#" * $completed + "-" * $remaining
     $progressText = "$Activity [$progressBar] $percentComplete% $Status"
     
     Write-Host "`r$progressText" -NoNewline -ForegroundColor Cyan
@@ -220,7 +220,7 @@ function Write-StatusTable {
     $maxKeyLength = ($StatusData.Keys | Measure-Object -Property Length -Maximum).Maximum
     $tableWidth = [math]::Max($maxKeyLength + 20, 60)
     
-    Write-Host "┌" + ("─" * ($tableWidth - 2)) + "┐" -ForegroundColor Gray
+    Write-Host "+" + ("-" * ($tableWidth - 2)) + "+" -ForegroundColor Gray
     
     foreach ($item in $StatusData.GetEnumerator()) {
         $key = $item.Key.PadRight($maxKeyLength)
@@ -228,20 +228,20 @@ function Write-StatusTable {
         
         # Determine status color
         $statusColor = "White"
-        if ($value -match "Success|Connected|✅|✓") { $statusColor = "Green" }
-        elseif ($value -match "Failed|Error|❌|✗") { $statusColor = "Red" }
-        elseif ($value -match "Warning|⚠️") { $statusColor = "Yellow" }
+        if ($value -match "Success|Connected|PASS|OK") { $statusColor = "Green" }
+        elseif ($value -match "Failed|Error|FAIL|ERROR") { $statusColor = "Red" }
+        elseif ($value -match "Warning|WARN") { $statusColor = "Yellow" }
         
-        Write-Host "│ " -NoNewline -ForegroundColor Gray
+        Write-Host "| " -NoNewline -ForegroundColor Gray
         Write-Host $key -NoNewline -ForegroundColor White
         Write-Host " : " -NoNewline -ForegroundColor Gray
         Write-Host $value -NoNewline -ForegroundColor $statusColor
         $padding = $tableWidth - $key.Length - $value.ToString().Length - 7
         Write-Host (" " * $padding) -NoNewline
-        Write-Host " │" -ForegroundColor Gray
+        Write-Host " |" -ForegroundColor Gray
     }
     
-    Write-Host "└" + ("─" * ($tableWidth - 2)) + "┘" -ForegroundColor Gray
+    Write-Host "+" + ("-" * ($tableWidth - 2)) + "+" -ForegroundColor Gray
     Write-Host ""
 }
 
@@ -249,7 +249,7 @@ function Write-SectionHeader {
     param(
         [string]$Title,
         [string]$Subtitle = "",
-        [string]$Icon = "📋"
+        [string]$Icon = "[SECTION]"
     )
     
     $headerText = if ($Subtitle) { "$Icon $Title - $Subtitle" } else { "$Icon $Title" }
@@ -263,11 +263,9 @@ function Write-CompletionSummary {
     )
     
     Write-Host ""
-    Write-Host "╔═══════════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-    Write-Host "║" + (" " * 67) + "║" -ForegroundColor Green
-    Write-Host "║" + ("🎉 $Title".PadLeft(35).PadRight(67)) + "║" -ForegroundColor Green
-    Write-Host "║" + (" " * 67) + "║" -ForegroundColor Green
-    Write-Host "╚═══════════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+    Write-Host "=================================================================" -ForegroundColor Green
+    Write-Host "                    $Title                    " -ForegroundColor Green
+    Write-Host "=================================================================" -ForegroundColor Green
     Write-Host ""
     
     if ($Summary) {
@@ -275,7 +273,7 @@ function Write-CompletionSummary {
     }
 }
 
-function Rotate-LogFile {
+function Move-LogFile {
     try {
         if (-not $script:LoggingConfig.LogFile -or -not (Test-Path $script:LoggingConfig.LogFile)) {
             return
@@ -288,14 +286,14 @@ function Rotate-LogFile {
         $rotatedLogFile = Join-Path $logDir "$logName`_$timestamp.log"
         Move-Item $script:LoggingConfig.LogFile $rotatedLogFile -Force
         
-        Write-MandALog "📁 Log file rotated to: $rotatedLogFile" -Level "INFO"
+        Write-MandALog "Log file rotated to: $rotatedLogFile" -Level "INFO"
         
     } catch {
         Write-Warning "Failed to rotate log file: $($_.Exception.Message)"
     }
 }
 
-function Cleanup-OldLogFiles {
+function Clear-OldLogFiles {
     param([string]$LogPath)
     
     try {
@@ -304,11 +302,11 @@ function Cleanup-OldLogFiles {
         
         foreach ($oldLog in $oldLogFiles) {
             Remove-Item $oldLog.FullName -Force
-            Write-MandALog "🗑️ Removed old log file: $($oldLog.Name)" -Level "DEBUG"
+            Write-MandALog "Removed old log file: $($oldLog.Name)" -Level "DEBUG"
         }
         
         if ($oldLogFiles.Count -gt 0) {
-            Write-MandALog "🧹 Cleaned up $($oldLogFiles.Count) old log files" -Level "INFO"
+            Write-MandALog "Cleaned up $($oldLogFiles.Count) old log files" -Level "INFO"
         }
         
     } catch {
@@ -327,7 +325,7 @@ function Set-LogLevel {
     )
     
     $script:LoggingConfig.LogLevel = $Level
-    Write-MandALog "📊 Log level changed to: $Level" -Level "INFO"
+    Write-MandALog "Log level changed to: $Level" -Level "INFO"
 }
 
 function Set-LoggingOptions {
@@ -343,7 +341,7 @@ function Set-LoggingOptions {
     $script:LoggingConfig.ShowTimestamp = $ShowTimestamp
     $script:LoggingConfig.ShowComponent = $ShowComponent
     
-    Write-MandALog "⚙️ Logging options updated" -Level "INFO"
+    Write-MandALog "Logging options updated" -Level "INFO"
 }
 
 # Export functions

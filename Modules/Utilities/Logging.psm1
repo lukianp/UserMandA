@@ -32,7 +32,7 @@ function Initialize-Logging {
         $script:LoggingConfig.LogFile = Join-Path $logPath $logFileName
         
         # Clean up old log files
-        Cleanup-OldLogFiles -LogPath $logPath
+        Clear-OldLogFiles -LogPath $logPath
         
         # Write initial log entry
         Write-MandALog "M&A Discovery Suite logging initialized" -Level "INFO"
@@ -61,7 +61,7 @@ function Write-MandALog {
     )
     
     # Check if message should be logged based on level
-    if (-not (Should-LogMessage -Level $Level)) {
+    if (-not (Test-LogMessage -Level $Level)) {
         return
     }
     
@@ -91,7 +91,7 @@ function Write-MandALog {
             # Check log file size and rotate if necessary
             $logFile = Get-Item $script:LoggingConfig.LogFile -ErrorAction SilentlyContinue
             if ($logFile -and ($logFile.Length / 1MB) -gt $script:LoggingConfig.MaxLogSizeMB) {
-                Rotate-LogFile
+                Move-LogFile
             }
         } catch {
             Write-Warning "Failed to write to log file: $($_.Exception.Message)"
@@ -99,7 +99,7 @@ function Write-MandALog {
     }
 }
 
-function Should-LogMessage {
+function Test-LogMessage {
     param([string]$Level)
     
     $levelHierarchy = @{
@@ -131,7 +131,7 @@ function Get-LogColor {
     }
 }
 
-function Rotate-LogFile {
+function Move-LogFile {
     try {
         if (-not $script:LoggingConfig.LogFile -or -not (Test-Path $script:LoggingConfig.LogFile)) {
             return
@@ -151,7 +151,7 @@ function Rotate-LogFile {
     }
 }
 
-function Cleanup-OldLogFiles {
+function Clear-OldLogFiles {
     param([string]$LogPath)
     
     try {
