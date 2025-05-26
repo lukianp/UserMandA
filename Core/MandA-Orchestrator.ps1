@@ -73,6 +73,40 @@ foreach ($ModulePath in $ModulePaths) {
     }
 }
 
+function ConvertTo-Hashtable {
+    param([Parameter(ValueFromPipeline)]$InputObject)
+    
+    process {
+        if ($null -eq $InputObject) { return $null }
+        
+        if ($InputObject -is [System.Collections.IDictionary]) {
+            $hash = @{}
+            foreach ($key in $InputObject.Keys) {
+                $hash[$key] = ConvertTo-Hashtable $InputObject[$key]
+            }
+            return $hash
+        }
+        
+        if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
+            $collection = @()
+            foreach ($item in $InputObject) {
+                $collection += ConvertTo-Hashtable $item
+            }
+            return $collection
+        }
+        
+        if ($InputObject.PSObject.Properties) {
+            $hash = @{}
+            foreach ($property in $InputObject.PSObject.Properties) {
+                $hash[$property.Name] = ConvertTo-Hashtable $property.Value
+            }
+            return $hash
+        }
+        
+        return $InputObject
+    }
+}
+
 function Initialize-MandAEnvironment {
     param([hashtable]$Configuration)
     
@@ -314,7 +348,7 @@ function Complete-MandADiscovery {
 # Main execution
 try {
     # Load configuration
-    $script:Config = Get-Content $ConfigurationFile | ConvertFrom-Json -AsHashtable
+    $script:Config = Get-Content $ConfigurationFile | ConvertFrom-Json | ConvertTo-Hashtable
     
     # Override configuration with parameters
     if ($OutputPath) { $script:Config.environment.outputPath = $OutputPath }
