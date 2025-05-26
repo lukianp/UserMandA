@@ -13,12 +13,14 @@ A comprehensive PowerShell-based solution for enterprise M&A environment discove
 - 🔄 **Robust Connectivity** - Enhanced connection manager with fallback methods
 - 📝 **Visual Progress Tracking** - Emoji-enhanced logging and progress bars
 - 🛠️ **PowerApps Integration** - Optimized JSON export for Power Platform
+- 📍 **Location Independence** - Run from any directory with automatic path resolution
+- 🔍 **Enhanced GPO Discovery** - Robust XML parsing with namespace handling and repair
 
 ## 🏗️ Architecture Overview
 
 ### **Modular Design**
-- **1 Orchestrator** - Central execution engine
-- **24+ Specialized Modules** - Focused, maintainable components
+- **1 Orchestrator** - Central execution engine with location-independent paths
+- **27+ Specialized Modules** - Focused, maintainable components
 - **Enhanced Modules** - Advanced versions with improved capabilities
 - **Configuration-Driven** - JSON-based behavior control
 - **Comprehensive Error Handling** - Retry logic and graceful degradation
@@ -39,9 +41,9 @@ M&A Discovery Suite/
 │   ├── Discovery/                           # Data collection modules
 │   │   ├── ActiveDirectoryDiscovery.psm1
 │   │   ├── GraphDiscovery.psm1
-│   │   ├── ExchangeDiscovery.psm1
-│   │   ├── AzureDiscovery.psm1
-│   │   ├── IntuneDiscovery.psm1
+│   │   ├── ExchangeDiscovery.psm1        # (To be implemented)
+│   │   ├── AzureDiscovery.psm1          # (To be implemented)
+│   │   ├── IntuneDiscovery.psm1         # (To be implemented)
 │   │   ├── GPODiscovery.psm1
 │   │   └── EnhancedGPODiscovery.psm1      # 🆕 Improved XML parsing
 │   ├── Processing/                          # Data analysis & transformation
@@ -52,7 +54,7 @@ M&A Discovery Suite/
 │   ├── Export/                              # Export formats
 │   │   ├── CSVExport.psm1
 │   │   ├── JSONExport.psm1
-│   │   └── ExcelExport.psm1
+│   │   └── ExcelExport.psm1             # (To be implemented)
 │   └── Utilities/                           # Core utilities
 │       ├── Logging.psm1
 │       ├── EnhancedLogging.psm1            # 🆕 Visual logging with emojis
@@ -64,6 +66,8 @@ M&A Discovery Suite/
 │   └── default-config.json                  # Default configuration template
 ├── Scripts/
 │   ├── QuickStart.ps1                      # Simplified launcher
+│   ├── Set-SuiteEnvironment.ps1            # 🆕 Environment setup for location independence
+│   ├── Test-LocationIndependence.ps1       # 🆕 Location independence validator
 │   └── Validate-Installation.ps1            # 🆕 Installation validator
 └── README.md                                # This file
 ```
@@ -100,10 +104,11 @@ Run the installation validator to ensure everything is properly configured:
 
 This will check:
 - ✅ PowerShell version
-- ✅ Module availability
+- ✅ Module availability and import capability
 - ✅ File structure integrity
 - ✅ Network connectivity
 - ✅ Configuration validity
+- ✅ Orchestrator syntax
 
 ### **Basic Usage**
 
@@ -147,6 +152,13 @@ This will check:
 3. **Validation only mode:**
    ```powershell
    .\Core\MandA-Orchestrator.ps1 -ValidateOnly
+   ```
+
+4. **Test location independence:**
+   ```powershell
+   .\Scripts\Test-LocationIndependence.ps1
+   # Or test with a specific location
+   .\Scripts\Test-LocationIndependence.ps1 -TestLocation "C:\Temp\TestSuite"
    ```
 
 ## ⚙️ Configuration
@@ -269,6 +281,7 @@ This will check:
    - Organization.Read.All
    - AuditLog.Read.All
    - Directory.Read.All
+   - Reports.Read.All (for OneDrive usage)
    
    **Exchange Online:**
    - Exchange.ManageAsApp
@@ -298,24 +311,28 @@ Save credentials securely for future use? (y/N): y
 
 ### **Data Sources**
 
-| Source | Description | Output Files |
-|--------|-------------|--------------|
-| **Active Directory** | On-premises AD users, groups, computers | ADUsers.csv, SecurityGroups.csv, ADComputers.csv |
-| **Microsoft Graph** | Azure AD users, groups, devices, licenses | GraphUsers.csv, GraphGroups.csv, GraphDevices.csv |
-| **Exchange Online** | Mailboxes, distribution lists, settings | ExchangeMailboxes.csv, DistributionLists.csv |
-| **Azure Resources** | Subscriptions, resource groups, VMs | AzureResources.csv, AzureVMs.csv |
-| **Intune** | Managed devices, compliance policies | IntuneDevices.csv, CompliancePolicies.csv |
-| **Group Policy** | GPOs, drive/printer mappings | GroupPolicies.csv, DriveMappingsGPO.csv |
+| Source | Description | Output Files | Implementation Status |
+|--------|-------------|--------------|----------------------|
+| **Active Directory** | On-premises AD users, groups, computers | ADUsers.csv, SecurityGroups.csv, ADComputers.csv, OrganizationalUnits.csv | ✅ Implemented |
+| **Microsoft Graph** | Azure AD users, groups, devices, licenses | GraphUsers.csv, GraphGroups.csv, GraphDevices.csv, GraphLicenses.csv, GraphApplications.csv | ✅ Implemented |
+| **Exchange Online** | Mailboxes, distribution lists, settings | ExchangeMailboxes.csv, DistributionLists.csv | 🚧 Partial |
+| **Azure Resources** | Subscriptions, resource groups, VMs | AzureResources.csv, AzureVMs.csv | 📋 Planned |
+| **Intune** | Managed devices, compliance policies | IntuneDevices.csv, CompliancePolicies.csv | 📋 Planned |
+| **Group Policy** | GPOs, drive/printer mappings | GroupPolicies.csv, DriveMappingsGPO.csv, PrinterMappingsGPO.csv, FolderRedirectionGPO.csv, LogonScripts.csv | ✅ Enhanced |
+| **OneDrive** | Usage statistics and storage | OneDriveUsage.csv | ✅ Implemented |
+| **App Proxies** | Application proxy configurations | ApplicationProxies.csv | ✅ Implemented |
 
 ### **Processing Outputs**
 
 | Output | Description | Location |
 |--------|-------------|----------|
-| **User Profiles** | Comprehensive user analysis | Processed/UserProfiles.csv |
+| **User Profiles** | Comprehensive user analysis with complexity scoring | Processed/UserProfiles.csv |
 | **Migration Waves** | Wave assignments and timing | Processed/MigrationWaves.csv |
 | **Complexity Analysis** | User complexity breakdown | Processed/ComplexityAnalysis.csv |
 | **Quality Report** | Data validation results | Processed/DataQualityReport.csv |
 | **Summary Statistics** | High-level metrics | Processed/SummaryStatistics.csv |
+| **Detailed User Report** | Complete user profile data | Processed/DetailedUserReport.csv |
+| **PowerApps Export** | Optimized JSON for Power Platform | PowerApps_Export.json |
 
 ## 🎯 Migration Planning Features
 
@@ -353,11 +370,43 @@ Users are analyzed across multiple factors:
    - Groups users by department
    - Maintains team cohesion
    - Optimal for business continuity
+   - Automatic wave splitting for large departments
 
 2. **Complexity-Based Waves**
    - Groups by migration difficulty
    - Balances workload across waves
    - Optimal for resource planning
+   - Priority-based ordering
+
+### **Enhanced Features**
+
+#### **Visual Logging System**
+The suite includes enhanced visual logging with emoji indicators:
+- 🚀 **Startup/Initialization**
+- ✅ **Success Operations**
+- ⚠️ **Warnings**
+- ❌ **Errors**
+- 🔄 **Progress Updates**
+- 📊 **Statistics**
+- 🎯 **Section Headers**
+- 🔍 **Debug Information**
+- 🔧 **Recommendations**
+
+#### **Connection Management**
+Enhanced connection handling with multiple fallback methods:
+- **Primary** - Service principal authentication
+- **Certificate** - Certificate-based authentication
+- **Interactive** - User interactive login
+- **Managed Identity** - Azure managed identity
+- **Proxy Handling** - Automatic proxy detection and bypass
+
+#### **GPO Discovery**
+Enhanced GPO discovery with robust XML parsing:
+- Namespace-aware XML parsing
+- Automatic XML repair for malformed files
+- Multiple XPath strategies for finding settings
+- Comprehensive error recovery
+- Visual progress indicators
 
 ## 🛠️ Troubleshooting
 
@@ -389,26 +438,24 @@ try { $config | ConvertFrom-Json } catch { $_.Exception.Message }
 ```
 
 #### Exchange Connection Issues
-- Ensure WinRM service is running
+The enhanced connection manager will automatically try:
+1. Modern auth with proxy bypass
+2. WinRM proxy configuration
+3. Direct connection
+4. Manual remote PowerShell
+
+If all fail:
+- Ensure WinRM service is running: `Get-Service WinRM`
 - Check proxy settings: `netsh winhttp show proxy`
 - Reset proxy if needed: `netsh winhttp reset proxy`
 - Verify Exchange permissions for service principal
-
-### **Enhanced Logging**
-
-The suite includes visual logging with emoji indicators:
-- 🚀 **Startup/Initialization**
-- ✅ **Success Operations**
-- ⚠️ **Warnings**
-- ❌ **Errors**
-- 🔄 **Progress Updates**
-- 📊 **Statistics**
-- 🎯 **Section Headers**
+- Run as administrator for best results
 
 ### **Log Locations**
 - **Main Log**: `{OutputPath}\Logs\MandA_Discovery_YYYYMMDD_HHMMSS.log`
 - **Progress Metrics**: `{OutputPath}\Logs\ProgressMetrics_YYYYMMDD_HHMMSS.json`
-- **Error Details**: Included in main log with full stack traces
+- **Validation Reports**: `{OutputPath}\Processed\ValidationReport_YYYYMMDD_HHMMSS.csv`
+- **GPO Reports**: `{OutputPath}\GPOReports\{GPO-GUID}.xml`
 
 ## 📈 Performance Optimization
 
@@ -433,16 +480,23 @@ The suite includes visual logging with emoji indicators:
 3. **Use skipExistingFiles** for incremental updates
 4. **Monitor memory usage** in Task Manager
 5. **Enable compression** for large datasets
+6. **Review logs** for optimization opportunities
 
 ## 🔄 Version History
 
-### **v4.0.0 (Current)**
-- 🆕 Enhanced modular architecture
-- 🆕 Visual logging with emojis
-- 🆕 Robust connection management with fallbacks
+### **v4.0.0 (Current - January 2025)**
+- 🆕 Enhanced modular architecture (27+ modules)
+- 🆕 Visual logging with emoji indicators
+- 🆕 Robust connection management with multiple fallbacks
 - 🆕 PowerApps-optimized exports
 - 🆕 Installation validator script
 - 🆕 Enhanced GPO discovery with XML repair
+- 🆕 Location-independent architecture
+- 🆕 OneDrive usage reporting
+- 🆕 Application proxy discovery
+- 🆕 Comprehensive data validation
+- 🆕 Department-based wave generation
+- 🆕 Enhanced error handling with retry logic
 
 ### **v3.0.0**
 - Initial modular design
@@ -457,28 +511,66 @@ The suite includes visual logging with emoji indicators:
 3. **Logging** - Use Write-MandALog for consistent output
 4. **Documentation** - Update help comments in modules
 5. **Testing** - Validate with Validate-Installation.ps1
+6. **Path Independence** - Use $script:SuiteRoot for all paths
 
 ### **Adding New Data Sources**
 1. Create new discovery module in `Modules\Discovery\`
 2. Add source to configuration enabledSources
-3. Update data aggregation logic
-4. Add export mappings
+3. Update data aggregation logic in DataAggregation.psm1
+4. Add export mappings in export modules
+5. Update documentation
+
+### **Module Development Template**
+```powershell
+<#
+.SYNOPSIS
+    Brief description
+.DESCRIPTION
+    Detailed description
+#>
+
+function Invoke-YourFunction {
+    param([hashtable]$Configuration)
+    
+    try {
+        Write-MandALog "Starting operation" -Level "INFO"
+        # Your code here
+        Write-MandALog "Operation completed" -Level "SUCCESS"
+    } catch {
+        Write-MandALog "Operation failed: $($_.Exception.Message)" -Level "ERROR"
+        throw
+    }
+}
+
+# Export functions
+Export-ModuleMember -Function @('Invoke-YourFunction')
+```
 
 ## 📞 Support
 
 ### **Getting Help**
 - Review logs in `{OutputPath}\Logs\`
 - Run validation script for diagnostics
-- Check README troubleshooting section
+- Check troubleshooting section
 - Verify service principal permissions
+- Test location independence
 
 ### **Maintenance Tasks**
+- 📅 **Weekly** - Review logs and clean up old files
 - 📅 **Monthly** - Update PowerShell modules
 - 📅 **Quarterly** - Review and rotate credentials
 - 📅 **Annually** - Update complexity thresholds
+
+### **Known Limitations**
+- Exchange discovery requires direct connectivity (proxy issues may occur)
+- Excel export requires ImportExcel module (optional)
+- Some Azure/Intune modules are planned but not yet implemented
+- Maximum recommended users per wave: 50 (configurable)
 
 ---
 
 **M&A Discovery Suite v4.0** - Enterprise-ready discovery and migration planning through intelligent automation.
 
 *Built with ❤️ for IT professionals managing complex M&A transitions*
+
+**Last Updated:** January 2025
