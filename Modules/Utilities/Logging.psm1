@@ -16,7 +16,7 @@ $script:LoggingConfig = @{
 }
 
 function Initialize-Logging {
-    param([hashtable]$Configuration)
+    param($Configuration)
     
     try {
         $script:LoggingConfig.LogLevel = $Configuration.environment.logLevel

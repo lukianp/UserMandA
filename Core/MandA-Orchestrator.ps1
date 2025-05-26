@@ -73,42 +73,9 @@ foreach ($ModulePath in $ModulePaths) {
     }
 }
 
-function ConvertTo-Hashtable {
-    param([Parameter(ValueFromPipeline)]$InputObject)
-    
-    process {
-        if ($null -eq $InputObject) { return $null }
-        
-        if ($InputObject -is [System.Collections.IDictionary]) {
-            $hash = @{}
-            foreach ($key in $InputObject.Keys) {
-                $hash[$key] = ConvertTo-Hashtable $InputObject[$key]
-            }
-            return $hash
-        }
-        
-        if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
-            $collection = @()
-            foreach ($item in $InputObject) {
-                $collection += ConvertTo-Hashtable $item
-            }
-            return $collection
-        }
-        
-        if ($InputObject.PSObject.Properties) {
-            $hash = @{}
-            foreach ($property in $InputObject.PSObject.Properties) {
-                $hash[$property.Name] = ConvertTo-Hashtable $property.Value
-            }
-            return $hash
-        }
-        
-        return $InputObject
-    }
-}
 
 function Initialize-MandAEnvironment {
-    param([hashtable]$Configuration)
+    param($Configuration, [switch]$ValidateOnly)
     
     try {
         Write-MandALog "Initializing M&A Discovery Environment" -Level "HEADER"
@@ -116,8 +83,8 @@ function Initialize-MandAEnvironment {
         # Initialize logging
         Initialize-Logging -Configuration $Configuration
         
-        # Validate system prerequisites
-        if (-not (Test-Prerequisites -Configuration $Configuration)) {
+        # Validate system prerequisites (skip module checks in validate-only mode)
+        if (-not (Test-Prerequisites -Configuration $Configuration -ValidateOnly:$ValidateOnly)) {
             throw "System prerequisites validation failed"
         }
         
@@ -141,7 +108,7 @@ function Initialize-MandAEnvironment {
 }
 
 function Get-RequiredModules {
-    param([hashtable]$Configuration)
+    param($Configuration)
     
     $modules = @()
     
@@ -185,7 +152,7 @@ function Get-RequiredModules {
 }
 
 function Invoke-DiscoveryPhase {
-    param([hashtable]$Configuration)
+    param($Configuration)
     
     try {
         Write-MandALog "Starting Discovery Phase" -Level "HEADER"
@@ -233,7 +200,7 @@ function Invoke-DiscoveryPhase {
 }
 
 function Invoke-ProcessingPhase {
-    param([hashtable]$Configuration)
+    param($Configuration)
     
     try {
         Write-MandALog "Starting Processing Phase" -Level "HEADER"
@@ -273,7 +240,7 @@ function Invoke-ProcessingPhase {
 }
 
 function Invoke-ExportPhase {
-    param([hashtable]$Configuration, [hashtable]$ProcessedData)
+    param($Configuration, $ProcessedData)
     
     try {
         Write-MandALog "Starting Export Phase" -Level "HEADER"
@@ -313,7 +280,7 @@ function Invoke-ExportPhase {
 }
 
 function Complete-MandADiscovery {
-    param([hashtable]$Configuration)
+    param($Configuration)
     
     try {
         $script:ExecutionMetrics.EndTime = Get-Date
@@ -348,7 +315,7 @@ function Complete-MandADiscovery {
 # Main execution
 try {
     # Load configuration
-    $script:Config = Get-Content $ConfigurationFile | ConvertFrom-Json | ConvertTo-Hashtable
+    $script:Config = Get-Content $ConfigurationFile | ConvertFrom-Json
     
     # Override configuration with parameters
     if ($OutputPath) { $script:Config.environment.outputPath = $OutputPath }
@@ -358,7 +325,7 @@ try {
     Write-Host "Mode: $Mode | Configuration: $ConfigurationFile" -ForegroundColor Yellow
     
     # Initialize environment
-    if (-not (Initialize-MandAEnvironment -Configuration $script:Config)) {
+    if (-not (Initialize-MandAEnvironment -Configuration $script:Config -ValidateOnly:$ValidateOnly)) {
         throw "Environment initialization failed"
     }
     

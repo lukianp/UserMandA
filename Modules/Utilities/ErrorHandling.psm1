@@ -147,7 +147,7 @@ function Write-ErrorSummary {
 }
 
 function Test-Prerequisites {
-    param([hashtable]$Configuration)
+    param($Configuration, [switch]$ValidateOnly)
     
     try {
         Write-MandALog "Validating system prerequisites" -Level "INFO"
@@ -159,16 +159,18 @@ function Test-Prerequisites {
             $validationErrors += "PowerShell 5.1 or higher is required"
         }
         
-        # Check required modules
-        $requiredModules = @(
-            "Microsoft.Graph",
-            "Microsoft.Graph.Authentication",
-            "ExchangeOnlineManagement"
-        )
-        
-        foreach ($module in $requiredModules) {
-            if (-not (Get-Module -ListAvailable -Name $module)) {
-                $validationErrors += "Required module not installed: $module"
+        # Check required modules (skip in validate-only mode)
+        if (-not $ValidateOnly) {
+            $requiredModules = @(
+                "Microsoft.Graph",
+                "Microsoft.Graph.Authentication",
+                "ExchangeOnlineManagement"
+            )
+            
+            foreach ($module in $requiredModules) {
+                if (-not (Get-Module -ListAvailable -Name $module)) {
+                    $validationErrors += "Required module not installed: $module"
+                }
             }
         }
         
@@ -231,7 +233,7 @@ function Test-Prerequisites {
 }
 
 function Initialize-OutputDirectories {
-    param([hashtable]$Configuration)
+    param($Configuration)
     
     try {
         $outputPath = $Configuration.environment.outputPath
