@@ -1,0 +1,63 @@
+{
+  "metadata": {
+    "version": "4.0.0",
+    "created": "2025-01-26",
+    "description": "M&A Discovery Suite Default Configuration",
+    "companyName": "Default Company"
+  },
+  "environment": {
+    "domainController": "ad.company.com",
+    "outputPath": "C:\\MandADiscovery\\Output",
+    "tempPath": "%TEMP%\\MandADiscovery",
+    "logLevel": "INFO",
+    "maxRetries": 3,
+    "timeoutSeconds": 300
+  },
+  "authentication": {
+    "credentialStorePath": "C:\\MandADiscovery\\Output\\credentials.config",
+    "certificateThumbprint": null,
+    "useInteractiveAuth": false,
+    "tokenRefreshThreshold": 300
+  },
+  "discovery": {
+    "parallelThreads": 5,
+    "batchSize": 100,
+    "enabledSources": [
+      "ActiveDirectory",
+      "Exchange",
+      "Graph",
+      "Azure",
+      "Intune"
+    ],
+    "skipExistingFiles": true,
+    "compressionEnabled": true
+  },
+  "processing": {
+    "chunkSize": 100,
+    "includeDisabledUsers": false,
+    "generateWavesByDepartment": true,
+    "maxWaveSize": 50,
+    "complexityThresholds": {
+      "low": 3,
+      "medium": 7,
+      "high": 10
+    }
+  },
+  "export": {
+    "formats": [
+      "CSV",
+      "Excel",
+      "JSON"
+    ],
+    "excelEnabled": true,
+    "powerAppsOptimized": true,
+    "includeMetadata": true,
+    "archiveResults": true
+  },
+  "performance": {
+    "memoryThresholdMB": 4096,
+    "diskSpaceThresholdGB": 5,
+    "progressUpdateInterval": 10,
+    "enableGarbageCollection": true
+  }
+}
