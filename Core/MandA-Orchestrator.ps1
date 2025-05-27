@@ -76,7 +76,6 @@ foreach ($ModulePath in $ModulePaths) {
     }
 }
 
-
 function Initialize-MandAEnvironment {
     param($Configuration, [switch]$ValidateOnly)
     
@@ -333,7 +332,24 @@ try {
     }
     
     # Load configuration
-    $script:Config = Get-Content $resolvedConfigFile | ConvertFrom-Json
+    function ConvertTo-HashtableFromPSObject {
+        param (
+            [Parameter(Mandatory=$true)]
+            [PSObject]$InputObject
+        )
+        $hashtable = @{}
+        foreach ($property in $InputObject.PSObject.Properties) {
+            if ($property.Value -is [PSObject]) {
+                $hashtable[$property.Name] = ConvertTo-HashtableFromPSObject -InputObject $property.Value
+            } else {
+                $hashtable[$property.Name] = $property.Value
+            }
+        }
+        return $hashtable
+    }
+
+    $configContent = Get-Content $resolvedConfigFile | ConvertFrom-Json
+    $script:Config = ConvertTo-HashtableFromPSObject -InputObject $configContent
     
     # Override configuration with parameters
     if ($OutputPath) { $script:Config.environment.outputPath = $OutputPath }
