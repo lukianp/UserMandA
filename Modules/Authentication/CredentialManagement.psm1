@@ -21,7 +21,8 @@ function Get-SecureCredentials {
         }
         
         Write-MandALog "Stored credentials not available, prompting for interactive input" -Level "WARN"
-        return Get-InteractiveCredentials -Configuration $Configuration
+        $interactiveCredentials = Get-InteractiveCredentials -Configuration $Configuration
+        return $interactiveCredentials
         
     } catch {
         Write-MandALog "Error retrieving credentials: $($_.Exception.Message)" -Level "ERROR"
@@ -40,15 +41,18 @@ function Read-EncryptedCredentials {
             throw "Credential file not found: $Path"
         }
         
-        $encryptedData = Get-Content $Path -Raw
+        $encryptedData = Get-Content $Path -Raw -ErrorAction Stop
+        if ([string]::IsNullOrWhiteSpace($encryptedData)) {
+            throw "Credential file is empty or corrupted: $Path"
+        }
         
         # Try DPAPI decryption first
         try {
-            $secureString = ConvertTo-SecureString -String $encryptedData
+            $secureString = ConvertTo-SecureString -String $encryptedData -ErrorAction Stop
             $jsonData = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
                 [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureString)
             )
-            $credentialData = $jsonData | ConvertFrom-Json
+            $credentialData = $jsonData | ConvertFrom-Json -ErrorAction Stop
         } catch {
             # Try certificate-based decryption if DPAPI fails
             if ($Configuration.authentication.certificateThumbprint) {
@@ -201,22 +205,32 @@ function Set-SecureCredentials {
 
 function Test-CredentialValidity {
     param(
+        [Parameter(Mandatory=$true)]
         [hashtable]$Credentials,
         [hashtable]$Configuration
     )
     
     try {
+        # Ensure Credentials is a hashtable
+        if ($Credentials -isnot [hashtable]) {
+            Write-MandALog "Invalid Credentials parameter type: Expected hashtable, got $($Credentials.GetType().FullName)" -Level "ERROR"
+            return $false
+        }
+        
         # Basic format validation
         if (-not ($Credentials.ClientId -and $Credentials.ClientSecret -and $Credentials.TenantId)) {
+            Write-MandALog "Incomplete credentials: ClientId, ClientSecret, or TenantId missing" -Level "ERROR"
             return $false
         }
         
         # GUID format validation
         if ($Credentials.ClientId -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+            Write-MandALog "Invalid ClientId format: Must be a valid GUID" -Level "ERROR"
             return $false
         }
         
         if ($Credentials.TenantId -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+            Write-MandALog "Invalid TenantId format: Must be a valid GUID" -Level "ERROR"
             return $false
         }
         
