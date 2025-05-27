@@ -66,13 +66,43 @@ M&A Discovery Suite/
 │   └── default-config.json                  # Default configuration template
 ├── Scripts/
 │   ├── QuickStart.ps1                      # Simplified launcher
+│   ├── Setup-AppRegistration.ps1           # 🆕 Azure AD App Registration setup
 │   ├── Set-SuiteEnvironment.ps1            # 🆕 Environment setup for location independence
 │   ├── Test-LocationIndependence.ps1       # 🆕 Location independence validator
 │   └── Validate-Installation.ps1            # 🆕 Installation validator
+├── CREDENTIALS_SETUP_GUIDE.md               # 🆕 Detailed credentials setup guide
 └── README.md                                # This file
 ```
 
 ## 🚀 Quick Start Guide
+
+### **🔐 IMPORTANT: Credentials Setup (Required First Step)**
+
+**Before running any discovery operations, you MUST set up Azure AD App Registration and encrypted credentials.**
+
+#### **Option 1: Create New App Registration (Recommended)**
+```powershell
+# Run the app registration setup script
+.\Scripts\Setup-AppRegistration.ps1 -TenantId "your-tenant-id-here"
+```
+
+#### **Option 2: Use Existing App Registration**
+```powershell
+# If you already have an app registration
+.\Scripts\Setup-AppRegistration.ps1 -TenantId "your-tenant-id-here" -UseExistingApp -ExistingClientId "your-client-id-here"
+```
+
+#### **📖 Detailed Setup Instructions**
+For complete setup instructions, troubleshooting, and security information, see:
+**[CREDENTIALS_SETUP_GUIDE.md](CREDENTIALS_SETUP_GUIDE.md)**
+
+#### **✅ Test Your Setup**
+```powershell
+# Validate configuration without running full discovery
+.\Core\MandA-Orchestrator.ps1 -ValidateOnly
+```
+
+---
 
 ### **Prerequisites**
 

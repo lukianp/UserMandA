@@ -77,6 +77,29 @@ foreach ($ModulePath in $ModulePaths) {
 }
 
 
+function Convert-PSObjectToHashtable {
+    param([Parameter(ValueFromPipeline)]$InputObject)
+    
+    process {
+        if ($null -eq $InputObject) { return $null }
+        
+        if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
+            $collection = @(
+                foreach ($object in $InputObject) { Convert-PSObjectToHashtable $object }
+            )
+            Write-Output -NoEnumerate $collection
+        } elseif ($InputObject -is [psobject]) {
+            $hash = @{}
+            foreach ($property in $InputObject.PSObject.Properties) {
+                $hash[$property.Name] = Convert-PSObjectToHashtable $property.Value
+            }
+            $hash
+        } else {
+            $InputObject
+        }
+    }
+}
+
 function Initialize-MandAEnvironment {
     param($Configuration, [switch]$ValidateOnly)
     
@@ -332,8 +355,9 @@ try {
         Join-Path $script:SuiteRoot $ConfigurationFile
     }
     
-    # Load configuration
-    $script:Config = Get-Content $resolvedConfigFile | ConvertFrom-Json
+    # Load configuration and convert to hashtable for proper parameter binding
+    $jsonConfig = Get-Content $resolvedConfigFile | ConvertFrom-Json
+    $script:Config = Convert-PSObjectToHashtable -InputObject $jsonConfig
     
     # Override configuration with parameters
     if ($OutputPath) { $script:Config.environment.outputPath = $OutputPath }
