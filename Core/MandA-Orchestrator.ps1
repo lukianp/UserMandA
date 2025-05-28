@@ -76,33 +76,34 @@ foreach ($ModulePath in $ModulePaths) {
     }
 }
 
-<<<<<<< HEAD
-
-function Convert-PSObjectToHashtable {
-    param([Parameter(ValueFromPipeline)]$InputObject)
+function ConvertTo-HashtableFromPSObject {
+    param (
+        [Parameter(Mandatory=$true)]
+        [PSObject]$InputObject
+    )
     
-    process {
-        if ($null -eq $InputObject) { return $null }
-        
-        if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
-            $collection = @(
-                foreach ($object in $InputObject) { Convert-PSObjectToHashtable $object }
-            )
-            Write-Output -NoEnumerate $collection
-        } elseif ($InputObject -is [psobject]) {
-            $hash = @{}
-            foreach ($property in $InputObject.PSObject.Properties) {
-                $hash[$property.Name] = Convert-PSObjectToHashtable $property.Value
+    if ($null -eq $InputObject) { 
+        return $null 
+    }
+    
+    if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
+        $collection = @(
+            foreach ($object in $InputObject) { 
+                ConvertTo-HashtableFromPSObject -InputObject $object 
             }
-            $hash
-        } else {
-            $InputObject
+        )
+        return ,$collection
+    } elseif ($InputObject -is [psobject]) {
+        $hashtable = @{}
+        foreach ($property in $InputObject.PSObject.Properties) {
+            $hashtable[$property.Name] = ConvertTo-HashtableFromPSObject -InputObject $property.Value
         }
+        return $hashtable
+    } else {
+        return $InputObject
     }
 }
 
-=======
->>>>>>> 05e710e4ef4a5248b84c83117122cf5103f381e2
 function Initialize-MandAEnvironment {
     param($Configuration, [switch]$ValidateOnly)
     
@@ -358,31 +359,9 @@ try {
         Join-Path $script:SuiteRoot $ConfigurationFile
     }
     
-<<<<<<< HEAD
     # Load configuration and convert to hashtable for proper parameter binding
-    $jsonConfig = Get-Content $resolvedConfigFile | ConvertFrom-Json
-    $script:Config = Convert-PSObjectToHashtable -InputObject $jsonConfig
-=======
-    # Load configuration
-    function ConvertTo-HashtableFromPSObject {
-        param (
-            [Parameter(Mandatory=$true)]
-            [PSObject]$InputObject
-        )
-        $hashtable = @{}
-        foreach ($property in $InputObject.PSObject.Properties) {
-            if ($property.Value -is [PSObject]) {
-                $hashtable[$property.Name] = ConvertTo-HashtableFromPSObject -InputObject $property.Value
-            } else {
-                $hashtable[$property.Name] = $property.Value
-            }
-        }
-        return $hashtable
-    }
-
     $configContent = Get-Content $resolvedConfigFile | ConvertFrom-Json
     $script:Config = ConvertTo-HashtableFromPSObject -InputObject $configContent
->>>>>>> 05e710e4ef4a5248b84c83117122cf5103f381e2
     
     # Override configuration with parameters
     if ($OutputPath) { $script:Config.environment.outputPath = $OutputPath }
