@@ -1,5 +1,5 @@
 # Enhanced DataAggregation.psm1
-function Build-ComprehensiveRelationshipGraph {
+function New-ComprehensiveRelationshipGraph {
     param(
         [hashtable]$AggregatedData,
         [hashtable]$Configuration
@@ -24,22 +24,22 @@ function Build-ComprehensiveRelationshipGraph {
         # Build user to group relationships with transitive membership
         if ($AggregatedData.Users -and $AggregatedData.Groups) {
             Write-MandALog "Building user to group relationships..." -Level "INFO"
-            $relationships.UserToGroup = Build-UserToGroupRelationships -Users $AggregatedData.Users -Groups $AggregatedData.Groups
+            $relationships.UserToGroup = New-UserToGroupRelationships -Users $AggregatedData.Users -Groups $AggregatedData.Groups
             
             Write-MandALog "Calculating transitive memberships..." -Level "INFO"
-            $relationships.TransitiveMemberships = Calculate-TransitiveMemberships -DirectMemberships $relationships.UserToGroup -Groups $AggregatedData.Groups
+            $relationships.TransitiveMemberships = Get-TransitiveMemberships -DirectMemberships $relationships.UserToGroup -Groups $AggregatedData.Groups
         }
         
         # Build group nesting hierarchy
         if ($AggregatedData.Groups) {
             Write-MandALog "Building group nesting hierarchy..." -Level "INFO"
-            $relationships.GroupNesting = Build-GroupNestingHierarchy -Groups $AggregatedData.Groups
+            $relationships.GroupNesting = New-GroupNestingHierarchy -Groups $AggregatedData.Groups
         }
         
         # Map service principal permissions
         if ($AggregatedData.ServicePrincipals -and $AggregatedData.OAuth2Grants) {
             Write-MandALog "Mapping service principal permissions..." -Level "INFO"
-            $relationships.ServicePrincipalPermissions = Map-ServicePrincipalPermissions `
+            $relationships.ServicePrincipalPermissions = Get-ServicePrincipalPermissions `
                 -ServicePrincipals $AggregatedData.ServicePrincipals `
                 -OAuth2Grants $AggregatedData.OAuth2Grants
         }
@@ -47,13 +47,13 @@ function Build-ComprehensiveRelationshipGraph {
         # Map application ownership and permissions
         if ($AggregatedData.Applications) {
             Write-MandALog "Mapping application ownership..." -Level "INFO"
-            $relationships.ApplicationOwners = Map-ApplicationOwnership -Applications $AggregatedData.Applications
+            $relationships.ApplicationOwners = Get-ApplicationOwnership -Applications $AggregatedData.Applications
         }
         
         # Map role assignments
         if ($AggregatedData.DirectoryRoles) {
             Write-MandALog "Mapping role assignments..." -Level "INFO"
-            $relationships.RoleAssignments = Map-RoleAssignments -Roles $AggregatedData.DirectoryRoles
+            $relationships.RoleAssignments = Get-RoleAssignments -Roles $AggregatedData.DirectoryRoles
         }
         
         # Calculate privileged access paths
@@ -61,7 +61,7 @@ function Build-ComprehensiveRelationshipGraph {
         $relationships.PrivilegedAccessPaths = Find-PrivilegedAccessPaths -Relationships $relationships
         
         # Generate relationship statistics
-        $stats = Generate-RelationshipStatistics -Relationships $relationships
+        $stats = New-RelationshipStatistics -Relationships $relationships
         Write-MandALog "Relationship mapping completed. Stats: $($stats | ConvertTo-Json -Compress)" -Level "SUCCESS"
         
         return $relationships
@@ -72,7 +72,7 @@ function Build-ComprehensiveRelationshipGraph {
     }
 }
 
-function Build-UserToGroupRelationships {
+function New-UserToGroupRelationships {
     param($Users, $Groups)
     
     $userGroupMap = @{}
@@ -105,7 +105,7 @@ function Build-UserToGroupRelationships {
     return $userGroupMap
 }
 
-function Calculate-TransitiveMemberships {
+function Get-TransitiveMemberships {
     param($DirectMemberships, $Groups)
     
     $transitiveMemberships = @{}
@@ -159,7 +159,7 @@ function Get-TransitiveGroups {
     }
 }
 
-function Map-ServicePrincipalPermissions {
+function Get-ServicePrincipalPermissions {
     param($ServicePrincipals, $OAuth2Grants)
     
     $permissionMap = @{}
@@ -329,3 +329,143 @@ function Find-PrivilegedAccessPaths {
     
     return $privilegedPaths
 }
+
+# Helper functions that were referenced but not included in the original
+function New-GroupNestingHierarchy {
+    param($Groups)
+    
+    $hierarchy = @{}
+    
+    foreach ($group in $Groups) {
+        $hierarchy[$group.Id] = @{
+            DisplayName = $group.DisplayName
+            ParentGroups = @()
+            ChildGroups = @()
+        }
+    }
+    
+    return $hierarchy
+}
+
+function Get-ApplicationOwnership {
+    param($Applications)
+    
+    $ownership = @{}
+    
+    foreach ($app in $Applications) {
+        $ownership[$app.Id] = @{
+            DisplayName = $app.DisplayName
+            Owners = @()
+        }
+    }
+    
+    return $ownership
+}
+
+function Get-RoleAssignments {
+    param($Roles)
+    
+    $assignments = @{}
+    
+    foreach ($role in $Roles) {
+        $assignments[$role.Id] = @{
+            RoleName = $role.DisplayName
+            Members = @()
+        }
+    }
+    
+    return $assignments
+}
+
+function New-RelationshipStatistics {
+    param($Relationships)
+    
+    $stats = @{
+        TotalUsers = $Relationships.UserToGroup.Count
+        TotalGroups = $Relationships.GroupNesting.Count
+        TotalServicePrincipals = $Relationships.ServicePrincipalPermissions.Count
+        TotalApplications = $Relationships.ApplicationOwners.Count
+        UsersWithPrivilegedAccess = $Relationships.PrivilegedAccessPaths.UserToPrivilegedRole.Count
+        ServicePrincipalsWithHighRisk = $Relationships.PrivilegedAccessPaths.ServicePrincipalToPrivilegedAccess.Count
+    }
+    
+    return $stats
+}
+
+function Find-GroupMembers {
+    param($GroupId, $TransitiveMemberships)
+    
+    $members = @()
+    
+    foreach ($userId in $TransitiveMemberships.Keys) {
+        if ($TransitiveMemberships[$userId] -contains $GroupId) {
+            $members += $userId
+        }
+    }
+    
+    return $members
+}
+
+function Test-HighRiskPermission {
+    param([string]$Permission)
+    
+    $highRiskPermissions = @(
+        # Application permissions
+        "Application.ReadWrite.All",
+        "AppRoleAssignment.ReadWrite.All", 
+        "Directory.ReadWrite.All",
+        "RoleManagement.ReadWrite.Directory",
+        "PrivilegedAccess.ReadWrite.AzureAD",
+        "PrivilegedAccess.ReadWrite.AzureResources",
+        
+        # Delegated permissions
+        "User.ReadWrite.All",
+        "Group.ReadWrite.All",
+        "GroupMember.ReadWrite.All",
+        "Mail.ReadWrite",
+        "Mail.Send",
+        "Files.ReadWrite.All",
+        
+        # Exchange permissions
+        "Exchange.ManageAsApp",
+        "full_access_as_app",
+        
+        # Other high-risk
+        "Sites.FullControl.All",
+        "TermStore.ReadWrite.All",
+        "SecurityEvents.ReadWrite.All"
+    )
+    
+    return $Permission -in $highRiskPermissions -or $Permission -match "\.All$|\.Write|Admin|Full"
+}
+
+function Invoke-SafeGraphOperation {
+    param(
+        [scriptblock]$Operation,
+        [string]$OperationName = "Graph Operation",
+        [hashtable]$Context = @{}
+    )
+    
+    try {
+        return & $Operation
+    } catch {
+        Write-MandALog "Error in $OperationName : $($_.Exception.Message)" -Level "WARN"
+        return $null
+    }
+}
+
+# Export functions with corrected names
+Export-ModuleMember -Function @(
+    'New-ComprehensiveRelationshipGraph',
+    'New-UserToGroupRelationships',
+    'Get-TransitiveMemberships',
+    'Get-ServicePrincipalPermissions',
+    'Find-PrivilegedAccessPaths',
+    'New-GroupNestingHierarchy',
+    'Get-ApplicationOwnership',
+    'Get-RoleAssignments',
+    'New-RelationshipStatistics',
+    'Find-GroupMembers',
+    'Test-HighRiskPermission',
+    'Invoke-SafeGraphOperation'
+)

@@ -98,10 +98,10 @@ function Get-FileServersData {
                             FreeDiskSpaceGB = [math]::Round($freeDiskSpace / 1GB, 2)
                             UsedDiskSpaceGB = [math]::Round(($totalDiskSpace - $freeDiskSpace) / 1GB, 2)
                             PercentUsed = if ($totalDiskSpace -gt 0) { [math]::Round((($totalDiskSpace - $freeDiskSpace) / $totalDiskSpace) * 100, 1) } else { 0 }
-                            FileServerInstalled = ($fileFeatures | Where-Object Name -eq "FS-FileServer") -ne $null
-                            DFSNamespaceInstalled = ($fileFeatures | Where-Object Name -eq "FS-DFS-Namespace") -ne $null
-                            DFSReplicationInstalled = ($fileFeatures | Where-Object Name -eq "FS-DFS-Replication") -ne $null
-                            FSRMInstalled = ($fileFeatures | Where-Object Name -eq "FS-Resource-Manager") -ne $null
+                            FileServerInstalled = ($null -ne ($fileFeatures | Where-Object Name -eq "FS-FileServer"))
+                            DFSNamespaceInstalled = ($null -ne ($fileFeatures | Where-Object Name -eq "FS-DFS-Namespace"))
+                            DFSReplicationInstalled = ($null -ne ($fileFeatures | Where-Object Name -eq "FS-DFS-Replication"))
+                            FSRMInstalled = ($null -ne ($fileFeatures | Where-Object Name -eq "FS-Resource-Manager"))
                             LastDiscovered = Get-Date
                         })
                     }
@@ -158,7 +158,7 @@ function Get-FileSharesData {
         
         foreach ($server in $servers) {
             $currentServer++
-            Write-Progress -Activity "Discovering File Shares" -Status "Server $currentServer of $totalServers: $($server.Name)" -PercentComplete (($currentServer / $totalServers) * 100)
+            Write-Progress -Activity "Discovering File Shares" -Status "Server $currentServer of $totalServers`: $($server.Name)" -PercentComplete (($currentServer / $totalServers) * 100)
             
             try {
                 if (Test-Connection -ComputerName $server.Name -Count 1 -Quiet) {
@@ -282,8 +282,8 @@ function Get-DFSNamespacesData {
         Write-MandALog "Discovering DFS Namespaces" -Level "INFO"
         
         # Get DFS roots from AD
-        $domain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
-        $domainDN = "DC=" + $domain.Name.Replace(".", ",DC=")
+        $domainObject = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
+        $domainDN = "DC=" + $domainObject.Name.Replace(".", ",DC=")
         
         # Try DFSN PowerShell module first
         if (Get-Module -ListAvailable -Name DFSN) {

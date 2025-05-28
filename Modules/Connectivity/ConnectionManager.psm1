@@ -240,7 +240,7 @@ function Connect-MandAExchange {
         Connect-ExchangeOnline -AppId $authContext.ClientId -ClientSecret $authContext.ClientSecret -Organization "$($authContext.TenantId)" -ShowBanner:$false -ErrorAction Stop
         
         # Test connection
-        $mailboxCount = (Get-Mailbox -ResultSize 1 -ErrorAction Stop | Measure-Object).Count
+        Get-Mailbox -ResultSize 1 -ErrorAction Stop | Out-Null
         
         Write-MandALog "Successfully connected to Exchange Online" -Level "SUCCESS"
         
