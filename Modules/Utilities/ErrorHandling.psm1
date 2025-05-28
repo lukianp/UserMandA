@@ -217,8 +217,8 @@ function Test-Prerequisites {
         
         if ($validationErrors.Count -gt 0) {
             Write-MandALog "Prerequisite validation failed:" -Level "ERROR"
-            foreach ($error in $validationErrors) {
-                Write-MandALog "  - $error" -Level "ERROR"
+            foreach ($errorMessage in $validationErrors) {
+                Write-MandALog "  - $errorMessage" -Level "ERROR"
             }
             return $false
         }

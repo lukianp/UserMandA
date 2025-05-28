@@ -29,8 +29,8 @@ function New-UserProfiles {
                 Write-Progress -Activity "Building User Profiles" -Status "User $processedCount of $($users.Count)" -PercentComplete (($processedCount / $users.Count) * 100)
             }
             
-            $profile = New-IndividualUserProfile -User $user -Configuration $Configuration
-            $userProfiles.Add($profile)
+            $userProfile = New-IndividualUserProfile -User $user -Configuration $Configuration
+            $userProfiles.Add($userProfile)
         }
         
         Write-Progress -Activity "Building User Profiles" -Completed
@@ -54,7 +54,7 @@ function New-IndividualUserProfile {
         [hashtable]$Configuration
     )
     
-    $profile = [PSCustomObject]@{
+    $userProfile = [PSCustomObject]@{
         # Identity
         UserPrincipalName = $User.UserPrincipalName
         SamAccountName = $User.SamAccountName
@@ -119,17 +119,17 @@ function New-IndividualUserProfile {
     }
     
     # Analyze complexity factors
-    Test-UserComplexity -Profile $profile -Configuration $Configuration
+    Test-UserComplexity -UserProfile $userProfile -Configuration $Configuration
     
     # Assess migration readiness
-    Test-MigrationReadiness -Profile $profile -Configuration $Configuration
+    Test-MigrationReadiness -UserProfile $userProfile -Configuration $Configuration
     
-    return $profile
+    return $userProfile
 }
 
 function Test-UserComplexity {
     param(
-        [PSCustomObject]$Profile,
+        [PSCustomObject]$UserProfile,
         [hashtable]$Configuration
     )
     
@@ -137,44 +137,44 @@ function Test-UserComplexity {
     $complexityScore = 0
     
     # Account status complexity
-    if (-not $Profile.Enabled) {
+    if (-not $UserProfile.Enabled) {
         $complexityFactors += "Disabled Account"
         $complexityScore += 1
     }
     
     # Service presence complexity
-    if ($Profile.HasADAccount -and -not $Profile.HasGraphAccount) {
+    if ($UserProfile.HasADAccount -and -not $UserProfile.HasGraphAccount) {
         $complexityFactors += "AD Only Account"
         $complexityScore += 2
     }
     
-    if (-not $Profile.HasExchangeMailbox -and $Profile.HasGraphAccount) {
+    if (-not $UserProfile.HasExchangeMailbox -and $UserProfile.HasGraphAccount) {
         $complexityFactors += "No Exchange Mailbox"
         $complexityScore += 1
     }
     
     # Licensing complexity
-    if ($Profile.LicenseCount -eq 0) {
+    if ($UserProfile.LicenseCount -eq 0) {
         $complexityFactors += "No Licenses Assigned"
         $complexityScore += 2
-    } elseif ($Profile.LicenseCount -gt 3) {
+    } elseif ($UserProfile.LicenseCount -gt 3) {
         $complexityFactors += "Multiple Licenses"
         $complexityScore += 1
     }
     
     # Mailbox size complexity
-    if ($Profile.MailboxSizeMB -gt 10240) { # > 10GB
+    if ($UserProfile.MailboxSizeMB -gt 10240) { # > 10GB
         $complexityFactors += "Large Mailbox (>10GB)"
         $complexityScore += 3
-    } elseif ($Profile.MailboxSizeMB -gt 5120) { # > 5GB
+    } elseif ($UserProfile.MailboxSizeMB -gt 5120) { # > 5GB
         $complexityFactors += "Medium Mailbox (>5GB)"
         $complexityScore += 2
     }
     
     # Account age complexity
-    if ($Profile.AccountCreated) {
+    if ($UserProfile.AccountCreated) {
         try {
-            $accountAge = (Get-Date) - [DateTime]$Profile.AccountCreated
+            $accountAge = (Get-Date) - [DateTime]$UserProfile.AccountCreated
             if ($accountAge.Days -gt 1825) { # > 5 years
                 $complexityFactors += "Legacy Account (>5 years)"
                 $complexityScore += 2
@@ -185,9 +185,9 @@ function Test-UserComplexity {
     }
     
     # Last logon complexity
-    if ($Profile.LastLogon) {
+    if ($UserProfile.LastLogon) {
         try {
-            $daysSinceLogon = (Get-Date) - [DateTime]$Profile.LastLogon
+            $daysSinceLogon = (Get-Date) - [DateTime]$UserProfile.LastLogon
             if ($daysSinceLogon.Days -gt 90) {
                 $complexityFactors += "Inactive User (>90 days)"
                 $complexityScore += 1
@@ -198,12 +198,12 @@ function Test-UserComplexity {
     }
     
     # Missing critical information
-    if ([string]::IsNullOrWhiteSpace($Profile.Mail)) {
+    if ([string]::IsNullOrWhiteSpace($UserProfile.Mail)) {
         $complexityFactors += "Missing Email Address"
         $complexityScore += 1
     }
     
-    if ([string]::IsNullOrWhiteSpace($Profile.Department)) {
+    if ([string]::IsNullOrWhiteSpace($UserProfile.Department)) {
         $complexityFactors += "Missing Department"
         $complexityScore += 1
     }
@@ -220,14 +220,14 @@ function Test-UserComplexity {
         $migrationCategory = "High Risk"
     }
     
-    $Profile.ComplexityFactors = $complexityFactors
-    $Profile.ComplexityScore = $complexityScore
-    $Profile.MigrationCategory = $migrationCategory
+    $UserProfile.ComplexityFactors = $complexityFactors
+    $UserProfile.ComplexityScore = $complexityScore
+    $UserProfile.MigrationCategory = $migrationCategory
 }
 
 function Test-MigrationReadiness {
     param(
-        [PSCustomObject]$Profile,
+        [PSCustomObject]$UserProfile,
         [hashtable]$Configuration
     )
     
@@ -236,30 +236,30 @@ function Test-MigrationReadiness {
     $riskFactors = @()
     
     # Check for blocking issues
-    if (-not $Profile.Enabled) {
+    if (-not $UserProfile.Enabled) {
         $blockingIssues += "Account is disabled"
         $readinessScore -= 50
     }
     
-    if (-not $Profile.HasGraphAccount) {
+    if (-not $UserProfile.HasGraphAccount) {
         $blockingIssues += "No Azure AD account"
         $readinessScore -= 30
     }
     
-    if ($Profile.LicenseCount -eq 0) {
+    if ($UserProfile.LicenseCount -eq 0) {
         $riskFactors += "No licenses assigned"
         $readinessScore -= 20
     }
     
     # Check for risk factors
-    if ($Profile.MailboxSizeMB -gt 10240) {
+    if ($UserProfile.MailboxSizeMB -gt 10240) {
         $riskFactors += "Large mailbox may require extended migration time"
         $readinessScore -= 10
     }
     
-    if ($Profile.LastLogon) {
+    if ($UserProfile.LastLogon) {
         try {
-            $daysSinceLogon = (Get-Date) - [DateTime]$Profile.LastLogon
+            $daysSinceLogon = (Get-Date) - [DateTime]$UserProfile.LastLogon
             if ($daysSinceLogon.Days -gt 180) {
                 $riskFactors += "User has not logged in recently"
                 $readinessScore -= 5
@@ -270,12 +270,12 @@ function Test-MigrationReadiness {
     }
     
     # Check for missing critical data
-    if ([string]::IsNullOrWhiteSpace($Profile.Mail)) {
+    if ([string]::IsNullOrWhiteSpace($UserProfile.Mail)) {
         $riskFactors += "Missing email address"
         $readinessScore -= 10
     }
     
-    if ([string]::IsNullOrWhiteSpace($Profile.Department)) {
+    if ([string]::IsNullOrWhiteSpace($UserProfile.Department)) {
         $riskFactors += "Missing department information"
         $readinessScore -= 5
     }
@@ -288,11 +288,11 @@ function Test-MigrationReadiness {
         default { "Not Ready" }
     }
     
-    $Profile.ReadinessScore = [Math]::Max(0, $readinessScore)
-    $Profile.ReadinessStatus = $readinessStatus
-    $Profile.BlockingIssues = $blockingIssues
-    $Profile.RiskFactors = $riskFactors
-    $Profile.RiskLevel = if ($riskFactors.Count -eq 0) { "Low" } elseif ($riskFactors.Count -le 2) { "Medium" } else { "High" }
+    $UserProfile.ReadinessScore = [Math]::Max(0, $readinessScore)
+    $UserProfile.ReadinessStatus = $readinessStatus
+    $UserProfile.BlockingIssues = $blockingIssues
+    $UserProfile.RiskFactors = $riskFactors
+    $UserProfile.RiskLevel = if ($riskFactors.Count -eq 0) { "Low" } elseif ($riskFactors.Count -le 2) { "Medium" } else { "High" }
 }
 
 function Measure-ComplexityScores {
@@ -306,22 +306,22 @@ function Measure-ComplexityScores {
     $p25 = Get-Percentile -Values $scores -Percentile 25
     $p75 = Get-Percentile -Values $scores -Percentile 75
     
-    foreach ($profile in $UserProfiles) {
+    foreach ($userProfile in $UserProfiles) {
         # Adjust migration priority based on complexity and readiness
-        if ($profile.ComplexityScore -le $p25 -and $profile.ReadinessScore -ge 90) {
-            $profile.MigrationPriority = "High"
-        } elseif ($profile.ComplexityScore -ge $p75 -or $profile.ReadinessScore -lt 50) {
-            $profile.MigrationPriority = "Low"
+        if ($userProfile.ComplexityScore -le $p25 -and $userProfile.ReadinessScore -ge 90) {
+            $userProfile.MigrationPriority = "High"
+        } elseif ($userProfile.ComplexityScore -ge $p75 -or $userProfile.ReadinessScore -lt 50) {
+            $userProfile.MigrationPriority = "Low"
         } else {
-            $profile.MigrationPriority = "Medium"
+            $userProfile.MigrationPriority = "Medium"
         }
         
         # Estimate migration time based on complexity and mailbox size
         $baseTime = 30 # minutes
-        $complexityMultiplier = 1 + ($profile.ComplexityScore * 0.1)
-        $sizeMultiplier = 1 + ($profile.MailboxSizeMB / 1024 * 0.1) # 10% per GB
+        $complexityMultiplier = 1 + ($userProfile.ComplexityScore * 0.1)
+        $sizeMultiplier = 1 + ($userProfile.MailboxSizeMB / 1024 * 0.1) # 10% per GB
         
-        $profile.EstimatedMigrationTime = [Math]::Round($baseTime * $complexityMultiplier * $sizeMultiplier, 0)
+        $userProfile.EstimatedMigrationTime = [Math]::Round($baseTime * $complexityMultiplier * $sizeMultiplier, 0)
     }
 }
 
@@ -492,7 +492,7 @@ function Measure-MigrationComplexity {
 # Enhanced UserProfileBuilder.psm1 additions
 function Measure-SecurityComplexity {
     param(
-        [PSCustomObject]$Profile,
+        [PSCustomObject]$UserProfile,
         [hashtable]$Relationships,
         [hashtable]$DiscoveryData
     )
@@ -509,8 +509,8 @@ function Measure-SecurityComplexity {
     }
     
     # Check for privileged role assignments
-    if ($Relationships.PrivilegedAccessPaths.UserToPrivilegedRole.ContainsKey($Profile.GraphId)) {
-        $privilegedRoles = $Relationships.PrivilegedAccessPaths.UserToPrivilegedRole[$Profile.GraphId]
+    if ($Relationships.PrivilegedAccessPaths.UserToPrivilegedRole.ContainsKey($UserProfile.GraphId)) {
+        $privilegedRoles = $Relationships.PrivilegedAccessPaths.UserToPrivilegedRole[$UserProfile.GraphId]
         
         foreach ($role in $privilegedRoles) {
             $securityFactors += "Privileged Role: $($role.Role) ($($role.AssignmentType))"
@@ -528,7 +528,7 @@ function Measure-SecurityComplexity {
     # Check for service principal ownership
     if ($DiscoveryData.ServicePrincipals) {
         $ownedSPs = $DiscoveryData.ServicePrincipals | Where-Object { 
-            $_.Owners -and $_.Owners -match $Profile.UserPrincipalName 
+            $_.Owners -and $_.Owners -match $UserProfile.UserPrincipalName 
         }
         
         foreach ($sp in $ownedSPs) {
@@ -549,7 +549,7 @@ function Measure-SecurityComplexity {
     # Check for high-risk application consents
     if ($DiscoveryData.OAuth2Grants) {
         $userConsents = $DiscoveryData.OAuth2Grants | Where-Object { 
-            $_.PrincipalId -eq $Profile.GraphId -and $_.ConsentType -eq "Principal" 
+            $_.PrincipalId -eq $UserProfile.GraphId -and $_.ConsentType -eq "Principal" 
         }
         
         foreach ($consent in $userConsents) {
@@ -571,8 +571,8 @@ function Measure-SecurityComplexity {
     }
     
     # Check for risky permissions through group membership
-    if ($Relationships.TransitiveMemberships.ContainsKey($Profile.GraphId)) {
-        $userGroups = $Relationships.TransitiveMemberships[$Profile.GraphId]
+    if ($Relationships.TransitiveMemberships.ContainsKey($UserProfile.GraphId)) {
+        $userGroups = $Relationships.TransitiveMemberships[$UserProfile.GraphId]
         
         # Check if any groups have privileged access
         foreach ($groupId in $userGroups) {
@@ -594,7 +594,7 @@ function Measure-SecurityComplexity {
     # Check for administrative unit membership
     if ($DiscoveryData.AdministrativeUnits) {
         foreach ($au in $DiscoveryData.AdministrativeUnits) {
-            $isMember = Test-AdminUnitMembership -UserId $Profile.GraphId -AdminUnitId $au.Id
+            $isMember = Test-AdminUnitMembership -UserId $UserProfile.GraphId -AdminUnitId $au.Id
             if ($isMember) {
                 $auRisk = if ($au.RestrictedManagement) { 2 } else { 1 }
                 $securityFactors += "Admin Unit Member: $($au.DisplayName)"
@@ -612,7 +612,7 @@ function Measure-SecurityComplexity {
     
     # Check for conditional access policy exclusions
     if ($DiscoveryData.ConditionalAccess) {
-        $exclusions = Find-ConditionalAccessExclusions -UserId $Profile.GraphId -Policies $DiscoveryData.ConditionalAccess
+        $exclusions = Find-ConditionalAccessExclusions -UserId $UserProfile.GraphId -Policies $DiscoveryData.ConditionalAccess
         
         foreach ($exclusion in $exclusions) {
             $caRisk = if ($exclusion.PolicyState -eq "enabled") { 3 } else { 1 }
@@ -640,18 +640,18 @@ function Measure-SecurityComplexity {
     }
     
     # Update profile with security assessment
-    $Profile.SecurityFactors = $securityFactors
-    $Profile.SecurityComplexityScore = $securityScore
-    $Profile.SecurityRiskLevel = $securityRiskLevel
-    $Profile.SecurityDetails = $securityDetails
+    $UserProfile.SecurityFactors = $securityFactors
+    $UserProfile.SecurityComplexityScore = $securityScore
+    $UserProfile.SecurityRiskLevel = $securityRiskLevel
+    $UserProfile.SecurityDetails = $securityDetails
     
     # Add security score to overall complexity
-    $Profile.ComplexityScore += $securityScore
+    $UserProfile.ComplexityScore += $securityScore
     
     # Adjust migration category if security risk is high
-    if ($securityRiskLevel -in @("Critical", "High") -and $Profile.MigrationCategory -ne "High Risk") {
-        $Profile.MigrationCategory = "High Risk"
-        $Profile.ComplexityFactors += "High Security Risk Profile"
+    if ($securityRiskLevel -in @("Critical", "High") -and $UserProfile.MigrationCategory -ne "High Risk") {
+        $UserProfile.MigrationCategory = "High Risk"
+        $UserProfile.ComplexityFactors += "High Security Risk Profile"
     }
 }
 
