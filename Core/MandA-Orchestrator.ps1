@@ -76,6 +76,7 @@ foreach ($ModulePath in $ModulePaths) {
     }
 }
 
+<<<<<<< HEAD
 
 function Convert-PSObjectToHashtable {
     param([Parameter(ValueFromPipeline)]$InputObject)
@@ -100,6 +101,8 @@ function Convert-PSObjectToHashtable {
     }
 }
 
+=======
+>>>>>>> 05e710e4ef4a5248b84c83117122cf5103f381e2
 function Initialize-MandAEnvironment {
     param($Configuration, [switch]$ValidateOnly)
     
@@ -355,9 +358,31 @@ try {
         Join-Path $script:SuiteRoot $ConfigurationFile
     }
     
+<<<<<<< HEAD
     # Load configuration and convert to hashtable for proper parameter binding
     $jsonConfig = Get-Content $resolvedConfigFile | ConvertFrom-Json
     $script:Config = Convert-PSObjectToHashtable -InputObject $jsonConfig
+=======
+    # Load configuration
+    function ConvertTo-HashtableFromPSObject {
+        param (
+            [Parameter(Mandatory=$true)]
+            [PSObject]$InputObject
+        )
+        $hashtable = @{}
+        foreach ($property in $InputObject.PSObject.Properties) {
+            if ($property.Value -is [PSObject]) {
+                $hashtable[$property.Name] = ConvertTo-HashtableFromPSObject -InputObject $property.Value
+            } else {
+                $hashtable[$property.Name] = $property.Value
+            }
+        }
+        return $hashtable
+    }
+
+    $configContent = Get-Content $resolvedConfigFile | ConvertFrom-Json
+    $script:Config = ConvertTo-HashtableFromPSObject -InputObject $configContent
+>>>>>>> 05e710e4ef4a5248b84c83117122cf5103f381e2
     
     # Override configuration with parameters
     if ($OutputPath) { $script:Config.environment.outputPath = $OutputPath }
