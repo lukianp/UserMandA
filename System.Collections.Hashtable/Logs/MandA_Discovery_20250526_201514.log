@@ -1,9 +1,0 @@
-﻿[2025-05-26 20:15:14] [INFO] [Main] M&A Discovery Suite logging initialized
-[2025-05-26 20:15:14] [INFO] [Main] Log file: System.Collections.Hashtable\Logs\MandA_Discovery_20250526_201514.log
-[2025-05-26 20:15:14] [INFO] [Main] Log level: System.Collections.Hashtable
-[2025-05-26 20:15:14] [INFO] [Main] Validating system prerequisites
-[2025-05-26 20:15:14] [ERROR] [Main] Prerequisite validation error: Could not compare "0" to "System.Collections.Hashtable". Error: "Cannot convert the "System.Collections.Hashtable" value of type "System.Collections.Hashtable" to type "System.Int32"."
-[2025-05-26 20:15:14] [ERROR] [Main] Environment initialization failed: System prerequisites validation failed
-[2025-05-26 20:15:14] [ERROR] [Main] CRITICAL ERROR: System prerequisites validation failed
-[2025-05-26 20:15:14] [INFO] [Main] Disconnecting from all services
-[2025-05-26 20:15:14] [SUCCESS] [Main] All services disconnected
