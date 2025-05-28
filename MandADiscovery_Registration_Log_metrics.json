@@ -1,0 +1,63 @@
+﻿{
+    "EndTime":  null,
+    "StartTime":  {
+                      "value":  "\/Date(1748304964935)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "27 May 2025 01:16:04"
+                  },
+    "Operations":  {
+                       "SecretCreation":  {
+                                              "Duration":  null,
+                                              "Success":  false
+                                          },
+                       "ModuleManagement":  {
+                                                "Duration":  null,
+                                                "Success":  false
+                                            },
+                       "CredentialStorage":  {
+                                                 "Duration":  null,
+                                                 "Success":  false
+                                             },
+                       "Prerequisites":  {
+                                             "Duration":  {
+                                                              "Ticks":  3556226,
+                                                              "Days":  0,
+                                                              "Hours":  0,
+                                                              "Milliseconds":  355,
+                                                              "Minutes":  0,
+                                                              "Seconds":  0,
+                                                              "TotalDays":  4.116002314814815E-06,
+                                                              "TotalHours":  9.8784055555555553E-05,
+                                                              "TotalMilliseconds":  355.62260000000003,
+                                                              "TotalMinutes":  0.0059270433333333331,
+                                                              "TotalSeconds":  0.3556226
+                                                          },
+                                             "StartTime":  {
+                                                               "value":  "\/Date(1748304964949)\/",
+                                                               "DisplayHint":  2,
+                                                               "DateTime":  "27 May 2025 01:16:04"
+                                                           },
+                                             "Success":  false
+                                         },
+                       "GraphConnection":  {
+                                               "Duration":  null,
+                                               "Success":  false
+                                           },
+                       "AzureConnection":  {
+                                               "Duration":  null,
+                                               "Success":  false
+                                           },
+                       "RoleAssignment":  {
+                                              "Duration":  null,
+                                              "Success":  false
+                                          },
+                       "AppRegistration":  {
+                                               "Duration":  null,
+                                               "Success":  false
+                                           },
+                       "PermissionGrant":  {
+                                               "Duration":  null,
+                                               "Success":  false
+                                           }
+                   }
+}
