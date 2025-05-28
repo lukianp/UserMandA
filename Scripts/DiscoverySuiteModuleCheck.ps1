@@ -87,6 +87,7 @@ function Write-SectionHeader {
 }
 
 function Install-OrUpdateModule {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)]
         [string]$ModuleName,
