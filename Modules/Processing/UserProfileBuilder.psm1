@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     User profile building for M&A Discovery Suite
 .DESCRIPTION
@@ -488,6 +488,271 @@ function Measure-MigrationComplexity {
         throw
     }
 }
+
+# Enhanced UserProfileBuilder.psm1 additions
+function Measure-SecurityComplexity {
+    param(
+        [PSCustomObject]$Profile,
+        [hashtable]$Relationships,
+        [hashtable]$DiscoveryData
+    )
+    
+    $securityFactors = @()
+    $securityScore = 0
+    $securityDetails = @{
+        PrivilegedAccess = @()
+        ServicePrincipalOwnership = @()
+        ApplicationConsents = @()
+        RiskyPermissions = @()
+        AdminUnitMembership = @()
+        ConditionalAccessExclusions = @()
+    }
+    
+    # Check for privileged role assignments
+    if ($Relationships.PrivilegedAccessPaths.UserToPrivilegedRole.ContainsKey($Profile.GraphId)) {
+        $privilegedRoles = $Relationships.PrivilegedAccessPaths.UserToPrivilegedRole[$Profile.GraphId]
+        
+        foreach ($role in $privilegedRoles) {
+            $securityFactors += "Privileged Role: $($role.Role) ($($role.AssignmentType))"
+            $securityScore += if ($role.AssignmentType -eq "Direct") { 5 } else { 3 }
+            
+            $securityDetails.PrivilegedAccess += @{
+                Role = $role.Role
+                Type = $role.AssignmentType
+                Path = $role.Path
+                RiskScore = if ($role.Role -eq "Global Administrator") { 10 } else { 5 }
+            }
+        }
+    }
+    
+    # Check for service principal ownership
+    if ($DiscoveryData.ServicePrincipals) {
+        $ownedSPs = $DiscoveryData.ServicePrincipals | Where-Object { 
+            $_.Owners -and $_.Owners -match $Profile.UserPrincipalName 
+        }
+        
+        foreach ($sp in $ownedSPs) {
+            $spRisk = if ($sp.RiskLevel -eq "High") { 4 } elseif ($sp.RiskLevel -eq "Medium") { 2 } else { 1 }
+            $securityFactors += "Service Principal Owner: $($sp.DisplayName) (Risk: $($sp.RiskLevel))"
+            $securityScore += $spRisk
+            
+            $securityDetails.ServicePrincipalOwnership += @{
+                ServicePrincipalId = $sp.Id
+                DisplayName = $sp.DisplayName
+                RiskLevel = $sp.RiskLevel
+                HighValuePermissions = $sp.HighValuePermissions
+                RiskScore = $spRisk
+            }
+        }
+    }
+    
+    # Check for high-risk application consents
+    if ($DiscoveryData.OAuth2Grants) {
+        $userConsents = $DiscoveryData.OAuth2Grants | Where-Object { 
+            $_.PrincipalId -eq $Profile.GraphId -and $_.ConsentType -eq "Principal" 
+        }
+        
+        foreach ($consent in $userConsents) {
+            if ($consent.RiskLevel -in @("High", "Medium")) {
+                $consentRisk = if ($consent.RiskLevel -eq "High") { 3 } else { 1 }
+                $securityFactors += "High-Risk App Consent: $($consent.ClientDisplayName)"
+                $securityScore += $consentRisk
+                
+                $securityDetails.ApplicationConsents += @{
+                    ApplicationId = $consent.ClientId
+                    ApplicationName = $consent.ClientDisplayName
+                    Scopes = $consent.Scope
+                    RiskLevel = $consent.RiskLevel
+                    HighRiskScopes = $consent.HighRiskScopes
+                    RiskScore = $consentRisk
+                }
+            }
+        }
+    }
+    
+    # Check for risky permissions through group membership
+    if ($Relationships.TransitiveMemberships.ContainsKey($Profile.GraphId)) {
+        $userGroups = $Relationships.TransitiveMemberships[$Profile.GraphId]
+        
+        # Check if any groups have privileged access
+        foreach ($groupId in $userGroups) {
+            if ($Relationships.PrivilegedAccessPaths.GroupToPrivilegedAccess.ContainsKey($groupId)) {
+                $groupPrivileges = $Relationships.PrivilegedAccessPaths.GroupToPrivilegedAccess[$groupId]
+                $securityFactors += "Privileged Group Member: $($groupPrivileges.GroupName)"
+                $securityScore += 2
+                
+                $securityDetails.RiskyPermissions += @{
+                    Source = "Group Membership"
+                    GroupId = $groupId
+                    Privileges = $groupPrivileges.Privileges
+                    RiskScore = 2
+                }
+            }
+        }
+    }
+    
+    # Check for administrative unit membership
+    if ($DiscoveryData.AdministrativeUnits) {
+        foreach ($au in $DiscoveryData.AdministrativeUnits) {
+            $isMember = Test-AdminUnitMembership -UserId $Profile.GraphId -AdminUnitId $au.Id
+            if ($isMember) {
+                $auRisk = if ($au.RestrictedManagement) { 2 } else { 1 }
+                $securityFactors += "Admin Unit Member: $($au.DisplayName)"
+                $securityScore += $auRisk
+                
+                $securityDetails.AdminUnitMembership += @{
+                    AdminUnitId = $au.Id
+                    DisplayName = $au.DisplayName
+                    RestrictedManagement = $au.RestrictedManagement
+                    RiskScore = $auRisk
+                }
+            }
+        }
+    }
+    
+    # Check for conditional access policy exclusions
+    if ($DiscoveryData.ConditionalAccess) {
+        $exclusions = Find-ConditionalAccessExclusions -UserId $Profile.GraphId -Policies $DiscoveryData.ConditionalAccess
+        
+        foreach ($exclusion in $exclusions) {
+            $caRisk = if ($exclusion.PolicyState -eq "enabled") { 3 } else { 1 }
+            $securityFactors += "CA Policy Exclusion: $($exclusion.PolicyName)"
+            $securityScore += $caRisk
+            
+            $securityDetails.ConditionalAccessExclusions += @{
+                PolicyId = $exclusion.PolicyId
+                PolicyName = $exclusion.PolicyName
+                ExclusionType = $exclusion.Type
+                RiskScore = $caRisk
+            }
+        }
+    }
+    
+    # Calculate overall security risk level
+    $securityRiskLevel = if ($securityScore -ge 15) { 
+        "Critical" 
+    } elseif ($securityScore -ge 10) { 
+        "High" 
+    } elseif ($securityScore -ge 5) { 
+        "Medium" 
+    } else { 
+        "Low" 
+    }
+    
+    # Update profile with security assessment
+    $Profile.SecurityFactors = $securityFactors
+    $Profile.SecurityComplexityScore = $securityScore
+    $Profile.SecurityRiskLevel = $securityRiskLevel
+    $Profile.SecurityDetails = $securityDetails
+    
+    # Add security score to overall complexity
+    $Profile.ComplexityScore += $securityScore
+    
+    # Adjust migration category if security risk is high
+    if ($securityRiskLevel -in @("Critical", "High") -and $Profile.MigrationCategory -ne "High Risk") {
+        $Profile.MigrationCategory = "High Risk"
+        $Profile.ComplexityFactors += "High Security Risk Profile"
+    }
+}
+
+function Test-HighRiskPermission {
+    param([string]$Permission)
+    
+    $highRiskPermissions = @(
+        # Application permissions
+        "Application.ReadWrite.All",
+        "AppRoleAssignment.ReadWrite.All", 
+        "Directory.ReadWrite.All",
+        "RoleManagement.ReadWrite.Directory",
+        "PrivilegedAccess.ReadWrite.AzureAD",
+        "PrivilegedAccess.ReadWrite.AzureResources",
+        
+        # Delegated permissions
+        "User.ReadWrite.All",
+        "Group.ReadWrite.All",
+        "GroupMember.ReadWrite.All",
+        "Mail.ReadWrite",
+        "Mail.Send",
+        "Files.ReadWrite.All",
+        
+        # Exchange permissions
+        "Exchange.ManageAsApp",
+        "full_access_as_app",
+        
+        # Other high-risk
+        "Sites.FullControl.All",
+        "TermStore.ReadWrite.All",
+        "SecurityEvents.ReadWrite.All"
+    )
+    
+    return $Permission -in $highRiskPermissions -or $Permission -match "\.All$|\.Write|Admin|Full"
+}
+
+function Measure-ServicePrincipalRisk {
+    param($ServicePrincipal, $Owners)
+    
+    $riskScore = 0
+    
+    # Check high-value permissions
+    if ($ServicePrincipal.HighValuePermissionsCount -gt 0) {
+        $riskScore += $ServicePrincipal.HighValuePermissionsCount * 2
+    }
+    
+    # Check for no owners (orphaned)
+    if ($Owners.Count -eq 0) {
+        $riskScore += 3
+    }
+    
+    # Check credentials
+    if ($ServicePrincipal.PasswordCredentialsCount -gt 0) {
+        $riskScore += 1
+    }
+    if ($ServicePrincipal.KeyCredentialsCount -gt 0) {
+        $riskScore += 1
+    }
+    
+    # Check publisher verification
+    if ($ServicePrincipal.VerifiedPublisher -eq "Not Verified") {
+        $riskScore += 2
+    }
+    
+    # Determine risk level
+    if ($riskScore -ge 8) { return "High" }
+    elseif ($riskScore -ge 4) { return "Medium" }
+    else { return "Low" }
+}
+
+function Measure-OAuth2ScopeRisk {
+    param([string]$Scopes)
+    
+    $scopeArray = $Scopes -split ' '
+    $highRiskScopes = @()
+    $riskScore = 0
+    
+    foreach ($scope in $scopeArray) {
+        if (Test-HighRiskPermission -Permission $scope) {
+            $highRiskScopes += $scope
+            $riskScore += 3
+        } elseif ($scope -match "Write|Manage|Admin") {
+            $riskScore += 2
+        } elseif ($scope -ne "User.Read" -and $scope -ne "profile" -and $scope -ne "openid") {
+            $riskScore += 1
+        }
+    }
+    
+    $level = if ($riskScore -ge 9) { "High" }
+    elseif ($riskScore -ge 5) { "Medium" }
+    else { "Low" }
+    
+    return @{
+        Level = $level
+        Score = $riskScore
+        HighRiskScopes = $highRiskScopes
+    }
+}
+
+
+
 
 # Export functions
 Export-ModuleMember -Function @(
