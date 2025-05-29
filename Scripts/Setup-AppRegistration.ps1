@@ -64,7 +64,7 @@ param(
     
     [Parameter(Mandatory=$false, HelpMessage="Path for encrypted credentials output")]
     [ValidateNotNullOrEmpty()]
-    [string]$EncryptedOutputPath = "C:\MandADiscovery\credentials.config",
+   [string]$EncryptedOutputPath = "C:\MandADiscovery\Output\credentials.config",
     
     [Parameter(Mandatory=$false, HelpMessage="Force recreation of existing app registration")]
     [switch]$Force,
@@ -93,6 +93,50 @@ param(
     [ValidatePattern('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')]
     [string]$ExistingClientId
 )
+
+
+# Get the script root directory for location-independent paths
+$script:ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$script:SuiteRoot = Split-Path $script:ScriptDir -Parent
+
+# Source Set-SuiteEnvironment.ps1 if not already done
+$envSetupScript = Join-Path $script:ScriptDir "Set-SuiteEnvironment.ps1"
+if (Test-Path $envSetupScript) {
+    . $envSetupScript
+}
+
+# Import required modules with better error handling
+$ModulePaths = @(
+    (Join-Path $script:SuiteRoot "Modules\Utilities\Logging.psm1"),
+    (Join-Path $script:SuiteRoot "Modules\Authentication\CredentialManagement.psm1")
+)
+
+$moduleLoadErrors = @()
+foreach ($ModulePath in $ModulePaths) {
+    if (Test-Path $ModulePath) {
+        try {
+            Import-Module $ModulePath -Force -Global
+            Write-Host "Successfully imported module: $(Split-Path $ModulePath -Leaf)" -ForegroundColor Green
+        } catch {
+            $moduleLoadErrors += "Failed to import $ModulePath $($_.Exception.Message)"
+            Write-Warning "Failed to import module: $ModulePath"
+        }
+    } else {
+        $moduleLoadErrors += "Module not found: $ModulePath"
+        Write-Warning "Required module not found: $ModulePath"
+    }
+}
+
+# Check if critical functions are available
+if (-not (Get-Command Set-SecureCredentials -ErrorAction SilentlyContinue)) {
+    Write-Error "Critical function 'Set-SecureCredentials' not available. Please ensure CredentialManagement.psm1 is properly loaded."
+    if ($moduleLoadErrors.Count -gt 0) {
+        Write-Error "Module loading errors:"
+        $moduleLoadErrors | ForEach-Object { Write-Error "  $_" }
+    }
+    throw "Required modules/functions not available. Cannot continue."
+}
+
 
 # Get the script root directory for location-independent paths
 $script:SuiteRoot = Split-Path $PSScriptRoot -Parent
@@ -488,11 +532,19 @@ function Test-Prerequisites {
 #endregion
 
 #region Enhanced Module Management
+
 function Ensure-RequiredModules {
     Start-OperationTimer "ModuleManagement"
     Write-ProgressHeader "MODULE MANAGEMENT" "Installing and updating required PowerShell modules"
     
     try {
+        # Set preferences to suppress Az module warnings
+        $OriginalWarningPreference = $WarningPreference
+        $WarningPreference = 'SilentlyContinue'
+        
+        # Suppress Az module breaking changes warnings
+        Update-AzConfig -DisplayBreakingChangeWarning $false -Scope Process -ErrorAction SilentlyContinue
+        
         # Clean up existing modules to prevent conflicts
         Write-EnhancedLog "Unloading potentially conflicting modules..." -Level PROGRESS
         $loadedModules = Get-Module -Name "Az.*", "Microsoft.Graph.*" -ErrorAction SilentlyContinue
@@ -522,44 +574,59 @@ function Ensure-RequiredModules {
             Write-EnhancedLog "Processing module: $moduleName" -Level PROGRESS
             
             try {
-                $installedModule = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue | 
-                    Sort-Object Version -Descending | Select-Object -First 1
-                
-                if (-not $installedModule) {
-                    Write-EnhancedLog "Installing $moduleName..." -Level PROGRESS
-                    Install-Module -Name $moduleName -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
-                    Write-EnhancedLog "Successfully installed $moduleName" -Level SUCCESS
-                } else {
-                    $installedVersion = $installedModule.Version.ToString()
-                    Write-EnhancedLog "Found $moduleName v$installedVersion" -Level INFO
+                # Special handling for Az modules in PowerShell 5.1
+                if ($moduleName -like "Az.*" -and $PSVersionTable.PSVersion.Major -eq 5) {
+                    # Ensure we have the latest version that's compatible with PS 5.1
+                    $installedModule = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue | 
+                        Where-Object { $_.Version.Major -ge 8 } |
+                        Sort-Object Version -Descending | 
+                        Select-Object -First 1
                     
-                    # Check for updates (optional, non-blocking)
-                    try {
-                        $latestModule = Find-Module -Name $moduleName -Repository PSGallery -ErrorAction Stop
-                        $latestVersion = $latestModule.Version.ToString()
-                        
-                        if ([version]$installedVersion -lt [version]$latestVersion) {
-                            Write-EnhancedLog "Update available for $moduleName v$installedVersion → v$latestVersion" -Level INFO
-                            Write-EnhancedLog "Installing latest version..." -Level PROGRESS
-                            Install-Module -Name $moduleName -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
-                            Write-EnhancedLog "Successfully updated $moduleName to v$latestVersion" -Level SUCCESS
-                        } else {
-                            Write-EnhancedLog "$moduleName is up to date (v$installedVersion)" -Level SUCCESS
-                        }
-                    } catch {
-                        Write-EnhancedLog "Could not check for updates to $moduleName`: $($_.Exception.Message)" -Level WARN
+                    if (-not $installedModule) {
+                        Write-EnhancedLog "Installing $moduleName (PS 5.1 compatible version)..." -Level PROGRESS
+                        Install-Module -Name $moduleName -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -SkipPublisherCheck -ErrorAction Stop
+                        Write-EnhancedLog "Successfully installed $moduleName" -Level SUCCESS
+                    } else {
+                        Write-EnhancedLog "Found $moduleName v$($installedModule.Version)" -Level INFO
                     }
-                }
-                
-                # Import with version verification
-                $latestInstalled = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue | 
-                    Sort-Object Version -Descending | Select-Object -First 1
-                
-                if ($latestInstalled) {
-                    Import-Module -Name $moduleName -RequiredVersion $latestInstalled.Version -Force -ErrorAction Stop
-                    Write-EnhancedLog "Imported $moduleName v$($latestInstalled.Version)" -Level SUCCESS
+                    
+                    # Import with specific error handling for Az modules
+                    try {
+                        Import-Module -Name $moduleName -Force -Global -ErrorAction Stop -WarningAction SilentlyContinue
+                        Write-EnhancedLog "Imported $moduleName successfully" -Level SUCCESS
+                    } catch {
+                        # If import fails, try importing specific version
+                        if ($installedModule) {
+                            Import-Module -Name $moduleName -RequiredVersion $installedModule.Version -Force -Global -ErrorAction Stop -WarningAction SilentlyContinue
+                            Write-EnhancedLog "Imported $moduleName v$($installedModule.Version) with specific version" -Level SUCCESS
+                        } else {
+                            throw
+                        }
+                    }
                 } else {
-                    throw "Module $moduleName not found after installation"
+                    # Standard module handling for non-Az modules
+                    $installedModule = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue | 
+                        Sort-Object Version -Descending | Select-Object -First 1
+                    
+                    if (-not $installedModule) {
+                        Write-EnhancedLog "Installing $moduleName..." -Level PROGRESS
+                        Install-Module -Name $moduleName -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
+                        Write-EnhancedLog "Successfully installed $moduleName" -Level SUCCESS
+                    } else {
+                        Write-EnhancedLog "Found $moduleName v$($installedModule.Version)" -Level INFO
+                        Write-EnhancedLog "$moduleName is up to date (v$($installedModule.Version))" -Level SUCCESS
+                    }
+                    
+                    # Import with version verification
+                    $latestInstalled = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue | 
+                        Sort-Object Version -Descending | Select-Object -First 1
+                    
+                    if ($latestInstalled) {
+                        Import-Module -Name $moduleName -RequiredVersion $latestInstalled.Version -Force -ErrorAction Stop
+                        Write-EnhancedLog "Imported $moduleName v$($latestInstalled.Version)" -Level SUCCESS
+                    } else {
+                        throw "Module $moduleName not found after installation"
+                    }
                 }
                 
             } catch {
@@ -571,14 +638,22 @@ function Ensure-RequiredModules {
         
         Write-Progress -Activity "Processing Modules" -Completed
         Write-EnhancedLog "All $totalModules modules processed successfully" -Level SUCCESS
+        
+        # Restore warning preference
+        $WarningPreference = $OriginalWarningPreference
+        
         Stop-OperationTimer "ModuleManagement" $true
         
     } catch {
         Write-EnhancedLog "Module management error: $($_.Exception.Message)" -Level ERROR
+        $WarningPreference = $OriginalWarningPreference
         Stop-OperationTimer "ModuleManagement" $false
         throw
     }
 }
+
+
+
 #endregion
 
 # Continue with the rest of the script...
@@ -755,7 +830,7 @@ function Connect-EnhancedAzure {
             
             # List subscription details (first 3 active)
             $activeSubscriptions | Select-Object -First 3 | ForEach-Object {
-                Write-EnhancedLog "    • $($_.Name) ($($_.State))" -Level INFO
+                Write-EnhancedLog "    â€¢ $($_.Name) ($($_.State))" -Level INFO
             }
             if ($activeSubscriptions.Count -gt 3) {
                 Write-EnhancedLog "    ... and $($activeSubscriptions.Count - 3) more active subscriptions" -Level INFO
@@ -1064,10 +1139,10 @@ function New-EnhancedClientSecret {
         # Enhanced security reminder with expiry calculation
         $daysUntilExpiry = ($secretEndDate - (Get-Date)).Days
         Write-EnhancedLog "SECRET SECURITY NOTICE:" -Level CRITICAL
-        Write-EnhancedLog "  • Secret value will be encrypted and stored securely" -Level IMPORTANT
-        Write-EnhancedLog "  • Secret cannot be retrieved after this session" -Level IMPORTANT
-        Write-EnhancedLog "  • Secret expires in $daysUntilExpiry days" -Level IMPORTANT
-        Write-EnhancedLog "  • Set calendar reminder for renewal before expiry" -Level IMPORTANT
+        Write-EnhancedLog "  â€¢ Secret value will be encrypted and stored securely" -Level IMPORTANT
+        Write-EnhancedLog "  â€¢ Secret cannot be retrieved after this session" -Level IMPORTANT
+        Write-EnhancedLog "  â€¢ Secret expires in $daysUntilExpiry days" -Level IMPORTANT
+        Write-EnhancedLog "  â€¢ Set calendar reminder for renewal before expiry" -Level IMPORTANT
         
         Stop-OperationTimer "SecretCreation" $true
         return $clientSecret
@@ -1116,6 +1191,7 @@ function Get-InteractiveClientSecret {
     }
 }
 
+
 function Save-EnhancedCredentials {
     param(
         [Parameter(Mandatory=$true)]
@@ -1127,79 +1203,122 @@ function Save-EnhancedCredentials {
     )
     
     Start-OperationTimer "CredentialStorage"
-    Write-ProgressHeader "CREDENTIAL STORAGE" "Encrypting and saving authentication data using M&A Suite credential management"
+    Write-ProgressHeader "CREDENTIAL STORAGE" "Encrypting and saving authentication data"
     
     try {
-        # Create configuration object for credential management
-        $config = @{
-            authentication = @{
-                credentialStorePath = $EncryptedOutputPath
-                certificateThumbprint = $null
-            }
-        }
-        
-        Write-EnhancedLog "Using M&A Discovery Suite credential management system..." -Level PROGRESS
+        Write-EnhancedLog "Preparing to save credentials..." -Level PROGRESS
         Write-EnhancedLog "  Target Path: $EncryptedOutputPath" -Level INFO
         Write-EnhancedLog "  Encryption: Windows DPAPI (current user)" -Level INFO
         
-        # Use the existing credential management system
-        $saveResult = Set-SecureCredentials -ClientId $AppRegistration.AppId -ClientSecret $ClientSecret.SecretText -TenantId $TenantId -Configuration $config -ExpiryDate $ClientSecret.EndDateTime
-        
-        if ($saveResult) {
-            Write-EnhancedLog "Credentials saved successfully using M&A Suite system" -Level SUCCESS
-            Write-EnhancedLog "  Location: $EncryptedOutputPath" -Level INFO
-            
-            # Create enhanced backup copy with rotation
-            try {
-                $encryptedDir = Split-Path $EncryptedOutputPath -Parent
-                $backupDir = Join-Path $encryptedDir "Backups"
-                if (-not (Test-Path $backupDir)) {
-                    New-Item -Path $backupDir -ItemType Directory -Force | Out-Null
+        # First, try to use the imported Set-SecureCredentials function
+        if (Get-Command Set-SecureCredentials -ErrorAction SilentlyContinue) {
+            # Create configuration object for credential management
+            $config = @{
+                authentication = @{
+                    credentialStorePath = $EncryptedOutputPath
+                    certificateThumbprint = $null
                 }
-                
-                $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-                $backupPath = Join-Path $backupDir "credentials_backup_$timestamp.config"
-                Copy-Item -Path $EncryptedOutputPath -Destination $backupPath -ErrorAction Stop
-                
-                # Cleanup old backups (keep last 5)
-                $backupFiles = Get-ChildItem -Path $backupDir -Filter "credentials_backup_*.config" | Sort-Object CreationTime -Descending
-                if ($backupFiles.Count -gt 5) {
-                    $backupFiles | Select-Object -Skip 5 | Remove-Item -Force
-                    Write-EnhancedLog "Cleaned up old backup files (kept 5 most recent)" -Level INFO
-                }
-                
-                Write-EnhancedLog "Created backup copy: $(Split-Path $backupPath -Leaf)" -Level SUCCESS
-            } catch {
-                Write-EnhancedLog "Could not create backup copy: $($_.Exception.Message)" -Level WARN
             }
             
-            # Create credential summary file for easy reference
-            try {
-                $summaryData = @{
-                    ApplicationName = $AppRegistration.DisplayName
-                    ClientId = $AppRegistration.AppId
-                    TenantId = $TenantId
-                    CreatedDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-                    ExpiryDate = $ClientSecret.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss')
-                    DaysUntilExpiry = ($ClientSecret.EndDateTime - (Get-Date)).Days
-                    CredentialFile = $EncryptedOutputPath
-                    BackupLocation = Split-Path $backupPath -Parent
-                    ScriptVersion = $script:ScriptInfo.Version
-                }
-                
-                $summaryPath = Join-Path (Split-Path $EncryptedOutputPath -Parent) "credential_summary.json"
-                $summaryData | ConvertTo-Json -Depth 2 | Set-Content -Path $summaryPath -Encoding UTF8
-                Write-EnhancedLog "Created credential summary file: credential_summary.json" -Level SUCCESS
-                
-            } catch {
-                Write-EnhancedLog "Could not create summary file: $($_.Exception.Message)" -Level WARN
-            }
+            Write-EnhancedLog "Using M&A Discovery Suite credential management system..." -Level PROGRESS
+            $saveResult = Set-SecureCredentials -ClientId $AppRegistration.AppId -ClientSecret $ClientSecret.SecretText -TenantId $TenantId -Configuration $config -ExpiryDate $ClientSecret.EndDateTime
             
-            Stop-OperationTimer "CredentialStorage" $true
-            return $true
+            if ($saveResult) {
+                Write-EnhancedLog "Credentials saved successfully using M&A Suite system" -Level SUCCESS
+            } else {
+                throw "Set-SecureCredentials returned false"
+            }
         } else {
-            throw "Credential save operation returned false"
+            # Fallback: Direct credential save if module function is not available
+            Write-EnhancedLog "Module function not available, using direct save method..." -Level WARN
+            
+            # Create the credential data
+            $credentialData = @{
+                ClientId = $AppRegistration.AppId
+                ClientSecret = $ClientSecret.SecretText
+                TenantId = $TenantId
+                CreatedDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+                ExpiryDate = $ClientSecret.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss')
+                ApplicationName = $AppRegistration.DisplayName
+            }
+            
+            # Convert to JSON
+            $jsonData = $credentialData | ConvertTo-Json
+            
+            # Encrypt using DPAPI
+            $secureString = ConvertTo-SecureString -String $jsonData -AsPlainText -Force
+            $encryptedData = ConvertFrom-SecureString -SecureString $secureString
+            
+            # Ensure directory exists
+            $credentialDir = Split-Path $EncryptedOutputPath -Parent
+            if (-not (Test-Path $credentialDir)) {
+                New-Item -Path $credentialDir -ItemType Directory -Force | Out-Null
+                Write-EnhancedLog "Created credential directory: $credentialDir" -Level SUCCESS
+            }
+            
+            # Save encrypted credentials
+            $encryptedData | Set-Content -Path $EncryptedOutputPath -Encoding UTF8
+            Write-EnhancedLog "Credentials saved directly to: $EncryptedOutputPath" -Level SUCCESS
         }
+        
+        # Verify the file was created
+        if (Test-Path $EncryptedOutputPath) {
+            $fileInfo = Get-Item $EncryptedOutputPath
+            Write-EnhancedLog "Credential file created successfully" -Level SUCCESS
+            Write-EnhancedLog "  File size: $($fileInfo.Length) bytes" -Level INFO
+            Write-EnhancedLog "  Location: $($fileInfo.FullName)" -Level INFO
+        } else {
+            throw "Credential file was not created at expected location"
+        }
+        
+        # Create enhanced backup copy with rotation
+        try {
+            $encryptedDir = Split-Path $EncryptedOutputPath -Parent
+            $backupDir = Join-Path $encryptedDir "Backups"
+            if (-not (Test-Path $backupDir)) {
+                New-Item -Path $backupDir -ItemType Directory -Force | Out-Null
+            }
+            
+            $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+            $backupPath = Join-Path $backupDir "credentials_backup_$timestamp.config"
+            Copy-Item -Path $EncryptedOutputPath -Destination $backupPath -ErrorAction Stop
+            
+            # Cleanup old backups (keep last 5)
+            $backupFiles = Get-ChildItem -Path $backupDir -Filter "credentials_backup_*.config" | Sort-Object CreationTime -Descending
+            if ($backupFiles.Count -gt 5) {
+                $backupFiles | Select-Object -Skip 5 | Remove-Item -Force
+                Write-EnhancedLog "Cleaned up old backup files (kept 5 most recent)" -Level INFO
+            }
+            
+            Write-EnhancedLog "Created backup copy: $(Split-Path $backupPath -Leaf)" -Level SUCCESS
+        } catch {
+            Write-EnhancedLog "Could not create backup copy: $($_.Exception.Message)" -Level WARN
+        }
+        
+        # Create credential summary file for easy reference
+        try {
+            $summaryData = @{
+                ApplicationName = $AppRegistration.DisplayName
+                ClientId = $AppRegistration.AppId
+                TenantId = $TenantId
+                CreatedDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+                ExpiryDate = $ClientSecret.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss')
+                DaysUntilExpiry = ($ClientSecret.EndDateTime - (Get-Date)).Days
+                CredentialFile = $EncryptedOutputPath
+                BackupLocation = if ($backupPath) { Split-Path $backupPath -Parent } else { "N/A" }
+                ScriptVersion = $script:ScriptInfo.Version
+            }
+            
+            $summaryPath = Join-Path (Split-Path $EncryptedOutputPath -Parent) "credential_summary.json"
+            $summaryData | ConvertTo-Json -Depth 2 | Set-Content -Path $summaryPath -Encoding UTF8
+            Write-EnhancedLog "Created credential summary file: credential_summary.json" -Level SUCCESS
+            
+        } catch {
+            Write-EnhancedLog "Could not create summary file: $($_.Exception.Message)" -Level WARN
+        }
+        
+        Stop-OperationTimer "CredentialStorage" $true
+        return $true
         
     } catch {
         Write-EnhancedLog "Failed to save credentials: $($_.Exception.Message)" -Level ERROR
@@ -1207,6 +1326,8 @@ function Save-EnhancedCredentials {
         throw
     }
 }
+
+
 #endregion
 #region Enhanced Role Assignment
 function Set-EnhancedRoleAssignments {
@@ -1580,11 +1701,11 @@ PowerShell: $($PSVersionTable.PSVersion)
     Write-EnhancedLog "  4. Run discovery: .\Core\MandA-Orchestrator.ps1 -Mode Full" -Level IMPORTANT
     
     Write-EnhancedLog "IMPORTANT SECURITY REMINDERS:" -Level CRITICAL -NoTimestamp
-    Write-EnhancedLog "  • Client secret expires: $($clientSecret.EndDateTime.ToString('yyyy-MM-dd'))" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  • Set calendar reminder for credential renewal" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  • Credentials are user-encrypted (current user only)" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  • Backup credentials file is stored securely" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  • Review and audit permissions regularly" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  â€¢ Client secret expires: $($clientSecret.EndDateTime.ToString('yyyy-MM-dd'))" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  â€¢ Set calendar reminder for credential renewal" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  â€¢ Credentials are user-encrypted (current user only)" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  â€¢ Backup credentials file is stored securely" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  â€¢ Review and audit permissions regularly" -Level IMPORTANT -NoTimestamp
     
     Write-EnhancedLog "Azure AD App Registration completed successfully!" -Level SUCCESS
     Write-EnhancedLog "Ready to proceed with M&A Discovery Suite operations" -Level SUCCESS
