@@ -1,15 +1,15 @@
 {
   "metadata": {
     "version": "4.0.0",
-    "companyName": "Zedra",
+    "companyName": "XXX",
     "projectName": "M&A Discovery Suite",
     "description": "Automated discovery and migration planning for M&A activities",
     "author": "IT Migration Team",
     "lastUpdated": "2024-01-15"
   },
   "environment": {
-    "outputPath": ".\\Output", 
-    "tempPath": ".\\Temp", 
+    "outputPath": "C:\\MandADiscovery\\Output", 
+    "tempPath": "C:\\MandADiscovery\\Temp",   
     "logLevel": "INFO", 
     "maxRetries": 3,
     "domainController": "DC01.contoso.com", 
@@ -32,7 +32,7 @@
   "authentication": {
     "useServicePrincipal": true,
     "useInteractiveAuth": false,
-    "credentialStorePath": ".\\Credentials\\credentials.config", 
+    "credentialStorePath": "C:\\MandADiscovery\\Credentials\\credentials.config", 
     "certificateThumbprint": "",
     "tokenRefreshThreshold": 600,
     "authenticationMethod": "ClientSecret" 
