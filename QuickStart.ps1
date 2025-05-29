@@ -20,18 +20,19 @@ param()
 $script:QuickStartScriptPath = $MyInvocation.MyCommand.Path
 # $script:ScriptsPath will be the directory containing this QuickStart.ps1 script (e.g., C:\UserMigration\Scripts).
 $script:ScriptsPath = Split-Path $script:QuickStartScriptPath -Parent
-# $script:SuiteRoot is assumed to be the parent of the 'Scripts' directory (e.g., C:\UserMigration).
-$script:SuiteRoot = Split-Path $script:ScriptsPath -Parent
+# $script:SuiteRoot is an initial assumption by QuickStart, but Set-SuiteEnvironment.ps1 will make the final determination.
+$script:SuiteRoot_QuickStartAssumption = Split-Path $script:ScriptsPath -Parent
 
 # Path to the Set-SuiteEnvironment.ps1 script.
 $envSetupScript = Join-Path $script:ScriptsPath "Set-SuiteEnvironment.ps1"
 
 if (Test-Path $envSetupScript) {
     Write-Verbose "Sourcing Set-SuiteEnvironment.ps1 from: $envSetupScript"
-    # Dot-source Set-SuiteEnvironment.ps1, passing the SuiteRoot determined by QuickStart.
-    # Set-SuiteEnvironment.ps1 (from Canvas set_suite_environment_v2) will then validate this path
-    # or use its internal logic to determine the correct SuiteRoot and set global variables.
-    . $envSetupScript -ProvidedSuiteRoot $script:SuiteRoot
+    # Dot-source Set-SuiteEnvironment.ps1 WITHOUT providing -ProvidedSuiteRoot.
+    # This allows Set-SuiteEnvironment.ps1 to use its internal default logic:
+    # 1. Check C:\UserMigration
+    # 2. If not valid, auto-detect based on its own location.
+    . $envSetupScript
 } else {
     Write-Error "CRITICAL: Set-SuiteEnvironment.ps1 not found at '$envSetupScript'. This script is essential for defining suite paths. Cannot proceed."
     exit 1
@@ -49,7 +50,7 @@ function Show-Menu {
     Write-Host "|              M&A Discovery Suite v4.0 - Main Menu              |" -ForegroundColor Cyan
     Write-Host "+==================================================================+" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  Suite Root Detected As: $($global:MandASuiteRoot)" -ForegroundColor DarkYellow # Display detected SuiteRoot
+    Write-Host "  Suite Root Established As: $($global:MandASuiteRoot)" -ForegroundColor DarkYellow # Display detected SuiteRoot from Set-SuiteEnvironment
     Write-Host ""
     Write-Host "  SETUP & CONFIGURATION" -ForegroundColor Yellow
     Write-Host "  ---------------------" -ForegroundColor Yellow
@@ -134,47 +135,17 @@ function Test-AppRegistrationPrerequisites {
 
     try {
         $configJson = Get-Content $configFilePath | ConvertFrom-Json
-        # Ensure paths from config are resolved correctly relative to SuiteRoot if they are relative
-        # The orchestrator and Setup-AppRegistration.ps1 handle path resolution internally.
-        # Here, we just need the configured path for the credential store.
-
-        $credStorePathRelative = $configJson.authentication.credentialStorePath
-        $outputPathRelative = $configJson.environment.outputPath
-
-        # Resolve outputPath first (relative to SuiteRoot)
-        $resolvedOutputPath = ""
-        if ([System.IO.Path]::IsPathRooted($outputPathRelative)) {
-            $resolvedOutputPath = $outputPathRelative
-        } else {
-            $resolvedOutputPath = Join-Path $global:MandASuiteRoot $outputPathRelative
-        }
-
-        # Resolve credStorePath (can be absolute or relative to resolvedOutputPath)
+        
+        $credStorePathFromConfig = $configJson.authentication.credentialStorePath
         $fullCredPath = ""
-        if ([System.IO.Path]::IsPathRooted($credStorePathRelative)) {
-            $fullCredPath = $credStorePathRelative
+
+        if ([System.IO.Path]::IsPathRooted($credStorePathFromConfig)) {
+            $fullCredPath = $credStorePathFromConfig
         } else {
-            # If credStorePath is relative, it's often relative to the outputPath in the config structure.
-            # Or, Setup-AppRegistration.ps1 uses its own default which is absolute.
-            # For this check, let's assume it might be relative to outputPath or an absolute path.
-            # The Setup-AppRegistration.ps1 script itself defaults to "C:\MandADiscovery\Output\credentials.config"
-            # Let's use the configured path and see if it exists.
-            $fullCredPath = $credStorePathRelative # Use the path as configured
-            if (-not ([System.IO.Path]::IsPathRooted($fullCredPath))) {
-                 # If it's still relative, assume it's relative to the suite root or output path.
-                 # The most reliable is the default output of Setup-AppRegistration.ps1 if not overridden.
-                 # For this check, we'll rely on the configured path.
-                 # $fullCredPath = Join-Path $resolvedOutputPath $credStorePathRelative # This was one interpretation
-                 # Let's stick to the direct config value, as Setup-AppRegistration.ps1's default is absolute.
-                 # If the config has a relative path, it should be relative to SuiteRoot or a known base.
-                 # The Setup-AppRegistration.ps1 script uses $EncryptedOutputPath which defaults to "C:\MandADiscovery\Output\credentials.config"
-                 # So, we should ideally check that specific default if the config path is not found.
-                 # For now, we check the path exactly as configured.
-                 $fullCredPath = $configJson.authentication.credentialStorePath
-                 if (-not ([System.IO.Path]::IsPathRooted($fullCredPath))) {
-                    $fullCredPath = Join-Path $global:MandASuiteRoot $fullCredPath
-                 }
-            }
+            # If relative, assume it's relative to SuiteRoot, as this is a common convention for config paths.
+            # Setup-AppRegistration.ps1 itself defaults to an absolute path "C:\MandADiscovery\Output\credentials.config"
+            # This check aims to see if the file specified in the *config* exists.
+            $fullCredPath = Join-Path $global:MandASuiteRoot $credStorePathFromConfig
         }
         
         # Normalize path for robust checking
@@ -182,7 +153,7 @@ function Test-AppRegistrationPrerequisites {
             $fullCredPath = (Resolve-Path -Path $fullCredPath).Path
         }
 
-        Write-Host "Verifying local credentials file at (from config): $fullCredPath ..." -NoNewline
+        Write-Host "Verifying local credentials file (from config '$($configJson.authentication.credentialStorePath)' resolved to: $fullCredPath) ..." -NoNewline
         if (Test-Path $fullCredPath -PathType Leaf) {
             Write-Host " FOUND." -ForegroundColor Green
             Write-Host "[INFO] App Registration appears to be configured locally (credentials file exists)." -ForegroundColor White
@@ -190,6 +161,7 @@ function Test-AppRegistrationPrerequisites {
         } else {
             Write-Host " NOT FOUND." -ForegroundColor Red
             Write-Host "[WARNING] Local credentials file ('$fullCredPath') is missing or path is incorrect in config." -ForegroundColor Yellow
+            Write-Host "           The Setup-AppRegistration.ps1 script typically saves credentials to 'C:\MandADiscovery\Output\credentials.config' by default." -ForegroundColor DarkGray
             Write-Host "           App Registration setup (Option [0]) might be required." -ForegroundColor Yellow
             return $false
         }
@@ -203,14 +175,14 @@ function Test-AppRegistrationPrerequisites {
 # Internal function to run app registration.
 function Invoke-AppRegistrationSetupInternal {
     Write-Host "`n--- Invoking App Registration Setup ---" -ForegroundColor Cyan
-    # $script:ScriptsPath is defined at the top of QuickStart.ps1 and is reliable.
-    # $global:MandAAppRegScriptPath is also available if Set-SuiteEnvironment.ps1 was successful.
-    $appRegScriptPath = Join-Path $script:ScriptsPath "Setup-AppRegistration.ps1" 
+    # $script:ScriptsPath is defined at the top of QuickStart.ps1 and is reliable for QuickStart's own directory.
+    # $global:MandAAppRegScriptPath (set by Set-SuiteEnvironment.ps1) is the canonical way to get this path.
+    $appRegScriptPath = $global:MandAAppRegScriptPath 
     
     if (Test-Path $appRegScriptPath) {
         Write-Host "Launching Azure App Registration setup script: $appRegScriptPath" -ForegroundColor Yellow
         Write-Host "Please follow the prompts. This may require elevated privileges." -ForegroundColor White
-        Write-Host "The script will use its default output for credentials (typically C:\MandADiscovery\Output\credentials.config) unless overridden." -ForegroundColor DarkGray
+        Write-Host "The script will use its default output for credentials (typically C:\MandADiscovery\Output\credentials.config) unless overridden by its parameters." -ForegroundColor DarkGray
         try {
             # Execute Setup-AppRegistration.ps1 from its own directory context
             Push-Location (Split-Path $appRegScriptPath -Parent)
@@ -218,6 +190,7 @@ function Invoke-AppRegistrationSetupInternal {
             Pop-Location
             Write-Host "[INFO] App Registration script execution finished." -ForegroundColor White
         } catch {
+            Pop-Location # Ensure Pop-Location on error
             Write-Host "[ERROR] Failed to execute Setup-AppRegistration.ps1: $($_.Exception.Message)" -ForegroundColor Red
         }
     } else {
@@ -240,8 +213,6 @@ function Invoke-OrchestratorPhaseWithAppRegCheck {
 
     Write-Host "`n--- Preparing to Launch Orchestrator ($PhaseTitle) ---" -ForegroundColor Cyan
     
-    # Pre-flight check: App Registration (Local Credentials)
-    # This check is only critical if not in ValidateOnly mode for the orchestrator itself.
     if (-not $ValidateOnlyFlag.IsPresent) {
         if (-not (Test-AppRegistrationPrerequisites)) {
             $confirmSetup = Read-Host "App Registration (local credentials file) appears to be missing or misconfigured. Run App Registration setup (Option [0]) now? (Y/N)"
@@ -264,16 +235,12 @@ function Invoke-OrchestratorPhaseWithAppRegCheck {
          Write-Host "[INFO] Skipping App Registration credential check for Orchestrator's ValidateOnly mode." -ForegroundColor DarkGray
     }
 
-
-    # Proceed with Orchestrator call
-    # $global:MandAOrchestratorPath and $global:MandADefaultConfigPath are set by Set-SuiteEnvironment.ps1
     $orchestratorPath = $global:MandAOrchestratorPath
-    $configFilePath = $global:MandADefaultConfigPath # Orchestrator will resolve this path relative to SuiteRoot if needed
+    $configFilePath = $global:MandADefaultConfigPath 
 
     if (-not (Test-Path $orchestratorPath -PathType Leaf)) { Write-Host "[ERROR] Orchestrator script not found: $orchestratorPath" -ForegroundColor Red; Request-UserToContinue; return }
-    # Config file existence is checked by the orchestrator itself using Resolve-MandAConfigPath or similar logic.
-
-    $arguments = @{ ConfigurationFile = $configFilePath } # Pass the path as configured or default
+    
+    $arguments = @{ ConfigurationFile = $configFilePath } 
     if ($ValidateOnlyFlag.IsPresent) { $arguments.ValidateOnly = $true } 
     elseif ($Mode) { $arguments.Mode = $Mode }
     foreach ($key in $ExtraArgs.Keys) { $arguments[$key] = $ExtraArgs[$key] }
@@ -281,8 +248,8 @@ function Invoke-OrchestratorPhaseWithAppRegCheck {
     $commandString = "& `"$orchestratorPath`""
     foreach ($key in $arguments.Keys) {
         if ($arguments[$key] -is [switch] -and $arguments[$key].IsPresent) { $commandString += " -$key" }
-        elseif ($arguments[$key] -is [bool] -and $arguments[$key]) { $commandString += " -$key" } # For explicit $true/$false switches
-        elseif ($null -ne $arguments[$key] -and -not ($arguments[$key] -is [switch])) { # Ensure non-switch params are not null
+        elseif ($arguments[$key] -is [bool] -and $arguments[$key]) { $commandString += " -$key" } 
+        elseif ($null -ne $arguments[$key] -and -not ($arguments[$key] -is [switch])) { 
              $commandString += " -$key `"$($arguments[$key])`"" 
         }
     }
@@ -290,7 +257,6 @@ function Invoke-OrchestratorPhaseWithAppRegCheck {
     Write-Host "Please wait..." -ForegroundColor Yellow
     
     try {
-        # Execute orchestrator from the Core directory context
         Push-Location $global:MandACorePath
         & $orchestratorPath @arguments
         $exitCode = $LASTEXITCODE
@@ -298,7 +264,7 @@ function Invoke-OrchestratorPhaseWithAppRegCheck {
         if ($exitCode -eq 0) { Write-Host "[SUCCESS] Orchestrator phase '$PhaseTitle' completed successfully." -ForegroundColor Green }
         else { Write-Host "[WARNING] Orchestrator phase '$PhaseTitle' completed with exit code: $exitCode. Check logs." -ForegroundColor Yellow }
     } catch { 
-        Pop-Location # Ensure Pop-Location on error
+        Pop-Location 
         Write-Host "[ERROR] Failed to launch Orchestrator for '$PhaseTitle': $($_.Exception.Message)" -ForegroundColor Red 
     }
     Request-UserToContinue
@@ -306,7 +272,6 @@ function Invoke-OrchestratorPhaseWithAppRegCheck {
 
 function Invoke-FullInstallationValidation {
     Write-Host "`n--- Invoking Full Installation Validation ---" -ForegroundColor Cyan
-    # $global:MandAValidationScriptPath is set by Set-SuiteEnvironment.ps1
     $validationScriptPath = $global:MandAValidationScriptPath
     if (Test-Path $validationScriptPath) {
         Write-Host "Running full installation validation: $validationScriptPath" -ForegroundColor Yellow
@@ -316,6 +281,7 @@ function Invoke-FullInstallationValidation {
             Pop-Location
             Write-Host "[INFO] Full installation validation finished." -ForegroundColor White
         } catch {
+            Pop-Location
             Write-Host "[ERROR] Failed to execute Validate-Installation.ps1: $($_.Exception.Message)" -ForegroundColor Red
         }
     } else {
@@ -331,29 +297,26 @@ function Request-UserToContinue {
 }
 
 # --- Main Script Body ---
-# Initial Checks (Run once at the start of QuickStart)
 Write-Host "`n--- M&A Discovery Suite QuickStart Initializing ---" -ForegroundColor Cyan
-Write-Host "Suite Root initially determined by QuickStart as: $($script:SuiteRoot)" -ForegroundColor DarkGray
+Write-Host "QuickStart's initial assumption for SuiteRoot: '$($script:SuiteRoot_QuickStartAssumption)'" -ForegroundColor DarkGray
 Write-Host "Sourcing Set-SuiteEnvironment.ps1 to finalize environment variables..." -ForegroundColor DarkGray
 # Set-SuiteEnvironment.ps1 was sourced at the very top. Its output will confirm the final SuiteRoot.
 
-# 1. Unblock Files (Run from SuiteRoot context)
-$unblockScriptPath = Join-Path $global:MandASuiteRoot "Unblock-AllFiles.ps1" # Use global path
+$unblockScriptPath = Join-Path $global:MandASuiteRoot "Unblock-AllFiles.ps1" 
 if (Test-Path $unblockScriptPath) {
     Write-Host "Attempting to unblock all script files in '$($global:MandASuiteRoot)'..." -ForegroundColor Yellow
     try { 
         Push-Location $global:MandASuiteRoot
-        & $unblockScriptPath -Path $global:MandASuiteRoot # Pass path explicitly
+        & $unblockScriptPath -Path $global:MandASuiteRoot 
         Pop-Location
         Write-Host "[SUCCESS] File unblocking completed." -ForegroundColor Green 
     }
     catch { 
-        Pop-Location # Ensure Pop-Location on error
+        Pop-Location 
         Write-Host "[ERROR] Unblocking files failed: $($_.Exception.Message)" -ForegroundColor Red; Request-UserToContinue 
     }
 } else { Write-Host "[WARNING] Unblock-AllFiles.ps1 not found at '$unblockScriptPath'. Files might be blocked." -ForegroundColor Yellow; Request-UserToContinue }
 
-# 2. PowerShell Module Check (initial check, can also be run from menu)
 if (-not (Test-RequiredPowerShellModules)) {
     Write-Host "[CRITICAL FAILURE] Essential PowerShell modules are missing or DiscoverySuiteModuleCheck.ps1 reported critical errors." -ForegroundColor Red
     Write-Host "                   Please resolve these module issues before proceeding." -ForegroundColor Red
@@ -365,7 +328,6 @@ if (-not (Test-RequiredPowerShellModules)) {
 
 Write-Host "Initialization complete. Launching main menu..." -ForegroundColor White; Start-Sleep -Seconds 1
 
-# Main Menu Loop
 do {
     Show-Menu
     $choice = Read-Host "Enter your choice"
@@ -384,11 +346,11 @@ do {
               Invoke-OrchestratorPhaseWithAppRegCheck -PhaseTitle "Export Phase (Part 2 of 2)" -Mode "Export"
             }
         '5' { Invoke-OrchestratorPhaseWithAppRegCheck -PhaseTitle "Validate Configuration Only" -ValidateOnlyFlag:$true }
-        'V' { Invoke-FullInstallationValidation } # New Menu Option
-        'M' { Test-RequiredPowerShellModules; Request-UserToContinue } # New Menu Option
+        'V' { Invoke-FullInstallationValidation } 
+        'M' { Test-RequiredPowerShellModules; Request-UserToContinue } 
         'q' { Write-Host "`nExiting M&A Discovery Suite QuickStart Launcher." -ForegroundColor Cyan }
         default { Write-Host "`n[ERROR] Invalid choice. Please try again." -ForegroundColor Red; Request-UserToContinue }
     }
-} while ($choice -cne 'q') # Case-insensitive comparison for quit
+} while ($choice -cne 'q') 
 
 Write-Host "Thank you for using the M&A Discovery Suite!" -ForegroundColor Green
