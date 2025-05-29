@@ -1,329 +1,17 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    User profile building for M&A Discovery Suite
+    M&A Discovery Suite - User Profile Builder Module
 .DESCRIPTION
-    Builds comprehensive user profiles for migration planning
+    This module is responsible for building comprehensive user profiles from aggregated data
+    and for measuring migration complexity and readiness for each user.
+.NOTES
+    Version: 1.2.0 (Integrated original functionality with new data contracts)
+    Author: Gemini
 #>
 
-function New-UserProfiles {
-    param(
-        [hashtable]$Data,
-        [hashtable]$Configuration
-    )
-    
-    try {
-        Write-MandALog "Building user profiles" -Level "HEADER"
-        
-        $userProfiles = [System.Collections.Generic.List[PSCustomObject]]::new()
-        $users = $Data.Users
-        
-        if (-not $users -or $users.Count -eq 0) {
-            Write-MandALog "No user data available for profile building" -Level "WARN"
-            return @()
-        }
-        
-        $processedCount = 0
-        foreach ($user in $users) {
-            $processedCount++
-            if ($processedCount % 50 -eq 0) {
-                Write-Progress -Activity "Building User Profiles" -Status "User $processedCount of $($users.Count)" -PercentComplete (($processedCount / $users.Count) * 100)
-            }
-            
-            $userProfile = New-IndividualUserProfile -User $user -Configuration $Configuration
-            $userProfiles.Add($userProfile)
-        }
-        
-        Write-Progress -Activity "Building User Profiles" -Completed
-        
-        # Calculate complexity scores
-        Write-MandALog "Calculating complexity scores..." -Level "INFO"
-        Measure-ComplexityScores -UserProfiles $userProfiles -Configuration $Configuration
-        
-        Write-MandALog "Built profiles for $($userProfiles.Count) users" -Level "SUCCESS"
-        return $userProfiles
-        
-    } catch {
-        Write-MandALog "User profile building failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
-    }
-}
-
-function New-IndividualUserProfile {
-    param(
-        [PSCustomObject]$User,
-        [hashtable]$Configuration
-    )
-    
-    $userProfile = [PSCustomObject]@{
-        # Identity
-        UserPrincipalName = $User.UserPrincipalName
-        SamAccountName = $User.SamAccountName
-        DisplayName = $User.DisplayName
-        GraphId = $User.GraphId
-        
-        # Personal Information
-        GivenName = $User.GivenName
-        Surname = $User.Surname
-        Mail = $User.Mail
-        
-        # Organizational Information
-        Department = $User.Department
-        Title = $User.Title
-        Company = $User.Company
-        Office = $User.Office
-        Manager = $User.Manager
-        
-        # Account Status
-        Enabled = $User.Enabled
-        AccountCreated = $User.AccountCreated
-        LastLogon = $User.LastLogon
-        PasswordLastSet = $User.PasswordLastSet
-        
-        # Service Presence
-        HasADAccount = $User.HasADAccount
-        HasGraphAccount = $User.HasGraphAccount
-        HasExchangeMailbox = $User.HasExchangeMailbox
-        
-        # Licensing
-        AssignedLicenses = $User.AssignedLicenses
-        LicenseCount = if ($User.AssignedLicenses) { ($User.AssignedLicenses -split ';').Count } else { 0 }
-        
-        # Mailbox Information
-        MailboxType = $User.MailboxType
-        MailboxSize = $User.MailboxSize
-        MailboxSizeMB = Convert-MailboxSizeToMB -SizeString $User.MailboxSize
-        
-        # Migration Complexity Factors
-        ComplexityFactors = @()
-        ComplexityScore = 0
-        MigrationCategory = "Standard"
-        
-        # Migration Planning
-        MigrationWave = $null
-        MigrationPriority = "Medium"
-        EstimatedMigrationTime = $null
-        
-        # Risk Assessment
-        RiskFactors = @()
-        RiskLevel = "Low"
-        
-        # Dependencies
-        DirectReports = @()
-        GroupMemberships = @()
-        ApplicationAccess = @()
-        
-        # Migration Readiness
-        ReadinessScore = 0
-        ReadinessStatus = "Not Assessed"
-        BlockingIssues = @()
-    }
-    
-    # Analyze complexity factors
-    Test-UserComplexity -UserProfile $userProfile -Configuration $Configuration
-    
-    # Assess migration readiness
-    Test-MigrationReadiness -UserProfile $userProfile -Configuration $Configuration
-    
-    return $userProfile
-}
-
-function Test-UserComplexity {
-    param(
-        [PSCustomObject]$UserProfile,
-        [hashtable]$Configuration
-    )
-    
-    $complexityFactors = @()
-    $complexityScore = 0
-    
-    # Account status complexity
-    if (-not $UserProfile.Enabled) {
-        $complexityFactors += "Disabled Account"
-        $complexityScore += 1
-    }
-    
-    # Service presence complexity
-    if ($UserProfile.HasADAccount -and -not $UserProfile.HasGraphAccount) {
-        $complexityFactors += "AD Only Account"
-        $complexityScore += 2
-    }
-    
-    if (-not $UserProfile.HasExchangeMailbox -and $UserProfile.HasGraphAccount) {
-        $complexityFactors += "No Exchange Mailbox"
-        $complexityScore += 1
-    }
-    
-    # Licensing complexity
-    if ($UserProfile.LicenseCount -eq 0) {
-        $complexityFactors += "No Licenses Assigned"
-        $complexityScore += 2
-    } elseif ($UserProfile.LicenseCount -gt 3) {
-        $complexityFactors += "Multiple Licenses"
-        $complexityScore += 1
-    }
-    
-    # Mailbox size complexity
-    if ($UserProfile.MailboxSizeMB -gt 10240) { # > 10GB
-        $complexityFactors += "Large Mailbox (>10GB)"
-        $complexityScore += 3
-    } elseif ($UserProfile.MailboxSizeMB -gt 5120) { # > 5GB
-        $complexityFactors += "Medium Mailbox (>5GB)"
-        $complexityScore += 2
-    }
-    
-    # Account age complexity
-    if ($UserProfile.AccountCreated) {
-        try {
-            $accountAge = (Get-Date) - [DateTime]$UserProfile.AccountCreated
-            if ($accountAge.Days -gt 1825) { # > 5 years
-                $complexityFactors += "Legacy Account (>5 years)"
-                $complexityScore += 2
-            }
-        } catch {
-            # Ignore date parsing errors
-        }
-    }
-    
-    # Last logon complexity
-    if ($UserProfile.LastLogon) {
-        try {
-            $daysSinceLogon = (Get-Date) - [DateTime]$UserProfile.LastLogon
-            if ($daysSinceLogon.Days -gt 90) {
-                $complexityFactors += "Inactive User (>90 days)"
-                $complexityScore += 1
-            }
-        } catch {
-            # Ignore date parsing errors
-        }
-    }
-    
-    # Missing critical information
-    if ([string]::IsNullOrWhiteSpace($UserProfile.Mail)) {
-        $complexityFactors += "Missing Email Address"
-        $complexityScore += 1
-    }
-    
-    if ([string]::IsNullOrWhiteSpace($UserProfile.Department)) {
-        $complexityFactors += "Missing Department"
-        $complexityScore += 1
-    }
-    
-    # Determine migration category
-    $thresholds = $Configuration.processing.complexityThresholds
-    if ($complexityScore -le $thresholds.low) {
-        $migrationCategory = "Simple"
-    } elseif ($complexityScore -le $thresholds.medium) {
-        $migrationCategory = "Standard"
-    } elseif ($complexityScore -le $thresholds.high) {
-        $migrationCategory = "Complex"
-    } else {
-        $migrationCategory = "High Risk"
-    }
-    
-    $UserProfile.ComplexityFactors = $complexityFactors
-    $UserProfile.ComplexityScore = $complexityScore
-    $UserProfile.MigrationCategory = $migrationCategory
-}
-
-function Test-MigrationReadiness {
-    param(
-        [PSCustomObject]$UserProfile,
-        [hashtable]$Configuration
-    )
-    
-    $readinessScore = 100
-    $blockingIssues = @()
-    $riskFactors = @()
-    
-    # Check for blocking issues
-    if (-not $UserProfile.Enabled) {
-        $blockingIssues += "Account is disabled"
-        $readinessScore -= 50
-    }
-    
-    if (-not $UserProfile.HasGraphAccount) {
-        $blockingIssues += "No Azure AD account"
-        $readinessScore -= 30
-    }
-    
-    if ($UserProfile.LicenseCount -eq 0) {
-        $riskFactors += "No licenses assigned"
-        $readinessScore -= 20
-    }
-    
-    # Check for risk factors
-    if ($UserProfile.MailboxSizeMB -gt 10240) {
-        $riskFactors += "Large mailbox may require extended migration time"
-        $readinessScore -= 10
-    }
-    
-    if ($UserProfile.LastLogon) {
-        try {
-            $daysSinceLogon = (Get-Date) - [DateTime]$UserProfile.LastLogon
-            if ($daysSinceLogon.Days -gt 180) {
-                $riskFactors += "User has not logged in recently"
-                $readinessScore -= 5
-            }
-        } catch {
-            # Ignore date parsing errors
-        }
-    }
-    
-    # Check for missing critical data
-    if ([string]::IsNullOrWhiteSpace($UserProfile.Mail)) {
-        $riskFactors += "Missing email address"
-        $readinessScore -= 10
-    }
-    
-    if ([string]::IsNullOrWhiteSpace($UserProfile.Department)) {
-        $riskFactors += "Missing department information"
-        $readinessScore -= 5
-    }
-    
-    # Determine readiness status
-    $readinessStatus = switch ($readinessScore) {
-        { $_ -ge 90 } { "Ready" }
-        { $_ -ge 70 } { "Minor Issues" }
-        { $_ -ge 50 } { "Needs Attention" }
-        default { "Not Ready" }
-    }
-    
-    $UserProfile.ReadinessScore = [Math]::Max(0, $readinessScore)
-    $UserProfile.ReadinessStatus = $readinessStatus
-    $UserProfile.BlockingIssues = $blockingIssues
-    $UserProfile.RiskFactors = $riskFactors
-    $UserProfile.RiskLevel = if ($riskFactors.Count -eq 0) { "Low" } elseif ($riskFactors.Count -le 2) { "Medium" } else { "High" }
-}
-
-function Measure-ComplexityScores {
-    param(
-        [System.Collections.Generic.List[PSCustomObject]]$UserProfiles,
-        [hashtable]$Configuration
-    )
-    
-    # Calculate percentiles for relative complexity
-    $scores = $UserProfiles | ForEach-Object { $_.ComplexityScore } | Sort-Object
-    $p25 = Get-Percentile -Values $scores -Percentile 25
-    $p75 = Get-Percentile -Values $scores -Percentile 75
-    
-    foreach ($userProfile in $UserProfiles) {
-        # Adjust migration priority based on complexity and readiness
-        if ($userProfile.ComplexityScore -le $p25 -and $userProfile.ReadinessScore -ge 90) {
-            $userProfile.MigrationPriority = "High"
-        } elseif ($userProfile.ComplexityScore -ge $p75 -or $userProfile.ReadinessScore -lt 50) {
-            $userProfile.MigrationPriority = "Low"
-        } else {
-            $userProfile.MigrationPriority = "Medium"
-        }
-        
-        # Estimate migration time based on complexity and mailbox size
-        $baseTime = 30 # minutes
-        $complexityMultiplier = 1 + ($userProfile.ComplexityScore * 0.1)
-        $sizeMultiplier = 1 + ($userProfile.MailboxSizeMB / 1024 * 0.1) # 10% per GB
-        
-        $userProfile.EstimatedMigrationTime = [Math]::Round($baseTime * $complexityMultiplier * $sizeMultiplier, 0)
-    }
-}
+[CmdletBinding()]
+param()
 
 function Convert-MailboxSizeToMB {
     param([string]$SizeString)
@@ -351,12 +39,13 @@ function Convert-MailboxSizeToMB {
         if ($SizeString -match '\(([0-9,]+)\s*bytes\)') {
             $bytesString = $matches[1] -replace ',', ''
             $bytes = [long]$bytesString
-            return $bytes / 1024 / 1024 # Convert to MB
+            return [math]::Round($bytes / 1MB, 2) # Convert to MB and round
         }
         
         return 0
         
     } catch {
+        Write-MandALog "Error parsing mailbox size '$SizeString': $($_.Exception.Message)" -Level "DEBUG"
         return 0
     }
 }
@@ -367,490 +56,340 @@ function Get-Percentile {
         [int]$Percentile
     )
     
-    if ($Values.Count -eq 0) { return 0 }
+    if ($null -eq $Values -or $Values.Count -eq 0) { return 0 }
     
-    $index = [Math]::Ceiling(($Percentile / 100.0) * $Values.Count) - 1
-    $index = [Math]::Max(0, [Math]::Min($index, $Values.Count - 1))
+    $SortedValues = $Values | Sort-Object
+    # Ensure index is within bounds
+    $rawIndex = ($Percentile / 100.0) * $SortedValues.Count 
+    # For percentile, it's common to take the Nth value. If N is not an integer, interpolation might be used.
+    # Simplest is Ceiling(N)-1 for 0-based index. Or Round(N)-1
+    $index = [Math]::Min([Math]::Max([Math]::Ceiling($rawIndex) - 1, 0), $SortedValues.Count - 1)
     
-    return $Values[$index]
+    return $SortedValues[$index]
 }
 
-function Measure-MigrationComplexity {
+# Main function to build user profiles
+function New-UserProfiles {
+    [CmdletBinding()]
     param(
-        [array]$Profiles,
+        [Parameter(Mandatory = $true)]
+        [hashtable]$AggregatedDataStore, # Contains .Users, .Groups, .Devices etc. from DataAggregation
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$RelationshipGraph,   # Contains linked entity information
+
+        [Parameter(Mandatory = $true)]
         [hashtable]$Configuration
     )
-    
-    try {
-        Write-MandALog "Calculating migration complexity analysis" -Level "INFO"
-        
-        $complexityAnalysis = [System.Collections.Generic.List[PSCustomObject]]::new()
-        
-        # Overall statistics
-        $totalUsers = $Profiles.Count
-        $simpleUsers = ($Profiles | Where-Object { $_.MigrationCategory -eq "Simple" }).Count
-        $standardUsers = ($Profiles | Where-Object { $_.MigrationCategory -eq "Standard" }).Count
-        $complexUsers = ($Profiles | Where-Object { $_.MigrationCategory -eq "Complex" }).Count
-        $highRiskUsers = ($Profiles | Where-Object { $_.MigrationCategory -eq "High Risk" }).Count
-        
-        $complexityAnalysis.Add([PSCustomObject]@{
-            Category = "Overall Statistics"
-            Metric = "Total Users"
-            Value = $totalUsers
-            Percentage = 100
-        })
-        
-        $complexityAnalysis.Add([PSCustomObject]@{
-            Category = "Migration Complexity"
-            Metric = "Simple Migrations"
-            Value = $simpleUsers
-            Percentage = if ($totalUsers -gt 0) { [math]::Round(($simpleUsers / $totalUsers) * 100, 1) } else { 0 }
-        })
-        
-        $complexityAnalysis.Add([PSCustomObject]@{
-            Category = "Migration Complexity"
-            Metric = "Standard Migrations"
-            Value = $standardUsers
-            Percentage = if ($totalUsers -gt 0) { [math]::Round(($standardUsers / $totalUsers) * 100, 1) } else { 0 }
-        })
-        
-        $complexityAnalysis.Add([PSCustomObject]@{
-            Category = "Migration Complexity"
-            Metric = "Complex Migrations"
-            Value = $complexUsers
-            Percentage = if ($totalUsers -gt 0) { [math]::Round(($complexUsers / $totalUsers) * 100, 1) } else { 0 }
-        })
-        
-        $complexityAnalysis.Add([PSCustomObject]@{
-            Category = "Migration Complexity"
-            Metric = "High Risk Migrations"
-            Value = $highRiskUsers
-            Percentage = if ($totalUsers -gt 0) { [math]::Round(($highRiskUsers / $totalUsers) * 100, 1) } else { 0 }
-        })
-        
-        # Readiness statistics
-        $readyUsers = ($Profiles | Where-Object { $_.ReadinessStatus -eq "Ready" }).Count
-        $minorIssuesUsers = ($Profiles | Where-Object { $_.ReadinessStatus -eq "Minor Issues" }).Count
-        $needsAttentionUsers = ($Profiles | Where-Object { $_.ReadinessStatus -eq "Needs Attention" }).Count
-        $notReadyUsers = ($Profiles | Where-Object { $_.ReadinessStatus -eq "Not Ready" }).Count
-        
-        $complexityAnalysis.Add([PSCustomObject]@{
-            Category = "Migration Readiness"
-            Metric = "Ready for Migration"
-            Value = $readyUsers
-            Percentage = if ($totalUsers -gt 0) { [math]::Round(($readyUsers / $totalUsers) * 100, 1) } else { 0 }
-        })
-        
-        $complexityAnalysis.Add([PSCustomObject]@{
-            Category = "Migration Readiness"
-            Metric = "Minor Issues"
-            Value = $minorIssuesUsers
-            Percentage = if ($totalUsers -gt 0) { [math]::Round(($minorIssuesUsers / $totalUsers) * 100, 1) } else { 0 }
-        })
-        
-        $complexityAnalysis.Add([PSCustomObject]@{
-            Category = "Migration Readiness"
-            Metric = "Needs Attention"
-            Value = $needsAttentionUsers
-            Percentage = if ($totalUsers -gt 0) { [math]::Round(($needsAttentionUsers / $totalUsers) * 100, 1) } else { 0 }
-        })
-        
-        $complexityAnalysis.Add([PSCustomObject]@{
-            Category = "Migration Readiness"
-            Metric = "Not Ready"
-            Value = $notReadyUsers
-            Percentage = if ($totalUsers -gt 0) { [math]::Round(($notReadyUsers / $totalUsers) * 100, 1) } else { 0 }
-        })
-        
-        # Time estimates
-        $totalEstimatedTime = ($Profiles | Measure-Object -Property EstimatedMigrationTime -Sum).Sum
-        $averageTime = if ($totalUsers -gt 0) { [math]::Round($totalEstimatedTime / $totalUsers, 0) } else { 0 }
-        
-        $complexityAnalysis.Add([PSCustomObject]@{
-            Category = "Time Estimates"
-            Metric = "Total Estimated Time (hours)"
-            Value = [math]::Round($totalEstimatedTime / 60, 1)
-            Percentage = $null
-        })
-        
-        $complexityAnalysis.Add([PSCustomObject]@{
-            Category = "Time Estimates"
-            Metric = "Average Time per User (minutes)"
-            Value = $averageTime
-            Percentage = $null
-        })
-        
-        Write-MandALog "Migration complexity analysis completed" -Level "SUCCESS"
-        return $complexityAnalysis
-        
-    } catch {
-        Write-MandALog "Migration complexity analysis failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
+
+    Write-MandALog "Starting User Profile Building..." -Level "INFO"
+    $userProfiles = [System.Collections.Generic.List[object]]::new()
+
+    # Ensure AggregatedDataStore.Users exists and is a collection
+    $allAggregatedUsers = @()
+    if ($AggregatedDataStore.ContainsKey("Users") -and ($AggregatedDataStore.Users -is [System.Collections.IList])) {
+        $allAggregatedUsers = $AggregatedDataStore.Users
     }
+    
+    if ($allAggregatedUsers.Count -eq 0) {
+        Write-MandALog "No users found in AggregatedDataStore.Users. Cannot build profiles." -Level "WARN"
+        return $userProfiles # Return empty list
+    }
+
+    Write-MandALog "Processing $($allAggregatedUsers.Count) user entries from aggregated data." -Level "INFO"
+    
+    $processedCount = 0
+    foreach ($rawUser in $allAggregatedUsers) {
+        $processedCount++
+        Update-Progress -Activity "Building User Profiles" -Status "User $processedCount of $($allAggregatedUsers.Count)" -PercentComplete (($processedCount / $allAggregatedUsers.Count) * 100)
+
+        # Create the base profile by mapping properties from the rawUser object
+        # (which comes from $AggregatedDataStore.Users, assumed to be consolidated)
+        $userProfile = [PSCustomObject]@{
+            # Identity
+            UserPrincipalName = $rawUser.UserPrincipalName
+            SamAccountName    = $rawUser.SamAccountName
+            DisplayName       = $rawUser.DisplayName
+            GraphId           = $rawUser.GraphId # Or $rawUser.Id if that's the Graph Object ID
+            
+            # Personal Information
+            GivenName         = $rawUser.GivenName
+            Surname           = $rawUser.Surname
+            Mail              = $rawUser.Mail
+            
+            # Organizational Information
+            Department        = $rawUser.Department
+            Title             = $rawUser.Title # Or JobTitle
+            Company           = $rawUser.Company # Or CompanyName
+            Office            = $rawUser.Office # Or PhysicalDeliveryOfficeName
+            Manager           = $rawUser.Manager # This might be a DN or UPN; needs resolving if a full manager profile is needed
+            
+            # Account Status
+            Enabled           = $rawUser.Enabled # Or AccountEnabled
+            AccountCreated    = $rawUser.AccountCreated # Or CreatedDateTime
+            LastLogon         = $rawUser.LastLogon # Or LastSignInDateTime
+            PasswordLastSet   = $rawUser.PasswordLastSet
+            
+            # Service Presence (These flags should be set during data aggregation if not directly on rawUser)
+            HasADAccount      = if($rawUser.PSObject.Properties["HasADAccount"]){$rawUser.HasADAccount}else{$false}
+            HasGraphAccount   = if($rawUser.PSObject.Properties["HasGraphAccount"]){$rawUser.HasGraphAccount}else{$false}
+            HasExchangeMailbox= if($rawUser.PSObject.Properties["HasExchangeMailbox"]){$rawUser.HasExchangeMailbox}else{$false}
+            
+            # Licensing
+            AssignedLicenses  = $rawUser.AssignedLicenses # Assuming this is a string or array from aggregation
+            LicenseCount      = if ($rawUser.PSObject.Properties["AssignedLicenses"] -and $rawUser.AssignedLicenses) { 
+                                    if ($rawUser.AssignedLicenses -is [array]) { $rawUser.AssignedLicenses.Count }
+                                    elseif ($rawUser.AssignedLicenses -is [string]) { ($rawUser.AssignedLicenses -split ';').Where({-not [string]::IsNullOrWhiteSpace($_)}).Count } # Count non-empty licenses
+                                    else { 0 }
+                                } else { 0 }
+            
+            # Mailbox Information
+            MailboxType       = $rawUser.MailboxType
+            MailboxSize       = $rawUser.MailboxSize # Raw size string
+            MailboxSizeMB     = Convert-MailboxSizeToMB -SizeString $rawUser.MailboxSize
+            
+            # Fields to be populated by Measure-MigrationComplexity
+            ComplexityFactors = @()
+            ComplexityScore   = 0
+            MigrationCategory = "Not Assessed" # Will be set by Measure-MigrationComplexity
+            
+            MigrationWave     = $null
+            MigrationPriority = "Medium" # Default, will be adjusted
+            EstimatedMigrationTime = 0 # Default, will be adjusted
+            
+            RiskFactors       = @() # Will be populated by Measure-MigrationComplexity (from original Test-MigrationReadiness)
+            RiskLevel         = "Low"   # Default, will be adjusted
+            
+            ReadinessScore    = 0
+            ReadinessStatus   = "Not Assessed"
+            BlockingIssues    = @()
+            
+            # Dependencies - These require lookups in AggregatedDataStore and RelationshipGraph
+            DirectReportsCount = 0
+            GroupMembershipCount = 0
+            ApplicationAccessCount = 0
+            OwnedObjectsCount = 0
+            Notes             = ""
+            # For storing names/details from relationships
+            GroupMembershipsText = "" # Changed from GroupMemberships to avoid conflict if rawUser has it
+            ApplicationAssignmentsText = ""
+            OwnedApplicationsText = ""
+            OwnedServicePrincipalsText = ""
+            OwnedGroupsText = ""
+            RegisteredDevicesText = ""
+        }
+        
+        # --- Enrichment using RelationshipGraph and AggregatedDataStore ---
+        $currentUserIdForGraph = $userProfile.GraphId # Prefer GraphId for lookups in RelationshipGraph
+        if ([string]::IsNullOrWhiteSpace($currentUserIdForGraph)) { $currentUserIdForGraph = $userProfile.UserPrincipalName }
+
+        if (($null -ne $RelationshipGraph) -and (-not [string]::IsNullOrWhiteSpace($currentUserIdForGraph))) {
+            # Group Memberships
+            if ($RelationshipGraph.UserToGroupMembership.ContainsKey($currentUserIdForGraph)) {
+                $userProfile.GroupMembershipsText = $RelationshipGraph.UserToGroupMembership[$currentUserIdForGraph] -join "; "
+                $userProfile.GroupMembershipCount = $RelationshipGraph.UserToGroupMembership[$currentUserIdForGraph].Count
+            }
+
+            # Application Role Assignments
+            if ($RelationshipGraph.UserToAppRoleAssignment.ContainsKey($currentUserIdForGraph)) {
+                $appAssignmentsDetails = $RelationshipGraph.UserToAppRoleAssignment[$currentUserIdForGraph] | ForEach-Object { "$($_.ResourceDisplayName) ($($_.AppRoleDisplayName))" }
+                $userProfile.ApplicationAssignmentsText = $appAssignmentsDetails -join "; "
+                $userProfile.ApplicationAccessCount = $RelationshipGraph.UserToAppRoleAssignment[$currentUserIdForGraph].Count
+            }
+
+            # Owned Objects
+            if ($RelationshipGraph.UserToOwnedObject.ContainsKey($currentUserIdForGraph)) {
+                $ownedObjects = $RelationshipGraph.UserToOwnedObject[$currentUserIdForGraph]
+                $userProfile.OwnedObjectsCount = $ownedObjects.Count
+                $userProfile.OwnedApplicationsText = $ownedObjects | Where-Object {$_.ObjectType -eq "Application"} | ForEach-Object {$_.DisplayName} | Join-String -Separator "; "
+                $userProfile.OwnedServicePrincipalsText = $ownedObjects | Where-Object {$_.ObjectType -eq "ServicePrincipal"} | ForEach-Object {$_.DisplayName} | Join-String -Separator "; "
+                $userProfile.OwnedGroupsText = $ownedObjects | Where-Object {$_.ObjectType -eq "Group"} | ForEach-Object {$_.DisplayName} | Join-String -Separator "; "
+            }
+            
+            # Registered Devices
+            if ($RelationshipGraph.UserToDeviceLink.ContainsKey($currentUserIdForGraph)) {
+                $userProfile.RegisteredDevicesText = $RelationshipGraph.UserToDeviceLink[$currentUserIdForGraph] -join "; "
+                # Count could be added if needed
+            }
+
+            # Direct Reports (Manager's perspective is in ManagerToDirectReport)
+            # To find who reports to this $userProfile, we'd iterate $RelationshipGraph.ManagerToDirectReport
+            # This is typically not stored directly on the user's profile but derived.
+            # For DirectReportsCount on this user (as a manager):
+            if ($RelationshipGraph.ManagerToDirectReport.ContainsKey($userProfile.UserPrincipalName)) { # Assuming ManagerToDirectReport uses UPN as key
+                $userProfile.DirectReportsCount = $RelationshipGraph.ManagerToDirectReport[$userProfile.UserPrincipalName].Count
+            }
+        }
+        
+        $userProfiles.Add($userProfile)
+    }
+    Write-Progress -Activity "Building User Profiles" -Completed
+
+    Write-MandALog "User Profile Building completed. $($userProfiles.Count) profiles created." -Level "SUCCESS"
+    return $userProfiles
 }
 
-# Enhanced UserProfileBuilder.psm1 additions
-function Measure-SecurityComplexity {
+# Function to measure migration complexity and readiness for user profiles
+function Measure-MigrationComplexity {
+    [CmdletBinding()]
     param(
-        [PSCustomObject]$UserProfile,
-        [hashtable]$Relationships,
-        [hashtable]$DiscoveryData
+        [Parameter(Mandatory = $true)]
+        [System.Collections.IList]$Profiles, # Expects an array/list of user profile objects from New-UserProfiles
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Configuration
     )
-    
-    $securityFactors = @()
-    $securityScore = 0
-    $securityDetails = @{
-        PrivilegedAccess = @()
-        ServicePrincipalOwnership = @()
-        ApplicationConsents = @()
-        RiskyPermissions = @()
-        AdminUnitMembership = @()
-        ConditionalAccessExclusions = @()
+
+    Write-MandALog "Starting Migration Complexity & Readiness Analysis for $($Profiles.Count) profiles..." -Level "INFO"
+    $complexityAnalysisSummary = [System.Collections.Generic.List[object]]::new() # For the summary report
+
+    $thresholds = $Configuration.processing.complexityThresholds
+    if ($null -eq $thresholds) {
+        Write-MandALog "Complexity thresholds not found in configuration. Using default values: Low=3, Medium=7, High=10." -Level "WARN"
+        $thresholds = @{ low = 3; medium = 7; high = 10 } # Default fallback
     }
-    
-    # Check for privileged role assignments
-    if ($Relationships.PrivilegedAccessPaths.UserToPrivilegedRole.ContainsKey($UserProfile.GraphId)) {
-        $privilegedRoles = $Relationships.PrivilegedAccessPaths.UserToPrivilegedRole[$UserProfile.GraphId]
+
+    $processedCount = 0
+    foreach ($profile in $Profiles) {
+        $processedCount++
+        Update-Progress -Activity "Analyzing Complexity/Readiness" -Status "Profile $processedCount of $($Profiles.Count)" -PercentComplete (($processedCount / $Profiles.Count) * 100)
+
+        # --- Start: Logic from original Test-UserComplexity ---
+        $currentComplexityScore = 0
+        $currentComplexityFactors = [System.Collections.Generic.List[string]]::new()
         
-        foreach ($role in $privilegedRoles) {
-            $securityFactors += "Privileged Role: $($role.Role) ($($role.AssignmentType))"
-            $securityScore += if ($role.AssignmentType -eq "Direct") { 5 } else { 3 }
+        if (-not $profile.Enabled) { $currentComplexityFactors.Add("Disabled Account"); $currentComplexityScore += 1 }
+        if ($profile.HasADAccount -and -not $profile.HasGraphAccount) { $currentComplexityFactors.Add("AD Only Account"); $currentComplexityScore += 2 }
+        if (-not $profile.HasExchangeMailbox -and $profile.HasGraphAccount) { $currentComplexityFactors.Add("No Exchange Mailbox"); $currentComplexityScore += 1 }
+        
+        if ($profile.PSObject.Properties['LicenseCount'] -and $profile.LicenseCount -eq 0) { $currentComplexityFactors.Add("No Licenses Assigned"); $currentComplexityScore += 2 }
+        elseif ($profile.PSObject.Properties['LicenseCount'] -and $profile.LicenseCount -gt 3) { $currentComplexityFactors.Add("Multiple Licenses"); $currentComplexityScore += 1 }
+        
+        if ($profile.PSObject.Properties['MailboxSizeMB'] -and $profile.MailboxSizeMB -gt 10240) { $currentComplexityFactors.Add("Large Mailbox (>10GB)"); $currentComplexityScore += 3 }
+        elseif ($profile.PSObject.Properties['MailboxSizeMB'] -and $profile.MailboxSizeMB -gt 5120) { $currentComplexityFactors.Add("Medium Mailbox (>5GB)"); $currentComplexityScore += 2 }
+        
+        if ($profile.AccountCreated) {
+            try {
+                $accountAge = (Get-Date) - [DateTime]$profile.AccountCreated
+                if ($accountAge.Days -gt 1825) { $currentComplexityFactors.Add("Legacy Account (>5 years)"); $currentComplexityScore += 2 }
+            } catch { Write-MandALog "Could not parse AccountCreated date '$($profile.AccountCreated)' for $($profile.UserPrincipalName)" -Level "DEBUG" }
+        }
+        if ($profile.LastLogon) {
+            try {
+                $daysSinceLogon = (Get-Date) - [DateTime]$profile.LastLogon
+                if ($daysSinceLogon.Days -gt 90) { $currentComplexityFactors.Add("Inactive User (>90 days)"); $currentComplexityScore += 1 }
+            } catch { Write-MandALog "Could not parse LastLogon date '$($profile.LastLogon)' for $($profile.UserPrincipalName)" -Level "DEBUG" }
+        }
+        if ([string]::IsNullOrWhiteSpace($profile.Mail)) { $currentComplexityFactors.Add("Missing Email Address"); $currentComplexityScore += 1 }
+        if ([string]::IsNullOrWhiteSpace($profile.Department)) { $currentComplexityFactors.Add("Missing Department"); $currentComplexityScore += 1 }
+        
+        $profile.ComplexityFactors = $currentComplexityFactors.ToArray()
+        $profile.ComplexityScore = $currentComplexityScore
+        
+        if ($currentComplexityScore -le $thresholds.low) { $profile.MigrationCategory = "Simple" }
+        elseif ($currentComplexityScore -le $thresholds.medium) { $profile.MigrationCategory = "Standard" }
+        elseif ($currentComplexityScore -le $thresholds.high) { $profile.MigrationCategory = "Complex" }
+        else { $profile.MigrationCategory = "High Risk" }
+        # --- End: Logic from original Test-UserComplexity ---
+
+        # --- Start: Logic from original Test-MigrationReadiness ---
+        $currentReadinessScore = 100
+        $currentBlockingIssues = [System.Collections.Generic.List[string]]::new()
+        $currentRiskFactors = [System.Collections.Generic.List[string]]::new() 
+        
+        if (-not $profile.Enabled) { $currentBlockingIssues.Add("Account is disabled"); $currentReadinessScore -= 50 }
+        if (-not $profile.HasGraphAccount) { $currentBlockingIssues.Add("No Azure AD account (or not flagged as such)"); $currentReadinessScore -= 30 }
+        if ($profile.PSObject.Properties['LicenseCount'] -and $profile.LicenseCount -eq 0) { $currentRiskFactors.Add("No licenses assigned (Readiness)"); $currentReadinessScore -= 20 }
+        if ($profile.PSObject.Properties['MailboxSizeMB'] -and $profile.MailboxSizeMB -gt 10240) { $currentRiskFactors.Add("Large mailbox may require extended migration time (Readiness)"); $currentReadinessScore -= 10 }
+        
+        if ($profile.LastLogon) {
+            try {
+                $daysSinceLogon = (Get-Date) - [DateTime]$profile.LastLogon
+                if ($daysSinceLogon.Days -gt 180) { $currentRiskFactors.Add("User has not logged in recently (180+ days)"); $currentReadinessScore -= 5 }
+            } catch { Write-MandALog "Could not parse LastLogon date for readiness check on $($profile.UserPrincipalName)" -Level "DEBUG" }
+        }
+        if ([string]::IsNullOrWhiteSpace($profile.Mail)) { $currentRiskFactors.Add("Missing email address (Readiness)"); $currentReadinessScore -= 10 }
+        if ([string]::IsNullOrWhiteSpace($profile.Department)) { $currentRiskFactors.Add("Missing department information (Readiness)"); $currentReadinessScore -= 5 }
+        
+        $profile.ReadinessScore = [Math]::Max(0, $currentReadinessScore)
+        $profile.ReadinessStatus = switch ($profile.ReadinessScore) {
+            { $_ -ge 90 } { "Ready" }
+            { $_ -ge 70 } { "Minor Issues" }
+            { $_ -ge 50 } { "Needs Attention" }
+            default { "Not Ready" }
+        }
+        $profile.BlockingIssues = $currentBlockingIssues.ToArray()
+        # Merge risk factors from complexity and readiness, ensuring uniqueness
+        $profile.RiskFactors = ($profile.ComplexityFactors + $currentRiskFactors.ToArray()) | Select-Object -Unique 
+        $profile.RiskLevel = if ($profile.RiskFactors.Count -eq 0) { "Low" } 
+                             elseif ($profile.RiskFactors.Count -le 2) { "Medium" } 
+                             else { "High" }
+        # --- End: Logic from original Test-MigrationReadiness ---
+    }
+    Write-Progress -Activity "Analyzing Complexity/Readiness" -Completed
+
+    # --- Start: Logic from original Measure-ComplexityScores (Statistical part & Time Estimation) ---
+    Write-MandALog "Calculating overall complexity scores and migration priorities..." -Level "INFO"
+    $allComplexityScores = $Profiles | ForEach-Object { $_.ComplexityScore } 
+    
+    if ($allComplexityScores.Count -gt 0) {
+        $p25Complexity = Get-Percentile -Values $allComplexityScores -Percentile 25
+        $p75Complexity = Get-Percentile -Values $allComplexityScores -Percentile 75
+        
+        foreach ($userProfileToPrioritize in $Profiles) {
+            if ($userProfileToPrioritize.ComplexityScore -le $p25Complexity -and $userProfileToPrioritize.ReadinessScore -ge 90) {
+                $userProfileToPrioritize.MigrationPriority = "High"
+            } elseif ($userProfileToPrioritize.ComplexityScore -ge $p75Complexity -or $userProfileToPrioritize.ReadinessScore -lt 50) {
+                $userProfileToPrioritize.MigrationPriority = "Low"
+            } else {
+                $userProfileToPrioritize.MigrationPriority = "Medium" # Default
+            }
             
-            $securityDetails.PrivilegedAccess += @{
-                Role = $role.Role
-                Type = $role.AssignmentType
-                Path = $role.Path
-                RiskScore = if ($role.Role -eq "Global Administrator") { 10 } else { 5 }
-            }
+            $baseTime = $Configuration.processing.baseMigrationTimeMinutes | Get-OrElse 30 # Example: Get from config or default
+            $complexityMultiplier = 1 + ($userProfileToPrioritize.ComplexityScore * ($Configuration.processing.complexityTimeFactor | Get-OrElse 0.1) )
+            $sizeMultiplier = 1 + (($userProfileToPrioritize.MailboxSizeMB / 1024) * ($Configuration.processing.mailboxSizeTimeFactorGB | Get-OrElse 0.1) ) # 10% per GB
+            $userProfileToPrioritize.EstimatedMigrationTime = [Math]::Round($baseTime * $complexityMultiplier * $sizeMultiplier, 0)
         }
     }
-    
-    # Check for service principal ownership
-    if ($DiscoveryData.ServicePrincipals) {
-        $ownedSPs = $DiscoveryData.ServicePrincipals | Where-Object { 
-            $_.Owners -and $_.Owners -match $UserProfile.UserPrincipalName 
-        }
-        
-        foreach ($sp in $ownedSPs) {
-            $spRisk = if ($sp.RiskLevel -eq "High") { 4 } elseif ($sp.RiskLevel -eq "Medium") { 2 } else { 1 }
-            $securityFactors += "Service Principal Owner: $($sp.DisplayName) (Risk: $($sp.RiskLevel))"
-            $securityScore += $spRisk
-            
-            $securityDetails.ServicePrincipalOwnership += @{
-                ServicePrincipalId = $sp.Id
-                DisplayName = $sp.DisplayName
-                RiskLevel = $sp.RiskLevel
-                HighValuePermissions = $sp.HighValuePermissions
-                RiskScore = $spRisk
-            }
-        }
+    # --- End: Logic from original Measure-ComplexityScores ---
+
+    # Build the summary analysis for returning (as expected by orchestrator)
+    $totalUsers = $Profiles.Count
+    $complexityAnalysisSummary.Add([PSCustomObject]@{ Category = "Overall Statistics"; Metric = "Total Users"; Value = $totalUsers; Percentage = 100 })
+    @("Simple", "Standard", "Complex", "High Risk") | ForEach-Object {
+        $categoryName = $_
+        $count = ($Profiles | Where-Object { $_.MigrationCategory -eq $categoryName }).Count
+        $complexityAnalysisSummary.Add([PSCustomObject]@{
+            Category   = "Migration Complexity"
+            Metric     = "$categoryName Migrations"
+            Value      = $count
+            Percentage = if ($totalUsers -gt 0) { [math]::Round(($count / $totalUsers) * 100, 1) } else { 0 }
+        })
     }
-    
-    # Check for high-risk application consents
-    if ($DiscoveryData.OAuth2Grants) {
-        $userConsents = $DiscoveryData.OAuth2Grants | Where-Object { 
-            $_.PrincipalId -eq $UserProfile.GraphId -and $_.ConsentType -eq "Principal" 
-        }
-        
-        foreach ($consent in $userConsents) {
-            if ($consent.RiskLevel -in @("High", "Medium")) {
-                $consentRisk = if ($consent.RiskLevel -eq "High") { 3 } else { 1 }
-                $securityFactors += "High-Risk App Consent: $($consent.ClientDisplayName)"
-                $securityScore += $consentRisk
-                
-                $securityDetails.ApplicationConsents += @{
-                    ApplicationId = $consent.ClientId
-                    ApplicationName = $consent.ClientDisplayName
-                    Scopes = $consent.Scope
-                    RiskLevel = $consent.RiskLevel
-                    HighRiskScopes = $consent.HighRiskScopes
-                    RiskScore = $consentRisk
-                }
-            }
-        }
+    @("Ready", "Minor Issues", "Needs Attention", "Not Ready") | ForEach-Object {
+        $statusName = $_
+        $count = ($Profiles | Where-Object { $_.ReadinessStatus -eq $statusName }).Count
+        $complexityAnalysisSummary.Add([PSCustomObject]@{
+            Category   = "Migration Readiness"
+            Metric     = $statusName
+            Value      = $count
+            Percentage = if ($totalUsers -gt 0) { [math]::Round(($count / $totalUsers) * 100, 1) } else { 0 }
+        })
     }
-    
-    # Check for risky permissions through group membership
-    if ($Relationships.TransitiveMemberships.ContainsKey($UserProfile.GraphId)) {
-        $userGroups = $Relationships.TransitiveMemberships[$UserProfile.GraphId]
-        
-        # Check if any groups have privileged access
-        foreach ($groupId in $userGroups) {
-            if ($Relationships.PrivilegedAccessPaths.GroupToPrivilegedAccess.ContainsKey($groupId)) {
-                $groupPrivileges = $Relationships.PrivilegedAccessPaths.GroupToPrivilegedAccess[$groupId]
-                $securityFactors += "Privileged Group Member: $($groupPrivileges.GroupName)"
-                $securityScore += 2
-                
-                $securityDetails.RiskyPermissions += @{
-                    Source = "Group Membership"
-                    GroupId = $groupId
-                    Privileges = $groupPrivileges.Privileges
-                    RiskScore = 2
-                }
-            }
-        }
-    }
-    
-    # Check for administrative unit membership
-    if ($DiscoveryData.AdministrativeUnits) {
-        foreach ($au in $DiscoveryData.AdministrativeUnits) {
-            $isMember = Test-AdminUnitMembership -UserId $UserProfile.GraphId -AdminUnitId $au.Id
-            if ($isMember) {
-                $auRisk = if ($au.RestrictedManagement) { 2 } else { 1 }
-                $securityFactors += "Admin Unit Member: $($au.DisplayName)"
-                $securityScore += $auRisk
-                
-                $securityDetails.AdminUnitMembership += @{
-                    AdminUnitId = $au.Id
-                    DisplayName = $au.DisplayName
-                    RestrictedManagement = $au.RestrictedManagement
-                    RiskScore = $auRisk
-                }
-            }
-        }
-    }
-    
-    # Check for conditional access policy exclusions
-    if ($DiscoveryData.ConditionalAccess) {
-        $exclusions = Find-ConditionalAccessExclusions -UserId $UserProfile.GraphId -Policies $DiscoveryData.ConditionalAccess
-        
-        foreach ($exclusion in $exclusions) {
-            $caRisk = if ($exclusion.PolicyState -eq "enabled") { 3 } else { 1 }
-            $securityFactors += "CA Policy Exclusion: $($exclusion.PolicyName)"
-            $securityScore += $caRisk
-            
-            $securityDetails.ConditionalAccessExclusions += @{
-                PolicyId = $exclusion.PolicyId
-                PolicyName = $exclusion.PolicyName
-                ExclusionType = $exclusion.Type
-                RiskScore = $caRisk
-            }
-        }
-    }
-    
-    # Calculate overall security risk level
-    $securityRiskLevel = if ($securityScore -ge 15) { 
-        "Critical" 
-    } elseif ($securityScore -ge 10) { 
-        "High" 
-    } elseif ($securityScore -ge 5) { 
-        "Medium" 
-    } else { 
-        "Low" 
-    }
-    
-    # Update profile with security assessment
-    $UserProfile.SecurityFactors = $securityFactors
-    $UserProfile.SecurityComplexityScore = $securityScore
-    $UserProfile.SecurityRiskLevel = $securityRiskLevel
-    $UserProfile.SecurityDetails = $securityDetails
-    
-    # Add security score to overall complexity
-    $UserProfile.ComplexityScore += $securityScore
-    
-    # Adjust migration category if security risk is high
-    if ($securityRiskLevel -in @("Critical", "High") -and $UserProfile.MigrationCategory -ne "High Risk") {
-        $UserProfile.MigrationCategory = "High Risk"
-        $UserProfile.ComplexityFactors += "High Security Risk Profile"
-    }
+    $totalEstimatedTime = ($Profiles | Measure-Object -Property EstimatedMigrationTime -Sum).Sum
+    $totalEstimatedTimeHours = if ($totalEstimatedTime) {[math]::Round($totalEstimatedTime / 60, 1)} else {0}
+    $averageTimePerUser = if ($totalUsers -gt 0 -and $totalEstimatedTime) { [math]::Round($totalEstimatedTime / $totalUsers, 0) } else { 0 }
+
+    $complexityAnalysisSummary.Add([PSCustomObject]@{ Category = "Time Estimates"; Metric = "Total Estimated Time (hours)"; Value = $totalEstimatedTimeHours; Percentage = $null })
+    $complexityAnalysisSummary.Add([PSCustomObject]@{ Category = "Time Estimates"; Metric = "Average Time per User (minutes)"; Value = $averageTimePerUser; Percentage = $null })
+
+    Write-MandALog "Migration Complexity & Readiness Analysis completed." -Level "SUCCESS"
+    return $complexityAnalysisSummary
 }
 
-function Test-HighRiskPermission {
-    param([string]$Permission)
-    
-    $highRiskPermissions = @(
-        # Application permissions
-        "Application.ReadWrite.All",
-        "AppRoleAssignment.ReadWrite.All", 
-        "Directory.ReadWrite.All",
-        "RoleManagement.ReadWrite.Directory",
-        "PrivilegedAccess.ReadWrite.AzureAD",
-        "PrivilegedAccess.ReadWrite.AzureResources",
-        
-        # Delegated permissions
-        "User.ReadWrite.All",
-        "Group.ReadWrite.All",
-        "GroupMember.ReadWrite.All",
-        "Mail.ReadWrite",
-        "Mail.Send",
-        "Files.ReadWrite.All",
-        
-        # Exchange permissions
-        "Exchange.ManageAsApp",
-        "full_access_as_app",
-        
-        # Other high-risk
-        "Sites.FullControl.All",
-        "TermStore.ReadWrite.All",
-        "SecurityEvents.ReadWrite.All"
-    )
-    
-    return $Permission -in $highRiskPermissions -or $Permission -match "\.All$|\.Write|Admin|Full"
+# Helper for Get-OrElse logic if not available as a standard cmdlet/filter
+filter Get-OrElse ($DefaultValue) {
+    if ($null -ne $_) { $_ } else { $DefaultValue }
 }
 
-function Measure-ServicePrincipalRisk {
-    param($ServicePrincipal, $Owners)
-    
-    $riskScore = 0
-    
-    # Check high-value permissions
-    if ($ServicePrincipal.HighValuePermissionsCount -gt 0) {
-        $riskScore += $ServicePrincipal.HighValuePermissionsCount * 2
-    }
-    
-    # Check for no owners (orphaned)
-    if ($Owners.Count -eq 0) {
-        $riskScore += 3
-    }
-    
-    # Check credentials
-    if ($ServicePrincipal.PasswordCredentialsCount -gt 0) {
-        $riskScore += 1
-    }
-    if ($ServicePrincipal.KeyCredentialsCount -gt 0) {
-        $riskScore += 1
-    }
-    
-    # Check publisher verification
-    if ($ServicePrincipal.VerifiedPublisher -eq "Not Verified") {
-        $riskScore += 2
-    }
-    
-    # Determine risk level
-    if ($riskScore -ge 8) { return "High" }
-    elseif ($riskScore -ge 4) { return "Medium" }
-    else { return "Low" }
-}
-
-function Measure-OAuth2ScopeRisk {
-    param([string]$Scopes)
-    
-    $scopeArray = $Scopes -split ' '
-    $highRiskScopes = @()
-    $riskScore = 0
-    
-    foreach ($scope in $scopeArray) {
-        if (Test-HighRiskPermission -Permission $scope) {
-            $highRiskScopes += $scope
-            $riskScore += 3
-        } elseif ($scope -match "Write|Manage|Admin") {
-            $riskScore += 2
-        } elseif ($scope -ne "User.Read" -and $scope -ne "profile" -and $scope -ne "openid") {
-            $riskScore += 1
-        }
-    }
-    
-    $level = if ($riskScore -ge 9) { "High" }
-    elseif ($riskScore -ge 5) { "Medium" }
-    else { "Low" }
-    
-    return @{
-        Level = $level
-        Score = $riskScore
-        HighRiskScopes = $highRiskScopes
-    }
-}
-
-# Enhanced UserProfileBuilder.psm1
-function New-UnifiedUserProfile {
-    param(
-        [PSCustomObject]$OnPremUser,
-        [PSCustomObject]$CloudUser,
-        [string]$EnvironmentType
-    )
-    
-    $unifiedProfile = [PSCustomObject]@{
-        # Unique identifiers
-        UnifiedId = [System.Guid]::NewGuid().ToString()
-        
-        # Source tracking
-        DataSources = @{
-            OnPremAD = @{
-                Present = ($null -ne $OnPremUser)
-                ObjectGuid = $OnPremUser.ObjectGuid
-                SamAccountName = $OnPremUser.SamAccountName
-                DistinguishedName = $OnPremUser.DistinguishedName
-                LastSync = $null
-            }
-            AzureAD = @{
-                Present = ($null -ne $CloudUser)
-                ObjectId = $CloudUser.Id
-                UserPrincipalName = $CloudUser.UserPrincipalName
-                ImmutableId = $CloudUser.OnPremisesImmutableId
-                SyncEnabled = $CloudUser.OnPremisesSyncEnabled
-            }
-        }
-        
-        # Identity correlation
-        IdentityCorrelation = @{
-            CorrelationMethod = "None"
-            CorrelationConfidence = 0
-            IsSynced = $false
-            HasConflict = $false
-            ConflictDetails = @()
-        }
-        
-        # Primary attributes (with conflict resolution)
-        UserPrincipalName = $null
-        DisplayName = $null
-        Mail = $null
-        Department = $null
-        
-        # Migration planning
-        MigrationSource = "Unknown"
-        RequiresDualMigration = $false
-        ConflictResolutionRequired = $false
-    }
-    
-    # Correlation logic
-    if ($EnvironmentType -eq "HybridSynced") {
-        # Use ImmutableId for correlation
-        if ($CloudUser.OnPremisesImmutableId -and $OnPremUser.ObjectGuid) {
-            $onPremGuidBase64 = [System.Convert]::ToBase64String([System.Guid]::Parse($OnPremUser.ObjectGuid).ToByteArray())
-            if ($CloudUser.OnPremisesImmutableId -eq $onPremGuidBase64) {
-                $unifiedProfile.IdentityCorrelation.IsSynced = $true
-                $unifiedProfile.IdentityCorrelation.CorrelationMethod = "ImmutableId"
-                $unifiedProfile.IdentityCorrelation.CorrelationConfidence = 100
-            }
-        }
-    } elseif ($EnvironmentType -eq "HybridDisconnected") {
-        # Try to correlate by UPN or email
-        if ($OnPremUser.UserPrincipalName -eq $CloudUser.UserPrincipalName) {
-            $unifiedProfile.IdentityCorrelation.CorrelationMethod = "UPN"
-            $unifiedProfile.IdentityCorrelation.CorrelationConfidence = 80
-        } elseif ($OnPremUser.Mail -eq $CloudUser.Mail) {
-            $unifiedProfile.IdentityCorrelation.CorrelationMethod = "Email"
-            $unifiedProfile.IdentityCorrelation.CorrelationConfidence = 70
-        }
-    }
-    
-    # Determine primary source and merge attributes
-    if ($unifiedProfile.IdentityCorrelation.IsSynced) {
-        # Synced user - cloud is authoritative
-        $unifiedProfile.MigrationSource = "AzureAD"
-        $unifiedProfile.UserPrincipalName = $CloudUser.UserPrincipalName
-        $unifiedProfile.DisplayName = $CloudUser.DisplayName
-    } else {
-        # Not synced - need to handle both
-        if ($OnPremUser -and $CloudUser) {
-            $unifiedProfile.RequiresDualMigration = $true
-            $unifiedProfile.ConflictResolutionRequired = $true
-            # Store both sets of data
-        }
-    }
-    
-    return $unifiedProfile
-}
-
-
-
-# Export functions
-Export-ModuleMember -Function @(
-    'New-UserProfiles',
-    'New-IndividualUserProfile',
-    'Test-UserComplexity',
-    'Test-MigrationReadiness',
-    'Measure-ComplexityScores',
-    'Measure-MigrationComplexity',
-    'Convert-MailboxSizeToMB'
-)
+Export-ModuleMember -Function New-UserProfiles, Measure-MigrationComplexity, Convert-MailboxSizeToMB, Get-Percentile
