@@ -751,6 +751,96 @@ function Measure-OAuth2ScopeRisk {
     }
 }
 
+# Enhanced UserProfileBuilder.psm1
+function New-UnifiedUserProfile {
+    param(
+        [PSCustomObject]$OnPremUser,
+        [PSCustomObject]$CloudUser,
+        [string]$EnvironmentType
+    )
+    
+    $unifiedProfile = [PSCustomObject]@{
+        # Unique identifiers
+        UnifiedId = [System.Guid]::NewGuid().ToString()
+        
+        # Source tracking
+        DataSources = @{
+            OnPremAD = @{
+                Present = ($null -ne $OnPremUser)
+                ObjectGuid = $OnPremUser.ObjectGuid
+                SamAccountName = $OnPremUser.SamAccountName
+                DistinguishedName = $OnPremUser.DistinguishedName
+                LastSync = $null
+            }
+            AzureAD = @{
+                Present = ($null -ne $CloudUser)
+                ObjectId = $CloudUser.Id
+                UserPrincipalName = $CloudUser.UserPrincipalName
+                ImmutableId = $CloudUser.OnPremisesImmutableId
+                SyncEnabled = $CloudUser.OnPremisesSyncEnabled
+            }
+        }
+        
+        # Identity correlation
+        IdentityCorrelation = @{
+            CorrelationMethod = "None"
+            CorrelationConfidence = 0
+            IsSynced = $false
+            HasConflict = $false
+            ConflictDetails = @()
+        }
+        
+        # Primary attributes (with conflict resolution)
+        UserPrincipalName = $null
+        DisplayName = $null
+        Mail = $null
+        Department = $null
+        
+        # Migration planning
+        MigrationSource = "Unknown"
+        RequiresDualMigration = $false
+        ConflictResolutionRequired = $false
+    }
+    
+    # Correlation logic
+    if ($EnvironmentType -eq "HybridSynced") {
+        # Use ImmutableId for correlation
+        if ($CloudUser.OnPremisesImmutableId -and $OnPremUser.ObjectGuid) {
+            $onPremGuidBase64 = [System.Convert]::ToBase64String([System.Guid]::Parse($OnPremUser.ObjectGuid).ToByteArray())
+            if ($CloudUser.OnPremisesImmutableId -eq $onPremGuidBase64) {
+                $unifiedProfile.IdentityCorrelation.IsSynced = $true
+                $unifiedProfile.IdentityCorrelation.CorrelationMethod = "ImmutableId"
+                $unifiedProfile.IdentityCorrelation.CorrelationConfidence = 100
+            }
+        }
+    } elseif ($EnvironmentType -eq "HybridDisconnected") {
+        # Try to correlate by UPN or email
+        if ($OnPremUser.UserPrincipalName -eq $CloudUser.UserPrincipalName) {
+            $unifiedProfile.IdentityCorrelation.CorrelationMethod = "UPN"
+            $unifiedProfile.IdentityCorrelation.CorrelationConfidence = 80
+        } elseif ($OnPremUser.Mail -eq $CloudUser.Mail) {
+            $unifiedProfile.IdentityCorrelation.CorrelationMethod = "Email"
+            $unifiedProfile.IdentityCorrelation.CorrelationConfidence = 70
+        }
+    }
+    
+    # Determine primary source and merge attributes
+    if ($unifiedProfile.IdentityCorrelation.IsSynced) {
+        # Synced user - cloud is authoritative
+        $unifiedProfile.MigrationSource = "AzureAD"
+        $unifiedProfile.UserPrincipalName = $CloudUser.UserPrincipalName
+        $unifiedProfile.DisplayName = $CloudUser.DisplayName
+    } else {
+        # Not synced - need to handle both
+        if ($OnPremUser -and $CloudUser) {
+            $unifiedProfile.RequiresDualMigration = $true
+            $unifiedProfile.ConflictResolutionRequired = $true
+            # Store both sets of data
+        }
+    }
+    
+    return $unifiedProfile
+}
 
 
 
