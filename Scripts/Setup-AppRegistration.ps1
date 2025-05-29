@@ -116,8 +116,7 @@ $script:AppConfig = @{
     DisplayName = $AppName
     Description = "M&A Environment Discovery Service Principal with comprehensive permissions for organizational assessment"
     RequiredGraphPermissions = @{
-        # Core directory permissions
-        "Application.Read.All" = "Read all applications and service principals"
+               "Application.Read.All" = "Read all applications and service principals" # Also allows reading Service Principals
         "AppRoleAssignment.Read.All" = "Read all app role assignments"
         "AuditLog.Read.All" = "Read audit logs for compliance tracking"
         "Directory.Read.All" = "Read directory data including users, groups, and organizational structure"
@@ -125,33 +124,43 @@ $script:AppConfig = @{
         "GroupMember.Read.All" = "Read group memberships across the organization"
         "User.Read.All" = "Read all user profiles and properties"
         "Organization.Read.All" = "Read organization information and settings"
-        
-        # Device and compliance
-        "Device.Read.All" = "Read all device information"
-        "DeviceManagementConfiguration.Read.All" = "Read device management configuration"
+        "RoleManagement.Read.All" = "Read role management data (Azure AD roles, eligibility, assignments)"
+        "SignIn.Read.All" = "Read all user sign-in activity logs (supplements AuditLog.Read.All for sign-in specifics)" # Added
+
+        # Device and compliance (Intune via Graph)
+        "Device.Read.All" = "Read all device information (Azure AD registered/joined devices)"
+        "DeviceManagementConfiguration.Read.All" = "Read device management configuration (Intune policies, settings)"
         "DeviceManagementManagedDevices.Read.All" = "Read managed devices in Intune"
-        "DeviceManagementApps.Read.All" = "Read device management applications"
-        
+        "DeviceManagementApps.Read.All" = "Read device management applications (Intune)"
+        "DeviceManagementServiceConfig.Read.All" = "Read Intune service configuration settings" # Added for comprehensive Intune discovery
+
         # Policy and governance
-        "Policy.Read.All" = "Read policies including conditional access"
-        "Policy.Read.ConditionalAccess" = "Read conditional access policies"
-        "Reports.Read.All" = "Read reports for usage and security analytics"
-        "RoleManagement.Read.All" = "Read role management data"
-        
-        # SharePoint and Teams
-        "Sites.Read.All" = "Read SharePoint sites and content"
-        "Sites.FullControl.All" = "Full control of SharePoint sites (for migration scenarios)"
-        "Files.Read.All" = "Read all files across the organization"
+        "Policy.Read.All" = "Read policies including conditional access, authentication methods, etc."
+        "Policy.Read.ConditionalAccess" = "Read conditional access policies specifically" # Already covered by Policy.Read.All but explicit
+        "Reports.Read.All" = "Read reports for usage (e.g., OneDrive, SharePoint, Teams) and security analytics"
+
+        # SharePoint, OneDrive, and Teams via Graph
+        "Sites.Read.All" = "Read SharePoint sites and content lists/libraries. For discovery, this is preferred over FullControl."
+        # "Sites.FullControl.All" = "Full control of SharePoint sites (typically for migration scenarios, very high privilege)" # Kept as per original script, but review if only discovery is needed.
+        "Files.Read.All" = "Read all files across the organization (OneDrive, SharePoint)"
         "Team.ReadBasic.All" = "Read basic team information"
         "TeamMember.Read.All" = "Read team members and ownership"
         "TeamSettings.Read.All" = "Read team settings and configuration"
-        
-        # Advanced features
-        "Directory.ReadWrite.All" = "Read and write directory data (for migration scenarios)"
-        "Synchronization.Read.All" = "Read synchronization data and hybrid configurations"
-        "ExternalConnection.Read.All" = "Read external connections and search configurations"
-        "Member.Read.Hidden" = "Read hidden group members"
-        "LicenseAssignment.Read.All" = "Read license assignments and usage"
+        "Channel.ReadBasic.All" = "Read basic channel information within Teams" # Added for Teams discovery
+        "ChannelMember.Read.All" = "Read channel membership within Teams" # Added for Teams discovery
+
+        # Exchange Online via Graph (for mail-related discovery if not solely relying on ExchangeOnlineManagement module)
+        "MailboxSettings.Read" = "Read users' mailbox settings (e.g., auto-reply, language, time zone)" # Added
+        "Mail.ReadBasic.All" = "Read basic properties of mail messages (without body) across all mailboxes" # Added for enumeration/listing
+        "Calendars.Read" = "Read users' calendars and events" # Added
+        "Contacts.Read" = "Read users' contacts" # Added
+
+        # Advanced features & Migration Planning related
+        "Directory.ReadWrite.All" = "Read and write directory data (potentially for migration scenarios, very high privilege)" # Kept as per original script
+        "Synchronization.Read.All" = "Read synchronization data and AD Connect hybrid configurations"
+        "ExternalConnection.Read.All" = "Read external connections and search configurations (Microsoft Search)"
+        "Member.Read.Hidden" = "Read hidden group members (requires specific admin consent)"
+        "LicenseAssignment.Read.All" = "Read license assignments and usage for users and groups" # Confirmed
     }
     AzureADRoles = @(
         "Cloud Application Administrator"
