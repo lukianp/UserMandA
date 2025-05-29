@@ -1,300 +1,161 @@
-﻿<#
+#Requires -Version 5.1
+<#
 .SYNOPSIS
-    JSON export functionality for M&A Discovery Suite
+    M&A Discovery Suite - JSON Export Module
 .DESCRIPTION
-    Handles JSON export of processed data for integration with other systems
+    This module is responsible for exporting processed data to JSON files.
+    It can also handle PowerApps optimized JSON if configured.
+.NOTES
+    Version: 1.1.1 (Corrected JSON depth handling)
+    Author: Lukian Poleschtschuk
 #>
 
+[CmdletBinding()]
+param()
+
+# Helper to load data if not passed directly (for "Export Only" mode)
+function Get-ProcessedDataForJSONExport {
+    param(
+        [string]$KeyName, # e.g., "UserProfiles"
+        [hashtable]$DirectInputData,
+        [string]$ProcessedOutputPath, # e.g., "C:\MandA\Discovery\Output\Processed"
+        [string]$DefaultFileName # e.g., "UserProfiles.csv" (source if direct input is null)
+    )
+    if ($null -ne $DirectInputData -and $DirectInputData.ContainsKey($KeyName) -and $null -ne $DirectInputData[$KeyName]) {
+        Write-MandALog "Using $KeyName data passed directly to JSON export." -Level "DEBUG"
+        return $DirectInputData[$KeyName]
+    } else {
+        $expectedFilePath = Join-Path $ProcessedOutputPath $DefaultFileName
+        if (Test-Path $expectedFilePath) {
+            Write-MandALog "Attempting to load $KeyName data from file for JSON export: $expectedFilePath" -Level "INFO"
+            try {
+                # Assuming processed files are CSVs that need to be converted to objects for JSON
+                return Import-DataFromCSV -FilePath $expectedFilePath 
+            } catch {
+                Write-MandALog "Failed to load $KeyName from $expectedFilePath for JSON export. Error: $($_.Exception.Message)" -Level "WARN"
+                return $null
+            }
+        } else {
+            Write-MandALog "$KeyName data not passed directly and source file not found at $expectedFilePath. Cannot export $KeyName to JSON." -Level "WARN"
+            return $null
+        }
+    }
+}
+
+# Main function to export data to JSON files
 function Export-ToJSON {
+    [CmdletBinding()]
     param(
-        [hashtable]$Data,
+        [Parameter(Mandatory = $true)] # Even if $null, it's passed, module should handle loading from file
+        [hashtable]$ProcessedData, # Contains UserProfiles, MigrationWaves, ComplexityAnalysis, etc.
+
+        [Parameter(Mandatory = $true)]
         [hashtable]$Configuration
     )
-    
-    try {
-        Write-MandALog "Starting JSON export" -Level "HEADER"
-        
-        $outputPath = $Configuration.environment.outputPath
-        $jsonPath = Join-Path $outputPath "Processed"
-        
-        if (-not (Test-Path $jsonPath)) {
-            New-Item -Path $jsonPath -ItemType Directory -Force | Out-Null
-        }
-        
-        $exportResults = @{}
-        
-        # Export user profiles
-        if ($Data.UserProfiles) {
-            $userProfilesFile = Join-Path $jsonPath "UserProfiles.json"
-            $Data.UserProfiles | ConvertTo-Json -Depth 10 | Set-Content -Path $userProfilesFile -Encoding UTF8
-            $exportResults.UserProfiles = $userProfilesFile
-            Write-MandALog "Exported $($Data.UserProfiles.Count) user profiles to JSON" -Level "SUCCESS"
-        }
-        
-        # Export migration waves
-        if ($Data.MigrationWaves) {
-            $migrationWavesFile = Join-Path $jsonPath "MigrationWaves.json"
-            $Data.MigrationWaves | ConvertTo-Json -Depth 10 | Set-Content -Path $migrationWavesFile -Encoding UTF8
-            $exportResults.MigrationWaves = $migrationWavesFile
-            Write-MandALog "Exported migration waves to JSON" -Level "SUCCESS"
-        }
-        
-        # Export complexity analysis
-        if ($Data.ComplexityAnalysis) {
-            $complexityFile = Join-Path $jsonPath "ComplexityAnalysis.json"
-            $Data.ComplexityAnalysis | ConvertTo-Json -Depth 10 | Set-Content -Path $complexityFile -Encoding UTF8
-            $exportResults.ComplexityAnalysis = $complexityFile
-            Write-MandALog "Exported complexity analysis to JSON" -Level "SUCCESS"
-        }
-        
-        # Export comprehensive summary
-        $summaryFile = Join-Path $jsonPath "ComprehensiveSummary.json"
-        $summary = New-ComprehensiveSummary -Data $Data -Configuration $Configuration
-        $summary | ConvertTo-Json -Depth 10 | Set-Content -Path $summaryFile -Encoding UTF8
-        $exportResults.Summary = $summaryFile
-        Write-MandALog "Exported comprehensive summary to JSON" -Level "SUCCESS"
-        
-        Write-MandALog "JSON export completed successfully" -Level "SUCCESS"
-        return $exportResults
-        
-    } catch {
-        Write-MandALog "JSON export failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
-    }
-}
 
-function Export-ForPowerApps {
-    param(
-        [hashtable]$Data,
-        [hashtable]$Configuration
+    Write-MandALog "Starting JSON Export Process..." -Level "INFO"
+    $exportOutputPath = Join-Path $Configuration.environment.outputPath "Exports\JSON" # Specific subfolder for JSON exports
+
+    if (-not (Test-Path $exportOutputPath)) {
+        try {
+            New-Item -Path $exportOutputPath -ItemType Directory -Force | Out-Null
+            Write-MandALog "Created directory for JSON exports: $exportOutputPath" -Level "INFO"
+        } catch {
+            Write-MandALog "Failed to create JSON export directory '$exportOutputPath': $($_.Exception.Message)" -Level "ERROR"
+            return
+        }
+    }
+
+    # Define what to export. Keys should match $ProcessedData or be loadable.
+    # DefaultFileName is the source CSV in "Processed" folder if $ProcessedData is sparse.
+    $exportItems = @(
+        @{ Key = "UserProfiles"; OutputFileName = "UserProfiles.json"; SourceCsv = "UserProfiles.csv" }
+        @{ Key = "MigrationWaves"; OutputFileName = "MigrationWaves.json"; SourceCsv = "MigrationWaves.csv" }
+        @{ Key = "ComplexityAnalysis"; OutputFileName = "ComplexityAnalysis.json"; SourceCsv = "ComplexityAnalysis.csv" }
+        @{ Key = "ValidationResults"; OutputFileName = "DataQualityIssues.json"; SourceCsv = "DataQualityIssues.csv" } # Assuming issues are in a CSV
+        @{ Key = "AggregatedDataStore"; OutputFileName = "AggregatedDataStore_Full.json"; SourceCsv = "N/A" } # Example: Exporting a complex object directly
+        @{ Key = "RelationshipGraph"; OutputFileName = "RelationshipGraph.json"; SourceCsv = "N/A" } # Example
     )
-    
-    try {
-        Write-MandALog "Starting PowerApps-optimized export" -Level "HEADER"
-        
-        $outputPath = $Configuration.environment.outputPath
-        $powerAppsFile = Join-Path $outputPath "PowerApps_Export.json"
-        
-        # Create PowerApps-optimized data structure
-        $powerAppsData = @{
-            metadata = @{
-                exportDate = Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"
-                version = "4.0.0"
-                totalUsers = if ($Data.UserProfiles) { $Data.UserProfiles.Count } else { 0 }
-                totalWaves = if ($Data.MigrationWaves) { $Data.MigrationWaves.Count } else { 0 }
-                companyName = $Configuration.metadata.companyName
-            }
-            users = @()
-            waves = @()
-            statistics = @{}
-        }
-        
-        # Optimize user data for PowerApps
-        if ($Data.UserProfiles) {
-            foreach ($user in $Data.UserProfiles) {
-                $powerAppsData.users += @{
-                    id = if ($user.GraphId) { $user.GraphId } else { [System.Guid]::NewGuid().ToString() }
-                    userPrincipalName = $user.UserPrincipalName
-                    displayName = $user.DisplayName
-                    mail = $user.Mail
-                    department = $user.Department
-                    title = $user.Title
-                    enabled = $user.Enabled
-                    migrationCategory = $user.MigrationCategory
-                    migrationWave = $user.MigrationWave
-                    migrationPriority = $user.MigrationPriority
-                    complexityScore = $user.ComplexityScore
-                    readinessScore = $user.ReadinessScore
-                    readinessStatus = $user.ReadinessStatus
-                    riskLevel = $user.RiskLevel
-                    estimatedMigrationTime = $user.EstimatedMigrationTime
-                    hasADAccount = $user.HasADAccount
-                    hasGraphAccount = $user.HasGraphAccount
-                    hasExchangeMailbox = $user.HasExchangeMailbox
-                    licenseCount = $user.LicenseCount
-                    mailboxSizeMB = $user.MailboxSizeMB
-                    lastLogon = $user.LastLogon
-                    complexityFactors = $user.ComplexityFactors
-                    riskFactors = $user.RiskFactors
-                    blockingIssues = $user.BlockingIssues
-                }
-            }
-        }
-        
-        # Optimize wave data for PowerApps
-        if ($Data.MigrationWaves) {
-            foreach ($waveKey in $Data.MigrationWaves.Keys) {
-                $wave = $Data.MigrationWaves[$waveKey]
-                $powerAppsData.waves += @{
-                    id = $waveKey
-                    name = $wave.Name
-                    totalUsers = $wave.TotalUsers
-                    estimatedTimeHours = $wave.EstimatedTimeHours
-                    averageComplexityScore = $wave.AverageComplexityScore
-                    averageReadinessScore = $wave.AverageReadinessScore
-                    riskLevel = $wave.RiskLevel
-                    departments = $wave.Departments
-                    statistics = $wave.Statistics
-                }
-            }
-        }
-        
-        # Add summary statistics
-        if ($Data.UserProfiles) {
-            $users = $Data.UserProfiles
-            $powerAppsData.statistics = @{
-                totalUsers = $users.Count
-                enabledUsers = ($users | Where-Object { $_.Enabled }).Count
-                licensedUsers = ($users | Where-Object { $_.LicenseCount -gt 0 }).Count
-                usersWithMailboxes = ($users | Where-Object { $_.HasExchangeMailbox }).Count
-                migrationCategories = @{
-                    simple = ($users | Where-Object { $_.MigrationCategory -eq "Simple" }).Count
-                    standard = ($users | Where-Object { $_.MigrationCategory -eq "Standard" }).Count
-                    complex = ($users | Where-Object { $_.MigrationCategory -eq "Complex" }).Count
-                    highRisk = ($users | Where-Object { $_.MigrationCategory -eq "High Risk" }).Count
-                }
-                readinessStatus = @{
-                    ready = ($users | Where-Object { $_.ReadinessStatus -eq "Ready" }).Count
-                    minorIssues = ($users | Where-Object { $_.ReadinessStatus -eq "Minor Issues" }).Count
-                    needsAttention = ($users | Where-Object { $_.ReadinessStatus -eq "Needs Attention" }).Count
-                    notReady = ($users | Where-Object { $_.ReadinessStatus -eq "Not Ready" }).Count
-                }
-                averageComplexityScore = [math]::Round(($users | Measure-Object -Property ComplexityScore -Average).Average, 1)
-                averageReadinessScore = [math]::Round(($users | Measure-Object -Property ReadinessScore -Average).Average, 1)
-                totalEstimatedTimeHours = [math]::Round(($users | Measure-Object -Property EstimatedMigrationTime -Sum).Sum / 60, 1)
-            }
-        }
-        
-        # Export PowerApps data
-        $powerAppsData | ConvertTo-Json -Depth 10 | Set-Content -Path $powerAppsFile -Encoding UTF8
-        
-        Write-MandALog "PowerApps-optimized export completed: $powerAppsFile" -Level "SUCCESS"
-        return $powerAppsFile
-        
-    } catch {
-        Write-MandALog "PowerApps export failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
-    }
-}
 
-function New-ComprehensiveSummary {
-    param(
-        [hashtable]$Data,
-        [hashtable]$Configuration
-    )
-    
-    $summary = @{
-        metadata = @{
-            exportDate = Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"
-            version = "4.0.0"
-            companyName = $Configuration.metadata.companyName
-            configurationUsed = $Configuration
-        }
-        discovery = @{
-            totalUsers = if ($Data.UserProfiles) { $Data.UserProfiles.Count } else { 0 }
-            dataSources = @()
-            dataQuality = if ($Data.ValidationResults) { $Data.ValidationResults } else { @{} }
-        }
-        analysis = @{
-            complexityBreakdown = @{}
-            readinessAssessment = @{}
-            riskAnalysis = @{}
-        }
-        migration = @{
-            totalWaves = if ($Data.MigrationWaves) { $Data.MigrationWaves.Count } else { 0 }
-            estimatedTotalTime = 0
-            recommendations = @()
-        }
-        recommendations = @()
-    }
-    
-    # Add user analysis
-    if ($Data.UserProfiles) {
-        $users = $Data.UserProfiles
-        
-        $summary.analysis.complexityBreakdown = @{
-            simple = ($users | Where-Object { $_.MigrationCategory -eq "Simple" }).Count
-            standard = ($users | Where-Object { $_.MigrationCategory -eq "Standard" }).Count
-            complex = ($users | Where-Object { $_.MigrationCategory -eq "Complex" }).Count
-            highRisk = ($users | Where-Object { $_.MigrationCategory -eq "High Risk" }).Count
-        }
-        
-        $summary.analysis.readinessAssessment = @{
-            ready = ($users | Where-Object { $_.ReadinessStatus -eq "Ready" }).Count
-            minorIssues = ($users | Where-Object { $_.ReadinessStatus -eq "Minor Issues" }).Count
-            needsAttention = ($users | Where-Object { $_.ReadinessStatus -eq "Needs Attention" }).Count
-            notReady = ($users | Where-Object { $_.ReadinessStatus -eq "Not Ready" }).Count
-        }
-        
-        $summary.analysis.riskAnalysis = @{
-            low = ($users | Where-Object { $_.RiskLevel -eq "Low" }).Count
-            medium = ($users | Where-Object { $_.RiskLevel -eq "Medium" }).Count
-            high = ($users | Where-Object { $_.RiskLevel -eq "High" }).Count
-        }
-        
-        $summary.migration.estimatedTotalTime = [math]::Round(($users | Measure-Object -Property EstimatedMigrationTime -Sum).Sum / 60, 1)
-    }
-    
-    # Add recommendations
-    $summary.recommendations = New-MigrationRecommendations -Data $Data
-    
-    return $summary
-}
+    $processedDataPath = Join-Path $Configuration.environment.outputPath "Processed"
 
-function New-MigrationRecommendations {
-    param([hashtable]$Data)
-    
-    $recommendations = @()
-    
-    if ($Data.UserProfiles) {
-        $users = $Data.UserProfiles
-        $totalUsers = $users.Count
-        
-        # High-level recommendations
-        $notReadyCount = ($users | Where-Object { $_.ReadinessStatus -eq "Not Ready" }).Count
-        if ($notReadyCount -gt 0) {
-            $recommendations += "Address $notReadyCount users not ready for migration before proceeding"
+    # Determine JSON export depth from configuration or use default
+    $jsonExportDepth = 5 # Default depth
+    if ($Configuration.export -and $Configuration.export.ContainsKey('jsonExportDepth') -and $null -ne $Configuration.export.jsonExportDepth) {
+        try {
+            $jsonExportDepth = [int]$Configuration.export.jsonExportDepth
+        } catch {
+            Write-MandALog "Invalid value for jsonExportDepth in configuration: '$($Configuration.export.jsonExportDepth)'. Using default depth of 5." -Level "WARN"
         }
-        
-        $highRiskCount = ($users | Where-Object { $_.MigrationCategory -eq "High Risk" }).Count
-        if ($highRiskCount -gt 0) {
-            $recommendations += "Plan special handling for $highRiskCount high-risk users"
+    }
+
+
+    foreach ($item in $exportItems) {
+        $dataToExport = $null
+        if ($item.SourceCsv -ne "N/A") {
+            $dataToExport = Get-ProcessedDataForJSONExport -KeyName $item.Key -DirectInputData $ProcessedData -ProcessedOutputPath $processedDataPath -DefaultFileName $item.SourceCsv
+        } elseif ($ProcessedData -and $ProcessedData.ContainsKey($item.Key)) {
+            # For complex objects not necessarily from a single CSV
+            $dataToExport = $ProcessedData[$item.Key]
+            Write-MandALog "Using $($item.Key) directly from ProcessedData for JSON export." -Level "DEBUG"
         }
-        
-        $unlicensedCount = ($users | Where-Object { $_.LicenseCount -eq 0 }).Count
-        if ($unlicensedCount -gt 0) {
-            $recommendations += "Review licensing for $unlicensedCount users without assigned licenses"
-        }
-        
-        $disabledCount = ($users | Where-Object { -not $_.Enabled }).Count
-        if ($disabledCount -gt 0) {
-            $recommendations += "Consider excluding $disabledCount disabled accounts from migration"
-        }
-        
-        # Wave-specific recommendations
-        if ($Data.MigrationWaves) {
-            $waveCount = $Data.MigrationWaves.Count
-            if ($waveCount -gt 10) {
-                $recommendations += "Consider consolidating migration waves (currently $waveCount waves)"
+
+
+        if ($null -ne $dataToExport) {
+            # For lists/arrays, check .Count. For single hashtables/objects, just proceed.
+            $canExport = $false
+            if ($dataToExport -is [System.Collections.IList]) {
+                if ($dataToExport.Count -gt 0) { $canExport = $true }
+            } else { # Assume it's a single object/hashtable worth exporting
+                $canExport = $true
             }
+
+            if ($canExport) {
+                $filePath = Join-Path $exportOutputPath $item.OutputFileName
+                try {
+                    $dataToExport | ConvertTo-Json -Depth $jsonExportDepth | Set-Content -Path $filePath -Encoding UTF8
+                    Write-MandALog "Exported $($item.Key) to $filePath" -Level "SUCCESS"
+                } catch {
+                    Write-MandALog "Failed to export $($item.Key) to $filePath. Error: $($_.Exception.Message)" -Level "ERROR"
+                }
+            } else {
+                Write-MandALog "No data available for $($item.Key) after attempting to load/retrieve. Skipping JSON export for this item." -Level "INFO"
+            }
+        } else {
+             Write-MandALog "Data for $($item.Key) is null. Skipping JSON export for this item." -Level "INFO"
+        }
+    }
+
+    # Handle PowerApps Optimized JSON if configured (can be a separate file or modify general JSON)
+    # This example assumes it's a distinct export based on UserProfiles
+    if ($Configuration.export.powerAppsOptimized) {
+        Write-MandALog "Generating PowerApps optimized JSON..." -Level "INFO"
+        $userProfilesForPowerApps = Get-ProcessedDataForJSONExport -KeyName "UserProfiles" -DirectInputData $ProcessedData -ProcessedOutputPath $processedDataPath -DefaultFileName "UserProfiles.csv"
+        
+        if ($null -ne $userProfilesForPowerApps -and $userProfilesForPowerApps.Count -gt 0) {
+            # Placeholder: Logic to transform $userProfilesForPowerApps for PowerApps
+            # e.g., flatten complex objects, select specific fields, ensure date formats are ISO 8601
+            $powerAppsData = $userProfilesForPowerApps | Select-Object UserPrincipalName, DisplayName, Department, MigrationCategory, ComplexityScore # Example subset
             
-            $totalEstimatedTime = 0
-            foreach ($wave in $Data.MigrationWaves.Values) {
-                $totalEstimatedTime += $wave.EstimatedTimeHours
+            $filePath = Join-Path $exportOutputPath "PowerApps_UserProfiles.json"
+            try {
+                # PowerApps often benefits from a shallower depth or specific structuring
+                $powerAppsJsonDepth = 3 
+                if ($Configuration.export.ContainsKey('powerAppsJsonDepth') -and $null -ne $Configuration.export.powerAppsJsonDepth) {
+                    try { $powerAppsJsonDepth = [int]$Configuration.export.powerAppsJsonDepth } catch {}
+                }
+                $powerAppsData | ConvertTo-Json -Depth $powerAppsJsonDepth | Set-Content -Path $filePath -Encoding UTF8
+                Write-MandALog "Exported PowerApps optimized UserProfiles to $filePath" -Level "SUCCESS"
+            } catch {
+                Write-MandALog "Failed to export PowerApps optimized UserProfiles to $filePath. Error: $($_.Exception.Message)" -Level "ERROR"
             }
-            
-            if ($totalEstimatedTime -gt 100) {
-                $recommendations += "Migration estimated to take $([math]::Round($totalEstimatedTime, 1)) hours - consider parallel processing"
-            }
+        } else {
+            Write-MandALog "No UserProfiles data available for PowerApps optimized JSON export." -Level "INFO"
         }
     }
-    
-    return $recommendations
+
+    Write-MandALog "JSON Export Process completed." -Level "SUCCESS"
+    return @{ Status = "Completed"; Path = $exportOutputPath }
 }
 
-# Export functions
-Export-ModuleMember -Function @(
-    'Export-ToJSON',
-    'Export-ForPowerApps',
-    'New-ComprehensiveSummary'
-)
+Export-ModuleMember -Function Export-ToJSON
