@@ -206,30 +206,43 @@ function Set-SecureCredentials {
 function Test-CredentialValidity {
     param(
         [Parameter(Mandatory=$true)]
-        $Credentials,  # Remove [hashtable] type constraint
+        $Credentials,
         [hashtable]$Configuration
     )
     
     try {
-        # Ensure Credentials is a hashtable
-        if ($Credentials -isnot [hashtable]) {
+        # Handle different credential formats
+        $credData = $null
+        if ($Credentials -is [hashtable]) {
+            if ($Credentials.ContainsKey('Success')) {
+                # It's a wrapped credential object
+                $credData = @{
+                    ClientId = $Credentials.ClientId
+                    ClientSecret = $Credentials.ClientSecret
+                    TenantId = $Credentials.TenantId
+                }
+            } else {
+                # It's already just the credential data
+                $credData = $Credentials
+            }
+        } else {
             Write-MandALog "Invalid Credentials parameter type: Expected hashtable, got $($Credentials.GetType().FullName)" -Level "ERROR"
             return $false
         }
         
         # Basic format validation
-        if (-not ($Credentials.ClientId -and $Credentials.ClientSecret -and $Credentials.TenantId)) {
+        if (-not ($credData.ClientId -and $credData.ClientSecret -and $credData.TenantId)) {
             Write-MandALog "Incomplete credentials: ClientId, ClientSecret, or TenantId missing" -Level "ERROR"
             return $false
         }
         
         # GUID format validation
-        if ($Credentials.ClientId -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+        if ($credData.ClientId -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
             Write-MandALog "Invalid ClientId format: Must be a valid GUID" -Level "ERROR"
             return $false
         }
         
-        if ($Credentials.TenantId -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+        if ($credData.TenantId -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
             Write-MandALog "Invalid TenantId format: Must be a valid GUID" -Level "ERROR"
             return $false
         }
@@ -244,11 +257,11 @@ function Test-CredentialValidity {
             
             Import-Module Microsoft.Graph.Authentication -Force
             
-            $secureSecret = ConvertTo-SecureString $Credentials.ClientSecret -AsPlainText -Force
-            $clientCredential = New-Object System.Management.Automation.PSCredential ($Credentials.ClientId, $secureSecret)
+            $secureSecret = ConvertTo-SecureString $credData.ClientSecret -AsPlainText -Force
+            $clientCredential = New-Object System.Management.Automation.PSCredential ($credData.ClientId, $secureSecret)
             
             # Attempt to connect to Graph
-            Connect-MgGraph -ClientSecretCredential $clientCredential -TenantId $Credentials.TenantId -NoWelcome -ErrorAction Stop
+            Connect-MgGraph -ClientSecretCredential $clientCredential -TenantId $credData.TenantId -NoWelcome -ErrorAction Stop
             
             # Test basic Graph access
             $org = Get-MgOrganization -Top 1 -ErrorAction Stop
