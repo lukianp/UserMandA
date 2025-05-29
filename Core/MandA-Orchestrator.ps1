@@ -45,6 +45,8 @@ param(
 if (-not $global:MandASuiteRoot) {
     $script:SuiteRoot = Split-Path $PSScriptRoot -Parent
     Write-Warning "global:MandASuiteRoot not set. Assuming SuiteRoot is: $($script:SuiteRoot)"
+    # If running standalone, Set-SuiteEnvironment.ps1 should ideally be sourced
+    # For now, we rely on QuickStart.ps1 to source Set-SuiteEnvironment.ps1 which sets $global:MandASuiteRoot
 }
 
 
@@ -114,7 +116,10 @@ function Initialize-MandAEnvironment {
         Initialize-Logging -Configuration $Configuration
         Initialize-OutputDirectories -Configuration $Configuration
         if (-not (Test-Prerequisites -Configuration $Configuration -ValidateOnly:$ValidateOnly)) { throw "System prerequisites validation failed" }
+        
+        # Get-RequiredModules is expected to be in ValidationHelpers.psm1 (loaded in $InitialEssentialModulePaths)
         $ModulesToLoadPaths = Get-RequiredModules -Configuration $Configuration -Mode $CurrentMode
+        
         Write-MandALog "Dynamically loading $($ModulesToLoadPaths.Count) modules for mode '$CurrentMode'..." -Level "INFO"
         foreach ($ModuleFile in $ModulesToLoadPaths) {
             if (Test-Path $ModuleFile) { Import-Module $ModuleFile -Force -Global; Write-MandALog "Loaded module: $(Split-Path $ModuleFile -Leaf)" -Level "SUCCESS" }
@@ -149,7 +154,7 @@ function Invoke-DiscoveryPhase {
         Invoke-DiscoveryModuleSafely -SourceName "Intune" -InvokeCommandName "Invoke-IntuneDiscovery" -Config $Configuration -StepRef ([ref]$currentStep) -ResultsRef ([ref]$discoveryResults)
         Invoke-DiscoveryModuleSafely -SourceName "GPO" -InvokeCommandName "Invoke-GPODiscovery" -Config $Configuration -StepRef ([ref]$currentStep) -ResultsRef ([ref]$discoveryResults) 
         Invoke-DiscoveryModuleSafely -SourceName "ExternalIdentity" -InvokeCommandName "Invoke-ExternalIdentityDiscovery" -Config $Configuration -StepRef ([ref]$currentStep) -ResultsRef ([ref]$discoveryResults)
-        Update-Progress -Step $enabledDiscoverySourcesCount -Status "Discovery Phase Potentially Complete" -ForceUpdate:$true
+        Update-Progress -Step $enabledDiscoverySourcesCount -Status "Discovery Phase Potentially Complete" -ForceUpdate:$true # Ensure progress bar completes
         Write-MandALog "Discovery phase completed successfully" -Level "SUCCESS"; return $discoveryResults
     } catch { Write-MandALog "Discovery phase failed: $($_.Exception.Message)" -Level "ERROR"; throw }
 }
@@ -158,28 +163,27 @@ function Invoke-ProcessingPhase {
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration
-        # Removed $DiscoveryData parameter as DataAggregation will handle loading its inputs
     )
     
     try {
         Write-MandALog "Starting Processing Phase" -Level "HEADER"
         $script:ExecutionMetrics.Phase = "Processing"
         
-        Initialize-ProgressTracker -Phase "Processing" -TotalSteps 5 # Step 1: Aggregation, Step 2: Profiling, Step 3: Complexity, Step 4: Waves, Step 5: Validation
+        Initialize-ProgressTracker -Phase "Processing" -TotalSteps 5 
         
-        # Step 1: Data Aggregation (now self-contained in DataAggregation.psm1)
+        # Step 1: Data Aggregation (from DataAggregation.psm1)
         Update-Progress -Step 1 -Status "Invoking Data Aggregation"
         $rawDataPath = Join-Path $Configuration.environment.outputPath "Raw"
-        $aggregationOutput = $null
+        $aggregationOutput = $null # This will hold {AggregatedDataStore, RelationshipGraph}
+
         if (Get-Command 'Invoke-DataAggregation' -ErrorAction SilentlyContinue) {
-            # Invoke-DataAggregation should return a hashtable with keys like 'AggregatedDataStore' and 'RelationshipGraph'
             $aggregationOutput = Invoke-DataAggregation -RawDataPath $rawDataPath -Configuration $Configuration
         } else {
             Write-MandALog "Invoke-DataAggregation command not found. Critical for processing. Aborting Processing Phase." -Level "ERROR"
             throw "Invoke-DataAggregation module/command not found."
         }
 
-        # Extract the actual aggregated data and relationship graph from the output
+        # Extract data from the aggregation output
         $aggregatedDataStore = $aggregationOutput.AggregatedDataStore
         $relationshipGraph = $aggregationOutput.RelationshipGraph
         
@@ -187,9 +191,10 @@ function Invoke-ProcessingPhase {
             Write-MandALog "Data Aggregation did not return aggregated data. Aborting Processing Phase." -Level "ERROR"
             throw "Data Aggregation failed to produce data."
         }
-        Write-MandALog "Data Aggregation completed. $($aggregatedDataStore.Users.Count) users (example count) in aggregated store." -Level "INFO"
+        Write-MandALog "Data Aggregation completed. $($aggregatedDataStore.Users.Count) users (example key) in aggregated store." -Level "INFO"
 
-        # Step 2: Build User Profiles
+        # Step 2: Build User Profiles (from UserProfileBuilder.psm1)
+        # New-UserProfiles should expect $AggregatedDataStore and $RelationshipGraph
         Update-Progress -Step 2 -Status "Building User Profiles"
         $userProfiles = if (Get-Command 'New-UserProfiles' -ErrorAction SilentlyContinue) {
             New-UserProfiles -AggregatedDataStore $aggregatedDataStore -RelationshipGraph $relationshipGraph -Configuration $Configuration 
@@ -197,7 +202,8 @@ function Invoke-ProcessingPhase {
             Write-MandALog "New-UserProfiles command not found. Skipping profile building." -Level "WARN"; @()
         }
         
-        # Step 3: Calculate Migration Complexity
+        # Step 3: Calculate Migration Complexity (from UserProfileBuilder.psm1 or ComplexityCalculator.psm1)
+        # Ensure Measure-MigrationComplexity (or your chosen name) is exported and handles $userProfiles
         Update-Progress -Step 3 -Status "Analyzing Migration Complexity"
         $complexityAnalysis = if (Get-Command 'Measure-MigrationComplexity' -ErrorAction SilentlyContinue) {
             Measure-MigrationComplexity -Profiles $userProfiles -Configuration $Configuration
@@ -205,7 +211,8 @@ function Invoke-ProcessingPhase {
             Write-MandALog "Measure-MigrationComplexity command not found. Skipping complexity analysis." -Level "WARN"; $null
         }
         
-        # Step 4: Generate Migration Waves
+        # Step 4: Generate Migration Waves (from WaveGeneration.psm1)
+        # New-MigrationWaves should expect $userProfiles
         Update-Progress -Step 4 -Status "Generating Migration Waves"
         $migrationWaves = if (Get-Command 'New-MigrationWaves' -ErrorAction SilentlyContinue) {
             New-MigrationWaves -Profiles $userProfiles -Configuration $Configuration
@@ -213,10 +220,11 @@ function Invoke-ProcessingPhase {
             Write-MandALog "New-MigrationWaves command not found. Skipping wave generation." -Level "WARN"; @()
         }
         
-        # Step 5: Validate Data Quality
+        # Step 5: Validate Data Quality (from DataValidation.psm1)
+        # Test-DataQuality should expect $userProfiles or perhaps $aggregatedDataStore
         Update-Progress -Step 5 -Status "Validating Data Quality"
         $validationResults = if (Get-Command 'Test-DataQuality' -ErrorAction SilentlyContinue) {
-            Test-DataQuality -Profiles $userProfiles -Configuration $Configuration # Or pass $aggregatedDataStore
+            Test-DataQuality -Profiles $userProfiles -Configuration $Configuration 
         } else {
             Write-MandALog "Test-DataQuality command not found. Skipping data validation." -Level "WARN"; $null
         }
@@ -230,13 +238,14 @@ function Invoke-ProcessingPhase {
             }
         }
         
+        # This is the $ProcessedData object that will be passed to the Export phase
         $processingResults = @{
             UserProfiles = $userProfiles
             ComplexityAnalysis = $complexityAnalysis
             MigrationWaves = $migrationWaves
             ValidationResults = $validationResults
-            RelationshipGraph = $relationshipGraph 
-            AggregatedDataStore = $aggregatedDataStore       
+            RelationshipGraph = $relationshipGraph # Included for potential direct export or detailed analysis
+            AggregatedDataStore = $aggregatedDataStore # Included for potential direct export or detailed analysis
         }
         
         $script:ExecutionMetrics.Modules["Processing"] = @{
@@ -262,33 +271,43 @@ function Invoke-ExportPhase {
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration, 
-        [Parameter(Mandatory=$true)] 
-        [hashtable]$ProcessedData
+        [Parameter(Mandatory=$true)] # $ProcessedData comes from Invoke-ProcessingPhase
+        [hashtable]$ProcessedData 
     )
     try {
         Write-MandALog "Starting Export Phase" -Level "HEADER"
         $script:ExecutionMetrics.Phase = "Export"
-        $exportTotalSteps = @($Configuration.export.formats).Count
+        
+        $exportFormatsCount = @($Configuration.export.formats).Count
         $isPowerAppsOptimized = $false
         if ($Configuration.export.powerAppsOptimized) {
             if ($Configuration.export.powerAppsOptimized -is [boolean]) { $isPowerAppsOptimized = $Configuration.export.powerAppsOptimized }
             elseif ($Configuration.export.powerAppsOptimized -is [string] -and $Configuration.export.powerAppsOptimized.ToLower() -eq 'true') { $isPowerAppsOptimized = $true }
         }
-        if ($isPowerAppsOptimized) { $exportTotalSteps++ }
+        $powerAppsStep = if ($isPowerAppsOptimized) { 1 } else { 0 }
+        $exportTotalSteps = $exportFormatsCount + $powerAppsStep
+        
         Initialize-ProgressTracker -Phase "Export" -TotalSteps $exportTotalSteps
+
         $exportResults = @{}; $currentStep = 0
+        
         function Invoke-ExportModuleSafely { 
-            param([string]$FormatName, [string]$InvokeCommandName, [hashtable]$Config, [hashtable]$Data, [ref]$StepRef, [ref]$ResultsRef)
+            param([string]$FormatName, [string]$InvokeCommandName, [hashtable]$Config, [hashtable]$DataToExport, [ref]$StepRef, [ref]$ResultsRef) # Renamed $Data to $DataToExport
             $StepRef.Value++; Update-Progress -Step $StepRef.Value -Status "$FormatName Export"
             if (Get-Command $InvokeCommandName -ErrorAction SilentlyContinue) {
-                Write-MandALog "Invoking $InvokeCommandName..." -Level "INFO"; $ResultsRef.Value.$FormatName = & $InvokeCommandName -Data $Data -Configuration $Config
+                Write-MandALog "Invoking $InvokeCommandName..." -Level "INFO"
+                # Each export module receives the entire $ProcessedData hashtable
+                $ResultsRef.Value.$FormatName = & $InvokeCommandName -ProcessedData $DataToExport -Configuration $Config 
             } else { Write-MandALog "$InvokeCommandName command not found. Skipping $FormatName export." -Level "WARN" }
         }
-        if ($Configuration.export.formats -contains "CSV") { Invoke-ExportModuleSafely -FormatName "CSV" -InvokeCommandName "Export-ToCSV" -Config $Configuration -Data $ProcessedData -StepRef ([ref]$currentStep) -ResultsRef ([ref]$exportResults) }
-        if ($Configuration.export.formats -contains "Excel") { Invoke-ExportModuleSafely -FormatName "Excel" -InvokeCommandName "Export-ToExcel" -Config $Configuration -Data $ProcessedData -StepRef ([ref]$currentStep) -ResultsRef ([ref]$exportResults) }
-        if ($Configuration.export.formats -contains "JSON") { Invoke-ExportModuleSafely -FormatName "JSON" -InvokeCommandName "Export-ToJSON" -Config $Configuration -Data $ProcessedData -StepRef ([ref]$currentStep) -ResultsRef ([ref]$exportResults) }
-        if ($isPowerAppsOptimized) { Invoke-ExportModuleSafely -FormatName "PowerApps" -InvokeCommandName "Export-ForPowerApps" -Config $Configuration -Data $ProcessedData -StepRef ([ref]$currentStep) -ResultsRef ([ref]$exportResults) }
-        Update-Progress -Step $currentStep -Status "Export Phase Potentially Complete" -ForceUpdate:$true
+
+        # Pass the entire $ProcessedData to each export module
+        if ($Configuration.export.formats -contains "CSV") { Invoke-ExportModuleSafely -FormatName "CSV" -InvokeCommandName "Export-ToCSV" -Config $Configuration -DataToExport $ProcessedData -StepRef ([ref]$currentStep) -ResultsRef ([ref]$exportResults) }
+        if ($Configuration.export.formats -contains "Excel") { Invoke-ExportModuleSafely -FormatName "Excel" -InvokeCommandName "Export-ToExcel" -Config $Configuration -DataToExport $ProcessedData -StepRef ([ref]$currentStep) -ResultsRef ([ref]$exportResults) }
+        if ($Configuration.export.formats -contains "JSON") { Invoke-ExportModuleSafely -FormatName "JSON" -InvokeCommandName "Export-ToJSON" -Config $Configuration -DataToExport $ProcessedData -StepRef ([ref]$currentStep) -ResultsRef ([ref]$exportResults) }
+        if ($isPowerAppsOptimized) { Invoke-ExportModuleSafely -FormatName "PowerApps" -InvokeCommandName "Export-ForPowerApps" -Config $Configuration -DataToExport $ProcessedData -StepRef ([ref]$currentStep) -ResultsRef ([ref]$exportResults) }
+        
+        Update-Progress -Step $currentStep -Status "Export Phase Potentially Complete" -ForceUpdate:$true # Ensure progress bar completes
         Write-MandALog "Export phase completed successfully" -Level "SUCCESS"; return $exportResults
     } catch { Write-MandALog "Export phase failed: $($_.Exception.Message)" -Level "ERROR"; throw }
 }
@@ -300,6 +319,8 @@ function Complete-MandADiscovery {
         $script:ExecutionMetrics.Duration = $script:ExecutionMetrics.EndTime - $script:ExecutionMetrics.StartTime
         Write-MandALog "M&A Discovery Suite Execution Summary" -Level "HEADER"
         Write-MandALog "Total Duration: $($script:ExecutionMetrics.Duration.ToString('hh\:mm\:ss'))" -Level "SUCCESS"
+        # Add more summary details if needed from $script:ExecutionMetrics
+
         Export-ProgressMetrics -Configuration $Configuration 
         Cleanup-TempFiles -Configuration $Configuration      
         Write-MandALog "M&A Discovery Suite completed successfully" -Level "SUCCESS"
@@ -309,38 +330,70 @@ function Complete-MandADiscovery {
 # --- Main execution ---
 try {
     $resolvedConfigFile = if ([System.IO.Path]::IsPathRooted($ConfigurationFile)) { $ConfigurationFile }
-    else { Join-Path $global:MandASuiteRoot $ConfigurationFile }
-    if (-not (Test-Path $resolvedConfigFile -PathType Leaf)) { Write-Error "Configuration file not found at '$resolvedConfigFile'."; exit 1 }
+    else { Join-Path $global:MandASuiteRoot $ConfigurationFile } # Assumes $global:MandASuiteRoot is set by Set-SuiteEnvironment
+    
+    if (-not (Test-Path $resolvedConfigFile -PathType Leaf)) { Write-Error "Configuration file not found at '$resolvedConfigFile'. Please ensure the path is correct."; exit 1 }
+    
     $configContent = Get-Content $resolvedConfigFile | ConvertFrom-Json -ErrorAction Stop
     $script:Config = ConvertTo-HashtableFromPSObject -InputObject $configContent
+    
     if ($OutputPath) { $script:Config.environment.outputPath = $OutputPath }
     if ($Force.IsPresent) { $script:Config.discovery.skipExistingFiles = $false }
+    
     Write-Host "`nM&A Discovery Suite v4.0 - Modular Orchestrator" -ForegroundColor Cyan
     Write-Host "Mode: $Mode | Config: $resolvedConfigFile" -ForegroundColor Yellow
+    
     if (-not (Initialize-MandAEnvironment -Configuration $script:Config -CurrentMode $Mode -ValidateOnly:$ValidateOnly)) { throw "Environment initialization failed" }
-    if ($ValidateOnly) { Write-MandALog "Validation Only Mode: Completed." -Level "SUCCESS"; exit 0 }
+    
+    if ($ValidateOnly) { Write-MandALog "Validation Only Mode: Orchestrator configuration and prerequisites appear valid." -Level "SUCCESS"; Write-MandALog "No discovery, processing, or export operations were performed." -Level "INFO"; exit 0 }
+    
     if (-not (Initialize-MandAAuthentication -Configuration $script:Config)) { throw "Authentication failed" }
-    if (-not (Initialize-AllConnections -Configuration $script:Config)) { Write-MandALog "One or more service connections failed." -Level "WARN" }
-    $discoveryResults = $null; $processingResults = $null
-    if ($Mode -in @("Discovery", "Full")) { $discoveryResults = Invoke-DiscoveryPhase -Configuration $script:Config }
-    if ($Mode -in @("Processing", "Full")) { $processingResults = Invoke-ProcessingPhase -Configuration $script:Config }
-    if ($Mode -in @("Export", "Full")) {
-        if ($null -eq $processingResults -and $Mode -ne "Processing") { 
-            Write-MandALog "Export mode requires processed data. Attempting to use existing." -Level "WARN"
-            # If $processingResults is $null here, it means processing didn't run in this session.
-            # Invoke-ExportPhase will need to handle loading data from files if $ProcessedData is $null.
-            # For now, we'll pass $null, and the export modules should be designed to load if data isn't passed.
-        }
-        if ($null -ne $processingResults -or ($Mode -eq "Export")) { 
-            Invoke-ExportPhase -Configuration $script:Config -ProcessedData $processingResults 
-        } else { Write-MandALog "Skipping Export Phase as no processed data is available." -Level "WARN" }
+    if (-not (Initialize-AllConnections -Configuration $script:Config)) { Write-MandALog "One or more service connections failed. Suite will attempt to proceed with limited functionality." -Level "WARN" }
+    
+    $discoveryResults = $null
+    $processingResults = $null # This will hold the output from Invoke-ProcessingPhase
+
+    if ($Mode -in @("Discovery", "Full")) {
+        $discoveryResults = Invoke-DiscoveryPhase -Configuration $script:Config
     }
+    
+    if ($Mode -in @("Processing", "Full")) {
+        $processingResults = Invoke-ProcessingPhase -Configuration $script:Config
+    }
+    
+    if ($Mode -in @("Export", "Full")) {
+        if ($null -eq $processingResults -and $Mode -eq "Export") { 
+            # If running Export only mode, $processingResults will be $null.
+            # We need to indicate to Invoke-ExportPhase that it might need to load data.
+            # For now, we pass $null; the export modules would need to be smart enough
+            # or we add logic here to load previously processed data.
+            # A simpler contract for now: Export phase always expects $processingResults from the same session or a previous "Processing" / "Full" run's files.
+            Write-MandALog "Export mode selected. Attempting to use previously processed data. Ensure Processing phase has run successfully." -Level "INFO"
+            # The Invoke-ExportPhase will receive $processingResults as $null in this specific "Export Only" case
+            # if processing didn't run in the same orchestrator session.
+            # The export modules themselves will need to load data from "Processed" folder if $ProcessedData.UserProfiles (etc.) is $null or empty.
+        }
+
+        if ($null -ne $processingResults) {
+            Invoke-ExportPhase -Configuration $script:Config -ProcessedData $processingResults 
+        } elseif ($Mode -eq "Export") {
+             # Allow Export mode to run even if $processingResults is null from this session.
+             # The export modules must be capable of loading their own input from files.
+            Write-MandALog "Running Export phase. Modules will attempt to load data from the 'Processed' directory." -Level "INFO"
+            Invoke-ExportPhase -Configuration $script:Config -ProcessedData $null # Explicitly pass $null
+        } else { 
+            Write-MandALog "Skipping Export Phase as no processed data is available from the current session (e.g., Discovery-only mode or Processing phase failed)." -Level "WARN"
+        }
+    }
+    
     Complete-MandADiscovery -Configuration $script:Config
+    
 } catch {
     Write-MandALog "ORCHESTRATOR CRITICAL ERROR: $($_.Exception.Message)" -Level "CRITICAL_ERROR"
     if ($_.ScriptStackTrace) { Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG" }
     if ($_.Exception.InnerException) { Write-MandALog "Inner Exception: $($_.Exception.InnerException.Message)" -Level "DEBUG" }
     exit 1
+    
 } finally {
     try { if (Get-Command 'Disconnect-AllServices' -ErrorAction SilentlyContinue) { Disconnect-AllServices } }
     catch { Write-MandALog "Error during final service disconnection: $($_.Exception.Message)" -Level "WARN" }
