@@ -7,7 +7,7 @@
     attempts to import them, and reports their status.
     It will attempt to install or update modules to meet requirements if they are missing or outdated.
 .NOTES
-    Version: 1.1.2
+    Version: 1.1.3
     Author: Gemini
     Date: 2025-05-28
 
@@ -87,7 +87,6 @@ function Write-SectionHeader {
 }
 
 function Install-OrUpdateModule {
-    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)]
         [string]$ModuleName,
@@ -97,8 +96,6 @@ function Install-OrUpdateModule {
         [ref]$ModuleResultToUpdate
     )
 
-    # This function will now always attempt to install/update if called,
-    # respecting ShouldProcess for user confirmation by default.
     if ($PSCmdlet.ShouldProcess($ModuleName, "Install/Update to version $($RequiredVersion.ToString()) or newer")) {
         Write-Host "  Attempting to install/update module '$ModuleName' to minimum version $($RequiredVersion.ToString())..." -ForegroundColor Magenta
         try {
@@ -108,6 +105,23 @@ function Install-OrUpdateModule {
                 Write-Host "  Status: $($ModuleResultToUpdate.Value.Status)" -ForegroundColor Red
                 Return $false
             }
+
+            # Pre-check Gallery reachability with Find-Module
+            Write-Host "  Verifying PowerShell Gallery reachability for '$ModuleName'..." -ForegroundColor Gray
+            $null = Find-Module -Name $ModuleName -Repository PSGallery -ErrorAction SilentlyContinue -ErrorVariable findModuleError
+            if ($findModuleError) {
+                # Check for common error messages indicating gallery unavailability
+                if ($findModuleError.ToString() -match "Unable to resolve the source 'PSGallery'" -or $findModuleError.ToString() -match "No match was found for the specified search criteria and module name") {
+                    # The "No match" can also mean gallery is down or module truly doesn't exist, but it's a good first check.
+                    $ModuleResultToUpdate.Value.Status = "Install Failed (PSGallery Unreachable)"
+                    $ModuleResultToUpdate.Value.Notes = "PowerShell Gallery may be unavailable or module '$ModuleName' not found. Error: $($findModuleError[0].Exception.Message)"
+                    Write-Host "  Status: $($ModuleResultToUpdate.Value.Status)" -ForegroundColor Red
+                    Write-Host "  Details: $($findModuleError[0].Exception.Message)" -ForegroundColor Red
+                    Return $false
+                }
+            }
+            Write-Host "  PowerShell Gallery seems reachable for '$ModuleName'." -ForegroundColor Gray
+
 
             if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
                 Write-Host "  NuGet provider not found. Attempting to install NuGet provider..." -ForegroundColor Magenta
@@ -122,19 +136,30 @@ function Install-OrUpdateModule {
                 Write-Host "  PSGallery set to trusted." -ForegroundColor Green
             } elseif (-not $psGallery) {
                 Write-Warning "PSGallery repository not found. Module installation might fail."
+                # Attempt to register it with default settings if completely missing
+                try {
+                    Write-Host "  Attempting to register default PSGallery repository..." -ForegroundColor Magenta
+                    Register-PSRepository -Name PSGallery -SourceLocation "https://www.powershellgallery.com/api/v2" -InstallationPolicy Trusted -ErrorAction Stop
+                    Write-Host "  PSGallery repository registered." -ForegroundColor Green
+                } catch {
+                    Write-Warning "Failed to register PSGallery: $($_.Exception.Message)"
+                    $ModuleResultToUpdate.Value.Status = "Install Failed (PSGallery Registration Failed)"
+                    $ModuleResultToUpdate.Value.Notes = "Could not find or register PSGallery. Error: $($_.Exception.Message)"
+                    Return $false
+                }
             }
 
             Install-Module -Name $ModuleName -MinimumVersion $RequiredVersion.ToString() -Force -Scope CurrentUser -AllowClobber -AcceptLicense -ErrorAction Stop
             $ModuleResultToUpdate.Value.Notes = "Module installation/update attempted. Re-checking status."
             Write-Host "  Module '$ModuleName' install/update command executed." -ForegroundColor Green
-            Return $true # Indicate fix was attempted
+            Return $true 
         }
         catch {
             $ModuleResultToUpdate.Value.Status = "Install/Update Failed"
             $ModuleResultToUpdate.Value.Notes = "Error during install/update: $($_.Exception.Message)"
             Write-Host "  Status: $($ModuleResultToUpdate.Value.Status)" -ForegroundColor Red
             Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-            Return $false # Indicate fix attempt failed
+            Return $false 
         }
     } else {
         $ModuleResultToUpdate.Value.Notes += " User chose not to proceed with install/update (ShouldProcess)."
@@ -177,10 +202,13 @@ function Test-SingleModule {
         
         if (-not $availableModule) {
             $moduleResult.Status = "Not Found"
-            $moduleResult.Notes = "Module is not installed or not discoverable in PSModulePath."
+            # Only append this note if it's the first time or no other specific note from Install-OrUpdateModule exists
+            if ($attempt -eq 1 -and -not $moduleResult.Notes.Contains("install/update")) { 
+                $moduleResult.Notes = "Module is not installed or not discoverable in PSModulePath."
+            }
             if ($attempt -eq 1) { Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Red }
 
-            if (-not $attemptedFixThisRun) { # Only attempt fix once per module check
+            if (-not $attemptedFixThisRun) { 
                 if (Install-OrUpdateModule -ModuleName $ModuleName -RequiredVersion $RequiredVersion -ModuleResultToUpdate ([ref]$moduleResult)) {
                     $attemptedFixThisRun = $true
                     continue 
@@ -188,7 +216,7 @@ function Test-SingleModule {
                     break 
                 }
             } else {
-                break # Already attempted fix, still not found
+                break 
             }
         } else { 
             $moduleResult.Path = ($availableModule | Select-Object -First 1).Path
@@ -198,17 +226,21 @@ function Test-SingleModule {
             if ($attempt -eq 1 -and -not $attemptedFixThisRun) {
                 Write-Host "  Status: Found (Available)" -ForegroundColor Green
                 Write-Host "  Installed Version: $($moduleResult.InstalledVersion)" -ForegroundColor White
+                Write-Host "  Path: $($moduleResult.Path)" -ForegroundColor Gray # Display path where it was found
             } elseif ($attemptedFixThisRun) { 
                  Write-Host "  Status after fix attempt: Found (Available)" -ForegroundColor Green
                  Write-Host "  Installed Version after fix attempt: $($moduleResult.InstalledVersion)" -ForegroundColor White
+                 Write-Host "  Path after fix attempt: $($moduleResult.Path)" -ForegroundColor Gray
             }
 
             if ($installedVersion -lt $RequiredVersion) {
                 $moduleResult.Status = "Version Mismatch (Installed: $($moduleResult.InstalledVersion), Required: $($moduleResult.RequiredVersion))"
-                $moduleResult.Notes = "Installed version is older than required."
+                if ($attempt -eq 1 -and -not $moduleResult.Notes.Contains("install/update")) { # Avoid overwriting install notes
+                    $moduleResult.Notes = "Installed version is older than required."
+                }
                 if ($attempt -eq 1 -and -not $attemptedFixThisRun) { Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Yellow }
                 
-                if (-not $attemptedFixThisRun) { # Only attempt fix once
+                if (-not $attemptedFixThisRun) { 
                     if (Install-OrUpdateModule -ModuleName $ModuleName -RequiredVersion $RequiredVersion -ModuleResultToUpdate ([ref]$moduleResult)) {
                         $attemptedFixThisRun = $true
                         continue
@@ -216,7 +248,7 @@ function Test-SingleModule {
                         break
                     }
                 } else {
-                    break # Already attempted fix, still mismatched
+                    break 
                 }
             } else { 
                 $moduleResult.Status = "Version OK"
@@ -231,12 +263,13 @@ function Test-SingleModule {
     if ($moduleResult.Status -notlike "Not Found*" -and $moduleResult.Status -notlike "Version Mismatch*" -and $moduleResult.Status -notlike "Install*Failed*") {
         $importedModule = $null
         try {
-            Write-Host "  Attempting to import module '$ModuleName'..." -ForegroundColor White
-            $importedModule = Import-Module -Name $ModuleName -Force -PassThru -ErrorAction Stop
+            Write-Host "  Attempting to import module '$ModuleName' from path '$($moduleResult.Path)'..." -ForegroundColor White
+            # Try importing from the specific path found, especially if it was just installed
+            $importedModule = Import-Module -Name $moduleResult.Path -Force -PassThru -ErrorAction Stop
             if ($importedModule) {
                 $moduleResult.Status = "Imported Successfully"
                 $moduleResult.InstalledVersion = $importedModule.Version.ToString() 
-                $moduleResult.Path = $importedModule.Path
+                $moduleResult.Path = $importedModule.Path # Confirm path of loaded module
                 Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Green
                 Write-Host "  Loaded Version: $($moduleResult.InstalledVersion)" -ForegroundColor White
                 Write-Host "  Loaded Path: $($moduleResult.Path)" -ForegroundColor White
@@ -276,12 +309,12 @@ function Test-SingleModule {
 #region Main Script Body
 Write-SectionHeader "M&A Discovery Suite - Module Dependency Check"
 Write-Host "This script will check the status of required and optional PowerShell modules."
-if ($AutoFix) { # Message is still useful
+if ($AutoFix) { 
     Write-Host "AUTO-FIX MODE ENABLED (by switch): Script will attempt to install/update missing or outdated modules." -ForegroundColor Magenta
 } else {
-    Write-Host "INFO: Script will attempt to install/update missing or outdated modules by default." -ForegroundColor Cyan
-    Write-Host "Use -Confirm:$false to suppress individual prompts if desired." -ForegroundColor Cyan
+    Write-Host "INFO: Script will attempt to install/update missing or outdated modules by default (will prompt)." -ForegroundColor Cyan
 }
+Write-Host "Use -Confirm:`$false (with or without -AutoFix) to suppress individual installation prompts." -ForegroundColor Cyan
 Write-Host "An internet connection is required for installations/updates." -ForegroundColor Yellow
 Write-Host "Modules will be installed for the CurrentUser scope." -ForegroundColor Yellow
 Write-Host "Timestamp: $(Get-Date)"
@@ -323,7 +356,7 @@ if (($Results | Where-Object {$_.Type -eq "Required" -and ($_.Status -like "Not 
 } else {
     Write-Host "`nERROR: CRITICAL issues found with REQUIRED modules:" -ForegroundColor Red
     $criticalIssues | ForEach-Object {
-        Write-Host "  - $($_.Name) (Required): Status: $($_.Status). Installed: $($_.InstalledVersion), Required: $($_.RequiredVersion). Notes: $($_.Notes)" -ForegroundColor Red
+        Write-Host ("  - {0} ({1}): Status: {2}. Installed: {3}, Required: {4}. Notes: {5}" -f $_.Name, $_.Type, $_.Status, $_.InstalledVersion, $_.RequiredVersion, $_.Notes) -ForegroundColor Red
     }
      Write-Host "`nPlease address the CRITICAL issues with REQUIRED modules above to ensure the M&A Discovery Suite can run correctly." -ForegroundColor Red
 }
@@ -331,14 +364,14 @@ if (($Results | Where-Object {$_.Type -eq "Required" -and ($_.Status -like "Not 
 if ($optionalIssues.Count -gt 0) {
     Write-Host "`nWARNING: Issue(s) found with OPTIONAL modules:" -ForegroundColor Yellow
     $optionalIssues | ForEach-Object {
-        Write-Host "  - $($_.Name) (Optional): Status: $($_.Status). Installed: $($_.InstalledVersion), Required: $($_.RequiredVersion). Notes: $($_.Notes)" -ForegroundColor Yellow
+        Write-Host ("  - {0} ({1}): Status: {2}. Installed: {3}, Required: {4}. Notes: {5}" -f $_.Name, $_.Type, $_.Status, $_.InstalledVersion, $_.RequiredVersion, $_.Notes) -ForegroundColor Yellow
     }
 }
 
 if ($customIssues.Count -gt 0) {
      Write-Host "`nWARNING: Issue(s) found with CUSTOM modules:" -ForegroundColor Yellow
     $customIssues | ForEach-Object {
-        Write-Host "  - $($_.Name) (Custom): Status: $($_.Status). Installed: $($_.InstalledVersion), Required: $($_.RequiredVersion). Notes: $($_.Notes)" -ForegroundColor Yellow
+        Write-Host ("  - {0} ({1}): Status: {2}. Installed: {3}, Required: {4}. Notes: {5}" -f $_.Name, $_.Type, $_.Status, $_.InstalledVersion, $_.RequiredVersion, $_.Notes) -ForegroundColor Yellow
     }
 }
 
