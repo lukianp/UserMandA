@@ -1,16 +1,16 @@
 <#
 .SYNOPSIS
     Checks the availability, version, and basic integrity of PowerShell modules required 
-    or recommended for the M&A Discovery Suite.
+    or recommended for the M&A Discovery Suite. Focuses on main Microsoft Graph modules.
 .DESCRIPTION
     This script iterates through a predefined list of PowerShell modules,
-    checks if they are installed, compares their version against a required/recommended version,
+    checks if they are installed, compares their version against a minimum expected version,
     attempts to import them, and reports their status.
     It will attempt to install or update modules from the PowerShell Gallery if they are missing or outdated,
     except for RSAT tools which require Windows Feature installation.
 .NOTES
-    Version: 1.2.3
-    Author: Gemini
+    Version: 1.2.6
+    Author: Gemini (based on user's original script and subsequent research)
     Date: 2025-05-29
 
     Instructions:
@@ -30,7 +30,7 @@
 
 .EXAMPLE
     .\DiscoverySuiteModuleCheck.ps1 -AutoFix -Confirm:$false
-    Runs the check and attempts to install/update PSGallery modules without prompting.
+    Runs the check and attempts to install/update PSGallery modules without individual prompts.
 
 .EXAMPLE
     .\DiscoverySuiteModuleCheck.ps1 -ModuleName "Microsoft.Graph.Users", "Az.Accounts"
@@ -47,26 +47,28 @@ param(
 )
 
 #region Configuration
-# Updated RequiredVersion based on user's installed versions where newer and functional.
+# Versions updated based on user's installed versions where newer and functional, or common recent versions.
+# Incorrect Graph module names removed. Beta module checks removed as per "dont use beta use main".
 $CoreRequiredModules = @(
     @{ Name = "Microsoft.Graph.Authentication"; RequiredVersion = "2.28.0"; Notes = "CRITICAL: Essential for all Microsoft Graph API authentication." },
-    @{ Name = "Microsoft.Graph.Users"; RequiredVersion = "2.28.0"; Notes = "CRITICAL: For Azure AD user discovery (GraphDiscovery, ExternalIdentityDiscovery)." },
+    @{ Name = "Microsoft.Graph.Users"; RequiredVersion = "2.28.0"; Notes = "CRITICAL: For Azure AD user discovery." },
     @{ Name = "Microsoft.Graph.Groups"; RequiredVersion = "2.28.0"; Notes = "CRITICAL: For Azure AD group discovery." },
-    @{ Name = "Microsoft.Graph.Applications"; RequiredVersion = "2.28.0"; Notes = "CRITICAL: For Azure AD App Registrations, Enterprise Apps (Setup-AppRegistration, GraphDiscovery)." },
+    @{ Name = "Microsoft.Graph.Applications"; RequiredVersion = "2.28.0"; Notes = "CRITICAL: For Azure AD App Registrations, Enterprise Apps." },
     @{ Name = "Microsoft.Graph.Identity.DirectoryManagement"; RequiredVersion = "2.28.0"; Notes = "CRITICAL: For Directory Roles, Organization Info, Auth Policies." },
-    @{ Name = "Microsoft.Graph.Identity.SignIns"; RequiredVersion = "2.28.0"; Notes = "CRITICAL: For user sign-in activity (ExternalIdentityDiscovery)." },
-    @{ Name = "Microsoft.Graph.Reports"; RequiredVersion = "2.28.0"; Notes = "Required for certain usage reports (e.g., OneDrive in GraphDiscovery)." },
-    @{ Name = "Microsoft.Graph.DeviceManagement"; RequiredVersion = "2.28.0"; Notes = "Required for Intune device and policy discovery (stable endpoints)." },
-    # Microsoft.Graph.DeviceAppManagement - This module name is correct and exists on PSGallery.
-    @{ Name = "Microsoft.Graph.DeviceAppManagement"; RequiredVersion = "2.9.0"; Notes = "CRITICAL: Required for Intune application discovery (stable endpoints). If not found, check PSGallery access." },
-    @{ Name = "ExchangeOnlineManagement"; RequiredVersion = "3.7.1"; Notes = "CRITICAL: For all Exchange Online discovery and some cross-service cmdlets." }
+    @{ Name = "Microsoft.Graph.Identity.SignIns"; RequiredVersion = "2.28.0"; Notes = "CRITICAL: For user sign-in activity." },
+    @{ Name = "Microsoft.Graph.Reports"; RequiredVersion = "2.28.0"; Notes = "Required for certain usage reports." },
+    # Microsoft.Graph.DeviceManagement covers v1.0 Intune functionalities, 
+    # including device app management via its sub-modules (e.g., Microsoft.Graph.Devices.CorporateManagement).
+    @{ Name = "Microsoft.Graph.DeviceManagement"; RequiredVersion = "2.28.0"; Notes = "CRITICAL: Required for Intune device, policy, and application discovery (stable v1.0 endpoints)." },
+    @{ Name = "ExchangeOnlineManagement"; RequiredVersion = "3.7.1"; Notes = "CRITICAL: For all Exchange Online discovery." }
+    # Consider adding "Microsoft.Graph" (the meta-module) itself if comprehensive v1.0 coverage is desired and not just specific sub-modules.
+    # For now, relying on the specific sub-modules identified as critical.
 )
 
 $ConditionallyRequiredOrOptionalModules = @(
     # RSAT Tools - Must be installed via Windows Features
-    @{ Name = "ActiveDirectory"; RequiredVersion = "1.0.1.0"; IsRSAT = $true; Notes = "CONDITIONALLY REQUIRED: For on-premises Active Directory discovery. Install via Windows Features: 'RSAT: Active Directory Domain Services and Lightweight Directory Services Tools'." },
-    # GroupPolicy is RSAT, not from PSGallery. The script should not attempt to install it from there.
-    @{ Name = "GroupPolicy"; RequiredVersion = "1.0.0.0"; IsRSAT = $true; Notes = "CONDITIONALLY REQUIRED: For GPO discovery. Install via Windows Features: 'Group Policy Management'. Version 2.0.0 might be for a different package or a newer RSAT version not typically installed by default." },
+    @{ Name = "ActiveDirectory"; RequiredVersion = "1.0.1.0"; IsRSAT = $true; Notes = "CONDITIONALLY REQUIRED: For on-premises Active Directory discovery. Install via Windows Features." },
+    @{ Name = "GroupPolicy"; RequiredVersion = "1.0.0.0"; IsRSAT = $true; Notes = "CONDITIONALLY REQUIRED: For GPO discovery. Install via Windows Features." },
 
     # Azure RM Modules
     @{ Name = "Az.Accounts"; RequiredVersion = "2.13.1"; Notes = "CONDITIONALLY REQUIRED: For Azure Resource Manager discovery." },
@@ -80,12 +82,6 @@ $ConditionallyRequiredOrOptionalModules = @(
     @{ Name = "Az.ContainerRegistry"; RequiredVersion = "4.1.1"; Notes = "Optional/Conditional: For Azure Container Registry discovery." },
     @{ Name = "Az.ManagedServiceIdentity"; RequiredVersion = "1.1.1"; Notes = "Optional/Conditional: For Azure Managed Identity discovery." },
     @{ Name = "Az.Functions"; RequiredVersion = "4.0.6"; Notes = "Optional/Conditional: For Azure Functions discovery." },
-
-    # Microsoft Graph Beta Modules
-    @{ Name = "Microsoft.Graph.Beta.Authentication"; RequiredVersion = "2.9.0"; Notes = "Optional/Conditional: For Beta Graph API authentication. If not found, check PSGallery access." },
-    @{ Name = "Microsoft.Graph.Beta.DeviceManagement"; RequiredVersion = "2.28.0"; Notes = "Optional/Conditional: For Intune discovery using Beta Graph API endpoints." },
-    @{ Name = "Microsoft.Graph.Beta.DeviceAppManagement"; RequiredVersion = "2.9.0"; Notes = "Optional/Conditional: For Intune app discovery using Beta Graph API endpoints. If not found, check PSGallery access." },
-    @{ Name = "Microsoft.Graph.Beta.Users.Actions"; RequiredVersion = "2.28.0"; Notes = "Optional/Conditional: For specific Beta user actions/device info in Intune." },
     
     # Other Optional Modules
     @{ Name = "ImportExcel"; RequiredVersion = "7.8.5"; Notes = "OPTIONAL: For generating reports in Excel format (ExcelExport.psm1)." },
@@ -113,19 +109,19 @@ function Install-OrUpdateModuleViaPSGallery {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)] [string]$ModuleNameForInstall,
-        [Parameter(Mandatory = $true)] [version]$ReqVersion,
+        [Parameter(Mandatory = $true)] [version]$ReqVersion, # This is the minimum expected version
         [Parameter(Mandatory = $true)] [ref]$ModuleResultToUpdateRef 
     )
     $installModuleParams = @{
         Name = $ModuleNameForInstall
-        MinimumVersion = $ReqVersion.ToString()
+        MinimumVersion = $ReqVersion.ToString() 
         Scope = "CurrentUser"
         AllowClobber = $true
         AcceptLicense = $true 
         ErrorAction = "Stop"
     }
     if ($AutoFix) {
-        $installModuleParams.Force = $true
+        $installModuleParams.Force = $true 
     }
 
     if ($PSCmdlet.ShouldProcess($ModuleNameForInstall, "Install/Update to minimum version $($ReqVersion.ToString()) from PowerShell Gallery (Params: $($installModuleParams | Out-String | ForEach-Object {$_.Trim()}))")) {
@@ -183,7 +179,7 @@ function Test-SingleModule {
 
     $moduleNameToCheck = $ModuleInfo.Name
     $moduleType = if ($CoreRequiredModules.Name -contains $moduleNameToCheck) { "CRITICAL REQUIRED" } else { "Conditionally Required/Optional" }
-    $reqVersion = [version]$ModuleInfo.RequiredVersion
+    $reqVersion = [version]$ModuleInfo.RequiredVersion # Minimum expected version
     
     $isRSATTool = $false
     # Correctly check if the 'IsRSAT' property exists and is true
@@ -202,7 +198,7 @@ function Test-SingleModule {
 
     $attemptedFixThisRun = $false 
 
-    for ($attempt = 1; $attempt -le 2; $attempt++) { 
+    for ($attempt = 1; $attempt -le 2; $attempt++) { # Allow one fix attempt
         $availableModule = Get-Module -ListAvailable -Name $moduleNameToCheck -ErrorAction SilentlyContinue
         
         if (-not $availableModule) {
@@ -305,7 +301,6 @@ Write-Host "Timestamp: $(Get-Date)"
 
 if ($ModulesToCheck.Count -eq 0) {
     Write-Warning "No modules specified or found in predefined lists to check."
-    # Setting a non-zero exit code if no modules to check, as it's an unexpected state.
     if ($Host.Name -eq "ConsoleHost") { exit 1 } else { throw "No modules to check." }
 }
 
@@ -347,7 +342,6 @@ if ($criticalIssues.Count -eq 0) {
 }
 
 if ($conditionalOrOptionalIssues.Count -gt 0) {
-    # These are warnings, not necessarily failures for the script's exit code unless they are truly blocking for a specific run.
     Write-Host "`nWARNING: Issue(s) found with CONDITIONALLY REQUIRED or OPTIONAL modules:" -ForegroundColor Yellow
     $conditionalOrOptionalIssues | ForEach-Object {
         Write-Host "  - $($_.Name) ($($_.Type)): Status: $($_.Status)." -ForegroundColor Yellow
@@ -364,12 +358,10 @@ if ($conditionalOrOptionalIssues.Count -gt 0) {
 Write-Host "`nDependency check finished at $(Get-Date)."
 Write-Host "If issues persist after attempted fixes, manual intervention (e.g., running PowerShell as Administrator, checking execution policies, manually installing modules/features, or verifying PSGallery configuration with Get-PSRepository) may be required." -ForegroundColor Gray
 
-# Set exit code based on critical issues
 if (-not $overallSuccess) {
     if ($Host.Name -eq "ConsoleHost") {
-        exit 1 # Exit with error code 1 if there were critical issues
+        exit 1 
     } else {
-        # In ISE or other hosts, throw to indicate failure
         throw "Critical module dependencies are not met." 
     }
 }
