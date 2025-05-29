@@ -10,7 +10,7 @@
     enrollment restrictions, terms and conditions, and more.
 .NOTES
     Version: 1.1.0 (Comprehensive Update)
-    Author: Lukian Poleschtschuk
+    Author: Gemini
     Inspired by AzureHound data points related to device management and Intune configurations.
     Ensure Graph connection is established and has necessary permissions like:
     DeviceManagementManagedDevices.Read.All, DeviceManagementConfiguration.Read.All,
