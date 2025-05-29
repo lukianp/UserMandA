@@ -39,41 +39,48 @@ function New-MigrationWaves {
     }
     
     $maxWaveSize = 50 # Default
-    if ($Configuration.processing.ContainsKey('maxWaveSize')) {
+    if ($Configuration.processing.ContainsKey('maxWaveSize') -and $Configuration.processing.maxWaveSize -gt 0) {
         $maxWaveSize = $Configuration.processing.maxWaveSize
+    } else {
+        Write-MandALog "maxWaveSize not configured or invalid in processing settings. Using default: $maxWaveSize" -Level "WARN"
     }
 
     Write-MandALog "Wave generation strategy: $(if($generateByDepartment){'Department'} else {'Complexity'}). Max wave size: $maxWaveSize" -Level "DEBUG"
     
-    # Placeholder: Detailed wave generation logic
-    # This would involve sorting users, grouping them based on criteria,
-    # and ensuring wave sizes are respected.
+    # --- Wave Generation Logic ---
+    # This is where your specific algorithms for grouping users into waves go.
+    # The following are illustrative examples.
 
     if ($generateByDepartment) {
         Write-MandALog "Generating waves by department..." -Level "INFO"
         # Ensure profiles have a 'Department' property for grouping
-        $usersByDepartment = $Profiles | Where-Object { -not [string]::IsNullOrWhiteSpace($_.Department) } | Group-Object Department
+        # Group users by Department, handling null or empty department names
+        $usersByDepartment = $Profiles | Group-Object -Property @{Expression={if ([string]::IsNullOrWhiteSpace($_.Department)) { "_UndefinedDepartment" } else { $_.Department }}}
         
         $waveCounter = 1
         foreach ($deptGroup in $usersByDepartment) {
-            $departmentName = $deptGroup.Name
-            $usersInDept = $deptGroup.Group | Sort-Object DisplayName # Consistent ordering
+            $departmentName = $deptGroup.Name # This will be "_UndefinedDepartment" for users with no department
+            $usersInDept = $deptGroup.Group | Sort-Object DisplayName # Consistent ordering within the department
             $deptWaveNumber = 1
             
+            Write-MandALog "Processing department: '$departmentName' with $($usersInDept.Count) users." -Level "DEBUG"
+
             for ($i = 0; $i -lt $usersInDept.Count; $i += $maxWaveSize) {
                 $waveUsers = $usersInDept[$i..[System.Math]::Min($i + $maxWaveSize - 1, $usersInDept.Count - 1)]
-                # Calculate average complexity for the wave (example metric)
-                $avgComplexity = ($waveUsers | Measure-Object -Property ComplexityScore -Average).Average
+                
+                $avgComplexity = 0
+                if ($waveUsers.Count -gt 0) { # Avoid division by zero if $waveUsers is empty (should not happen with this loop logic)
+                    $avgComplexity = ($waveUsers | Measure-Object -Property ComplexityScore -Average).Average
+                }
                 
                 $wave = [PSCustomObject]@{
                     WaveName          = "Dept-$departmentName-Wave$deptWaveNumber"
                     WaveID            = "WAVE-$($waveCounter)"
                     TotalUsers        = $waveUsers.Count
-                    UserPrincipalNames= ($waveUsers.UserPrincipalName -join ";") # Storing UPNs for summary
-                  # Users             = $waveUsers # Optionally include full profiles, can make CSV large
+                    UserPrincipalNames= ($waveUsers.UserPrincipalName -join ";") 
                     Criteria          = "Department: $departmentName"
                     AverageComplexity = [math]::Round($avgComplexity, 2)
-                    # Add other wave-specific summary data here
+                    UserProfilesInWave= $waveUsers # Optionally include full profiles, or just UPNs
                 }
                 $migrationWaves.Add($wave)
                 $waveCounter++
@@ -81,38 +88,50 @@ function New-MigrationWaves {
             }
         }
     } else { # Default to complexity-based or other logic
-        Write-MandALog "Generating waves by complexity (example)..." -Level "INFO"
+        Write-MandALog "Generating waves by complexity..." -Level "INFO"
         # Ensure profiles have 'ComplexityScore' property
-        $sortedProfiles = $Profiles | Sort-Object ComplexityScore, DisplayName # Sort by complexity, then name
+        # Users with higher complexity might be in later waves, or smaller waves, or mixed.
+        # This example sorts by complexity and then groups.
+        $sortedProfiles = $Profiles | Sort-Object ComplexityScore, DisplayName 
         
         $waveCounter = 1
         for ($i = 0; $i -lt $sortedProfiles.Count; $i += $maxWaveSize) {
             $waveUsers = $sortedProfiles[$i..[System.Math]::Min($i + $maxWaveSize - 1, $sortedProfiles.Count - 1)]
-            $avgComplexity = ($waveUsers | Measure-Object -Property ComplexityScore -Average).Average
+            
+            $avgComplexity = 0
+            if ($waveUsers.Count -gt 0) {
+                $avgComplexity = ($waveUsers | Measure-Object -Property ComplexityScore -Average).Average
+            }
 
             $wave = [PSCustomObject]@{
                 WaveName          = "Complexity-Wave$waveCounter"
                 WaveID            = "WAVE-$($waveCounter)"
                 TotalUsers        = $waveUsers.Count
                 UserPrincipalNames= ($waveUsers.UserPrincipalName -join ";")
-              # Users             = $waveUsers # Optionally include full profiles
                 Criteria          = "Complexity Score Grouping"
                 AverageComplexity = [math]::Round($avgComplexity, 2)
+                UserProfilesInWave= $waveUsers # Optionally include full profiles
             }
             $migrationWaves.Add($wave)
             $waveCounter++
         }
     }
 
+    # Fallback if no waves were generated but profiles exist (e.g., all users had undefined department and dept. generation was on)
     if ($migrationWaves.Count -eq 0 -and $Profiles.Count -gt 0) {
-        Write-MandALog "No specific wave generation logic matched or no users fit criteria. Creating a single fallback wave." -Level "WARN"
+        Write-MandALog "No specific waves generated by primary strategy. Creating a single fallback wave for all $($Profiles.Count) users." -Level "WARN"
+        $avgComplexityFallback = 0
+        if ($Profiles.Count -gt 0) {
+             $avgComplexityFallback = ($Profiles | Measure-Object -Property ComplexityScore -Average).Average
+        }
         $wave = [PSCustomObject]@{
             WaveName          = "Fallback-Wave1"
             WaveID            = "WAVE-FB1"
             TotalUsers        = $Profiles.Count
             UserPrincipalNames= ($Profiles.UserPrincipalName -join ";")
-            Criteria          = "Fallback - All remaining users"
-            AverageComplexity = [math]::Round(($Profiles | Measure-Object -Property ComplexityScore -Average).Average, 2)
+            Criteria          = "Fallback - All users"
+            AverageComplexity = [math]::Round($avgComplexityFallback, 2)
+            UserProfilesInWave= $Profiles
         }
         $migrationWaves.Add($wave)
     }
