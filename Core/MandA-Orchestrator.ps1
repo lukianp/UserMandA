@@ -113,9 +113,14 @@ function Initialize-MandAEnvironment {
         # Initialize logging
         Initialize-Logging -Configuration $Configuration
         
-        # Validate system prerequisites (skip module checks in validate-only mode)
+        # Validate system prerequisites
         if (-not (Test-Prerequisites -Configuration $Configuration -ValidateOnly:$ValidateOnly)) {
             throw "System prerequisites validation failed"
+        }
+        
+        # Check for required modules (new addition)
+        if (-not $ValidateOnly) {
+            Test-RequiredModules -Configuration $Configuration
         }
         
         # Initialize output directories
@@ -125,7 +130,7 @@ function Initialize-MandAEnvironment {
         $ModulesToLoad = Get-RequiredModules -Configuration $Configuration
         foreach ($Module in $ModulesToLoad) {
             Import-Module $Module -Force -Global
-            Write-MandALog "Loaded module: $Module" -Level "SUCCESS"
+            Write-MandALog "Loaded module: $(Split-Path $Module -Leaf)" -Level "SUCCESS"
         }
         
         Write-MandALog "Environment initialization completed successfully" -Level "SUCCESS"
@@ -137,57 +142,49 @@ function Initialize-MandAEnvironment {
     }
 }
 
-function Get-RequiredModules {
+function Test-RequiredModules {
     param($Configuration)
     
-    $modules = @()
+    $requiredModules = @{
+        "ActiveDirectory" = "Modules\Discovery\ActiveDirectoryDiscovery.psm1"
+        "Graph" = "Modules\Discovery\GraphDiscovery.psm1"
+        "Exchange" = "Modules\Discovery\ExchangeDiscovery.psm1"
+        "Azure" = "Modules\Discovery\AzureDiscovery.psm1"
+        "Intune" = "Modules\Discovery\IntuneDiscovery.psm1"
+    }
     
-    # Always required
-    $modules += Join-Path $script:SuiteRoot "Modules\Utilities\ProgressTracking.psm1"
-    $modules += Join-Path $script:SuiteRoot "Modules\Utilities\FileOperations.psm1"
+    $missingModules = @()
+    $enabledSources = $Configuration.discovery.enabledSources
     
-    # Mode-specific modules
-    switch ($Mode) {
-        "Discovery" {
-            $discoveryPath = Join-Path $script:SuiteRoot "Modules\Discovery"
-            $modules += Get-ChildItem "$discoveryPath\*.psm1" | ForEach-Object { $_.FullName }
-        }
-        "Processing" {
-            $processingPath = Join-Path $script:SuiteRoot "Modules\Processing"
-            $modules += Get-ChildItem "$processingPath\*.psm1" | ForEach-Object { $_.FullName }
-        }
-        "Export" {
-            $exportPath = Join-Path $script:SuiteRoot "Modules\Export"
-            $modules += Get-ChildItem "$exportPath\*.psm1" | ForEach-Object { $_.FullName }
-        }
-        "Full" {
-            $discoveryPath = Join-Path $script:SuiteRoot "Modules\Discovery"
-            $processingPath = Join-Path $script:SuiteRoot "Modules\Processing"
-            $exportPath = Join-Path $script:SuiteRoot "Modules\Export"
-            $modules += Get-ChildItem "$discoveryPath\*.psm1" | ForEach-Object { $_.FullName }
-            $modules += Get-ChildItem "$processingPath\*.psm1" | ForEach-Object { $_.FullName }
-            $modules += Get-ChildItem "$exportPath\*.psm1" | ForEach-Object { $_.FullName }
+    foreach ($source in $enabledSources) {
+        if ($requiredModules.ContainsKey($source)) {
+            $modulePath = Join-Path $script:SuiteRoot $requiredModules[$source]
+            if (-not (Test-Path $modulePath)) {
+                $missingModules += @{
+                    Source = $source
+                    Module = $requiredModules[$source]
+                    Impact = "Discovery for $source will be skipped"
+                }
+            }
         }
     }
     
-    # Authentication modules
-    $authPath = Join-Path $script:SuiteRoot "Modules\Authentication"
-    $modules += Get-ChildItem "$authPath\*.psm1" | ForEach-Object { $_.FullName }
-    
-    # Connectivity modules based on enabled sources
-    $connectivityPath = Join-Path $script:SuiteRoot "Modules\Connectivity"
-    if ($Configuration.discovery.enabledSources -contains "Graph") {
-        $modules += Join-Path $connectivityPath "GraphConnection.psm1"
-    }
-    if ($Configuration.discovery.enabledSources -contains "Azure") {
-        $modules += Join-Path $connectivityPath "AzureConnection.psm1"
-    }
-    if ($Configuration.discovery.enabledSources -contains "Exchange") {
-        $modules += Join-Path $connectivityPath "ExchangeConnection.psm1"
+    if ($missingModules.Count -gt 0) {
+        Write-MandALog "Missing discovery modules detected:" -Level "WARN"
+        foreach ($missing in $missingModules) {
+            Write-MandALog "  - $($missing.Source): $($missing.Module)" -Level "WARN"
+            Write-MandALog "    Impact: $($missing.Impact)" -Level "WARN"
+        }
+        
+        # Optionally create placeholder functions
+        if ($Configuration.advancedSettings.createPlaceholderFunctions) {
+            New-PlaceholderDiscoveryFunctions -MissingModules $missingModules
+        }
     }
     
-    return $modules | Where-Object { Test-Path $_ }
+    return ($missingModules.Count -eq 0)
 }
+
 
 function Invoke-DiscoveryPhase {
     param($Configuration)
