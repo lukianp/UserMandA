@@ -1,3 +1,5 @@
+Install-Module Microsoft.Graph.Beta.DeviceAppManagement -AllowPrerelease -Force
+
 #Requires -Version 5.1
 #Requires -Modules Microsoft.Graph.DeviceManagement, Microsoft.Graph.Beta.DeviceManagement, Microsoft.Graph.Beta.Users.Actions, Microsoft.Graph.Users.Actions, Microsoft.Graph.Beta.DeviceAppManagement
 # Microsoft.Graph.Beta.Users.Actions for Get-MgBetaUserManagedDevice, Microsoft.Graph.Users.Actions for Get-MgUserManagedDevice
@@ -19,8 +21,6 @@
     Using Beta endpoints for richer data where appropriate.
 #>
 
-[CmdletBinding()]
-param()
 
 # Main function to invoke Intune discovery
 function Invoke-IntuneDiscovery {
