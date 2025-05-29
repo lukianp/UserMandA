@@ -5,25 +5,126 @@
     Provides input validation and data quality checks
 #>
 
-
 function Get-RequiredModules {
-    param([hashtable]$Configuration, [string]$Mode)
-    $suiteRoot = if ($global:MandASuiteRoot) { $global:MandASuiteRoot } else { "C:\UserMigration" }
-    $baseModules = @(
-        "Modules\Utilities\EnhancedLogging.psm1",
-        "Modules\Utilities\ErrorHandling.psm1", 
-        "Modules\Utilities\ValidationHelpers.psm1",
-        "Modules\Utilities\FileOperations.psm1",
-        "Modules\Utilities\ProgressTracking.psm1",
-        "Modules\Authentication\Authentication.psm1",
-        "Modules\Connectivity\EnhancedConnectionManager.psm1"
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Mode # Expected values: "Discovery", "Processing", "Export", "Full"
     )
-    return $baseModules | ForEach-Object { Join-Path $suiteRoot $_ }
+
+    Write-Verbose "Getting required modules for Mode: $Mode"
+    $modulesToLoadPaths = [System.Collections.Generic.List[string]]::new()
+
+    # --- Define Mappings ---
+    # Discovery sources to module files (relative to Modules/Discovery/)
+    # Ensure the keys here (e.g., "ActiveDirectory") match the strings used in $Configuration.discovery.enabledSources
+    # Ensure the .psm1 filenames match the actual files in your Modules/Discovery/ directory.
+    $discoveryModuleMapping = @{
+        "ActiveDirectory"    = "ActiveDirectoryDiscovery.psm1"
+        "Graph"              = "GraphDiscovery.psm1"
+        "Exchange"           = "ExchangeDiscovery.psm1"      # Assumed filename for "Exchange" source (planned)
+        "Azure"              = "AzureDiscovery.psm1"         # Assumed filename for "Azure" source (planned)
+        "Intune"             = "IntuneDiscovery.psm1"        # Assumed filename for "Intune" source (planned)
+        "GPO"                = "EnhancedGPODiscovery.psm1"   # Maps "GPO" source to the enhanced module
+        "ExternalIdentity"   = "ExternalIdentityDiscovery.psm1"
+        # Add other discovery sources and their corresponding module files here
+    }
+
+    # Processing modules (relative to Modules/Processing/) - these are usually all needed for processing phase
+    # Ensure these .psm1 filenames match the actual files in your Modules/Processing/ directory.
+    $processingModules = @(
+        "DataAggregation.psm1",
+        "UserProfileBuilder.psm1", # Assuming this handles complexity or a separate ComplexityCalculator.psm1 exists
+        "WaveGeneration.psm1",
+        "DataValidation.psm1"
+        # "ComplexityCalculator.psm1" # Add if separate and always needed for processing
+    )
+
+    # Export formats to module files (relative to Modules/Export/)
+    # Ensure the keys here (e.g., "CSV") match the strings used in $Configuration.export.formats
+    # Ensure the .psm1 filenames match the actual files in your Modules/Export/ directory.
+    $exportModuleMapping = @{
+        "CSV"     = "CSVExport.psm1"
+        "Excel"   = "ExcelExport.psm1" # Assumed filename for "Excel" format (planned)
+        "JSON"    = "JSONExport.psm1"
+        # If "PowerApps" is a format in config that maps to a specific file, add it here:
+        # "PowerApps" = "PowerAppsExporter.psm1" 
+    }
+    # Path for a potentially dedicated PowerApps export module, if not covered by the 'formats' array
+    $powerAppsDedicatedModuleFile = "PowerAppsExporter.psm1" # Assumed filename for dedicated PowerApps export (planned)
+
+    # --- Determine Modules Based on Mode and Configuration ---
+
+    # Discovery Modules
+    if ($Mode -in @("Discovery", "Full")) {
+        if ($Configuration.discovery -and $Configuration.discovery.enabledSources) {
+            foreach ($source in $Configuration.discovery.enabledSources) {
+                if ($discoveryModuleMapping.ContainsKey($source)) {
+                    $moduleFileName = $discoveryModuleMapping[$source]
+                    # Fix: Use $global:MandASuiteRoot with full path instead of $global:MandAModulesPath
+                    $modulePath = Join-Path $global:MandASuiteRoot "Modules\Discovery\$moduleFileName"
+                    if (-not $modulesToLoadPaths.Contains($modulePath)) {
+                        $modulesToLoadPaths.Add($modulePath)
+                    }
+                } else {
+                    Write-MandALog "No module mapping found for enabled discovery source: '$source'. It will be skipped." -Level "WARN"
+                }
+            }
+        }
+    }
+
+    # Processing Modules
+    if ($Mode -in @("Processing", "Full")) {
+        foreach ($moduleFileName in $processingModules) {
+            # Fix: Use $global:MandASuiteRoot with full path
+            $modulePath = Join-Path $global:MandASuiteRoot "Modules\Processing\$moduleFileName"
+            if (-not $modulesToLoadPaths.Contains($modulePath)) {
+                $modulesToLoadPaths.Add($modulePath)
+            }
+        }
+    }
+
+    # Export Modules
+    if ($Mode -in @("Export", "Full")) {
+        if ($Configuration.export -and $Configuration.export.formats) {
+            foreach ($format in $Configuration.export.formats) {
+                if ($exportModuleMapping.ContainsKey($format)) {
+                    $moduleFileName = $exportModuleMapping[$format]
+                    # Fix: Use $global:MandASuiteRoot with full path
+                    $modulePath = Join-Path $global:MandASuiteRoot "Modules\Export\$moduleFileName"
+                    if (-not $modulesToLoadPaths.Contains($modulePath)) {
+                        $modulesToLoadPaths.Add($modulePath)
+                    }
+                } else {
+                    Write-MandALog "No module mapping found for enabled export format: '$format'. It will be skipped." -Level "WARN"
+                }
+            }
+        }
+        # Handle PowerApps optimized export if it's a separate module and enabled via the specific flag
+        if ($Configuration.export -and $Configuration.export.powerAppsOptimized) {
+            # Fix: Use $global:MandASuiteRoot with full path
+            $powerAppsModulePath = Join-Path $global:MandASuiteRoot "Modules\Export\$powerAppsDedicatedModuleFile"
+            # Add only if not already added (e.g., if "PowerApps" was also a format type in the array and mapped above)
+            if (-not $modulesToLoadPaths.Contains($powerAppsModulePath)) {
+                # This logic assumes PowerAppsExporter.psm1 is a dedicated module.
+                # If PowerApps export functionality is built into JSONExport.psm1 (or another module)
+                # and triggered by the $Configuration.export.powerAppsOptimized flag,
+                # then that module (e.g., JSONExport.psm1) would already be loaded if "JSON" is in formats.
+                # In such a case, this specific block for $powerAppsDedicatedModuleFile might not be strictly necessary
+                # for module loading, as the functionality would reside within an already loaded module.
+                # However, if PowerAppsExporter.psm1 is truly separate, this ensures it's loaded.
+                $modulesToLoadPaths.Add($powerAppsModulePath)
+                Write-MandALog "PowerApps optimized export is enabled. Attempting to load '$powerAppsDedicatedModuleFile' if it's a distinct module." -Level "INFO"
+            }
+        }
+    }
+    
+    Write-Verbose "Final list of modules to load for mode '$Mode': $($modulesToLoadPaths -join ', ')"
+    return $modulesToLoadPaths.ToArray() # Return as a standard array
 }
-
-
-
-
 
 function Test-GuidFormat {
     param(
@@ -321,7 +422,7 @@ function Export-ValidationReport {
 
 # Export functions
 Export-ModuleMember -Function @(
-    'Get-RequiredModules',
+    'Get-RequiredModules',    # Make sure this is included
     'Test-GuidFormat',
     'Test-EmailFormat',
     'Test-UPNFormat',
