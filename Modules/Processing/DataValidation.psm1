@@ -31,7 +31,7 @@ function Test-DataQuality {
 
     if ($null -eq $Profiles -or $Profiles.Count -eq 0) {
         Write-MandALog "No user profiles provided. Skipping data quality validation." -Level "WARN"
-        return @{ TotalRecords = 0; ValidRecords = 0; InvalidRecords = 0; QualityScore = 100; Issues = $issuesFound }
+        return @{ TotalRecords = 0; ValidRecords = 0; InvalidRecords = 0; TotalIssues = 0; QualityScore = 100; Issues = $issuesFound }
     }
     
     $processedCount = 0
@@ -40,64 +40,99 @@ function Test-DataQuality {
         Update-Progress -Activity "Validating Data Quality" -Status "Profile $processedCount of $($Profiles.Count)" -PercentComplete (($processedCount / $Profiles.Count) * 100)
 
         $currentProfileIssueCount = 0
-        # --- Placeholder: Detailed data validation logic ---
+        
+        # --- Detailed Data Validation Rules ---
 
-        # Example: Check for missing UserPrincipalName
+        # Rule 1: Check for missing UserPrincipalName (Critical)
         if ([string]::IsNullOrWhiteSpace($profile.UserPrincipalName)) {
             $issuesFound.Add([PSCustomObject]@{
                 Identifier  = $profile.DisplayName # Fallback identifier
                 IssueType   = "Missing Critical Data"
                 Field       = "UserPrincipalName"
-                Description = "UserPrincipalName is missing or empty."
+                Description = "UserPrincipalName is missing or empty. This is a critical identifier."
                 Severity    = "High"
-                Recommendation = "Investigate source data for this user; UPN is critical."
+                Recommendation = "Investigate source data for this user; UPN is essential for matching and migration."
             })
             $currentProfileIssueCount++
         }
 
-        # Example: Check for missing DisplayName
+        # Rule 2: Check for missing DisplayName
         if ([string]::IsNullOrWhiteSpace($profile.DisplayName)) {
             $issuesFound.Add([PSCustomObject]@{
                 Identifier  = $profile.UserPrincipalName # Use UPN if DisplayName is missing
-                IssueType   = "Missing Data"
+                IssueType   = "Missing Identifying Data"
                 Field       = "DisplayName"
                 Description = "DisplayName is missing or empty."
                 Severity    = "Medium"
-                Recommendation = "Populate DisplayName for better reporting and user experience."
+                Recommendation = "Populate DisplayName for better reporting and user identification."
             })
             $currentProfileIssueCount++
         }
         
-        # Example: Check if ComplexityScore was calculated (assuming it shouldn't be 0 if assessed)
-        # This depends on your actual scoring logic; 0 might be a valid score.
-        # if ($profile.PSObject.Properties["ComplexityScore"] -and $profile.ComplexityScore -is [int] -and $profile.MigrationCategory -eq "Not Assessed") {
-        #     $issuesFound.Add([PSCustomObject]@{
-        #         Identifier  = $profile.UserPrincipalName
-        #         IssueType   = "Processing Incomplete"
-        #         Field       = "MigrationCategory"
-        #         Description = "Migration category is 'Not Assessed', complexity scoring might not have run fully."
-        #         Severity    = "Medium"
-        #         Recommendation = "Verify complexity calculation step for this user."
-        #     })
-        #     $currentProfileIssueCount++
-        # }
-
-        # Add more validation rules:
-        # - Email format for UPN/Mail
-        # - Consistency checks (e.g., IsEnabled vs LastLogonDate)
-        # - Expected value ranges for scores, etc.
-        # - Check if Department is populated if generating waves by department
-        if ($Configuration.processing.generateWavesByDepartment -and [string]::IsNullOrWhiteSpace($profile.Department)) {
+        # Rule 3: Check if MigrationCategory was assessed
+        if ($profile.PSObject.Properties["MigrationCategory"] -and $profile.MigrationCategory -eq "Not Assessed") {
             $issuesFound.Add([PSCustomObject]@{
                 Identifier  = $profile.UserPrincipalName
-                IssueType   = "Missing Configuration Data"
-                Field       = "Department"
-                Description = "Department is missing, but wave generation is by department."
-                Severity    = "High"
-                Recommendation = "Populate department information or change wave generation strategy."
+                IssueType   = "Processing Incomplete"
+                Field       = "MigrationCategory"
+                Description = "Migration category is 'Not Assessed'. Complexity scoring might not have run fully or user fits no defined category."
+                Severity    = "Medium"
+                Recommendation = "Verify complexity calculation step for this user and ensure scoring thresholds in configuration are appropriate."
             })
             $currentProfileIssueCount++
         }
+
+        # Rule 4: Check if Department is populated if generating waves by department
+        if ($Configuration.processing.ContainsKey('generateWavesByDepartment') -and $Configuration.processing.generateWavesByDepartment -and [string]::IsNullOrWhiteSpace($profile.Department)) {
+            $issuesFound.Add([PSCustomObject]@{
+                Identifier  = $profile.UserPrincipalName
+                IssueType   = "Missing Configuration Data for Waves"
+                Field       = "Department"
+                Description = "Department is missing, but wave generation is configured by department. This user may be excluded or miscategorized."
+                Severity    = "High" 
+                Recommendation = "Populate department information for all users or adjust wave generation strategy in configuration."
+            })
+            $currentProfileIssueCount++
+        }
+
+        # Rule 5: Check for potentially invalid email format in Mail property (simple check)
+        if (-not [string]::IsNullOrWhiteSpace($profile.Mail) -and $profile.Mail -notmatch "^\S+@\S+\.\S+$") {
+             $issuesFound.Add([PSCustomObject]@{
+                Identifier  = $profile.UserPrincipalName
+                IssueType   = "Invalid Data Format"
+                Field       = "Mail"
+                Description = "Mail property '$($profile.Mail)' does not appear to be a valid email format."
+                Severity    = "Low"
+                Recommendation = "Verify the email address format for this user."
+            })
+            $currentProfileIssueCount++
+        }
+        
+        # Rule 6: Check if LastLogon date is very old, indicating potential stale account
+        if ($profile.PSObject.Properties["LastLogon"] -and $profile.LastLogon) {
+            try {
+                $lastLogonDate = [datetime]$profile.LastLogon
+                if ($lastLogonDate -lt (Get-Date).AddYears(-2)) { # Example: older than 2 years
+                     $issuesFound.Add([PSCustomObject]@{
+                        Identifier  = $profile.UserPrincipalName
+                        IssueType   = "Stale Data Indication"
+                        Field       = "LastLogon"
+                        Description = "Last logon date ($($lastLogonDate.ToString('yyyy-MM-dd'))) is older than 2 years."
+                        Severity    = "Medium"
+                        Recommendation = "Confirm if this account is still active or should be considered for decommissioning/archival rather than migration."
+                    })
+                    $currentProfileIssueCount++
+                }
+            } catch {
+                 Write-MandALog "Could not parse LastLogon date '$($profile.LastLogon)' for data validation on $($profile.UserPrincipalName)." -Level "DEBUG"
+            }
+        }
+
+        # Add more specific validation rules as per your suite's requirements.
+        # For example:
+        # - Check if HasADAccount and HasGraphAccount are consistent with expectations for synced users.
+        # - Check if MailboxSizeMB is a non-negative number.
+        # - Validate specific license assignments if you have a list of expected/problematic ones.
 
         if ($currentProfileIssueCount -gt 0) {
             $invalidRecords++ # This profile has one or more issues
@@ -119,10 +154,10 @@ function Test-DataQuality {
     return @{
         TotalRecords   = $totalRecords
         ValidRecords   = $validRecords
-        InvalidRecords = $invalidRecords # Number of profiles with at least one issue
-        TotalIssues    = $issuesFound.Count # Total number of distinct issues found
+        InvalidRecords = $invalidRecords 
+        TotalIssues    = $issuesFound.Count 
         QualityScore   = $qualityScore
-        Issues         = $issuesFound # List of specific issue objects
+        Issues         = $issuesFound 
     }
 }
 
@@ -144,6 +179,18 @@ function New-QualityReport {
     
     $reportFilePath = Join-Path $OutputPath $ReportFileName
 
+    # Ensure directory exists
+    $outputDir = Split-Path $reportFilePath -Resolve # Use -Resolve to get full path if $OutputPath is relative
+    if (-not (Test-Path $outputDir)) {
+        try {
+            New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
+            Write-MandALog "Created directory for quality report: $outputDir" -Level "DEBUG"
+        } catch {
+             Write-MandALog "Failed to create directory for quality report '$outputDir': $($_.Exception.Message)" -Level "ERROR"
+             return # Cannot proceed
+        }
+    }
+
     $reportContent = @"
 M&A Discovery Suite - Data Quality Report
 =========================================
@@ -163,16 +210,16 @@ Detailed Issues Found ($($ValidationResults.Issues.Count)):
 
     if ($ValidationResults.Issues.Count -gt 0) {
         # Group issues by type for better readability in the report
-        $groupedIssues = $ValidationResults.Issues | Group-Object IssueType
+        $groupedIssues = $ValidationResults.Issues | Group-Object IssueType | Sort-Object Name
         foreach ($group in $groupedIssues) {
             $reportContent += "`nIssue Type: $($group.Name) ($($group.Count) occurrences)`n"
-            $reportContent += ("-" * ($group.Name.Length + 23)) + "`n"
-            $group.Group | ForEach-Object {
+            $reportContent += ("-" * ($group.Name.Length + 23)) + "`n" # Dynamic underline
+            $group.Group | Sort-Object Severity, Identifier | ForEach-Object { # Sort issues within the group
                 $reportContent += @"
-    Identifier:  $($_.Identifier)
-    Field:       $($_.Field)
-    Description: $($_.Description)
-    Severity:    $($_.Severity)
+    Identifier:     $($_.Identifier)
+    Field:          $($_.Field)
+    Severity:       $($_.Severity)
+    Description:    $($_.Description)
     Recommendation: $($_.Recommendation)
     ----------
 "@
@@ -183,7 +230,7 @@ Detailed Issues Found ($($ValidationResults.Issues.Count)):
     }
 
     try {
-        $reportContent | Set-Content -Path $reportFilePath -Encoding UTF8
+        Set-Content -Path $reportFilePath -Value $reportContent -Encoding UTF8
         Write-MandALog "Data Quality Report generated: $reportFilePath" -Level "SUCCESS"
     } catch {
         Write-MandALog "Failed to generate Data Quality Report: $($_.Exception.Message)" -Level "ERROR"
