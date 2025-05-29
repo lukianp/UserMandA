@@ -64,7 +64,7 @@ param(
     
     [Parameter(Mandatory=$false, HelpMessage="Path for encrypted credentials output")]
     [ValidateNotNullOrEmpty()]
-    [string]$EncryptedOutputPath = "C:\MandADiscovery\Output\credentials.config",
+    [string]$EncryptedOutputPath = "C:\MandADiscovery\credentials.config",
     
     [Parameter(Mandatory=$false, HelpMessage="Force recreation of existing app registration")]
     [switch]$Force,
