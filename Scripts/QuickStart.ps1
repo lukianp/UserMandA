@@ -1,536 +1,356 @@
-#Requires -Version 5.1
 <#
 .SYNOPSIS
-    M&A Discovery Suite - Main Orchestrator
+    Quick start script for M&A Discovery Suite v4.0
 .DESCRIPTION
-    Unified orchestrator for M&A environment discovery, processing, and export operations.
-    Replaces the previous three-script approach with a modular, maintainable architecture.
-.PARAMETER ConfigurationFile
-    Path to the JSON configuration file
-.PARAMETER Mode
-    Execution mode: Discovery, Processing, Export, or Full
-.PARAMETER OutputPath
-    Override output path from configuration
-.PARAMETER Force
-    Force reprocessing of existing files
-.PARAMETER ValidateOnly
-    Only validate prerequisites without executing
+    A menu-driven, one-stop shop for setting up, validating, and running discovery operations
+    for the M&A Discovery Suite. Performs initial environment checks before displaying the menu.
+    It ensures Set-SuiteEnvironment.ps1 is sourced first to establish correct paths.
 .EXAMPLE
-    .\MandA-Orchestrator.ps1 -Mode Full -ConfigurationFile ".\Configuration\production-config.json"
-.EXAMPLE
-    .\MandA-Orchestrator.ps1 -Mode Discovery -OutputPath "C:\CustomOutput" -Force
+    .\QuickStart.ps1
+    (Located in the Scripts directory, e.g., C:\UserMigration\Scripts\)
 #>
 
 [CmdletBinding()]
-param(
-    [Parameter(Mandatory=$false)]
-    [ValidateScript({Test-Path $_ -PathType Leaf})]
-    [string]$ConfigurationFile = ".\Configuration\default-config.json", # Relative to SuiteRoot by default
-    
-    [Parameter(Mandatory=$false)]
-    [ValidateSet("Discovery", "Processing", "Export", "Full")]
-    [string]$Mode = "Full",
-    
-    [Parameter(Mandatory=$false)]
-    [string]$OutputPath,
-    
-    [Parameter(Mandatory=$false)]
-    [switch]$Force,
-    
-    [Parameter(Mandatory=$false)]
-    [switch]$ValidateOnly
-)
+param()
 
-# Get the script root directory for location-independent paths
-# $script:SuiteRoot is set by Set-SuiteEnvironment.ps1, which should be sourced by the caller (e.g. QuickStart.ps1)
-# If running orchestrator directly, ensure $global:MandASuiteRoot is set or resolve SuiteRoot here.
-# For consistency with QuickStart, assuming Set-SuiteEnvironment.ps1 has run and set global paths.
-# If $global:MandASuiteRoot is not set, this script might have issues finding modules.
-# It's safer for the orchestrator to also be able to determine its SuiteRoot if run standalone.
-if (-not $global:MandASuiteRoot) {
-    $script:SuiteRoot = Split-Path $PSScriptRoot -Parent
-    Write-Warning "global:MandASuiteRoot not set. Assuming SuiteRoot is: $($script:SuiteRoot)"
-    # And then ensure global paths are set if Set-SuiteEnvironment wasn't sourced.
-    # For now, we rely on the QuickStart.ps1 to source Set-SuiteEnvironment.ps1
-}
+# --- Script Setup: Determine Paths and Source Set-SuiteEnvironment.ps1 ---
+# This section runs first to establish the suite's environment context.
 
+# $MyInvocation.MyCommand.Path provides the full path to this QuickStart.ps1 script.
+$script:QuickStartScriptPath = $MyInvocation.MyCommand.Path
+# $script:ScriptsPath will be the directory containing this QuickStart.ps1 script (e.g., C:\UserMigration\Scripts).
+$script:ScriptsPath = Split-Path $script:QuickStartScriptPath -Parent
+# $script:SuiteRoot is an initial assumption by QuickStart, but Set-SuiteEnvironment.ps1 will make the final determination.
+$script:SuiteRoot_QuickStartAssumption = Split-Path $script:ScriptsPath -Parent
 
-# Global script variables
-$script:Config = $null
-$script:StartTime = Get-Date
-$script:ExecutionMetrics = @{
-    StartTime = $script:StartTime
-    EndTime = $null
-    Duration = $null
-    Phase = "Initialization"
-    TotalOperations = 0
-    SuccessfulOperations = 0
-    FailedOperations = 0
-    Modules = @{}
-}
+# Path to the Set-SuiteEnvironment.ps1 script.
+$envSetupScript = Join-Path $script:ScriptsPath "Set-SuiteEnvironment.ps1"
 
-# Import ESSENTIAL modules using absolute paths relative to suite root
-# These are core utilities needed for the orchestrator to function.
-# Other modules will be loaded dynamically by Initialize-MandAEnvironment.
-$InitialEssentialModulePaths = @(
-    (Join-Path $global:MandASuiteRoot "Modules\Utilities\EnhancedLogging.psm1"),
-    (Join-Path $global:MandASuiteRoot "Modules\Utilities\ErrorHandling.psm1"),
-    (Join-Path $global:MandASuiteRoot "Modules\Utilities\ValidationHelpers.psm1"), # Contains Get-RequiredModules, Test-Prerequisites
-    (Join-Path $global:MandASuiteRoot "Modules\Utilities\FileOperations.psm1"),   # For Initialize-OutputDirectories etc.
-    (Join-Path $global:MandASuiteRoot "Modules\Utilities\ProgressTracking.psm1"), # For progress bar functions
-    (Join-Path $global:MandASuiteRoot "Modules\Authentication\Authentication.psm1"),
-    (Join-Path $global:MandASuiteRoot "Modules\Connectivity\EnhancedConnectionManager.psm1") 
-    # CredentialManagement.psm1 is usually imported by Authentication.psm1
-)
-
-foreach ($ModulePath in $InitialEssentialModulePaths) {
-    if (Test-Path $ModulePath) {
-        Import-Module $ModulePath -Force -Global
-        Write-Verbose "Statically imported essential module: $(Split-Path $ModulePath -Leaf)"
-    } else {
-        Write-Error "CRITICAL: Essential module not found: $ModulePath. Orchestrator cannot continue."
-        exit 1
-    }
-}
-
-# Helper function to convert PSObjects from JSON (nested) to Hashtables for easier use
-function ConvertTo-HashtableFromPSObject {
-    param (
-        [Parameter(Mandatory=$true)]
-        [AllowNull()]$InputObject
-    )
-    
-    if ($null -eq $InputObject) { 
-        return $null 
-    }
-    
-    if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
-        $collection = @(
-            foreach ($objectInCollection in $InputObject) { 
-                ConvertTo-HashtableFromPSObject -InputObject $objectInCollection 
-            }
-        )
-        return $collection # Return as array, not ,$collection for single item arrays from JSON
-    } elseif ($InputObject.PSObject.BaseObject -is [System.Management.Automation.PSCustomObject] -or $InputObject.GetType().Name -eq 'PSCustomObject') {
-        $hashtable = @{}
-        foreach ($property in $InputObject.PSObject.Properties) {
-            $hashtable[$property.Name] = ConvertTo-HashtableFromPSObject -InputObject $property.Value
-        }
-        return $hashtable
-    } else {
-        return $InputObject
-    }
-}
-
-function Initialize-MandAEnvironment {
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration, 
-        [Parameter(Mandatory=$true)]
-        [string]$CurrentMode, # Pass the current orchestrator mode
-        [switch]$ValidateOnly
-    )
-    
-    try {
-        Write-MandALog "Initializing M&A Discovery Environment for Mode: $CurrentMode" -Level "HEADER"
-        
-        # Initialize logging (already loaded from EnhancedLogging.psm1)
-        Initialize-Logging -Configuration $Configuration
-        
-        # Initialize output directories (already loaded from FileOperations.psm1)
-        Initialize-OutputDirectories -Configuration $Configuration
-        
-        # Validate system prerequisites (already loaded from ValidationHelpers.psm1)
-        if (-not (Test-Prerequisites -Configuration $Configuration -ValidateOnly:$ValidateOnly)) {
-            throw "System prerequisites validation failed"
-        }
-        
-        # Load dynamic modules based on Mode and Configuration
-        # Get-RequiredModules is in ValidationHelpers.psm1 (already loaded)
-        $ModulesToLoadPaths = Get-RequiredModules -Configuration $Configuration -Mode $CurrentMode
-        
-        Write-MandALog "Dynamically loading $($ModulesToLoadPaths.Count) modules for mode '$CurrentMode'..." -Level "INFO"
-        foreach ($ModuleFile in $ModulesToLoadPaths) {
-            if (Test-Path $ModuleFile) {
-                Import-Module $ModuleFile -Force -Global
-                Write-MandALog "Loaded module: $(Split-Path $ModuleFile -Leaf)" -Level "SUCCESS"
-            } else {
-                # This warning is important. If a configured source/format has no module, it won't run.
-                Write-MandALog "Module file not found: $ModuleFile. Functionality depending on this module will be skipped." -Level "WARN"
-            }
-        }
-        
-        # The old Test-RequiredModules (file existence check) is removed as Get-RequiredModules and import loop handle it.
-        # If specific checks for *function export* from these modules are needed, that could be an addition here.
-
-        Write-MandALog "Environment initialization completed successfully" -Level "SUCCESS"
-        return $true
-        
-    } catch {
-        Write-MandALog "Environment initialization failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
-    }
-}
-
-
-function Invoke-DiscoveryPhase {
-    param([hashtable]$Configuration)
-    
-    try {
-        Write-MandALog "Starting Discovery Phase" -Level "HEADER"
-        $script:ExecutionMetrics.Phase = "Discovery"
-        
-        # Adjust total steps based on how many sources might actually run
-        $enabledDiscoverySourcesCount = @($Configuration.discovery.enabledSources).Count
-        Initialize-ProgressTracker -Phase "Discovery" -TotalSteps $enabledDiscoverySourcesCount # Or a fixed larger number if steps per source vary
-        
-        $discoveryResults = @{}
-        $currentStep = 0
-
-        # Helper function to safely invoke discovery modules
-        function Invoke-DiscoveryModuleSafely { # Renamed from Safe-InvokeDiscoveryModule
-            param(
-                [string]$SourceName,
-                [string]$InvokeCommandName,
-                [hashtable]$Config,
-                [ref]$StepRef,
-                [ref]$ResultsRef
-            )
-            if ($Config.discovery.enabledSources -contains $SourceName) {
-                $StepRef.Value++
-                Update-Progress -Step $StepRef.Value -Status "$SourceName Discovery"
-                if (Get-Command $InvokeCommandName -ErrorAction SilentlyContinue) {
-                    Write-MandALog "Invoking $InvokeCommandName..." -Level "INFO"
-                    $ResultsRef.Value.$SourceName = & $InvokeCommandName -Configuration $Config
-                } else {
-                    Write-MandALog "$InvokeCommandName command not found. Skipping $SourceName discovery." -Level "WARN"
-                }
-            }
-        }
-
-        Invoke-DiscoveryModuleSafely -SourceName "ActiveDirectory" -InvokeCommandName "Invoke-ActiveDirectoryDiscovery" -Config $Configuration -StepRef ([ref]$currentStep) -ResultsRef ([ref]$discoveryResults)
-        Invoke-DiscoveryModuleSafely -SourceName "Exchange" -InvokeCommandName "Invoke-ExchangeDiscovery" -Config $Configuration -StepRef ([ref]$currentStep) -ResultsRef ([ref]$discoveryResults)
-        Invoke-DiscoveryModuleSafely -SourceName "Graph" -InvokeCommandName "Invoke-GraphDiscovery" -Config $Configuration -StepRef ([ref]$currentStep) -ResultsRef ([ref]$discoveryResults)
-        Invoke-DiscoveryModuleSafely -SourceName "Azure" -InvokeCommandName "Invoke-AzureDiscovery" -Config $Configuration -StepRef ([ref]$currentStep) -ResultsRef ([ref]$discoveryResults)
-        Invoke-DiscoveryModuleSafely -SourceName "Intune" -InvokeCommandName "Invoke-IntuneDiscovery" -Config $Configuration -StepRef ([ref]$currentStep) -ResultsRef ([ref]$discoveryResults)
-        Invoke-DiscoveryModuleSafely -SourceName "GPO" -InvokeCommandName "Invoke-GPODiscovery" -Config $Configuration -StepRef ([ref]$currentStep) -ResultsRef ([ref]$discoveryResults) # Assuming Invoke-GPODiscovery
-        Invoke-DiscoveryModuleSafely -SourceName "ExternalIdentity" -InvokeCommandName "Invoke-ExternalIdentityDiscovery" -Config $Configuration -StepRef ([ref]$currentStep) -ResultsRef ([ref]$discoveryResults)
-        
-        # Ensure progress completes if not all sources were enabled/run
-        Update-Progress -Step $enabledDiscoverySourcesCount -Status "Discovery Phase Potentially Complete" -ForceUpdate:$true
-        
-        Write-MandALog "Discovery phase completed successfully" -Level "SUCCESS"
-        return $discoveryResults
-        
-    } catch {
-        Write-MandALog "Discovery phase failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
-    }
-}
-
-function Invoke-ProcessingPhase {
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration,
-        [Parameter(Mandatory=$false)] # Discovery results might be passed if not reading from file
-        [hashtable]$DiscoveryData # Optional: if discovery ran in the same session
-    )
-    
-    try {
-        Write-MandALog "Starting Processing Phase" -Level "HEADER"
-        $script:ExecutionMetrics.Phase = "Processing"
-        
-        Initialize-ProgressTracker -Phase "Processing" -TotalSteps 5 # Example steps
-        
-        # Step 1: Data Aggregation - Load raw data and build comprehensive relationship graph
-        Update-Progress -Step 1 -Status "Aggregating Data & Building Relationship Graph"
-        
-        $aggregatedData = @{ Users = @(); Groups = @(); Applications = @(); ServicePrincipals = @(); DirectoryRoles = @(); OAuth2Grants = @(); AdministrativeUnits = @(); ConditionalAccess = @() }
-        $rawDataPath = Join-Path $Configuration.environment.outputPath "Raw"
-
-        # Example: Load key data files needed for aggregation. This should be more comprehensive.
-        # This part needs to be robust, loading all necessary CSVs produced by the discovery phase.
-        # The DataAggregation.psm1 module should ideally handle the logic of finding and loading its input files.
-        Write-MandALog "Loading raw data for aggregation from $rawDataPath..." -Level "INFO"
-        # Example of loading a few key files. DataAggregation.psm1 should handle this more robustly.
-        if (Test-Path (Join-Path $rawDataPath "ADUsers.csv")) { $aggregatedData.Users += Import-DataFromCSV -FilePath (Join-Path $rawDataPath "ADUsers.csv") }
-        if (Test-Path (Join-Path $rawDataPath "GraphUsers.csv")) { $aggregatedData.Users += Import-DataFromCSV -FilePath (Join-Path $rawDataPath "GraphUsers.csv") }
-        # ... load other necessary raw data files ...
-
-        # Call the main aggregation function (ensure New-ComprehensiveRelationshipGraph is exported by DataAggregation.psm1)
-        # This function should internally load all necessary raw data files based on config and file availability.
-        # The $aggregatedData passed here might be a starting point or this function could do all loading.
-        # For now, assuming it takes the pre-loaded (partial) data and configuration.
-        $relationshipGraph = if (Get-Command 'New-ComprehensiveRelationshipGraph' -ErrorAction SilentlyContinue) {
-            New-ComprehensiveRelationshipGraph -AggregatedData $aggregatedData -Configuration $Configuration
-        } else {
-            Write-MandALog "New-ComprehensiveRelationshipGraph command not found. Skipping relationship graph building." -Level "WARN"; $null
-        }
-        $aggregatedData.Relationships = $relationshipGraph # Or merge as appropriate
-
-        # Step 2: Build User Profiles
-        Update-Progress -Step 2 -Status "Building User Profiles"
-        $userProfiles = if (Get-Command 'New-UserProfiles' -ErrorAction SilentlyContinue) {
-            New-UserProfiles -Data $aggregatedData -Configuration $Configuration # Pass the fully aggregated data
-        } else {
-            Write-MandALog "New-UserProfiles command not found. Skipping profile building." -Level "WARN"; @()
-        }
-        
-        # Step 3: Calculate Migration Complexity
-        Update-Progress -Step 3 -Status "Analyzing Migration Complexity"
-        # Ensure Measure-MigrationComplexity or equivalent is exported by UserProfileBuilder.psm1 or ComplexityCalculator.psm1
-        $complexityAnalysis = if (Get-Command 'Measure-MigrationComplexity' -ErrorAction SilentlyContinue) {
-            Measure-MigrationComplexity -Profiles $userProfiles -Configuration $Configuration
-        } else {
-            Write-MandALog "Measure-MigrationComplexity command not found. Skipping complexity analysis." -Level "WARN"; $null
-        }
-        
-        # Step 4: Generate Migration Waves
-        Update-Progress -Step 4 -Status "Generating Migration Waves"
-        $migrationWaves = if (Get-Command 'New-MigrationWaves' -ErrorAction SilentlyContinue) {
-            New-MigrationWaves -Profiles $userProfiles -Configuration $Configuration
-        } else {
-            Write-MandALog "New-MigrationWaves command not found. Skipping wave generation." -Level "WARN"; @()
-        }
-        
-        # Step 5: Validate Data Quality
-        Update-Progress -Step 5 -Status "Validating Data Quality"
-        $validationResults = if (Get-Command 'Test-DataQuality' -ErrorAction SilentlyContinue) {
-            Test-DataQuality -Profiles $userProfiles -Configuration $Configuration # Or pass $aggregatedData
-        } else {
-            Write-MandALog "Test-DataQuality command not found. Skipping data validation." -Level "WARN"; $null
-        }
-        
-        if ($validationResults -and $validationResults.InvalidRecords -gt 0) {
-            if (Get-Command 'New-QualityReport' -ErrorAction SilentlyContinue) {
-                $qualityReportPath = Join-Path $Configuration.environment.outputPath "Processed"
-                New-QualityReport -ValidationResults $validationResults -OutputPath $qualityReportPath
-            } else {
-                Write-MandALog "New-QualityReport command not found. Cannot generate quality report." -Level "WARN"
-            }
-        }
-        
-        $processingResults = @{
-            UserProfiles = $userProfiles
-            ComplexityAnalysis = $complexityAnalysis
-            MigrationWaves = $migrationWaves
-            ValidationResults = $validationResults
-            RelationshipGraph = $relationshipGraph # If built
-            AggregatedData = $aggregatedData       # The full aggregated dataset
-        }
-        
-        $script:ExecutionMetrics.Modules["Processing"] = @{
-            UserProfilesBuilt = $userProfiles.Count
-            WavesGenerated = $migrationWaves.Count
-            DataQualityScore = if($validationResults) { $validationResults.QualityScore } else { "N/A" }
-            ProcessingComplete = $true
-        }
-        
-        Write-MandALog "Processing phase completed successfully" -Level "SUCCESS"
-        return $processingResults
-        
-    } catch {
-        Write-MandALog "Processing phase failed: $($_.Exception.Message)" -Level "ERROR"
-        Write-MandALog "Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG"
-        $script:ExecutionMetrics.FailedOperations++
-        $script:ExecutionMetrics.Modules["Processing"] = @{ ProcessingComplete = $false; Error = $_.Exception.Message }
-        throw
-    }
-}
-
-function Invoke-ExportPhase {
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration, 
-        [Parameter(Mandatory=$true)] # ProcessedData must be passed from Processing phase
-        [hashtable]$ProcessedData
-    )
-    
-    try {
-        Write-MandALog "Starting Export Phase" -Level "HEADER"
-        $script:ExecutionMetrics.Phase = "Export"
-        
-        # Corrected Ternary Operator for TotalSteps
-        $exportTotalSteps = @($Configuration.export.formats).Count
-        $isPowerAppsOptimized = $false
-        if ($Configuration.export.powerAppsOptimized) {
-            if ($Configuration.export.powerAppsOptimized -is [boolean]) {
-                $isPowerAppsOptimized = $Configuration.export.powerAppsOptimized
-            } elseif ($Configuration.export.powerAppsOptimized -is [string] -and $Configuration.export.powerAppsOptimized.ToLower() -eq 'true') {
-                $isPowerAppsOptimized = $true
-            }
-        }
-        if ($isPowerAppsOptimized) {
-             $exportTotalSteps++
-        }
-        Initialize-ProgressTracker -Phase "Export" -TotalSteps $exportTotalSteps
-        
-        $exportResults = @{}
-        $currentStep = 0
-
-        function Invoke-ExportModuleSafely { # Renamed from Safe-InvokeExportModule
-            param(
-                [string]$FormatName,
-                [string]$InvokeCommandName,
-                [hashtable]$Config,
-                [hashtable]$Data,
-                [ref]$StepRef,
-                [ref]$ResultsRef
-            )
-            $StepRef.Value++
-            Update-Progress -Step $StepRef.Value -Status "$FormatName Export"
-            if (Get-Command $InvokeCommandName -ErrorAction SilentlyContinue) {
-                Write-MandALog "Invoking $InvokeCommandName..." -Level "INFO"
-                $ResultsRef.Value.$FormatName = & $InvokeCommandName -Data $Data -Configuration $Config
-            } else {
-                Write-MandALog "$InvokeCommandName command not found. Skipping $FormatName export." -Level "WARN"
-            }
-        }
-
-        if ($Configuration.export.formats -contains "CSV") {
-            Invoke-ExportModuleSafely -FormatName "CSV" -InvokeCommandName "Export-ToCSV" -Config $Configuration -Data $ProcessedData -StepRef ([ref]$currentStep) -ResultsRef ([ref]$exportResults)
-        }
-        if ($Configuration.export.formats -contains "Excel") {
-            Invoke-ExportModuleSafely -FormatName "Excel" -InvokeCommandName "Export-ToExcel" -Config $Configuration -Data $ProcessedData -StepRef ([ref]$currentStep) -ResultsRef ([ref]$exportResults)
-        }
-        if ($Configuration.export.formats -contains "JSON") {
-            Invoke-ExportModuleSafely -FormatName "JSON" -InvokeCommandName "Export-ToJSON" -Config $Configuration -Data $ProcessedData -StepRef ([ref]$currentStep) -ResultsRef ([ref]$exportResults)
-        }
-        if ($isPowerAppsOptimized) { # Use the boolean flag determined earlier
-            # Assuming Export-ForPowerApps is the command for this
-            Invoke-ExportModuleSafely -FormatName "PowerApps" -InvokeCommandName "Export-ForPowerApps" -Config $Configuration -Data $ProcessedData -StepRef ([ref]$currentStep) -ResultsRef ([ref]$exportResults)
-        }
-        
-        Update-Progress -Step $currentStep -Status "Export Phase Potentially Complete" -ForceUpdate:$true
-
-        Write-MandALog "Export phase completed successfully" -Level "SUCCESS"
-        return $exportResults
-        
-    } catch {
-        Write-MandALog "Export phase failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
-    }
-}
-
-function Complete-MandADiscovery {
-    param([hashtable]$Configuration)
-    
-    try {
-        $script:ExecutionMetrics.EndTime = Get-Date
-        $script:ExecutionMetrics.Duration = $script:ExecutionMetrics.EndTime - $script:ExecutionMetrics.StartTime
-        
-        Write-MandALog "M&A Discovery Suite Execution Summary" -Level "HEADER"
-        Write-MandALog "Total Duration: $($script:ExecutionMetrics.Duration.ToString('hh\:mm\:ss'))" -Level "SUCCESS"
-        # Add more summary details if needed
-
-        Export-ProgressMetrics -Configuration $Configuration # From ProgressTracking.psm1
-        Cleanup-TempFiles -Configuration $Configuration      # From FileOperations.psm1
-        
-        Write-MandALog "M&A Discovery Suite completed successfully" -Level "SUCCESS"
-        
-    } catch {
-        Write-MandALog "Completion phase failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
-    }
-}
-
-# --- Main execution ---
-try {
-    # Resolve configuration file path relative to suite root if not absolute
-    $resolvedConfigFile = if ([System.IO.Path]::IsPathRooted($ConfigurationFile)) {
-        $ConfigurationFile
-    } else {
-        Join-Path $global:MandASuiteRoot $ConfigurationFile # Assumes $global:MandASuiteRoot is set
-    }
-    
-    if (-not (Test-Path $resolvedConfigFile -PathType Leaf)) {
-        Write-Error "Configuration file not found at '$resolvedConfigFile'. Please ensure the path is correct."
-        exit 1
-    }
-    
-    $configContent = Get-Content $resolvedConfigFile | ConvertFrom-Json -ErrorAction Stop
-    $script:Config = ConvertTo-HashtableFromPSObject -InputObject $configContent
-    
-    if ($OutputPath) { $script:Config.environment.outputPath = $OutputPath }
-    if ($Force.IsPresent) { $script:Config.discovery.skipExistingFiles = $false } # skipExistingFiles = $false means force
-    
-    Write-Host "`nM&A Discovery Suite v4.0 - Modular Orchestrator" -ForegroundColor Cyan
-    Write-Host "Mode: $Mode | Config: $resolvedConfigFile" -ForegroundColor Yellow
-    
-    # Initialize environment - pass the current $Mode to it
-    if (-not (Initialize-MandAEnvironment -Configuration $script:Config -CurrentMode $Mode -ValidateOnly:$ValidateOnly)) {
-        throw "Environment initialization failed"
-    }
-    
-    if ($ValidateOnly) {
-        Write-MandALog "Validation Only Mode: Orchestrator configuration and prerequisites appear valid." -Level "SUCCESS"
-        Write-MandALog "No discovery, processing, or export operations were performed." -Level "INFO"
-        exit 0
-    }
-    
-    # Authenticate (Authentication.psm1)
-    if (-not (Initialize-MandAAuthentication -Configuration $script:Config)) {
-        throw "Authentication failed"
-    }
-    
-    # Establish connections (EnhancedConnectionManager.psm1)
-    if (-not (Initialize-AllConnections -Configuration $script:Config)) {
-        # This function should internally log detailed errors/warnings
-        Write-MandALog "One or more service connections failed. Suite will attempt to proceed with limited functionality." -Level "WARN"
-    }
-    
-    $discoveryResults = $null
-    $processingResults = $null
-    # $exportResults = $null # Not used directly in this flow
-
-    if ($Mode -in @("Discovery", "Full")) {
-        $discoveryResults = Invoke-DiscoveryPhase -Configuration $script:Config
-    }
-    
-    if ($Mode -in @("Processing", "Full")) {
-        # Processing phase might need to load data if not passed directly from discovery
-        # For a "Processing" only mode, $discoveryResults would be $null.
-        # The Invoke-ProcessingPhase should handle loading raw data from files.
-        $processingResults = Invoke-ProcessingPhase -Configuration $script:Config # -DiscoveryData $discoveryResults (optional)
-    }
-    
-    if ($Mode -in @("Export", "Full")) {
-        if ($null -eq $processingResults -and $Mode -ne "Processing") { # If mode is "Export" but processing didn't run in this session
-             Write-MandALog "Export mode selected, but no processed data available from this session. Ensure processing has been run previously and data exists in Processed folder." -Level "WARN"
-             # Invoke-ExportPhase should load data from files if $ProcessedData is not supplied or is empty.
-             # For now, it requires $ProcessedData. This needs careful design for standalone export.
-             # A simple approach: if $processingResults is null, try to load key processed files.
-             # For now, we assume if "Export" or "Full" is chosen, processing data is available or generated.
-        }
-         if ($null -ne $processingResults -or ($Mode -eq "Export")) { # For "Export" only mode, $processingResults will be $null initially
-            # If $processingResults is $null in "Export" only mode, Invoke-ExportPhase must load data itself.
-            # This is a placeholder; Invoke-ExportPhase needs to be robust enough to load its own input.
-            Invoke-ExportPhase -Configuration $script:Config -ProcessedData $processingResults
-        } else {
-            Write-MandALog "Skipping Export Phase as no processed data is available (e.g. Processing phase did not run or failed)." -Level "WARN"
-        }
-    }
-    
-    Complete-MandADiscovery -Configuration $script:Config
-    
-} catch {
-    Write-MandALog "ORCHESTRATOR CRITICAL ERROR: $($_.Exception.Message)" -Level "CRITICAL_ERROR"
-    if ($_.ScriptStackTrace) {
-        Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG"
-    }
-    if ($_.Exception.InnerException) {
-        Write-MandALog "Inner Exception: $($_.Exception.InnerException.Message)" -Level "DEBUG"
-    }
-    # Consider more detailed error logging to a dedicated error file here
+if (Test-Path $envSetupScript) {
+    Write-Verbose "Sourcing Set-SuiteEnvironment.ps1 from: $envSetupScript"
+    # Dot-source Set-SuiteEnvironment.ps1 WITHOUT providing -ProvidedSuiteRoot.
+    # This allows Set-SuiteEnvironment.ps1 to use its internal default logic:
+    # 1. Check C:\UserMigration
+    # 2. If not valid, auto-detect based on its own location.
+    . $envSetupScript
+} else {
+    Write-Error "CRITICAL: Set-SuiteEnvironment.ps1 not found at '$envSetupScript'. This script is essential for defining suite paths. Cannot proceed."
     exit 1
+}
+
+# At this point, global variables like $global:MandASuiteRoot, $global:MandAScriptsPath, etc.,
+# should be set by the sourced Set-SuiteEnvironment.ps1 script.
+
+# --- Helper Functions ---
+
+function Show-Menu {
+    Clear-Host
+    Write-Host ""
+    Write-Host "+==================================================================+" -ForegroundColor Cyan
+    Write-Host "|              M&A Discovery Suite v4.0 - Main Menu              |" -ForegroundColor Cyan
+    Write-Host "+==================================================================+" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "  Suite Root Established As: $($global:MandASuiteRoot)" -ForegroundColor DarkYellow # Display detected SuiteRoot from Set-SuiteEnvironment
+    Write-Host ""
+    Write-Host "  SETUP & CONFIGURATION" -ForegroundColor Yellow
+    Write-Host "  ---------------------" -ForegroundColor Yellow
+    Write-Host "  [0] Invoke App Registration Setup (Azure AD Credentials)"
+    Write-Host ""
+    Write-Host "  ORCHESTRATOR EXECUTION (App Registration will be checked/prompted)" -ForegroundColor Yellow
+    Write-Host "  -----------------------------------------------------------------" -ForegroundColor Yellow
+    Write-Host "  [1] Invoke Orchestrator: Discovery Only"
+    Write-Host "  [2] Invoke Orchestrator: Discovery & Processing"
+    Write-Host "  [3] Invoke Orchestrator: Processing Only"
+    Write-Host "  [4] Invoke Orchestrator: Processing & Export"
+    Write-Host "  [5] Invoke Orchestrator: Validate Configuration Only (Test Mode)"
+    Write-Host ""
+    Write-Host "  UTILITIES & VALIDATION" -ForegroundColor Yellow
+    Write-Host "  ------------------------" -ForegroundColor Yellow
+    Write-Host "  [V] Validate Full Installation (Validate-Installation.ps1)"
+    Write-Host "  [M] Check PowerShell Modules (DiscoverySuiteModuleCheck.ps1)"
+    Write-Host ""
+    Write-Host "  [Q] Quit" -ForegroundColor Yellow
+    Write-Host ""
+}
+
+# Function to check PowerShell module dependencies.
+# Returns $true if critical modules seem okay or script is missing, $false if critical issues found.
+function Test-RequiredPowerShellModules {
+    Write-Host "`n--- Checking Required PowerShell Modules ---" -ForegroundColor DarkCyan
+    # $global:MandAScriptsPath is set by Set-SuiteEnvironment.ps1
+    $moduleCheckScriptPath = Join-Path $global:MandAScriptsPath "DiscoverySuiteModuleCheck.ps1"
+
+    if (-not (Test-Path $moduleCheckScriptPath)) {
+        Write-Host "[WARNING] DiscoverySuiteModuleCheck.ps1 not found at '$moduleCheckScriptPath'." -ForegroundColor Yellow
+        Write-Host "          Cannot automatically verify PowerShell module dependencies. Please ensure they are installed." -ForegroundColor White
+        return $true # Allow to proceed but with a warning
+    }
+
+    Write-Host "Running PowerShell module dependency check: $moduleCheckScriptPath" -ForegroundColor White
+    Write-Host "This may take a moment and might attempt to install/update modules..." -ForegroundColor Gray
     
-} finally {
+    $outputFromScript = ""
+    $exitCode = 0
     try {
-        if (Get-Command 'Disconnect-AllServices' -ErrorAction SilentlyContinue) {
-            Disconnect-AllServices # From EnhancedConnectionManager.psm1
+        # Execute in the context of the Scripts directory
+        Push-Location $global:MandAScriptsPath
+        $outputFromScript = & $moduleCheckScriptPath -AutoFix -ErrorAction SilentlyContinue # Added -AutoFix for convenience
+        $exitCode = $LASTEXITCODE
+        Pop-Location
+    } catch {
+        Pop-Location # Ensure Pop-Location runs even if there's an error
+        Write-Host "[ERROR] DiscoverySuiteModuleCheck.ps1 failed to execute: $($_.Exception.Message)" -ForegroundColor Red
+        return $true # Allow to proceed but with a significant warning, as the check itself failed.
+    }
+    
+    if ($exitCode -ne 0) {
+        Write-Host "[ERROR] DiscoverySuiteModuleCheck.ps1 indicated an issue (Exit Code: $exitCode)." -ForegroundColor Red
+        Write-Host "        Please run DiscoverySuiteModuleCheck.ps1 manually from the '$($global:MandAScriptsPath)' directory for details." -ForegroundColor Yellow
+        return $false # Treat non-zero exit as a failure for critical modules
+    }
+    
+    # Fallback check based on output string matching (less ideal but a secondary check)
+    if ($outputFromScript -match "CRITICAL issues found with REQUIRED modules" -or $outputFromScript -match "ERROR: CRITICAL issues found with REQUIRED modules:") {
+        Write-Host "[ERROR] Critical PowerShell module dependencies are missing or incorrect (as per script output)." -ForegroundColor Red
+        Write-Host "        Please review the output from DiscoverySuiteModuleCheck.ps1 and resolve the issues." -ForegroundColor Yellow
+        return $false
+    }
+
+    Write-Host "[INFO] PowerShell module dependency check completed." -ForegroundColor Green
+    return $true
+}
+
+
+# Function to check the status of local app registration artifacts.
+# Returns $true if ready, $false otherwise.
+function Test-AppRegistrationPrerequisites {
+    Write-Host "`n--- Checking App Registration Prerequisites (Local Credentials) ---" -ForegroundColor DarkCyan
+    
+    # $global:MandADefaultConfigPath is set by Set-SuiteEnvironment.ps1
+    $configFilePath = $global:MandADefaultConfigPath 
+    if (-not (Test-Path $configFilePath)) {
+        Write-Host "[ERROR] Default configuration file not found at: $configFilePath" -ForegroundColor Red
+        return $false
+    }
+
+    try {
+        $configJson = Get-Content $configFilePath | ConvertFrom-Json
+        
+        $credStorePathFromConfig = $configJson.authentication.credentialStorePath
+        $fullCredPath = ""
+
+        if ([System.IO.Path]::IsPathRooted($credStorePathFromConfig)) {
+            $fullCredPath = $credStorePathFromConfig
+        } else {
+            # If relative, assume it's relative to SuiteRoot, as this is a common convention for config paths.
+            # Setup-AppRegistration.ps1 itself defaults to an absolute path "C:\MandADiscovery\Output\credentials.config"
+            # This check aims to see if the file specified in the *config* exists.
+            $fullCredPath = Join-Path $global:MandASuiteRoot $credStorePathFromConfig
+        }
+        
+        # Normalize path for robust checking
+        if (Test-Path $fullCredPath -ErrorAction SilentlyContinue) {
+            $fullCredPath = (Resolve-Path -Path $fullCredPath).Path
+        }
+
+        Write-Host "Verifying local credentials file (from config '$($configJson.authentication.credentialStorePath)' resolved to: $fullCredPath) ..." -NoNewline
+        if (Test-Path $fullCredPath -PathType Leaf) {
+            Write-Host " FOUND." -ForegroundColor Green
+            Write-Host "[INFO] App Registration appears to be configured locally (credentials file exists)." -ForegroundColor White
+            return $true
+        } else {
+            Write-Host " NOT FOUND." -ForegroundColor Red
+            Write-Host "[WARNING] Local credentials file ('$fullCredPath') is missing or path is incorrect in config." -ForegroundColor Yellow
+            Write-Host "           The Setup-AppRegistration.ps1 script typically saves credentials to 'C:\MandADiscovery\Output\credentials.config' by default." -ForegroundColor DarkGray
+            Write-Host "           App Registration setup (Option [0]) might be required." -ForegroundColor Yellow
+            return $false
         }
     } catch {
-        Write-MandALog "Error during final service disconnection: $($_.Exception.Message)" -Level "WARN"
+        Write-Host "`n[ERROR] Could not read or parse configuration file '$configFilePath':" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        return $false
     }
-    Write-MandALog "Orchestrator execution finished at $(Get-Date)." -Level "INFO"
 }
+
+# Internal function to run app registration.
+function Invoke-AppRegistrationSetupInternal {
+    Write-Host "`n--- Invoking App Registration Setup ---" -ForegroundColor Cyan
+    # $script:ScriptsPath is defined at the top of QuickStart.ps1 and is reliable for QuickStart's own directory.
+    # $global:MandAAppRegScriptPath (set by Set-SuiteEnvironment.ps1) is the canonical way to get this path.
+    $appRegScriptPath = $global:MandAAppRegScriptPath 
+    
+    if (Test-Path $appRegScriptPath) {
+        Write-Host "Launching Azure App Registration setup script: $appRegScriptPath" -ForegroundColor Yellow
+        Write-Host "Please follow the prompts. This may require elevated privileges." -ForegroundColor White
+        Write-Host "The script will use its default output for credentials (typically C:\MandADiscovery\Output\credentials.config) unless overridden by its parameters." -ForegroundColor DarkGray
+        try {
+            # Execute Setup-AppRegistration.ps1 from its own directory context
+            Push-Location (Split-Path $appRegScriptPath -Parent)
+            & $appRegScriptPath # This will use its internal defaults for log path and encrypted output path
+            Pop-Location
+            Write-Host "[INFO] App Registration script execution finished." -ForegroundColor White
+        } catch {
+            Pop-Location # Ensure Pop-Location on error
+            Write-Host "[ERROR] Failed to execute Setup-AppRegistration.ps1: $($_.Exception.Message)" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "[ERROR] Setup-AppRegistration.ps1 not found at '$appRegScriptPath'!" -ForegroundColor Red
+    }
+}
+
+# Orchestrator caller with App Registration pre-flight check
+function Invoke-OrchestratorPhaseWithAppRegCheck {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$PhaseTitle,
+        [Parameter(Mandatory=$false)]
+        [string]$Mode,
+        [Parameter(Mandatory=$false)]
+        [switch]$ValidateOnlyFlag,
+        [Parameter(Mandatory=$false)]
+        [hashtable]$ExtraArgs = @{}
+    )
+
+    Write-Host "`n--- Preparing to Launch Orchestrator ($PhaseTitle) ---" -ForegroundColor Cyan
+    
+    if (-not $ValidateOnlyFlag.IsPresent) {
+        if (-not (Test-AppRegistrationPrerequisites)) {
+            $confirmSetup = Read-Host "App Registration (local credentials file) appears to be missing or misconfigured. Run App Registration setup (Option [0]) now? (Y/N)"
+            if ($confirmSetup -clike 'y') {
+                Invoke-AppRegistrationSetupInternal
+                if (-not (Test-AppRegistrationPrerequisites)) {
+                    Write-Host "[ERROR] App Registration setup was run, but local credentials are still not found/configured correctly." -ForegroundColor Red
+                    Write-Host "        Cannot proceed with orchestrator phase '$PhaseTitle'." -ForegroundColor Yellow
+                    Request-UserToContinue
+                    return
+                }
+                Write-Host "[SUCCESS] App Registration prerequisites met after setup." -ForegroundColor Green
+            } else {
+                Write-Host "[INFO] Orchestrator phase '$PhaseTitle' cancelled by user due to missing App Registration." -ForegroundColor Yellow
+                Request-UserToContinue
+                return
+            }
+        }
+    } else {
+         Write-Host "[INFO] Skipping App Registration credential check for Orchestrator's ValidateOnly mode." -ForegroundColor DarkGray
+    }
+
+    $orchestratorPath = $global:MandAOrchestratorPath
+    $configFilePath = $global:MandADefaultConfigPath 
+
+    if (-not (Test-Path $orchestratorPath -PathType Leaf)) { Write-Host "[ERROR] Orchestrator script not found: $orchestratorPath" -ForegroundColor Red; Request-UserToContinue; return }
+    
+    $arguments = @{ ConfigurationFile = $configFilePath } 
+    if ($ValidateOnlyFlag.IsPresent) { $arguments.ValidateOnly = $true } 
+    elseif ($Mode) { $arguments.Mode = $Mode }
+    foreach ($key in $ExtraArgs.Keys) { $arguments[$key] = $ExtraArgs[$key] }
+    
+    $commandString = "& `"$orchestratorPath`""
+    foreach ($key in $arguments.Keys) {
+        if ($arguments[$key] -is [switch] -and $arguments[$key].IsPresent) { $commandString += " -$key" }
+        elseif ($arguments[$key] -is [bool] -and $arguments[$key]) { $commandString += " -$key" } 
+        elseif ($null -ne $arguments[$key] -and -not ($arguments[$key] -is [switch])) { 
+             $commandString += " -$key `"$($arguments[$key])`"" 
+        }
+    }
+    Write-Host "Executing Orchestrator: $commandString" -ForegroundColor DarkGray
+    Write-Host "Please wait..." -ForegroundColor Yellow
+    
+    try {
+        Push-Location $global:MandACorePath
+        & $orchestratorPath @arguments
+        $exitCode = $LASTEXITCODE
+        Pop-Location
+        if ($exitCode -eq 0) { Write-Host "[SUCCESS] Orchestrator phase '$PhaseTitle' completed successfully." -ForegroundColor Green }
+        else { Write-Host "[WARNING] Orchestrator phase '$PhaseTitle' completed with exit code: $exitCode. Check logs." -ForegroundColor Yellow }
+    } catch { 
+        Pop-Location 
+        Write-Host "[ERROR] Failed to launch Orchestrator for '$PhaseTitle': $($_.Exception.Message)" -ForegroundColor Red 
+    }
+    Request-UserToContinue
+}
+
+function Invoke-FullInstallationValidation {
+    Write-Host "`n--- Invoking Full Installation Validation ---" -ForegroundColor Cyan
+    $validationScriptPath = $global:MandAValidationScriptPath
+    if (Test-Path $validationScriptPath) {
+        Write-Host "Running full installation validation: $validationScriptPath" -ForegroundColor Yellow
+        try {
+            Push-Location (Split-Path $validationScriptPath -Parent)
+            & $validationScriptPath
+            Pop-Location
+            Write-Host "[INFO] Full installation validation finished." -ForegroundColor White
+        } catch {
+            Pop-Location
+            Write-Host "[ERROR] Failed to execute Validate-Installation.ps1: $($_.Exception.Message)" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "[ERROR] Validate-Installation.ps1 not found at '$validationScriptPath'!" -ForegroundColor Red
+    }
+    Request-UserToContinue
+}
+
+
+function Request-UserToContinue {
+    Write-Host "`nPress Enter to return to the menu..." -ForegroundColor Gray
+    Read-Host | Out-Null
+}
+
+# --- Main Script Body ---
+Write-Host "`n--- M&A Discovery Suite QuickStart Initializing ---" -ForegroundColor Cyan
+Write-Host "QuickStart's initial assumption for SuiteRoot: '$($script:SuiteRoot_QuickStartAssumption)'" -ForegroundColor DarkGray
+Write-Host "Sourcing Set-SuiteEnvironment.ps1 to finalize environment variables..." -ForegroundColor DarkGray
+# Set-SuiteEnvironment.ps1 was sourced at the very top. Its output will confirm the final SuiteRoot.
+
+$unblockScriptPath = Join-Path $global:MandASuiteRoot "Unblock-AllFiles.ps1" 
+if (Test-Path $unblockScriptPath) {
+    Write-Host "Attempting to unblock all script files in '$($global:MandASuiteRoot)'..." -ForegroundColor Yellow
+    try { 
+        Push-Location $global:MandASuiteRoot
+        & $unblockScriptPath -Path $global:MandASuiteRoot 
+        Pop-Location
+        Write-Host "[SUCCESS] File unblocking completed." -ForegroundColor Green 
+    }
+    catch { 
+        Pop-Location 
+        Write-Host "[ERROR] Unblocking files failed: $($_.Exception.Message)" -ForegroundColor Red; Request-UserToContinue 
+    }
+} else { Write-Host "[WARNING] Unblock-AllFiles.ps1 not found at '$unblockScriptPath'. Files might be blocked." -ForegroundColor Yellow; Request-UserToContinue }
+
+if (-not (Test-RequiredPowerShellModules)) {
+    Write-Host "[CRITICAL FAILURE] Essential PowerShell modules are missing or DiscoverySuiteModuleCheck.ps1 reported critical errors." -ForegroundColor Red
+    Write-Host "                   Please resolve these module issues before proceeding." -ForegroundColor Red
+    Write-Host "                   QuickStart will pause. Press Enter to see the menu, but some options may not function correctly." -ForegroundColor Yellow
+    Request-UserToContinue
+} else {
+    Write-Host "[SUCCESS] Initial PowerShell module check passed or allows proceeding." -ForegroundColor Green
+}
+
+Write-Host "Initialization complete. Launching main menu..." -ForegroundColor White; Start-Sleep -Seconds 1
+
+do {
+    Show-Menu
+    $choice = Read-Host "Enter your choice"
+    switch ($choice) {
+        '0' { Invoke-AppRegistrationSetupInternal; Request-UserToContinue }
+        '1' { Invoke-OrchestratorPhaseWithAppRegCheck -PhaseTitle "Discovery Only" -Mode "Discovery" }
+        '2' { 
+              Invoke-OrchestratorPhaseWithAppRegCheck -PhaseTitle "Discovery Phase (Part 1 of 2)" -Mode "Discovery"
+              Write-Host "`n--- Next: Processing Phase (Part 2 of 2) ---" -ForegroundColor Cyan
+              Invoke-OrchestratorPhaseWithAppRegCheck -PhaseTitle "Processing Phase (Part 2 of 2)" -Mode "Processing"
+            }
+        '3' { Invoke-OrchestratorPhaseWithAppRegCheck -PhaseTitle "Processing Only" -Mode "Processing" }
+        '4' { 
+              Invoke-OrchestratorPhaseWithAppRegCheck -PhaseTitle "Processing Phase (Part 1 of 2)" -Mode "Processing"
+              Write-Host "`n--- Next: Export Phase (Part 2 of 2) ---" -ForegroundColor Cyan
+              Invoke-OrchestratorPhaseWithAppRegCheck -PhaseTitle "Export Phase (Part 2 of 2)" -Mode "Export"
+            }
+        '5' { Invoke-OrchestratorPhaseWithAppRegCheck -PhaseTitle "Validate Configuration Only" -ValidateOnlyFlag:$true }
+        'V' { Invoke-FullInstallationValidation } 
+        'M' { Test-RequiredPowerShellModules; Request-UserToContinue } 
+        'q' { Write-Host "`nExiting M&A Discovery Suite QuickStart Launcher." -ForegroundColor Cyan }
+        default { Write-Host "`n[ERROR] Invalid choice. Please try again." -ForegroundColor Red; Request-UserToContinue }
+    }
+} while ($choice -cne 'q') 
+
+Write-Host "Thank you for using the M&A Discovery Suite!" -ForegroundColor Green
