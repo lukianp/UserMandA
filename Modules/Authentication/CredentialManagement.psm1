@@ -206,7 +206,7 @@ function Set-SecureCredentials {
 function Test-CredentialValidity {
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$Credentials,
+        $Credentials,  # Remove [hashtable] type constraint
         [hashtable]$Configuration
     )
     
