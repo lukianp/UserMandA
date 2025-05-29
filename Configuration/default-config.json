@@ -12,7 +12,7 @@
     "tempPath": "C:\\MandADiscovery\\Temp",   
     "logLevel": "INFO", 
     "maxRetries": 3,
-    "domainController": "DC01.contoso.com", 
+    "domainController": "ad.zedra.com", 
     "logging": {
       "useEmojis": true,
       "useColors": true,
@@ -32,7 +32,7 @@
   "authentication": {
     "useServicePrincipal": true,
     "useInteractiveAuth": false,
-    "credentialStorePath": "C:\\MandADiscovery\\Credentials\\credentials.config", 
+    "credentialStorePath": "C:\\MandADiscovery\\Output\\credentials.config", 
     "certificateThumbprint": "",
     "tokenRefreshThreshold": 600,
     "authenticationMethod": "ClientSecret" 
