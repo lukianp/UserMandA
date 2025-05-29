@@ -8,11 +8,11 @@
     "lastUpdated": "2024-01-15"
   },
   "environment": {
-    "outputPath": "C:\\MandA\\Discovery\\Output",
-    "tempPath": "C:\\MandA\\Discovery\\Temp",
-    "logLevel": "INFO",
+    "outputPath": ".\\Output", 
+    "tempPath": ".\\Temp", 
+    "logLevel": "INFO", 
     "maxRetries": 3,
-    "domainController": "DC01.contoso.com",
+    "domainController": "DC01.contoso.com", 
     "logging": {
       "useEmojis": true,
       "useColors": true,
@@ -25,17 +25,17 @@
       "preferInteractiveAuth": false,
       "proxyBypassForExchange": true,
       "maxConnectionRetries": 3,
-      "connectionTimeout": 30,
+      "connectionTimeout": 30, 
       "retryDelaySeconds": 5
     }
   },
   "authentication": {
     "useServicePrincipal": true,
     "useInteractiveAuth": false,
-    "credentialStorePath": "C:\\MandA\\Discovery\\Credentials\\creds.enc",
+    "credentialStorePath": ".\\Credentials\\credentials.config", 
     "certificateThumbprint": "",
     "tokenRefreshThreshold": 600,
-    "authenticationMethod": "ClientSecret"
+    "authenticationMethod": "ClientSecret" 
   },
   "discovery": {
     "enabledSources": [
@@ -43,12 +43,14 @@
       "Graph",
       "Exchange",
       "Azure",
-      "Intune"
+      "Intune",
+      "GPO",
+      "ExternalIdentity"
     ],
     "skipExistingFiles": true,
     "parallelProcessing": true,
     "maxConcurrentJobs": 5,
-    "batchSize": 1000,
+    "batchSize": 1000, 
     "excludeDisabledUsers": false,
     "includeGuestUsers": true,
     "discoveryScope": {
@@ -56,16 +58,19 @@
       "excludedOUs": [],
       "includedDomains": [],
       "excludedDomains": []
-    }
+    },
+    "compressionEnabled": true 
   },
   "processing": {
+    "chunkSize": 100, 
+    "includeDisabledUsers": false, 
+    "generateWavesByDepartment": true,
+    "maxWaveSize": 50, 
     "complexityThresholds": {
       "low": 3,
       "medium": 7,
-      "high": 12
+      "high": 10 
     },
-    "maxWaveSize": 100,
-    "generateWavesByDepartment": true,
     "priorityWeights": {
       "complexity": 0.3,
       "readiness": 0.4,
@@ -78,26 +83,29 @@
     }
   },
   "export": {
-    "formats": ["CSV", "Excel", "JSON"],
+    "formats": ["CSV", "JSON"], 
+    "excelEnabled": true, 
     "powerAppsOptimized": true,
-    "includeDetailedReports": true,
-    "compressionEnabled": true,
-    "archiveOldReports": true,
+    "includeMetadata": true,
+    "archiveResults": true,
     "reportRetentionDays": 90,
+    "jsonExportDepth": 5, 
+    "powerAppsJsonDepth": 3, 
     "exportOptions": {
       "includeRawData": false,
       "includeProcessedData": true,
       "includeSummaryReports": true,
-      "includeVisualizations": false
+      "includeVisualizations": false 
     }
   },
   "performance": {
     "memoryThresholdMB": 4096,
-    "diskSpaceThresholdGB": 10,
-    "throttleLimit": 100,
-    "progressUpdateInterval": 100,
+    "diskSpaceThresholdGB": 10, 
+    "throttleLimit": 100, 
+    "progressUpdateInterval": 100, 
     "enableCaching": true,
-    "cacheExpirationMinutes": 60
+    "cacheExpirationMinutes": 60,
+    "enableGarbageCollection": true 
   },
   "advancedSettings": {
     "debugMode": false,
@@ -106,7 +114,8 @@
     "validateDataIntegrity": true,
     "enableAuditLog": true,
     "customModulePath": "",
-    "bypassCertificateValidation": false
+    "bypassCertificateValidation": false,
+    "createPlaceholderFunctions": false 
   },
   "notifications": {
     "enabled": false,
@@ -123,9 +132,10 @@
     "useBetaEndpoint": false,
     "pageSize": 999,
     "selectFields": {
-      "users": ["id", "userPrincipalName", "displayName", "mail", "department", "jobTitle"],
-      "groups": ["id", "displayName", "description", "mailEnabled", "securityEnabled"],
-      "applications": ["id", "appId", "displayName", "publisherDomain"]
+      "users": ["id", "userPrincipalName", "displayName", "mail", "department", "jobTitle", "createdDateTime", "accountEnabled", "lastSignInDateTime", "onPremisesSyncEnabled", "onPremisesImmutableId", "companyName", "usageLocation", "assignedLicenses", "memberOf"],
+      "groups": ["id", "displayName", "description", "mailEnabled", "securityEnabled", "groupTypes", "visibility"],
+      "applications": ["id", "appId", "displayName", "publisherDomain", "signInAudience"],
+      "servicePrincipals": ["id", "appId", "displayName", "servicePrincipalType", "accountEnabled", "appRoles", "oauth2PermissionScopes", "owners"]
     }
   },
   "exchangeOnline": {
