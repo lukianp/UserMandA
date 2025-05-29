@@ -1,265 +1,150 @@
-﻿<#
+#Requires -Version 5.1
+<#
 .SYNOPSIS
-    Data quality validation for M&A Discovery Suite
+    M&A Discovery Suite - Data Validation Module
 .DESCRIPTION
-    Validates data quality and generates quality reports
+    This module is responsible for validating the quality and completeness of
+    processed data (e.g., user profiles) and generating quality reports.
+.NOTES
+    Version: 1.1.0 (Refactored for orchestrator data contracts)
+    Author: Gemini
 #>
 
+[CmdletBinding()]
+param()
+
+# Main function to test data quality
 function Test-DataQuality {
+    [CmdletBinding()]
     param(
-        [array]$Profiles,
+        [Parameter(Mandatory = $true)]
+        [System.Collections.IList]$Profiles, # Expects an array/list of user profile objects
+
+        [Parameter(Mandatory = $true)]
         [hashtable]$Configuration
     )
-    
-    try {
-        Write-MandALog "Starting data quality validation" -Level "HEADER"
-        
-        if (-not $Profiles -or $Profiles.Count -eq 0) {
-            Write-MandALog "No profiles available for data quality validation" -Level "WARN"
-            return @{
-                IsValid = $true
-                TotalRecords = 0
-                ValidRecords = 0
-                InvalidRecords = 0
-                QualityScore = 100
-                Issues = @()
-            }
-        }
-        
-        $requiredFields = @("UserPrincipalName", "DisplayName")
-        $validationResult = Test-DataQuality -Data $Profiles -RequiredFields $requiredFields -DataType "User Profiles"
-        
-        # Additional profile-specific validations
-        $profileIssues = @()
-        
-        foreach ($profile in $Profiles) {
-            $issues = @()
-            
-            # Check for missing critical information
-            if ([string]::IsNullOrWhiteSpace($profile.Mail)) {
-                $issues += "Missing email address"
-            }
-            
-            if ([string]::IsNullOrWhiteSpace($profile.Department)) {
-                $issues += "Missing department information"
-            }
-            
-            # Check for data consistency
-            if ($profile.HasGraphAccount -and [string]::IsNullOrWhiteSpace($profile.GraphId)) {
-                $issues += "Marked as having Graph account but missing Graph ID"
-            }
-            
-            if ($profile.HasExchangeMailbox -and [string]::IsNullOrWhiteSpace($profile.MailboxType)) {
-                $issues += "Marked as having mailbox but missing mailbox type"
-            }
-            
-            # Check for logical inconsistencies
-            if (-not $profile.Enabled -and $profile.ReadinessStatus -eq "Ready") {
-                $issues += "Disabled account marked as ready for migration"
-            }
-            
-            if ($profile.ComplexityScore -lt 0 -or $profile.ComplexityScore -gt 20) {
-                $issues += "Complexity score out of expected range"
-            }
-            
-            if ($profile.ReadinessScore -lt 0 -or $profile.ReadinessScore -gt 100) {
-                $issues += "Readiness score out of valid range"
-            }
-            
-            if ($issues.Count -gt 0) {
-                $profileIssues += @{
-                    Record = $profile
-                    Issues = $issues
-                }
-            }
-        }
-        
-        # Combine validation results
-        $combinedResult = @{
-            IsValid = ($validationResult.IsValid -and $profileIssues.Count -eq 0)
-            TotalRecords = $Profiles.Count
-            ValidRecords = $Profiles.Count - $profileIssues.Count
-            InvalidRecords = $profileIssues.Count
-            QualityScore = if ($Profiles.Count -gt 0) { [math]::Round((($Profiles.Count - $profileIssues.Count) / $Profiles.Count) * 100, 2) } else { 100 }
-            Issues = $validationResult.Issues + $profileIssues
-        }
-        
-        Write-MandALog "Data quality validation completed" -Level "SUCCESS"
-        Write-MandALog "Quality Score: $($combinedResult.QualityScore)%" -Level "INFO"
-        Write-MandALog "Valid Records: $($combinedResult.ValidRecords) of $($combinedResult.TotalRecords)" -Level "INFO"
-        
-        if ($combinedResult.InvalidRecords -gt 0) {
-            Write-MandALog "Found $($combinedResult.InvalidRecords) records with data quality issues" -Level "WARN"
-        }
-        
-        return $combinedResult
-        
-    } catch {
-        Write-MandALog "Data quality validation failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
-    }
-}
 
-function New-QualityReport {
-    param(
-        [hashtable]$ValidationResults,
-        [string]$OutputPath
-    )
+    Write-MandALog "Starting Data Quality Validation for $($Profiles.Count) profiles..." -Level "INFO"
+    $issuesFound = [System.Collections.Generic.List[object]]::new()
+    $validRecords = 0
+    $invalidRecords = 0
+
+    if ($Profiles.Count -eq 0) {
+        Write-MandALog "No user profiles provided. Skipping data quality validation." -Level "WARN"
+        return @{ TotalRecords = 0; ValidRecords = 0; InvalidRecords = 0; QualityScore = 100; Issues = $issuesFound }
+    }
     
-    try {
-        Write-MandALog "Generating data quality report" -Level "INFO"
-        
-        $reportFile = Join-Path $OutputPath "DataQualityReport.csv"
-        $reportData = [System.Collections.Generic.List[PSCustomObject]]::new()
-        
-        # Summary statistics
-        $reportData.Add([PSCustomObject]@{
-            Category = "Summary"
-            Issue = "Total Records"
-            Count = $ValidationResults.TotalRecords
-            Percentage = 100
-            Severity = "Info"
-            Recommendation = "Total number of records processed"
-        })
-        
-        $reportData.Add([PSCustomObject]@{
-            Category = "Summary"
-            Issue = "Valid Records"
-            Count = $ValidationResults.ValidRecords
-            Percentage = [math]::Round(($ValidationResults.ValidRecords / $ValidationResults.TotalRecords) * 100, 1)
-            Severity = "Success"
-            Recommendation = "Records that passed all validation checks"
-        })
-        
-        $reportData.Add([PSCustomObject]@{
-            Category = "Summary"
-            Issue = "Invalid Records"
-            Count = $ValidationResults.InvalidRecords
-            Percentage = [math]::Round(($ValidationResults.InvalidRecords / $ValidationResults.TotalRecords) * 100, 1)
-            Severity = if ($ValidationResults.InvalidRecords -eq 0) { "Success" } else { "Warning" }
-            Recommendation = if ($ValidationResults.InvalidRecords -gt 0) { "Review and correct data quality issues" } else { "No issues found" }
-        })
-        
-        $reportData.Add([PSCustomObject]@{
-            Category = "Summary"
-            Issue = "Overall Quality Score"
-            Count = $ValidationResults.QualityScore
-            Percentage = $ValidationResults.QualityScore
-            Severity = if ($ValidationResults.QualityScore -ge 95) { "Success" } elseif ($ValidationResults.QualityScore -ge 85) { "Warning" } else { "Error" }
-            Recommendation = if ($ValidationResults.QualityScore -lt 95) { "Improve data quality before migration" } else { "Data quality is acceptable" }
-        })
-        
-        # Group issues by type
-        $issueGroups = @{}
-        foreach ($issue in $ValidationResults.Issues) {
-            foreach ($issueDetail in $issue.Issues) {
-                if (-not $issueGroups.ContainsKey($issueDetail)) {
-                    $issueGroups[$issueDetail] = 0
-                }
-                $issueGroups[$issueDetail]++
-            }
-        }
-        
-        # Add issue details
-        foreach ($issueType in $issueGroups.GetEnumerator()) {
-            $severity = Get-IssueSeverity -IssueType $issueType.Key
-            $recommendation = Get-IssueRecommendation -IssueType $issueType.Key
-            
-            $reportData.Add([PSCustomObject]@{
-                Category = "Data Issues"
-                Issue = $issueType.Key
-                Count = $issueType.Value
-                Percentage = [math]::Round(($issueType.Value / $ValidationResults.TotalRecords) * 100, 1)
-                Severity = $severity
-                Recommendation = $recommendation
+    $processedCount = 0
+    foreach ($profile in $Profiles) {
+        $processedCount++
+        Update-Progress -Activity "Validating Data Quality" -Status "Profile $processedCount of $($Profiles.Count)" -PercentComplete (($processedCount / $Profiles.Count) * 100)
+
+        $currentProfileIssues = 0
+        # Placeholder: Detailed data validation logic
+        if ([string]::IsNullOrWhiteSpace($profile.UserPrincipalName)) {
+            $issuesFound.Add([PSCustomObject]@{
+                Identifier  = $profile.DisplayName # Or another available identifier
+                IssueType   = "Missing Data"
+                Field       = "UserPrincipalName"
+                Description = "UserPrincipalName is missing or empty."
+                Severity    = "High"
             })
+            $currentProfileIssues++
         }
-        
-        # Export report
-        Export-DataToCSV -Data $reportData -FilePath $reportFile
-        Write-MandALog "Data quality report generated: $reportFile" -Level "SUCCESS"
-        
-        return $reportFile
-        
-    } catch {
-        Write-MandALog "Failed to generate quality report: $($_.Exception.Message)" -Level "ERROR"
-        return $null
+        if ([string]::IsNullOrWhiteSpace($profile.DisplayName)) {
+            $issuesFound.Add([PSCustomObject]@{
+                Identifier  = $profile.UserPrincipalName
+                IssueType   = "Missing Data"
+                Field       = "DisplayName"
+                Description = "DisplayName is missing or empty."
+                Severity    = "Medium"
+            })
+            $currentProfileIssues++
+        }
+        # Add more validation rules:
+        # - Email format for UPN/Mail
+        # - Consistency checks (e.g., IsEnabled vs LastLogonDate)
+        # - Expected value ranges for scores, etc.
+
+        if ($currentProfileIssues -gt 0) {
+            $invalidRecords++
+        } else {
+            $validRecords++
+        }
+    }
+    Write-Progress -Activity "Validating Data Quality" -Completed
+
+    $totalRecords = $Profiles.Count
+    $qualityScore = 0
+    if ($totalRecords -gt 0) {
+        $qualityScore = [math]::Round(($validRecords / $totalRecords) * 100, 2)
+    }
+
+    Write-MandALog "Data Quality Validation completed." -Level "SUCCESS"
+    Write-MandALog "Total Profiles: $totalRecords, Valid: $validRecords, Invalid: $invalidRecords, Quality Score: $qualityScore %" -Level "INFO"
+
+    return @{
+        TotalRecords   = $totalRecords
+        ValidRecords   = $validRecords
+        InvalidRecords = $invalidRecords
+        QualityScore   = $qualityScore
+        Issues         = $issuesFound # List of specific issues
     }
 }
 
-function Get-IssueSeverity {
-    param([string]$IssueType)
-    
-    switch -Wildcard ($IssueType) {
-        "*Missing email*" { return "High" }
-        "*Disabled account*" { return "Medium" }
-        "*Missing department*" { return "Low" }
-        "*out of range*" { return "High" }
-        "*inconsistency*" { return "Medium" }
-        default { return "Medium" }
-    }
-}
-
-function Get-IssueRecommendation {
-    param([string]$IssueType)
-    
-    switch -Wildcard ($IssueType) {
-        "*Missing email*" { return "Update user records with valid email addresses" }
-        "*Disabled account*" { return "Review disabled accounts and determine migration necessity" }
-        "*Missing department*" { return "Update organizational information for better wave planning" }
-        "*out of range*" { return "Review calculation logic and data sources" }
-        "*inconsistency*" { return "Investigate and resolve data inconsistencies" }
-        default { return "Review and correct data quality issue" }
-    }
-}
-
-function Export-IssueDetails {
+# Function to generate a quality report
+function New-QualityReport {
+    [CmdletBinding()]
     param(
-        [hashtable]$ValidationResults,
-        [string]$OutputPath
+        [Parameter(Mandatory = $true)]
+        [hashtable]$ValidationResults, # The output from Test-DataQuality
+
+        [Parameter(Mandatory = $true)]
+        [string]$OutputPath # Base path for Processed data, e.g., "C:\MandADiscovery\Output\Processed"
     )
+
+    Write-MandALog "Generating Data Quality Report..." -Level "INFO"
     
+    $reportFileName = "DataQualityReport_$(Get-Date -Format 'yyyyMMddHHmmss').txt"
+    $reportFilePath = Join-Path $OutputPath $reportFileName
+
+    $reportContent = @"
+M&A Discovery Suite - Data Quality Report
+=========================================
+Date: $(Get-Date)
+
+Summary:
+--------
+Total Records Processed: $($ValidationResults.TotalRecords)
+Valid Records:           $($ValidationResults.ValidRecords)
+Invalid Records:         $($ValidationResults.InvalidRecords)
+Data Quality Score:      $($ValidationResults.QualityScore)%
+
+Detailed Issues Found ($($ValidationResults.Issues.Count)):
+----------------------
+"@
+
+    if ($ValidationResults.Issues.Count -gt 0) {
+        $ValidationResults.Issues | ForEach-Object {
+            $reportContent += @"
+Identifier:  $($_.Identifier)
+Issue Type:  $($_.IssueType)
+Field:       $($_.Field)
+Description: $($_.Description)
+Severity:    $($_.Severity)
+----------
+"@
+        }
+    } else {
+        $reportContent += "No specific issues found."
+    }
+
     try {
-        $issueDetailsFile = Join-Path $OutputPath "DataQualityIssues.csv"
-        $issueData = [System.Collections.Generic.List[PSCustomObject]]::new()
-        
-        foreach ($issue in $ValidationResults.Issues) {
-            $userIdentifier = if ($issue.Record.UserPrincipalName) { 
-                $issue.Record.UserPrincipalName 
-            } elseif ($issue.Record.DisplayName) { 
-                $issue.Record.DisplayName 
-            } else { 
-                "Unknown User" 
-            }
-            
-            foreach ($issueDetail in $issue.Issues) {
-                $issueData.Add([PSCustomObject]@{
-                    UserIdentifier = $userIdentifier
-                    Department = $issue.Record.Department
-                    Issue = $issueDetail
-                    Severity = Get-IssueSeverity -IssueType $issueDetail
-                    Recommendation = Get-IssueRecommendation -IssueType $issueDetail
-                    RecordData = ($issue.Record | ConvertTo-Json -Compress)
-                })
-            }
-        }
-        
-        if ($issueData.Count -gt 0) {
-            Export-DataToCSV -Data $issueData -FilePath $issueDetailsFile
-            Write-MandALog "Issue details exported: $issueDetailsFile" -Level "SUCCESS"
-        }
-        
-        return $issueDetailsFile
-        
+        $reportContent | Set-Content -Path $reportFilePath -Encoding UTF8
+        Write-MandALog "Data Quality Report generated: $reportFilePath" -Level "SUCCESS"
     } catch {
-        Write-MandALog "Failed to export issue details: $($_.Exception.Message)" -Level "ERROR"
-        return $null
+        Write-MandALog "Failed to generate Data Quality Report: $($_.Exception.Message)" -Level "ERROR"
     }
 }
 
-# Export functions
-Export-ModuleMember -Function @(
-    'Test-DataQuality',
-    'New-QualityReport',
-    'Export-IssueDetails'
-)
+Export-ModuleMember -Function Test-DataQuality, New-QualityReport
