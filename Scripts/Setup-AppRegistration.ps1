@@ -116,7 +116,9 @@ $script:AppConfig = @{
     DisplayName = $AppName
     Description = "M&A Environment Discovery Service Principal with comprehensive permissions for organizational assessment"
     RequiredGraphPermissions = @{
-               "Application.Read.All" = "Read all applications and service principals" # Also allows reading Service Principals
+        
+         # Core directory permissions
+        "Application.Read.All" = "Read all applications and service principals" # Also allows reading Service Principals
         "AppRoleAssignment.Read.All" = "Read all app role assignments"
         "AuditLog.Read.All" = "Read audit logs for compliance tracking"
         "Directory.Read.All" = "Read directory data including users, groups, and organizational structure"
@@ -163,10 +165,11 @@ $script:AppConfig = @{
         "LicenseAssignment.Read.All" = "Read license assignments and usage for users and groups" # Confirmed
     }
     AzureADRoles = @(
-        "Cloud Application Administrator"
+        "Cloud Application Administrator", # To manage enterprise applications, app registrations, consent
+        "Directory Readers" # Basic read access to directory, often granted by default but good to ensure
     )
     AzureRoles = @(
-        "Reader"
+        "Reader" # For Azure resource discovery (VMs, VNETs, etc.)
     )
 }
 
