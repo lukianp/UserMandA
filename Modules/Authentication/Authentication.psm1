@@ -17,9 +17,18 @@ function Initialize-MandAAuthentication {
             throw "Failed to obtain valid credentials"
         }
         
-        # Test credential validity
-        if (-not (Test-CredentialValidity -Credentials $credentials -Configuration $Configuration)) {
-            throw "Credential validation failed"
+        # Test credential validity - pass only the credential data, not the wrapper
+        if ($credentials.Success) {
+            $credentialData = @{
+                ClientId = $credentials.ClientId
+                ClientSecret = $credentials.ClientSecret
+                TenantId = $credentials.TenantId
+            }
+            if (-not (Test-CredentialValidity -Credentials $credentialData -Configuration $Configuration)) {
+                throw "Credential validation failed"
+            }
+        } else {
+            throw "Failed to obtain valid credentials"
         }
         
         # Store authentication context
