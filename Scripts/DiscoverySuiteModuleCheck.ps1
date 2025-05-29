@@ -1,36 +1,40 @@
 <#
 .SYNOPSIS
-    Checks the availability, version, and basic integrity of PowerShell modules required by the M&A Discovery Suite.
+    Checks the availability, version, and basic integrity of PowerShell modules required 
+    or recommended for the M&A Discovery Suite.
 .DESCRIPTION
-    This script iterates through a predefined list of required and optional PowerShell modules,
-    checks if they are installed, compares their version against a required version,
+    This script iterates through a predefined list of PowerShell modules,
+    checks if they are installed, compares their version against a required/recommended version,
     attempts to import them, and reports their status.
-    It will attempt to install or update modules to meet requirements if they are missing or outdated.
+    It will attempt to install or update modules from the PowerShell Gallery if they are missing or outdated,
+    except for RSAT tools which require Windows Feature installation.
 .NOTES
-    Version: 1.1.3
+    Version: 1.2.0
     Author: Gemini
-    Date: 2025-05-28
+    Date: 2025-05-29
 
     Instructions:
     1. Run this script on the machine where you intend to run the M&A Discovery Suite.
-    2. Review the output for any errors or warnings.
-    3. The script will attempt to install/update modules if needed.
-       This requires an internet connection and appropriate permissions to install modules.
-       Modules are installed to the CurrentUser scope.
-    4. Use the -AutoFix switch to signal intent and see initial messages about auto-fixing.
-       Use -Confirm:$false with -AutoFix to suppress installation prompts.
+    2. Review the output for any errors or warnings. CRITICAL errors for required modules
+       will prevent parts of the M&A Discovery Suite from functioning correctly.
+    3. The script attempts to auto-fix modules from PSGallery. This requires an internet connection
+       and permissions to install modules (CurrentUser scope is used).
+    4. RSAT tools (ActiveDirectory, GroupPolicy) must be installed via Windows Features.
 .EXAMPLE
-    .\Check-MandAModuleDependencies.ps1
-    Runs the dependency check and will attempt to install/update modules, prompting for each.
+    .\DiscoverySuiteModuleCheck.ps1
+    Runs the dependency check. Will attempt to install/update PSGallery modules, prompting for each.
+
 .EXAMPLE
-    .\Check-MandAModuleDependencies.ps1 -AutoFix
+    .\DiscoverySuiteModuleCheck.ps1 -AutoFix
     Same as above, but explicitly states auto-fix mode is active.
+
 .EXAMPLE
-    .\Check-MandAModuleDependencies.ps1 -AutoFix -Confirm:$false
-    Runs the dependency check and attempts to install/update modules without prompting.
+    .\DiscoverySuiteModuleCheck.ps1 -AutoFix -Confirm:$false
+    Runs the check and attempts to install/update PSGallery modules without prompting.
+
 .EXAMPLE
-    .\Check-MandAModuleDependencies.ps1 -ModuleName "Microsoft.Graph" -AutoFix -Confirm:$false
-    Checks and attempts to fix only Microsoft.Graph without prompting.
+    .\DiscoverySuiteModuleCheck.ps1 -ModuleName "Microsoft.Graph.Users", "Az.Accounts"
+    Checks only the specified modules.
 #>
 
 [CmdletBinding(SupportsShouldProcess = $true)]
@@ -39,39 +43,61 @@ param(
     [string[]]$ModuleName,
 
     [Parameter(Mandatory = $false)]
-    [switch]$AutoFix # Retained for user clarity and potentially controlling ShouldProcess verbosity if desired
+    [switch]$AutoFix 
 )
 
 #region Configuration
-$RequiredModules = @(
-    @{ Name = "Microsoft.Graph"; RequiredVersion = "2.0.0"; Notes = "Core module for Microsoft Graph API interaction." },
-    @{ Name = "Microsoft.Graph.Authentication"; RequiredVersion = "2.0.0"; Notes = "Handles authentication for Microsoft Graph." },
-    @{ Name = "ExchangeOnlineManagement"; RequiredVersion = "3.0.0"; Notes = "Required for Exchange Online data collection (EXO V2/V3)." }
+# Modules absolutely critical for core Graph API interactions and Exchange Online.
+$CoreRequiredModules = @(
+    @{ Name = "Microsoft.Graph.Authentication"; RequiredVersion = "2.9.0"; Notes = "CRITICAL: Essential for all Microsoft Graph API authentication." },
+    @{ Name = "Microsoft.Graph.Users"; RequiredVersion = "2.9.0"; Notes = "CRITICAL: For Azure AD user discovery (GraphDiscovery, ExternalIdentityDiscovery)." },
+    @{ Name = "Microsoft.Graph.Groups"; RequiredVersion = "2.9.0"; Notes = "CRITICAL: For Azure AD group discovery." },
+    @{ Name = "Microsoft.Graph.Applications"; RequiredVersion = "2.9.0"; Notes = "CRITICAL: For Azure AD App Registrations, Enterprise Apps (Setup-AppRegistration, GraphDiscovery)." },
+    @{ Name = "Microsoft.Graph.Identity.DirectoryManagement"; RequiredVersion = "2.9.0"; Notes = "CRITICAL: For Directory Roles, Organization Info, Auth Policies." },
+    @{ Name = "Microsoft.Graph.Identity.SignIns"; RequiredVersion = "2.9.0"; Notes = "CRITICAL: For user sign-in activity (ExternalIdentityDiscovery)." },
+    @{ Name = "Microsoft.Graph.Reports"; RequiredVersion = "2.9.0"; Notes = "Required for certain usage reports (e.g., OneDrive in GraphDiscovery)." },
+    @{ Name = "Microsoft.Graph.DeviceManagement"; RequiredVersion = "2.9.0"; Notes = "Required for Intune device and policy discovery (stable endpoints)." },
+    @{ Name = "Microsoft.Graph.DeviceAppManagement"; RequiredVersion = "2.9.0"; Notes = "Required for Intune application discovery (stable endpoints)." },
+    @{ Name = "ExchangeOnlineManagement"; RequiredVersion = "3.2.0"; Notes = "CRITICAL: For all Exchange Online discovery and some cross-service cmdlets (e.g., Get-SPOTenant in ExternalIdentityDiscovery)." }
 )
 
-$OptionalModules = @(
-    @{ Name = "ActiveDirectory"; RequiredVersion = "1.0.0"; Notes = "For on-premises Active Directory discovery. Version is less critical." },
-    @{ Name = "ImportExcel"; RequiredVersion = "7.0.0"; Notes = "For generating Excel reports." },
-    @{ Name = "Az.Accounts"; RequiredVersion = "2.5.0"; Notes = "For Azure Resource Manager interactions (if Azure discovery is used extensively)." }
+# Modules required if their specific discovery sources are enabled, or optional for enhanced features.
+$ConditionallyRequiredOrOptionalModules = @(
+    # RSAT Tools - Must be installed via Windows Features
+    @{ Name = "ActiveDirectory"; RequiredVersion = "1.0.0"; IsRSAT = $true; Notes = "CONDITIONALLY REQUIRED: For on-premises Active Directory discovery. Install via Windows Features: 'RSAT: Active Directory Domain Services and Lightweight Directory Services Tools'." },
+    @{ Name = "GroupPolicy"; RequiredVersion = "2.0.0"; IsRSAT = $true; Notes = "CONDITIONALLY REQUIRED: For GPO discovery. Install via Windows Features: 'Group Policy Management'." },
+
+    # Azure RM Modules - Required if "Azure" discovery source is enabled
+    @{ Name = "Az.Accounts"; RequiredVersion = "2.12.0"; Notes = "CONDITIONALLY REQUIRED: For Azure Resource Manager discovery (AzureDiscovery.psm1). Often brings other Az modules." },
+    @{ Name = "Az.Resources"; RequiredVersion = "6.5.0"; Notes = "CONDITIONALLY REQUIRED: For Azure Resource discovery (dependency of Az.Accounts)." },
+    # Specific Az modules can be listed if granular control is needed, otherwise Az.Accounts is usually sufficient.
+    @{ Name = "Az.Storage"; RequiredVersion = "5.6.0"; Notes = "Optional/Conditional: For detailed Azure Storage discovery if not covered by Az.Resources." },
+    @{ Name = "Az.Sql"; RequiredVersion = "4.5.0"; Notes = "Optional/Conditional: For Azure SQL discovery." },
+    @{ Name = "Az.Network"; RequiredVersion = "5.5.0"; Notes = "Optional/Conditional: For Azure Networking discovery." },
+    @{ Name = "Az.KeyVault"; RequiredVersion = "4.9.2"; Notes = "Optional/Conditional: For Azure Key Vault discovery." },
+    @{ Name = "Az.Websites"; RequiredVersion = "2.14.0"; Notes = "Optional/Conditional: For Azure App Service discovery." },
+    @{ Name = "Az.Aks"; RequiredVersion = "5.3.2"; Notes = "Optional/Conditional: For Azure Kubernetes Service discovery." },
+    @{ Name = "Az.ContainerRegistry"; RequiredVersion = "3.0.3"; Notes = "Optional/Conditional: For Azure Container Registry discovery." },
+    @{ Name = "Az.ManagedServiceIdentity"; RequiredVersion = "1.1.1"; Notes = "Optional/Conditional: For Azure Managed Identity discovery." },
+    @{ Name = "Az.Functions"; RequiredVersion = "4.0.6"; Notes = "Optional/Conditional: For Azure Functions discovery within App Services." },
+
+
+    # Microsoft Graph Beta Modules - For Intune or advanced features needing Beta API endpoints
+    @{ Name = "Microsoft.Graph.Beta.Authentication"; RequiredVersion = "2.9.0"; Notes = "Optional/Conditional: For Beta Graph API authentication if needed." },
+    @{ Name = "Microsoft.Graph.Beta.DeviceManagement"; RequiredVersion = "2.9.0"; Notes = "Optional/Conditional: For Intune discovery using Beta Graph API endpoints (provides richer data)." },
+    @{ Name = "Microsoft.Graph.Beta.DeviceAppManagement"; RequiredVersion = "2.9.0"; Notes = "Optional/Conditional: For Intune app discovery using Beta Graph API endpoints." },
+    @{ Name = "Microsoft.Graph.Beta.Users.Actions"; RequiredVersion = "2.9.0"; Notes = "Optional/Conditional: For specific Beta user actions/device info in Intune." },
+    
+    # Other Optional Modules
+    @{ Name = "ImportExcel"; RequiredVersion = "7.8.5"; Notes = "OPTIONAL: For generating reports in Excel format (ExcelExport.psm1)." },
+    @{ Name = "MicrosoftTeams"; RequiredVersion = "5.5.0"; Notes = "OPTIONAL/Conditional: If Teams-specific cmdlets like Get-CsTenantFederationConfiguration are used (e.g., in ExternalIdentityDiscovery)." }
 )
+
+$ModulesToCheck = $CoreRequiredModules + $ConditionallyRequiredOrOptionalModules
 
 if ($PSBoundParameters.ContainsKey('ModuleName')) {
-    Write-Host "Checking specified modules: $($ModuleName -join ', ')" -ForegroundColor Cyan
-    $ModulesToCheck = @()
-    foreach ($name in $ModuleName) {
-        $foundModuleDef = $RequiredModules | Where-Object { $_.Name -eq $name }
-        if (-not $foundModuleDef) {
-            $foundModuleDef = $OptionalModules | Where-Object { $_.Name -eq $name }
-        }
-        if ($foundModuleDef) {
-            $ModulesToCheck += $foundModuleDef
-        } else {
-            $ModulesToCheck += @{ Name = $name; RequiredVersion = "0.0.0"; Notes = "Custom module specified by user. Version check skipped for non-predefined." }
-            Write-Warning "Module '$name' is not in the predefined list but will be checked (version check skipped unless defined here)."
-        }
-    }
-} else {
-    $ModulesToCheck = $RequiredModules + $OptionalModules
+    Write-Host "Checking only specified modules: $($ModuleName -join ', ')" -ForegroundColor Cyan
+    $ModulesToCheck = $ModulesToCheck | Where-Object { $_.Name -in $ModuleName }
 }
 
 $Results = [System.Collections.Generic.List[PSObject]]::new()
@@ -80,48 +106,27 @@ $Results = [System.Collections.Generic.List[PSObject]]::new()
 #region Helper Functions
 function Write-SectionHeader {
     param([string]$Header)
-    Write-Host "`n"
-    Write-Host ("-" * ($Header.Length + 4)) -ForegroundColor DarkCyan
-    Write-Host "  $Header  " -ForegroundColor Cyan
-    Write-Host ("-" * ($Header.Length + 4)) -ForegroundColor DarkCyan
+    Write-Host "`n"; Write-Host ("-" * ($Header.Length + 4)) -ForegroundColor DarkCyan
+    Write-Host "  $Header  " -ForegroundColor Cyan; Write-Host ("-" * ($Header.Length + 4)) -ForegroundColor DarkCyan
 }
 
-function Install-OrUpdateModule {
+function Install-OrUpdateModuleViaPSGallery {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$ModuleName,
-        [Parameter(Mandatory = $true)]
-        [version]$RequiredVersion,
-        [Parameter(Mandatory = $true)]
-        [ref]$ModuleResultToUpdate
+        [Parameter(Mandatory = $true)] [string]$ModuleNameForInstall,
+        [Parameter(Mandatory = $true)] [version]$ReqVersion,
+        [Parameter(Mandatory = $true)] [ref]$ModuleResultToUpdateRef
     )
 
-    if ($PSCmdlet.ShouldProcess($ModuleName, "Install/Update to version $($RequiredVersion.ToString()) or newer")) {
-        Write-Host "  Attempting to install/update module '$ModuleName' to minimum version $($RequiredVersion.ToString())..." -ForegroundColor Magenta
+    if ($PSCmdlet.ShouldProcess($ModuleNameForInstall, "Install/Update to version $($ReqVersion.ToString()) or newer from PowerShell Gallery")) {
+        Write-Host "  Attempting to install/update module '$ModuleNameForInstall' to minimum version $($ReqVersion.ToString())..." -ForegroundColor Magenta
         try {
             if (-not (Get-Command Install-Module -ErrorAction SilentlyContinue)) {
-                $ModuleResultToUpdate.Value.Status = "Install Failed (PowerShellGet Missing)"
-                $ModuleResultToUpdate.Value.Notes = "Install-Module command not found. Please ensure PowerShellGet module is installed and functional."
-                Write-Host "  Status: $($ModuleResultToUpdate.Value.Status)" -ForegroundColor Red
+                $ModuleResultToUpdateRef.Value.Status = "Install Failed (PowerShellGet Missing)"
+                $ModuleResultToUpdateRef.Value.Notes = "Install-Module command not found. Ensure PowerShellGet module is installed and functional. This is critical."
+                Write-Host "  Status: $($ModuleResultToUpdateRef.Value.Status)" -ForegroundColor Red
                 Return $false
             }
-
-            # Pre-check Gallery reachability with Find-Module
-            Write-Host "  Verifying PowerShell Gallery reachability for '$ModuleName'..." -ForegroundColor Gray
-            $null = Find-Module -Name $ModuleName -Repository PSGallery -ErrorAction SilentlyContinue -ErrorVariable findModuleError
-            if ($findModuleError) {
-                # Check for common error messages indicating gallery unavailability
-                if ($findModuleError.ToString() -match "Unable to resolve the source 'PSGallery'" -or $findModuleError.ToString() -match "No match was found for the specified search criteria and module name") {
-                    # The "No match" can also mean gallery is down or module truly doesn't exist, but it's a good first check.
-                    $ModuleResultToUpdate.Value.Status = "Install Failed (PSGallery Unreachable)"
-                    $ModuleResultToUpdate.Value.Notes = "PowerShell Gallery may be unavailable or module '$ModuleName' not found. Error: $($findModuleError[0].Exception.Message)"
-                    Write-Host "  Status: $($ModuleResultToUpdate.Value.Status)" -ForegroundColor Red
-                    Write-Host "  Details: $($findModuleError[0].Exception.Message)" -ForegroundColor Red
-                    Return $false
-                }
-            }
-            Write-Host "  PowerShell Gallery seems reachable for '$ModuleName'." -ForegroundColor Gray
-
 
             if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
                 Write-Host "  NuGet provider not found. Attempting to install NuGet provider..." -ForegroundColor Magenta
@@ -136,170 +141,126 @@ function Install-OrUpdateModule {
                 Write-Host "  PSGallery set to trusted." -ForegroundColor Green
             } elseif (-not $psGallery) {
                 Write-Warning "PSGallery repository not found. Module installation might fail."
-                # Attempt to register it with default settings if completely missing
-                try {
-                    Write-Host "  Attempting to register default PSGallery repository..." -ForegroundColor Magenta
-                    Register-PSRepository -Name PSGallery -SourceLocation "https://www.powershellgallery.com/api/v2" -InstallationPolicy Trusted -ErrorAction Stop
-                    Write-Host "  PSGallery repository registered." -ForegroundColor Green
-                } catch {
-                    Write-Warning "Failed to register PSGallery: $($_.Exception.Message)"
-                    $ModuleResultToUpdate.Value.Status = "Install Failed (PSGallery Registration Failed)"
-                    $ModuleResultToUpdate.Value.Notes = "Could not find or register PSGallery. Error: $($_.Exception.Message)"
-                    Return $false
-                }
+                $ModuleResultToUpdateRef.Value.Notes += " PSGallery repository not found."
             }
 
-            Install-Module -Name $ModuleName -MinimumVersion $RequiredVersion.ToString() -Force -Scope CurrentUser -AllowClobber -AcceptLicense -ErrorAction Stop
-            $ModuleResultToUpdate.Value.Notes = "Module installation/update attempted. Re-checking status."
-            Write-Host "  Module '$ModuleName' install/update command executed." -ForegroundColor Green
+            Install-Module -Name $ModuleNameForInstall -MinimumVersion $ReqVersion.ToString() -Force -Scope CurrentUser -AllowClobber -AcceptLicense -ErrorAction Stop
+            $ModuleResultToUpdateRef.Value.Notes = "Module installation/update attempted via PSGallery. Re-checking status."
+            Write-Host "  Module '$ModuleNameForInstall' install/update command executed." -ForegroundColor Green
             Return $true 
         }
         catch {
-            $ModuleResultToUpdate.Value.Status = "Install/Update Failed"
-            $ModuleResultToUpdate.Value.Notes = "Error during install/update: $($_.Exception.Message)"
-            Write-Host "  Status: $($ModuleResultToUpdate.Value.Status)" -ForegroundColor Red
+            $ModuleResultToUpdateRef.Value.Status = "Install/Update Failed (PSGallery)"
+            $ModuleResultToUpdateRef.Value.Notes = "Error during PSGallery install/update: $($_.Exception.Message)"
+            Write-Host "  Status: $($ModuleResultToUpdateRef.Value.Status)" -ForegroundColor Red
             Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-            Return $false 
+            Return $false
         }
     } else {
-        $ModuleResultToUpdate.Value.Notes += " User chose not to proceed with install/update (ShouldProcess)."
-        Write-Host "  Skipping install/update for '$ModuleName' as per user choice (ShouldProcess)." -ForegroundColor Yellow
+        $ModuleResultToUpdateRef.Value.Notes += " User chose not to proceed with install/update (ShouldProcess)."
+        Write-Host "  Skipping install/update for '$ModuleNameForInstall' as per user choice (ShouldProcess)." -ForegroundColor Yellow
         Return $false 
     }
 }
 
 function Test-SingleModule {
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$ModuleName,
-        [Parameter(Mandatory = $true)]
-        [string]$ModuleType, 
-        [Parameter(Mandatory = $true)]
-        [version]$RequiredVersion,
-        [Parameter(Mandatory = $false)]
-        [string]$Notes
+        [Parameter(Mandatory = $true)] [PSObject]$ModuleInfo # Contains Name, RequiredVersion, Notes, IsRSAT
     )
 
-    Write-Host "`nChecking $ModuleType Module: $ModuleName (Required Version: $($RequiredVersion.ToString()))" -ForegroundColor Yellow
-    if ($Notes) {
-        Write-Host "  Notes: $Notes" -ForegroundColor Gray
-    }
+    $moduleNameToCheck = $ModuleInfo.Name
+    $moduleType = if ($CoreRequiredModules.Name -contains $moduleNameToCheck) { "CRITICAL REQUIRED" } else { "Conditionally Required/Optional" }
+    $reqVersion = [version]$ModuleInfo.RequiredVersion
+    $isRSATTool = $ModuleInfo.PSObject.Properties["IsRSAT"] -and $ModuleInfo.IsRSAT
+
+    Write-Host "`nChecking $moduleType Module: $moduleNameToCheck (Required/Recommended Version: $($reqVersion.ToString()))" -ForegroundColor Yellow
+    if ($ModuleInfo.Notes) { Write-Host "  Notes: $($ModuleInfo.Notes)" -ForegroundColor Gray }
 
     $moduleResult = [PSCustomObject]@{
-        Name = $ModuleName
-        Type = $ModuleType
-        Status = "Not Checked"
-        RequiredVersion = $RequiredVersion.ToString()
-        InstalledVersion = "N/A"
-        Path = "N/A"
-        Notes = ""
+        Name = $moduleNameToCheck; Type = $moduleType; Status = "Not Checked"; RequiredVersion = $reqVersion.ToString();
+        InstalledVersion = "N/A"; Path = "N/A"; Notes = ""
     }
 
     $attemptedFixThisRun = $false 
 
-    for ($attempt = 1; $attempt -le 2; $attempt++) {
-        $availableModule = Get-Module -ListAvailable -Name $ModuleName -ErrorAction SilentlyContinue
+    for ($attempt = 1; $attempt -le 2; $attempt++) { # Allow one fix attempt
+        $availableModule = Get-Module -ListAvailable -Name $moduleNameToCheck -ErrorAction SilentlyContinue
         
         if (-not $availableModule) {
             $moduleResult.Status = "Not Found"
-            # Only append this note if it's the first time or no other specific note from Install-OrUpdateModule exists
-            if ($attempt -eq 1 -and -not $moduleResult.Notes.Contains("install/update")) { 
-                $moduleResult.Notes = "Module is not installed or not discoverable in PSModulePath."
+            $moduleResult.Notes = "Module is not installed or not discoverable in PSModulePath."
+            if ($isRSATTool) {
+                $moduleResult.Notes += " This is an RSAT tool; install via Windows Features."
             }
             if ($attempt -eq 1) { Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Red }
 
-            if (-not $attemptedFixThisRun) { 
-                if (Install-OrUpdateModule -ModuleName $ModuleName -RequiredVersion $RequiredVersion -ModuleResultToUpdate ([ref]$moduleResult)) {
-                    $attemptedFixThisRun = $true
-                    continue 
-                } else {
-                    break 
-                }
-            } else {
-                break 
-            }
+            if (-not $attemptedFixThisRun -and -not $isRSATTool) { 
+                if (Install-OrUpdateModuleViaPSGallery -ModuleNameForInstall $moduleNameToCheck -ReqVersion $reqVersion -ModuleResultToUpdateRef ([ref]$moduleResult)) {
+                    $attemptedFixThisRun = $true; continue 
+                } else { break }
+            } elseif ($isRSATTool) {
+                Write-Host "  Action: Manual installation required via Windows Features." -ForegroundColor Yellow
+                break
+            } else { break } # Already attempted fix or is RSAT
         } else { 
-            $moduleResult.Path = ($availableModule | Select-Object -First 1).Path
-            $installedVersion = ($availableModule | Select-Object -First 1).Version
+            $latestAvailable = $availableModule | Sort-Object Version -Descending | Select-Object -First 1
+            $moduleResult.Path = $latestAvailable.Path
+            $installedVersion = $latestAvailable.Version
             $moduleResult.InstalledVersion = $installedVersion.ToString()
 
-            if ($attempt -eq 1 -and -not $attemptedFixThisRun) {
-                Write-Host "  Status: Found (Available)" -ForegroundColor Green
-                Write-Host "  Installed Version: $($moduleResult.InstalledVersion)" -ForegroundColor White
-                Write-Host "  Path: $($moduleResult.Path)" -ForegroundColor Gray # Display path where it was found
-            } elseif ($attemptedFixThisRun) { 
-                 Write-Host "  Status after fix attempt: Found (Available)" -ForegroundColor Green
-                 Write-Host "  Installed Version after fix attempt: $($moduleResult.InstalledVersion)" -ForegroundColor White
-                 Write-Host "  Path after fix attempt: $($moduleResult.Path)" -ForegroundColor Gray
-            }
-
-            if ($installedVersion -lt $RequiredVersion) {
+            $statusMsg = if ($attemptedFixThisRun) { "Status after fix attempt: Found" } else { "Status: Found" }
+            Write-Host "  $statusMsg (Available)" -ForegroundColor Green
+            Write-Host "  Installed Version: $($moduleResult.InstalledVersion)" -ForegroundColor White
+            
+            if ($installedVersion -lt $reqVersion) {
                 $moduleResult.Status = "Version Mismatch (Installed: $($moduleResult.InstalledVersion), Required: $($moduleResult.RequiredVersion))"
-                if ($attempt -eq 1 -and -not $moduleResult.Notes.Contains("install/update")) { # Avoid overwriting install notes
-                    $moduleResult.Notes = "Installed version is older than required."
-                }
+                $moduleResult.Notes = "Installed version is older than required/recommended."
+                if ($isRSATTool) { $moduleResult.Notes += " This is an RSAT tool; update via Windows Features or ensure correct version is installed." }
                 if ($attempt -eq 1 -and -not $attemptedFixThisRun) { Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Yellow }
                 
-                if (-not $attemptedFixThisRun) { 
-                    if (Install-OrUpdateModule -ModuleName $ModuleName -RequiredVersion $RequiredVersion -ModuleResultToUpdate ([ref]$moduleResult)) {
-                        $attemptedFixThisRun = $true
-                        continue
-                    } else {
-                        break
-                    }
-                } else {
-                    break 
-                }
+                if (-not $attemptedFixThisRun -and -not $isRSATTool) {
+                    if (Install-OrUpdateModuleViaPSGallery -ModuleNameForInstall $moduleNameToCheck -ReqVersion $reqVersion -ModuleResultToUpdateRef ([ref]$moduleResult)) {
+                        $attemptedFixThisRun = $true; continue
+                    } else { break }
+                } elseif ($isRSATTool) {
+                    Write-Host "  Action: Manual update/check required for RSAT tool." -ForegroundColor Yellow
+                    break
+                } else { break } 
             } else { 
                 $moduleResult.Status = "Version OK"
-                if (-not $attemptedFixThisRun) { 
-                     Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Green
-                } 
-                break 
+                if (-not $attemptedFixThisRun) { Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Green } 
+                # Try to import
+                $importedModule = $null
+                try {
+                    Write-Host "  Attempting to import module '$moduleNameToCheck'..." -ForegroundColor White
+                    $importedModule = Import-Module -Name $moduleNameToCheck -RequiredVersion $installedVersion -Force -PassThru -ErrorAction Stop
+                    if ($importedModule) {
+                        $moduleResult.Status = "Imported Successfully (Version OK)"
+                        Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Green
+                        Write-Host "  Loaded Version: $($importedModule.Version.ToString())" -ForegroundColor White
+                    } else {
+                        $moduleResult.Status = "Import Attempted (No Object Returned, Version OK)"
+                        $moduleResult.Notes += " Module import did not return an object; status post-import uncertain."
+                        Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Yellow
+                    }
+                } catch {
+                    $moduleResult.Status = "Import Failed (Version OK)"
+                    $moduleResult.Notes += " Error during import: $($_.Exception.Message). Module might be corrupt or have unresolved dependencies."
+                    Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Red
+                    Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
+                } finally {
+                    if ($importedModule) {
+                        try { Remove-Module -Name $moduleNameToCheck -Force -ErrorAction SilentlyContinue }
+                        catch { Write-Warning "Could not remove module $moduleNameToCheck after testing: $($_.Exception.Message)" }
+                    }
+                }
+                break # Version is OK, import attempted, no need for second loop pass
             }
         }
     } 
     
-    if ($moduleResult.Status -notlike "Not Found*" -and $moduleResult.Status -notlike "Version Mismatch*" -and $moduleResult.Status -notlike "Install*Failed*") {
-        $importedModule = $null
-        try {
-            Write-Host "  Attempting to import module '$ModuleName' from path '$($moduleResult.Path)'..." -ForegroundColor White
-            # Try importing from the specific path found, especially if it was just installed
-            $importedModule = Import-Module -Name $moduleResult.Path -Force -PassThru -ErrorAction Stop
-            if ($importedModule) {
-                $moduleResult.Status = "Imported Successfully"
-                $moduleResult.InstalledVersion = $importedModule.Version.ToString() 
-                $moduleResult.Path = $importedModule.Path # Confirm path of loaded module
-                Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Green
-                Write-Host "  Loaded Version: $($moduleResult.InstalledVersion)" -ForegroundColor White
-                Write-Host "  Loaded Path: $($moduleResult.Path)" -ForegroundColor White
-            } else {
-                $moduleResult.Status = "Import Attempted (No Object Returned)"
-                $moduleResult.Notes += " Module import did not return an object, status uncertain."
-                Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Yellow
-            }
-        }
-        catch {
-            $moduleResult.Status = "Import Failed"
-            $moduleResult.Notes += " Error during import: $($_.Exception.Message)."
-            Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Red
-            Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        }
-        finally {
-            if ($importedModule) {
-                try {
-                    Write-Host "  Attempting to remove module '$ModuleName' post-check..." -ForegroundColor Gray
-                    Remove-Module -Name $ModuleName -Force -ErrorAction SilentlyContinue
-                }
-                catch {
-                    Write-Warning "Could not remove module $ModuleName after testing: $($_.Exception.Message)"
-                    $moduleResult.Notes += " (Could not remove after test)."
-                }
-            }
-        }
-    } elseif ($moduleResult.Status -eq "Not Checked") {
-        $moduleResult.Status = "Check Incomplete"
-        $moduleResult.Notes += " Module status could not be fully determined."
+    if ($moduleResult.Status -eq "Not Checked") { # Should not happen with the loop logic
+        $moduleResult.Status = "Check Incomplete"; $moduleResult.Notes += " Module status could not be fully determined."
     }
 
     $Results.Add($moduleResult)
@@ -307,16 +268,16 @@ function Test-SingleModule {
 #endregion Helper Functions
 
 #region Main Script Body
-Write-SectionHeader "M&A Discovery Suite - Module Dependency Check"
-Write-Host "This script will check the status of required and optional PowerShell modules."
-if ($AutoFix) { 
-    Write-Host "AUTO-FIX MODE ENABLED (by switch): Script will attempt to install/update missing or outdated modules." -ForegroundColor Magenta
+Write-SectionHeader "M&A Discovery Suite - PowerShell Module Dependency Check"
+Write-Host "This script checks required and optional PowerShell modules for the M&A Discovery Suite."
+if ($AutoFix -or $PSCmdlet.ShouldProcess("Modules", "Attempt to install/update")) {
+    Write-Host "AUTO-FIX MODE ACTIVE: Script will attempt to install/update missing or outdated modules from PSGallery." -ForegroundColor Magenta
+    Write-Host "RSAT tools (ActiveDirectory, GroupPolicy) require manual installation via Windows Features." -ForegroundColor Yellow
 } else {
-    Write-Host "INFO: Script will attempt to install/update missing or outdated modules by default (will prompt)." -ForegroundColor Cyan
+    Write-Host "INFO: To attempt automatic installation/updates for PSGallery modules, re-run with -AutoFix or confirm ShouldProcess prompts." -ForegroundColor Cyan
 }
-Write-Host "Use -Confirm:`$false (with or without -AutoFix) to suppress individual installation prompts." -ForegroundColor Cyan
-Write-Host "An internet connection is required for installations/updates." -ForegroundColor Yellow
-Write-Host "Modules will be installed for the CurrentUser scope." -ForegroundColor Yellow
+Write-Host "An internet connection is required for installations/updates from PSGallery." -ForegroundColor Yellow
+Write-Host "Modules are installed/updated for the CurrentUser scope." -ForegroundColor Yellow
 Write-Host "Timestamp: $(Get-Date)"
 
 if ($ModulesToCheck.Count -eq 0) {
@@ -324,56 +285,44 @@ if ($ModulesToCheck.Count -eq 0) {
     exit 0
 }
 
-foreach ($moduleInfo in $ModulesToCheck) {
-    $moduleType = "Custom" 
-    if ($RequiredModules.Name -contains $moduleInfo.Name) {
-        $moduleType = "Required"
-    } elseif ($OptionalModules.Name -contains $moduleInfo.Name) {
-        $moduleType = "Optional"
-    }
-    Test-SingleModule -ModuleName $moduleInfo.Name -ModuleType $moduleType -RequiredVersion ([version]$moduleInfo.RequiredVersion) -Notes $moduleInfo.Notes
+foreach ($moduleDef in $ModulesToCheck) {
+    Test-SingleModule -ModuleInfo $moduleDef
 }
 
 Write-SectionHeader "Dependency Check Summary"
-
 $Results | Format-Table -AutoSize -Wrap
 
 $criticalIssues = $Results | Where-Object { 
-    ($_.Status -like "Not Found*" -or $_.Status -like "*Mismatch*" -or $_.Status -like "Import Failed*" -or $_.Status -like "Install*Failed*") -and $_.Type -eq "Required"
+    ($_.Status -notlike "Imported Successfully*" -and $_.Status -notlike "Version OK" -and $_.Status -notlike "Import Attempted (No Object Returned, Version OK)") -and $_.Type -eq "CRITICAL REQUIRED"
 }
-$optionalIssues = $Results | Where-Object { 
-    ($_.Status -like "Not Found*" -or $_.Status -like "*Mismatch*" -or $_.Status -like "Import Failed*" -or $_.Status -like "Install*Failed*") -and $_.Type -eq "Optional"
-}
-$customIssues = $Results | Where-Object { 
-    ($_.Status -like "Not Found*" -or $_.Status -like "*Mismatch*" -or $_.Status -like "Import Failed*" -or $_.Status -like "Install*Failed*") -and $_.Type -eq "Custom"
+$conditionalOrOptionalIssues = $Results | Where-Object { 
+    ($_.Status -notlike "Imported Successfully*" -and $_.Status -notlike "Version OK" -and $_.Status -notlike "Import Attempted (No Object Returned, Version OK)") -and $_.Type -ne "CRITICAL REQUIRED"
 }
 
-if (($Results | Where-Object {$_.Type -eq "Required" -and ($_.Status -like "Not Found*" -or $_.Status -like "*Mismatch*" -or $_.Status -like "Import Failed*" -or $_.Status -like "Install*Failed*")}).Count -eq 0) {
-    Write-Host "`nAll REQUIRED modules appear to meet version requirements and are importable." -ForegroundColor Green
-    if ($optionalIssues.Count -gt 0 -or $customIssues.Count -gt 0) {
-        Write-Host "However, please review warnings for optional/custom modules." -ForegroundColor Yellow
+if ($criticalIssues.Count -eq 0) {
+    Write-Host "`nAll CRITICAL REQUIRED PowerShell modules appear to be correctly installed, versioned, and importable." -ForegroundColor Green
+    if ($conditionalOrOptionalIssues.Count -gt 0) {
+        Write-Host "However, please review warnings for Conditionally Required/Optional modules, as they might affect specific functionalities." -ForegroundColor Yellow
     }
 } else {
-    Write-Host "`nERROR: CRITICAL issues found with REQUIRED modules:" -ForegroundColor Red
+    Write-Host "`nERROR: CRITICAL ISSUES FOUND WITH REQUIRED MODULES:" -ForegroundColor Red
     $criticalIssues | ForEach-Object {
-        Write-Host ("  - {0} ({1}): Status: {2}. Installed: {3}, Required: {4}. Notes: {5}" -f $_.Name, $_.Type, $_.Status, $_.InstalledVersion, $_.RequiredVersion, $_.Notes) -ForegroundColor Red
+        Write-Host "  - $($_.Name) ($($_.Type)): Status: $($_.Status)." -ForegroundColor Red
+        Write-Host "    Installed: $($_.InstalledVersion), Required: $($_.RequiredVersion). Notes: $($_.Notes)" -ForegroundColor Red
+        Write-Host "    IMPACT: Core functionalities of the M&A Discovery Suite WILL LIKELY FAIL." -ForegroundColor Red
     }
      Write-Host "`nPlease address the CRITICAL issues with REQUIRED modules above to ensure the M&A Discovery Suite can run correctly." -ForegroundColor Red
 }
 
-if ($optionalIssues.Count -gt 0) {
-    Write-Host "`nWARNING: Issue(s) found with OPTIONAL modules:" -ForegroundColor Yellow
-    $optionalIssues | ForEach-Object {
-        Write-Host ("  - {0} ({1}): Status: {2}. Installed: {3}, Required: {4}. Notes: {5}" -f $_.Name, $_.Type, $_.Status, $_.InstalledVersion, $_.RequiredVersion, $_.Notes) -ForegroundColor Yellow
-    }
-}
-
-if ($customIssues.Count -gt 0) {
-     Write-Host "`nWARNING: Issue(s) found with CUSTOM modules:" -ForegroundColor Yellow
-    $customIssues | ForEach-Object {
-        Write-Host ("  - {0} ({1}): Status: {2}. Installed: {3}, Required: {4}. Notes: {5}" -f $_.Name, $_.Type, $_.Status, $_.InstalledVersion, $_.RequiredVersion, $_.Notes) -ForegroundColor Yellow
+if ($conditionalOrOptionalIssues.Count -gt 0) {
+    Write-Host "`nWARNING: Issue(s) found with CONDITIONALLY REQUIRED or OPTIONAL modules:" -ForegroundColor Yellow
+    $conditionalOrOptionalIssues | ForEach-Object {
+        Write-Host "  - $($_.Name) ($($_.Type)): Status: $($_.Status)." -ForegroundColor Yellow
+        Write-Host "    Installed: $($_.InstalledVersion), Required: $($_.RequiredVersion). Notes: $($_.Notes)" -ForegroundColor Yellow
+        Write-Host "    IMPACT: Specific discovery sources or export features might not work as expected." -ForegroundColor Yellow
     }
 }
 
 Write-Host "`nDependency check finished at $(Get-Date)."
+Write-Host "If issues persist after attempted fixes, manual intervention (e.g., running PowerShell as Administrator, checking execution policies, or manually installing modules/features) may be required." -ForegroundColor Gray
 #endregion Main Script Body
