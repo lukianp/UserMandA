@@ -60,11 +60,11 @@ $script:ExecutionMetrics = @{
 
 # Import required modules using absolute paths relative to suite root
 $ModulePaths = @(
-    (Join-Path $script:SuiteRoot "Modules\Utilities\Logging.psm1"),
+    (Join-Path $script:SuiteRoot "Modules\Utilities\EnhancedLogging.psm1"),        # Use Enhanced
     (Join-Path $script:SuiteRoot "Modules\Utilities\ErrorHandling.psm1"),
     (Join-Path $script:SuiteRoot "Modules\Utilities\ValidationHelpers.psm1"),
     (Join-Path $script:SuiteRoot "Modules\Authentication\Authentication.psm1"),
-    (Join-Path $script:SuiteRoot "Modules\Connectivity\ConnectionManager.psm1")
+    (Join-Path $script:SuiteRoot "Modules\Connectivity\EnhancedConnectionManager.psm1")
 )
 
 foreach ($ModulePath in $ModulePaths) {
@@ -246,33 +246,107 @@ function Invoke-ProcessingPhase {
         
         Initialize-ProgressTracker -Phase "Processing" -TotalSteps 5
         
-        Update-Progress -Step 1 -Status "Data Aggregation"
-        $aggregatedData = Start-DataAggregation -Configuration $Configuration
+        # Step 1: Data Aggregation - Build comprehensive relationship graph
+        Update-Progress -Step 1 -Status "Building Relationship Graph"
         
-        Update-Progress -Step 2 -Status "Profile Building"
-        $userProfiles = Build-UserProfiles -Data $aggregatedData -Configuration $Configuration
+        # First, we need to prepare the aggregated data structure
+        $aggregatedData = @{
+            Users = @()
+            Groups = @()
+            Applications = @()
+            ServicePrincipals = @()
+            DirectoryRoles = @()
+            OAuth2Grants = @()
+            AdministrativeUnits = @()
+            ConditionalAccess = @()
+        }
         
-        Update-Progress -Step 3 -Status "Complexity Analysis"
-        $complexityAnalysis = Calculate-MigrationComplexity -Profiles $userProfiles -Configuration $Configuration
+        # Load raw discovery data from files
+        $rawDataPath = Join-Path $Configuration.environment.outputPath "Raw"
         
-        Update-Progress -Step 4 -Status "Wave Generation"
-        $migrationWaves = Generate-MigrationWaves -Profiles $userProfiles -Configuration $Configuration
+        if (Test-Path (Join-Path $rawDataPath "ADUsers.csv")) {
+            $aggregatedData.Users += Import-DataFromCSV -FilePath (Join-Path $rawDataPath "ADUsers.csv")
+        }
+        if (Test-Path (Join-Path $rawDataPath "GraphUsers.csv")) {
+            $aggregatedData.Users += Import-DataFromCSV -FilePath (Join-Path $rawDataPath "GraphUsers.csv")
+        }
+        if (Test-Path (Join-Path $rawDataPath "GraphGroups.csv")) {
+            $aggregatedData.Groups = Import-DataFromCSV -FilePath (Join-Path $rawDataPath "GraphGroups.csv")
+        }
+        if (Test-Path (Join-Path $rawDataPath "GraphApplications.csv")) {
+            $aggregatedData.Applications = Import-DataFromCSV -FilePath (Join-Path $rawDataPath "GraphApplications.csv")
+        }
+        if (Test-Path (Join-Path $rawDataPath "GraphServicePrincipals.csv")) {
+            $aggregatedData.ServicePrincipals = Import-DataFromCSV -FilePath (Join-Path $rawDataPath "GraphServicePrincipals.csv")
+        }
+        if (Test-Path (Join-Path $rawDataPath "GraphDirectoryRoles.csv")) {
+            $aggregatedData.DirectoryRoles = Import-DataFromCSV -FilePath (Join-Path $rawDataPath "GraphDirectoryRoles.csv")
+        }
         
-        Update-Progress -Step 5 -Status "Data Validation"
+        # Build comprehensive relationship graph (from DataAggregation module)
+        $relationshipGraph = New-ComprehensiveRelationshipGraph -AggregatedData $aggregatedData -Configuration $Configuration
+        
+        # Merge relationship data with aggregated data for profile building
+        $aggregatedData.Relationships = $relationshipGraph
+        
+        # Step 2: Build User Profiles
+        Update-Progress -Step 2 -Status "Building User Profiles"
+        $userProfiles = New-UserProfiles -Data $aggregatedData -Configuration $Configuration
+        
+        # Step 3: Calculate Migration Complexity
+        Update-Progress -Step 3 -Status "Analyzing Migration Complexity"
+        $complexityAnalysis = Measure-MigrationComplexity -Profiles $userProfiles -Configuration $Configuration
+        
+        # Step 4: Generate Migration Waves
+        Update-Progress -Step 4 -Status "Generating Migration Waves"
+        $migrationWaves = New-MigrationWaves -Profiles $userProfiles -Configuration $Configuration
+        
+        # Step 5: Validate Data Quality
+        Update-Progress -Step 5 -Status "Validating Data Quality"
         $validationResults = Test-DataQuality -Profiles $userProfiles -Configuration $Configuration
         
+        # Generate quality report if there are issues
+        if ($validationResults.InvalidRecords -gt 0) {
+            $qualityReportPath = Join-Path $Configuration.environment.outputPath "Processed"
+            New-QualityReport -ValidationResults $validationResults -OutputPath $qualityReportPath
+        }
+        
+        # Package results
         $processingResults = @{
             UserProfiles = $userProfiles
             ComplexityAnalysis = $complexityAnalysis
             MigrationWaves = $migrationWaves
             ValidationResults = $validationResults
+            RelationshipGraph = $relationshipGraph
+            AggregatedData = $aggregatedData
+        }
+        
+        # Update execution metrics
+        $script:ExecutionMetrics.Modules["Processing"] = @{
+            UserProfilesBuilt = $userProfiles.Count
+            WavesGenerated = $migrationWaves.Count
+            DataQualityScore = $validationResults.QualityScore
+            ProcessingComplete = $true
         }
         
         Write-MandALog "Processing phase completed successfully" -Level "SUCCESS"
+        Write-MandALog "Built $($userProfiles.Count) user profiles" -Level "INFO"
+        Write-MandALog "Generated $($migrationWaves.Count) migration waves" -Level "INFO"
+        Write-MandALog "Data quality score: $($validationResults.QualityScore)%" -Level "INFO"
+        
         return $processingResults
         
     } catch {
         Write-MandALog "Processing phase failed: $($_.Exception.Message)" -Level "ERROR"
+        Write-MandALog "Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG"
+        
+        # Update metrics to reflect failure
+        $script:ExecutionMetrics.FailedOperations++
+        $script:ExecutionMetrics.Modules["Processing"] = @{
+            ProcessingComplete = $false
+            Error = $_.Exception.Message
+        }
+        
         throw
     }
 }

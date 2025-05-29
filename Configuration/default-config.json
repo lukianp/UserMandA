@@ -1,63 +1,144 @@
 {
   "metadata": {
     "version": "4.0.0",
-    "created": "2025-01-26",
-    "description": "M&A Discovery Suite Default Configuration",
-    "companyName": "Default Company"
+    "companyName": "Zedra",
+    "projectName": "M&A Discovery Suite",
+    "description": "Automated discovery and migration planning for M&A activities",
+    "author": "IT Migration Team",
+    "lastUpdated": "2024-01-15"
   },
   "environment": {
-    "domainController": "ad.company.com",
-    "outputPath": "C:\\MandADiscovery\\Output",
-    "tempPath": "%TEMP%\\MandADiscovery",
+    "outputPath": "C:\\MandA\\Discovery\\Output",
+    "tempPath": "C:\\MandA\\Discovery\\Temp",
     "logLevel": "INFO",
     "maxRetries": 3,
-    "timeoutSeconds": 300
+    "domainController": "DC01.contoso.com",
+    "logging": {
+      "useEmojis": true,
+      "useColors": true,
+      "showTimestamp": true,
+      "showComponent": true,
+      "maxLogSizeMB": 50,
+      "logRetentionDays": 30
+    },
+    "connectivity": {
+      "preferInteractiveAuth": false,
+      "proxyBypassForExchange": true,
+      "maxConnectionRetries": 3,
+      "connectionTimeout": 30,
+      "retryDelaySeconds": 5
+    }
   },
   "authentication": {
-    "credentialStorePath": "C:\\MandADiscovery\\Output\\credentials.config",
-    "certificateThumbprint": null,
+    "useServicePrincipal": true,
     "useInteractiveAuth": false,
-    "tokenRefreshThreshold": 300
+    "credentialStorePath": "C:\\MandA\\Discovery\\Credentials\\creds.enc",
+    "certificateThumbprint": "",
+    "tokenRefreshThreshold": 600,
+    "authenticationMethod": "ClientSecret"
   },
   "discovery": {
-    "parallelThreads": 5,
-    "batchSize": 100,
     "enabledSources": [
       "ActiveDirectory",
-      "Exchange",
       "Graph",
+      "Exchange",
       "Azure",
       "Intune"
     ],
     "skipExistingFiles": true,
-    "compressionEnabled": true
+    "parallelProcessing": true,
+    "maxConcurrentJobs": 5,
+    "batchSize": 1000,
+    "excludeDisabledUsers": false,
+    "includeGuestUsers": true,
+    "discoveryScope": {
+      "includedOUs": [],
+      "excludedOUs": [],
+      "includedDomains": [],
+      "excludedDomains": []
+    }
   },
   "processing": {
-    "chunkSize": 100,
-    "includeDisabledUsers": false,
-    "generateWavesByDepartment": true,
-    "maxWaveSize": 50,
     "complexityThresholds": {
       "low": 3,
       "medium": 7,
-      "high": 10
+      "high": 12
+    },
+    "maxWaveSize": 100,
+    "generateWavesByDepartment": true,
+    "priorityWeights": {
+      "complexity": 0.3,
+      "readiness": 0.4,
+      "businessImpact": 0.3
+    },
+    "riskFactors": {
+      "largeMailboxThresholdGB": 10,
+      "inactivityThresholdDays": 90,
+      "complexLicenseCount": 3
     }
   },
   "export": {
-    "formats": [
-      "CSV",
-      "Excel",
-      "JSON"
-    ],
-    "excelEnabled": true,
+    "formats": ["CSV", "Excel", "JSON"],
     "powerAppsOptimized": true,
-    "includeMetadata": true,
-    "archiveResults": true
+    "includeDetailedReports": true,
+    "compressionEnabled": true,
+    "archiveOldReports": true,
+    "reportRetentionDays": 90,
+    "exportOptions": {
+      "includeRawData": false,
+      "includeProcessedData": true,
+      "includeSummaryReports": true,
+      "includeVisualizations": false
+    }
   },
   "performance": {
     "memoryThresholdMB": 4096,
-    "diskSpaceThresholdGB": 5,
-    "progressUpdateInterval": 10,
-    "enableGarbageCollection": true
+    "diskSpaceThresholdGB": 10,
+    "throttleLimit": 100,
+    "progressUpdateInterval": 100,
+    "enableCaching": true,
+    "cacheExpirationMinutes": 60
+  },
+  "advancedSettings": {
+    "debugMode": false,
+    "verboseLogging": false,
+    "simulationMode": false,
+    "validateDataIntegrity": true,
+    "enableAuditLog": true,
+    "customModulePath": "",
+    "bypassCertificateValidation": false
+  },
+  "notifications": {
+    "enabled": false,
+    "smtpServer": "",
+    "smtpPort": 587,
+    "useSSL": true,
+    "from": "manda-discovery@contoso.com",
+    "to": ["it-team@contoso.com"],
+    "sendOnCompletion": true,
+    "sendOnError": true
+  },
+  "graphAPI": {
+    "apiVersion": "v1.0",
+    "useBetaEndpoint": false,
+    "pageSize": 999,
+    "selectFields": {
+      "users": ["id", "userPrincipalName", "displayName", "mail", "department", "jobTitle"],
+      "groups": ["id", "displayName", "description", "mailEnabled", "securityEnabled"],
+      "applications": ["id", "appId", "displayName", "publisherDomain"]
+    }
+  },
+  "exchangeOnline": {
+    "includeSoftDeletedMailboxes": false,
+    "includeArchiveMailboxes": true,
+    "includeResourceMailboxes": false,
+    "includeSharedMailboxes": true,
+    "mailboxStatsBatchSize": 100
+  },
+  "azure": {
+    "includeClassicResources": false,
+    "subscriptionFilter": [],
+    "resourceGroupFilter": [],
+    "tagFilter": {}
   }
 }
