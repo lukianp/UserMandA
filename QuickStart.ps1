@@ -41,14 +41,14 @@ function Show-Menu {
     Write-Host ""
     Write-Host "  SETUP & CONFIGURATION" -ForegroundColor Yellow
     Write-Host "  ---------------------" -ForegroundColor Yellow
-    Write-Host "  [0] Check App Registration Readiness (Local Credentials)"
-    Write-Host "  [1] Configure App Registration (Azure AD Setup)"
+    Write-Host "  [0] Get App Registration Readiness Status (Local Credentials)"
+    Write-Host "  [1] Invoke App Registration Setup (Azure AD Setup)"
     Write-Host ""
     Write-Host "  ORCHESTRATOR EXECUTION" -ForegroundColor Yellow
     Write-Host "  ----------------------" -ForegroundColor Yellow
-    Write-Host "  [2] Run Discovery Phase Only"
-    Write-Host "  [3] Run Discovery & Processing Phases"
-    Write-Host "  [4] Run Processing & Export Phases"
+    Write-Host "  [2] Invoke Discovery Phase Only"
+    Write-Host "  [3] Invoke Discovery & Processing Phases"
+    Write-Host "  [4] Invoke Processing & Export Phases"
     Write-Host "  [5] Validate Orchestrator Configuration Only"
     Write-Host ""
     Write-Host "  [Q] Quit" -ForegroundColor Yellow
@@ -56,14 +56,14 @@ function Show-Menu {
 }
 
 # Function to check the status of local app registration artifacts
-function Check-AppRegistrationReadiness {
-    Write-Host "`n--- Checking App Registration Readiness ---" -ForegroundColor Cyan
+function Get-AppRegistrationReadinessStatus {
+    Write-Host "`n--- Getting App Registration Readiness Status ---" -ForegroundColor Cyan
     
     $configFilePath = $global:MandADefaultConfigPath
     if (-not (Test-Path $configFilePath)) {
         Write-Host "[ERROR] Default configuration file not found at: $configFilePath" -ForegroundColor Red
         Write-Host "Please ensure the suite is correctly installed." -ForegroundColor Yellow
-        Pause-And-Continue
+        Request-UserToContinue
         return
     }
 
@@ -91,12 +91,12 @@ function Check-AppRegistrationReadiness {
         Write-Host "`n[ERROR] Could not read or parse configuration file '$configFilePath':" -ForegroundColor Red
         Write-Host $_.Exception.Message -ForegroundColor Red
     }
-    Pause-And-Continue
+    Request-UserToContinue
 }
 
 # Function to run the App Registration setup script
-function Run-AppRegistrationSetup {
-    Write-Host "`n--- Configuring App Registration ---" -ForegroundColor Cyan
+function Invoke-AppRegistrationSetup {
+    Write-Host "`n--- Invoking App Registration Setup ---" -ForegroundColor Cyan
     
     $appRegScriptPath = Join-Path $global:MandAScriptsPath "Setup-AppRegistration.ps1"
     if (Test-Path $appRegScriptPath) {
@@ -117,11 +117,11 @@ function Run-AppRegistrationSetup {
     } else {
         Write-Host "[ERROR] Setup-AppRegistration.ps1 not found at '$appRegScriptPath'!" -ForegroundColor Red
     }
-    Pause-And-Continue
+    Request-UserToContinue
 }
 
 # Function to run the M&A Orchestrator with specified parameters
-function Run-OrchestratorPhase {
+function Invoke-OrchestratorPhase {
     param(
         [Parameter(Mandatory=$true)]
         [string]$PhaseTitle,
@@ -140,12 +140,12 @@ function Run-OrchestratorPhase {
 
     if (-not (Test-Path $orchestratorPath)) {
         Write-Host "[ERROR] Orchestrator script not found at: $orchestratorPath" -ForegroundColor Red
-        Pause-And-Continue
+        Request-UserToContinue
         return
     }
     if (-not (Test-Path $configFilePath)) {
         Write-Host "[ERROR] Default configuration file not found at: $configFilePath" -ForegroundColor Red
-        Pause-And-Continue
+        Request-UserToContinue
         return
     }
 
@@ -170,7 +170,7 @@ function Run-OrchestratorPhase {
             $commandString += " -$key"
         } elseif ($arguments[$key] -is [bool] -and $arguments[$key]) {
              $commandString += " -$key"
-        } elseif ($arguments[$key] -ne $null) {
+        } elseif ($null -ne $arguments[$key]) { # Corrected null comparison
             $commandString += " -$key `"$($arguments[$key])`""
         }
     }
@@ -191,11 +191,11 @@ function Run-OrchestratorPhase {
         Write-Host "[ERROR] Failed to launch M&A Discovery Suite Orchestrator for phase '$PhaseTitle':" -ForegroundColor Red
         Write-Host $_.Exception.Message -ForegroundColor Red
     }
-    Pause-And-Continue
+    Request-UserToContinue
 }
 
 # Function to pause and wait for user input
-function Pause-And-Continue {
+function Request-UserToContinue {
     Write-Host "`nPress Enter to return to the menu..." -ForegroundColor Gray
     Read-Host | Out-Null
 }
@@ -214,13 +214,13 @@ if (Test-Path $unblockScriptPath) {
     } catch {
         Write-Host "[ERROR] Failed to unblock files: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host "         You may encounter issues running other scripts." -ForegroundColor Yellow
-        Pause-And-Continue
+        Request-UserToContinue
     }
 } else {
     Write-Host "[WARNING] Unblock-AllFiles.ps1 not found at '$unblockScriptPath'." -ForegroundColor Yellow
     Write-Host "           If you downloaded this suite as a ZIP, files might be blocked." -ForegroundColor White
     Write-Host "           Consider running Unblock-AllFiles.ps1 manually if you encounter issues." -ForegroundColor White
-    Pause-And-Continue
+    Request-UserToContinue
 }
 Write-Host "Initialization complete. Launching main menu..." -ForegroundColor White
 Start-Sleep -Seconds 2
@@ -232,29 +232,29 @@ do {
     $choice = Read-Host "Enter your choice"
 
     switch ($choice) {
-        '0' { Check-AppRegistrationReadiness }
-        '1' { Run-AppRegistrationSetup } # Changed from Run-InitialSetup as unblocking is now automatic
-        '2' { Run-OrchestratorPhase -PhaseTitle "Discovery Only" -Mode "Discovery" }
+        '0' { Get-AppRegistrationReadinessStatus }
+        '1' { Invoke-AppRegistrationSetup } # Changed from Run-InitialSetup as unblocking is now automatic
+        '2' { Invoke-OrchestratorPhase -PhaseTitle "Discovery Only" -Mode "Discovery" }
         '3' { 
-              Run-OrchestratorPhase -PhaseTitle "Discovery Phase" -Mode "Discovery"
+              Invoke-OrchestratorPhase -PhaseTitle "Discovery Phase" -Mode "Discovery"
               # Assuming Discovery must complete before Processing can use its output
               Write-Host "`n--- Discovery Phase completed. Proceeding to Processing Phase. ---" -ForegroundColor Cyan
-              Run-OrchestratorPhase -PhaseTitle "Processing Phase" -Mode "Processing"
+              Invoke-OrchestratorPhase -PhaseTitle "Processing Phase" -Mode "Processing"
             }
         '4' { 
-              Run-OrchestratorPhase -PhaseTitle "Processing Phase" -Mode "Processing"
+              Invoke-OrchestratorPhase -PhaseTitle "Processing Phase" -Mode "Processing"
               # Assuming Processing must complete before Export can use its output
               Write-Host "`n--- Processing Phase completed. Proceeding to Export Phase. ---" -ForegroundColor Cyan
-              Run-OrchestratorPhase -PhaseTitle "Export Phase" -Mode "Export"
+              Invoke-OrchestratorPhase -PhaseTitle "Export Phase" -Mode "Export"
             }
-        '5' { Run-OrchestratorPhase -PhaseTitle "Validate Configuration Only" -ValidateOnlyFlag }
+        '5' { Invoke-OrchestratorPhase -PhaseTitle "Validate Configuration Only" -ValidateOnlyFlag:$true } # Pass as switch
         'q' {
             Write-Host "`nExiting M&A Discovery Suite QuickStart Launcher." -ForegroundColor Cyan
             Write-Host "Have a great day!"
         }
         default {
             Write-Host "`n[ERROR] Invalid choice '$choice'. Please select a valid option from the menu." -ForegroundColor Red
-            Pause-And-Continue
+            Request-UserToContinue
         }
     }
 } while ($choice -ne 'q')
