@@ -5,6 +5,7 @@
     Provides input validation and data quality checks
 #>
 
+
 function Get-RequiredModules {
     [CmdletBinding()]
     param(
@@ -20,35 +21,41 @@ function Get-RequiredModules {
 
     # --- Define Mappings ---
     # Discovery sources to module files (relative to Modules/Discovery/)
+    # Ensure the keys here (e.g., "ActiveDirectory") match the strings used in $Configuration.discovery.enabledSources
+    # Ensure the .psm1 filenames match the actual files in your Modules/Discovery/ directory.
     $discoveryModuleMapping = @{
         "ActiveDirectory"    = "ActiveDirectoryDiscovery.psm1"
         "Graph"              = "GraphDiscovery.psm1"
-        "Exchange"           = "ExchangeDiscovery.psm1"
-        "Azure"              = "AzureDiscovery.psm1" # Assumed, may need to verify actual filename
-        "Intune"             = "IntuneDiscovery.psm1"  # Assumed, may need to verify actual filename
-        "GPO"                = "GPODiscovery.psm1"     # Or EnhancedGPODiscovery.psm1 - align with config/intent
+        "Exchange"           = "ExchangeDiscovery.psm1"      # Assumed filename for "Exchange" source (planned)
+        "Azure"              = "AzureDiscovery.psm1"         # Assumed filename for "Azure" source (planned)
+        "Intune"             = "IntuneDiscovery.psm1"        # Assumed filename for "Intune" source (planned)
+        "GPO"                = "EnhancedGPODiscovery.psm1"   # Maps "GPO" source to the enhanced module
         "ExternalIdentity"   = "ExternalIdentityDiscovery.psm1"
         # Add other discovery sources and their corresponding module files here
     }
 
     # Processing modules (relative to Modules/Processing/) - these are usually all needed for processing phase
+    # Ensure these .psm1 filenames match the actual files in your Modules/Processing/ directory.
     $processingModules = @(
         "DataAggregation.psm1",
         "UserProfileBuilder.psm1", # Assuming this handles complexity or a separate ComplexityCalculator.psm1 exists
         "WaveGeneration.psm1",
         "DataValidation.psm1"
-        # "ComplexityCalculator.psm1" # If separate
+        # "ComplexityCalculator.psm1" # Add if separate and always needed for processing
     )
 
     # Export formats to module files (relative to Modules/Export/)
+    # Ensure the keys here (e.g., "CSV") match the strings used in $Configuration.export.formats
+    # Ensure the .psm1 filenames match the actual files in your Modules/Export/ directory.
     $exportModuleMapping = @{
         "CSV"     = "CSVExport.psm1"
-        "Excel"   = "ExcelExport.psm1"
+        "Excel"   = "ExcelExport.psm1" # Assumed filename for "Excel" format (planned)
         "JSON"    = "JSONExport.psm1"
-        # "PowerApps" could map to "PowerAppsExporter.psm1" if it's a distinct module
-        # Or its logic might be within JSONExport.psm1 triggered by a config flag
+        # If "PowerApps" is a format in config that maps to a specific file, add it here:
+        # "PowerApps" = "PowerAppsExporter.psm1" 
     }
-    $powerAppsExportModule = "PowerAppsExporter.psm1" # If a dedicated module exists
+    # Path for a potentially dedicated PowerApps export module, if not covered by the 'formats' array
+    $powerAppsDedicatedModuleFile = "PowerAppsExporter.psm1" # Assumed filename for dedicated PowerApps export (planned)
 
     # --- Determine Modules Based on Mode and Configuration ---
 
@@ -63,7 +70,7 @@ function Get-RequiredModules {
                         $modulesToLoadPaths.Add($modulePath)
                     }
                 } else {
-                    Write-MandALog "No module mapping found for enabled discovery source: $source" -Level "WARN"
+                    Write-MandALog "No module mapping found for enabled discovery source: '$source'. It will be skipped." -Level "WARN"
                 }
             }
         }
@@ -90,35 +97,32 @@ function Get-RequiredModules {
                         $modulesToLoadPaths.Add($modulePath)
                     }
                 } else {
-                    Write-MandALog "No module mapping found for enabled export format: $format" -Level "WARN"
+                    Write-MandALog "No module mapping found for enabled export format: '$format'. It will be skipped." -Level "WARN"
                 }
             }
         }
-        # Handle PowerApps optimized export if it's a separate module and enabled
+        # Handle PowerApps optimized export if it's a separate module and enabled via the specific flag
         if ($Configuration.export -and $Configuration.export.powerAppsOptimized) {
-            $modulePath = Join-Path $global:MandAModulesPath "Export\$powerAppsExportModule"
-             # Assuming PowerAppsExporter.psm1 exists, otherwise this check might be different
-            if ($exportModuleMapping.Values -notcontains $powerAppsExportModule) { # Avoid double-adding if already mapped
-                 if (-not $modulesToLoadPaths.Contains($modulePath)) {
-                    # Check if PowerAppsExporter.psm1 is distinct or part of JSONExport.psm1
-                    # For now, let's assume it's distinct if powerAppsOptimized is true
-                    # and it's not already added via the 'formats' array.
-                    # This logic might need refinement based on actual module structure for PowerApps export.
-                    # A common pattern is for JSONExport to handle a powerAppsOptimized flag.
-                    # If it is a truly separate module, this is fine.
-                    # For now, we'll add it if the flag is true and the file exists.
-                    # This part is a bit speculative without knowing the exact PowerApps export module.
-                    # If PowerApps export is handled by JSONExport.psm1, this specific block for $powerAppsExportModule might not be needed.
-                    # $modulesToLoadPaths.Add($modulePath) # Example if PowerAppsExporter.psm1 is a dedicated module
-                    Write-MandALog "PowerApps optimized export is enabled. Ensure relevant module/logic is loaded (e.g., within JSONExport.psm1 or a dedicated PowerAppsExporter.psm1)." -Level "INFO"
-                 }
+            $powerAppsModulePath = Join-Path $global:MandAModulesPath "Export\$powerAppsDedicatedModuleFile"
+            # Add only if not already added (e.g., if "PowerApps" was also a format type in the array and mapped above)
+            if (-not $modulesToLoadPaths.Contains($powerAppsModulePath)) {
+                # This logic assumes PowerAppsExporter.psm1 is a dedicated module.
+                # If PowerApps export functionality is built into JSONExport.psm1 (or another module)
+                # and triggered by the $Configuration.export.powerAppsOptimized flag,
+                # then that module (e.g., JSONExport.psm1) would already be loaded if "JSON" is in formats.
+                # In such a case, this specific block for $powerAppsDedicatedModuleFile might not be strictly necessary
+                # for module loading, as the functionality would reside within an already loaded module.
+                # However, if PowerAppsExporter.psm1 is truly separate, this ensures it's loaded.
+                $modulesToLoadPaths.Add($powerAppsModulePath)
+                Write-MandALog "PowerApps optimized export is enabled. Attempting to load '$powerAppsDedicatedModuleFile' if it's a distinct module." -Level "INFO"
             }
         }
     }
     
-    Write-Verbose "Modules to load based on mode '$Mode': $($modulesToLoadPaths -join ', ')"
+    Write-Verbose "Final list of modules to load for mode '$Mode': $($modulesToLoadPaths -join ', ')"
     return $modulesToLoadPaths.ToArray() # Return as a standard array
 }
+
 
 
 
