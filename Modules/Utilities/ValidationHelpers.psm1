@@ -5,6 +5,124 @@
     Provides input validation and data quality checks
 #>
 
+function Get-RequiredModules {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Mode # Expected values: "Discovery", "Processing", "Export", "Full"
+    )
+
+    Write-Verbose "Getting required modules for Mode: $Mode"
+    $modulesToLoadPaths = [System.Collections.Generic.List[string]]::new()
+
+    # --- Define Mappings ---
+    # Discovery sources to module files (relative to Modules/Discovery/)
+    $discoveryModuleMapping = @{
+        "ActiveDirectory"    = "ActiveDirectoryDiscovery.psm1"
+        "Graph"              = "GraphDiscovery.psm1"
+        "Exchange"           = "ExchangeDiscovery.psm1"
+        "Azure"              = "AzureDiscovery.psm1" # Assumed, may need to verify actual filename
+        "Intune"             = "IntuneDiscovery.psm1"  # Assumed, may need to verify actual filename
+        "GPO"                = "GPODiscovery.psm1"     # Or EnhancedGPODiscovery.psm1 - align with config/intent
+        "ExternalIdentity"   = "ExternalIdentityDiscovery.psm1"
+        # Add other discovery sources and their corresponding module files here
+    }
+
+    # Processing modules (relative to Modules/Processing/) - these are usually all needed for processing phase
+    $processingModules = @(
+        "DataAggregation.psm1",
+        "UserProfileBuilder.psm1", # Assuming this handles complexity or a separate ComplexityCalculator.psm1 exists
+        "WaveGeneration.psm1",
+        "DataValidation.psm1"
+        # "ComplexityCalculator.psm1" # If separate
+    )
+
+    # Export formats to module files (relative to Modules/Export/)
+    $exportModuleMapping = @{
+        "CSV"     = "CSVExport.psm1"
+        "Excel"   = "ExcelExport.psm1"
+        "JSON"    = "JSONExport.psm1"
+        # "PowerApps" could map to "PowerAppsExporter.psm1" if it's a distinct module
+        # Or its logic might be within JSONExport.psm1 triggered by a config flag
+    }
+    $powerAppsExportModule = "PowerAppsExporter.psm1" # If a dedicated module exists
+
+    # --- Determine Modules Based on Mode and Configuration ---
+
+    # Discovery Modules
+    if ($Mode -in @("Discovery", "Full")) {
+        if ($Configuration.discovery -and $Configuration.discovery.enabledSources) {
+            foreach ($source in $Configuration.discovery.enabledSources) {
+                if ($discoveryModuleMapping.ContainsKey($source)) {
+                    $moduleFileName = $discoveryModuleMapping[$source]
+                    $modulePath = Join-Path $global:MandAModulesPath "Discovery\$moduleFileName"
+                    if (-not $modulesToLoadPaths.Contains($modulePath)) {
+                        $modulesToLoadPaths.Add($modulePath)
+                    }
+                } else {
+                    Write-MandALog "No module mapping found for enabled discovery source: $source" -Level "WARN"
+                }
+            }
+        }
+    }
+
+    # Processing Modules
+    if ($Mode -in @("Processing", "Full")) {
+        foreach ($moduleFileName in $processingModules) {
+            $modulePath = Join-Path $global:MandAModulesPath "Processing\$moduleFileName"
+            if (-not $modulesToLoadPaths.Contains($modulePath)) {
+                $modulesToLoadPaths.Add($modulePath)
+            }
+        }
+    }
+
+    # Export Modules
+    if ($Mode -in @("Export", "Full")) {
+        if ($Configuration.export -and $Configuration.export.formats) {
+            foreach ($format in $Configuration.export.formats) {
+                if ($exportModuleMapping.ContainsKey($format)) {
+                    $moduleFileName = $exportModuleMapping[$format]
+                    $modulePath = Join-Path $global:MandAModulesPath "Export\$moduleFileName"
+                    if (-not $modulesToLoadPaths.Contains($modulePath)) {
+                        $modulesToLoadPaths.Add($modulePath)
+                    }
+                } else {
+                    Write-MandALog "No module mapping found for enabled export format: $format" -Level "WARN"
+                }
+            }
+        }
+        # Handle PowerApps optimized export if it's a separate module and enabled
+        if ($Configuration.export -and $Configuration.export.powerAppsOptimized) {
+            $modulePath = Join-Path $global:MandAModulesPath "Export\$powerAppsExportModule"
+             # Assuming PowerAppsExporter.psm1 exists, otherwise this check might be different
+            if ($exportModuleMapping.Values -notcontains $powerAppsExportModule) { # Avoid double-adding if already mapped
+                 if (-not $modulesToLoadPaths.Contains($modulePath)) {
+                    # Check if PowerAppsExporter.psm1 is distinct or part of JSONExport.psm1
+                    # For now, let's assume it's distinct if powerAppsOptimized is true
+                    # and it's not already added via the 'formats' array.
+                    # This logic might need refinement based on actual module structure for PowerApps export.
+                    # A common pattern is for JSONExport to handle a powerAppsOptimized flag.
+                    # If it is a truly separate module, this is fine.
+                    # For now, we'll add it if the flag is true and the file exists.
+                    # This part is a bit speculative without knowing the exact PowerApps export module.
+                    # If PowerApps export is handled by JSONExport.psm1, this specific block for $powerAppsExportModule might not be needed.
+                    # $modulesToLoadPaths.Add($modulePath) # Example if PowerAppsExporter.psm1 is a dedicated module
+                    Write-MandALog "PowerApps optimized export is enabled. Ensure relevant module/logic is loaded (e.g., within JSONExport.psm1 or a dedicated PowerAppsExporter.psm1)." -Level "INFO"
+                 }
+            }
+        }
+    }
+    
+    Write-Verbose "Modules to load based on mode '$Mode': $($modulesToLoadPaths -join ', ')"
+    return $modulesToLoadPaths.ToArray() # Return as a standard array
+}
+
+
+
+
 function Test-GuidFormat {
     param(
         [Parameter(Mandatory=$true)]
