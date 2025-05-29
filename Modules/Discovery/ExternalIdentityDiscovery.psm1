@@ -792,9 +792,24 @@ function Get-CrossTenantAccessData {
                     InboundTrust_HybridJoinedEnabled = $defaultSettings.b2bCollaborationInbound.applications.targetType
                     OutboundTrust_MfaEnabled = $defaultSettings.b2bCollaborationOutbound.usersAndGroups.accessType
                     OutboundTrust_CompliantDeviceEnabled = $defaultSettings.b2bCollaborationOutbound.applications.accessType
-                    OutboundTrust_HybridJoinedEnabled = $defaultSettings.b2bCollaborationOutbound.applications.targetType
-                    B2BDirectConnectInbound = $defaultSettings.b2bDirectConnectInbound.isEnabled
-                    B2BDirectConnectOutbound = $defaultSettings.b2bDirectConnectOutbound.isEnabled
-                    # CONTINUE FROM HERE
-
+                                        OutboundTrust_HybridJoinedEnabled = $defaultSettings.b2bCollaborationOutbound.applications.targetType
+                                        B2BDirectConnectInbound = $defaultSettings.b2bDirectConnectInbound.isEnabled
+                                        B2BDirectConnectOutbound = $defaultSettings.b2bDirectConnectOutbound.isEnabled
+                                    })
+                                }
+                            } catch {
+                                Write-MandALog "Could not retrieve cross-tenant access policy: $($_.Exception.Message)" -Level "WARN"
+                            }
                     
+                            Write-MandALog "Retrieved cross-tenant access settings" -Level "SUCCESS"
+                    
+                            # Export to CSV
+                            Export-DataToCSV -Data $accessData -FilePath $outputFile
+                    
+                            return $accessData
+                    
+                        } catch {
+                            Write-MandALog "Error retrieving cross-tenant access settings: $($_.Exception.Message)" -Level "ERROR"
+                            return @()
+                        }
+                    }
