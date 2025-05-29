@@ -310,6 +310,14 @@ function Invoke-ExportPhase {
         Update-Progress -Step $currentStep -Status "Export Phase Potentially Complete" -ForceUpdate:$true # Ensure progress bar completes
         Write-MandALog "Export phase completed successfully" -Level "SUCCESS"; return $exportResults
     } catch { Write-MandALog "Export phase failed: $($_.Exception.Message)" -Level "ERROR"; throw }
+
+
+if ($Configuration.export.formats -contains "CompanyControlSheet" -or $Configuration.export.exportAllCustomSheets) { # Example config check
+    Write-MandALog "Invoking Company Control Sheet Exporter..." -Level "INFO"
+    Export-ToCompanyControlSheet -ProcessedData $ProcessedData -Configuration $Configuration
+}
+
+
 }
 
 function Complete-MandADiscovery {
