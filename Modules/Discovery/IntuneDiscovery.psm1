@@ -1,8 +1,4 @@
-Install-Module Microsoft.Graph.Beta.DeviceAppManagement -AllowPrerelease -Force
 
-#Requires -Version 5.1
-#Requires -Modules Microsoft.Graph.DeviceManagement, Microsoft.Graph.Beta.DeviceManagement, Microsoft.Graph.Beta.Users.Actions, Microsoft.Graph.Users.Actions, Microsoft.Graph.Beta.DeviceAppManagement
-# Microsoft.Graph.Beta.Users.Actions for Get-MgBetaUserManagedDevice, Microsoft.Graph.Users.Actions for Get-MgUserManagedDevice
 <#
 .SYNOPSIS
     M&A Discovery Suite - Intune Discovery Module (Comprehensive)
