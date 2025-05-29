@@ -7,7 +7,7 @@
     discovery modules, aggregating it, and building a comprehensive relationship graph.
 .NOTES
     Version: 1.3.0 (Enhanced Relationship Graph Logic)
-    Author: Gemini
+    Author: Lukian Poleschtschuk
 #>
 
 [CmdletBinding()]
