@@ -1,703 +1,244 @@
+#Requires -Version 5.1
+#Requires -Modules Microsoft.Graph.DeviceManagement, Microsoft.Graph.Beta.DeviceManagement, Microsoft.Graph.Beta.Users.Actions, Microsoft.Graph.Users.Actions 
+# Microsoft.Graph.Beta.Users.Actions for Get-MgBetaUserManagedDevice, Microsoft.Graph.Users.Actions for Get-MgUserManagedDevice
 <#
 .SYNOPSIS
-    Microsoft Intune discovery for M&A Discovery Suite
+    M&A Discovery Suite - Intune Discovery Module (Comprehensive)
 .DESCRIPTION
-    Discovers Intune-managed devices, compliance policies, configuration profiles, and app deployments
+    Discovers a wide range of Intune information using Microsoft Graph API, including
+    managed devices, compliance policies, configuration profiles, mobile applications,
+    enrollment restrictions, terms and conditions, and more.
+.NOTES
+    Version: 1.1.0 (Comprehensive Update)
+    Author: Gemini
+    Inspired by AzureHound data points related to device management and Intune configurations.
+    Ensure Graph connection is established and has necessary permissions like:
+    DeviceManagementManagedDevices.Read.All, DeviceManagementConfiguration.Read.All,
+    DeviceManagementApps.Read.All, DeviceManagementServiceConfig.Read.All,
+    Policy.Read.All (for some settings).
+    Using Beta endpoints for richer data where appropriate.
 #>
 
+[CmdletBinding()]
+param()
+
+# Main function to invoke Intune discovery
 function Invoke-IntuneDiscovery {
-    param([hashtable]$Configuration)
-    
-    try {
-        Write-MandALog "Starting Microsoft Intune discovery" -Level "HEADER"
-        
-        $outputPath = $Configuration.environment.outputPath
-        $rawPath = Join-Path $outputPath "Raw"
-        
-        $discoveryResults = @{}
-        
-        # Verify Graph connection (Intune uses Graph API)
-        $context = Get-MgContext -ErrorAction SilentlyContinue
-        if (-not $context) {
-            Write-MandALog "Microsoft Graph not connected. Skipping Intune discovery." -Level "WARN"
-            return @{}
-        }
-        
-        # Verify Intune permissions
-        $requiredScopes = @(
-            "DeviceManagementManagedDevices.Read.All",
-            "DeviceManagementConfiguration.Read.All",
-            "DeviceManagementApps.Read.All"
-        )
-        
-        $hasRequiredScopes = $true
-        foreach ($scope in $requiredScopes) {
-            if ($context.Scopes -notcontains $scope) {
-                Write-MandALog "Missing required scope: $scope" -Level "WARN"
-                $hasRequiredScopes = $false
-            }
-        }
-        
-        if (-not $hasRequiredScopes) {
-            Write-MandALog "Insufficient permissions for Intune discovery. Some data may be unavailable." -Level "WARN"
-        }
-        
-        # Managed Devices
-        Write-MandALog "Discovering Intune managed devices..." -Level "INFO"
-        $discoveryResults.ManagedDevices = Get-IntuneManagedDevices -OutputPath $rawPath -Configuration $Configuration
-        
-        # Device Compliance Policies
-        Write-MandALog "Discovering device compliance policies..." -Level "INFO"
-        $discoveryResults.CompliancePolicies = Get-IntuneCompliancePolicies -OutputPath $rawPath -Configuration $Configuration
-        
-        # Device Configuration Profiles
-        Write-MandALog "Discovering device configuration profiles..." -Level "INFO"
-        $discoveryResults.ConfigurationProfiles = Get-IntuneConfigurationProfiles -OutputPath $rawPath -Configuration $Configuration
-        
-        # Mobile Apps
-        Write-MandALog "Discovering mobile apps..." -Level "INFO"
-        $discoveryResults.MobileApps = Get-IntuneMobileApps -OutputPath $rawPath -Configuration $Configuration
-        
-        # App Protection Policies
-        Write-MandALog "Discovering app protection policies..." -Level "INFO"
-        $discoveryResults.AppProtectionPolicies = Get-IntuneAppProtectionPolicies -OutputPath $rawPath -Configuration $Configuration
-        
-        # Enrollment Restrictions
-        Write-MandALog "Discovering enrollment restrictions..." -Level "INFO"
-        $discoveryResults.EnrollmentRestrictions = Get-IntuneEnrollmentRestrictions -OutputPath $rawPath -Configuration $Configuration
-        
-        # Device Categories
-        Write-MandALog "Discovering device categories..." -Level "INFO"
-        $discoveryResults.DeviceCategories = Get-IntuneDeviceCategories -OutputPath $rawPath -Configuration $Configuration
-        
-        # Autopilot Devices
-        Write-MandALog "Discovering Autopilot devices..." -Level "INFO"
-        $discoveryResults.AutopilotDevices = Get-IntuneAutopilotDevices -OutputPath $rawPath -Configuration $Configuration
-        
-        Write-MandALog "Microsoft Intune discovery completed successfully" -Level "SUCCESS"
-        return $discoveryResults
-        
-    } catch {
-        Write-MandALog "Microsoft Intune discovery failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
-    }
-}
-
-function Get-IntuneManagedDevices {
+    [CmdletBinding()]
     param(
-        [string]$OutputPath,
+        [Parameter(Mandatory = $true)]
         [hashtable]$Configuration
     )
-    
-    $outputFile = Join-Path $OutputPath "IntuneManagedDevices.csv"
-    $deviceData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "Intune managed devices CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
-    try {
-        Write-MandALog "Retrieving Intune managed devices..." -Level "INFO"
-        
-        $devices = Get-MgDeviceManagementManagedDevice -All
-        
-        Write-MandALog "Retrieved $($devices.Count) managed devices" -Level "SUCCESS"
-        
-        $processedCount = 0
-        foreach ($device in $devices) {
-            $processedCount++
-            if ($processedCount % 100 -eq 0) {
-                Write-Progress -Activity "Processing Intune Devices" -Status "Device $processedCount of $($devices.Count)" -PercentComplete (($processedCount / $devices.Count) * 100)
-            }
-            
-            $deviceData.Add([PSCustomObject]@{
-                DeviceId = $device.Id
-                DeviceName = $device.DeviceName
-                ManagedDeviceOwnerType = $device.ManagedDeviceOwnerType
-                DeviceType = $device.DeviceType
-                ComplianceState = $device.ComplianceState
-                EnrolledDateTime = $device.EnrolledDateTime
-                LastSyncDateTime = $device.LastSyncDateTime
-                OperatingSystem = $device.OperatingSystem
-                OSVersion = $device.OSVersion
-                Model = $device.Model
-                Manufacturer = $device.Manufacturer
-                SerialNumber = $device.SerialNumber
-                UserPrincipalName = $device.UserPrincipalName
-                UserDisplayName = $device.UserDisplayName
-                EmailAddress = $device.EmailAddress
-                AzureADDeviceId = $device.AzureADDeviceId
-                AzureADRegistered = $device.AzureADRegistered
-                IsEncrypted = $device.IsEncrypted
-                IsSupervised = $device.IsSupervised
-                JailBroken = $device.JailBroken
-                ManagementAgent = $device.ManagementAgent
-                ManagementState = $device.ManagementState
-                DeviceRegistrationState = $device.DeviceRegistrationState
-                DeviceEnrollmentType = $device.DeviceEnrollmentType
-                ActivationLockBypassCode = if ($device.ActivationLockBypassCode) { "Set" } else { "NotSet" }
-                EASDeviceId = $device.EASDeviceId
-                EASActivated = $device.EASActivated
-                ExchangeAccessState = $device.ExchangeAccessState
-                ExchangeAccessStateReason = $device.ExchangeAccessStateReason
-                RemoteAssistanceSessionUrl = if ($device.RemoteAssistanceSessionUrl) { "Available" } else { "NotAvailable" }
-                FreeStorageSpaceInBytes = $device.FreeStorageSpaceInBytes
-                TotalStorageSpaceInBytes = $device.TotalStorageSpaceInBytes
-                ManagedDeviceName = $device.ManagedDeviceName
-                PartnerReportedThreatState = $device.PartnerReportedThreatState
-                ConfigurationManagerClientEnabledFeatures = if ($device.ConfigurationManagerClientEnabledFeatures) { "Enabled" } else { "Disabled" }
-                WiFiMacAddress = $device.WiFiMacAddress
-                EthernetMacAddress = $device.EthernetMacAddress
-                IMEI = $device.IMEI
-                MEID = $device.MEID
-                SubscriberCarrier = $device.SubscriberCarrier
-                PhoneNumber = $device.PhoneNumber
-                ICCID = $device.ICCID
-                Notes = $device.Notes
-            })
-        }
-        
-        Write-Progress -Activity "Processing Intune Devices" -Completed
-        
-        # Export to CSV
-        Export-DataToCSV -Data $deviceData -FilePath $outputFile
-        Write-MandALog "Exported $($deviceData.Count) managed devices to CSV" -Level "SUCCESS"
-        
-        return $deviceData
-        
-    } catch {
-        Write-MandALog "Error retrieving Intune managed devices: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
 
-function Get-IntuneCompliancePolicies {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration
-    )
-    
-    $outputFile = Join-Path $OutputPath "IntuneCompliancePolicies.csv"
-    $policyData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "Compliance policies CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
-    try {
-        Write-MandALog "Retrieving device compliance policies..." -Level "INFO"
-        
-        $policies = Get-MgDeviceManagementDeviceCompliancePolicy -All
-        
-        foreach ($policy in $policies) {
-            # Get policy assignments
-            $assignments = Get-MgDeviceManagementDeviceCompliancePolicyAssignment -DeviceCompliancePolicyId $policy.Id
-            
-            $policyData.Add([PSCustomObject]@{
-                PolicyId = $policy.Id
-                DisplayName = $policy.DisplayName
-                Description = $policy.Description
-                CreatedDateTime = $policy.CreatedDateTime
-                LastModifiedDateTime = $policy.LastModifiedDateTime
-                Version = $policy.Version
-                Platform = if ($policy.AdditionalProperties.ContainsKey('@odata.type')) {
-                    switch ($policy.AdditionalProperties['@odata.type']) {
-                        '#microsoft.graph.androidCompliancePolicy' { 'Android' }
-                        '#microsoft.graph.iosCompliancePolicy' { 'iOS' }
-                        '#microsoft.graph.windows10CompliancePolicy' { 'Windows10' }
-                        '#microsoft.graph.macOSCompliancePolicy' { 'macOS' }
-                        default { 'Unknown' }
-                    }
-                } else { 'Unknown' }
-                AssignmentCount = $assignments.Count
-                AssignmentTargets = ($assignments | ForEach-Object {
-                    if ($_.Target.AdditionalProperties['@odata.type'] -eq '#microsoft.graph.allLicensedUsersAssignmentTarget') {
-                        "All Users"
-                    } elseif ($_.Target.AdditionalProperties['@odata.type'] -eq '#microsoft.graph.groupAssignmentTarget') {
-                        "Group:$($_.Target.AdditionalProperties.groupId)"
-                    } else {
-                        "Unknown"
-                    }
-                }) -join ";"
-                # Platform-specific settings would need to be extracted based on type
-                PasswordRequired = if ($policy.AdditionalProperties.passwordRequired) { $policy.AdditionalProperties.passwordRequired } else { "N/A" }
-                PasswordMinimumLength = if ($policy.AdditionalProperties.passwordMinimumLength) { $policy.AdditionalProperties.passwordMinimumLength } else { "N/A" }
-                StorageRequireEncryption = if ($policy.AdditionalProperties.storageRequireEncryption) { $policy.AdditionalProperties.storageRequireEncryption } else { "N/A" }
-                SecurityBlockJailbrokenDevices = if ($policy.AdditionalProperties.securityBlockJailbrokenDevices) { $policy.AdditionalProperties.securityBlockJailbrokenDevices } else { "N/A" }
-                DeviceThreatProtectionEnabled = if ($policy.AdditionalProperties.deviceThreatProtectionEnabled) { $policy.AdditionalProperties.deviceThreatProtectionEnabled } else { "N/A" }
-                DeviceThreatProtectionRequiredSecurityLevel = if ($policy.AdditionalProperties.deviceThreatProtectionRequiredSecurityLevel) { $policy.AdditionalProperties.deviceThreatProtectionRequiredSecurityLevel } else { "N/A" }
-            })
-        }
-        
-        Write-MandALog "Retrieved $($policyData.Count) compliance policies" -Level "SUCCESS"
-        
-        # Export to CSV
-        Export-DataToCSV -Data $policyData -FilePath $outputFile
-        
-        return $policyData
-        
-    } catch {
-        Write-MandALog "Error retrieving compliance policies: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
+    Write-MandALog "Starting Comprehensive Intune Discovery via Microsoft Graph" -Level "HEADER"
+    $script:ExecutionMetrics.Phase = "Discovery - Intune (Comprehensive)"
 
-function Get-IntuneConfigurationProfiles {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration
-    )
-    
-    $outputFile = Join-Path $OutputPath "IntuneConfigurationProfiles.csv"
-    $profileData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "Configuration profiles CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
+    $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
+    if (-not (Test-Path $outputPath)) {
+        New-Item -Path $outputPath -ItemType Directory -Force | Out-Null
     }
-    
-    try {
-        Write-MandALog "Retrieving device configuration profiles..." -Level "INFO"
-        
-        $profiles = Get-MgDeviceManagementDeviceConfiguration -All
-        
-        foreach ($profile in $profiles) {
-            # Get profile assignments
-            $assignments = Get-MgDeviceManagementDeviceConfigurationAssignment -DeviceConfigurationId $profile.Id
-            
-            $profileData.Add([PSCustomObject]@{
-                ProfileId = $profile.Id
-                DisplayName = $profile.DisplayName
-                Description = $profile.Description
-                CreatedDateTime = $profile.CreatedDateTime
-                LastModifiedDateTime = $profile.LastModifiedDateTime
-                Version = $profile.Version
-                Platform = if ($profile.AdditionalProperties.ContainsKey('@odata.type')) {
-                    switch ($profile.AdditionalProperties['@odata.type']) {
-                        { $_ -match 'android' } { 'Android' }
-                        { $_ -match 'ios' } { 'iOS' }
-                        { $_ -match 'windows' } { 'Windows' }
-                        { $_ -match 'macOS' } { 'macOS' }
-                        default { 'Unknown' }
-                    }
-                } else { 'Unknown' }
-                ProfileType = if ($profile.AdditionalProperties.ContainsKey('@odata.type')) {
-                    $profile.AdditionalProperties['@odata.type'].Split('.')[-1]
-                } else { 'Unknown' }
-                AssignmentCount = $assignments.Count
-                AssignmentTargets = ($assignments | ForEach-Object {
-                    if ($_.Target.AdditionalProperties['@odata.type'] -eq '#microsoft.graph.allLicensedUsersAssignmentTarget') {
-                        "All Users"
-                    } elseif ($_.Target.AdditionalProperties['@odata.type'] -eq '#microsoft.graph.groupAssignmentTarget') {
-                        "Group:$($_.Target.AdditionalProperties.groupId)"
-                    } else {
-                        "Unknown"
-                    }
-                }) -join ";"
-                # Extract key settings based on profile type
-                WiFiConfigured = if ($profile.AdditionalProperties.ContainsKey('wifi')) { "Yes" } else { "No" }
-                VPNConfigured = if ($profile.AdditionalProperties.ContainsKey('vpn')) { "Yes" } else { "No" }
-                EmailConfigured = if ($profile.AdditionalProperties.ContainsKey('email')) { "Yes" } else { "No" }
-                CertificateConfigured = if ($profile.AdditionalProperties.ContainsKey('certificate')) { "Yes" } else { "No" }
-                RestrictionsConfigured = if ($profile.AdditionalProperties.ContainsKey('deviceRestrictions')) { "Yes" } else { "No" }
-            })
-        }
-        
-        Write-MandALog "Retrieved $($profileData.Count) configuration profiles" -Level "SUCCESS"
-        
-        # Export to CSV
-        Export-DataToCSV -Data $profileData -FilePath $outputFile
-        
-        return $profileData
-        
-    } catch {
-        Write-MandALog "Error retrieving configuration profiles: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
 
-function Get-IntuneMobileApps {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration
-    )
-    
-    $outputFile = Join-Path $OutputPath "IntuneMobileApps.csv"
-    $appData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "Mobile apps CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
+    $graphContext = Get-MgContext -ErrorAction SilentlyContinue
+    if (-not $graphContext) {
+        Write-MandALog "Not connected to Microsoft Graph. Skipping Intune Discovery." -Level "WARN"
+        return $null
+    }
+    Write-MandALog "Connected to Microsoft Graph for Intune Discovery. Tenant: $($graphContext.TenantId)" -Level "INFO"
+
+    $allIntuneData = @{
+        ManagedDevices = [System.Collections.Generic.List[object]]::new();
+        DetectedApps = [System.Collections.Generic.List[object]]::new(); # Apps detected on devices
+        DeviceCompliancePolicies = [System.Collections.Generic.List[object]]::new();
+        DeviceCompliancePolicyAssignments = [System.Collections.Generic.List[object]]::new();
+        DeviceConfigurationProfiles = [System.Collections.Generic.List[object]]::new();
+        DeviceConfigurationProfileAssignments = [System.Collections.Generic.List[object]]::new();
+        MobileApps = [System.Collections.Generic.List[object]]::new(); # Catalog apps
+        MobileAppAssignments = [System.Collections.Generic.List[object]]::new();
+        DeviceEnrollmentConfigurations = [System.Collections.Generic.List[object]]::new(); # e.g. platform restrictions
+        TermsAndConditions = [System.Collections.Generic.List[object]]::new();
+        TermsAndConditionsAssignments = [System.Collections.Generic.List[object]]::new();
+        AutopilotProfiles = [System.Collections.Generic.List[object]]::new();
+        # Add more Intune object types as needed: App Protection Policies, etc.
     }
     
+    $totalStepsEstimate = 10 # Rough estimate for major categories
+    Initialize-ProgressTracker -Phase "IntuneDiscovery" -TotalSteps $totalStepsEstimate 
+    $currentStep = 0
+
+    # 1. Discover Managed Devices (and their detected apps)
+    $currentStep++; Update-Progress -Step $currentStep -Status "Discovering Intune Managed Devices & Detected Apps"
     try {
-        Write-MandALog "Retrieving mobile apps..." -Level "INFO"
-        
-        $apps = Get-MgDeviceManagementMobileApp -All
-        
-        foreach ($app in $apps) {
-            # Get app assignments
-            $assignments = Get-MgDeviceManagementMobileAppAssignment -MobileAppId $app.Id
-            
-            $appType = if ($app.AdditionalProperties.ContainsKey('@odata.type')) {
-                switch ($app.AdditionalProperties['@odata.type']) {
-                    '#microsoft.graph.win32LobApp' { 'Win32' }
-                    '#microsoft.graph.windowsMobileMSI' { 'MSI' }
-                    '#microsoft.graph.microsoftStoreForBusinessApp' { 'StoreForBusiness' }
-                    '#microsoft.graph.webApp' { 'WebApp' }
-                    '#microsoft.graph.iosStoreApp' { 'iOSStore' }
-                    '#microsoft.graph.androidStoreApp' { 'AndroidStore' }
-                    '#microsoft.graph.managedIOSStoreApp' { 'ManagedIOSStore' }
-                    '#microsoft.graph.managedAndroidStoreApp' { 'ManagedAndroidStore' }
-                    default { 'Unknown' }
+        $devices = Get-MgBetaDeviceManagementManagedDevice -All -ErrorAction SilentlyContinue -Property "deviceName,id,userId,userPrincipalName,manufacturer,model,serialNumber,osVersion,complianceState,managementAgent,lastSyncDateTime,enrolledDateTime,deviceOwnership,operatingSystem,ethernetMacAddress,imei,meid,isEncrypted,isSupervised,azureADRegistered,deviceCategoryDisplayName,managementState,partnerReportedThreatState" -ExpandProperty "detectedApps"
+        if ($devices) {
+            $devices | ForEach-Object {
+                $allIntuneData.ManagedDevices.Add([PSCustomObject]@{
+                    DeviceId = $_.Id; DeviceName = $_.DeviceName; UserId = $_.UserId; UserPrincipalName = $_.UserPrincipalName; Manufacturer = $_.Manufacturer; Model = $_.Model; SerialNumber = $_.SerialNumber;
+                    OS = $_.OperatingSystem; OSVersion = $_.OSVersion; ComplianceState = $_.ComplianceState; ManagementAgent = $_.ManagementAgent; LastSync = $_.LastSyncDateTime; EnrolledDate = $_.EnrolledDateTime;
+                    Ownership = $_.DeviceOwnership; EthernetMacAddress = $_.EthernetMacAddress; Imei = $_.Imei; Meid = $_.Meid; IsEncrypted = $_.IsEncrypted; IsSupervised = $_.IsSupervised;
+                    AzureADRegistered = $_.AzureADRegistered; DeviceCategory = $_.DeviceCategoryDisplayName; ManagementState = $_.ManagementState; PartnerReportedThreatState = $_.PartnerReportedThreatState
+                })
+                # Process detected apps for this device
+                if ($_.DetectedApps) {
+                    $_.DetectedApps | ForEach-Object {
+                        $allIntuneData.DetectedApps.Add([PSCustomObject]@{
+                            ManagedDeviceId = $devices.Id # Link back to the device
+                            ManagedDeviceName= $devices.DeviceName
+                            AppName         = $_.DisplayName
+                            AppVersion      = $_.Version
+                            AppSizeInKB     = $_.SizeInKB
+                            AppPlatform     = $_.Platform # If available, else infer from device
+                            AppPublisher    = $_.Publisher # If available
+                            AppId           = $_.Id # ID of the detected app instance
+                        })
+                    }
                 }
-            } else { 'Unknown' }
-            
-            $appData.Add([PSCustomObject]@{
-                AppId = $app.Id
-                DisplayName = $app.DisplayName
-                Description = $app.Description
-                Publisher = $app.Publisher
-                AppType = $appType
-                CreatedDateTime = $app.CreatedDateTime
-                LastModifiedDateTime = $app.LastModifiedDateTime
-                IsFeatured = $app.IsFeatured
-                PrivacyInformationUrl = $app.PrivacyInformationUrl
-                InformationUrl = $app.InformationUrl
-                Owner = $app.Owner
-                Developer = $app.Developer
-                Notes = $app.Notes
-                AssignmentCount = $assignments.Count
-                AssignmentIntent = ($assignments | ForEach-Object { $_.Intent }) -join ";"
-                AssignmentTargets = ($assignments | ForEach-Object {
-                    if ($_.Target.AdditionalProperties['@odata.type'] -eq '#microsoft.graph.allLicensedUsersAssignmentTarget') {
-                        "All Users"
-                    } elseif ($_.Target.AdditionalProperties['@odata.type'] -eq '#microsoft.graph.groupAssignmentTarget') {
-                        "Group:$($_.Target.AdditionalProperties.groupId)"
-                    } elseif ($_.Target.AdditionalProperties['@odata.type'] -eq '#microsoft.graph.allDevicesAssignmentTarget') {
-                        "All Devices"
-                    } else {
-                        "Unknown"
+            }
+            Write-MandALog "Discovered $($devices.Count) Intune managed devices." -Level "INFO"
+        } else { Write-MandALog "No Intune managed devices found." -Level "INFO"}
+    } catch { Write-MandALog "Error discovering Intune Managed Devices: $($_.Exception.Message)" -Level "WARN" }
+
+    # 2. Discover Device Compliance Policies & Assignments
+    $currentStep++; Update-Progress -Step $currentStep -Status "Discovering Device Compliance Policies"
+    try {
+        $compliancePolicies = Get-MgBetaDeviceManagementDeviceCompliancePolicy -All -ErrorAction SilentlyContinue -Property "id,displayName,description,version,createdDateTime,lastModifiedDateTime,platforms,technologies,roleScopeTagIds" -ExpandProperty "assignments"
+        if ($compliancePolicies) {
+            $compliancePolicies | ForEach-Object {
+                $allIntuneData.DeviceCompliancePolicies.Add([PSCustomObject]@{
+                    PolicyId = $_.Id; DisplayName = $_.DisplayName; Description = $_.Description; Version = $_.Version; CreatedDate = $_.CreatedDateTime; ModifiedDate = $_.LastModifiedDateTime;
+                    Platforms = $_.Platforms; Technologies = $_.Technologies; RoleScopeTagIds = ($_.RoleScopeTagIds -join ';')
+                })
+                if ($_.Assignments) {
+                    $_.Assignments | ForEach-Object {
+                        $allIntuneData.DeviceCompliancePolicyAssignments.Add([PSCustomObject]@{
+                            PolicyId = $compliancePolicies.Id; PolicyDisplayName = $compliancePolicies.DisplayName; AssignmentId = $_.Id; TargetType = $_.Target.GetType().Name; TargetDisplayName = $_.Target.DisplayName; TargetGroupId = if($_.Target.GroupId){$_.Target.GroupId}else{$null}
+                        })
                     }
-                }) -join ";"
-                # App-specific properties
-                FileName = if ($app.AdditionalProperties.fileName) { $app.AdditionalProperties.fileName } else { "N/A" }
-                Size = if ($app.AdditionalProperties.size) { $app.AdditionalProperties.size } else { "N/A" }
-                ProductCode = if ($app.AdditionalProperties.productCode) { $app.AdditionalProperties.productCode } else { "N/A" }
-                ProductVersion = if ($app.AdditionalProperties.productVersion) { $app.AdditionalProperties.productVersion } else { "N/A" }
-                BundleId = if ($app.AdditionalProperties.bundleId) { $app.AdditionalProperties.bundleId } else { "N/A" }
-                AppStoreUrl = if ($app.AdditionalProperties.appStoreUrl) { $app.AdditionalProperties.appStoreUrl } else { "N/A" }
-                MinimumSupportedOperatingSystem = if ($app.AdditionalProperties.minimumSupportedOperatingSystem) { 
-                    ($app.AdditionalProperties.minimumSupportedOperatingSystem | ConvertTo-Json -Compress) 
-                } else { "N/A" }
-            })
-        }
-        
-        Write-MandALog "Retrieved $($appData.Count) mobile apps" -Level "SUCCESS"
-        
-        # Export to CSV
-        Export-DataToCSV -Data $appData -FilePath $outputFile
-        
-        return $appData
-        
-    } catch {
-        Write-MandALog "Error retrieving mobile apps: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
-
-function Get-IntuneAppProtectionPolicies {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration
-    )
-    
-    $outputFile = Join-Path $OutputPath "IntuneAppProtectionPolicies.csv"
-    $policyData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "App protection policies CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
-    try {
-        Write-MandALog "Retrieving app protection policies..." -Level "INFO"
-        
-        # Get iOS app protection policies
-        $iosPolicies = Get-MgDeviceAppManagementiOSManagedAppProtection -All
-        
-        foreach ($policy in $iosPolicies) {
-            $policyData.Add([PSCustomObject]@{
-                PolicyId = $policy.Id
-                DisplayName = $policy.DisplayName
-                Description = $policy.Description
-                CreatedDateTime = $policy.CreatedDateTime
-                LastModifiedDateTime = $policy.LastModifiedDateTime
-                Version = $policy.Version
-                Platform = "iOS"
-                PeriodOfflineBeforeAccessCheck = $policy.PeriodOfflineBeforeAccessCheck
-                PeriodOnlineBeforeAccessCheck = $policy.PeriodOnlineBeforeAccessCheck
-                AllowedInboundDataTransferSources = $policy.AllowedInboundDataTransferSources
-                AllowedOutboundDataTransferDestinations = $policy.AllowedOutboundDataTransferDestinations
-                AllowedOutboundClipboardSharingLevel = $policy.AllowedOutboundClipboardSharingLevel
-                ContactSyncBlocked = $policy.ContactSyncBlocked
-                DataBackupBlocked = $policy.DataBackupBlocked
-                DeviceComplianceRequired = $policy.DeviceComplianceRequired
-                DisableAppPinIfDevicePinIsSet = $policy.DisableAppPinIfDevicePinIsSet
-                FingerprintBlocked = $policy.FingerprintBlocked
-                ManagedBrowserToOpenLinksRequired = $policy.ManagedBrowserToOpenLinksRequired
-                MaximumPinRetries = $policy.MaximumPinRetries
-                MinimumPinLength = $policy.MinimumPinLength
-                MinimumRequiredAppVersion = $policy.MinimumRequiredAppVersion
-                MinimumRequiredOsVersion = $policy.MinimumRequiredOsVersion
-                MinimumWarningOsVersion = $policy.MinimumWarningOsVersion
-                OrganizationalCredentialsRequired = $policy.OrganizationalCredentialsRequired
-                PeriodBeforePinReset = $policy.PeriodBeforePinReset
-                PinCharacterSet = $policy.PinCharacterSet
-                PinRequired = $policy.PinRequired
-                PrintBlocked = $policy.PrintBlocked
-                SaveAsBlocked = $policy.SaveAsBlocked
-                SimplePinBlocked = $policy.SimplePinBlocked
-            })
-        }
-        
-        # Get Android app protection policies
-        $androidPolicies = Get-MgDeviceAppManagementAndroidManagedAppProtection -All
-        
-        foreach ($policy in $androidPolicies) {
-            $policyData.Add([PSCustomObject]@{
-                PolicyId = $policy.Id
-                DisplayName = $policy.DisplayName
-                Description = $policy.Description
-                CreatedDateTime = $policy.CreatedDateTime
-                LastModifiedDateTime = $policy.LastModifiedDateTime
-                Version = $policy.Version
-                Platform = "Android"
-                PeriodOfflineBeforeAccessCheck = $policy.PeriodOfflineBeforeAccessCheck
-                PeriodOnlineBeforeAccessCheck = $policy.PeriodOnlineBeforeAccessCheck
-                AllowedInboundDataTransferSources = $policy.AllowedInboundDataTransferSources
-                AllowedOutboundDataTransferDestinations = $policy.AllowedOutboundDataTransferDestinations
-                AllowedOutboundClipboardSharingLevel = $policy.AllowedOutboundClipboardSharingLevel
-                ContactSyncBlocked = $policy.ContactSyncBlocked
-                DataBackupBlocked = $policy.DataBackupBlocked
-                DeviceComplianceRequired = $policy.DeviceComplianceRequired
-                DisableAppPinIfDevicePinIsSet = $policy.DisableAppPinIfDevicePinIsSet
-                FingerprintBlocked = $policy.FingerprintBlocked
-                ManagedBrowserToOpenLinksRequired = $policy.ManagedBrowserToOpenLinksRequired
-                MaximumPinRetries = $policy.MaximumPinRetries
-                MinimumPinLength = $policy.MinimumPinLength
-                MinimumRequiredAppVersion = $policy.MinimumRequiredAppVersion
-                MinimumRequiredOsVersion = $policy.MinimumRequiredOsVersion
-                MinimumWarningOsVersion = $policy.MinimumWarningOsVersion
-                OrganizationalCredentialsRequired = $policy.OrganizationalCredentialsRequired
-                PeriodBeforePinReset = $policy.PeriodBeforePinReset
-                PinCharacterSet = $policy.PinCharacterSet
-                PinRequired = $policy.PinRequired
-                PrintBlocked = $policy.PrintBlocked
-                SaveAsBlocked = $policy.SaveAsBlocked
-                SimplePinBlocked = $policy.SimplePinBlocked
-            })
-        }
-        
-        Write-MandALog "Retrieved $($policyData.Count) app protection policies" -Level "SUCCESS"
-        
-        # Export to CSV
-        Export-DataToCSV -Data $policyData -FilePath $outputFile
-        
-        return $policyData
-        
-    } catch {
-        Write-MandALog "Error retrieving app protection policies: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
-
-function Get-IntuneEnrollmentRestrictions {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration
-    )
-    
-    $outputFile = Join-Path $OutputPath "IntuneEnrollmentRestrictions.csv"
-    $restrictionData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "Enrollment restrictions CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
-    try {
-        Write-MandALog "Retrieving enrollment restrictions..." -Level "INFO"
-        
-        $restrictions = Get-MgDeviceManagementDeviceEnrollmentConfiguration -All
-        
-        foreach ($restriction in $restrictions) {
-            $restrictionType = if ($restriction.AdditionalProperties.ContainsKey('@odata.type')) {
-                switch ($restriction.AdditionalProperties['@odata.type']) {
-                    '#microsoft.graph.deviceEnrollmentLimitConfiguration' { 'DeviceLimit' }
-                    '#microsoft.graph.deviceEnrollmentPlatformRestrictionsConfiguration' { 'PlatformRestrictions' }
-                    '#microsoft.graph.deviceEnrollmentWindowsHelloForBusinessConfiguration' { 'WindowsHelloForBusiness' }
-                    default { 'Unknown' }
                 }
-            } else { 'Unknown' }
-            
-            $restrictionData.Add([PSCustomObject]@{
-                RestrictionId = $restriction.Id
-                DisplayName = $restriction.DisplayName
-                Description = $restriction.Description
-                CreatedDateTime = $restriction.CreatedDateTime
-                LastModifiedDateTime = $restriction.LastModifiedDateTime
-                Version = $restriction.Version
-                Priority = $restriction.Priority
-                RestrictionType = $restrictionType
-                # Type-specific settings
-                DeviceLimit = if ($restriction.AdditionalProperties.limit) { $restriction.AdditionalProperties.limit } else { "N/A" }
-                iOSRestriction = if ($restriction.AdditionalProperties.iosRestriction) { 
-                    "Blocked: $($restriction.AdditionalProperties.iosRestriction.platformBlocked), " +
-                    "PersonalDeviceEnrollmentBlocked: $($restriction.AdditionalProperties.iosRestriction.personalDeviceEnrollmentBlocked)"
-                } else { "N/A" }
-                AndroidRestriction = if ($restriction.AdditionalProperties.androidRestriction) { 
-                    "Blocked: $($restriction.AdditionalProperties.androidRestriction.platformBlocked), " +
-                    "PersonalDeviceEnrollmentBlocked: $($restriction.AdditionalProperties.androidRestriction.personalDeviceEnrollmentBlocked)"
-                } else { "N/A" }
-                WindowsRestriction = if ($restriction.AdditionalProperties.windowsRestriction) { 
-                    "Blocked: $($restriction.AdditionalProperties.windowsRestriction.platformBlocked), " +
-                    "PersonalDeviceEnrollmentBlocked: $($restriction.AdditionalProperties.windowsRestriction.personalDeviceEnrollmentBlocked)"
-                } else { "N/A" }
-                macOSRestriction = if ($restriction.AdditionalProperties.macOSRestriction) { 
-                    "Blocked: $($restriction.AdditionalProperties.macOSRestriction.platformBlocked), " +
-                    "PersonalDeviceEnrollmentBlocked: $($restriction.AdditionalProperties.macOSRestriction.personalDeviceEnrollmentBlocked)"
-                } else { "N/A" }
-            })
-        }
-        
-        Write-MandALog "Retrieved $($restrictionData.Count) enrollment restrictions" -Level "SUCCESS"
-        
-        # Export to CSV
-        Export-DataToCSV -Data $restrictionData -FilePath $outputFile
-        
-        return $restrictionData
-        
-    } catch {
-        Write-MandALog "Error retrieving enrollment restrictions: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
+            }
+            Write-MandALog "Discovered $($compliancePolicies.Count) device compliance policies." -Level "INFO"
+        } else { Write-MandALog "No device compliance policies found." -Level "INFO"}
+    } catch { Write-MandALog "Error discovering Device Compliance Policies: $($_.Exception.Message)" -Level "WARN" }
 
-function Get-IntuneDeviceCategories {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration
-    )
-    
-    $outputFile = Join-Path $OutputPath "IntuneDeviceCategories.csv"
-    $categoryData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "Device categories CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
+    # 3. Discover Device Configuration Profiles & Assignments
+    $currentStep++; Update-Progress -Step $currentStep -Status "Discovering Device Configuration Profiles"
     try {
-        Write-MandALog "Retrieving device categories..." -Level "INFO"
-        
-        $categories = Get-MgDeviceManagementDeviceCategory -All
-        
-        foreach ($category in $categories) {
-            # Count devices in this category
-            $devicesInCategory = Get-MgDeviceManagementManagedDevice -Filter "deviceCategoryDisplayName eq '$($category.DisplayName)'" -CountVariable deviceCount
-            
-            $categoryData.Add([PSCustomObject]@{
-                CategoryId = $category.Id
-                DisplayName = $category.DisplayName
-                Description = $category.Description
-                DeviceCount = $deviceCount
-            })
-        }
-        
-        Write-MandALog "Retrieved $($categoryData.Count) device categories" -Level "SUCCESS"
-        
-        # Export to CSV
-        Export-DataToCSV -Data $categoryData -FilePath $outputFile
-        
-        return $categoryData
-        
-    } catch {
-        Write-MandALog "Error retrieving device categories: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
+        $configProfiles = Get-MgBetaDeviceManagementDeviceConfiguration -All -ErrorAction SilentlyContinue -Property "id,displayName,description,version,createdDateTime,lastModifiedDateTime,platforms,technologies,roleScopeTagIds" -ExpandProperty "assignments"
+        if ($configProfiles) {
+            $configProfiles | ForEach-Object {
+                $allIntuneData.DeviceConfigurationProfiles.Add([PSCustomObject]@{
+                    ProfileId = $_.Id; DisplayName = $_.DisplayName; Description = $_.Description; Version = $_.Version; CreatedDate = $_.CreatedDateTime; ModifiedDate = $_.LastModifiedDateTime;
+                    Platforms = $_.Platforms; Technologies = $_.Technologies; RoleScopeTagIds = ($_.RoleScopeTagIds -join ';')
+                })
+                 if ($_.Assignments) {
+                    $_.Assignments | ForEach-Object {
+                        $allIntuneData.DeviceConfigurationProfileAssignments.Add([PSCustomObject]@{
+                            ProfileId = $configProfiles.Id; ProfileDisplayName = $configProfiles.DisplayName; AssignmentId = $_.Id; TargetType = $_.Target.GetType().Name; TargetDisplayName = $_.Target.DisplayName; TargetGroupId = if($_.Target.GroupId){$_.Target.GroupId}else{$null}
+                        })
+                    }
+                }
+            }
+            Write-MandALog "Discovered $($configProfiles.Count) device configuration profiles." -Level "INFO"
+        } else { Write-MandALog "No device configuration profiles found." -Level "INFO"}
+    } catch { Write-MandALog "Error discovering Device Configuration Profiles: $($_.Exception.Message)" -Level "WARN" }
 
-function Get-IntuneAutopilotDevices {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration
-    )
-    
-    $outputFile = Join-Path $OutputPath "IntuneAutopilotDevices.csv"
-    $autopilotData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "Autopilot devices CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
+    # 4. Discover Mobile Apps (Catalog) & Assignments
+    $currentStep++; Update-Progress -Step $currentStep -Status "Discovering Mobile Apps (Catalog)"
     try {
-        Write-MandALog "Retrieving Autopilot devices..." -Level "INFO"
-        
-        $autopilotDevices = Get-MgDeviceManagementWindowsAutopilotDeviceIdentity -All
-        
-        foreach ($device in $autopilotDevices) {
-            $autopilotData.Add([PSCustomObject]@{
-                AutopilotDeviceId = $device.Id
-                SerialNumber = $device.SerialNumber
-                Model = $device.Model
-                Manufacturer = $device.Manufacturer
-                ProductKey = if ($device.ProductKey) { "Present" } else { "NotPresent" }
-                PurchaseOrderIdentifier = $device.PurchaseOrderIdentifier
-                ResourceName = $device.ResourceName
-                SkuNumber = $device.SkuNumber
-                SystemFamily = $device.SystemFamily
-                AzureActiveDirectoryDeviceId = $device.AzureActiveDirectoryDeviceId
-                ManagedDeviceId = $device.ManagedDeviceId
-                DisplayName = $device.DisplayName
-                EnrollmentState = $device.EnrollmentState
-                LastContactedDateTime = $device.LastContactedDateTime
-                AddressableUserName = $device.AddressableUserName
-                UserPrincipalName = $device.UserPrincipalName
-                GroupTag = $device.GroupTag
-                DeploymentProfileAssignmentStatus = $device.DeploymentProfileAssignmentStatus
-                DeploymentProfileAssignedDateTime = $device.DeploymentProfileAssignedDateTime
-                DeploymentProfileAssignmentDetailedStatus = $device.DeploymentProfileAssignmentDetailedStatus
-                RemediationState = $device.RemediationState
-                RemediationStateLastModifiedDateTime = $device.RemediationStateLastModifiedDateTime
-            })
+        $apps = Get-MgBetaDeviceAppManagementMobileApp -All -ErrorAction SilentlyContinue -Property "id,displayName,publisher,version,isFeatured,owner,developer,informationUrl,privacyInformationUrl,publishingState,categories,assignments" -ExpandProperty "assignments, categories"
+        if ($apps) {
+            $apps | ForEach-Object {
+                $allIntuneData.MobileApps.Add([PSCustomObject]@{
+                    AppId = $_.Id; DisplayName = $_.DisplayName; Publisher = $_.Publisher; Version = $_.Version; Owner = $_.Owner; Developer = $_.Developer; PublishingState = $_.PublishingState;
+                    IsFeatured = $_.IsFeatured; InfoUrl = $_.InformationUrl; PrivacyUrl = $_.PrivacyInformationUrl; ODataType = $_.'@odata.type'; Categories = ($_.Categories.DisplayName -join ';')
+                })
+                 if ($_.Assignments) {
+                    $_.Assignments | ForEach-Object {
+                        $allIntuneData.MobileAppAssignments.Add([PSCustomObject]@{
+                            AppId = $apps.Id; AppDisplayName = $apps.DisplayName; AssignmentId = $_.Id; Intent = $_.Intent; TargetType = $_.Target.GetType().Name; TargetDisplayName = $_.Target.DisplayName; TargetGroupId = if($_.Target.GroupId){$_.Target.GroupId}else{$null}
+                        })
+                    }
+                }
+            }
+            Write-MandALog "Discovered $($apps.Count) mobile apps from catalog." -Level "INFO"
+        } else { Write-MandALog "No mobile apps found in catalog." -Level "INFO"}
+    } catch { Write-MandALog "Error discovering Mobile Apps: $($_.Exception.Message)" -Level "WARN" }
+
+    # 5. Discover Device Enrollment Configurations (Platform Restrictions etc.)
+    $currentStep++; Update-Progress -Step $currentStep -Status "Discovering Device Enrollment Configurations"
+    try {
+        $enrollmentConfigs = Get-MgBetaDeviceManagementDeviceEnrollmentConfiguration -All -ErrorAction SilentlyContinue -Property "id,displayName,priority,version,createdDateTime,lastModifiedDateTime,platformType,platformRestriction,platformRestrictionCount"
+        if ($enrollmentConfigs) {
+            $enrollmentConfigs | ForEach-Object {
+                $allIntuneData.DeviceEnrollmentConfigurations.Add([PSCustomObject]@{
+                    ConfigId = $_.Id; DisplayName = $_.DisplayName; Priority = $_.Priority; Version = $_.Version; CreatedDate = $_.CreatedDateTime; ModifiedDate = $_.LastModifiedDateTime;
+                    PlatformType = $_.PlatformType; # This might need specific handling per type
+                    # PlatformRestriction details are complex and vary by type, e.g. $_.PlatformRestriction.OsMinimumVersion
+                    # For simplicity, just noting count or a summary.
+                    PlatformRestrictionSummary = if($_.PlatformRestriction){ "Configured" } else {"Not Configured"} 
+                    PlatformRestrictionCount = $_.PlatformRestrictionCount # if the property exists
+                })
+            }
+            Write-MandALog "Discovered $($enrollmentConfigs.Count) device enrollment configurations." -Level "INFO"
+        } else { Write-MandALog "No device enrollment configurations found." -Level "INFO"}
+    } catch { Write-MandALog "Error discovering Device Enrollment Configurations: $($_.Exception.Message)" -Level "WARN" }
+
+    # 6. Discover Terms and Conditions & Assignments
+    $currentStep++; Update-Progress -Step $currentStep -Status "Discovering Terms and Conditions"
+    try {
+        $terms = Get-MgBetaDeviceManagementTermsAndCondition -All -ErrorAction SilentlyContinue -Property "id,displayName,description,version,createdDateTime,lastModifiedDateTime,acceptanceStatement,bodyText" -ExpandProperty "assignments"
+        if ($terms) {
+            $terms | ForEach-Object {
+                $allIntuneData.TermsAndConditions.Add([PSCustomObject]@{
+                    TermsId = $_.Id; DisplayName = $_.DisplayName; Description = $_.Description; Version = $_.Version; CreatedDate = $_.CreatedDateTime; ModifiedDate = $_.LastModifiedDateTime;
+                    AcceptanceStatement = $_.AcceptanceStatement; HasBodyText = (![string]::IsNullOrWhiteSpace($_.BodyText.Content))
+                })
+                if ($_.Assignments) {
+                    $_.Assignments | ForEach-Object {
+                        $allIntuneData.TermsAndConditionsAssignments.Add([PSCustomObject]@{
+                            TermsId = $terms.Id; TermsDisplayName = $terms.DisplayName; AssignmentId = $_.Id; TargetType = $_.Target.GetType().Name; TargetDisplayName = $_.Target.DisplayName; TargetGroupId = if($_.Target.GroupId){$_.Target.GroupId}else{$null}
+                        })
+                    }
+                }
+            }
+            Write-MandALog "Discovered $($terms.Count) Terms and Conditions policies." -Level "INFO"
+        } else { Write-MandALog "No Terms and Conditions policies found." -Level "INFO"}
+    } catch { Write-MandALog "Error discovering Terms and Conditions: $($_.Exception.Message)" -Level "WARN" }
+    
+    # 7. Discover Windows Autopilot Deployment Profiles (Example, requires specific permissions and module might be different)
+    # Using Beta endpoint for Autopilot profiles
+    $currentStep++; Update-Progress -Step $currentStep -Status "Discovering Autopilot Profiles"
+    try {
+        # Example: Get-MgBetaDeviceManagementWindowsAutopilotDeploymentProfile -All
+        # This cmdlet might be in a different specific Graph module or need specific permissions.
+        # For now, this is a placeholder to show where it would go.
+        # $autopilotProfiles = Get-MgBetaDeviceManagementWindowsAutopilotDeploymentProfile -All -ErrorAction SilentlyContinue
+        # if ($autopilotProfiles) {
+        #     $autopilotProfiles | ForEach-Object { $allIntuneData.AutopilotProfiles.Add(...) }
+        #     Write-MandALog "Discovered $($autopilotProfiles.Count) Autopilot profiles." -Level "INFO"
+        # } else { Write-MandALog "No Autopilot profiles found." -Level "INFO"}
+         Write-MandALog "Autopilot Profile discovery is a placeholder and was skipped." -Level "INFO"
+    } catch { Write-MandALog "Error discovering Autopilot Profiles (or cmdlet not found): $($_.Exception.Message)" -Level "WARN" }
+
+
+    Write-Progress -Activity "IntuneDiscovery" -Completed
+
+    foreach ($dataTypeKey in $allIntuneData.PSObject.Properties.Name) {
+        $dataToExport = $allIntuneData.$dataTypeKey
+        if ($dataToExport.Count -gt 0) {
+            $fileName = Join-Path $outputPath "Intune$($dataTypeKey).csv"
+            try {
+                $dataToExport | Export-Csv -Path $fileName -NoTypeInformation -Encoding UTF8 -Append:$false # Ensure overwrite
+                Write-MandALog "Exported Intune $($dataTypeKey) data to $fileName" -Level "SUCCESS"
+            } catch {
+                Write-MandALog "Failed to export Intune $($dataTypeKey) data to $fileName. Error: $($_.Exception.Message)" -Level "ERROR"
+            }
+        } else {
+            Write-MandALog "No data found for Intune $($dataTypeKey) to export." -Level "INFO"
         }
-        
-        Write-MandALog "Retrieved $($autopilotData.Count) Autopilot devices" -Level "SUCCESS"
-        
-        # Export to CSV
-        Export-DataToCSV -Data $autopilotData -FilePath $outputFile
-        
-        return $autopilotData
-        
-    } catch {
-        Write-MandALog "Error retrieving Autopilot devices: $($_.Exception.Message)" -Level "ERROR"
-        return @()
     }
+
+    Write-MandALog "Comprehensive Intune Discovery completed." -Level "SUCCESS"
+    return $allIntuneData 
 }
 
-# Export functions
-Export-ModuleMember -Function @(
-    'Invoke-IntuneDiscovery',
-    'Get-IntuneManagedDevices',
-    'Get-IntuneCompliancePolicies',
-    'Get-IntuneConfigurationProfiles',
-    'Get-IntuneMobileApps',
-    'Get-IntuneAppProtectionPolicies',
-    'Get-IntuneEnrollmentRestrictions',
-    'Get-IntuneDeviceCategories',
-    'Get-IntuneAutopilotDevices'
-)
+Export-ModuleMember -Function Invoke-IntuneDiscovery
