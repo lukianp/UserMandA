@@ -8,11 +8,11 @@
     "lastUpdated": "2024-01-15"
   },
   "environment": {
-    "outputPath": "C:\\MandADiscovery\\Output", 
-    "tempPath": "C:\\MandADiscovery\\Temp",   
-    "logLevel": "INFO", 
+    "outputPath": "C:\\MandADiscovery\\Output",
+    "tempPath": "C:\\MandADiscovery\\Temp",
+    "logLevel": "INFO",
     "maxRetries": 3,
-    "domainController": "ad.zedra.com", 
+    "domainController": "ad.zedra.com",
     "logging": {
       "useEmojis": true,
       "useColors": true,
@@ -25,17 +25,17 @@
       "preferInteractiveAuth": false,
       "proxyBypassForExchange": true,
       "maxConnectionRetries": 3,
-      "connectionTimeout": 30, 
+      "connectionTimeout": 30,
       "retryDelaySeconds": 5
     }
   },
   "authentication": {
     "useServicePrincipal": true,
     "useInteractiveAuth": false,
-    "credentialStorePath": "C:\\MandADiscovery\\Output\\credentials.config", 
+    "credentialStorePath": "C:\\MandADiscovery\\Output\\credentials.config",
     "certificateThumbprint": "",
     "tokenRefreshThreshold": 600,
-    "authenticationMethod": "ClientSecret" 
+    "authenticationMethod": "ClientSecret"
   },
   "discovery": {
     "enabledSources": [
@@ -50,7 +50,7 @@
     "skipExistingFiles": true,
     "parallelProcessing": true,
     "maxConcurrentJobs": 5,
-    "batchSize": 1000, 
+    "batchSize": 1000,
     "excludeDisabledUsers": false,
     "includeGuestUsers": true,
     "discoveryScope": {
@@ -59,17 +59,17 @@
       "includedDomains": [],
       "excludedDomains": []
     },
-    "compressionEnabled": true 
+    "compressionEnabled": true
   },
   "processing": {
-    "chunkSize": 100, 
-    "includeDisabledUsers": false, 
+    "chunkSize": 100,
+    "includeDisabledUsers": false,
     "generateWavesByDepartment": true,
-    "maxWaveSize": 50, 
+    "maxWaveSize": 50,
     "complexityThresholds": {
       "low": 3,
       "medium": 7,
-      "high": 10 
+      "high": 10
     },
     "priorityWeights": {
       "complexity": 0.3,
@@ -83,29 +83,29 @@
     }
   },
   "export": {
-    "formats": ["CSV", "JSON"], 
-    "excelEnabled": true, 
+    "formats": ["CSV", "JSON"],
+    "excelEnabled": true,
     "powerAppsOptimized": true,
     "includeMetadata": true,
     "archiveResults": true,
     "reportRetentionDays": 90,
-    "jsonExportDepth": 5, 
-    "powerAppsJsonDepth": 3, 
+    "jsonExportDepth": 5,
+    "powerAppsJsonDepth": 3,
     "exportOptions": {
       "includeRawData": false,
       "includeProcessedData": true,
       "includeSummaryReports": true,
-      "includeVisualizations": false 
+      "includeVisualizations": false
     }
   },
   "performance": {
     "memoryThresholdMB": 4096,
-    "diskSpaceThresholdGB": 10, 
-    "throttleLimit": 100, 
-    "progressUpdateInterval": 100, 
+    "diskSpaceThresholdGB": 10,
+    "throttleLimit": 100,
+    "progressUpdateInterval": 100,
     "enableCaching": true,
     "cacheExpirationMinutes": 60,
-    "enableGarbageCollection": true 
+    "enableGarbageCollection": true
   },
   "advancedSettings": {
     "debugMode": false,
@@ -115,7 +115,7 @@
     "enableAuditLog": true,
     "customModulePath": "",
     "bypassCertificateValidation": false,
-    "createPlaceholderFunctions": false 
+    "createPlaceholderFunctions": false
   },
   "notifications": {
     "enabled": false,
