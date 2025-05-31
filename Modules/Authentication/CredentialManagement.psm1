@@ -3,6 +3,11 @@
     Secure credential storage and retrieval for M&A Discovery Suite
 .DESCRIPTION
     Handles encrypted credential storage using DPAPI and certificate-based encryption
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-05-31
+    Last Modified: 2025-05-31
 #>
 
 function Get-SecureCredentials {

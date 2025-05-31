@@ -1,7 +1,10 @@
 # Module: AzureDiscovery.psm1
 # Description: Handles discovery of Azure resources.
-# Version: 1.2.1 (Fixes for export and empty collections)
-# Date: 2025-05-31
+# Author: Lukian Poleschtschuk
+# Version: 1.2.1
+# Created: 2025-05-31
+# Last Modified: 2025-05-31
+# Notes: Fixes for export and empty collections
 
 #Requires -Modules Az.Accounts, Az.Resources, Az.Compute, Az.Network, Az.PolicyInsights, Az.RecoveryServices, Az.Storage, Az.KeyVault, Az.ManagedServiceIdentity
 

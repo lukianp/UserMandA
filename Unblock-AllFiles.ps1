@@ -8,6 +8,11 @@
     Root path of the M&A Discovery Suite installation
 .EXAMPLE
     .\Unblock-AllFiles.ps1 -Path "C:\UserMigration"
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-05-31
+    Last Modified: 2025-05-31
 #>
 
 [CmdletBinding()]

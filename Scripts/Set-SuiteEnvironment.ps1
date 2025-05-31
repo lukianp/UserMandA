@@ -17,6 +17,11 @@
 .EXAMPLE
     . .\Scripts\Set-SuiteEnvironment.ps1 -ProvidedSuiteRoot "D:\CustomPath\UserMandA"
     # Uses D:\CustomPath\UserMandA as the SuiteRoot after validation.
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-05-31
+    Last Modified: 2025-05-31
 #>
 
 [CmdletBinding()]

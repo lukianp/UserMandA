@@ -71,10 +71,10 @@
 #     - Network connectivity to Microsoft Graph, Azure, and Exchange Online endpoints
 #
 # NOTES
-#     Author: Enhanced M&A Discovery Suite
+#     Author: Lukian Poleschtschuk
 #     Version: 4.0.0
-#     Created: 2025
-#     Last Modified: 2025-05-30
+#     Created: 2025-05-31
+#     Last Modified: 2025-05-31
 #     
 #     Security: Credentials encrypted with Windows DPAPI for current user context
 #     Resume: Supports re-running without recreation of existing resources
@@ -186,7 +186,7 @@ $ProgressPreference = "Continue"
 $script:ScriptInfo = @{
     Name = "Enhanced M&A Discovery Suite - App Registration"
     Version = "4.0.0"
-    Author = "M&A Discovery Team"
+    Author = "Lukian Poleschtschuk"
     RequiredPSVersion = "5.1"
     Dependencies = @(
         "Az.Accounts", 

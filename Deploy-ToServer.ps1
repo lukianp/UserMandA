@@ -9,6 +9,11 @@
     Overwrite existing files
 .EXAMPLE
     .\Deploy-ToServer.ps1 -TargetPath "C:\UserMigration" -Force
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-05-31
+    Last Modified: 2025-05-31
 #>
 
 [CmdletBinding()]

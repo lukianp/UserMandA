@@ -9,6 +9,11 @@
 .EXAMPLE
     .\QuickStart.ps1
     (Located in the Scripts directory, e.g., C:\UserMigration\Scripts\)
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 4.0.0
+    Created: 2025-05-31
+    Last Modified: 2025-05-31
 #>
 
 [CmdletBinding()]
