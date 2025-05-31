@@ -1,11 +1,11 @@
 {
   "metadata": {
-    "version": "4.0.0",
+    "version": "4.1.0",
     "companyName": "XXX",
     "projectName": "M&A Discovery Suite",
     "description": "Automated discovery and migration planning for M&A activities",
     "author": "IT Migration Team",
-    "lastUpdated": "2024-01-15"
+    "lastUpdated": "2025-06-01"
   },
   "environment": {
     "outputPath": "C:\\MandADiscovery\\Output",
@@ -13,6 +13,7 @@
     "logLevel": "INFO",
     "maxRetries": 3,
     "domainController": "ad.zedra.com",
+    "globalCatalog": "ad.zedra.com",
     "logging": {
       "useEmojis": true,
       "useColors": true,
@@ -26,7 +27,11 @@
       "proxyBypassForExchange": true,
       "maxConnectionRetries": 3,
       "connectionTimeout": 30,
-      "retryDelaySeconds": 5
+      "retryDelaySeconds": 5,
+      "haltOnConnectionError": [
+        "ActiveDirectory",
+        "Graph"
+      ]
     }
   },
   "authentication": {
