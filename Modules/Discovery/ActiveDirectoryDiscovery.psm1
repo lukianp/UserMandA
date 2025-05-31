@@ -53,7 +53,7 @@ function Get-ADUsersDataInternal {
                     Description           = $user.Description
                     DistinguishedName     = $user.DistinguishedName
                     Enabled               = $user.Enabled
-                    LastLogonDate         = if ($null -ne $user.LastLogonTimestamp -and 0 -ne $user.LastLogonTimestamp) { [datetime]::FromFileTime($user.LastLogonTimestamp) } else { $null }
+                    LastLogonDate         = if ($user.LastLogonTimestamp -ne $null -and $user.LastLogonTimestamp -ne 0) { [datetime]::FromFileTime($user.LastLogonTimestamp) } else { $null }
                     CreatedDate           = $user.whenCreated
                     ModifiedDate          = $user.whenChanged
                     EmailAddress          = $user.mail
@@ -270,10 +270,18 @@ function Get-ADSitesAndServicesDataInternal {
                     IntersiteTopologyGenerator = if ($site.PSObject.Properties['Options'] -and $site.Options -ne $null) { ($site.Options -band [Microsoft.ActiveDirectory.Management.ADReplicationSiteOptions]::IntersiteTopologyGenerator) -as [bool] } else { $null }
                     IsStaleSite             = if ($site.PSObject.Properties['Options'] -and $site.Options -ne $null) { ($site.Options -band [Microsoft.ActiveDirectory.Management.ADReplicationSiteOptions]::IsStaleSite) -as [bool] } else { $null }
                     GroupMembershipCaching  = if ($site.PSObject.Properties['Options'] -and $site.Options -ne $null) { ($site.Options -band [Microsoft.ActiveDirectory.Management.ADReplicationSiteOptions]::GroupMembershipCaching) -as [bool] } else { $null }
-                    ServersInSite           = try { (Get-ADComputer -Filter "Enabled -eq `$true -and UserAccountControl -notmatch 'WORKSTATION_TRUST_ACCOUNT|SERVER_TRUST_ACCOUNT'" -SearchBase $site.DistinguishedName -Server $domainController -ErrorAction SilentlyContinue | Measure-Object).Count } catch {0}
-                }
-                $allSiteData.Add($siteInfo)
+                        ServersInSite           = try { (Get-ADComputer -Filter "Enabled -eq `$true -and UserAccountControl -notmatch 'WORKSTATION_TRUST_ACCOUNT|SERVER_TRUST_ACCOUNT'" -SearchBase $site.DistinguishedName -Server $domainController -ErrorAction SilentlyContinue | Measure-Object).Count } catch {0}
+                    }
+                    # Assign DomainControllersInSite outside the hashtable/object
+                    $domainControllersInSiteCount = 0
+                    try {
+                        $domainControllersInSiteCount = (Get-ADDomainController -Filter * -Site $site.Name -Server $domainController -ErrorAction SilentlyContinue | Measure-Object).Count
+                    } catch {
+                        $domainControllersInSiteCount = 0
+                    }
+                    $siteInfo | Add-Member -MemberType NoteProperty -Name DomainControllersInSite -Value $domainControllersInSiteCount
             }
+            $allSiteData.Add($siteInfo)
             Export-DataToCSV -InputObject $allSiteData -FileName "ADSites.csv" -OutputPath $outputPath
             Write-MandALog "Successfully discovered and exported $($allSiteData.Count) AD Sites." -Level "SUCCESS"
         } else {
@@ -355,7 +363,7 @@ function Get-ADDNSZoneDataInternal {
     }
 
     if ($targetDnsServer) {
-        $dnsServerParams.ComputerName = $targetDnsServer
+        $dnsServerParams["ComputerName"] = $targetDnsServer
         Write-MandALog "Targeting DNS server: $targetDnsServer for DNS queries." -Level "INFO"
     } else {
         Write-MandALog "No specific DNS server targeted for DNS queries, using local or default. This might fail if not run on a DNS server or DC." -Level "WARN"
@@ -405,7 +413,7 @@ function Get-ADDNSZoneDataInternal {
                                     "MX"      { "Preference=$($record.RecordData.Preference); Exchange=$($record.RecordData.MailExchange)" }
                                     "NS"      { $record.RecordData.NameServer }
                                     "PTR"     { $record.RecordData.PtrDomainName }
-                                    "SOA"     { "PrimaryServer=$($record.RecordData.PrimaryServer); ResponsiblePerson=$($record.RecordData.ResponsiblePerson); SerialNumber=$($record.RecordData.SerialNumber)"}
+                                    "SOA"     { "PrimaryServer=$($record.RecordData.PrimaryServer); ResponsiblePerson=$($record.RecordData.ResponsiblePerson); SerialNumber=$($record.RecordData.SerialNumber)" }
                                     "SRV"     { "DomainName=$($record.RecordData.DomainName); Port=$($record.RecordData.Port); Priority=$($record.RecordData.Priority); Weight=$($record.RecordData.Weight)" }
                                     "TXT"     { ($record.RecordData.DescriptiveText -join '; ') }
                                     default   { "Complex or Unhandled Type: $($record.RecordType)" }
@@ -479,7 +487,7 @@ function Invoke-ActiveDirectoryDiscovery {
         # e.g., $discoveredData.GPOs = Get-ADGPOsInternal -Configuration $Configuration
         
     } catch {
-        Write-MandALog "An error occurred during the Active Directory Discovery Phase: $($_.Exception.Message)" -Level "CRITICAL_ERROR"
+        Write-MandALog "An error occurred during the Active Directory Discovery Phase: $($_.Exception.Message)" -Level "ERROR" # MODIFIED HERE
         $overallStatus = $false
     }
 
