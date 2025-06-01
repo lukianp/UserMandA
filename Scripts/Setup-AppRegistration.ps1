@@ -1048,118 +1048,74 @@ function Save-EnhancedCredentials {
         [Parameter(Mandatory=$true)]
         [Microsoft.Graph.PowerShell.Models.MicrosoftGraphApplication]$AppRegistration,
         [Parameter(Mandatory=$true)]
-        $ClientSecret, 
+        $ClientSecret,
         [Parameter(Mandatory=$true)]
-        [string]$TenantIdParam 
+        [string]$TenantIdParam
     )
     
     Start-OperationTimer "CredentialStorage"
     Write-ProgressHeader "CREDENTIAL STORAGE" "Encrypting and saving authentication data"
     
     try {
-        # Ensure $ClientSecret is not null and has the SecretText property
-        if ($null -eq $ClientSecret -or -not $ClientSecret.PSObject.Properties['SecretText']) {
-            throw "ClientSecret object is invalid or missing SecretText property."
-        }
-
         Write-EnhancedLog "Preparing to save credentials..." -Level PROGRESS
         Write-EnhancedLog "  Target Path: $EncryptedOutputPath" -Level INFO
-        Write-EnhancedLog "  Encryption: Windows DPAPI (current user)" -Level INFO
         
-        if (Get-Command Set-SecureCredentials -ErrorAction SilentlyContinue) {
-            $configParam = @{ 
-                authentication = @{
-                    credentialStorePath = $EncryptedOutputPath
-                    certificateThumbprint = $null
+        # Ensure the CredentialManagement module is loaded
+        $credMgmtPath = Join-Path $script:SuiteRoot "Modules\Authentication\CredentialManagement.psm1"
+        if (-not (Get-Module -Name "CredentialManagement")) {
+            Import-Module $credMgmtPath -Force -Global
+        }
+        
+        # Prepare the configuration for the credential management module
+        $configParam = @{ 
+            authentication = @{
+                credentialStorePath = $EncryptedOutputPath
+            }
+        }
+        
+        # Calculate days until expiry
+        $daysUntilExpiry = if ($ClientSecret.EndDateTime) {
+            ($ClientSecret.EndDateTime - (Get-Date)).Days
+        } else {
+            365 # Default to 1 year if no expiry date
+        }
+        
+        Write-EnhancedLog "Using standardized credential management system..." -Level PROGRESS
+        $saveResult = Set-SecureCredentials `
+            -ClientId $AppRegistration.AppId `
+            -ClientSecret $ClientSecret.SecretText `
+            -TenantId $TenantIdParam `
+            -Configuration $configParam `
+            -ExpiryDate $ClientSecret.EndDateTime
+        
+        if ($saveResult) {
+            Write-EnhancedLog "Credentials saved successfully" -Level SUCCESS
+            
+            # Verify the file exists and has content
+            if (Test-Path $EncryptedOutputPath) {
+                $fileInfo = Get-Item $EncryptedOutputPath
+                Write-EnhancedLog "Credential file details:" -Level SUCCESS
+                Write-EnhancedLog "  Location: $($fileInfo.FullName)" -Level INFO
+                Write-EnhancedLog "  Size: $($fileInfo.Length) bytes" -Level INFO
+                Write-EnhancedLog "  Days until expiry: $daysUntilExpiry" -Level INFO
+                
+                # Test reading it back immediately
+                Write-EnhancedLog "Verifying credential file readability..." -Level PROGRESS
+                try {
+                    $testRead = Get-SecureCredentials -Configuration $configParam
+                    if ($testRead.Success -and $testRead.ClientId -eq $AppRegistration.AppId) {
+                        Write-EnhancedLog "Credential file verification successful - file is readable" -Level SUCCESS
+                    } else {
+                        Write-EnhancedLog "WARNING: Credential file saved but verification failed" -Level WARN
+                    }
+                } catch {
+                    Write-EnhancedLog "WARNING: Could not verify credential file: $($_.Exception.Message)" -Level WARN
                 }
-            }
-            
-            Write-EnhancedLog "Using M&A Discovery Suite credential management system..." -Level PROGRESS
-            $saveResult = Set-SecureCredentials -ClientId $AppRegistration.AppId -ClientSecret $ClientSecret.SecretText -TenantId $TenantIdParam -Configuration $configParam -ExpiryDate $ClientSecret.EndDateTime
-            
-            if ($saveResult) {
-                Write-EnhancedLog "Credentials saved successfully using M&A Suite system" -Level SUCCESS
             } else {
-                throw "Set-SecureCredentials returned false"
+                throw "Credential file was not created at expected location"
             }
         } else {
-            Write-EnhancedLog "Set-SecureCredentials (from CredentialManagement.psm1) not available, using direct save method..." -Level WARN
-            
-            $credentialData = @{
-                ClientId = $AppRegistration.AppId
-                ClientSecret = $ClientSecret.SecretText 
-                TenantId = $TenantIdParam 
-                CreatedDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-                ExpiryDate = $ClientSecret.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss')
-                ApplicationName = $AppRegistration.DisplayName
-            }
-            
-            $jsonData = $credentialData | ConvertTo-Json
-            
-            $secureString = ConvertTo-SecureString -String $jsonData -AsPlainText -Force
-            $encryptedData = ConvertFrom-SecureString -SecureString $secureString
-            
-            $credentialDir = Split-Path $EncryptedOutputPath -Parent
-            if (-not (Test-Path $credentialDir)) {
-                New-Item -Path $credentialDir -ItemType Directory -Force | Out-Null
-                Write-EnhancedLog "Created credential directory: $credentialDir" -Level SUCCESS
-            }
-            
-            $encryptedData | Set-Content -Path $EncryptedOutputPath -Encoding UTF8
-            Write-EnhancedLog "Credentials saved directly to: $EncryptedOutputPath" -Level SUCCESS
-        }
-        
-        if (Test-Path $EncryptedOutputPath) {
-            $fileInfo = Get-Item $EncryptedOutputPath
-            Write-EnhancedLog "Credential file created successfully" -Level SUCCESS
-            Write-EnhancedLog "  File size: $($fileInfo.Length) bytes" -Level INFO
-            Write-EnhancedLog "  Location: $($fileInfo.FullName)" -Level INFO
-        } else {
-            throw "Credential file was not created at expected location"
-        }
-        
-        $backupPath = $null 
-        try {
-            $encryptedDir_backup = Split-Path $EncryptedOutputPath -Parent # Renamed
-            $backupDir = Join-Path $encryptedDir_backup "Backups"
-            if (-not (Test-Path $backupDir)) {
-                New-Item -Path $backupDir -ItemType Directory -Force | Out-Null
-            }
-            
-            $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-            $backupPath = Join-Path $backupDir "credentials_backup_$timestamp.config"
-            Copy-Item -Path $EncryptedOutputPath -Destination $backupPath -ErrorAction Stop
-            
-            $backupFiles = Get-ChildItem -Path $backupDir -Filter "credentials_backup_*.config" | Sort-Object CreationTime -Descending
-            if ($backupFiles.Count -gt 5) {
-                $backupFiles | Select-Object -Skip 5 | Remove-Item -Force
-                Write-EnhancedLog "Cleaned up old backup files (kept 5 most recent)" -Level INFO
-            }
-            
-            Write-EnhancedLog "Created backup copy: $(Split-Path $backupPath -Leaf)" -Level SUCCESS
-        } catch {
-            Write-EnhancedLog "Could not create backup copy: $($_.Exception.Message)" -Level WARN
-        }
-        
-        try {
-            $summaryData = @{
-                ApplicationName = $AppRegistration.DisplayName
-                ClientId = $AppRegistration.AppId
-                TenantId = $TenantIdParam 
-                CreatedDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-                ExpiryDate = $ClientSecret.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss')
-                DaysUntilExpiry = ($ClientSecret.EndDateTime - (Get-Date)).Days
-                CredentialFile = $EncryptedOutputPath
-                BackupLocation = if ($backupPath) { Split-Path $backupPath -Parent } else { "N/A" }
-                ScriptVersion = $script:ScriptInfo.Version
-            }
-            
-            $summaryPath = Join-Path (Split-Path $EncryptedOutputPath -Parent) "credential_summary.json"
-            $summaryData | ConvertTo-Json -Depth 2 | Set-Content -Path $summaryPath -Encoding UTF8
-            Write-EnhancedLog "Created credential summary file: credential_summary.json" -Level SUCCESS
-            
-        } catch {
-            Write-EnhancedLog "Could not create summary file: $($_.Exception.Message)" -Level WARN
+            throw "Set-SecureCredentials returned false"
         }
         
         Stop-OperationTimer "CredentialStorage" $true
@@ -1171,6 +1127,8 @@ function Save-EnhancedCredentials {
         throw
     }
 }
+
+
 #endregion
 
 #region Enhanced Role Assignment

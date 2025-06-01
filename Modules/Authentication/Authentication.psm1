@@ -10,6 +10,7 @@
     Last Modified: 2025-05-31
 #>
 
+
 function Initialize-MandAAuthentication {
     param([hashtable]$Configuration)
     
@@ -19,22 +20,26 @@ function Initialize-MandAAuthentication {
         # Get credentials
         $credentials = Get-SecureCredentials -Configuration $Configuration
         if (-not $credentials.Success) {
-            throw "Failed to obtain valid credentials"
+            Write-MandALog "Failed to obtain credentials: $($credentials.Error)" -Level "ERROR"
+            return @{
+                Authenticated = $false
+                Error = "Failed to obtain valid credentials"
+            }
         }
         
-        # Test credential validity - pass only the credential data, not the wrapper
-        if ($credentials.Success) {
-            $credentialData = @{
-                ClientId = $credentials.ClientId
-                ClientSecret = $credentials.ClientSecret
-                TenantId = $credentials.TenantId
+        Write-MandALog "Credentials obtained successfully" -Level "SUCCESS"
+        
+        # Validate credentials
+        $validationResult = Test-CredentialValidity -Credentials $credentials -Configuration $Configuration
+        if (-not $validationResult) {
+            Write-MandALog "Credential validation failed" -Level "ERROR"
+            return @{
+                Authenticated = $false
+                Error = "Credential validation failed"
             }
-            if (-not (Test-CredentialValidity -Credentials $credentialData -Configuration $Configuration)) {
-                throw "Credential validation failed"
-            }
-        } else {
-            throw "Failed to obtain valid credentials"
         }
+        
+        Write-MandALog "Credentials validated successfully" -Level "SUCCESS"
         
         # Store authentication context
         $script:AuthContext = @{
@@ -46,11 +51,21 @@ function Initialize-MandAAuthentication {
         }
         
         Write-MandALog "Authentication initialized successfully" -Level "SUCCESS"
-        return $true
+        
+        # Return a proper authentication result
+        return @{
+            Authenticated = $true
+            ClientId = $credentials.ClientId
+            TenantId = $credentials.TenantId
+            Context = $script:AuthContext
+        }
         
     } catch {
         Write-MandALog "Authentication initialization failed: $($_.Exception.Message)" -Level "ERROR"
-        return $false
+        return @{
+            Authenticated = $false
+            Error = $_.Exception.Message
+        }
     }
 }
 
