@@ -5,8 +5,9 @@
     Establishes a single global context object ($global:MandA) containing
     all required paths and the loaded, validated configuration.
     Uses 'throw' for critical errors to halt calling scripts.
+    Improved SuiteRoot auto-detection.
 .NOTES
-    Version: 3.0.1
+    Version: 3.0.2
     Author: Gemini
     Date: 2025-06-01
 #>
@@ -47,21 +48,29 @@ try {
             $SuiteRoot = Resolve-Path $defaultPath | Select-Object -ExpandProperty Path
             $determinedBy = "default path ('$defaultPath')"
         } else {
-            $currentScriptPath = $null
-            if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') {
-                $currentScriptPath = $MyInvocation.MyCommand.Path
-            } elseif ($PSScriptRoot) { # Fallback for when sourced or in ISE
-                $currentScriptPath = Join-Path $PSScriptRoot $MyInvocation.MyCommand.Name
-            } else {
-                 throw "CRITICAL: Cannot determine PSScriptRoot or MyInvocation.MyCommand.Path to auto-detect SuiteRoot."
+            # Determine the path of the Set-SuiteEnvironment.ps1 script itself
+            $scriptFullPath = $MyInvocation.MyCommand.Path
+            if ([string]::IsNullOrWhiteSpace($scriptFullPath)) {
+                # Fallback for scenarios where MyCommand.Path might be empty
+                if ($PSScriptRoot -and $MyInvocation.MyCommand.Name) {
+                    $scriptFullPath = Join-Path $PSScriptRoot $MyInvocation.MyCommand.Name
+                } elseif ($PSScriptRoot) { 
+                     $scriptFullPath = Join-Path $PSScriptRoot "Set-SuiteEnvironment.ps1" # Assume it's being sourced from Scripts dir
+                     Write-Warning "MyInvocation.MyCommand.Path was empty. Assuming Set-SuiteEnvironment.ps1 is in caller's PSScriptRoot: '$scriptFullPath'."
+                } else {
+                    throw "CRITICAL: Cannot reliably determine the path of Set-SuiteEnvironment.ps1 for auto-detection of SuiteRoot. Both MyInvocation.MyCommand.Path and PSScriptRoot are problematic."
+                }
             }
-            $autoDetectedPath = Split-Path (Split-Path $currentScriptPath -Parent) -Parent # Assumes Set-SuiteEnvironment.ps1 is in Scripts directory
+            
+            # Assuming Set-SuiteEnvironment.ps1 is located in the "Scripts" subdirectory of the SuiteRoot
+            $scriptsDirCandidate = Split-Path $scriptFullPath -Parent
+            $autoDetectedPath = Split-Path $scriptsDirCandidate -Parent 
             
             if (Test-MandASuiteStructureInternal -PathToTest $autoDetectedPath) {
                 $SuiteRoot = Resolve-Path $autoDetectedPath | Select-Object -ExpandProperty Path
-                $determinedBy = "auto-detection relative to script location ('$autoDetectedPath')"
+                $determinedBy = "auto-detection relative to script location ('$autoDetectedPath' from '$scriptFullPath')"
             } else {
-                throw "CRITICAL: Could not determine a valid M&A Discovery Suite root path. Tried default '$defaultPath' and auto-detection based on '$currentScriptPath'."
+                throw "CRITICAL: Could not determine a valid M&A Discovery Suite root path. Tried default '$defaultPath' and auto-detection based on script path '$scriptFullPath' (expected parent of 'Scripts' dir to be SuiteRoot: '$autoDetectedPath'). Ensure this script is in the 'Scripts' subdirectory of your suite."
             }
         }
     }
@@ -97,7 +106,7 @@ try {
     throw $errorMessage # Halt execution
 }
 
-function ConvertTo-HashtableRecursiveInternal { # Renamed for clarity
+function ConvertTo-HashtableRecursiveInternal { 
     param($obj)
     if ($obj -is [System.Management.Automation.PSCustomObject]) {
         $hash = @{}
@@ -114,15 +123,26 @@ function ConvertTo-HashtableRecursiveInternal { # Renamed for clarity
 $configHashtable = ConvertTo-HashtableRecursiveInternal $loadedConfig
 
 # Define paths
-$credentialStorePathFromConfig = $configHashtable.authentication.credentialStorePath
+$credentialStorePathFromConfig = $null
+if ($configHashtable.authentication -is [hashtable] -and $configHashtable.authentication.ContainsKey('credentialStorePath')) {
+    $credentialStorePathFromConfig = $configHashtable.authentication.credentialStorePath
+}
+
 $resolvedCredentialPath = if (-not [string]::IsNullOrWhiteSpace($credentialStorePathFromConfig) -and [System.IO.Path]::IsPathRooted($credentialStorePathFromConfig)) { 
                                 $credentialStorePathFromConfig 
                           } elseif (-not [string]::IsNullOrWhiteSpace($credentialStorePathFromConfig)) { 
                                 Join-Path $SuiteRoot $credentialStorePathFromConfig 
                           } else {
                                 Write-Warning "authentication.credentialStorePath is missing or empty in config. Defaulting to a path under SuiteRoot/Output."
-                                Join-Path $SuiteRoot "Output/credentials.config" # Fallback if not specified
+                                Join-Path $SuiteRoot "Output/credentials.config" 
                           }
+
+# Ensure critical paths from config are resolved before adding to $global:MandA.Paths
+$envOutputPath = $configHashtable.environment.outputPath
+if (-not ([System.IO.Path]::IsPathRooted($envOutputPath))) {
+    $envOutputPath = Join-Path $SuiteRoot $envOutputPath
+}
+
 
 $global:MandA = @{
     DeterminedBy = $determinedBy
@@ -146,9 +166,10 @@ $global:MandA = @{
         AppRegScript    = Join-Path $SuiteRoot "Scripts/Setup-AppRegistration.ps1"  
         ModuleCheckScript= Join-Path $SuiteRoot "Scripts/DiscoverySuiteModuleCheck.ps1" 
         
-        RawDataOutput   = Join-Path $configHashtable.environment.outputPath "Raw"
-        ProcessedDataOutput = Join-Path $configHashtable.environment.outputPath "Processed"
-        LogOutput       = Join-Path $configHashtable.environment.outputPath "Logs"
+        # Use resolved environment output path
+        RawDataOutput   = Join-Path $envOutputPath "Raw"
+        ProcessedDataOutput = Join-Path $envOutputPath "Processed"
+        LogOutput       = Join-Path $envOutputPath "Logs"
         CredentialFile  = $resolvedCredentialPath
     }
 }
@@ -159,12 +180,10 @@ if (Test-Path $configValidationModulePath -PathType Leaf) {
     try {
         Import-Module $configValidationModulePath -Force -Global
         if (Get-Command Test-SuiteConfigurationAgainstSchema -ErrorAction SilentlyContinue) {
-            # Use Write-Host for direct feedback during this setup phase, as Write-MandALog might not be fully available yet
             Write-Host "INFO: Validating configuration against schema..." -ForegroundColor Gray
             $validationResult = Test-SuiteConfigurationAgainstSchema -ConfigurationObject $global:MandA.Config -SchemaPath $global:MandA.Paths.ConfigSchema
             if (-not $validationResult.IsValid) {
                 Write-Warning "Configuration validation against schema failed. See previous errors. The suite might behave unexpectedly."
-                # Consider if this should be a 'throw' for critical environments
             } else {
                  Write-Host "INFO: Configuration successfully validated against schema." -ForegroundColor Green
             }
@@ -178,7 +197,7 @@ if (Test-Path $configValidationModulePath -PathType Leaf) {
     Write-Warning "ConfigurationValidation.psm1 not found at '$configValidationModulePath'. Runtime config schema validation skipped."
 }
 
-Write-Host "M&A Discovery Suite Environment Initialized (v4.2)" -ForegroundColor Cyan
+Write-Host "M&A Discovery Suite Environment Initialized (v3.0.2)" -ForegroundColor Cyan
 Write-Host ("=" * 65) -ForegroundColor Cyan
 Write-Host "Suite Root Path : $($global:MandA.Paths.SuiteRoot)" -ForegroundColor Green
 Write-Host "Determined By   : $($global:MandA.DeterminedBy)" -ForegroundColor DarkGray
