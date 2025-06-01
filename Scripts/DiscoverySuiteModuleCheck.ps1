@@ -17,7 +17,7 @@
     Optional. Switch to suppress individual confirmation prompts when -AutoFix is also used.
     Effectively makes -AutoFix non-interactive for PSGallery module installations.
 .NOTES
-    Version: 2.0.3
+    Version: 2.0.4
     Author: Gemini & User
     Date: 2025-06-01
 
@@ -103,23 +103,84 @@ $Results = [System.Collections.Generic.List[PSObject]]::new()
 
 #region Helper Functions
 function Write-SectionHeader { param([string]$Header) Write-Host "`n"; Write-Host ("-" * ($Header.Length + 4)) -FG DarkCyan; Write-Host "  $Header  " -FG Cyan; Write-Host ("-" * ($Header.Length + 4)) -FG DarkCyan }
+
 function Install-OrUpdateModuleViaPSGallery {
-    [CmdletBinding(SupportsShouldProcess = $true)] param([string]$ModuleNameForInstall, [version]$ReqVersion, [ref]$ModuleResultToUpdateRef, [bool]$AttemptAutoFix, [bool]$AttemptSilentFix)
-    $installModuleParams = @{ Name = $ModuleNameForInstall; MinimumVersion = $ReqVersion.ToString(); Scope = "CurrentUser"; AllowClobber = $true; AcceptLicense = $true; ErrorAction = "Stop" }
+    [CmdletBinding(SupportsShouldProcess = $true)] 
+    param(
+        [Parameter(Mandatory = $true)] [string]$ModuleNameForInstall,
+        [Parameter(Mandatory = $true)] [version]$ReqVersion,
+        [Parameter(Mandatory = $true)] [ref]$ModuleResultToUpdateRef,
+        [Parameter(Mandatory = $true)] [bool]$AttemptAutoFix,
+        [Parameter(Mandatory = $true)] [bool]$AttemptSilentFix
+    )
+    
+    $installModuleParams = @{
+        Name            = $ModuleNameForInstall
+        MinimumVersion  = $ReqVersion.ToString() 
+        Scope           = "CurrentUser"
+        AllowClobber    = $true
+        AcceptLicense   = $true 
+        ErrorAction     = "Stop"
+    }
     if ($AttemptAutoFix) { $installModuleParams.Force = $true }
+
     $shouldProceedWithInstall = $false
-    if ($AttemptAutoFix -and $AttemptSilentFix) { $shouldProceedWithInstall = $true; Write-Host "  Attempting to install/update module '$ModuleNameForInstall' (Silent AutoFix)..." -FG Magenta
-    } elseif ($AttemptAutoFix) { if ($PSCmdlet.ShouldProcess($ModuleNameForInstall, "Install/Update to minimum version $($ReqVersion.ToString())")) { $shouldProceedWithInstall = $true; Write-Host "  Attempting to install/update module '$ModuleNameForInstall'..." -FG Magenta } else { $ModuleResultToUpdateRef.Value.Notes += " User skipped install/update."; Write-Host "  Skipping install/update for '$ModuleNameForInstall'." -FG Yellow }
-    } else { $ModuleResultToUpdateRef.Value.Notes += " AutoFix not enabled."; Write-Host "  AutoFix not enabled for '$ModuleNameForInstall'." -FG Yellow; return $false }
+    # Simplified message for ShouldProcess
+    $shouldProcessMessage = "Install/Update module '$ModuleNameForInstall' to minimum version $($ReqVersion.ToString()) from PowerShell Gallery?"
+
+    if ($AttemptAutoFix -and $AttemptSilentFix) {
+        $shouldProceedWithInstall = $true
+        Write-Host "  Attempting to install/update module '$ModuleNameForInstall' (Silent AutoFix)..." -FG Magenta
+    } elseif ($AttemptAutoFix) {
+        if ($PSCmdlet.ShouldProcess($ModuleNameForInstall, $shouldProcessMessage)) { # Using simplified message
+            $shouldProceedWithInstall = $true
+            Write-Host "  Attempting to install/update module '$ModuleNameForInstall'..." -FG Magenta
+        } else {
+            $ModuleResultToUpdateRef.Value.Notes += " User skipped install/update."
+            Write-Host "  Skipping install/update for '$ModuleNameForInstall'." -FG Yellow
+        }
+    } else {
+        $ModuleResultToUpdateRef.Value.Notes += " AutoFix not enabled."
+        Write-Host "  AutoFix not enabled for '$ModuleNameForInstall'." -FG Yellow
+        return $false
+    }
+
     if (-not $shouldProceedWithInstall) { return $false }
+
     try {
-        if (-not (Get-Command Install-Module -EA SilentlyContinue)) { $ModuleResultToUpdateRef.Value.Status = "Install Failed (PowerShellGet Missing)"; $ModuleResultToUpdateRef.Value.Notes = "Install-Module not found."; Write-Host "  Status: $($ModuleResultToUpdateRef.Value.Status)" -FG Red; Return $false }
+        if (-not (Get-Command Install-Module -EA SilentlyContinue)) {
+            $ModuleResultToUpdateRef.Value.Status = "Install Failed (PowerShellGet Missing)"
+            $ModuleResultToUpdateRef.Value.Notes = "Install-Module not found."
+            Write-Host "  Status: $($ModuleResultToUpdateRef.Value.Status)" -FG Red
+            Return $false
+        }
         $psGallery = Get-PSRepository -Name PSGallery -EA SilentlyContinue
-        if ($null -eq $psGallery) { Write-Warning "PSGallery repository not found. Attempting to register..."; try { Register-PSRepository -Default -InstallationPolicy Trusted -EA Stop; $psGallery = Get-PSRepository -Name PSGallery -EA SilentlyContinue; if ($null -eq $psGallery) { $ModuleResultToUpdateRef.Value.Notes += " PSGallery registration failed." } else { Write-Host "  PSGallery registered." -FG Green } } catch { $ModuleResultToUpdateRef.Value.Notes += " Error registering PSGallery: $($_.Exception.Message)" } }
-        elseif ($psGallery.InstallationPolicy -ne 'Trusted') { Write-Host "  Setting PSGallery to trusted..." -FG Magenta; Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -EA Stop; Write-Host "  PSGallery trusted." -FG Green }
-        Install-Module @installModuleParams; $ModuleResultToUpdateRef.Value.Notes = "Install/update attempted. Re-checking."; Write-Host "  Module '$ModuleNameForInstall' install/update command executed." -FG Green; Return $true 
-    } catch { $ModuleResultToUpdateRef.Value.Status = "Install/Update Failed"; $ModuleResultToUpdateRef.Value.Notes = "Error: $($_.Exception.Message)"; Write-Host "  Status: $($ModuleResultToUpdateRef.Value.Status)" -FG Red; Return $false }
+        if ($null -eq $psGallery) {
+            Write-Warning "PSGallery repository not found. Attempting to register..."
+            try {
+                Register-PSRepository -Default -InstallationPolicy Trusted -EA Stop
+                $psGallery = Get-PSRepository -Name PSGallery -EA SilentlyContinue
+                if ($null -eq $psGallery) { $ModuleResultToUpdateRef.Value.Notes += " PSGallery registration failed." }
+                else { Write-Host "  PSGallery registered." -FG Green }
+            } catch { $ModuleResultToUpdateRef.Value.Notes += " Error registering PSGallery: $($_.Exception.Message)" }
+        } elseif ($psGallery.InstallationPolicy -ne 'Trusted') {
+            Write-Host "  Setting PSGallery to trusted..." -FG Magenta
+            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -EA Stop
+            Write-Host "  PSGallery trusted." -FG Green
+        }
+        
+        Install-Module @installModuleParams 
+        $ModuleResultToUpdateRef.Value.Notes = "Install/update attempted. Re-checking."
+        Write-Host "  Module '$ModuleNameForInstall' install/update command executed." -FG Green
+        Return $true 
+    } catch {
+        $ModuleResultToUpdateRef.Value.Status = "Install/Update Failed"
+        $ModuleResultToUpdateRef.Value.Notes = "Error: $($_.Exception.Message)"
+        Write-Host "  Status: $($ModuleResultToUpdateRef.Value.Status)" -FG Red
+        Return $false
+    }
 }
+
 function Test-SingleModule {
     param([PSObject]$ModuleInfo, [bool]$AttemptAutoFix, [bool]$AttemptSilentFix)
     $moduleNameToCheck = $ModuleInfo.Name; $moduleCategory = $ModuleInfo.Category; $reqVersion = [version]$ModuleInfo.RequiredVersion; $isRSATTool = [bool]$ModuleInfo.IsRSAT
@@ -163,7 +224,7 @@ function Test-SingleModule {
 #endregion
 
 #region Main Script Body
-Write-SectionHeader "M&A Discovery Suite - PowerShell Module Dependency Check (v2.0.3)"
+Write-SectionHeader "M&A Discovery Suite - PowerShell Module Dependency Check (v2.0.4)"
 if ($AutoFix.IsPresent) { 
     if ($Silent.IsPresent) { Write-Host "AUTO-FIX MODE (SILENT): Will attempt to install/update PSGallery modules with -Force and no individual prompts." -FG Magenta } 
     else { Write-Host "AUTO-FIX MODE (INTERACTIVE): Will prompt via ShouldProcess before installing/updating each PSGallery module with -Force." -FG Magenta }
@@ -175,36 +236,13 @@ if ($ModulesToCheck.Count -eq 0) { Write-Warning "No modules to check."; if ($Ho
 foreach ($moduleDef in $ModulesToCheck) { Test-SingleModule -ModuleInfo $moduleDef -AttemptAutoFix $AutoFix.IsPresent -AttemptSilentFix $Silent.IsPresent }
 
 Write-SectionHeader "Dependency Check Summary"; $Results | Format-Table -AutoSize -Wrap
-
 $criticalIssues = $Results | Where-Object { ($_.Status -notlike "Imported Successfully*" -and $_.Status -notlike "Version OK" -and $_.Status -notlike "Import Attempted*") -and $_.Category -eq "CRITICAL REQUIRED" }
-# Corrected alias usage below:
 $otherIssues = $Results | Where-Object { ($_.Status -notlike "Imported Successfully*" -and $_.Status -notlike "Version OK" -and $_.Status -notlike "Import Attempted*") -and $_.Category -ne "CRITICAL REQUIRED" }
 $overallSuccess = $true
-
-if ($criticalIssues.Count -eq 0) { 
-    Write-Host "`nAll CRITICAL REQUIRED modules appear OK." -FG Green
-    if ($otherIssues.Count -gt 0) { Write-Host "Review warnings for other module categories." -FG Yellow }
-} else { 
-    $overallSuccess = $false; Write-Host "`nERROR: CRITICAL ISSUES FOUND:" -FG Red
-    # Corrected alias usage below:
-    $criticalIssues | ForEach-Object { 
-        Write-Host ("  - $($_.Name) ($($_.Category)): Status: $($_.Status). Notes: $($_.Notes)") -FG Red
-        if ($_.IsRSAT) { Write-Host "    ACTION: Install/update RSAT tool via Windows Features." -FG Red }
-    }
-    Write-Host "`nPlease address CRITICAL issues." -FG Red 
-}
-if ($otherIssues.Count -gt 0) { 
-    Write-Host "`nWARNING: Issue(s) with CONDITIONALLY REQUIRED or OPTIONAL modules:" -FG Yellow
-    # Corrected alias usage below:
-    $otherIssues | ForEach-Object { 
-        Write-Host ("  - $($_.Name) ($($_.Category)): Status: $($_.Status). Notes: $($_.Notes)") -FG Yellow
-        if ($_.IsRSAT) { Write-Host "    ACTION: If needed, install/update RSAT tool via Windows Features." -FG Yellow }
-    }
-}
+if ($criticalIssues.Count -eq 0) { Write-Host "`nAll CRITICAL REQUIRED modules appear OK." -FG Green; if ($otherIssues.Count -gt 0) { Write-Host "Review warnings for other module categories." -FG Yellow }
+} else { $overallSuccess = $false; Write-Host "`nERROR: CRITICAL ISSUES FOUND:" -FG Red; $criticalIssues | ForEach-Object { Write-Host ("  - $($_.Name) ($($_.Category)): Status: $($_.Status). Notes: $($_.Notes)") -FG Red; if ($_.IsRSAT) { Write-Host "    ACTION: Install/update RSAT tool via Windows Features." -FG Red }}; Write-Host "`nPlease address CRITICAL issues." -FG Red }
+if ($otherIssues.Count -gt 0) { Write-Host "`nWARNING: Issue(s) with CONDITIONALLY REQUIRED or OPTIONAL modules:" -FG Yellow; $otherIssues | ForEach-Object { Write-Host ("  - $($_.Name) ($($_.Category)): Status: $($_.Status). Notes: $($_.Notes)") -FG Yellow; if ($_.IsRSAT) { Write-Host "    ACTION: If needed, install/update RSAT tool via Windows Features." -FG Yellow }} }
 Write-Host "`nDependency check finished at $(Get-Date)."
 if (-not $overallSuccess -and -not $AutoFix.IsPresent) { Write-Host "Consider re-running with -AutoFix for PSGallery modules." -FG Cyan }
-if (-not $overallSuccess) { 
-    if ($Host.Name -eq "ConsoleHost") { exit 1 }
-    if ($criticalIssues.Count -gt 0) { throw "Critical module dependencies are not met." } 
-}
+if (-not $overallSuccess) { if ($Host.Name -eq "ConsoleHost") { exit 1 }; if ($criticalIssues.Count -gt 0) { throw "Critical module dependencies are not met." } }
 #endregion
