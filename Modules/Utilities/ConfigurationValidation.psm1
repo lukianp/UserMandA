@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
     Provides functions to validate the M&A Discovery Suite configuration object
-    against a JSON schema.
+    against a JSON schema. Uses Write-Host for internal logging.
 .DESCRIPTION
     This module is crucial for ensuring the integrity and correctness of the 
     `default-config.json` file at runtime, preventing errors due to misconfiguration.
 .NOTES
-    Version: 1.0.1
+    Version: 1.0.2
     Author: Gemini
     Date: 2025-06-01
 #>
@@ -20,7 +20,7 @@ function Test-SuiteConfigurationAgainstSchema {
         [string]$SchemaPath # Path to config.schema.json
     )
 
-    Write-MandALog "Validating configuration against schema: $SchemaPath" -Level "INFO"
+    Write-Host "INFO: Validating configuration against schema: $SchemaPath" -ForegroundColor Gray
     $validationErrors = [System.Collections.Generic.List[string]]::new()
     $validationWarnings = [System.Collections.Generic.List[string]]::new()
 
@@ -29,11 +29,18 @@ function Test-SuiteConfigurationAgainstSchema {
         return @{ IsValid = $false; Errors = $validationErrors; Warnings = $validationWarnings }
     }
 
-    $schemaJson = Get-Content $SchemaPath -Raw | ConvertFrom-Json -ErrorAction SilentlyContinue
-    if ($null -eq $schemaJson) {
-        $validationErrors.Add("Failed to parse configuration schema file at '$SchemaPath'. Schema validation skipped.")
+    $schemaJson = $null
+    try {
+        $schemaJson = Get-Content $SchemaPath -Raw | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        $validationErrors.Add("Failed to parse configuration schema file at '$SchemaPath': $($_.Exception.Message). Schema validation skipped.")
         return @{ IsValid = $false; Errors = $validationErrors; Warnings = $validationWarnings }
     }
+     if ($null -eq $schemaJson) { # Check if ConvertFrom-Json failed silently
+        $validationErrors.Add("Failed to parse configuration schema file at '$SchemaPath' (result was null). Schema validation skipped.")
+        return @{ IsValid = $false; Errors = $validationErrors; Warnings = $validationWarnings }
+    }
+
 
     # Recursive validation helper function (internal to this function's scope)
     function Test-ConfigurationNodeInternal {
@@ -50,7 +57,7 @@ function Test-SuiteConfigurationAgainstSchema {
 
         if ($NodeSchema.required -is [array]) {
             foreach ($requiredProp in $NodeSchema.required) {
-                if (-not $NodeData.ContainsKey($requiredProp)) {
+                if ($NodeData -isnot [hashtable] -or (-not $NodeData.ContainsKey($requiredProp))) { # Ensure NodeData is a hashtable before ContainsKey
                     $validationErrors.Add("Path '$CurrentPath': Missing required property '$requiredProp'.")
                 }
             }
@@ -60,26 +67,19 @@ function Test-SuiteConfigurationAgainstSchema {
             if ($null -ne $NodeSchema.properties) {
                 foreach ($propKey in $NodeData.Keys) {
                     $propPath = "$CurrentPath.$propKey"
-                    if ($NodeSchema.properties.ContainsKey($propKey)) { # Check if key exists in schema properties
+                    if ($NodeSchema.properties.ContainsKey($propKey)) { 
                         Test-ConfigurationNodeInternal -NodeData $NodeData.$propKey -NodeSchema $NodeSchema.properties.$propKey -CurrentPath $propPath
                     } else {
-                        # Property in config but not in schema
-                        # Check additionalProperties setting in the schema
                         $allowAdditional = $false 
                         if ($NodeSchema.PSObject.Properties.ContainsKey('additionalProperties')) {
                            if ($NodeSchema.additionalProperties -is [boolean] -and $NodeSchema.additionalProperties -eq $true) {
                                $allowAdditional = $true
                            } elseif ($NodeSchema.additionalProperties -is [hashtable]) { 
-                               # If additionalProperties is a schema, it means further validation, for simplicity we'll treat as allowed if present
                                $allowAdditional = $true 
                            }
                         } elseif ($NodeSchema.PSObject.Properties.ContainsKey('$ref')) {
-                            # If there's a $ref, additional properties might be defined in the referenced schema.
-                            # For simplicity here, we'll assume it might be allowed. A full resolver would be needed for accuracy.
-                            $allowAdditional = $true # Or fetch and check the referenced schema
+                            $allowAdditional = $true 
                         }
-
-
                         if (-not $allowAdditional) {
                              $validationWarnings.Add("Path '$propPath': Property exists in configuration but not defined in schema, and 'additionalProperties' is not explicitly true or is absent.")
                         }
@@ -106,9 +106,9 @@ function Test-SuiteConfigurationAgainstSchema {
                 }
             } elseif ($actualType -eq $expectedType -or ($expectedType -eq "null" -and $null -eq $NodeData)) {
                 $typeMatch = $true
-            } elseif ($expectedType -eq "integer" -and $actualType -eq "int32") { 
+            } elseif ($expectedType -eq "integer" -and ($actualType -eq "int32" -or $actualType -eq "int64")) { # Handle int64 as well
                 $typeMatch = $true
-            } elseif ($expectedType -eq "number" -and ($actualType -eq "double" -or $actualType -eq "decimal" -or $actualType -eq "int32")) {
+            } elseif ($expectedType -eq "number" -and ($actualType -in @("double", "decimal", "int32", "int64", "single"))) {
                  $typeMatch = $true
             }
 
@@ -122,8 +122,8 @@ function Test-SuiteConfigurationAgainstSchema {
             if ($expectedType -eq "string" -and $null -ne $NodeSchema.pattern -and $NodeData -notmatch $NodeSchema.pattern) {
                 $validationErrors.Add("Path '$CurrentPath': Value '$NodeData' does not match pattern '$($NodeSchema.pattern)'.")
             }
-            if ($null -ne $NodeSchema.minLength -and $NodeData.Length -lt $NodeSchema.minLength) {
-                 $validationErrors.Add("Path '$CurrentPath': Length $($NodeData.Length) is less than minLength $($NodeSchema.minLength).")
+            if ($null -ne $NodeSchema.minLength -and $NodeData.ToString().Length -lt $NodeSchema.minLength) { # Ensure it's a string for Length
+                 $validationErrors.Add("Path '$CurrentPath': Length $($NodeData.ToString().Length) is less than minLength $($NodeSchema.minLength).")
             }
              if ($null -ne $NodeSchema.minimum -and $NodeData -lt $NodeSchema.minimum) {
                  $validationErrors.Add("Path '$CurrentPath': Value $NodeData is less than minimum $($NodeSchema.minimum).")
@@ -138,16 +138,16 @@ function Test-SuiteConfigurationAgainstSchema {
 
     $isValid = $validationErrors.Count -eq 0
     if (-not $isValid) {
-        Write-MandALog "Configuration validation failed with $($validationErrors.Count) errors." -Level "ERROR"
-        $validationErrors | ForEach-Object { Write-MandALog "  VALIDATION ERROR: $_" -Level "ERROR" }
+        Write-Host "ERROR: Configuration validation failed with $($validationErrors.Count) errors." -ForegroundColor Red
+        $validationErrors | ForEach-Object { Write-Host "  VALIDATION ERROR: $_" -ForegroundColor Red }
     }
     if ($validationWarnings.Count -gt 0) {
-         Write-MandALog "Configuration validation has $($validationWarnings.Count) warnings." -Level "WARN"
-        $validationWarnings | ForEach-Object { Write-MandALog "  VALIDATION WARNING: $_" -Level "WARN" }
+         Write-Host "WARNING: Configuration validation has $($validationWarnings.Count) warnings." -ForegroundColor Yellow
+        $validationWarnings | ForEach-Object { Write-Host "  VALIDATION WARNING: $_" -ForegroundColor Yellow }
     }
 
     if ($isValid) {
-        Write-MandALog "Configuration successfully validated against schema." -Level "SUCCESS"
+        Write-Host "INFO: Configuration successfully validated against schema." -ForegroundColor Green
     }
     
     return @{ IsValid = $isValid; Errors = $validationErrors; Warnings = $validationWarnings }

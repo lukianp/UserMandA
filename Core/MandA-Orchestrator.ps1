@@ -1,12 +1,12 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    M&A Discovery Suite v4.2.1 - Main Orchestrator
+    M&A Discovery Suite v4.2.2 - Main Orchestrator
 .DESCRIPTION
     Unified orchestrator for discovery, processing, and export.
-    Now with more robust module loading and pre-flight dependency checks.
+    Enhanced module import checks and logging.
 .NOTES
-    Version: 4.2.1
+    Version: 4.2.2
     Author: Gemini & User
     Date: 2025-06-01
 #>
@@ -24,11 +24,84 @@ param(
     [switch]$ValidateOnly # Validates config and prerequisites then exits
 )
 
-# This script expects $global:MandA to be set by Set-SuiteEnvironment.ps1
+# Ensure script halts on terminating errors for critical operations
+$OriginalErrorActionPreferenceOrchestrator = $ErrorActionPreference
+$ErrorActionPreference = "Stop"
+
+# This script expects $global:MandA to be set by Set-SuiteEnvironment.ps1 (or embedded in QuickStart)
 if ($null -eq $global:MandA -or $null -eq $global:MandA.Paths) {
     Write-Error "CRITICAL: The global context `$global:MandA (with Paths) is not set. Please run this script via QuickStart.ps1 or ensure Set-SuiteEnvironment.ps1 has been sourced correctly."
+    $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
     exit 1
 }
+
+# --- Import Core Utility Modules (Essential for Orchestrator Operation) ---
+# These are imported first as the orchestrator relies on them directly.
+Write-Host "--- Orchestrator: Importing Core Utility Modules ---" -ForegroundColor DarkCyan
+$utilityModulesToImport = @(
+    "EnhancedLogging.psm1",
+    "FileOperations.psm1",
+    "ValidationHelpers.psm1",
+    "ConfigurationValidation.psm1", # For schema validation if used directly by orchestrator logic
+    "ErrorHandling.psm1" # If you have specific error handling utilities here
+)
+foreach ($moduleName in $utilityModulesToImport) {
+    $modulePath = Join-Path $global:MandA.Paths.Utilities $moduleName
+    if (Test-Path $modulePath -PathType Leaf) {
+        try {
+            Write-Host "Importing utility module: $modulePath" -ForegroundColor Gray
+            Import-Module $modulePath -Force -Global -ErrorAction Stop
+            Write-Host "Successfully imported $moduleName" -ForegroundColor DarkGreen
+        } catch {
+            Write-Error "CRITICAL: Failed to import essential utility module '$moduleName' from '$modulePath'. Error: $($_.Exception.Message). Orchestrator cannot continue."
+            $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
+            exit 1
+        }
+    } else {
+        Write-Error "CRITICAL: Essential utility module '$moduleName' not found at '$modulePath'. Orchestrator cannot continue."
+        $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
+        exit 1
+    }
+}
+
+# Specifically verify critical functions after import
+if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
+    Write-Error "CRITICAL: Write-MandALog function not found after importing EnhancedLogging.psm1. Logging will fail."
+    $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
+    exit 1
+}
+if (-not (Get-Command Initialize-OutputDirectories -ErrorAction SilentlyContinue)) {
+    Write-Error "CRITICAL: Initialize-OutputDirectories function not found after importing FileOperations.psm1."
+    $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
+    exit 1
+}
+if (-not (Get-Command Test-Prerequisites -ErrorAction SilentlyContinue)) {
+    Write-Error "CRITICAL: Test-Prerequisites function not found after importing ValidationHelpers.psm1."
+    $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
+    exit 1
+}
+
+# Import Authentication and Connectivity Managers - also essential for orchestrator setup
+try {
+    Write-Host "Importing Authentication module..." -ForegroundColor Gray
+    Import-Module (Join-Path $global:MandA.Paths.Modules "Authentication/Authentication.psm1") -Force -Global -ErrorAction Stop
+    Write-Host "Successfully imported Authentication.psm1" -ForegroundColor DarkGreen
+
+    Write-Host "Importing EnhancedConnectionManager module..." -ForegroundColor Gray
+    Import-Module (Join-Path $global:MandA.Paths.Modules "Connectivity/EnhancedConnectionManager.psm1") -Force -Global -ErrorAction Stop
+    Write-Host "Successfully imported EnhancedConnectionManager.psm1" -ForegroundColor DarkGreen
+} catch {
+    Write-Error "CRITICAL: Failed to import Authentication or ConnectionManager modules. Error: $($_.Exception.Message). Orchestrator cannot continue."
+    $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
+    exit 1
+}
+if (-not (Get-Command Initialize-MandAAuthentication -ErrorAction SilentlyContinue) -or -not (Get-Command Initialize-AllConnections -ErrorAction SilentlyContinue)) {
+    Write-Error "CRITICAL: Core Authentication/Connection functions not found after module imports."
+    $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
+    exit 1
+}
+Write-Host "--- Orchestrator: Core Utility Modules Imported Successfully ---" -ForegroundColor DarkCyan
+
 
 # --- Core Orchestration Functions ---
 
@@ -44,27 +117,16 @@ function Initialize-MandAEnvironmentInternal {
     )
     Write-MandALog "Initializing M&A Discovery Environment for Mode: $CurrentMode" -Level "HEADER"
 
-    # 1. Initialize Logging (should already be done if Write-MandALog is working, but good to confirm)
-    if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
-        $loggingModulePath = Join-Path $global:MandA.Paths.Utilities "EnhancedLogging.psm1"
-        if (Test-Path $loggingModulePath) { Import-Module $loggingModulePath -Force -Global }
-        else { Write-Warning "EnhancedLogging.psm1 not found. Logging will be basic."; function Write-MandALog { param([string]$Message) Write-Host $Message } }
-    }
-    Initialize-Logging -Configuration $Configuration # From EnhancedLogging.psm1
-
-    # 2. Initialize Output Directories
-    if (-not (Initialize-OutputDirectories -Configuration $Configuration)) { # From FileOperations.psm1
+    Initialize-Logging -Configuration $Configuration 
+    if (-not (Initialize-OutputDirectories -Configuration $Configuration)) { 
         throw "Failed to initialize output directories. Check permissions and paths in config."
     }
 
-    # 3. CRITICAL: PowerShell Module Dependency Check
-    Write-MandALog "Performing PowerShell module dependency check..." -Level "INFO"
+    Write-MandALog "Performing PowerShell module dependency check via DiscoverySuiteModuleCheck.ps1..." -Level "INFO"
     $moduleCheckScriptPath = $global:MandA.Paths.ModuleCheckScript
     if (Test-Path $moduleCheckScriptPath) {
         try {
-            # Run with AutoFix and Silent for non-interactive fixing during orchestration.
-            # If a critical module still can't be installed, this will throw, halting the orchestrator.
-            & $moduleCheckScriptPath -AutoFix -Silent -ErrorAction Stop
+            & $moduleCheckScriptPath -AutoFix -Silent -ErrorAction Stop # Run silently during orchestration
             Write-MandALog "PowerShell module dependency check completed." -Level "SUCCESS"
         } catch {
             Write-MandALog "PowerShell module dependency check failed: $($_.Exception.Message). Orchestrator cannot continue if critical modules are missing." -Level "ERROR"
@@ -75,13 +137,10 @@ function Initialize-MandAEnvironmentInternal {
         throw "Module check script is missing."
     }
     
-    # 4. System Prerequisites (basic checks, module check is more comprehensive for PS modules)
-    if (-not (Test-Prerequisites -Configuration $Configuration -ValidateOnly:$IsValidateOnlyMode.IsPresent)) { # From ValidationHelpers.psm1
+    if (-not (Test-Prerequisites -Configuration $Configuration -ValidateOnly:$IsValidateOnlyMode.IsPresent)) { 
         throw "System prerequisites validation failed."
     }
 
-    # 5. Dynamically Load Discovery Modules based on Configured 'enabledSources' for Discovery Mode
-    # Other modes (Processing, Export) will load their specific modules as needed or assume data exists.
     if ($CurrentMode -in "Discovery", "Full") {
         $discoveryModulePathBase = Join-Path $global:MandA.Paths.Modules "Discovery"
         $enabledSources = @($Configuration.discovery.enabledSources)
@@ -89,7 +148,7 @@ function Initialize-MandAEnvironmentInternal {
         Write-MandALog "Dynamically loading discovery modules for $($enabledSources.Count) enabled sources..." -Level "INFO"
         $loadedCount = 0
         foreach ($sourceName in $enabledSources) {
-            $moduleFileName = "$($sourceName)Discovery.psm1" # Convention: FileServer -> FileServerDiscovery.psm1
+            $moduleFileName = "$($sourceName)Discovery.psm1" 
             $fullModulePath = Join-Path $discoveryModulePathBase $moduleFileName
             
             if (Test-Path $fullModulePath -PathType Leaf) {
@@ -99,7 +158,6 @@ function Initialize-MandAEnvironmentInternal {
                     $loadedCount++
                 } catch {
                     Write-MandALog "Failed to load discovery module '$moduleFileName': $($_.Exception.Message). Discovery for '$sourceName' might be affected." -Level "ERROR"
-                    # Depending on strictness, you might choose to throw here if a critical source module fails.
                 }
             } else {
                 Write-MandALog "Module file not found for enabled source '$sourceName': $fullModulePath. Skipping." -Level "WARN"
@@ -107,8 +165,6 @@ function Initialize-MandAEnvironmentInternal {
         }
         Write-MandALog "Finished loading $loadedCount discovery modules." -Level "INFO"
     }
-    # Other utility modules (Processing, Export) are typically imported directly by their consumer functions or phases.
-
     Write-MandALog "Environment initialization completed." -Level "SUCCESS"
     return $true
 }
@@ -124,7 +180,7 @@ function Invoke-DiscoveryPhaseInternal {
     $enabledSources = @($Configuration.discovery.enabledSources)
 
     foreach ($sourceName in $enabledSources) {
-        $invokeFunctionName = "Invoke-$($sourceName)Discovery" # Convention
+        $invokeFunctionName = "Invoke-$($sourceName)Discovery" 
         if (Get-Command $invokeFunctionName -ErrorAction SilentlyContinue) {
             Write-MandALog "Invoking $invokeFunctionName for source '$sourceName'..." -Level "INFO"
             try {
@@ -133,10 +189,10 @@ function Invoke-DiscoveryPhaseInternal {
                 Write-MandALog "Finished discovery for source '$sourceName'." -Level "SUCCESS"
             } catch {
                 Write-MandALog "Error during discovery for source '$sourceName': $($_.Exception.Message)" -Level "ERROR"
-                $discoveryResults[$sourceName] = @{ Error = $_.Exception.Message } # Log error for this source
+                $discoveryResults[$sourceName] = @{ Error = $_.Exception.Message } 
             }
         } else {
-            Write-MandALog "Discovery function '$invokeFunctionName' not found for enabled source '$sourceName'. Module might be missing or not loaded correctly." -Level "WARN"
+            Write-MandALog "Discovery function '$invokeFunctionName' not found for enabled source '$sourceName'. Module might be missing, not loaded correctly, or not in enabledSources." -Level "WARN"
         }
     }
     Write-MandALog "--- Discovery Phase Completed ---" -Level "SUCCESS"
@@ -148,7 +204,7 @@ function Invoke-ProcessingPhaseInternal {
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration,
-        [Parameter(Mandatory=$true)] # Expects path to the "Raw" data directory
+        [Parameter(Mandatory=$true)] 
         [string]$RawDataPath 
     )
     Write-MandALog "--- Starting Processing Phase ---" -Level "HEADER"
@@ -159,7 +215,6 @@ function Invoke-ProcessingPhaseInternal {
     # ... and so on for UserProfileBuilder, WaveGeneration, DataValidation
     Write-MandALog "Processing phase logic to be fully implemented here." -Level "INFO"
     Write-MandALog "Assuming data is read from: $RawDataPath" -Level "DEBUG"
-    # For now, return a placeholder
     $processedData = @{ UserProfiles = @(); MigrationWaves = @(); Status = "Processing Phase Placeholder" }
     Write-MandALog "--- Processing Phase (Placeholder) Completed ---" -Level "SUCCESS"
     return $processedData
@@ -171,7 +226,7 @@ function Invoke-ExportPhaseInternal {
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration,
         [Parameter(Mandatory=$true)]
-        [hashtable]$ProcessedData # Expects output from Processing phase
+        [hashtable]$ProcessedData 
     )
     Write-MandALog "--- Starting Export Phase ---" -Level "HEADER"
     # Placeholder: Load Export modules (e.g., CSVExport.psm1, JSONExport.psm1)
@@ -190,39 +245,28 @@ function Complete-MandADiscoveryInternal {
         [hashtable]$Configuration
     )
     Write-MandALog "--- Finalizing M&A Discovery Suite Execution ---" -Level "HEADER"
-    # Generate final metrics, cleanup temp files, etc.
-    Write-MandALog "Execution completed. Review logs and output files." -Level "SUCCESS"
+    Write-MandALog "Execution completed. Review logs at '$($global:MandA.Paths.LogOutput)' and output files in '$($Configuration.environment.outputPath)'." -Level "SUCCESS"
 }
 
 # --- Main Execution Block ---
 try {
-    # Load essential utility modules needed by the orchestrator itself
-    Import-Module (Join-Path $global:MandA.Paths.Utilities "EnhancedLogging.psm1") -Force -Global
-    Import-Module (Join-Path $global:MandA.Paths.Utilities "FileOperations.psm1") -Force -Global
-    Import-Module (Join-Path $global:MandA.Paths.Utilities "ValidationHelpers.psm1") -Force -Global
-    Import-Module (Join-Path $global:MandA.Paths.Utilities "ConfigurationValidation.psm1") -Force -Global # For schema validation if used directly
-    Import-Module (Join-Path $global:MandA.Paths.Modules "Authentication/Authentication.psm1") -Force -Global
-    Import-Module (Join-Path $global:MandA.Paths.Modules "Connectivity/EnhancedConnectionManager.psm1") -Force -Global
-
-
-    $script:CurrentConfig = $global:MandA.Config # Use the already loaded and validated config
+    $script:CurrentConfig = $global:MandA.Config 
     if ($Force.IsPresent) { 
         Write-MandALog "Force parameter specified: 'discovery.skipExistingFiles' will be treated as false for this run." -Level "INFO"
         $script:CurrentConfig.discovery.skipExistingFiles = $false 
     }
     
-    Write-MandALog "M&A Discovery Suite v$($script:CurrentConfig.metadata.version) - Orchestrator (v4.2.1)" -Level "HEADER"
+    Write-MandALog "M&A Discovery Suite v$($script:CurrentConfig.metadata.version) - Orchestrator (v4.2.2)" -Level "HEADER"
     Write-MandALog "Mode: $Mode | Config: $($global:MandA.Paths.ConfigFile)" -Level "INFO"
 
-    # Initialize Environment (includes module loading for discovery mode)
     Initialize-MandAEnvironmentInternal -Configuration $script:CurrentConfig -CurrentMode $Mode -IsValidateOnlyMode:$ValidateOnly.IsPresent
     
     if ($ValidateOnly.IsPresent) {
         Write-MandALog "Validation Only Mode: Environment checks complete. Exiting." -Level "SUCCESS"
+        $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
         exit 0
     }
     
-    # Authentication and Connection (critical steps)
     $authContext = Initialize-MandAAuthentication -Configuration $script:CurrentConfig
     if ($null -eq $authContext -or -not $authContext.Authenticated) { throw "Authentication failed. Orchestrator cannot proceed." }
 
@@ -236,14 +280,12 @@ try {
             Write-MandALog "CRITICAL FAILURE: Connection to required service '$service' failed. Halting execution as per configuration." -Level "ERROR"
             $criticalFailure = $true
         } elseif (-not $connectionStatus.ContainsKey($service) -and $haltSources -contains $service) {
-            # This case handles if a service in haltOnConnectionError was never even attempted or its status object wasn't created.
              Write-MandALog "CRITICAL FAILURE: Status for required service '$service' (in haltOnConnectionError) not found. Assuming connection failed. Halting." -Level "ERROR"
             $criticalFailure = $true
         }
     }
     if ($criticalFailure) { throw "Halting due to critical connection failure(s)." }
 
-    # --- Phase Execution ---
     $discoveryOutput = $null
     $processingOutput = $null
 
@@ -264,11 +306,10 @@ try {
     if ($Mode -in "Export", "Full") {
         if (($Mode -eq "Export") -and ($null -eq $processingOutput)) {
             Write-MandALog "Export mode selected. Will attempt to use existing data from '$($global:MandA.Paths.ProcessedDataOutput)' or processing phase output if available." -Level "INFO"
-            # If processingOutput is null here, Export phase needs to be robust enough to load from disk or handle it.
         } elseif ($Mode -eq "Full" -and ($null -eq $processingOutput)) {
              Write-MandALog "Full mode selected, but processing output is null. Export may fail or use existing processed data." -Level "WARN"
         }
-        Invoke-ExportPhaseInternal -Configuration $script:CurrentConfig -ProcessedData $processingOutput # Pass null if processing didn't run or failed
+        Invoke-ExportPhaseInternal -Configuration $script:CurrentConfig -ProcessedData $processingOutput 
     }
 
     Complete-MandADiscoveryInternal -Configuration $script:CurrentConfig
@@ -276,11 +317,11 @@ try {
 } catch {
     Write-MandALog "ORCHESTRATOR CRITICAL ERROR: $($_.Exception.Message)" -Level "ERROR"
     if ($_.ScriptStackTrace) { Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG" }
-    # Ensure exit code is non-zero for failures
     if ($Host.Name -eq "ConsoleHost") { $Host.SetShouldExit(1); exit 1 } else { throw }
 } finally {
     if (Get-Command 'Disconnect-AllServices' -ErrorAction SilentlyContinue) {
-        Disconnect-AllServices # From EnhancedConnectionManager.psm1
+        Disconnect-AllServices 
     }
     Write-MandALog "Orchestrator execution finished at $(Get-Date)." -Level "INFO"
+    $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
 }
