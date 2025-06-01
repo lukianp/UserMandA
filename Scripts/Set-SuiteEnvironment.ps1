@@ -1,189 +1,173 @@
 <#
 .SYNOPSIS
-    Sets up environment variables and paths for M&A Discovery Suite.
-    It prioritizes a provided -ProvidedSuiteRoot parameter, then a default path (C:\UserMigration),
-    and finally auto-detects based on its own location if the others are invalid.
+    Sets up the environment for the M&A Discovery Suite v4.2
 .DESCRIPTION
-    Creates location-independent environment setup for the M&A Discovery Suite
-    that can be sourced by other scripts to ensure consistent path handling.
-    Validates the integrity of the determined SuiteRoot by checking for essential subdirectories.
-.PARAMETER ProvidedSuiteRoot
-    Optional. Explicitly defines the root path of the M&A Discovery Suite.
-    If provided, this path will be used and validated.
-.EXAMPLE
-    . .\Scripts\Set-SuiteEnvironment.ps1
-    # Attempts to use C:\UserMigration, then auto-detects if C:\UserMigration is not a valid suite location.
-
-.EXAMPLE
-    . .\Scripts\Set-SuiteEnvironment.ps1 -ProvidedSuiteRoot "D:\CustomPath\UserMandA"
-    # Uses D:\CustomPath\UserMandA as the SuiteRoot after validation.
+    Establishes a single global context object ($global:MandA) containing
+    all required paths and the loaded, validated configuration.
 .NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.0.0
-    Created: 2025-05-31
-    Last Modified: 2025-05-31
+    Version: 3.0.0
+    Author: Gemini
+    Date: 2025-06-01
 #>
-
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ProvidedSuiteRoot 
+    [string]$ProvidedSuiteRoot
 )
 
-# Function to test if a given path contains the core M&A Discovery Suite structure
-function Test-MandASuiteStructure {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$PathToTest
-    )
+# Temporarily set ErrorActionPreference for this script's core logic
+$ErrorActionPreference = "Stop"
+
+function Test-MandASuiteStructureInternal { # Renamed to avoid conflict if script is sourced multiple times
+    param([string]$PathToTest)
     $requiredSubDirs = @("Core", "Modules", "Scripts", "Configuration")
-    if (-not (Test-Path $PathToTest -PathType Container)) {
-        Write-Verbose "Test-MandASuiteStructure: Provided path '$PathToTest' does not exist or is not a directory."
-        return $false
-    }
+    if (-not (Test-Path $PathToTest -PathType Container)) { return $false }
     foreach ($subDir in $requiredSubDirs) {
-        $fullSubDirPath = Join-Path $PathToTest $subDir
-        if (-not (Test-Path $fullSubDirPath -PathType Container)) {
-            Write-Verbose "Test-MandASuiteStructure: Required subdirectory '$subDir' not found in '$PathToTest'."
-            return $false # Structure is incomplete
-        }
+        if (-not (Test-Path (Join-Path $PathToTest $subDir) -PathType Container)) { return $false }
     }
-    Write-Verbose "Test-MandASuiteStructure: Path '$PathToTest' contains all required subdirectories."
-    return $true # Structure is complete
+    return $true
 }
 
-# --- Determine SuiteRoot ---
-$DeterminedSuiteRoot = $null # Use a local variable to avoid confusion with $global:MandASuiteRoot yet
-$determinedBy = "" # For logging how SuiteRoot was determined
+$SuiteRoot = $null
+$determinedBy = ""
 
-if (-not [string]::IsNullOrWhiteSpace($ProvidedSuiteRoot)) {
-    # 1. Use -ProvidedSuiteRoot parameter if provided
-    Write-Verbose "Attempting to use provided SuiteRoot: '$ProvidedSuiteRoot'."
-    if (Test-MandASuiteStructure -PathToTest $ProvidedSuiteRoot) {
-        $DeterminedSuiteRoot = $ProvidedSuiteRoot
-        $determinedBy = "parameter input ('$ProvidedSuiteRoot')"
+try {
+    if (-not [string]::IsNullOrWhiteSpace($ProvidedSuiteRoot)) {
+        if (Test-MandASuiteStructureInternal -PathToTest $ProvidedSuiteRoot) {
+            $SuiteRoot = Resolve-Path $ProvidedSuiteRoot | Select-Object -ExpandProperty Path
+            $determinedBy = "parameter input ('$ProvidedSuiteRoot')"
+        } else {
+            throw "Provided SuiteRoot '$ProvidedSuiteRoot' is not a valid suite structure (missing Core, Modules, Scripts, or Configuration)."
+        }
     } else {
-        throw "Error: The provided SuiteRoot parameter '$ProvidedSuiteRoot' does not exist or does not contain the required M&A Discovery Suite structure (Core, Modules, Scripts, Configuration folders)."
-    }
-} else {
-    # 2. Try the default preferred path: C:\UserMigration
-    $defaultPreferredPath = "C:\UserMigration"
-    Write-Verbose "No SuiteRoot parameter provided. Attempting to use default preferred path: '$defaultPreferredPath'."
-    if (Test-MandASuiteStructure -PathToTest $defaultPreferredPath) {
-        $DeterminedSuiteRoot = $defaultPreferredPath
-        $determinedBy = "default preferred path ('$defaultPreferredPath')"
-    } else {
-        Write-Warning "Default preferred path '$defaultPreferredPath' is not a valid M&A Discovery Suite location (missing required subdirectories or path does not exist)."
-        
-        # 3. Fallback to auto-detection based on script location
-        $autoDetectedPath = ""
-        try {
-            if ($PSScriptRoot) { # $PSScriptRoot is the directory of the currently running script (Set-SuiteEnvironment.ps1)
-                 $autoDetectedPath = Split-Path $PSScriptRoot -Parent # Parent of 'Scripts' folder
-            } else {
-                # This fallback is less reliable, used if $PSScriptRoot is somehow not defined
-                $autoDetectedPath = Split-Path (Get-Location).Path -Parent 
-                Write-Warning "\$PSScriptRoot was not available. Attempting to auto-detect SuiteRoot based on current working directory's parent: '$autoDetectedPath'. This might be unreliable if not run from the 'Scripts' directory."
-            }
-           
-            Write-Verbose "Attempting to auto-detect SuiteRoot based on script location: '$autoDetectedPath'."
-            if (Test-MandASuiteStructure -PathToTest $autoDetectedPath) {
-                $DeterminedSuiteRoot = $autoDetectedPath
+        $defaultPath = "C:\UserMigration"
+        if (Test-MandASuiteStructureInternal -PathToTest $defaultPath) {
+            $SuiteRoot = Resolve-Path $defaultPath | Select-Object -ExpandProperty Path
+            $determinedBy = "default path ('$defaultPath')"
+        } else {
+            # $PSScriptRoot is the directory of the script being run or sourced.
+            # If this script (Set-SuiteEnvironment.ps1) is in 'Scripts', its parent is SuiteRoot.
+            $autoDetectedPath = Split-Path $PSScriptRoot -Parent 
+            if (Test-MandASuiteStructureInternal -PathToTest $autoDetectedPath) {
+                $SuiteRoot = Resolve-Path $autoDetectedPath | Select-Object -ExpandProperty Path
                 $determinedBy = "auto-detection relative to script location ('$autoDetectedPath')"
             } else {
-                throw "Error: Auto-detection failed. The path '$autoDetectedPath' (derived from script location) does not contain the required M&A Discovery Suite structure. Please ensure the suite is correctly placed or provide the -ProvidedSuiteRoot parameter."
+                throw "CRITICAL: Could not determine a valid M&A Discovery Suite root path. Tried default '$defaultPath' and auto-detection from '$PSScriptRoot'."
             }
-        } catch {
-            throw "CRITICAL Error: Could not determine a valid SuiteRoot. Tried default path '$defaultPreferredPath' and auto-detection. Last auto-detected attempt was '$autoDetectedPath'. Please ensure the M&A Discovery Suite files are correctly structured and accessible, or specify the -ProvidedSuiteRoot parameter. Original error: $($_.Exception.Message)"
         }
     }
+} catch {
+    Write-Error "Failed to establish SuiteRoot: $($_.Exception.Message)"
+    # Attempt to restore original ErrorActionPreference before exiting if this script is sourced
+    $ErrorActionPreference = $global:DefaultErrorActionPreference # Or whatever it was
+    return # or exit 1 if run directly
 }
 
-if ([string]::IsNullOrWhiteSpace($DeterminedSuiteRoot) -or (-not (Test-Path $DeterminedSuiteRoot -PathType Container))) {
-    throw "CRITICAL Error: Failed to establish a valid M&A Discovery SuiteRoot. The determined path '$DeterminedSuiteRoot' is invalid or could not be resolved."
+
+# --- Set Single Global Context Object ---
+$configFilePath = Join-Path $SuiteRoot "Configuration/default-config.json"
+$configSchemaPath = Join-Path $SuiteRoot "Configuration/config.schema.json" # Path to your new schema
+
+if (-not (Test-Path $configFilePath -PathType Leaf)) {
+    Write-Error "CRITICAL: Configuration file 'default-config.json' not found at expected location: '$configFilePath'"
+    $ErrorActionPreference = $global:DefaultErrorActionPreference; return
+}
+if (-not (Test-Path $configSchemaPath -PathType Leaf)) {
+    Write-Warning "Configuration schema 'config.schema.json' not found at '$configSchemaPath'. Runtime configuration validation will be skipped."
+    # Allow to continue without schema for now, but log it.
 }
 
-# --- Set Global Variables for the Suite ---
-$global:MandASuiteRoot = $DeterminedSuiteRoot # Now assign to global
-$global:MandACorePath = Join-Path $global:MandASuiteRoot "Core"
-$global:MandAConfigPath = Join-Path $global:MandASuiteRoot "Configuration"
-$global:MandAScriptsPath = Join-Path $global:MandASuiteRoot "Scripts" 
-$global:MandAModulesPath = Join-Path $global:MandASuiteRoot "Modules"
-$global:MandADocumentationPath = Join-Path $global:MandASuiteRoot "Documentation" 
-
-$global:MandAAuthModulesPath = Join-Path $global:MandAModulesPath "Authentication"
-$global:MandAConnectivityModulesPath = Join-Path $global:MandAModulesPath "Connectivity"
-$global:MandADiscoveryModulesPath = Join-Path $global:MandAModulesPath "Discovery"
-$global:MandAProcessingModulesPath = Join-Path $global:MandAModulesPath "Processing"
-$global:MandAExportModulesPath = Join-Path $global:MandAModulesPath "Export"
-$global:MandAUtilitiesModulesPath = Join-Path $global:MandAModulesPath "Utilities"
-
-$global:MandAOrchestratorPath = Join-Path $global:MandACorePath "MandA-Orchestrator.ps1"
-$global:MandADefaultConfigPath = Join-Path $global:MandAConfigPath "default-config.json"
-$global:MandAQuickStartPath = Join-Path $global:MandAScriptsPath "QuickStart.ps1"
-$global:MandAValidationScriptPath = Join-Path $global:MandAScriptsPath "Validate-Installation.ps1"
-$global:MandAAppRegScriptPath = Join-Path $global:MandAScriptsPath "Setup-AppRegistration.ps1"
-
-# Functions defined here are automatically available in the dot-sourcing scope.
-# Export-ModuleMember is not needed and was causing errors.
-function Get-MandAModulePath {
-    param(
-        [Parameter(Mandatory=$true)]
-        [ValidateSet("Authentication", "Connectivity", "Discovery", "Processing", "Export", "Utilities")]
-        [string]$Category,
-        [Parameter(Mandatory=$true)]
-        [string]$ModuleName # Should be the filename without .psm1 extension
-    )
-    $categoryPath = ""
-    switch ($Category) {
-        "Authentication" { $categoryPath = $global:MandAAuthModulesPath }
-        "Connectivity" { $categoryPath = $global:MandAConnectivityModulesPath }
-        "Discovery" { $categoryPath = $global:MandADiscoveryModulesPath }
-        "Processing" { $categoryPath = $global:MandAProcessingModulesPath }
-        "Export" { $categoryPath = $global:MandAExportModulesPath }
-        "Utilities" { $categoryPath = $global:MandAUtilitiesModulesPath }
-        default { throw "Invalid module category: $Category" }
-    }
-    $moduleFilePath = Join-Path $categoryPath "$ModuleName.psm1"
-    if (-not (Test-Path $moduleFilePath -PathType Leaf)) {
-        Write-Warning "Module file '$ModuleName.psm1' not found in category '$Category' at '$moduleFilePath'."
-        return $null
-    }
-    return $moduleFilePath
+$loadedConfig = $null
+try {
+    $loadedConfig = Get-Content $configFilePath -Raw | ConvertFrom-Json -ErrorAction Stop
+} catch {
+    Write-Error "CRITICAL: Failed to parse 'default-config.json': $($_.Exception.Message)"
+    $ErrorActionPreference = $global:DefaultErrorActionPreference; return
 }
 
-function Resolve-MandAConfigPath {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$ConfigFile # Can be a relative path (to SuiteRoot) or an absolute path
-    )
-    if ([System.IO.Path]::IsPathRooted($ConfigFile)) {
-        if (Test-Path $ConfigFile -PathType Leaf) {
-            return $ConfigFile
-        } else {
-            throw "Absolute configuration file path does not exist: '$ConfigFile'"
+# Convert PSCustomObject from ConvertFrom-Json to a nested Hashtable for easier manipulation if needed by other scripts
+function ConvertTo-HashtableRecursive {
+    param($obj)
+    if ($obj -is [System.Management.Automation.PSCustomObject]) {
+        $hash = @{}
+        foreach ($prop in $obj.PSObject.Properties) {
+            $hash[$prop.Name] = ConvertTo-HashtableRecursive $prop.Value
         }
+        return $hash
+    } elseif ($obj -is [array]) {
+        return @($obj | ForEach-Object { ConvertTo-HashtableRecursive $_ })
     } else {
-        $resolvedPath = Join-Path $global:MandASuiteRoot $ConfigFile
-        if (Test-Path $resolvedPath -PathType Leaf) {
-            return $resolvedPath
-        } else {
-            throw "Relative configuration file path '$ConfigFile' (resolved to '$resolvedPath') does not exist within SuiteRoot."
-        }
+        return $obj
+    }
+}
+$configHashtable = ConvertTo-HashtableRecursive $loadedConfig
+
+# Define paths (many will be used by other scripts via $global:MandA.Paths)
+$global:MandA = @{
+    DeterminedBy = $determinedBy
+    Config       = $configHashtable # Store the hashtable version
+    Paths        = @{
+        SuiteRoot       = $SuiteRoot
+        Core            = Join-Path $SuiteRoot "Core"
+        Configuration   = Join-Path $SuiteRoot "Configuration"
+        Scripts         = Join-Path $SuiteRoot "Scripts"
+        Modules         = Join-Path $SuiteRoot "Modules"
+        Utilities       = Join-Path $SuiteRoot "Modules/Utilities" # Added for direct access
+        Documentation   = Join-Path $SuiteRoot "Documentation"
+        
+        ConfigFile      = $configFilePath
+        ConfigSchema    = $configSchemaPath
+        CsvSchemas      = Join-Path $SuiteRoot "Configuration/csv.schemas.json"
+
+        Orchestrator    = Join-Path $SuiteRoot "Core/MandA-Orchestrator.ps1"
+        QuickStart      = Join-Path $SuiteRoot "Scripts/QuickStart.ps1"
+        ValidationScript= Join-Path $SuiteRoot "Scripts/Validate-Installation.ps1" # Renamed for clarity
+        AppRegScript    = Join-Path $SuiteRoot "Scripts/Setup-AppRegistration.ps1"  # Renamed for clarity
+        ModuleCheckScript= Join-Path $SuiteRoot "Scripts/DiscoverySuiteModuleCheck.ps1" # Renamed for clarity
+        
+        RawDataOutput   = Join-Path $configHashtable.environment.outputPath "Raw"
+        ProcessedDataOutput = Join-Path $configHashtable.environment.outputPath "Processed"
+        LogOutput       = Join-Path $configHashtable.environment.outputPath "Logs"
+        CredentialFile  = if ([System.IO.Path]::IsPathRooted($configHashtable.authentication.credentialStorePath)) { 
+                                $configHashtable.authentication.credentialStorePath 
+                          } else { 
+                                Join-Path $SuiteRoot $configHashtable.authentication.credentialStorePath 
+                          }
     }
 }
 
-Write-Host "M&A Discovery Suite Environment Setup Initialized" -ForegroundColor Cyan
-Write-Host "=================================================" -ForegroundColor Cyan
-Write-Host "SuiteRoot determined by: $determinedBy" -ForegroundColor DarkGray
-Write-Host "Suite Root Path      : $($global:MandASuiteRoot)" -ForegroundColor Green
-Write-Host "Core Path            : $($global:MandACorePath)" -ForegroundColor Gray
-Write-Host "Modules Path         : $($global:MandAModulesPath)" -ForegroundColor Gray
-Write-Host "Scripts Path         : $($global:MandAScriptsPath)" -ForegroundColor Gray
-Write-Host "Configuration Path   : $($global:MandAConfigPath)" -ForegroundColor Gray
-Write-Host "Documentation Path   : $($global:MandADocumentationPath)" -ForegroundColor Gray
-Write-Host ""
-Write-Host "Global environment variables for M&A Discovery Suite have been set." -ForegroundColor Green
-Write-Host "You can now use variables like `$global:MandASuiteRoot, `$global:MandAOrchestratorPath`, etc." -ForegroundColor White
-Write-Host "Helper functions like Get-MandAModulePath and Resolve-MandAConfigPath are available." -ForegroundColor White
-Write-Host ""
+# Attempt to load and use the ConfigurationValidation module
+$configValidationModulePath = Join-Path $global:MandA.Paths.Utilities "ConfigurationValidation.psm1"
+if (Test-Path $configValidationModulePath -PathType Leaf) {
+    try {
+        Import-Module $configValidationModulePath -Force -Global
+        if (Get-Command Test-SuiteConfigurationAgainstSchema -ErrorAction SilentlyContinue) {
+            $validationResult = Test-SuiteConfigurationAgainstSchema -ConfigurationObject $global:MandA.Config -SchemaPath $global:MandA.Paths.ConfigSchema
+            if (-not $validationResult.IsValid) {
+                Write-Warning "Configuration validation against schema failed. See previous errors. The suite might behave unexpectedly."
+                # Decide if this should be a critical error:
+                # throw "Configuration is invalid according to schema."
+            }
+        } else {
+            Write-Warning "Test-SuiteConfigurationAgainstSchema function not found after importing ConfigurationValidation.psm1."
+        }
+    } catch {
+        Write-Warning "Failed to import or run ConfigurationValidation.psm1: $($_.Exception.Message)"
+    }
+} else {
+    Write-Warning "ConfigurationValidation.psm1 not found at '$configValidationModulePath'. Runtime config schema validation skipped."
+}
+
+
+Write-Host "M&A Discovery Suite Environment Initialized (v4.2)" -ForegroundColor Cyan
+Write-Host ("=" * 65) -ForegroundColor Cyan
+Write-Host "Suite Root Path : $($global:MandA.Paths.SuiteRoot)" -ForegroundColor Green
+Write-Host "Determined By   : $($global:MandA.DeterminedBy)" -ForegroundColor DarkGray
+Write-Host "Config File     : $($global:MandA.Paths.ConfigFile)" -ForegroundColor White
+Write-Host "Log Output Path : $($global:MandA.Paths.LogOutput)" -ForegroundColor White
+Write-Host "Raw Data Path   : $($global:MandA.Paths.RawDataOutput)" -ForegroundColor White
+Write-Host "Global context object `$global:MandA has been set." -ForegroundColor White
+Write-Host ("-" * 65) -ForegroundColor Cyan
+
+# Restore original ErrorActionPreference
+$ErrorActionPreference = $global:DefaultErrorActionPreference
