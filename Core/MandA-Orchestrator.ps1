@@ -1,10 +1,13 @@
 #Requires -Version 5.1
+
 <#
 .SYNOPSIS
     M&A Discovery Suite v4.2.3 - Main Orchestrator
+
 .DESCRIPTION
     Unified orchestrator for discovery, processing, and export.
     Ensures both Authentication and CredentialManagement modules are loaded.
+
 .NOTES
     Version: 4.2.3
     Author: Gemini & User
@@ -15,14 +18,21 @@
 param(
     [Parameter(Mandatory=$false)]
     [string]$ConfigurationFile = "Configuration/default-config.json", 
+    
     [Parameter(Mandatory=$false)]
     [ValidateSet("Discovery", "Processing", "Export", "Full")]
     [string]$Mode = "Full",
+    
     [Parameter(Mandatory=$false)]
     [switch]$Force, 
+    
     [Parameter(Mandatory=$false)]
     [switch]$ValidateOnly 
 )
+
+#===============================================================================
+#                           INITIALIZATION SECTION
+#===============================================================================
 
 # Ensure script halts on terminating errors for critical operations
 $OriginalErrorActionPreferenceOrchestrator = $ErrorActionPreference
@@ -35,9 +45,13 @@ if ($null -eq $global:MandA -or $null -eq $global:MandA.Paths) {
     exit 1
 }
 
-# --- Import Core Utility Modules (Essential for Orchestrator Operation) ---
+#===============================================================================
+#                      CORE UTILITY MODULES IMPORT
+#===============================================================================
 # These are imported first as the orchestrator relies on them directly.
+
 Write-Host "--- Orchestrator: Importing Core Utility Modules ---" -ForegroundColor DarkCyan
+
 $utilityModulesToImport = @(
     "EnhancedLogging.psm1",
     "FileOperations.psm1",
@@ -45,103 +59,134 @@ $utilityModulesToImport = @(
     "ConfigurationValidation.psm1", 
     "ErrorHandling.psm1" 
 )
+
 foreach ($moduleName in $utilityModulesToImport) {
     $modulePath = Join-Path $global:MandA.Paths.Utilities $moduleName
+    
     if (Test-Path $modulePath -PathType Leaf) {
         try {
             Write-Host "Importing utility module: $modulePath" -ForegroundColor Gray
             Import-Module $modulePath -Force -Global -ErrorAction Stop
             Write-Host "Successfully imported $moduleName" -ForegroundColor DarkGreen
-        } catch {
+        } 
+        catch {
             Write-Error "CRITICAL: Failed to import essential utility module '$moduleName' from '$modulePath'. Error: $($_.Exception.Message). Orchestrator cannot continue."
             $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
             exit 1
         }
-    } else {
+    } 
+    else {
         Write-Error "CRITICAL: Essential utility module '$moduleName' not found at '$modulePath'. Orchestrator cannot continue."
         $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
         exit 1
     }
 }
 
-# Specifically verify critical functions after import
+#-------------------------------------------------------------------------------
+# Verify critical functions after import
+#-------------------------------------------------------------------------------
+
 if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
     Write-Error "CRITICAL: Write-MandALog function not found after importing EnhancedLogging.psm1. Logging will fail."
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
     exit 1
 }
+
 if (-not (Get-Command Initialize-OutputDirectories -ErrorAction SilentlyContinue)) {
     Write-Error "CRITICAL: Initialize-OutputDirectories function not found after importing FileOperations.psm1."
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
     exit 1
 }
+
 if (-not (Get-Command Test-Prerequisites -ErrorAction SilentlyContinue)) {
     Write-Error "CRITICAL: Test-Prerequisites function not found after importing ValidationHelpers.psm1."
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
     exit 1
 }
 
-# Import Authentication Modules (Authentication.psm1 AND CredentialManagement.psm1)
+#===============================================================================
+#                     AUTHENTICATION MODULES IMPORT
+#===============================================================================
+# Import Authentication.psm1 AND CredentialManagement.psm1
+
 Write-Host "Importing Authentication modules..." -ForegroundColor DarkCyan
+
 $authModulesToImport = @(
     "Authentication/Authentication.psm1",
     "Authentication/CredentialManagement.psm1" 
 )
+
 foreach ($authModuleRelPath in $authModulesToImport) {
     $authModulePath = Join-Path $global:MandA.Paths.Modules $authModuleRelPath
-     if (Test-Path $authModulePath -PathType Leaf) {
+    
+    if (Test-Path $authModulePath -PathType Leaf) {
         try {
             Write-Host "Importing auth module: $authModulePath" -ForegroundColor Gray
             Import-Module $authModulePath -Force -Global -ErrorAction Stop
             Write-Host "Successfully imported $(Split-Path $authModulePath -Leaf)" -ForegroundColor DarkGreen
-        } catch {
+        } 
+        catch {
             Write-Error "CRITICAL: Failed to import auth module '$authModuleRelPath'. Error: $($_.Exception.Message). Orchestrator cannot continue."
             $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
             exit 1
         }
-    } else {
+    } 
+    else {
         Write-Error "CRITICAL: Auth module '$authModuleRelPath' not found at '$authModulePath'. Orchestrator cannot continue."
         $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
         exit 1
     }
 }
 
-# Import Connectivity Manager
+#===============================================================================
+#                      CONNECTIVITY MANAGER IMPORT
+#===============================================================================
+
 try {
     $connManagerPath = Join-Path $global:MandA.Paths.Modules "Connectivity/EnhancedConnectionManager.psm1"
-    if (Test-Path $connManagerPath -PathType Leaf) { # Added -PathType Leaf
+    
+    if (Test-Path $connManagerPath -PathType Leaf) { 
         Write-Host "Importing EnhancedConnectionManager..." -ForegroundColor Gray
         Import-Module $connManagerPath -Force -Global -ErrorAction Stop
         Write-Host "Successfully imported EnhancedConnectionManager.psm1" -ForegroundColor DarkGreen
-    } else { 
+    } 
+    else { 
         throw "EnhancedConnectionManager.psm1 not found at '$connManagerPath'"
     }
-} catch {
+} 
+catch {
     Write-Error "CRITICAL: Failed to import EnhancedConnectionManager. Error: $($_.Exception.Message). Orchestrator cannot continue."
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
     exit 1
 }
 
+#-------------------------------------------------------------------------------
 # Verify critical auth functions
+#-------------------------------------------------------------------------------
+
 if (-not (Get-Command Initialize-MandAAuthentication -ErrorAction SilentlyContinue)) {
     Write-Error "CRITICAL: Initialize-MandAAuthentication function not found after module imports."
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
     exit 1
 }
+
 if (-not (Get-Command Get-SecureCredentials -ErrorAction SilentlyContinue)) {
     Write-Error "CRITICAL: Get-SecureCredentials function not found after module imports. This is essential for authentication."
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
     exit 1 
 }
+
 if (-not (Get-Command Initialize-AllConnections -ErrorAction SilentlyContinue)) {
     Write-Error "CRITICAL: Initialize-AllConnections function not found after module imports."
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
     exit 1
 }
+
 Write-Host "--- Orchestrator: Core Utility & Auth Modules Imported Successfully ---" -ForegroundColor DarkCyan
 
-
-# --- Core Orchestration Functions ---
+#===============================================================================
+#                       CORE ORCHESTRATION FUNCTIONS
+#===============================================================================
 
 function Initialize-MandAEnvironmentInternal {
     [CmdletBinding()]
@@ -282,17 +327,30 @@ function Complete-MandADiscoveryInternal {
     Write-MandALog "Execution completed. Review logs at '$($global:MandA.Paths.LogOutput)' and output files in '$($Configuration.environment.outputPath)'." -Level "SUCCESS"
 }
 
-# --- Main Execution Block ---
+#===============================================================================
+#                         MAIN EXECUTION BLOCK
+#===============================================================================
+
 try {
+    #---------------------------------------------------------------------------
+    # Configuration Setup
+    #---------------------------------------------------------------------------
     $script:CurrentConfig = $global:MandA.Config 
+    
     if ($Force.IsPresent) { 
         Write-MandALog "Force parameter specified: 'discovery.skipExistingFiles' will be treated as false for this run." -Level "INFO"
         $script:CurrentConfig.discovery.skipExistingFiles = $false 
     }
     
+    #---------------------------------------------------------------------------
+    # Suite Header
+    #---------------------------------------------------------------------------
     Write-MandALog "M&A Discovery Suite v$($script:CurrentConfig.metadata.version) - Orchestrator (v4.2.3)" -Level "HEADER"
     Write-MandALog "Mode: $Mode | Config: $($global:MandA.Paths.ConfigFile)" -Level "INFO"
 
+    #---------------------------------------------------------------------------
+    # Environment Initialization
+    #---------------------------------------------------------------------------
     Initialize-MandAEnvironmentInternal -Configuration $script:CurrentConfig -CurrentMode $Mode -IsValidateOnlyMode:$ValidateOnly.IsPresent
     
     if ($ValidateOnly.IsPresent) {
@@ -301,61 +359,112 @@ try {
         exit 0
     }
     
+    #---------------------------------------------------------------------------
+    # Authentication & Connection Setup
+    #---------------------------------------------------------------------------
     $authContext = Initialize-MandAAuthentication -Configuration $script:CurrentConfig
-    if ($null -eq $authContext -or -not $authContext.Authenticated) { throw "Authentication failed. Orchestrator cannot proceed." }
+    if ($null -eq $authContext -or -not $authContext.Authenticated) { 
+        throw "Authentication failed. Orchestrator cannot proceed." 
+    }
 
     $connectionStatus = Initialize-AllConnections -Configuration $script:CurrentConfig -AuthContext $authContext
-    if ($null -eq $connectionStatus) { throw "Connection initialization failed critically."}
+    if ($null -eq $connectionStatus) { 
+        throw "Connection initialization failed critically."
+    }
     
+    #---------------------------------------------------------------------------
+    # Critical Connection Validation
+    #---------------------------------------------------------------------------
     $criticalFailure = $false
     $haltSources = @($script:CurrentConfig.environment.connectivity.haltOnConnectionError)
+    
     foreach($service in $haltSources) {
         if ($connectionStatus.ContainsKey($service) -and (-not $connectionStatus.$service.Connected)) {
             Write-MandALog "CRITICAL FAILURE: Connection to required service '$service' failed. Halting execution as per configuration." -Level "ERROR"
             $criticalFailure = $true
-        } elseif (-not $connectionStatus.ContainsKey($service) -and $haltSources -contains $service) {
-             Write-MandALog "CRITICAL FAILURE: Status for required service '$service' (in haltOnConnectionError) not found. Assuming connection failed. Halting." -Level "ERROR"
+        } 
+        elseif (-not $connectionStatus.ContainsKey($service) -and $haltSources -contains $service) {
+            Write-MandALog "CRITICAL FAILURE: Status for required service '$service' (in haltOnConnectionError) not found. Assuming connection failed. Halting." -Level "ERROR"
             $criticalFailure = $true
         }
     }
-    if ($criticalFailure) { throw "Halting due to critical connection failure(s)." }
+    
+    if ($criticalFailure) { 
+        throw "Halting due to critical connection failure(s)." 
+    }
 
+    #---------------------------------------------------------------------------
+    # Phase Execution Variables
+    #---------------------------------------------------------------------------
     $discoveryOutput = $null
     $processingOutput = $null
 
+    #---------------------------------------------------------------------------
+    # Discovery Phase
+    #---------------------------------------------------------------------------
     if ($Mode -in "Discovery", "Full") {
         $discoveryOutput = Invoke-DiscoveryPhaseInternal -Configuration $script:CurrentConfig
     }
     
+    #---------------------------------------------------------------------------
+    # Processing Phase
+    #---------------------------------------------------------------------------
     if ($Mode -in "Processing", "Full") {
         $rawPathForProcessing = $global:MandA.Paths.RawDataOutput
+        
         if (($Mode -eq "Processing") -and ($null -eq $discoveryOutput)) {
             Write-MandALog "Processing mode selected. Will attempt to use existing data from '$rawPathForProcessing'." -Level "INFO"
-        } elseif ($Mode -eq "Full" -and ($null -eq $discoveryOutput)) {
-             Write-MandALog "Full mode selected, but discovery output is null. Processing may fail or use existing raw data." -Level "WARN"
+        } 
+        elseif ($Mode -eq "Full" -and ($null -eq $discoveryOutput)) {
+            Write-MandALog "Full mode selected, but discovery output is null. Processing may fail or use existing raw data." -Level "WARN"
         }
+        
         $processingOutput = Invoke-ProcessingPhaseInternal -Configuration $script:CurrentConfig -RawDataPath $rawPathForProcessing
     }
     
+    #---------------------------------------------------------------------------
+    # Export Phase
+    #---------------------------------------------------------------------------
     if ($Mode -in "Export", "Full") {
         if (($Mode -eq "Export") -and ($null -eq $processingOutput)) {
             Write-MandALog "Export mode selected. Will attempt to use existing data from '$($global:MandA.Paths.ProcessedDataOutput)' or processing phase output if available." -Level "INFO"
-        } elseif ($Mode -eq "Full" -and ($null -eq $processingOutput)) {
-             Write-MandALog "Full mode selected, but processing output is null. Export may fail or use existing processed data." -Level "WARN"
+        } 
+        elseif ($Mode -eq "Full" -and ($null -eq $processingOutput)) {
+            Write-MandALog "Full mode selected, but processing output is null. Export may fail or use existing processed data." -Level "WARN"
         }
+        
         Invoke-ExportPhaseInternal -Configuration $script:CurrentConfig -ProcessedData $processingOutput 
     }
 
+    #---------------------------------------------------------------------------
+    # Completion
+    #---------------------------------------------------------------------------
     Complete-MandADiscoveryInternal -Configuration $script:CurrentConfig
 
-} catch {
+} 
+catch {
     Write-MandALog "ORCHESTRATOR CRITICAL ERROR: $($_.Exception.Message)" -Level "ERROR"
-    if ($_.ScriptStackTrace) { Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG" }
-    if ($Host.Name -eq "ConsoleHost") { $Host.SetShouldExit(1); exit 1 } else { throw }
-} finally {
+    
+    if ($_.ScriptStackTrace) { 
+        Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG" 
+    }
+    
+    if ($Host.Name -eq "ConsoleHost") { 
+        $Host.SetShouldExit(1)
+        exit 1 
+    } 
+    else { 
+        throw 
+    }
+} 
+finally {
+    #---------------------------------------------------------------------------
+    # Cleanup
+    #---------------------------------------------------------------------------
     if (Get-Command 'Disconnect-AllServices' -ErrorAction SilentlyContinue) {
         Disconnect-AllServices 
     }
+    
     Write-MandALog "Orchestrator execution finished at $(Get-Date)." -Level "INFO"
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
 }

@@ -109,7 +109,25 @@
                     },
                     "additionalProperties": false
                 },
-                "fileServer": { "type": "object" } 
+                "fileServer": {
+                    "type": "object",
+                    "properties": {
+                        "targetServers": {"type": "array", "items": {"type": "string"}},
+                        "excludedServers": {"type": "array", "items": {"type": "string"}},
+                        "useSmbShareForEnumeration": {"type": "boolean"},
+                        "timeoutPerServerRemoteCommandSeconds": {"type": "integer", "minimum": 1},
+                        "collectShareDetailsLevel": {"type": "string", "enum": ["Basic", "Full"]},
+                        "timeoutPerShareAclSeconds": {"type": "integer", "minimum": 1},
+                        "timeoutPerShareSizeSeconds": {"type": "integer", "minimum": 1},
+                        "maxSharePathDepthForSize": {"type": "integer", "minimum": 0},
+                        "excludedShareNames": {"type": "array", "items": {"type": "string"}},
+                        "discoverDFS": {"type": "boolean"},
+                        "discoverStorageAnalysis": {"type": "boolean"},
+                        "discoverShadowCopies": {"type": "boolean"},
+                        "discoverClusters": {"type": "boolean"},
+                        "skipShareSizeCalculationForPathDepthExceeding": {"type": "integer", "minimum": 0}
+                    }
+                }
             },
             "required": ["enabledSources", "batchSize"],
             "additionalProperties": false
@@ -272,5 +290,5 @@
         "processing",
         "export"
     ],
-    "additionalProperties": false 
+    "additionalProperties": false
 }
