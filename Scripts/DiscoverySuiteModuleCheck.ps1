@@ -95,14 +95,46 @@ $ModulesToCheck = @(
 )
 
 if ($PSBoundParameters.ContainsKey('ModuleName')) {
-    Write-Host "Checking only specified modules: $($ModuleName -join ', ')" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "  TARGET FILTER APPLIED  " -BackgroundColor DarkBlue -ForegroundColor White
+    Write-Host "  Checking only: " -ForegroundColor Cyan -NoNewline
+    Write-Host "$($ModuleName -join ', ')" -ForegroundColor Yellow
+    Write-Host ""
     $ModulesToCheck = $ModulesToCheck | Where-Object { $_.Name -in $ModuleName }
 }
 $Results = [System.Collections.Generic.List[PSObject]]::new()
 #endregion
 
 #region Helper Functions
-function Write-SectionHeader { param([string]$Header) Write-Host "`n"; Write-Host ("-" * ($Header.Length + 4)) -FG DarkCyan; Write-Host "  $Header  " -FG Cyan; Write-Host ("-" * ($Header.Length + 4)) -FG DarkCyan }
+function Write-SectionHeader { 
+    param([string]$Header)
+    Write-Host ""
+    Write-Host "  " -NoNewline
+    Write-Host ("=" * 80) -ForegroundColor DarkCyan
+    Write-Host "  " -NoNewline  
+    Write-Host " $Header " -BackgroundColor DarkCyan -ForegroundColor White
+    Write-Host "  " -NoNewline
+    Write-Host ("=" * 80) -ForegroundColor DarkCyan
+    Write-Host ""
+}
+
+function Write-StatusIcon {
+    param([string]$Status)
+    switch ($Status) {
+        "SUCCESS" { Write-Host " [OK] " -BackgroundColor DarkGreen -ForegroundColor White -NoNewline }
+        "ERROR" { Write-Host " [!!] " -BackgroundColor DarkRed -ForegroundColor White -NoNewline }
+        "WARNING" { Write-Host " [??] " -BackgroundColor DarkYellow -ForegroundColor Black -NoNewline }
+        "INFO" { Write-Host " [>>] " -BackgroundColor DarkBlue -ForegroundColor White -NoNewline }
+        "WORKING" { Write-Host " [...] " -BackgroundColor DarkMagenta -ForegroundColor White -NoNewline }
+    }
+}
+
+function Write-ModuleStatus {
+    param([string]$Message, [string]$Status, [string]$Color = "White")
+    Write-Host "    " -NoNewline
+    Write-StatusIcon -Status $Status
+    Write-Host " $Message" -ForegroundColor $Color
+}
 
 function Install-OrUpdateModuleViaPSGallery {
     [CmdletBinding(SupportsShouldProcess = $true)] 
@@ -125,23 +157,22 @@ function Install-OrUpdateModuleViaPSGallery {
     if ($AttemptAutoFix) { $installModuleParams.Force = $true }
 
     $shouldProceedWithInstall = $false
-    # Simplified message for ShouldProcess
     $shouldProcessMessage = "Install/Update module '$ModuleNameForInstall' to minimum version $($ReqVersion.ToString()) from PowerShell Gallery?"
 
     if ($AttemptAutoFix -and $AttemptSilentFix) {
         $shouldProceedWithInstall = $true
-        Write-Host "  Attempting to install/update module '$ModuleNameForInstall' (Silent AutoFix)..." -FG Magenta
+        Write-ModuleStatus -Message "Installing/updating '$ModuleNameForInstall' (Silent AutoFix mode)" -Status "WORKING" -Color "Magenta"
     } elseif ($AttemptAutoFix) {
-        if ($PSCmdlet.ShouldProcess($ModuleNameForInstall, $shouldProcessMessage)) { # Using simplified message
+        if ($PSCmdlet.ShouldProcess($ModuleNameForInstall, $shouldProcessMessage)) {
             $shouldProceedWithInstall = $true
-            Write-Host "  Attempting to install/update module '$ModuleNameForInstall'..." -FG Magenta
+            Write-ModuleStatus -Message "Installing/updating '$ModuleNameForInstall' (User confirmed)" -Status "WORKING" -Color "Magenta"
         } else {
             $ModuleResultToUpdateRef.Value.Notes += " User skipped install/update."
-            Write-Host "  Skipping install/update for '$ModuleNameForInstall'." -FG Yellow
+            Write-ModuleStatus -Message "Skipping install/update for '$ModuleNameForInstall' (User declined)" -Status "WARNING" -Color "Yellow"
         }
     } else {
         $ModuleResultToUpdateRef.Value.Notes += " AutoFix not enabled."
-        Write-Host "  AutoFix not enabled for '$ModuleNameForInstall'." -FG Yellow
+        Write-ModuleStatus -Message "AutoFix not enabled for '$ModuleNameForInstall'" -Status "INFO" -Color "Cyan"
         return $false
     }
 
@@ -151,98 +182,393 @@ function Install-OrUpdateModuleViaPSGallery {
         if (-not (Get-Command Install-Module -EA SilentlyContinue)) {
             $ModuleResultToUpdateRef.Value.Status = "Install Failed (PowerShellGet Missing)"
             $ModuleResultToUpdateRef.Value.Notes = "Install-Module not found."
-            Write-Host "  Status: $($ModuleResultToUpdateRef.Value.Status)" -FG Red
+            Write-ModuleStatus -Message "PowerShellGet module not available" -Status "ERROR" -Color "Red"
             Return $false
         }
         $psGallery = Get-PSRepository -Name PSGallery -EA SilentlyContinue
         if ($null -eq $psGallery) {
-            Write-Warning "PSGallery repository not found. Attempting to register..."
+            Write-ModuleStatus -Message "PSGallery repository not found - attempting to register" -Status "WARNING" -Color "Yellow"
             try {
                 Register-PSRepository -Default -InstallationPolicy Trusted -EA Stop
                 $psGallery = Get-PSRepository -Name PSGallery -EA SilentlyContinue
-                if ($null -eq $psGallery) { $ModuleResultToUpdateRef.Value.Notes += " PSGallery registration failed." }
-                else { Write-Host "  PSGallery registered." -FG Green }
-            } catch { $ModuleResultToUpdateRef.Value.Notes += " Error registering PSGallery: $($_.Exception.Message)" }
+                if ($null -eq $psGallery) { 
+                    $ModuleResultToUpdateRef.Value.Notes += " PSGallery registration failed." 
+                } else { 
+                    Write-ModuleStatus -Message "PSGallery repository registered successfully" -Status "SUCCESS" -Color "Green"
+                }
+            } catch { 
+                $ModuleResultToUpdateRef.Value.Notes += " Error registering PSGallery: $($_.Exception.Message)" 
+            }
         } elseif ($psGallery.InstallationPolicy -ne 'Trusted') {
-            Write-Host "  Setting PSGallery to trusted..." -FG Magenta
+            Write-ModuleStatus -Message "Setting PSGallery to trusted repository" -Status "INFO" -Color "Cyan"
             Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -EA Stop
-            Write-Host "  PSGallery trusted." -FG Green
+            Write-ModuleStatus -Message "PSGallery is now trusted" -Status "SUCCESS" -Color "Green"
         }
         
         Install-Module @installModuleParams 
         $ModuleResultToUpdateRef.Value.Notes = "Install/update attempted. Re-checking."
-        Write-Host "  Module '$ModuleNameForInstall' install/update command executed." -FG Green
+        Write-ModuleStatus -Message "Module '$ModuleNameForInstall' install/update completed" -Status "SUCCESS" -Color "Green"
         Return $true 
     } catch {
         $ModuleResultToUpdateRef.Value.Status = "Install/Update Failed"
         $ModuleResultToUpdateRef.Value.Notes = "Error: $($_.Exception.Message)"
-        Write-Host "  Status: $($ModuleResultToUpdateRef.Value.Status)" -FG Red
+        Write-ModuleStatus -Message "Install/update failed: $($_.Exception.Message)" -Status "ERROR" -Color "Red"
         Return $false
     }
 }
 
 function Test-SingleModule {
     param([PSObject]$ModuleInfo, [bool]$AttemptAutoFix, [bool]$AttemptSilentFix)
-    $moduleNameToCheck = $ModuleInfo.Name; $moduleCategory = $ModuleInfo.Category; $reqVersion = [version]$ModuleInfo.RequiredVersion; $isRSATTool = [bool]$ModuleInfo.IsRSAT
-    Write-Host "`nChecking $moduleCategory Module: $moduleNameToCheck (Minimum Expected: $($reqVersion.ToString()))" -FG Yellow
-    if ($isRSATTool) { Write-Host "  Type: RSAT Tool (Requires Windows Feature installation)" -FG DarkCyan }
-    if ($ModuleInfo.Notes) { Write-Host "  Notes: $($ModuleInfo.Notes)" -FG Gray }
-    $moduleResult = [PSCustomObject]@{ Name = $moduleNameToCheck; Category = $moduleCategory; Status = "Not Checked"; RequiredVersion = $reqVersion.ToString(); InstalledVersion = "N/A"; Path = "N/A"; Notes = ""; IsRSAT = $isRSATTool }
+    
+    $moduleNameToCheck = $ModuleInfo.Name
+    $moduleCategory = $ModuleInfo.Category
+    $reqVersion = [version]$ModuleInfo.RequiredVersion
+    $isRSATTool = [bool]$ModuleInfo.IsRSAT
+    
+    # Header for this module
+    Write-Host ""
+    Write-Host "  " -NoNewline
+    Write-Host ("-" * 78) -ForegroundColor DarkGray
+    
+    # Module name and category with color coding
+    Write-Host "  " -NoNewline
+    $categoryColor = switch ($moduleCategory) {
+        "CRITICAL REQUIRED" { "Red" }
+        "CONDITIONALLY REQUIRED" { "Yellow" }
+        "RECOMMENDED" { "Cyan" }
+        "OPTIONAL" { "Gray" }
+        default { "White" }
+    }
+    
+    Write-Host " [$moduleCategory] " -BackgroundColor DarkBlue -ForegroundColor $categoryColor -NoNewline
+    Write-Host " $moduleNameToCheck " -ForegroundColor White -NoNewline
+    Write-Host "(Min: $($reqVersion.ToString()))" -ForegroundColor Gray
+    
+    if ($isRSATTool) { 
+        Write-Host "    " -NoNewline
+        Write-Host " RSAT TOOL " -BackgroundColor DarkYellow -ForegroundColor Black -NoNewline
+        Write-Host " Requires Windows Feature installation" -ForegroundColor Yellow
+    }
+    
+    if ($ModuleInfo.Notes) { 
+        Write-Host "    " -NoNewline
+        Write-Host " INFO " -BackgroundColor DarkGreen -ForegroundColor White -NoNewline
+        Write-Host " $($ModuleInfo.Notes)" -ForegroundColor Gray
+    }
+    
+    $moduleResult = [PSCustomObject]@{ 
+        Name = $moduleNameToCheck
+        Category = $moduleCategory
+        Status = "Not Checked"
+        RequiredVersion = $reqVersion.ToString()
+        InstalledVersion = "N/A"
+        Path = "N/A"
+        Notes = ""
+        IsRSAT = $isRSATTool 
+    }
+    
     $attemptedFixThisRun = $false 
+    
     for ($attempt = 1; $attempt -le 2; $attempt++) { 
         $availableModule = Get-Module -ListAvailable -Name $moduleNameToCheck -EA SilentlyContinue | Sort-Object Version -Descending | Select-Object -First 1
+        
         if ($null -eq $availableModule) {
-            $moduleResult.Status = "Not Found"; $moduleResult.Notes = "Module not installed/discoverable."; if ($isRSATTool) { $moduleResult.Notes += " Install via Windows Features." }
-            if ($attempt -eq 1) { Write-Host "  Status: $($moduleResult.Status)" -FG Red }
-            if (-not $attemptedFixThisRun -and -not $isRSATTool) { if (Install-OrUpdateModuleViaPSGallery -ModuleNameForInstall $moduleNameToCheck -ReqVersion $reqVersion -ModuleResultToUpdateRef ([ref]$moduleResult) -AttemptAutoFix $AttemptAutoFix -AttemptSilentFix $AttemptSilentFix) { $attemptedFixThisRun = $true; continue } else { break } 
-            } elseif ($isRSATTool) { Write-Host "  Action: Manual installation required for RSAT tool '$moduleNameToCheck'." -FG Yellow; break 
-            } else { break } 
-        } else { 
-            $moduleResult.Path = $availableModule.Path; $installedVersion = $availableModule.Version; $moduleResult.InstalledVersion = $installedVersion.ToString()
-            Write-Host ("  Status: " + (if ($attemptedFixThisRun) { "Found (after fix)" } else { "Found" }) + " (Version: $($moduleResult.InstalledVersion))") -FG Green
-            if ($installedVersion -lt $reqVersion) {
-                $moduleResult.Status = "Version Mismatch"; $moduleResult.Notes = "Installed version older than expected."; if ($isRSATTool) { $moduleResult.Notes += " Update via Windows Features." }
-                if ($attempt -eq 1 -and -not $attemptedFixThisRun) { Write-Host "  Status: $($moduleResult.Status)" -FG Yellow }
-                if (-not $attemptedFixThisRun -and -not $isRSATTool) { if (Install-OrUpdateModuleViaPSGallery -ModuleNameForInstall $moduleNameToCheck -ReqVersion $reqVersion -ModuleResultToUpdateRef ([ref]$moduleResult) -AttemptAutoFix $AttemptAutoFix -AttemptSilentFix $AttemptSilentFix) { $attemptedFixThisRun = $true; continue } else { break } 
-                } elseif ($isRSATTool) { Write-Host "  Action: Manual update required for RSAT tool '$moduleNameToCheck'." -FG Yellow; break 
-                } else { break } 
+            $moduleResult.Status = "Not Found"
+            $moduleResult.Notes = "Module not installed/discoverable."
+            if ($isRSATTool) { $moduleResult.Notes += " Install via Windows Features." }
+            
+            if ($attempt -eq 1) { 
+                Write-ModuleStatus -Message "Module not found" -Status "ERROR" -Color "Red"
+            }
+            
+            if (-not $attemptedFixThisRun -and -not $isRSATTool) { 
+                if (Install-OrUpdateModuleViaPSGallery -ModuleNameForInstall $moduleNameToCheck -ReqVersion $reqVersion -ModuleResultToUpdateRef ([ref]$moduleResult) -AttemptAutoFix $AttemptAutoFix -AttemptSilentFix $AttemptSilentFix) { 
+                    $attemptedFixThisRun = $true
+                    continue 
+                } else { 
+                    break 
+                } 
+            } elseif ($isRSATTool) { 
+                Write-ModuleStatus -Message "Manual installation required via Windows Features" -Status "WARNING" -Color "Yellow"
+                break 
             } else { 
-                $moduleResult.Status = "Version OK"; if (-not $attemptedFixThisRun) { Write-Host "  Status: $($moduleResult.Status)" -FG Green } 
+                break 
+            } 
+        } else { 
+            $moduleResult.Path = $availableModule.Path
+            $installedVersion = $availableModule.Version
+            $moduleResult.InstalledVersion = $installedVersion.ToString()
+            
+            $statusText = if ($attemptedFixThisRun) { "Found (after fix attempt)" } else { "Found" }
+            Write-ModuleStatus -Message "$statusText - Version: $($moduleResult.InstalledVersion)" -Status "SUCCESS" -Color "Green"
+            
+            if ($installedVersion -lt $reqVersion) {
+                $moduleResult.Status = "Version Mismatch"
+                $moduleResult.Notes = "Installed version older than expected."
+                if ($isRSATTool) { $moduleResult.Notes += " Update via Windows Features." }
+                
+                if ($attempt -eq 1 -and -not $attemptedFixThisRun) { 
+                    Write-ModuleStatus -Message "Version is below minimum requirement" -Status "WARNING" -Color "Yellow"
+                }
+                
+                if (-not $attemptedFixThisRun -and -not $isRSATTool) { 
+                    if (Install-OrUpdateModuleViaPSGallery -ModuleNameForInstall $moduleNameToCheck -ReqVersion $reqVersion -ModuleResultToUpdateRef ([ref]$moduleResult) -AttemptAutoFix $AttemptAutoFix -AttemptSilentFix $AttemptSilentFix) { 
+                        $attemptedFixThisRun = $true
+                        continue 
+                    } else { 
+                        break 
+                    } 
+                } elseif ($isRSATTool) { 
+                    Write-ModuleStatus -Message "Manual update required via Windows Features" -Status "WARNING" -Color "Yellow"
+                    break 
+                } else { 
+                    break 
+                } 
+            } else { 
+                $moduleResult.Status = "Version OK"
+                if (-not $attemptedFixThisRun) { 
+                    Write-ModuleStatus -Message "Version requirement satisfied" -Status "SUCCESS" -Color "Green"
+                } 
+                
                 $importedModule = $null
-                try { Write-Host "  Attempting to import module '$moduleNameToCheck'..." -FG White; $importedModule = Import-Module -Name $moduleNameToCheck -RequiredVersion $installedVersion -Force -PassThru -EA Stop
-                    if ($null -ne $importedModule) { $moduleResult.Status = "Imported Successfully (Version OK)"; Write-Host "  Status: $($moduleResult.Status)" -FG Green }
-                    else { $moduleResult.Status = "Import Attempted (No Object Returned, Version OK)"; $moduleResult.Notes += " Import did not return object."; Write-Host "  Status: $($moduleResult.Status)" -FG Yellow }
-                } catch { $moduleResult.Status = "Import Failed (Version OK)"; $moduleResult.Notes += " Import Error: $($_.Exception.Message)."; Write-Host "  Status: $($moduleResult.Status)" -FG Red }
-                finally { if ($null -ne $importedModule) { try { Remove-Module -Name $moduleNameToCheck -Force -EA SilentlyContinue } catch {} } }
+                try { 
+                    Write-ModuleStatus -Message "Testing module import capability" -Status "INFO" -Color "Cyan"
+                    $importedModule = Import-Module -Name $moduleNameToCheck -RequiredVersion $installedVersion -Force -PassThru -EA Stop
+                    
+                    if ($null -ne $importedModule) { 
+                        $moduleResult.Status = "Imported Successfully (Version OK)"
+                        Write-ModuleStatus -Message "Module imported successfully" -Status "SUCCESS" -Color "Green"
+                    } else { 
+                        $moduleResult.Status = "Import Attempted (No Object Returned, Version OK)"
+                        $moduleResult.Notes += " Import did not return object."
+                        Write-ModuleStatus -Message "Import completed but no object returned" -Status "WARNING" -Color "Yellow"
+                    }
+                } catch { 
+                    $moduleResult.Status = "Import Failed (Version OK)"
+                    $moduleResult.Notes += " Import Error: $($_.Exception.Message)."
+                    Write-ModuleStatus -Message "Import failed: $($_.Exception.Message)" -Status "ERROR" -Color "Red"
+                } finally { 
+                    if ($null -ne $importedModule) { 
+                        try { 
+                            Remove-Module -Name $moduleNameToCheck -Force -EA SilentlyContinue 
+                        } catch {} 
+                    } 
+                }
                 break 
             }
         }
     } 
-    if ($moduleResult.Status -eq "Not Checked") { $moduleResult.Status = "Check Incomplete"; $moduleResult.Notes += " Status not fully determined."}
+    
+    if ($moduleResult.Status -eq "Not Checked") { 
+        $moduleResult.Status = "Check Incomplete"
+        $moduleResult.Notes += " Status not fully determined."
+    }
+    
     $Results.Add($moduleResult)
 }
 #endregion
 
 #region Main Script Body
-Write-SectionHeader "M&A Discovery Suite - PowerShell Module Dependency Check (v2.0.4)"
+Clear-Host
+Write-Host ""
+Write-Host "  " -NoNewline
+Write-Host ("=" * 80) -ForegroundColor DarkCyan
+Write-Host "  " -NoNewline
+Write-Host " M&A DISCOVERY SUITE - MODULE DEPENDENCY CHECK v2.0.4 " -BackgroundColor DarkCyan -ForegroundColor White
+Write-Host "  " -NoNewline
+Write-Host ("=" * 80) -ForegroundColor DarkCyan
+Write-Host ""
+
+# Mode indicators
 if ($AutoFix.IsPresent) { 
-    if ($Silent.IsPresent) { Write-Host "AUTO-FIX MODE (SILENT): Will attempt to install/update PSGallery modules with -Force and no individual prompts." -FG Magenta } 
-    else { Write-Host "AUTO-FIX MODE (INTERACTIVE): Will prompt via ShouldProcess before installing/updating each PSGallery module with -Force." -FG Magenta }
-    Write-Host "RSAT tools require manual Windows Feature installation and are NOT auto-fixed." -FG Yellow
-} else { Write-Host "INFO: To attempt automatic fixes for PSGallery modules, re-run with -AutoFix. Use -Silent with -AutoFix for non-interactive fixing." -FG Cyan }
-Write-Host "Internet connection required for PSGallery. Modules installed for CurrentUser scope. Timestamp: $(Get-Date)"
-if ($ModulesToCheck.Count -eq 0) { Write-Warning "No modules to check."; if ($Host.Name -eq "ConsoleHost") { exit 1 } else { throw "No modules to check." } }
+    if ($Silent.IsPresent) { 
+        Write-Host "  " -NoNewline
+        Write-Host " AUTO-FIX MODE (SILENT) " -BackgroundColor DarkRed -ForegroundColor White -NoNewline
+        Write-Host " PSGallery modules will be installed/updated with -Force (no prompts)" -ForegroundColor Magenta
+    } else { 
+        Write-Host "  " -NoNewline
+        Write-Host " AUTO-FIX MODE (INTERACTIVE) " -BackgroundColor DarkYellow -ForegroundColor Black -NoNewline
+        Write-Host " Will prompt before installing/updating each PSGallery module" -ForegroundColor Yellow
+    }
+    Write-Host ""
+    Write-Host "  " -NoNewline
+    Write-Host " NOTE " -BackgroundColor DarkBlue -ForegroundColor White -NoNewline
+    Write-Host " RSAT tools require manual Windows Feature installation (NOT auto-fixed)" -ForegroundColor Cyan
+} else { 
+    Write-Host "  " -NoNewline
+    Write-Host " READ-ONLY MODE " -BackgroundColor DarkGreen -ForegroundColor White -NoNewline
+    Write-Host " To enable automatic fixes, re-run with -AutoFix parameter" -ForegroundColor Green
+}
 
-foreach ($moduleDef in $ModulesToCheck) { Test-SingleModule -ModuleInfo $moduleDef -AttemptAutoFix $AutoFix.IsPresent -AttemptSilentFix $Silent.IsPresent }
+Write-Host ""
+Write-Host "  " -NoNewline
+Write-Host " REQUIREMENTS " -BackgroundColor DarkMagenta -ForegroundColor White -NoNewline
+Write-Host " Internet connection required for PSGallery | Modules installed for CurrentUser scope" -ForegroundColor Gray
 
-Write-SectionHeader "Dependency Check Summary"; $Results | Format-Table -AutoSize -Wrap
-$criticalIssues = $Results | Where-Object { ($_.Status -notlike "Imported Successfully*" -and $_.Status -notlike "Version OK" -and $_.Status -notlike "Import Attempted*") -and $_.Category -eq "CRITICAL REQUIRED" }
-$otherIssues = $Results | Where-Object { ($_.Status -notlike "Imported Successfully*" -and $_.Status -notlike "Version OK" -and $_.Status -notlike "Import Attempted*") -and $_.Category -ne "CRITICAL REQUIRED" }
+Write-Host ""
+Write-Host "  " -NoNewline
+Write-Host " TIMESTAMP " -BackgroundColor DarkGray -ForegroundColor White -NoNewline
+Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray
+
+if ($ModulesToCheck.Count -eq 0) { 
+    Write-Host ""
+    Write-Host "  " -NoNewline
+    Write-Host " ERROR " -BackgroundColor DarkRed -ForegroundColor White -NoNewline
+    Write-Host " No modules to check" -ForegroundColor Red
+    if ($Host.Name -eq "ConsoleHost") { exit 1 } else { throw "No modules to check." } 
+}
+
+Write-Host ""
+Write-Host "  " -NoNewline
+Write-Host " MODULE COUNT " -BackgroundColor DarkBlue -ForegroundColor White -NoNewline
+Write-Host " Checking $($ModulesToCheck.Count) modules" -ForegroundColor Cyan
+
+foreach ($moduleDef in $ModulesToCheck) { 
+    Test-SingleModule -ModuleInfo $moduleDef -AttemptAutoFix $AutoFix.IsPresent -AttemptSilentFix $Silent.IsPresent 
+}
+
+Write-SectionHeader "DEPENDENCY CHECK RESULTS"
+
+# Enhanced table output
+$criticalModules = $Results | Where-Object { $_.Category -eq "CRITICAL REQUIRED" }
+$conditionalModules = $Results | Where-Object { $_.Category -eq "CONDITIONALLY REQUIRED" }
+$recommendedModules = $Results | Where-Object { $_.Category -eq "RECOMMENDED" }
+$optionalModules = $Results | Where-Object { $_.Category -eq "OPTIONAL" }
+
+function Write-ModuleTable {
+    param([array]$Modules, [string]$CategoryName, [string]$CategoryColor)
+    
+    if ($Modules.Count -gt 0) {
+        Write-Host ""
+        Write-Host "  " -NoNewline
+        Write-Host " $CategoryName ($($Modules.Count)) " -BackgroundColor $CategoryColor -ForegroundColor White
+        Write-Host ""
+        
+        foreach ($module in $Modules) {
+            $statusColor = switch ($module.Status) {
+                { $_ -like "Imported Successfully*" } { "Green" }
+                "Version OK" { "Green" }
+                { $_ -like "Import Attempted*" } { "Yellow" }
+                "Version Mismatch" { "Yellow" }
+                "Not Found" { "Red" }
+                { $_ -like "*Failed*" } { "Red" }
+                default { "Gray" }
+            }
+            
+            $statusIcon = switch ($module.Status) {
+                { $_ -like "Imported Successfully*" } { "[OK]" }
+                "Version OK" { "[OK]" }
+                { $_ -like "Import Attempted*" } { "[??]" }
+                "Version Mismatch" { "[!!]" }
+                "Not Found" { "[XX]" }
+                { $_ -like "*Failed*" } { "[XX]" }
+                default { "[--]" }
+            }
+            
+            Write-Host "    $statusIcon " -ForegroundColor $statusColor -NoNewline
+            Write-Host $module.Name.PadRight(40) -ForegroundColor White -NoNewline
+            Write-Host " $($module.InstalledVersion.PadRight(12))" -ForegroundColor Gray -NoNewline
+            Write-Host " $($module.Status)" -ForegroundColor $statusColor
+        }
+    }
+}
+
+Write-ModuleTable -Modules $criticalModules -CategoryName "CRITICAL REQUIRED" -CategoryColor "DarkRed"
+Write-ModuleTable -Modules $conditionalModules -CategoryName "CONDITIONALLY REQUIRED" -CategoryColor "DarkYellow"
+Write-ModuleTable -Modules $recommendedModules -CategoryName "RECOMMENDED" -CategoryColor "DarkBlue"
+Write-ModuleTable -Modules $optionalModules -CategoryName "OPTIONAL" -CategoryColor "DarkGray"
+
+Write-SectionHeader "FINAL ASSESSMENT"
+
+$criticalIssues = $Results | Where-Object { 
+    ($_.Status -notlike "Imported Successfully*" -and $_.Status -notlike "Version OK" -and $_.Status -notlike "Import Attempted*") -and 
+    $_.Category -eq "CRITICAL REQUIRED" 
+}
+
+$otherIssues = $Results | Where-Object { 
+    ($_.Status -notlike "Imported Successfully*" -and $_.Status -notlike "Version OK" -and $_.Status -notlike "Import Attempted*") -and 
+    $_.Category -ne "CRITICAL REQUIRED" 
+}
+
 $overallSuccess = $true
-if ($criticalIssues.Count -eq 0) { Write-Host "`nAll CRITICAL REQUIRED modules appear OK." -FG Green; if ($otherIssues.Count -gt 0) { Write-Host "Review warnings for other module categories." -FG Yellow }
-} else { $overallSuccess = $false; Write-Host "`nERROR: CRITICAL ISSUES FOUND:" -FG Red; $criticalIssues | ForEach-Object { Write-Host ("  - $($_.Name) ($($_.Category)): Status: $($_.Status). Notes: $($_.Notes)") -FG Red; if ($_.IsRSAT) { Write-Host "    ACTION: Install/update RSAT tool via Windows Features." -FG Red }}; Write-Host "`nPlease address CRITICAL issues." -FG Red }
-if ($otherIssues.Count -gt 0) { Write-Host "`nWARNING: Issue(s) with CONDITIONALLY REQUIRED or OPTIONAL modules:" -FG Yellow; $otherIssues | ForEach-Object { Write-Host ("  - $($_.Name) ($($_.Category)): Status: $($_.Status). Notes: $($_.Notes)") -FG Yellow; if ($_.IsRSAT) { Write-Host "    ACTION: If needed, install/update RSAT tool via Windows Features." -FG Yellow }} }
-Write-Host "`nDependency check finished at $(Get-Date)."
-if (-not $overallSuccess -and -not $AutoFix.IsPresent) { Write-Host "Consider re-running with -AutoFix for PSGallery modules." -FG Cyan }
-if (-not $overallSuccess) { if ($Host.Name -eq "ConsoleHost") { exit 1 }; if ($criticalIssues.Count -gt 0) { throw "Critical module dependencies are not met." } }
+
+if ($criticalIssues.Count -eq 0) { 
+    Write-Host "  " -NoNewline
+    Write-Host " SUCCESS " -BackgroundColor DarkGreen -ForegroundColor White -NoNewline
+    Write-Host " All CRITICAL REQUIRED modules are properly configured" -ForegroundColor Green
+    Write-Host ""
+    
+    if ($otherIssues.Count -gt 0) { 
+        Write-Host "  " -NoNewline
+        Write-Host " ADVISORY " -BackgroundColor DarkYellow -ForegroundColor Black -NoNewline
+        Write-Host " Some optional/conditional modules have issues - review warnings above" -ForegroundColor Yellow
+    }
+} else { 
+    $overallSuccess = $false
+    Write-Host "  " -NoNewline
+    Write-Host " CRITICAL ISSUES DETECTED " -BackgroundColor DarkRed -ForegroundColor White
+    Write-Host ""
+    
+    $criticalIssues | ForEach-Object { 
+        Write-Host "    " -NoNewline
+        Write-Host " FAIL " -BackgroundColor Red -ForegroundColor White -NoNewline
+        Write-Host " $($_.Name) - $($_.Status)" -ForegroundColor Red
+        Write-Host "         Notes: $($_.Notes)" -ForegroundColor Gray
+        
+        if ($_.IsRSAT) { 
+            Write-Host "         " -NoNewline
+            Write-Host " ACTION REQUIRED " -BackgroundColor DarkYellow -ForegroundColor Black -NoNewline
+            Write-Host " Install/update via Windows Features (RSAT)" -ForegroundColor Yellow
+        }
+    }
+    
+    Write-Host ""
+    Write-Host "  " -NoNewline
+    Write-Host " BLOCKING " -BackgroundColor DarkRed -ForegroundColor White -NoNewline
+    Write-Host " M&A Discovery Suite functionality will be impaired" -ForegroundColor Red
+}
+
+if ($otherIssues.Count -gt 0) { 
+    Write-Host ""
+    Write-Host "  " -NoNewline
+    Write-Host " WARNINGS " -BackgroundColor DarkYellow -ForegroundColor Black -NoNewline
+    Write-Host " Issues with non-critical modules:" -ForegroundColor Yellow
+    Write-Host ""
+    
+    $otherIssues | ForEach-Object { 
+        Write-Host "    " -NoNewline
+        Write-Host " WARN " -BackgroundColor Yellow -ForegroundColor Black -NoNewline
+        Write-Host " $($_.Name) ($($_.Category)) - $($_.Status)" -ForegroundColor Yellow
+        Write-Host "         Notes: $($_.Notes)" -ForegroundColor Gray
+        
+        if ($_.IsRSAT) { 
+            Write-Host "         " -NoNewline
+            Write-Host " INFO " -BackgroundColor DarkBlue -ForegroundColor White -NoNewline
+            Write-Host " Install via Windows Features if this module is needed" -ForegroundColor Cyan
+        }
+    }
+}
+
+Write-Host ""
+Write-Host "  " -NoNewline
+Write-Host ("-" * 78) -ForegroundColor DarkGray
+Write-Host "  Dependency check completed at $(Get-Date -Format 'HH:mm:ss')" -ForegroundColor Gray
+
+if (-not $overallSuccess -and -not $AutoFix.IsPresent) { 
+    Write-Host ""
+    Write-Host "  " -NoNewline
+    Write-Host " TIP " -BackgroundColor DarkBlue -ForegroundColor White -NoNewline
+    Write-Host " Re-run with -AutoFix to attempt automatic PSGallery module installation" -ForegroundColor Cyan
+}
+
+Write-Host ""
+
+if (-not $overallSuccess) { 
+    if ($Host.Name -eq "ConsoleHost") { 
+        exit 1 
+    }
+    if ($criticalIssues.Count -gt 0) { 
+        throw "Critical module dependencies are not met." 
+    } 
+}
 #endregion
