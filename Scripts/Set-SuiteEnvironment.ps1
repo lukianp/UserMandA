@@ -4,8 +4,9 @@
 .DESCRIPTION
     Establishes a single global context object ($global:MandA) containing
     all required paths and the loaded, validated configuration.
+    Uses 'throw' for critical errors to halt calling scripts.
 .NOTES
-    Version: 3.0.0
+    Version: 3.0.1
     Author: Gemini
     Date: 2025-06-01
 #>
@@ -16,9 +17,10 @@ param(
 )
 
 # Temporarily set ErrorActionPreference for this script's core logic
+$OriginalErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = "Stop"
 
-function Test-MandASuiteStructureInternal { # Renamed to avoid conflict if script is sourced multiple times
+function Test-MandASuiteStructureInternal {
     param([string]$PathToTest)
     $requiredSubDirs = @("Core", "Modules", "Scripts", "Configuration")
     if (-not (Test-Path $PathToTest -PathType Container)) { return $false }
@@ -45,74 +47,93 @@ try {
             $SuiteRoot = Resolve-Path $defaultPath | Select-Object -ExpandProperty Path
             $determinedBy = "default path ('$defaultPath')"
         } else {
-            # $PSScriptRoot is the directory of the script being run or sourced.
-            # If this script (Set-SuiteEnvironment.ps1) is in 'Scripts', its parent is SuiteRoot.
-            $autoDetectedPath = Split-Path $PSScriptRoot -Parent 
+            $currentScriptPath = $null
+            if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') {
+                $currentScriptPath = $MyInvocation.MyCommand.Path
+            } elseif ($PSScriptRoot) { # Fallback for when sourced or in ISE
+                $currentScriptPath = Join-Path $PSScriptRoot $MyInvocation.MyCommand.Name
+            } else {
+                 throw "CRITICAL: Cannot determine PSScriptRoot or MyInvocation.MyCommand.Path to auto-detect SuiteRoot."
+            }
+            $autoDetectedPath = Split-Path (Split-Path $currentScriptPath -Parent) -Parent # Assumes Set-SuiteEnvironment.ps1 is in Scripts directory
+            
             if (Test-MandASuiteStructureInternal -PathToTest $autoDetectedPath) {
                 $SuiteRoot = Resolve-Path $autoDetectedPath | Select-Object -ExpandProperty Path
                 $determinedBy = "auto-detection relative to script location ('$autoDetectedPath')"
             } else {
-                throw "CRITICAL: Could not determine a valid M&A Discovery Suite root path. Tried default '$defaultPath' and auto-detection from '$PSScriptRoot'."
+                throw "CRITICAL: Could not determine a valid M&A Discovery Suite root path. Tried default '$defaultPath' and auto-detection based on '$currentScriptPath'."
             }
         }
     }
 } catch {
     Write-Error "Failed to establish SuiteRoot: $($_.Exception.Message)"
-    # Attempt to restore original ErrorActionPreference before exiting if this script is sourced
-    $ErrorActionPreference = $global:DefaultErrorActionPreference # Or whatever it was
-    return # or exit 1 if run directly
+    $ErrorActionPreference = $OriginalErrorActionPreference
+    throw # Re-throw to halt the calling script (QuickStart.ps1)
 }
 
 
 # --- Set Single Global Context Object ---
 $configFilePath = Join-Path $SuiteRoot "Configuration/default-config.json"
-$configSchemaPath = Join-Path $SuiteRoot "Configuration/config.schema.json" # Path to your new schema
+$configSchemaPath = Join-Path $SuiteRoot "Configuration/config.schema.json"
 
 if (-not (Test-Path $configFilePath -PathType Leaf)) {
-    Write-Error "CRITICAL: Configuration file 'default-config.json' not found at expected location: '$configFilePath'"
-    $ErrorActionPreference = $global:DefaultErrorActionPreference; return
+    $errorMessage = "CRITICAL: Configuration file 'default-config.json' not found at expected location: '$configFilePath'"
+    Write-Error $errorMessage
+    $ErrorActionPreference = $OriginalErrorActionPreference
+    throw $errorMessage # Halt execution
 }
+# Schema path check is less critical; validation can be skipped if schema is missing.
 if (-not (Test-Path $configSchemaPath -PathType Leaf)) {
     Write-Warning "Configuration schema 'config.schema.json' not found at '$configSchemaPath'. Runtime configuration validation will be skipped."
-    # Allow to continue without schema for now, but log it.
 }
 
 $loadedConfig = $null
 try {
     $loadedConfig = Get-Content $configFilePath -Raw | ConvertFrom-Json -ErrorAction Stop
 } catch {
-    Write-Error "CRITICAL: Failed to parse 'default-config.json': $($_.Exception.Message)"
-    $ErrorActionPreference = $global:DefaultErrorActionPreference; return
+    $errorMessage = "CRITICAL: Failed to parse 'default-config.json': $($_.Exception.Message)"
+    Write-Error $errorMessage
+    $ErrorActionPreference = $OriginalErrorActionPreference
+    throw $errorMessage # Halt execution
 }
 
-# Convert PSCustomObject from ConvertFrom-Json to a nested Hashtable for easier manipulation if needed by other scripts
-function ConvertTo-HashtableRecursive {
+function ConvertTo-HashtableRecursiveInternal { # Renamed for clarity
     param($obj)
     if ($obj -is [System.Management.Automation.PSCustomObject]) {
         $hash = @{}
         foreach ($prop in $obj.PSObject.Properties) {
-            $hash[$prop.Name] = ConvertTo-HashtableRecursive $prop.Value
+            $hash[$prop.Name] = ConvertTo-HashtableRecursiveInternal $prop.Value
         }
         return $hash
     } elseif ($obj -is [array]) {
-        return @($obj | ForEach-Object { ConvertTo-HashtableRecursive $_ })
+        return @($obj | ForEach-Object { ConvertTo-HashtableRecursiveInternal $_ })
     } else {
         return $obj
     }
 }
-$configHashtable = ConvertTo-HashtableRecursive $loadedConfig
+$configHashtable = ConvertTo-HashtableRecursiveInternal $loadedConfig
 
-# Define paths (many will be used by other scripts via $global:MandA.Paths)
+# Define paths
+$credentialStorePathFromConfig = $configHashtable.authentication.credentialStorePath
+$resolvedCredentialPath = if (-not [string]::IsNullOrWhiteSpace($credentialStorePathFromConfig) -and [System.IO.Path]::IsPathRooted($credentialStorePathFromConfig)) { 
+                                $credentialStorePathFromConfig 
+                          } elseif (-not [string]::IsNullOrWhiteSpace($credentialStorePathFromConfig)) { 
+                                Join-Path $SuiteRoot $credentialStorePathFromConfig 
+                          } else {
+                                Write-Warning "authentication.credentialStorePath is missing or empty in config. Defaulting to a path under SuiteRoot/Output."
+                                Join-Path $SuiteRoot "Output/credentials.config" # Fallback if not specified
+                          }
+
 $global:MandA = @{
     DeterminedBy = $determinedBy
-    Config       = $configHashtable # Store the hashtable version
+    Config       = $configHashtable 
     Paths        = @{
         SuiteRoot       = $SuiteRoot
         Core            = Join-Path $SuiteRoot "Core"
         Configuration   = Join-Path $SuiteRoot "Configuration"
         Scripts         = Join-Path $SuiteRoot "Scripts"
         Modules         = Join-Path $SuiteRoot "Modules"
-        Utilities       = Join-Path $SuiteRoot "Modules/Utilities" # Added for direct access
+        Utilities       = Join-Path $SuiteRoot "Modules/Utilities" 
         Documentation   = Join-Path $SuiteRoot "Documentation"
         
         ConfigFile      = $configFilePath
@@ -121,18 +142,14 @@ $global:MandA = @{
 
         Orchestrator    = Join-Path $SuiteRoot "Core/MandA-Orchestrator.ps1"
         QuickStart      = Join-Path $SuiteRoot "Scripts/QuickStart.ps1"
-        ValidationScript= Join-Path $SuiteRoot "Scripts/Validate-Installation.ps1" # Renamed for clarity
-        AppRegScript    = Join-Path $SuiteRoot "Scripts/Setup-AppRegistration.ps1"  # Renamed for clarity
-        ModuleCheckScript= Join-Path $SuiteRoot "Scripts/DiscoverySuiteModuleCheck.ps1" # Renamed for clarity
+        ValidationScript= Join-Path $SuiteRoot "Scripts/Validate-Installation.ps1" 
+        AppRegScript    = Join-Path $SuiteRoot "Scripts/Setup-AppRegistration.ps1"  
+        ModuleCheckScript= Join-Path $SuiteRoot "Scripts/DiscoverySuiteModuleCheck.ps1" 
         
         RawDataOutput   = Join-Path $configHashtable.environment.outputPath "Raw"
         ProcessedDataOutput = Join-Path $configHashtable.environment.outputPath "Processed"
         LogOutput       = Join-Path $configHashtable.environment.outputPath "Logs"
-        CredentialFile  = if ([System.IO.Path]::IsPathRooted($configHashtable.authentication.credentialStorePath)) { 
-                                $configHashtable.authentication.credentialStorePath 
-                          } else { 
-                                Join-Path $SuiteRoot $configHashtable.authentication.credentialStorePath 
-                          }
+        CredentialFile  = $resolvedCredentialPath
     }
 }
 
@@ -142,11 +159,14 @@ if (Test-Path $configValidationModulePath -PathType Leaf) {
     try {
         Import-Module $configValidationModulePath -Force -Global
         if (Get-Command Test-SuiteConfigurationAgainstSchema -ErrorAction SilentlyContinue) {
+            # Use Write-Host for direct feedback during this setup phase, as Write-MandALog might not be fully available yet
+            Write-Host "INFO: Validating configuration against schema..." -ForegroundColor Gray
             $validationResult = Test-SuiteConfigurationAgainstSchema -ConfigurationObject $global:MandA.Config -SchemaPath $global:MandA.Paths.ConfigSchema
             if (-not $validationResult.IsValid) {
                 Write-Warning "Configuration validation against schema failed. See previous errors. The suite might behave unexpectedly."
-                # Decide if this should be a critical error:
-                # throw "Configuration is invalid according to schema."
+                # Consider if this should be a 'throw' for critical environments
+            } else {
+                 Write-Host "INFO: Configuration successfully validated against schema." -ForegroundColor Green
             }
         } else {
             Write-Warning "Test-SuiteConfigurationAgainstSchema function not found after importing ConfigurationValidation.psm1."
@@ -158,7 +178,6 @@ if (Test-Path $configValidationModulePath -PathType Leaf) {
     Write-Warning "ConfigurationValidation.psm1 not found at '$configValidationModulePath'. Runtime config schema validation skipped."
 }
 
-
 Write-Host "M&A Discovery Suite Environment Initialized (v4.2)" -ForegroundColor Cyan
 Write-Host ("=" * 65) -ForegroundColor Cyan
 Write-Host "Suite Root Path : $($global:MandA.Paths.SuiteRoot)" -ForegroundColor Green
@@ -166,8 +185,8 @@ Write-Host "Determined By   : $($global:MandA.DeterminedBy)" -ForegroundColor Da
 Write-Host "Config File     : $($global:MandA.Paths.ConfigFile)" -ForegroundColor White
 Write-Host "Log Output Path : $($global:MandA.Paths.LogOutput)" -ForegroundColor White
 Write-Host "Raw Data Path   : $($global:MandA.Paths.RawDataOutput)" -ForegroundColor White
+Write-Host "Credential File : $($global:MandA.Paths.CredentialFile)" -ForegroundColor White
 Write-Host "Global context object `$global:MandA has been set." -ForegroundColor White
 Write-Host ("-" * 65) -ForegroundColor Cyan
 
-# Restore original ErrorActionPreference
-$ErrorActionPreference = $global:DefaultErrorActionPreference
+$ErrorActionPreference = $OriginalErrorActionPreference
