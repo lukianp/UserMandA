@@ -17,7 +17,7 @@
     Optional. Switch to suppress individual confirmation prompts when -AutoFix is also used.
     Effectively makes -AutoFix non-interactive for PSGallery module installations.
 .NOTES
-    Version: 2.0.0
+    Version: 2.0.1
     Author: Gemini & User
     Date: 2025-06-01
 
@@ -59,8 +59,10 @@ param(
 # This script is often called by QuickStart, which sources Set-SuiteEnvironment.
 if ($null -eq $global:MandA -or $null -eq $global:MandA.Config) {
     Write-Warning "Global configuration `$global:MandA.Config` not found. Attempting to load default config. Paths might be incorrect if not run via QuickStart."
-    # Attempt to find a config if run standalone for basic checks
-    $standaloneConfigPath = Join-Path $PSScriptRoot "..Configuration\default-config.json"
+    $PSScriptRootDiscoveryModuleCheck = $PSScriptRoot # Capture current PSScriptRoot
+    if ($null -eq $PSScriptRootDiscoveryModuleCheck) { $PSScriptRootDiscoveryModuleCheck = Split-Path $MyInvocation.MyCommand.Definition -Parent}
+
+    $standaloneConfigPath = Join-Path $PSScriptRootDiscoveryModuleCheck "..Configuration\default-config.json"
     if (Test-Path $standaloneConfigPath) {
         try {
             $script:StandaloneConfig = Get-Content $standaloneConfigPath | ConvertFrom-Json
@@ -69,28 +71,32 @@ if ($null -eq $global:MandA -or $null -eq $global:MandA.Config) {
             $script:StandaloneConfig = $null
         }
     } else {
+        Write-Warning "Standalone config not found at $standaloneConfigPath"
         $script:StandaloneConfig = $null
     }
 }
 
-# Use versions from config if available, otherwise use hardcoded defaults.
 $configModules = $null
-if ($null -ne $global:MandA.Config.discovery.powershellModules) { # Assuming modules are defined here in your config
+if ($null -ne $global:MandA.Config.discovery.powershellModules) { 
     $configModules = $global:MandA.Config.discovery.powershellModules
 } elseif ($null -ne $script:StandaloneConfig.discovery.powershellModules) {
     $configModules = $script:StandaloneConfig.discovery.powershellModules
 }
 
-# Define modules with their types and minimum required versions
-# Priority: Configured version > Hardcoded version
 Function Get-ModuleDefinition {
     param ([string]$Name, [string]$DefaultVersion, [string]$Category, [string]$Notes, [bool]$IsRSAT = $false)
     $reqVersion = $DefaultVersion
-    if ($null -ne $configModules -and $configModules.$Name -and $configModules.$Name.RequiredVersion) {
-        $reqVersion = $configModules.$Name.RequiredVersion
-        $Notes = $configModules.$Name.Notes # Also take notes from config if present
+    $effectiveNotes = $Notes
+    if ($null -ne $configModules) {
+        # Accessing nested properties in PowerShell requires checking existence at each level
+        if ($configModules.PSObject.Properties[$Name] -and $configModules.$Name.PSObject.Properties['RequiredVersion']) {
+            $reqVersion = $configModules.$Name.RequiredVersion
+        }
+        if ($configModules.PSObject.Properties[$Name] -and $configModules.$Name.PSObject.Properties['Notes']) {
+            $effectiveNotes = $configModules.$Name.Notes
+        }
     }
-    return @{ Name = $Name; RequiredVersion = $reqVersion; Category = $Category; Notes = $Notes; IsRSAT = $IsRSAT }
+    return @{ Name = $Name; RequiredVersion = $reqVersion; Category = $Category; Notes = $effectiveNotes; IsRSAT = $IsRSAT }
 }
 
 $ModulesToCheck = @(
@@ -100,12 +106,13 @@ $ModulesToCheck = @(
     (Get-ModuleDefinition -Name "Microsoft.Graph.Applications" -DefaultVersion "2.10.0" -Category "CRITICAL REQUIRED" -Notes "For Azure AD App Registrations, Enterprise Apps.")
     (Get-ModuleDefinition -Name "Microsoft.Graph.Identity.DirectoryManagement" -DefaultVersion "2.10.0" -Category "CRITICAL REQUIRED" -Notes "For Directory Roles, Organization Info.")
     (Get-ModuleDefinition -Name "Microsoft.Graph.Identity.SignIns" -DefaultVersion "2.10.0" -Category "CRITICAL REQUIRED" -Notes "For user sign-in activity.")
+    (Get-ModuleDefinition -Name "Microsoft.Graph.Policies" -DefaultVersion "2.10.0" -Category "RECOMMENDED" -Notes "For policy-related discovery (e.g., cross-tenant access). Required by ExternalIdentityDiscovery.") # Added this module
     (Get-ModuleDefinition -Name "Microsoft.Graph.Reports" -DefaultVersion "2.10.0" -Category "RECOMMENDED" -Notes "Required for certain usage reports.")
     (Get-ModuleDefinition -Name "Microsoft.Graph.DeviceManagement" -DefaultVersion "2.10.0" -Category "RECOMMENDED" -Notes "Required for Intune device, policy, and application discovery.")
     (Get-ModuleDefinition -Name "ExchangeOnlineManagement" -DefaultVersion "3.2.0" -Category "CRITICAL REQUIRED" -Notes "For all Exchange Online discovery.")
     
     (Get-ModuleDefinition -Name "ActiveDirectory" -DefaultVersion "1.0.1.0" -Category "CONDITIONALLY REQUIRED" -Notes "For on-premises Active Directory discovery. Install via Windows Features." -IsRSAT $true)
-    (Get-ModuleDefinition -Name "DnsServer" -DefaultVersion "2.0.0.0" -Category "CONDITIONALLY REQUIRED" -Notes "For DNS discovery. Install via Windows Features (RSAT)." -IsRSAT $true) # Added DnsServer
+    (Get-ModuleDefinition -Name "DnsServer" -DefaultVersion "2.0.0.0" -Category "CONDITIONALLY REQUIRED" -Notes "For DNS discovery. Install via Windows Features (RSAT)." -IsRSAT $true) 
     (Get-ModuleDefinition -Name "GroupPolicy" -DefaultVersion "1.0.0.0" -Category "CONDITIONALLY REQUIRED" -Notes "For GPO discovery. Install via Windows Features." -IsRSAT $true)
 
     (Get-ModuleDefinition -Name "Az.Accounts" -DefaultVersion "2.12.0" -Category "CONDITIONALLY REQUIRED" -Notes "For Azure Resource Manager authentication.")
@@ -130,7 +137,7 @@ function Write-SectionHeader {
 }
 
 function Install-OrUpdateModuleViaPSGallery {
-    [CmdletBinding(SupportsShouldProcess = $true)] # SupportsShouldProcess is key for -Confirm behavior
+    [CmdletBinding(SupportsShouldProcess = $true)] 
     param(
         [Parameter(Mandatory = $true)] [string]$ModuleNameForInstall,
         [Parameter(Mandatory = $true)] [version]$ReqVersion,
@@ -147,17 +154,15 @@ function Install-OrUpdateModuleViaPSGallery {
         AcceptLicense = $true 
         ErrorAction = "Stop"
     }
-    if ($AttemptAutoFix) { # Only add -Force if AutoFix is intended
+    if ($AttemptAutoFix) { 
         $installModuleParams.Force = $true 
     }
 
     $shouldProceedWithInstall = $false
     if ($AttemptAutoFix -and $AttemptSilentFix) {
-        # -AutoFix and -Silent: Proceed without individual ShouldProcess prompt for this installation
         $shouldProceedWithInstall = $true
         Write-Host "  Attempting to install/update module '$ModuleNameForInstall' (Silent AutoFix)..." -ForegroundColor Magenta
     } elseif ($AttemptAutoFix) {
-        # -AutoFix but not -Silent: Use ShouldProcess to prompt for this specific installation
         if ($PSCmdlet.ShouldProcess($ModuleNameForInstall, "Install/Update to minimum version $($ReqVersion.ToString()) from PowerShell Gallery (Params: $($installModuleParams | Out-String | ForEach-Object {$_.Trim()}))")) {
             $shouldProceedWithInstall = $true
             Write-Host "  Attempting to install/update module '$ModuleNameForInstall'..." -ForegroundColor Magenta
@@ -166,7 +171,6 @@ function Install-OrUpdateModuleViaPSGallery {
             Write-Host "  Skipping install/update for '$ModuleNameForInstall' as per user choice." -ForegroundColor Yellow
         }
     } else {
-        # No -AutoFix: Don't attempt to install, just report.
         $ModuleResultToUpdateRef.Value.Notes += " AutoFix not enabled. Manual action required."
         Write-Host "  AutoFix not enabled for '$ModuleNameForInstall'. Manual action required." -ForegroundColor Yellow
         return $false
@@ -176,7 +180,6 @@ function Install-OrUpdateModuleViaPSGallery {
         return $false
     }
 
-    # Proceed with actual installation attempt
     try {
         if (-not (Get-Command Install-Module -ErrorAction SilentlyContinue)) {
             $ModuleResultToUpdateRef.Value.Status = "Install Failed (PowerShellGet Missing)"
@@ -188,12 +191,18 @@ function Install-OrUpdateModuleViaPSGallery {
         $psGallery = Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
         if ($null -eq $psGallery) {
             Write-Warning "PSGallery repository not found. Attempting to register default..."
-            Register-PSRepository -Default -InstallationPolicy Trusted -ErrorAction SilentlyContinue
-            $psGallery = Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
-            if ($null -eq $psGallery) {
-                $ModuleResultToUpdateRef.Value.Notes += " PSGallery repository not found and could not be registered. Manual intervention required."
-                Write-Host "  Failed to find or register PSGallery. Module installation will likely fail." -ForegroundColor Red
-                # return $false # Allow to proceed to Install-Module to see its specific error
+            try {
+                Register-PSRepository -Default -InstallationPolicy Trusted -ErrorAction Stop
+                $psGallery = Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
+                if ($null -eq $psGallery) {
+                    $ModuleResultToUpdateRef.Value.Notes += " PSGallery repository not found and could not be registered. Manual intervention required."
+                    Write-Host "  Failed to find or register PSGallery. Module installation will likely fail." -ForegroundColor Red
+                } else {
+                     Write-Host "  PSGallery repository registered and trusted." -ForegroundColor Green
+                }
+            } catch {
+                 $ModuleResultToUpdateRef.Value.Notes += " Error registering PSGallery: $($_.Exception.Message)"
+                 Write-Host "  Error registering PSGallery: $($_.Exception.Message)" -ForegroundColor Red
             }
         } elseif ($psGallery.InstallationPolicy -ne 'Trusted') {
             Write-Host "  PSGallery is not trusted. Attempting to set as trusted..." -ForegroundColor Magenta
@@ -238,7 +247,7 @@ function Test-SingleModule {
 
     $attemptedFixThisRun = $false 
 
-    for ($attempt = 1; $attempt -le 2; $attempt++) { # Allow one fix attempt
+    for ($attempt = 1; $attempt -le 2; $attempt++) { 
         $availableModule = Get-Module -ListAvailable -Name $moduleNameToCheck -ErrorAction SilentlyContinue | Sort-Object Version -Descending | Select-Object -First 1
         
         if ($null -eq $availableModule) {
@@ -284,7 +293,6 @@ function Test-SingleModule {
                 $moduleResult.Status = "Version OK"
                 if (-not $attemptedFixThisRun) { Write-Host "  Status: $($moduleResult.Status)" -ForegroundColor Green } 
                 
-                # Attempt to import for basic integrity check
                 $importedModule = $null
                 try {
                     Write-Host "  Attempting to import module '$moduleNameToCheck'..." -ForegroundColor White
@@ -307,7 +315,7 @@ function Test-SingleModule {
                         catch { Write-Warning "Could not remove module $moduleNameToCheck after testing: $($_.Exception.Message)" }
                     }
                 }
-                break # Module is OK or import tested, no need for second loop iteration
+                break 
             }
         }
     } 
@@ -320,7 +328,7 @@ function Test-SingleModule {
 #endregion Helper Functions
 
 #region Main Script Body
-Write-SectionHeader "M&A Discovery Suite - PowerShell Module Dependency Check (v2.0.0)"
+Write-SectionHeader "M&A Discovery Suite - PowerShell Module Dependency Check (v2.0.1)"
 Write-Host "This script checks required and optional PowerShell modules."
 if ($AutoFix.IsPresent) { 
     if ($Silent.IsPresent) {
@@ -393,11 +401,8 @@ if (-not $overallSuccess -and -not $AutoFix.IsPresent) {
 
 if (-not $overallSuccess) {
     if ($Host.Name -eq "ConsoleHost") { exit 1 } 
-    # Do not throw an exception if it's just warnings for optional modules,
-    # but do indicate failure if critical modules are missing.
     if ($criticalIssues.Count -gt 0) {
         throw "Critical module dependencies are not met." 
     }
 }
 #endregion Main Script Body
-
