@@ -1,12 +1,12 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    M&A Discovery Suite v4.2.2 - Main Orchestrator
+    M&A Discovery Suite v4.2.3 - Main Orchestrator
 .DESCRIPTION
     Unified orchestrator for discovery, processing, and export.
-    Enhanced module import checks and logging.
+    Ensures both Authentication and CredentialManagement modules are loaded.
 .NOTES
-    Version: 4.2.2
+    Version: 4.2.3
     Author: Gemini & User
     Date: 2025-06-01
 #>
@@ -14,14 +14,14 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ConfigurationFile = "Configuration/default-config.json", # Relative to SuiteRoot
+    [string]$ConfigurationFile = "Configuration/default-config.json", 
     [Parameter(Mandatory=$false)]
     [ValidateSet("Discovery", "Processing", "Export", "Full")]
     [string]$Mode = "Full",
     [Parameter(Mandatory=$false)]
-    [switch]$Force, # Overrides skipExistingFiles in config for discovery
+    [switch]$Force, 
     [Parameter(Mandatory=$false)]
-    [switch]$ValidateOnly # Validates config and prerequisites then exits
+    [switch]$ValidateOnly 
 )
 
 # Ensure script halts on terminating errors for critical operations
@@ -42,8 +42,8 @@ $utilityModulesToImport = @(
     "EnhancedLogging.psm1",
     "FileOperations.psm1",
     "ValidationHelpers.psm1",
-    "ConfigurationValidation.psm1", # For schema validation if used directly by orchestrator logic
-    "ErrorHandling.psm1" # If you have specific error handling utilities here
+    "ConfigurationValidation.psm1", 
+    "ErrorHandling.psm1" 
 )
 foreach ($moduleName in $utilityModulesToImport) {
     $modulePath = Join-Path $global:MandA.Paths.Utilities $moduleName
@@ -81,26 +81,64 @@ if (-not (Get-Command Test-Prerequisites -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-# Import Authentication and Connectivity Managers - also essential for orchestrator setup
-try {
-    Write-Host "Importing Authentication module..." -ForegroundColor Gray
-    Import-Module (Join-Path $global:MandA.Paths.Modules "Authentication/Authentication.psm1") -Force -Global -ErrorAction Stop
-    Write-Host "Successfully imported Authentication.psm1" -ForegroundColor DarkGreen
+# Import Authentication Modules (Authentication.psm1 AND CredentialManagement.psm1)
+Write-Host "Importing Authentication modules..." -ForegroundColor DarkCyan
+$authModulesToImport = @(
+    "Authentication/Authentication.psm1",
+    "Authentication/CredentialManagement.psm1" 
+)
+foreach ($authModuleRelPath in $authModulesToImport) {
+    $authModulePath = Join-Path $global:MandA.Paths.Modules $authModuleRelPath
+     if (Test-Path $authModulePath -PathType Leaf) {
+        try {
+            Write-Host "Importing auth module: $authModulePath" -ForegroundColor Gray
+            Import-Module $authModulePath -Force -Global -ErrorAction Stop
+            Write-Host "Successfully imported $(Split-Path $authModulePath -Leaf)" -ForegroundColor DarkGreen
+        } catch {
+            Write-Error "CRITICAL: Failed to import auth module '$authModuleRelPath'. Error: $($_.Exception.Message). Orchestrator cannot continue."
+            $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
+            exit 1
+        }
+    } else {
+        Write-Error "CRITICAL: Auth module '$authModuleRelPath' not found at '$authModulePath'. Orchestrator cannot continue."
+        $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
+        exit 1
+    }
+}
 
-    Write-Host "Importing EnhancedConnectionManager module..." -ForegroundColor Gray
-    Import-Module (Join-Path $global:MandA.Paths.Modules "Connectivity/EnhancedConnectionManager.psm1") -Force -Global -ErrorAction Stop
-    Write-Host "Successfully imported EnhancedConnectionManager.psm1" -ForegroundColor DarkGreen
+# Import Connectivity Manager
+try {
+    $connManagerPath = Join-Path $global:MandA.Paths.Modules "Connectivity/EnhancedConnectionManager.psm1"
+    if (Test-Path $connManagerPath -PathType Leaf) { # Added -PathType Leaf
+        Write-Host "Importing EnhancedConnectionManager..." -ForegroundColor Gray
+        Import-Module $connManagerPath -Force -Global -ErrorAction Stop
+        Write-Host "Successfully imported EnhancedConnectionManager.psm1" -ForegroundColor DarkGreen
+    } else { 
+        throw "EnhancedConnectionManager.psm1 not found at '$connManagerPath'"
+    }
 } catch {
-    Write-Error "CRITICAL: Failed to import Authentication or ConnectionManager modules. Error: $($_.Exception.Message). Orchestrator cannot continue."
+    Write-Error "CRITICAL: Failed to import EnhancedConnectionManager. Error: $($_.Exception.Message). Orchestrator cannot continue."
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
     exit 1
 }
-if (-not (Get-Command Initialize-MandAAuthentication -ErrorAction SilentlyContinue) -or -not (Get-Command Initialize-AllConnections -ErrorAction SilentlyContinue)) {
-    Write-Error "CRITICAL: Core Authentication/Connection functions not found after module imports."
+
+# Verify critical auth functions
+if (-not (Get-Command Initialize-MandAAuthentication -ErrorAction SilentlyContinue)) {
+    Write-Error "CRITICAL: Initialize-MandAAuthentication function not found after module imports."
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
     exit 1
 }
-Write-Host "--- Orchestrator: Core Utility Modules Imported Successfully ---" -ForegroundColor DarkCyan
+if (-not (Get-Command Get-SecureCredentials -ErrorAction SilentlyContinue)) {
+    Write-Error "CRITICAL: Get-SecureCredentials function not found after module imports. This is essential for authentication."
+    $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
+    exit 1 
+}
+if (-not (Get-Command Initialize-AllConnections -ErrorAction SilentlyContinue)) {
+    Write-Error "CRITICAL: Initialize-AllConnections function not found after module imports."
+    $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
+    exit 1
+}
+Write-Host "--- Orchestrator: Core Utility & Auth Modules Imported Successfully ---" -ForegroundColor DarkCyan
 
 
 # --- Core Orchestration Functions ---
@@ -124,9 +162,9 @@ function Initialize-MandAEnvironmentInternal {
 
     Write-MandALog "Performing PowerShell module dependency check via DiscoverySuiteModuleCheck.ps1..." -Level "INFO"
     $moduleCheckScriptPath = $global:MandA.Paths.ModuleCheckScript
-    if (Test-Path $moduleCheckScriptPath) {
+    if (Test-Path $moduleCheckScriptPath -PathType Leaf) { # Added -PathType Leaf
         try {
-            & $moduleCheckScriptPath -AutoFix -Silent -ErrorAction Stop # Run silently during orchestration
+            & $moduleCheckScriptPath -AutoFix -Silent -ErrorAction Stop 
             Write-MandALog "PowerShell module dependency check completed." -Level "SUCCESS"
         } catch {
             Write-MandALog "PowerShell module dependency check failed: $($_.Exception.Message). Orchestrator cannot continue if critical modules are missing." -Level "ERROR"
@@ -208,13 +246,8 @@ function Invoke-ProcessingPhaseInternal {
         [string]$RawDataPath 
     )
     Write-MandALog "--- Starting Processing Phase ---" -Level "HEADER"
-    # Placeholder: Load Processing modules (e.g., DataAggregation.psm1)
-    # $processingModule = Join-Path $global:MandA.Paths.Modules "Processing/DataAggregation.psm1"
-    # if(Test-Path $processingModule){ Import-Module $processingModule -Force -Global } else { throw "DataAggregation module missing!"}
-    # $processedData = Invoke-DataAggregation -RawDataPath $RawDataPath -Configuration $Configuration
-    # ... and so on for UserProfileBuilder, WaveGeneration, DataValidation
-    Write-MandALog "Processing phase logic to be fully implemented here." -Level "INFO"
-    Write-MandALog "Assuming data is read from: $RawDataPath" -Level "DEBUG"
+    Write-MandALog "Processing phase logic (placeholder)." -Level "INFO"
+    Write-MandALog "Data from: $RawDataPath" -Level "DEBUG"
     $processedData = @{ UserProfiles = @(); MigrationWaves = @(); Status = "Processing Phase Placeholder" }
     Write-MandALog "--- Processing Phase (Placeholder) Completed ---" -Level "SUCCESS"
     return $processedData
@@ -225,15 +258,16 @@ function Invoke-ExportPhaseInternal {
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true)] # Allow $null if processing didn't run/succeeded
         [hashtable]$ProcessedData 
     )
     Write-MandALog "--- Starting Export Phase ---" -Level "HEADER"
-    # Placeholder: Load Export modules (e.g., CSVExport.psm1, JSONExport.psm1)
-    # Invoke-CSVExport -ProcessedData $ProcessedData -Configuration $Configuration
-    # Invoke-JSONExport -ProcessedData $ProcessedData -Configuration $Configuration
-    Write-MandALog "Export phase logic to be fully implemented here." -Level "INFO"
-    Write-MandALog "Data to export: $($ProcessedData.Keys -join ', ')" -Level "DEBUG"
+    Write-MandALog "Export phase logic (placeholder)." -Level "INFO"
+    if ($null -ne $ProcessedData) {
+        Write-MandALog "Data to export: $($ProcessedData.Keys -join ', ')" -Level "DEBUG"
+    } else {
+        Write-MandALog "No processed data provided to export phase." -Level "WARN"
+    }
     Write-MandALog "--- Export Phase (Placeholder) Completed ---" -Level "SUCCESS"
     return $true
 }
@@ -256,7 +290,7 @@ try {
         $script:CurrentConfig.discovery.skipExistingFiles = $false 
     }
     
-    Write-MandALog "M&A Discovery Suite v$($script:CurrentConfig.metadata.version) - Orchestrator (v4.2.2)" -Level "HEADER"
+    Write-MandALog "M&A Discovery Suite v$($script:CurrentConfig.metadata.version) - Orchestrator (v4.2.3)" -Level "HEADER"
     Write-MandALog "Mode: $Mode | Config: $($global:MandA.Paths.ConfigFile)" -Level "INFO"
 
     Initialize-MandAEnvironmentInternal -Configuration $script:CurrentConfig -CurrentMode $Mode -IsValidateOnlyMode:$ValidateOnly.IsPresent
