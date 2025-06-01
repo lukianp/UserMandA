@@ -365,7 +365,7 @@ try {
     $authContext = $null # Ensure $authContext is initialized
     $authContext = Initialize-MandAAuthentication -Configuration $script:CurrentConfig
     
-    if ($null -eq $authContext -or -not $authContext.PSObject.Properties['Authenticated'] -or $authContext.Authenticated -eq $false) { 
+   if ($null -eq $authContext -or (-not $authContext.ContainsKey('Authenticated')) -or $authContext.Authenticated -eq $false) {
         Write-MandALog "Orchestrator Check: Authentication context indicates failure." -Level "ERROR"
         if ($null -eq $authContext) {
             Write-MandALog "Diagnostic: authContext object is null." -Level "DEBUG"
