@@ -10,7 +10,6 @@
     attempts to import them, and reports their status.
     It can attempt to install or update modules from the PowerShell Gallery.
     It can also attempt to install missing RSAT tools (requires Administrator privileges).
-    It dynamically elevates the requirement category for certain modules if their dependent discovery source is enabled.
 
 .PARAMETER ModuleName
     Optional. An array of specific module names to check. If not provided, all predefined modules are checked.
@@ -25,7 +24,7 @@
     Effectively makes -AutoFix non-interactive for PSGallery module and RSAT tool installations.
 
 .NOTES
-    Version: 2.0.6
+    Version: 2.0.8
     Author: Gemini & User
     Date: 2025-06-01
 
@@ -34,6 +33,8 @@
     2. For RSAT tool installation (-AutoFix), RUN AS ADMINISTRATOR.
     3. Review the output for any errors or warnings. CRITICAL errors for required modules
        will prevent parts of the M&A Discovery Suite from functioning correctly.
+    4. The module 'Microsoft.Graph.Policies' was removed from checks as it's not a standalone installable module.
+       The script 'ExternalIdentityDiscovery.psm1' must be updated to require the correct Graph SDK module(s) it uses.
 
 .EXAMPLE
     # Check modules, attempt to auto-fix Gallery modules and RSAT tools (prompts for each)
@@ -104,15 +105,13 @@ else {
 }
 
 $configModules = $null
-$enabledDiscoverySources = @()
+$enabledDiscoverySources = @() # This variable is not used in v2.0.8 for criticality change
 
 if ($null -ne $script:GlobalMandAConfig) {
     if ($script:GlobalMandAConfig.discovery -is [System.Management.Automation.PSCustomObject] -and $script:GlobalMandAConfig.discovery.PSObject.Properties['powershellModules']) {
         $configModules = $script:GlobalMandAConfig.discovery.powershellModules
     }
-    if ($script:GlobalMandAConfig.discovery -is [System.Management.Automation.PSCustomObject] -and $script:GlobalMandAConfig.discovery.PSObject.Properties['enabledSources']) {
-        $enabledDiscoverySources = @($script:GlobalMandAConfig.discovery.enabledSources)
-    }
+    # $enabledDiscoverySources is not used for dynamic criticality in this version
 }
 
 #-------------------------------------------------------------------------------
@@ -125,7 +124,7 @@ Function Get-ModuleDefinition {
         [string]$Category, 
         [string]$Notes, 
         [bool]$IsRSAT = $false,
-        [string]$RSATCapabilityName = "" # New parameter for specific capability name
+        [string]$RSATCapabilityName = "" 
     )
 
     $reqVersion = $DefaultVersion
@@ -148,7 +147,7 @@ Function Get-ModuleDefinition {
         Category = $Category; 
         Notes = $effectiveNotes; 
         IsRSAT = $IsRSAT;
-        RSATCapabilityName = $RSATCapabilityName # Store capability name
+        RSATCapabilityName = $RSATCapabilityName 
     }
 }
 
@@ -157,18 +156,18 @@ $ModulesToCheck = @(
     (Get-ModuleDefinition -Name "Microsoft.Graph.Users" -DefaultVersion "2.10.0" -Category "CRITICAL REQUIRED" -Notes "For Azure AD user discovery.")
     (Get-ModuleDefinition -Name "Microsoft.Graph.Groups" -DefaultVersion "2.10.0" -Category "CRITICAL REQUIRED" -Notes "For Azure AD group discovery.")
     (Get-ModuleDefinition -Name "Microsoft.Graph.Applications" -DefaultVersion "2.10.0" -Category "CRITICAL REQUIRED" -Notes "For Azure AD App Registrations, Enterprise Apps.")
-    (Get-ModuleDefinition -Name "Microsoft.Graph.Identity.DirectoryManagement" -DefaultVersion "2.10.0" -Category "CRITICAL REQUIRED" -Notes "For Directory Roles, Organization Info.")
-    (Get-ModuleDefinition -Name "Microsoft.Graph.Identity.SignIns" -DefaultVersion "2.10.0" -Category "CRITICAL REQUIRED" -Notes "For user sign-in activity.")
-    (Get-ModuleDefinition -Name "Microsoft.Graph.Policies" -DefaultVersion "2.10.0" -Category "CONDITIONALLY REQUIRED" -Notes "For policy-related discovery. Required by ExternalIdentityDiscovery if that source is enabled.") 
+    (Get-ModuleDefinition -Name "Microsoft.Graph.Identity.DirectoryManagement" -DefaultVersion "2.10.0" -Category "CRITICAL REQUIRED" -Notes "For Directory Roles, Organization Info. May be used by ExternalIdentityDiscovery.") # Updated Note
+    (Get-ModuleDefinition -Name "Microsoft.Graph.Identity.SignIns" -DefaultVersion "2.10.0" -Category "CRITICAL REQUIRED" -Notes "For user sign-in activity. May provide policy cmdlets for ExternalIdentityDiscovery.") # Updated Note
+    # Removed Microsoft.Graph.Policies as it's not a standalone module
     (Get-ModuleDefinition -Name "Microsoft.Graph.Reports" -DefaultVersion "2.10.0" -Category "RECOMMENDED" -Notes "Required for certain usage reports.")
     (Get-ModuleDefinition -Name "Microsoft.Graph.DeviceManagement" -DefaultVersion "2.10.0" -Category "RECOMMENDED" -Notes "Required for Intune device, policy, and application discovery.")
     (Get-ModuleDefinition -Name "ExchangeOnlineManagement" -DefaultVersion "3.2.0" -Category "CRITICAL REQUIRED" -Notes "For all Exchange Online discovery.")
     
-    (Get-ModuleDefinition -Name "ActiveDirectory" -DefaultVersion "1.0.1.0" -Category "CONDITIONALLY REQUIRED" -Notes "For on-premises AD discovery. Install via Windows Features (RSAT)." -IsRSAT $true -RSATCapabilityName "RSAT.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0")
-    (Get-ModuleDefinition -Name "DnsServer" -DefaultVersion "2.0.0.0" -Category "CONDITIONALLY REQUIRED" -Notes "For DNS discovery. Install via Windows Features (RSAT)." -IsRSAT $true -RSATCapabilityName "RSAT.Dns.Tools~~~~0.0.1.0") 
-    (Get-ModuleDefinition -Name "GroupPolicy" -DefaultVersion "1.0.0.0" -Category "CONDITIONALLY REQUIRED" -Notes "For GPO discovery. Install via Windows Features (RSAT)." -IsRSAT $true -RSATCapabilityName "RSAT.GroupPolicy.Management.Tools~~~~0.0.1.0")
-    (Get-ModuleDefinition -Name "DfsMgmt" -DefaultVersion "2.0.0.0" -Category "CONDITIONALLY REQUIRED" -Notes "For DFS discovery. Install via Windows Features (RSAT)." -IsRSAT $true -RSATCapabilityName "RSAT.FileServices.Tools~~~~0.0.1.0") # DfsMgmt is part of FileServices RSAT
-    (Get-ModuleDefinition -Name "FailoverClusters" -DefaultVersion "2.0.0.0" -Category "CONDITIONALLY REQUIRED" -Notes "For File Server Cluster discovery. Install via Windows Features (RSAT)." -IsRSAT $true -RSATCapabilityName "RSAT.FailoverCluster.Management.Tools~~~~0.0.1.0") 
+    (Get-ModuleDefinition -Name "ActiveDirectory" -DefaultVersion "1.0.1.0" -Category "CONDITIONALLY REQUIRED" -Notes "For on-premises AD discovery." -IsRSAT $true -RSATCapabilityName "RSAT.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0")
+    (Get-ModuleDefinition -Name "DnsServer" -DefaultVersion "2.0.0.0" -Category "CONDITIONALLY REQUIRED" -Notes "For DNS discovery." -IsRSAT $true -RSATCapabilityName "RSAT.Dns.Tools~~~~0.0.1.0") 
+    (Get-ModuleDefinition -Name "GroupPolicy" -DefaultVersion "1.0.0.0" -Category "CONDITIONALLY REQUIRED" -Notes "For GPO discovery." -IsRSAT $true -RSATCapabilityName "RSAT.GroupPolicy.Management.Tools~~~~0.0.1.0")
+    (Get-ModuleDefinition -Name "DfsMgmt" -DefaultVersion "2.0.0.0" -Category "CONDITIONALLY REQUIRED" -Notes "For DFS discovery." -IsRSAT $true -RSATCapabilityName "RSAT.FileServices.Tools~~~~0.0.1.0") 
+    (Get-ModuleDefinition -Name "FailoverClusters" -DefaultVersion "2.0.0.0" -Category "CONDITIONALLY REQUIRED" -Notes "For File Server Cluster discovery." -IsRSAT $true -RSATCapabilityName "RSAT.FailoverCluster.Management.Tools~~~~0.0.1.0") 
 
     (Get-ModuleDefinition -Name "Az.Accounts" -DefaultVersion "2.12.0" -Category "CONDITIONALLY REQUIRED" -Notes "For Azure Resource Manager authentication.")
     (Get-ModuleDefinition -Name "Az.Resources" -DefaultVersion "6.5.0" -Category "CONDITIONALLY REQUIRED" -Notes "For Azure Resource discovery.")
@@ -319,14 +318,19 @@ function Install-OrUpdateModuleViaPSGallery {
         }
         
         Install-Module @installModuleParams 
-        $ModuleResultToUpdateRef.Value.Notes += " PSGallery Install/update attempted." # Changed note
+        $ModuleResultToUpdateRef.Value.Notes += " PSGallery Install/update attempted." 
         Write-ModuleStatus -Message "Module '$ModuleNameForInstall' PSGallery install/update completed" -Status "SUCCESS" -Color "Green"
         Return $true 
     } 
     catch {
         $ModuleResultToUpdateRef.Value.Status = "PSGallery Install/Update Failed"
-        $ModuleResultToUpdateRef.Value.Notes = "PSGallery Error: $($_.Exception.Message)"
-        Write-ModuleStatus -Message "PSGallery install/update failed for '$ModuleNameForInstall': $($_.Exception.Message)" -Status "ERROR" -Color "Red"
+        # Check if the error is about "No match was found" specifically
+        if ($_.Exception.Message -like "*No match was found*") {
+            $ModuleResultToUpdateRef.Value.Notes = "PSGallery Error: Module '$ModuleNameForInstall' not found in any registered repository. Verify module name."
+        } else {
+            $ModuleResultToUpdateRef.Value.Notes = "PSGallery Error: $($_.Exception.Message)"
+        }
+        Write-ModuleStatus -Message "PSGallery install/update failed for '$ModuleNameForInstall': $($ModuleResultToUpdateRef.Value.Notes)" -Status "ERROR" -Color "Red"
         Return $false
     }
 }
@@ -359,14 +363,14 @@ function Install-RSATModuleTool {
         return $false
     }
     
-    $shouldProcessMessage = "Install RSAT tool '$RSATModuleName' (Capability: '$CapabilityName')?"
+    $shouldProcessMessage = "Install RSAT tool '$RSATModuleName' (Windows Capability: '$CapabilityName')?"
     $shouldProceedWithInstall = $false
 
     if ($AttemptSilentFix) {
         $shouldProceedWithInstall = $true
         Write-ModuleStatus -Message "Attempting to install RSAT tool '$RSATModuleName' (Silent AutoFix mode)" -Status "WORKING" -Color "Magenta"
     }
-    elseif ($PSCmdlet.ShouldProcess($CapabilityName, $shouldProcessMessage)) { # ShouldProcess target is the capability
+    elseif ($PSCmdlet.ShouldProcess($CapabilityName, $shouldProcessMessage)) { 
         $shouldProceedWithInstall = $true
         Write-ModuleStatus -Message "Attempting to install RSAT tool '$RSATModuleName' (User confirmed)" -Status "WORKING" -Color "Magenta"
     }
@@ -382,7 +386,7 @@ function Install-RSATModuleTool {
 
     try {
         Write-ModuleStatus -Message "Checking current state of capability '$CapabilityName'..." -Status "INFO"
-        $capability = Get-WindowsCapability -Online -Name $CapabilityName -ErrorAction Stop
+        $capability = Get-WindowsCapability -Online -Name $CapabilityName -ErrorAction Stop 
         
         if ($capability.State -eq 'Installed') {
             $ModuleResultToUpdateRef.Value.Notes += " RSAT Capability '$CapabilityName' already installed."
@@ -393,14 +397,20 @@ function Install-RSATModuleTool {
         Write-ModuleStatus -Message "Installing Windows Capability '$CapabilityName' for module '$RSATModuleName'. This may take some time..." -Status "WORKING" -Color "Magenta"
         Add-WindowsCapability -Online -Name $CapabilityName -ErrorAction Stop
         
-        # Re-check capability state
-        $capability = Get-WindowsCapability -Online -Name $CapabilityName -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2 
+        $capability = Get-WindowsCapability -Online -Name $CapabilityName -ErrorAction SilentlyContinue 
+        
         if ($capability.State -eq 'Installed') {
             $ModuleResultToUpdateRef.Value.Notes += " RSAT Capability '$CapabilityName' installed successfully."
             Write-ModuleStatus -Message "RSAT tool '$RSATModuleName' (Capability '$CapabilityName') installed successfully." -Status "SUCCESS" -Color "Green"
             return $true
-        } else {
-            throw "Capability '$CapabilityName' not in 'Installed' state after Add-WindowsCapability. Current state: $($capability.State)"
+        } 
+        else {
+            $errorMessageDetail = "Capability '$CapabilityName' not in 'Installed' state after Add-WindowsCapability. Current state: $($capability.State)."
+            if ($capability.State -eq 'NotPresent') {
+                $errorMessageDetail += " This often means the system could not download the payload. Ensure Administrator rights, check Internet connectivity, Windows Update service status, and for restrictive Group Policies. Try manual installation via Windows Settings (Optional Features) or DISM using 'DISM.exe /Online /Add-Capability /CapabilityName:$CapabilityName'."
+            }
+            throw $errorMessageDetail
         }
     }
     catch {
@@ -416,25 +426,16 @@ function Test-SingleModule {
     param(
         [PSObject]$ModuleInfo, 
         [bool]$AttemptAutoFix, 
-        [bool]$AttemptSilentFix,
-        [string[]]$CurrentEnabledDiscoverySources 
+        [bool]$AttemptSilentFix
+        # Removed CurrentEnabledDiscoverySources as the dynamic criticality for Microsoft.Graph.Policies was based on a non-existent module
     )
     
     $moduleNameToCheck = $ModuleInfo.Name
-    $moduleCategory = $ModuleInfo.Category 
-    $effectiveCategory = $moduleCategory 
+    $effectiveCategory = $ModuleInfo.Category # Use original category from definition
     $reqVersion = [version]$ModuleInfo.RequiredVersion
     $isRSATTool = [bool]$ModuleInfo.IsRSAT
     $rsatCapabilityName = $ModuleInfo.RSATCapabilityName
     
-    #---------------------------------------------------------------------------
-    # Dynamic Criticality Assessment
-    #---------------------------------------------------------------------------
-    if ($moduleNameToCheck -eq "Microsoft.Graph.Policies" -and $CurrentEnabledDiscoverySources -contains "ExternalIdentity") {
-        $effectiveCategory = "CRITICAL REQUIRED" 
-        Write-Host "    NOTE: '$moduleNameToCheck' is now CRITICAL as 'ExternalIdentity' source is enabled." -ForegroundColor Yellow
-    }
-
     #---------------------------------------------------------------------------
     # Module Header Display
     #---------------------------------------------------------------------------
@@ -499,21 +500,21 @@ function Test-SingleModule {
                     if ($AttemptAutoFix) {
                         if (Install-RSATModuleTool -RSATModuleName $moduleNameToCheck -CapabilityName $rsatCapabilityName -ModuleResultToUpdateRef ([ref]$moduleResult) -AttemptSilentFix $AttemptSilentFix) {
                             $attemptedFixThisRun = $true
-                            Start-Sleep -Seconds 2 # Give time for module path to be recognized
-                            continue # Re-check after RSAT install attempt
-                        } else { break } # RSAT install failed or skipped
+                            Start-Sleep -Seconds 2 
+                            continue 
+                        } else { break } 
                     } else {
                         $moduleResult.Notes += " Install via Windows Features/Capabilities or use -AutoFix (as Admin)."
                         Write-ModuleStatus -Message "Manual installation or -AutoFix (as Admin) required for RSAT tool" -Status "WARNING" -Color "Yellow"
                         break
                     }
-                } else { # Not RSAT, try PSGallery
+                } else { 
                     if (Install-OrUpdateModuleViaPSGallery -ModuleNameForInstall $moduleNameToCheck -ReqVersion $reqVersion -ModuleResultToUpdateRef ([ref]$moduleResult) -AttemptAutoFix $AttemptAutoFix -AttemptSilentFix $AttemptSilentFix) { 
                         $attemptedFixThisRun = $true
-                        continue # Re-check after PSGallery fix attempt
-                    } else { break } # PSGallery Install failed or skipped
+                        continue 
+                    } else { break } 
                 }
-            } else { break } # Already attempted fix
+            } else { break } 
         } 
         else { 
             #-------------------------------------------------------------------
@@ -539,22 +540,16 @@ function Test-SingleModule {
                 
                 if (-not $attemptedFixThisRun) {
                     if ($isRSATTool) {
-                        if ($AttemptAutoFix) { # Even if version mismatch, for RSAT, it implies ensuring the feature is there.
-                             Write-ModuleStatus -Message "RSAT tool found but version is low. Manual update via Windows Features may be needed." -Status "WARNING" -Color "Yellow"
-                             $moduleResult.Notes += " Update via Windows Features if issues persist."
-                             break # Don't try to "update" RSAT module from gallery if found but old.
-                        } else {
-                            $moduleResult.Notes += " Update via Windows Features or use -AutoFix (as Admin)."
-                            Write-ModuleStatus -Message "Manual update via Windows Features required for RSAT tool version." -Status "WARNING" -Color "Yellow"
-                            break
-                        }
-                    } else { # Not RSAT, try PSGallery update
+                        $moduleResult.Notes += " Update via Windows Features if issues persist or version is critical."
+                        Write-ModuleStatus -Message "RSAT tool version is low. Manual update via Windows Features may be needed." -Status "WARNING" -Color "Yellow"
+                        break 
+                    } else { 
                         if (Install-OrUpdateModuleViaPSGallery -ModuleNameForInstall $moduleNameToCheck -ReqVersion $reqVersion -ModuleResultToUpdateRef ([ref]$moduleResult) -AttemptAutoFix $AttemptAutoFix -AttemptSilentFix $AttemptSilentFix) { 
                             $attemptedFixThisRun = $true
-                            continue # Re-check after PSGallery update
-                        } else { break } # PSGallery Update failed or skipped
+                            continue 
+                        } else { break } 
                     }
-                } else { break } # Already attempted fix
+                } else { break } 
             } 
             else { 
                 #---------------------------------------------------------------
@@ -590,10 +585,10 @@ function Test-SingleModule {
                         try { Remove-Module -Name $moduleNameToCheck -Force -ErrorAction SilentlyContinue } catch {} 
                     } 
                 }
-                break # Module is OK or import tested, exit loop
+                break 
             }
         }
-    } # End of for loop ($attempt)
+    } 
     
     if ($moduleResult.Status -eq "Not Checked") { 
         $moduleResult.Status = "Check Incomplete"
@@ -611,7 +606,7 @@ Write-Host ""
 Write-Host "  " -NoNewline
 Write-Host ("=" * 80) -ForegroundColor DarkCyan
 Write-Host "  " -NoNewline
-Write-Host " M&A DISCOVERY SUITE - MODULE DEPENDENCY CHECK v2.0.6 " -BackgroundColor DarkCyan -ForegroundColor White
+Write-Host " M&A DISCOVERY SUITE - MODULE DEPENDENCY CHECK v2.0.8 " -BackgroundColor DarkCyan -ForegroundColor White
 Write-Host "  " -NoNewline
 Write-Host ("=" * 80) -ForegroundColor DarkCyan
 Write-Host ""
@@ -623,7 +618,7 @@ if ($AutoFix.IsPresent -and -not $script:IsAdmin) {
     Write-Host "  " -NoNewline
     Write-Host " WARNING " -BackgroundColor DarkYellow -ForegroundColor Black -NoNewline
     Write-Host " Script is not running with Administrator privileges." -ForegroundColor Yellow
-    Write-Host "           RSAT tool installation via -AutoFix will likely fail." -ForegroundColor Yellow
+    Write-Host "           RSAT tool installation via -AutoFix will likely fail or be incomplete." -ForegroundColor Yellow 
     Write-Host ""
 }
 
@@ -683,17 +678,18 @@ Write-Host "  " -NoNewline
 Write-Host " MODULE COUNT " -BackgroundColor DarkBlue -ForegroundColor White -NoNewline
 Write-Host " Checking $($ModulesToCheck.Count) modules" -ForegroundColor Cyan
 
-if ($enabledDiscoverySources.Count -gt 0) {
-    Write-Host "  " -NoNewline
-    Write-Host " ENABLED SOURCES " -BackgroundColor DarkBlue -ForegroundColor White -NoNewline
-    Write-Host " ($($enabledDiscoverySources.Count)): $($enabledDiscoverySources -join ', ')" -ForegroundColor Cyan
-}
+# $enabledDiscoverySources is not used directly here anymore for output
+# if ($enabledDiscoverySources.Count -gt 0) {
+# Write-Host " " -NoNewline
+# Write-Host " ENABLED SOURCES " -BackgroundColor DarkBlue -ForegroundColor White -NoNewline
+# Write-Host " ($($enabledDiscoverySources.Count)): $($enabledDiscoverySources -join ', ')" -ForegroundColor Cyan
+# }
 
 #-------------------------------------------------------------------------------
 # Iterate and Test Modules
 #-------------------------------------------------------------------------------
 foreach ($moduleDef in $ModulesToCheck) { 
-    Test-SingleModule -ModuleInfo $moduleDef -AttemptAutoFix $AutoFix.IsPresent -AttemptSilentFix $Silent.IsPresent -CurrentEnabledDiscoverySources $enabledDiscoverySources
+    Test-SingleModule -ModuleInfo $moduleDef -AttemptAutoFix $AutoFix.IsPresent -AttemptSilentFix $Silent.IsPresent
 }
 
 #===============================================================================
@@ -773,13 +769,13 @@ $overallSuccess = $true
 if ($criticalIssues.Count -eq 0) { 
     Write-Host "  " -NoNewline
     Write-Host " SUCCESS " -BackgroundColor DarkGreen -ForegroundColor White -NoNewline
-    Write-Host " All CRITICAL REQUIRED modules are properly configured or were auto-fixed." -ForegroundColor Green # Updated message
+    Write-Host " All CRITICAL REQUIRED modules are properly configured or were auto-fixed." -ForegroundColor Green 
     Write-Host ""
     
     if ($otherIssues.Count -gt 0) { 
         Write-Host "  " -NoNewline
         Write-Host " ADVISORY " -BackgroundColor DarkYellow -ForegroundColor Black -NoNewline
-        Write-Host " Some optional/conditional modules have issues or require manual steps - review warnings above." -ForegroundColor Yellow # Updated message
+        Write-Host " Some optional/conditional modules have issues or require manual steps - review warnings above." -ForegroundColor Yellow 
     }
 } 
 else { 
@@ -794,7 +790,7 @@ else {
         Write-Host " $($_.Name) - $($_.Status) (Category: $($_.Category))" -ForegroundColor Red
         Write-Host "         Notes: $($_.Notes)" -ForegroundColor Gray
         
-        if ($_.IsRSAT -and ($_.Status -notlike "Imported Successfully*" -and $_.Status -notlike "Version OK")) { # Check if it's still an issue
+        if ($_.IsRSAT -and ($_.Status -notlike "Imported Successfully*" -and $_.Status -notlike "Version OK")) { 
             Write-Host "         " -NoNewline
             Write-Host " ACTION REQUIRED " -BackgroundColor DarkYellow -ForegroundColor Black -NoNewline
             Write-Host " Install/update RSAT tool manually or re-run as Admin with -AutoFix." -ForegroundColor Yellow
@@ -810,7 +806,7 @@ else {
 if ($otherIssues.Count -gt 0) { 
     Write-Host ""
     Write-Host "  " -NoNewline
-    Write-Host " WARNINGS / INFO " -BackgroundColor DarkYellow -ForegroundColor Black -NoNewline # Changed Title
+    Write-Host " WARNINGS / INFO " -BackgroundColor DarkYellow -ForegroundColor Black -NoNewline 
     Write-Host " Issues or notes for non-critical modules:" -ForegroundColor Yellow
     Write-Host ""
     
@@ -840,7 +836,7 @@ if (-not $overallSuccess -and -not $AutoFix.IsPresent) {
     Write-Host ""
     Write-Host "  " -NoNewline
     Write-Host " TIP " -BackgroundColor DarkBlue -ForegroundColor White -NoNewline
-    Write-Host " Re-run with -AutoFix to attempt automatic module/tool installation." -ForegroundColor Cyan # Updated message
+    Write-Host " Re-run with -AutoFix to attempt automatic module/tool installation." -ForegroundColor Cyan 
 }
 
 Write-Host ""

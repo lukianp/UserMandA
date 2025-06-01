@@ -27,7 +27,7 @@
     Optional. The Client ID (App ID) of an existing app registration to use or validate.
 .NOTES
     Author: Lukian Poleschtschuk & Gemini
-    Version: 5.1.0
+    Version: 5.2.0
     Created: 2025-05-31
     Last Modified: 2025-06-01
 #>
@@ -70,9 +70,7 @@ param(
 )
 
 # --- Environment Initialization ---
-# Source the master environment script to ensure all paths and configs are loaded.
 try {
-    # This block ensures that if the script is run directly, it can find the environment setup script.
     if ($null -eq $global:MandA) {
         $envSetupScriptPath = Join-Path $PSScriptRoot "Set-SuiteEnvironment.ps1"
         if (Test-Path $envSetupScriptPath) {
@@ -86,7 +84,6 @@ try {
     exit 1
 }
 
-# Set default paths from the now-loaded global environment configuration
 if (-not $PSBoundParameters.ContainsKey('LogPath')) {
     $LogPath = Join-Path $global:MandA.Paths.LogOutput "Setup-AppRegistration_$(Get-Date -Format 'yyyyMMddHHmmss').log"
 }
@@ -96,33 +93,30 @@ if (-not $PSBoundParameters.ContainsKey('EncryptedOutputPath')) {
 # --- End Environment Initialization ---
 
 
-# Get the script root directory for location-independent paths
 $script:ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $script:SuiteRoot = Split-Path $script:ScriptDir -Parent
 
-# Import required modules with better error handling
 $ModulePaths = @(
     (Join-Path $script:SuiteRoot "Modules\Utilities\EnhancedLogging.psm1"),
     (Join-Path $script:SuiteRoot "Modules\Authentication\CredentialManagement.psm1")
 )
 
 $moduleLoadErrors = @()
-foreach ($ModulePath in $ModulePaths) {
-    if (Test-Path $ModulePath) {
+foreach ($ModulePath_item in $ModulePaths) { # Renamed $ModulePath to avoid conflict
+    if (Test-Path $ModulePath_item) {
         try {
-            Import-Module $ModulePath -Force -Global
-            Write-Host "Successfully imported module: $(Split-Path $ModulePath -Leaf)" -ForegroundColor Green
+            Import-Module $ModulePath_item -Force -Global
+            Write-Host "Successfully imported module: $(Split-Path $ModulePath_item -Leaf)" -ForegroundColor Green
         } catch {
-            $moduleLoadErrors += "Failed to import $ModulePath $($_.Exception.Message)"
-            Write-Warning "Failed to import module: $ModulePath"
+            $moduleLoadErrors += "Failed to import $ModulePath_item $($_.Exception.Message)"
+            Write-Warning "Failed to import module: $ModulePath_item"
         }
     } else {
-        $moduleLoadErrors += "Module not found: $ModulePath"
-        Write-Warning "Required module not found: $ModulePath"
+        $moduleLoadErrors += "Module not found: $ModulePath_item"
+        Write-Warning "Required module not found: $ModulePath_item"
     }
 }
 
-# Check if critical functions are available
 if (-not (Get-Command Set-SecureCredentials -ErrorAction SilentlyContinue)) {
     Write-Error "Critical function 'Set-SecureCredentials' not available. Please ensure CredentialManagement.psm1 is properly loaded."
     if ($moduleLoadErrors.Count -gt 0) {
@@ -132,20 +126,15 @@ if (-not (Get-Command Set-SecureCredentials -ErrorAction SilentlyContinue)) {
     throw "Required modules/functions not available. Cannot continue."
 }
 
-
-# Get the script root directory for location-independent paths
-$script:SuiteRoot = Split-Path $PSScriptRoot -Parent
-
 #region Enhanced Global Configuration
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-$VerbosePreference = "SilentlyContinue" # Set to "Continue" for more verbose output if needed
+$VerbosePreference = "SilentlyContinue" 
 $ProgressPreference = "Continue"
 
-# Script metadata and validation
 $script:ScriptInfo = @{
     Name = "Enhanced M&A Discovery Suite - App Registration"
-    Version = "5.1.0" # Incremented version
+    Version = "5.2.0" 
     Author = "Lukian Poleschtschuk & Gemini"
     RequiredPSVersion = "5.1"
     Dependencies = @(
@@ -166,15 +155,12 @@ $script:ScriptInfo = @{
     }
 }
 
-# Enhanced application configuration with Exchange permissions
 $script:AppConfig = @{
     DisplayName = "MandADiscovery"
     Description = "M&A Environment Discovery Service Principal with read-only permissions for comprehensive organizational assessment"
     RequiredGraphPermissions = @{
-        
-         # Core directory permissions
         "Application.Read.All" = "Read all applications and service principals" 
-        "AppRoleAssignment.Read.All" = "Read all app role assignments"
+        # "AppRoleAssignment.Read.All" = "Read all app role assignments" # Temporarily removed due to mapping issues
         "AuditLog.Read.All" = "Read audit logs for compliance tracking"
         "Directory.Read.All" = "Read directory data including users, groups, and organizational structure"
         "Group.Read.All" = "Read all groups and group properties"
@@ -182,21 +168,15 @@ $script:AppConfig = @{
         "User.Read.All" = "Read all user profiles and properties"
         "Organization.Read.All" = "Read organization information and settings"
         "RoleManagement.Read.All" = "Read role management data (Azure AD roles, eligibility, assignments)"
-        "SignIn.Read.All" = "Read all user sign-in activity logs"
-
-        # Device and compliance (Intune via Graph)
+        # "SignIn.Read.All" = "Read all user sign-in activity logs" # Temporarily removed due to mapping issues
         "Device.Read.All" = "Read all device information (Azure AD registered/joined devices)"
         "DeviceManagementConfiguration.Read.All" = "Read device management configuration (Intune policies, settings)"
         "DeviceManagementManagedDevices.Read.All" = "Read managed devices in Intune"
         "DeviceManagementApps.Read.All" = "Read device management applications (Intune)"
         "DeviceManagementServiceConfig.Read.All" = "Read Intune service configuration settings"
-
-        # Policy and governance
         "Policy.Read.All" = "Read policies including conditional access, authentication methods, etc."
         "Policy.Read.ConditionalAccess" = "Read conditional access policies specifically" 
         "Reports.Read.All" = "Read reports for usage and security analytics"
-
-        # SharePoint, OneDrive, and Teams via Graph
         "Sites.Read.All" = "Read SharePoint sites and content lists/libraries."
         "Files.Read.All" = "Read all files across the organization (OneDrive, SharePoint)"
         "Team.ReadBasic.All" = "Read basic team information"
@@ -204,14 +184,10 @@ $script:AppConfig = @{
         "TeamSettings.Read.All" = "Read team settings and configuration"
         "Channel.ReadBasic.All" = "Read basic channel information within Teams"
         "ChannelMember.Read.All" = "Read channel membership within Teams"
-
-        # Exchange Online via Graph
         "MailboxSettings.Read" = "Read users' mailbox settings"
         "Mail.ReadBasic.All" = "Read basic properties of mail messages"
         "Calendars.Read" = "Read users' calendars and events"
         "Contacts.Read" = "Read users' contacts"
-
-        # Advanced features & Migration Planning related
         "Directory.ReadWrite.All" = "Read and write directory data" 
         "Synchronization.Read.All" = "Read synchronization data and AD Connect hybrid configurations"
         "ExternalConnection.Read.All" = "Read external connections and search configurations"
@@ -225,10 +201,9 @@ $script:AppConfig = @{
     AzureRoles = @(
         "Reader" 
     )
-    # ExchangeRoles property is not used in this version of the script based on Set-ExchangeRoleAssignment
+    ExchangeRoles = @() # Added empty array to prevent error
 }
 
-# Enhanced color scheme for consistent output
 $script:ColorScheme = @{
     Header = @{ ForegroundColor = "White"; BackgroundColor = "DarkBlue" }
     Success = @{ ForegroundColor = "Green" }
@@ -244,14 +219,12 @@ $script:ColorScheme = @{
     Exchange = @{ ForegroundColor = "Blue"; BackgroundColor = "White" }
 }
 
-# Connection status tracking with Exchange
 $script:ConnectionStatus = @{
     Graph = @{ Connected = $false; LastError = $null; RetryCount = 0; Context = $null }
     Azure = @{ Connected = $false; LastError = $null; RetryCount = 0; Context = $null }
     Exchange = @{ Connected = $false; LastError = $null; RetryCount = 0; Session = $null }
 }
 
-# Performance metrics with Exchange operations
 $script:Metrics = @{
     StartTime = Get-Date
     EndTime = $null
@@ -382,20 +355,6 @@ function Stop-OperationTimer {
 }
 #endregion
 
-# Import required modules using absolute paths relative to suite root
-# Already handled by initial block sourcing Set-SuiteEnvironment.ps1 if $global:MandA not present
-# $ModulePaths = @(
-# (Join-Path $script:SuiteRoot "Modules\Utilities\Logging.psm1"), # Should be EnhancedLogging
-# (Join-Path $script:SuiteRoot "Modules\Authentication\CredentialManagement.psm1")
-# )
-# foreach ($ModulePath in $ModulePaths) {
-# if (Test-Path $ModulePath) {
-# Import-Module $ModulePath -Force
-# } else {
-# Write-Warning "Required module not found: $ModulePath"
-# }
-# }
-
 #region Enhanced Prerequisites and Validation
 function Test-Prerequisites {
     param(
@@ -413,8 +372,8 @@ function Test-Prerequisites {
         elseif ($psVersion.Major -eq 5) { $warnings += "PowerShell 5.1 detected. PowerShell 7+ recommended." }
         else { Write-EnhancedLog "PowerShell version: $psVersion" -Level SUCCESS }
 
-        $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-        $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
+        $currentUserIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object Security.Principal.WindowsPrincipal($currentUserIdentity)
         $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
         
         if ($isAdmin) {
@@ -431,18 +390,18 @@ function Test-Prerequisites {
         )
         Write-EnhancedLog "Testing network connectivity to $($connectivityTests.Count) endpoints..." -Level PROGRESS
         $connectionResults = @()
-        foreach ($test in $connectivityTests) {
+        foreach ($test_item in $connectivityTests) { # Renamed $test to $test_item
             try {
-                $connection = Test-NetConnection -ComputerName $test.Host -Port $test.Port -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction Stop
+                $connection = Test-NetConnection -ComputerName $test_item.Host -Port $test_item.Port -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction Stop
                 if ($connection) {
-                    Write-EnhancedLog "Connectivity to $($test.Service): Available" -Level SUCCESS
+                    Write-EnhancedLog "Connectivity to $($test_item.Service): Available" -Level SUCCESS
                     $connectionResults += $true
                 } else {
-                    $issues += "Cannot connect to $($test.Service) ($($test.Host) port $($test.Port))"
+                    $issues += "Cannot connect to $($test_item.Service) ($($test_item.Host) port $($test_item.Port))"
                     $connectionResults += $false
                 }
             } catch {
-                $issues += "Network test failed for $($test.Service): $($_.Exception.Message)"
+                $issues += "Network test failed for $($test_item.Service): $($_.Exception.Message)"
                 $connectionResults += $false
             }
         }
@@ -454,20 +413,20 @@ function Test-Prerequisites {
             try { New-Item -Path $encryptedDir -ItemType Directory -Force -ErrorAction Stop | Out-Null; Write-EnhancedLog "Created output directory: $encryptedDir" -Level SUCCESS }
             catch { $issues += "Cannot create output directory '$encryptedDir': $($_.Exception.Message)" }
         } else {
-            $testFile = Join-Path $encryptedDir "write_test_$(Get-Random).tmp"
-            try { "test" | Out-File -FilePath $testFile -ErrorAction Stop; Remove-Item $testFile -ErrorAction SilentlyContinue; Write-EnhancedLog "Output directory accessible: $encryptedDir" -Level SUCCESS }
+            $testFile_local = Join-Path $encryptedDir "write_test_$(Get-Random).tmp" # Renamed $testFile
+            try { "test" | Out-File -FilePath $testFile_local -ErrorAction Stop; Remove-Item $testFile_local -ErrorAction SilentlyContinue; Write-EnhancedLog "Output directory accessible: $encryptedDir" -Level SUCCESS }
             catch { $issues += "Output directory lacks write permissions: $encryptedDir" }
         }
         
         Write-EnhancedLog "Checking PowerShell modules..." -Level PROGRESS
-        foreach ($module in $script:ScriptInfo.Dependencies) {
-            $installedModule = Get-Module -ListAvailable -Name $module -ErrorAction SilentlyContinue | 
+        foreach ($module_item in $script:ScriptInfo.Dependencies) { # Renamed $module to $module_item
+            $installedModule = Get-Module -ListAvailable -Name $module_item -ErrorAction SilentlyContinue | 
                 Sort-Object Version -Descending | Select-Object -First 1
             
             if ($installedModule) {
-                Write-EnhancedLog "Module available: $module v$($installedModule.Version)" -Level SUCCESS
+                Write-EnhancedLog "Module available: $module_item v$($installedModule.Version)" -Level SUCCESS
             } else {
-                $issues += "Required module '$module' not found. Install with: Install-Module $module -Scope CurrentUser"
+                $issues += "Required module '$module_item' not found. Install with: Install-Module $module_item -Scope CurrentUser"
             }
         }
 
@@ -482,7 +441,7 @@ function Test-Prerequisites {
 
 #region Enhanced Module Management
 
-function Initialize-RequiredModules { # Renamed from Ensure-RequiredModules
+function Initialize-RequiredModules { 
     Start-OperationTimer "ModuleManagement"
     Write-ProgressHeader "MODULE MANAGEMENT" "Installing and updating required PowerShell modules"
     try {
@@ -494,76 +453,76 @@ function Initialize-RequiredModules { # Renamed from Ensure-RequiredModules
         Write-EnhancedLog "Unloading potentially conflicting modules..." -Level PROGRESS
         $loadedModules = Get-Module -Name "Az.*", "Microsoft.Graph.*" -ErrorAction SilentlyContinue
         $unloadCount = 0
-        foreach ($module in $loadedModules) {
+        foreach ($module_to_unload in $loadedModules) { # Renamed $module
             try {
-                Remove-Module -Name $module.Name -Force -ErrorAction Stop
+                Remove-Module -Name $module_to_unload.Name -Force -ErrorAction Stop
                 $unloadCount++
-                Write-EnhancedLog "Unloaded $($module.Name) v$($module.Version)" -Level SUCCESS
+                Write-EnhancedLog "Unloaded $($module_to_unload.Name) v$($module_to_unload.Version)" -Level SUCCESS
             } catch {
-                Write-EnhancedLog "Could not unload $($module.Name): $($_.Exception.Message)" -Level WARN
+                Write-EnhancedLog "Could not unload $($module_to_unload.Name): $($_.Exception.Message)" -Level WARN
             }
         }
         
         $totalModules = $script:ScriptInfo.Dependencies.Count; $processedModules = 0
-        foreach ($moduleName in $script:ScriptInfo.Dependencies) {
+        foreach ($moduleName_local in $script:ScriptInfo.Dependencies) { # Renamed $moduleName
             $processedModules++
-            Write-Progress -Activity "Processing Modules" -Status "Processing $moduleName ($processedModules/$totalModules)" -PercentComplete (($processedModules / $totalModules) * 100)
+            Write-Progress -Activity "Processing Modules" -Status "Processing $moduleName_local ($processedModules/$totalModules)" -PercentComplete (($processedModules / $totalModules) * 100)
             
-            Write-EnhancedLog "Processing module: $moduleName" -Level PROGRESS
+            Write-EnhancedLog "Processing module: $moduleName_local" -Level PROGRESS
             try {
-                if ($moduleName -like "Az.*" -and $PSVersionTable.PSVersion.Major -eq 5) {
-                    $installedModule = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue | 
+                if ($moduleName_local -like "Az.*" -and $PSVersionTable.PSVersion.Major -eq 5) {
+                    $installedModule = Get-Module -ListAvailable -Name $moduleName_local -ErrorAction SilentlyContinue | 
                         Where-Object { $_.Version.Major -ge 8 } |
                         Sort-Object Version -Descending | 
                         Select-Object -First 1
                     
                     if (-not $installedModule) {
-                        Write-EnhancedLog "Installing $moduleName (PS 5.1 compatible version)..." -Level PROGRESS
-                        Install-Module -Name $moduleName -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -SkipPublisherCheck -ErrorAction Stop
-                        Write-EnhancedLog "Successfully installed $moduleName" -Level SUCCESS
+                        Write-EnhancedLog "Installing $moduleName_local (PS 5.1 compatible version)..." -Level PROGRESS
+                        Install-Module -Name $moduleName_local -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -SkipPublisherCheck -ErrorAction Stop
+                        Write-EnhancedLog "Successfully installed $moduleName_local" -Level SUCCESS
                     } else {
-                        Write-EnhancedLog "Found $moduleName v$($installedModule.Version)" -Level INFO
+                        Write-EnhancedLog "Found $moduleName_local v$($installedModule.Version)" -Level INFO
                     }
                     
                     try {
-                        Import-Module -Name $moduleName -Force -Global -ErrorAction Stop -WarningAction SilentlyContinue
-                        Write-EnhancedLog "Imported $moduleName successfully" -Level SUCCESS
+                        Import-Module -Name $moduleName_local -Force -Global -ErrorAction Stop -WarningAction SilentlyContinue
+                        Write-EnhancedLog "Imported $moduleName_local successfully" -Level SUCCESS
                     } catch {
                         if ($installedModule) {
-                            Import-Module -Name $moduleName -RequiredVersion $installedModule.Version -Force -Global -ErrorAction Stop -WarningAction SilentlyContinue
-                            Write-EnhancedLog "Imported $moduleName v$($installedModule.Version) with specific version" -Level SUCCESS
+                            Import-Module -Name $moduleName_local -RequiredVersion $installedModule.Version -Force -Global -ErrorAction Stop -WarningAction SilentlyContinue
+                            Write-EnhancedLog "Imported $moduleName_local v$($installedModule.Version) with specific version" -Level SUCCESS
                         } else {
                             throw
                         }
                     }
                 } else {
-                    $installedModule = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue | 
+                    $installedModule = Get-Module -ListAvailable -Name $moduleName_local -ErrorAction SilentlyContinue | 
                         Sort-Object Version -Descending | Select-Object -First 1
                     
                     if (-not $installedModule) {
-                        Write-EnhancedLog "Installing $moduleName..." -Level PROGRESS
-                        Install-Module -Name $moduleName -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
-                        Write-EnhancedLog "Successfully installed $moduleName" -Level SUCCESS
+                        Write-EnhancedLog "Installing $moduleName_local..." -Level PROGRESS
+                        Install-Module -Name $moduleName_local -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
+                        Write-EnhancedLog "Successfully installed $moduleName_local" -Level SUCCESS
                     } else {
-                        Write-EnhancedLog "Found $moduleName v$($installedModule.Version)" -Level INFO
-                        Write-EnhancedLog "$moduleName is up to date (v$($installedModule.Version))" -Level SUCCESS
+                        Write-EnhancedLog "Found $moduleName_local v$($installedModule.Version)" -Level INFO
+                        Write-EnhancedLog "$moduleName_local is up to date (v$($installedModule.Version))" -Level SUCCESS
                     }
                     
-                    $latestInstalled = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue | 
+                    $latestInstalled = Get-Module -ListAvailable -Name $moduleName_local -ErrorAction SilentlyContinue | 
                         Sort-Object Version -Descending | Select-Object -First 1
                     
                     if ($latestInstalled) {
-                        Import-Module -Name $moduleName -RequiredVersion $latestInstalled.Version -Force -ErrorAction Stop
-                        Write-EnhancedLog "Imported $moduleName v$($latestInstalled.Version)" -Level SUCCESS
+                        Import-Module -Name $moduleName_local -RequiredVersion $latestInstalled.Version -Force -ErrorAction Stop
+                        Write-EnhancedLog "Imported $moduleName_local v$($latestInstalled.Version)" -Level SUCCESS
                     } else {
-                        throw "Module $moduleName not found after installation"
+                        throw "Module $moduleName_local not found after installation"
                     }
                 }
                 
             } catch {
-                Write-EnhancedLog "Failed to process $moduleName`: $($_.Exception.Message)" -Level ERROR
+                Write-EnhancedLog "Failed to process $moduleName_local`: $($_.Exception.Message)" -Level ERROR
                 Stop-OperationTimer "ModuleManagement" $false
-                throw "Module management failed for $moduleName"
+                throw "Module management failed for $moduleName_local"
             }
         }
         Write-Progress -Activity "Processing Modules" -Completed
@@ -587,10 +546,10 @@ Write-EnhancedLog "Enhanced M&A Discovery Suite App Registration Script loaded s
 function Connect-EnhancedGraph {
     param(
         [Parameter(Mandatory=$false)]
-        [switch]$UseDeviceAuth,
+        [switch]$UseDeviceAuth, # Keep this specific to function
         
         [Parameter(Mandatory=$false)]
-        [string]$TenantIdParam # Renamed to avoid conflict with $TenantId from main scope
+        [string]$TenantIdParam 
     )
     
     Start-OperationTimer "GraphConnection"
@@ -610,7 +569,7 @@ function Connect-EnhancedGraph {
             if ($existingContext) { Disconnect-MgGraph -ErrorAction SilentlyContinue; Write-EnhancedLog "Disconnected existing Graph session" -Level INFO }
 
             Write-EnhancedLog "Connecting to Microsoft Graph with required scopes..." -Level PROGRESS
-            if ($TenantIdParam) { # Use the renamed parameter
+            if ($TenantIdParam) { 
                 Connect-MgGraph -Scopes $requiredScopes -TenantId $TenantIdParam -NoWelcome -ErrorAction Stop
             } else {
                 Connect-MgGraph -Scopes $requiredScopes -NoWelcome -ErrorAction Stop
@@ -625,8 +584,8 @@ function Connect-EnhancedGraph {
                     throw "Cannot access organization data - check permissions"
                 }
                 
-                $testApps = Get-MgApplication -Top 1 -ErrorAction Stop # Renamed from $apps
-                if (-not $testApps) { # Added check for $testApps
+                $testApps = Get-MgApplication -Top 1 -ErrorAction Stop 
+                if (-not $testApps) { 
                     throw "Cannot access application data - check permissions"
                 }
                 Write-EnhancedLog "Permission verification: Organization and Application access confirmed" -Level SUCCESS
@@ -668,6 +627,7 @@ function Connect-EnhancedGraph {
 }
 
 function Connect-EnhancedAzure {
+    # This function uses $TenantId from the script's main parameter scope if available
     if ($SkipAzureRoles) { Write-EnhancedLog "Skipping Azure connection as requested" -Level INFO; return $true }
     Start-OperationTimer "AzureConnection"
     Write-ProgressHeader "AZURE CONNECTION" "Establishing Azure Resource Management session"
@@ -675,21 +635,21 @@ function Connect-EnhancedAzure {
     for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
         try {
             Write-EnhancedLog "Azure Connection attempt $attempt of $maxRetries..." -Level PROGRESS
-            $existingContext = Get-AzContext -ErrorAction SilentlyContinue
-            if ($existingContext -and $existingContext.Account) {
-                try { Get-AzSubscription -ErrorAction Stop | Out-Null; Write-EnhancedLog "Using existing Azure connection" -Level SUCCESS; $script:ConnectionStatus.Azure.Connected = $true; $script:ConnectionStatus.Azure.Context = $existingContext; Stop-OperationTimer "AzureConnection" $true; return $true }
+            $existingAzContext = Get-AzContext -ErrorAction SilentlyContinue # Renamed to avoid conflict
+            if ($existingAzContext -and $existingAzContext.Account) {
+                try { Get-AzSubscription -ErrorAction Stop | Out-Null; Write-EnhancedLog "Using existing Azure connection" -Level SUCCESS; $script:ConnectionStatus.Azure.Connected = $true; $script:ConnectionStatus.Azure.Context = $existingAzContext; Stop-OperationTimer "AzureConnection" $true; return $true }
                 catch { Write-EnhancedLog "Existing Azure connection invalid, reconnecting..." -Level WARN }
             }
 
             Write-EnhancedLog "Connecting to Azure..." -Level PROGRESS
-            if ($TenantId) { # This $TenantId refers to the one available in the script's main scope if set
+            if ($TenantId) { 
                 Connect-AzAccount -TenantId $TenantId -Scope CurrentUser -ErrorAction Stop | Out-Null
             } else {
                 Connect-AzAccount -Scope CurrentUser -ErrorAction Stop | Out-Null
             }
             
-            $context = Get-AzContext -ErrorAction Stop
-            if (-not $context -or -not $context.Account) {
+            $currentAzContext = Get-AzContext -ErrorAction Stop # Renamed
+            if (-not $currentAzContext -or -not $currentAzContext.Account) {
                 throw "Failed to establish valid Azure context"
             }
             
@@ -702,8 +662,8 @@ function Connect-EnhancedAzure {
             $disabledSubscriptions = $subscriptions | Where-Object { $_.State -ne "Enabled" }
             
             Write-EnhancedLog "Successfully connected to Azure" -Level SUCCESS
-            Write-EnhancedLog "  Account: $($context.Account.Id)" -Level INFO
-            Write-EnhancedLog "  Tenant: $($context.Tenant.Id)" -Level INFO
+            Write-EnhancedLog "  Account: $($currentAzContext.Account.Id)" -Level INFO
+            Write-EnhancedLog "  Tenant: $($currentAzContext.Tenant.Id)" -Level INFO
             Write-EnhancedLog "  Total Subscriptions: $($subscriptions.Count)" -Level INFO
             Write-EnhancedLog "  Active Subscriptions: $($activeSubscriptions.Count)" -Level INFO
             
@@ -712,14 +672,14 @@ function Connect-EnhancedAzure {
             }
             
             $activeSubscriptions | Select-Object -First 3 | ForEach-Object {
-                Write-EnhancedLog "    â€¢ $($_.Name) ($($_.State))" -Level INFO
+                Write-EnhancedLog "    • $($_.Name) ($($_.State))" -Level INFO
             }
             if ($activeSubscriptions.Count -gt 3) {
                 Write-EnhancedLog "    ... and $($activeSubscriptions.Count - 3) more active subscriptions" -Level INFO
             }
             
             $script:ConnectionStatus.Azure.Connected = $true
-            $script:ConnectionStatus.Azure.Context = $context
+            $script:ConnectionStatus.Azure.Context = $currentAzContext
             $script:ConnectionStatus.Azure.LastError = $null
             $script:ConnectionStatus.Azure.RetryCount = $attempt
             
@@ -741,7 +701,7 @@ function Connect-EnhancedExchange {
         [Parameter(Mandatory=$true)]
         [string]$AppId,
         [Parameter(Mandatory=$true)]
-        [string]$TenantIdParam # Renamed to avoid conflict
+        [string]$TenantIdParam 
     )
     
     if ($SkipExchangeRole) {
@@ -785,7 +745,7 @@ function Connect-EnhancedExchange {
             
             $connectionParams = @{
                 AppId = $AppId
-                Organization = "$($TenantIdParam).onmicrosoft.com" # Use renamed parameter
+                Organization = "$($TenantIdParam).onmicrosoft.com" 
                 Certificate = $null 
                 ShowBanner = $false
                 ErrorAction = 'Stop'
@@ -863,12 +823,11 @@ function New-EnhancedAppRegistration {
         $resourceAccess = @(); $foundPermissions = @(); $missingPermissions = @()
         $totalPermissions = $script:AppConfig.RequiredGraphPermissions.Count; $processedPermissions = 0
         Write-EnhancedLog "Mapping $totalPermissions permissions..." -Level PROGRESS
-        foreach ($permission in $script:AppConfig.RequiredGraphPermissions.GetEnumerator()) {
+        foreach ($permission_item in $script:AppConfig.RequiredGraphPermissions.GetEnumerator()) { # Renamed $permission
             $processedPermissions++
-            Write-Progress -Activity "Mapping Permissions" -Status "Processing $($permission.Key) ($processedPermissions/$totalPermissions)" -PercentComplete (($processedPermissions / $totalPermissions) * 100)
+            Write-Progress -Activity "Mapping Permissions" -Status "Processing $($permission_item.Key) ($processedPermissions/$totalPermissions)" -PercentComplete (($processedPermissions / $totalPermissions) * 100)
             
-            $permissionName = $permission.Key
-            # $permissionDescription = $permission.Value # Removed as it's unused
+            $permissionName = $permission_item.Key
             
             $appRole = $graphSp.AppRoles | Where-Object { $_.Value -eq $permissionName }
             if ($appRole) {
@@ -896,17 +855,17 @@ function New-EnhancedAppRegistration {
 
 function Use-ExistingAppRegistration {
     param(
-        [string]$ClientIdParam, # Renamed
-        [string]$TenantIdParam # Renamed
+        [string]$ClientIdParam, 
+        [string]$TenantIdParam 
     )
     
     try {
         Write-EnhancedLog "Using existing App Registration..." -Level PROGRESS
         
-        $app = Get-MgApplication -Filter "AppId eq '$ClientIdParam'" -ErrorAction Stop # Use renamed
+        $app = Get-MgApplication -Filter "AppId eq '$ClientIdParam'" -ErrorAction Stop 
         
         if (-not $app) {
-            throw "Application with Client ID '$ClientIdParam' not found" # Use renamed
+            throw "Application with Client ID '$ClientIdParam' not found" 
         }
         
         Write-EnhancedLog "Found existing application: $($app.DisplayName)" -Level SUCCESS
@@ -938,41 +897,50 @@ function Grant-EnhancedAdminConsent {
         $grantedCount = 0
         $skippedCount = 0
         $failedCount = 0
-        $totalPermissions = $AppRegistration.RequiredResourceAccess[0].ResourceAccess.Count
-        
-        $currentPermission = 0
-        foreach ($access in $AppRegistration.RequiredResourceAccess[0].ResourceAccess) { # Renamed from $resourceAccess to $access
-            $currentPermission++
-            
-            if ($access.Type -eq "Role") { # Use $access
-                $permissionId = $access.Id # Use $access
-                
-                $permissionName = $null
-                $matchingRole = $graphSp.AppRoles | Where-Object { $_.Id -eq $permissionId }
-                if ($matchingRole) {
-                    $permissionName = $matchingRole.Value
-                } else {
-                    $permissionName = "Unknown Permission"
-                }
-                
-                Write-Progress -Activity "Granting Permissions" -Status "Processing $permissionName ($currentPermission/$totalPermissions)" -PercentComplete (($currentPermission / $totalPermissions) * 100)
-                
-                $existingAssignment = Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $appSp.Id -ErrorAction SilentlyContinue | 
-                    Where-Object { $_.AppRoleId -eq $permissionId -and $_.ResourceId -eq $graphSp.Id }
-                
-                if ($existingAssignment) {
-                    Write-EnhancedLog "Already granted: $permissionName" -Level INFO
-                    $skippedCount++
-                    continue
-                }
-                
-                try {
-                    New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $appSp.Id -PrincipalId $appSp.Id -ResourceId $graphSp.Id -AppRoleId $access.Id -ErrorAction Stop | Out-Null # Use $access.Id
-                    Write-EnhancedLog "Granted: $permissionName" -Level SUCCESS; $grantedCount++
-                } catch { Write-EnhancedLog "Failed to grant $permissionName`: $($_.Exception.Message)" -Level ERROR; $failedCount++ }
-            }
+        # Ensure RequiredResourceAccess and its first element are not null before counting
+        $totalPermissions = 0
+        if ($AppRegistration.RequiredResourceAccess -and $AppRegistration.RequiredResourceAccess.Count -gt 0) {
+            $totalPermissions = $AppRegistration.RequiredResourceAccess[0].ResourceAccess.Count
         }
-        Write-Progress -Activity "Granting Permissions" -Completed
+
+        if ($totalPermissions -gt 0) {
+            $currentPermission = 0
+            foreach ($access_item in $AppRegistration.RequiredResourceAccess[0].ResourceAccess) { # Renamed $access
+                $currentPermission++
+                
+                if ($access_item.Type -eq "Role") { 
+                    $permissionId = $access_item.Id 
+                    
+                    $permissionName = $null
+                    $matchingRole = $graphSp.AppRoles | Where-Object { $_.Id -eq $permissionId }
+                    if ($matchingRole) {
+                        $permissionName = $matchingRole.Value
+                    } else {
+                        $permissionName = "Unknown Permission ID: $permissionId"
+                    }
+                    
+                    Write-Progress -Activity "Granting Permissions" -Status "Processing $permissionName ($currentPermission/$totalPermissions)" -PercentComplete (($currentPermission / $totalPermissions) * 100)
+                    
+                    $existingAssignment = Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $appSp.Id -ErrorAction SilentlyContinue | 
+                        Where-Object { $_.AppRoleId -eq $permissionId -and $_.ResourceId -eq $graphSp.Id }
+                    
+                    if ($existingAssignment) {
+                        Write-EnhancedLog "Already granted: $permissionName" -Level INFO
+                        $skippedCount++
+                        continue
+                    }
+                    
+                    try {
+                        New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $appSp.Id -PrincipalId $appSp.Id -ResourceId $graphSp.Id -AppRoleId $access_item.Id -ErrorAction Stop | Out-Null 
+                        Write-EnhancedLog "Granted: $permissionName" -Level SUCCESS; $grantedCount++
+                    } catch { Write-EnhancedLog "Failed to grant $permissionName`: $($_.Exception.Message)" -Level ERROR; $failedCount++ }
+                }
+            }
+            Write-Progress -Activity "Granting Permissions" -Completed
+        } else {
+            Write-EnhancedLog "No permissions found in RequiredResourceAccess to grant." -Level WARN
+        }
+
         Write-EnhancedLog "Permission grant summary: Granted=$grantedCount, Skipped=$skippedCount, Failed=$failedCount" -Level INFO
         if ($failedCount -gt 0) { Write-EnhancedLog "Some permissions failed to grant. Application may have limited functionality." -Level WARN }
         Stop-OperationTimer "PermissionGrant" $true; return $servicePrincipal
@@ -988,6 +956,7 @@ function New-EnhancedClientSecret {
     Start-OperationTimer "SecretCreation"
     Write-ProgressHeader "CLIENT SECRET" "Generating secure authentication credentials"
     
+    $clientSecretObj = $null # Initialize to ensure scope
     try {
         $secretDescription = "M&A Discovery Secret - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
         $secretEndDate = (Get-Date).AddYears($SecretValidityYears)
@@ -1005,23 +974,23 @@ function New-EnhancedClientSecret {
             }
         }
         
-        $clientSecret = Add-MgApplicationPassword @secretParams -ErrorAction Stop
+        $clientSecretObj = Add-MgApplicationPassword @secretParams -ErrorAction Stop
         
         Write-EnhancedLog "Client secret created successfully" -Level SUCCESS
-        Write-EnhancedLog "  Secret ID: $($clientSecret.KeyId)" -Level INFO
-        Write-EnhancedLog "  Expires: $($secretEndDate.ToString('yyyy-MM-dd HH:mm:ss'))" -Level INFO
+        Write-EnhancedLog "  Secret ID: $($clientSecretObj.KeyId)" -Level INFO
+        Write-EnhancedLog "  Expires: $($clientSecretObj.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss'))" -Level INFO
         
         Write-Host "`n" -NoNewline
         Write-Host "════════════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
         Write-Host "                              CLIENT SECRET VALUE                                " -ForegroundColor White -BackgroundColor DarkGreen
         Write-Host "════════════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
         Write-Host "`nCOPY THIS SECRET NOW - IT CANNOT BE RETRIEVED LATER:" -ForegroundColor Yellow
-        Write-Host "`n$($clientSecret.SecretText)`n" -ForegroundColor White -BackgroundColor DarkBlue
+        Write-Host "`n$($clientSecretObj.SecretText)`n" -ForegroundColor White -BackgroundColor DarkBlue
         Write-Host "════════════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
         Write-Host "`nPress Enter after you have copied the secret..." -ForegroundColor Yellow
-        Read-Host
+        Read-Host | Out-Null # Ensure Read-Host output doesn't affect return
         
-        $daysUntilExpiry = ($secretEndDate - (Get-Date)).Days
+        $daysUntilExpiry = ($clientSecretObj.EndDateTime - (Get-Date)).Days
         Write-EnhancedLog "SECRET SECURITY NOTICE:" -Level CRITICAL
         Write-EnhancedLog "  • Secret value has been displayed and will be encrypted" -Level IMPORTANT
         Write-EnhancedLog "  • Secret cannot be retrieved after this session" -Level IMPORTANT
@@ -1029,7 +998,7 @@ function New-EnhancedClientSecret {
         Write-EnhancedLog "  • Set calendar reminder for renewal before expiry" -Level IMPORTANT
         
         Stop-OperationTimer "SecretCreation" $true
-        return $clientSecret
+        return $clientSecretObj # Explicitly return the secret object
         
     } catch {
         Write-EnhancedLog "Failed to create client secret: $($_.Exception.Message)" -Level ERROR
@@ -1079,21 +1048,26 @@ function Save-EnhancedCredentials {
         [Parameter(Mandatory=$true)]
         [Microsoft.Graph.PowerShell.Models.MicrosoftGraphApplication]$AppRegistration,
         [Parameter(Mandatory=$true)]
-        $ClientSecret, # This object has .SecretText, .KeyId, .EndDateTime
+        $ClientSecret, 
         [Parameter(Mandatory=$true)]
-        [string]$TenantIdParam # Renamed
+        [string]$TenantIdParam 
     )
     
     Start-OperationTimer "CredentialStorage"
     Write-ProgressHeader "CREDENTIAL STORAGE" "Encrypting and saving authentication data"
     
     try {
+        # Ensure $ClientSecret is not null and has the SecretText property
+        if ($null -eq $ClientSecret -or -not $ClientSecret.PSObject.Properties['SecretText']) {
+            throw "ClientSecret object is invalid or missing SecretText property."
+        }
+
         Write-EnhancedLog "Preparing to save credentials..." -Level PROGRESS
         Write-EnhancedLog "  Target Path: $EncryptedOutputPath" -Level INFO
         Write-EnhancedLog "  Encryption: Windows DPAPI (current user)" -Level INFO
         
         if (Get-Command Set-SecureCredentials -ErrorAction SilentlyContinue) {
-            $configParam = @{ # Renamed from $config to $configParam
+            $configParam = @{ 
                 authentication = @{
                     credentialStorePath = $EncryptedOutputPath
                     certificateThumbprint = $null
@@ -1113,8 +1087,8 @@ function Save-EnhancedCredentials {
             
             $credentialData = @{
                 ClientId = $AppRegistration.AppId
-                ClientSecret = $ClientSecret.SecretText
-                TenantId = $TenantIdParam # Use renamed
+                ClientSecret = $ClientSecret.SecretText 
+                TenantId = $TenantIdParam 
                 CreatedDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
                 ExpiryDate = $ClientSecret.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss')
                 ApplicationName = $AppRegistration.DisplayName
@@ -1144,10 +1118,10 @@ function Save-EnhancedCredentials {
             throw "Credential file was not created at expected location"
         }
         
-        $backupPath = $null # Initialize for scope
+        $backupPath = $null 
         try {
-            $encryptedDir = Split-Path $EncryptedOutputPath -Parent
-            $backupDir = Join-Path $encryptedDir "Backups"
+            $encryptedDir_backup = Split-Path $EncryptedOutputPath -Parent # Renamed
+            $backupDir = Join-Path $encryptedDir_backup "Backups"
             if (-not (Test-Path $backupDir)) {
                 New-Item -Path $backupDir -ItemType Directory -Force | Out-Null
             }
@@ -1171,7 +1145,7 @@ function Save-EnhancedCredentials {
             $summaryData = @{
                 ApplicationName = $AppRegistration.DisplayName
                 ClientId = $AppRegistration.AppId
-                TenantId = $TenantIdParam # Use renamed
+                TenantId = $TenantIdParam 
                 CreatedDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
                 ExpiryDate = $ClientSecret.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss')
                 DaysUntilExpiry = ($ClientSecret.EndDateTime - (Get-Date)).Days
@@ -1197,9 +1171,8 @@ function Save-EnhancedCredentials {
         throw
     }
 }
-
-
 #endregion
+
 #region Enhanced Role Assignment
 function Set-EnhancedRoleAssignments {
     param(
@@ -1209,23 +1182,25 @@ function Set-EnhancedRoleAssignments {
     Start-OperationTimer "RoleAssignment"
     Write-ProgressHeader "ROLE ASSIGNMENTS" "Configuring Azure AD and Azure subscription roles"
     $azureRoleDetails = @{ AssignedCount = 0; SkippedCount = 0; FailedCount = 0; FailedSubscriptions = @(); SuccessfulSubscriptions = @() }
+    $enabledSubscriptions = @() # Initialize $enabledSubscriptions
+
     try {
         Write-EnhancedLog "Processing Azure AD role assignments for SP ID: $($ServicePrincipal.Id)..." -Level PROGRESS
         $adRoleResults = @{ Assigned = 0; Skipped = 0; Failed = 0 }
-        foreach ($roleName in $script:AppConfig.AzureADRoles) {
+        foreach ($roleName_item in $script:AppConfig.AzureADRoles) { # Renamed $roleName
             try {
-                Write-EnhancedLog "Assigning Azure AD role: $roleName" -Level PROGRESS
-                $roleDefinition = Get-MgDirectoryRole -Filter "DisplayName eq '$roleName'" -ErrorAction SilentlyContinue
+                Write-EnhancedLog "Assigning Azure AD role: $roleName_item" -Level PROGRESS
+                $roleDefinition = Get-MgDirectoryRole -Filter "DisplayName eq '$roleName_item'" -ErrorAction SilentlyContinue
                 if (-not $roleDefinition) {
-                    $roleTemplate = Get-MgDirectoryRoleTemplate -Filter "DisplayName eq '$roleName'" -ErrorAction Stop
-                    if ($roleTemplate) { $roleDefinition = New-MgDirectoryRole -RoleTemplateId $roleTemplate.Id -ErrorAction Stop; Write-EnhancedLog "Activated role template: $roleName" -Level SUCCESS }
-                    else { throw "Role template '$roleName' not found" }
+                    $roleTemplate = Get-MgDirectoryRoleTemplate -Filter "DisplayName eq '$roleName_item'" -ErrorAction Stop
+                    if ($roleTemplate) { $roleDefinition = New-MgDirectoryRole -RoleTemplateId $roleTemplate.Id -ErrorAction Stop; Write-EnhancedLog "Activated role template: $roleName_item" -Level SUCCESS }
+                    else { throw "Role template '$roleName_item' not found" }
                 }
                 if (-not (Get-MgDirectoryRoleMember -DirectoryRoleId $roleDefinition.Id -ErrorAction SilentlyContinue | Where-Object { $_.Id -eq $ServicePrincipal.Id })) {
                     New-MgDirectoryRoleMemberByRef -DirectoryRoleId $roleDefinition.Id -OdataId "https://graph.microsoft.com/v1.0/directoryObjects/$($ServicePrincipal.Id)" -ErrorAction Stop
-                    Write-EnhancedLog "Assigned Azure AD role: $roleName" -Level SUCCESS; $adRoleResults.Assigned++
-                } else { Write-EnhancedLog "Azure AD role already assigned: $roleName" -Level INFO; $adRoleResults.Skipped++ }
-            } catch { Write-EnhancedLog "Failed to assign Azure AD role '$roleName': $($_.Exception.Message)" -Level ERROR; $adRoleResults.Failed++ }
+                    Write-EnhancedLog "Assigned Azure AD role: $roleName_item" -Level SUCCESS; $adRoleResults.Assigned++
+                } else { Write-EnhancedLog "Azure AD role already assigned: $roleName_item" -Level INFO; $adRoleResults.Skipped++ }
+            } catch { Write-EnhancedLog "Failed to assign Azure AD role '$roleName_item': $($_.Exception.Message)" -Level ERROR; $adRoleResults.Failed++ }
         }
         Write-EnhancedLog "Azure AD role assignment summary: Assigned=$($adRoleResults.Assigned), Skipped=$($adRoleResults.Skipped), Failed=$($adRoleResults.Failed)" -Level INFO
 
@@ -1234,8 +1209,10 @@ function Set-EnhancedRoleAssignments {
             $originalWarning = $WarningPreference; $WarningPreference = "SilentlyContinue"
             try {
                 $subscriptions = Get-AzSubscription -ErrorAction Stop
-                if (-not $subscriptions -or $subscriptions.Count -eq 0) { Write-EnhancedLog "No Azure subscriptions found in tenant." -Level WARN }
-                else {
+                if (-not $subscriptions -or $subscriptions.Count -eq 0) { 
+                    Write-EnhancedLog "No Azure subscriptions found in tenant." -Level WARN 
+                    # $enabledSubscriptions remains empty
+                } else {
                     $enabledSubscriptions = $subscriptions | Where-Object { $_.State -eq "Enabled" }
                     $disabledSubscriptions = $subscriptions | Where-Object { $_.State -ne "Enabled" }
                     
@@ -1246,32 +1223,32 @@ function Set-EnhancedRoleAssignments {
                     }
                     
                     for ($i = 0; $i -lt $enabledSubscriptions.Count; $i++) {
-                        $subscription = $enabledSubscriptions[$i]
-                        $subscriptionName = $subscription.Name
-                        $subscriptionId = $subscription.Id
+                        $subscription_item = $enabledSubscriptions[$i] # Renamed $subscription
+                        $subscriptionName = $subscription_item.Name
+                        $subscriptionId = $subscription_item.Id
                         $scope = "/subscriptions/$subscriptionId"
                         
                         Write-Progress -Activity "Processing Subscriptions" -Status "Processing $subscriptionName ($($i+1)/$($enabledSubscriptions.Count))" -PercentComplete (($i / $enabledSubscriptions.Count) * 100)
                         Write-EnhancedLog "Processing subscription [$($i+1)/$($enabledSubscriptions.Count)]: $subscriptionName" -Level PROGRESS
                         
                         try {
-                            $contextResult = Set-AzContext -SubscriptionId $subscriptionId -ErrorAction Stop # Assign to $contextResult
-                            if ($contextResult.Subscription.Id -ne $subscriptionId) { # Use $contextResult
+                            $contextResult = Set-AzContext -SubscriptionId $subscriptionId -ErrorAction Stop 
+                            if ($contextResult.Subscription.Id -ne $subscriptionId) { 
                                 throw "Context switch verification failed for subscription $subscriptionName"
                             }
                             
                             $existingRoles = Get-AzRoleAssignment -ObjectId $ServicePrincipal.Id -Scope $scope -ErrorAction SilentlyContinue
-                            foreach ($roleName in $script:AppConfig.AzureRoles) {
-                                $hasRole = $existingRoles | Where-Object { $_.RoleDefinitionName -eq $roleName }
+                            foreach ($roleName_sub in $script:AppConfig.AzureRoles) { # Renamed $roleName
+                                $hasRole = $existingRoles | Where-Object { $_.RoleDefinitionName -eq $roleName_sub }
                                 
                                 if ($hasRole) {
-                                    Write-EnhancedLog "  $roleName already assigned to: $subscriptionName" -Level INFO
+                                    Write-EnhancedLog "  $roleName_sub already assigned to: $subscriptionName" -Level INFO
                                     $azureRoleDetails.SkippedCount++
                                 } else {
                                     try {
                                         $roleAssignmentParams = @{
                                             ObjectId = $ServicePrincipal.Id
-                                            RoleDefinitionName = $roleName
+                                            RoleDefinitionName = $roleName_sub
                                             Scope = $scope
                                             ErrorAction = 'Stop'
                                         }
@@ -1279,7 +1256,7 @@ function Set-EnhancedRoleAssignments {
                                         $roleAssignment = New-AzRoleAssignment @roleAssignmentParams
                                         
                                         if ($roleAssignment) {
-                                            Write-EnhancedLog "  Successfully assigned $roleName to: $subscriptionName" -Level SUCCESS
+                                            Write-EnhancedLog "  Successfully assigned $roleName_sub to: $subscriptionName" -Level SUCCESS
                                             $azureRoleDetails.AssignedCount++
                                         } else {
                                             throw "Role assignment returned null"
@@ -1287,9 +1264,9 @@ function Set-EnhancedRoleAssignments {
                                         
                                     } catch {
                                         $errorMsg = $_.Exception.Message
-                                        Write-EnhancedLog "  Failed to assign $roleName to $subscriptionName : $errorMsg" -Level ERROR
+                                        Write-EnhancedLog "  Failed to assign $roleName_sub to $subscriptionName : $errorMsg" -Level ERROR
                                         $azureRoleDetails.FailedCount++
-                                        $azureRoleDetails.FailedSubscriptions += "$subscriptionName ($roleName): $errorMsg"
+                                        $azureRoleDetails.FailedSubscriptions += "$subscriptionName ($roleName_sub): $errorMsg"
                                     }
                                 }
                             }
@@ -1312,7 +1289,7 @@ function Set-EnhancedRoleAssignments {
                 }
                 
                 Write-EnhancedLog "Azure subscription role assignment summary:" -Level INFO
-                Write-EnhancedLog "  Total Enabled Subscriptions: $($enabledSubscriptions.Count)" -Level INFO
+                Write-EnhancedLog "  Total Enabled Subscriptions: $($enabledSubscriptions.Count)" -Level INFO # Now $enabledSubscriptions is defined
                 Write-EnhancedLog "  Roles Assigned: $($azureRoleDetails.AssignedCount)" -Level SUCCESS
                 Write-EnhancedLog "  Already Assigned: $($azureRoleDetails.SkippedCount)" -Level INFO
                 Write-EnhancedLog "  Successful Subscriptions: $($azureRoleDetails.SuccessfulSubscriptions.Count)" -Level SUCCESS
@@ -1326,7 +1303,6 @@ function Set-EnhancedRoleAssignments {
                 
             } catch {
                 Write-EnhancedLog "Failed to process subscription role assignments: $($_.Exception.Message)" -Level ERROR
-                # $azureRoleAssignmentSuccess remains false if it fails here.
             } finally {
                 $WarningPreference = $originalWarning
             }
@@ -1379,42 +1355,42 @@ function Set-ExchangeRoleAssignment {
             Failed = 0
         }
         
-        # This loop won't run if $script:AppConfig.ExchangeRoles is not defined or empty
-        foreach ($roleName in $script:AppConfig.ExchangeRoles) { 
+        # This loop will now not error if ExchangeRoles is an empty array
+        foreach ($roleName_exch in $script:AppConfig.ExchangeRoles) { # Renamed $roleName
             try {
-                Write-EnhancedLog "Assigning Exchange role: $roleName" -Level PROGRESS
+                Write-EnhancedLog "Assigning Exchange role: $roleName_exch" -Level PROGRESS
                 
-                $role = Get-RoleGroup -Identity $roleName -ErrorAction SilentlyContinue
+                $role = Get-RoleGroup -Identity $roleName_exch -ErrorAction SilentlyContinue
                 if (-not $role) {
-                    Write-EnhancedLog "Exchange role '$roleName' not found" -Level ERROR
+                    Write-EnhancedLog "Exchange role '$roleName_exch' not found" -Level ERROR
                     $exchangeRoleResults.Failed++
                     continue
                 }
                 
-                $currentMembers = Get-RoleGroupMember -Identity $roleName -ErrorAction SilentlyContinue
+                $currentMembers = Get-RoleGroupMember -Identity $roleName_exch -ErrorAction SilentlyContinue
                 $isAssigned = $currentMembers | Where-Object { $_.Identity -eq $AppId -or $_.Identity -eq $ServicePrincipalId }
                 
                 if ($isAssigned) {
-                    Write-EnhancedLog "Exchange role already assigned: $roleName" -Level INFO
+                    Write-EnhancedLog "Exchange role already assigned: $roleName_exch" -Level INFO
                     $exchangeRoleResults.Skipped++
                 } else {
-                    Add-RoleGroupMember -Identity $roleName -Member $AppId -ErrorAction Stop
-                    Write-EnhancedLog "Successfully assigned Exchange role: $roleName" -Level SUCCESS
+                    Add-RoleGroupMember -Identity $roleName_exch -Member $AppId -ErrorAction Stop
+                    Write-EnhancedLog "Successfully assigned Exchange role: $roleName_exch" -Level SUCCESS
                     $exchangeRoleResults.Assigned++
                     
                     Start-Sleep -Seconds 2
-                    $verifyMembers = Get-RoleGroupMember -Identity $roleName -ErrorAction SilentlyContinue
+                    $verifyMembers = Get-RoleGroupMember -Identity $roleName_exch -ErrorAction SilentlyContinue
                     $verified = $verifyMembers | Where-Object { $_.Identity -eq $AppId -or $_.Identity -eq $ServicePrincipalId }
                     
                     if ($verified) {
-                        Write-EnhancedLog "Verified Exchange role assignment: $roleName" -Level SUCCESS
+                        Write-EnhancedLog "Verified Exchange role assignment: $roleName_exch" -Level SUCCESS
                     } else {
-                        Write-EnhancedLog "Could not verify Exchange role assignment: $roleName" -Level WARN
+                        Write-EnhancedLog "Could not verify Exchange role assignment: $roleName_exch" -Level WARN
                     }
                 }
                 
             } catch {
-                Write-EnhancedLog "Failed to assign Exchange role '$roleName': $($_.Exception.Message)" -Level ERROR
+                Write-EnhancedLog "Failed to assign Exchange role '$roleName_exch': $($_.Exception.Message)" -Level ERROR
                 $exchangeRoleResults.Failed++
             }
         }
@@ -1436,7 +1412,6 @@ function Set-ExchangeRoleAssignment {
         return $false
     }
 }
-
 #endregion
 
 #region Main Execution
@@ -1473,7 +1448,7 @@ PowerShell: $($PSVersionTable.PSVersion)
     Write-EnhancedLog "  Validate Only: $ValidateOnly" -Level INFO
     Write-EnhancedLog "  Skip Azure Roles: $SkipAzureRoles" -Level INFO
     Write-EnhancedLog "  Secret Validity: $SecretValidityYears years" -Level INFO
-    # Write-EnhancedLog "  Use Existing App: $UseExistingApp" # $UseExistingApp is not defined
+    # Write-EnhancedLog "  Use Existing App: $UseExistingApp" 
     if ($ExistingClientId) {
         Write-EnhancedLog "  Existing Client ID: $ExistingClientId" -Level INFO
     }
@@ -1487,18 +1462,18 @@ PowerShell: $($PSVersionTable.PSVersion)
         exit 0
     }
     
-    Initialize-RequiredModules # Renamed from Ensure-RequiredModules
+    Initialize-RequiredModules 
     
-    $TenantId = $null # Initialize to be set later
-    if (-not (Connect-EnhancedGraph -UseDeviceAuth:$UseDeviceCode -TenantIdParam:$TenantId)) { # Pass $TenantId explicitly if set by user
+    $GlobalTenantId = $null # Use a specific variable for tenant ID in this script
+    if (-not (Connect-EnhancedGraph -UseDeviceAuth:$UseDeviceCode -TenantIdParam:$GlobalTenantId)) { # Pass $GlobalTenantId, it will be updated by Get-MgContext if null
         throw "Failed to establish Microsoft Graph connection"
     }
     
-    $context = Get-MgContext
-    $TenantId = $context.TenantId # Get TenantId after successful Graph connection
-    Write-EnhancedLog "Operating in Tenant ID: $TenantId" -Level INFO
+    $mgContext = Get-MgContext # Get context after successful connection
+    $GlobalTenantId = $mgContext.TenantId 
+    Write-EnhancedLog "Operating in Tenant ID: $GlobalTenantId" -Level INFO
 
-    if (-not (Connect-EnhancedAzure)) { # Connect-EnhancedAzure implicitly uses $TenantId from script scope if set
+    if (-not (Connect-EnhancedAzure)) { # Connect-EnhancedAzure will implicitly use $GlobalTenantId if $TenantId param in its scope isn't set
         if (-not $SkipAzureRoles) {
             Write-EnhancedLog "Azure connection failed. Subscription role assignments will be skipped." -Level WARN
         }
@@ -1513,8 +1488,8 @@ PowerShell: $($PSVersionTable.PSVersion)
     
     $appRegistration = $null
     
-    if ($ExistingClientId) { # Check if ExistingClientId is provided
-        $appRegistration = Use-ExistingAppRegistration -ClientIdParam $ExistingClientId -TenantIdParam $TenantId
+    if ($ExistingClientId) { 
+        $appRegistration = Use-ExistingAppRegistration -ClientIdParam $ExistingClientId -TenantIdParam $GlobalTenantId
     } else {
         $appRegistration = New-EnhancedAppRegistration
     }
@@ -1523,22 +1498,22 @@ PowerShell: $($PSVersionTable.PSVersion)
     Set-EnhancedRoleAssignments -ServicePrincipal $servicePrincipal
     
     if (-not $SkipExchangeRole) {
-        if (Connect-EnhancedExchange -AppId $appRegistration.AppId -TenantIdParam $TenantId) { # Pass TenantId explicitly
+        if (Connect-EnhancedExchange -AppId $appRegistration.AppId -TenantIdParam $GlobalTenantId) { 
             Set-ExchangeRoleAssignment -ServicePrincipalId $servicePrincipal.Id -AppId $appRegistration.AppId
         } else {
             Write-EnhancedLog "Exchange Online connection failed. Exchange role assignment skipped." -Level WARN
         }
     }
 
-    $clientSecret = $null
+    $clientSecretObj = $null # Renamed to avoid confusion with $ClientSecret parameter in Save-EnhancedCredentials
     
-    if ($ExistingClientId) { # Check if ExistingClientId is provided
-        $clientSecret = Get-InteractiveClientSecret -AppRegistration $appRegistration
+    if ($ExistingClientId) { 
+        $clientSecretObj = Get-InteractiveClientSecret -AppRegistration $appRegistration
     } else {
-        $clientSecret = New-EnhancedClientSecret -AppRegistration $appRegistration
+        $clientSecretObj = New-EnhancedClientSecret -AppRegistration $appRegistration
     }
     
-    Save-EnhancedCredentials -AppRegistration $appRegistration -ClientSecret $clientSecret -TenantIdParam $TenantId # Pass TenantId explicitly
+    Save-EnhancedCredentials -AppRegistration $appRegistration -ClientSecret $clientSecretObj -TenantIdParam $GlobalTenantId 
     
     $script:Metrics.EndTime = Get-Date
     $totalDuration = $script:Metrics.EndTime - $script:Metrics.StartTime
@@ -1548,15 +1523,15 @@ PowerShell: $($PSVersionTable.PSVersion)
     Write-ProgressHeader "DEPLOYMENT SUMMARY" "M&A Discovery service principal ready for operations"
     
     Write-EnhancedLog "APPLICATION DETAILS:" -Level HEADER
-    Write-EnhancedLog "  Application Name: $($script:AppConfig.DisplayName)" -Level SUCCESS
+    Write-EnhancedLog "  Application Name: $($appRegistration.DisplayName)" -Level SUCCESS # Use $appRegistration.DisplayName
     Write-EnhancedLog "  Application (Client) ID: $($appRegistration.AppId)" -Level SUCCESS
-    Write-EnhancedLog "  Directory (Tenant) ID: $TenantId" -Level SUCCESS
+    Write-EnhancedLog "  Directory (Tenant) ID: $GlobalTenantId" -Level SUCCESS
     Write-EnhancedLog "  Object ID: $($appRegistration.Id)" -Level SUCCESS
     Write-EnhancedLog "  Service Principal ID: $($servicePrincipal.Id)" -Level SUCCESS
     
     Write-EnhancedLog "SECURITY INFORMATION:" -Level HEADER
-    Write-EnhancedLog "  Secret Expires: $($clientSecret.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss'))" -Level SUCCESS
-    Write-EnhancedLog "  Days Until Expiry: $(($clientSecret.EndDateTime - (Get-Date)).Days)" -Level SUCCESS
+    Write-EnhancedLog "  Secret Expires: $($clientSecretObj.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss'))" -Level SUCCESS
+    Write-EnhancedLog "  Days Until Expiry: $(($clientSecretObj.EndDateTime - (Get-Date)).Days)" -Level SUCCESS
     Write-EnhancedLog "  Credentials File: $EncryptedOutputPath" -Level SUCCESS
     Write-EnhancedLog "  Encryption: Windows DPAPI (User: $env:USERNAME)" -Level SUCCESS
     Write-EnhancedLog "  Permissions Granted: $($script:AppConfig.RequiredGraphPermissions.Count)" -Level SUCCESS
@@ -1580,17 +1555,17 @@ PowerShell: $($PSVersionTable.PSVersion)
     }
     
     Write-EnhancedLog "NEXT STEPS:" -Level HEADER
-    Write-EnhancedLog "  1. Admin consent URL: https://login.microsoftonline.com/$TenantId/adminconsent?client_id=$($appRegistration.AppId)" -Level IMPORTANT
+    Write-EnhancedLog "  1. Admin consent URL: https://login.microsoftonline.com/$GlobalTenantId/adminconsent?client_id=$($appRegistration.AppId)" -Level IMPORTANT
     Write-EnhancedLog "  2. Update M&A Discovery configuration to use: $EncryptedOutputPath" -Level IMPORTANT
     Write-EnhancedLog "  3. Test with: .\Core\MandA-Orchestrator.ps1 -ValidateOnly (Run from Suite Root)" -Level IMPORTANT
     Write-EnhancedLog "  4. Run discovery: .\Core\MandA-Orchestrator.ps1 -Mode Full (Run from Suite Root)" -Level IMPORTANT
     
     Write-EnhancedLog "IMPORTANT SECURITY REMINDERS:" -Level CRITICAL -NoTimestamp
-    Write-EnhancedLog "  â€¢ Client secret expires: $($clientSecret.EndDateTime.ToString('yyyy-MM-dd'))" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  â€¢ Set calendar reminder for credential renewal" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  â€¢ Credentials are user-encrypted (current user only)" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  â€¢ Backup credentials file is stored securely" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  â€¢ Review and audit permissions regularly" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  • Client secret expires: $($clientSecretObj.EndDateTime.ToString('yyyy-MM-dd'))" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  • Set calendar reminder for credential renewal" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  • Credentials are user-encrypted (current user only)" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  • Backup credentials file is stored securely" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  • Review and audit permissions regularly" -Level IMPORTANT -NoTimestamp
     
     Write-EnhancedLog "Azure AD App Registration completed successfully!" -Level SUCCESS
     Write-EnhancedLog "Ready to proceed with M&A Discovery Suite operations" -Level SUCCESS
@@ -1610,9 +1585,9 @@ PowerShell: $($PSVersionTable.PSVersion)
     Write-EnhancedLog "Performing cleanup operations..." -Level PROGRESS
     
     @("Graph", "Azure") | ForEach-Object {
-        $service = $_
+        $service_item = $_ # Renamed $service
         try {
-            switch ($service) {
+            switch ($service_item) {
                 "Graph" { 
                     if (Get-MgContext -ErrorAction SilentlyContinue) {
                         Disconnect-MgGraph -ErrorAction SilentlyContinue
@@ -1627,12 +1602,12 @@ PowerShell: $($PSVersionTable.PSVersion)
                 }
             }
         } catch {
-            Write-EnhancedLog "Error during $service disconnect: $($_.Exception.Message)" -Level WARN
+            Write-EnhancedLog "Error during $service_item disconnect: $($_.Exception.Message)" -Level WARN
         }
     }
     if ($script:Metrics) {
         try { 
-            $metricsFile = $LogPath -replace '\.log$', '_metrics.json' # Define metricsFile
+            $metricsFile = $LogPath -replace '\.log$', '_metrics.json' 
             $script:Metrics | ConvertTo-Json -Depth 3 | Set-Content -Path $metricsFile -Encoding UTF8; Write-EnhancedLog "Metrics saved to $metricsFile" -Level SUCCESS 
         }
         catch { Write-EnhancedLog "Could not save metrics: $($_.Exception.Message)" -Level WARN }
