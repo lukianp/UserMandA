@@ -1,17 +1,15 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    M&A Discovery Suite - Main Orchestrator (Blended & Enhanced Version)
+    M&A Discovery Suite - Main Orchestrator (Fixed Version)
 
 .DESCRIPTION
     Unified orchestrator for discovery, processing, and export.
-    This version incorporates robust company-specific path handling from user's v4.3.1,
-    dynamic loading of all necessary modules (Discovery, Processing, Export),
-    and functional calls to the respective phase modules.
+    This version fixes the CRITICAL log level error and implements proper processing/export phases.
 
 .NOTES
-    Version: 4.4.1
-    Author: Gemini (Blended with User v4.3.1)
+    Version: 4.5.1 (Fixed)
+    Author: Fixed Implementation
     Date: 2025-06-02
 #>
 
@@ -21,7 +19,7 @@ param(
     [string]$CompanyName,
 
     [Parameter(Mandatory=$false)]
-    [string]$ConfigurationFile, # Allow overriding the default config
+    [string]$ConfigurationFile,
     
     [Parameter(Mandatory=$false)]
     [ValidateSet("Discovery", "Processing", "Export", "Full")]
@@ -114,29 +112,45 @@ function Initialize-MandAEnvironmentInternal {
         Write-MandALog "INITIALIZING ENVIRONMENT FOR MODE: $CurrentMode (Company: $($Configuration.metadata.companyName))" -Level "HEADER"
         
         # Ensure company-specific output path is set in the working configuration object
-        # (Incorporated from user's v4.3.1 for robustness)
         if ($global:MandA.Paths.CompanyProfileRoot) {
             $Configuration.environment['outputPath'] = $global:MandA.Paths.CompanyProfileRoot
             Write-MandALog "Using company-specific output path: $($Configuration.environment.outputPath)" -Level "INFO"
         } else {
-            # This check is critical. Set-SuiteEnvironment.ps1 should always set this.
             throw "CompanyProfileRoot not found in `$global:MandA.Paths. Ensure Set-SuiteEnvironment.ps1 ran successfully for Company '$($Configuration.metadata.companyName)'."
         }
 
-        Initialize-Logging -Configuration $Configuration
-        if (-not (Initialize-OutputDirectories -Configuration $Configuration)) { throw "Failed to initialize output directories." }
+        # Initialize output directories
+        if (-not (Initialize-OutputDirectories -Configuration $Configuration)) { 
+            throw "Failed to initialize output directories." 
+        }
 
-        if (-not $global:MandA.ModulesChecked) { # Property to track if check was done in this session
+        # Module dependency check
+        if (-not $global:MandA.ModulesChecked) {
             Write-MandALog "Checking PowerShell module dependencies..." -Level INFO
             $moduleCheckScriptPath = $global:MandA.Paths.ModuleCheckScript
             if (Test-Path $moduleCheckScriptPath -PathType Leaf) {
-                try { & $moduleCheckScriptPath -Silent -ErrorAction Stop; $global:MandA.ModulesChecked = $true }
-                catch { Write-MandALog "ERROR: Module dependency check failed: $($_.Exception.Message)" -Level ERROR; $global:MandA.ModulesChecked = $true; Write-MandALog "WARN: Continuing despite module check failure." -Level WARN }
-            } else { Write-MandALog "WARN: DiscoverySuiteModuleCheck.ps1 not found at '$moduleCheckScriptPath'" -Level WARN; $global:MandA.ModulesChecked = $true }
-        } else { Write-MandALog "Module dependencies already checked in this session." -Level INFO }
+                try { 
+                    & $moduleCheckScriptPath -Silent -ErrorAction Stop
+                    $global:MandA.ModulesChecked = $true 
+                }
+                catch { 
+                    Write-MandALog "ERROR: Module dependency check failed: $($_.Exception.Message)" -Level ERROR
+                    $global:MandA.ModulesChecked = $true
+                    Write-MandALog "WARN: Continuing despite module check failure." -Level WARN 
+                }
+            } else { 
+                Write-MandALog "WARN: DiscoverySuiteModuleCheck.ps1 not found at '$moduleCheckScriptPath'" -Level WARN
+                $global:MandA.ModulesChecked = $true 
+            }
+        } else { 
+            Write-MandALog "Module dependencies already checked in this session." -Level INFO 
+        }
         
-        if (-not (Test-Prerequisites -Configuration $Configuration -ValidateOnly:$IsValidateOnlyMode)) { throw "System prerequisites validation failed." }
+        if (-not (Test-Prerequisites -Configuration $Configuration -ValidateOnly:$IsValidateOnlyMode)) { 
+            throw "System prerequisites validation failed." 
+        }
 
+        # Load Discovery modules if needed
         if ($CurrentMode -in "Discovery", "Full") {
             $discoveryModulePathBase = Join-Path $global:MandA.Paths.Modules "Discovery"
             $enabledSources = @($Configuration.discovery.enabledSources)
@@ -146,54 +160,99 @@ function Initialize-MandAEnvironmentInternal {
                 $moduleFileName = "$($sourceName)Discovery.psm1"
                 $fullModulePath = Join-Path $discoveryModulePathBase $moduleFileName
                 if (Test-Path $fullModulePath -PathType Leaf) {
-                    try { Import-Module $fullModulePath -Force -Global -ErrorAction Stop; Write-MandALog "Loaded module: $moduleFileName" -Level SUCCESS; $loadedCount++ }
-                    catch { Write-MandALog "ERROR: Failed to load discovery module '$moduleFileName': $($_.Exception.Message)" -Level ERROR }
-                } else { Write-MandALog "WARN: Module file not found for source '$sourceName': $fullModulePath" -Level WARN }
+                    try { 
+                        Import-Module $fullModulePath -Force -Global -ErrorAction Stop
+                        Write-MandALog "Loaded module: $moduleFileName" -Level SUCCESS
+                        $loadedCount++ 
+                    }
+                    catch { 
+                        Write-MandALog "ERROR: Failed to load discovery module '$moduleFileName': $($_.Exception.Message)" -Level ERROR 
+                    }
+                } else { 
+                    Write-MandALog "WARN: Module file not found for source '$sourceName': $fullModulePath" -Level WARN 
+                }
             }
             Write-MandALog "Loaded $loadedCount discovery modules." -Level INFO
         }
 
-        if ($CurrentMode -in "Processing", "Full", "Export") { 
+        # Load Processing modules if needed
+        if ($CurrentMode -in "Processing", "Full") { 
             $processingModulePathBase = Join-Path $global:MandA.Paths.Modules "Processing"
-            $processingModulesToLoad = @("DataAggregation.psm1") # Primary processing module
-            # Potentially add UserProfileBuilder.psm1, WaveGeneration.psm1 if they are separate and directly called by orchestrator in future
+            $processingModulesToLoad = @(
+                "DataAggregation.psm1",
+                "UserProfileBuilder.psm1",
+                "WaveGeneration.psm1",
+                "DataValidation.psm1"
+            )
             Write-MandALog "Loading processing modules..." -Level INFO
             foreach ($moduleFile in $processingModulesToLoad) {
                 $fullModulePath = Join-Path $processingModulePathBase $moduleFile
                 if (Test-Path $fullModulePath -PathType Leaf) {
-                    try { Import-Module $fullModulePath -Force -Global -ErrorAction Stop; Write-MandALog "Loaded processing module: $moduleFile" -Level SUCCESS }
-                    catch { Write-MandALog "ERROR: Failed to load processing module '$moduleFile': $($_.Exception.Message)" -Level ERROR }
-                } else { Write-MandALog "WARN: Processing module not found: $fullModulePath" -Level WARN }
+                    try { 
+                        Import-Module $fullModulePath -Force -Global -ErrorAction Stop
+                        Write-MandALog "Loaded processing module: $moduleFile" -Level SUCCESS 
+                    }
+                    catch { 
+                        Write-MandALog "ERROR: Failed to load processing module '$moduleFile': $($_.Exception.Message)" -Level ERROR 
+                    }
+                } else { 
+                    Write-MandALog "WARN: Processing module not found: $fullModulePath" -Level WARN 
+                }
             }
         }
 
+        # Load Export modules if needed
         if ($CurrentMode -in "Export", "Full") {
             $exportModulePathBase = Join-Path $global:MandA.Paths.Modules "Export"
             $enabledFormats = @($Configuration.export.formats)
-            Write-MandALog "Loading export modules for $($enabledFormats.Count) formats: $($enabledFormats -join ', ')" -Level INFO
+            Write-MandALog "Loading export modules for enabled formats: $($enabledFormats -join ', ')" -Level INFO
             $loadedCount = 0
+            
             foreach ($formatName in $enabledFormats) {
-                $moduleFileName = "$($formatName)Exporter.psm1" 
-                if ($formatName -eq "CompanyControlSheet") {$moduleFileName = "CompanyControlSheetExporter.psm1"}
-                if ($formatName -eq "PowerApps") {$moduleFileName = "PowerAppsExporter.psm1"}
-                # Add other specific mappings if needed: elseif ($formatName -eq "CSV") {$moduleFileName = "CSVExporter.psm1"} etc.
-
-                $fullModulePath = Join-Path $exportModulePathBase $moduleFileName
-                if (Test-Path $fullModulePath -PathType Leaf) {
-                    try { Import-Module $fullModulePath -Force -Global -ErrorAction Stop; Write-MandALog "Loaded export module: $moduleFileName" -Level SUCCESS; $loadedCount++ }
-                    catch { Write-MandALog "ERROR: Failed to load export module '$moduleFileName': $($_.Exception.Message)" -Level ERROR }
-                } else { Write-MandALog "WARN: Module file not found for export format '$formatName' (expected '$moduleFileName' at '$fullModulePath')" -Level WARN }
+                $moduleFileName = ""
+                # Map format names to module file names
+                switch ($formatName) {
+                    "CSV" { $moduleFileName = "CSVExport.psm1" }
+                    "JSON" { $moduleFileName = "JSONExport.psm1" }
+                    "Excel" { $moduleFileName = "ExcelExport.psm1" }
+                    "CompanyControlSheet" { $moduleFileName = "CompanyControlSheetExporter.psm1" }
+                    "PowerApps" { $moduleFileName = "PowerAppsExporter.psm1" }
+                    default { 
+                        Write-MandALog "WARN: No module mapping found for format '$formatName'" -Level WARN
+                        continue
+                    }
+                }
+                
+                if ($moduleFileName) {
+                    $fullModulePath = Join-Path $exportModulePathBase $moduleFileName
+                    if (Test-Path $fullModulePath -PathType Leaf) {
+                        try { 
+                            Import-Module $fullModulePath -Force -Global -ErrorAction Stop
+                            Write-MandALog "Loaded export module: $moduleFileName" -Level SUCCESS
+                            $loadedCount++ 
+                        }
+                        catch { 
+                            Write-MandALog "ERROR: Failed to load export module '$moduleFileName': $($_.Exception.Message)" -Level ERROR 
+                        }
+                    } else { 
+                        Write-MandALog "WARN: Export module file not found: $fullModulePath" -Level WARN 
+                    }
+                }
             }
             Write-MandALog "Loaded $loadedCount export modules." -Level INFO
         }
 
         Write-MandALog "Environment initialization completed." -Level SUCCESS
         return $true
-    } catch { Write-MandALog "ERROR: Environment initialization failed: $($_.Exception.Message)" -Level ERROR; throw }
+    } catch { 
+        Write-MandALog "ERROR: Environment initialization failed: $($_.Exception.Message)" -Level ERROR
+        throw 
+    }
 }
 
 function Invoke-DiscoveryPhaseInternal {
-    [CmdletBinding()] param([Parameter(Mandatory=$true)][hashtable]$Configuration)
+    [CmdletBinding()] 
+    param([Parameter(Mandatory=$true)][hashtable]$Configuration)
     try {
         Write-MandALog "STARTING DISCOVERY PHASE" -Level "HEADER"
         $discoveryResults = @{}
@@ -202,35 +261,61 @@ function Invoke-DiscoveryPhaseInternal {
             $invokeFunctionName = "Invoke-$($sourceName)Discovery"
             if (Get-Command $invokeFunctionName -ErrorAction SilentlyContinue) {
                 Write-MandALog "Invoking $invokeFunctionName for '$sourceName'..." -Level INFO
-                try { $discoveryResults[$sourceName] = (& $invokeFunctionName -Configuration $Configuration -ErrorAction Stop); Write-MandALog "Finished discovery for '$sourceName'." -Level SUCCESS }
-                catch { Write-MandALog "ERROR: Discovery failed for '$sourceName': $($_.Exception.Message)" -Level ERROR; $discoveryResults[$sourceName] = @{ Error = $_.Exception.Message; Success=$false } }
-            } else { Write-MandALog "WARN: Discovery function '$invokeFunctionName' not found for '$sourceName'." -Level WARN }
+                try { 
+                    $discoveryResults[$sourceName] = (& $invokeFunctionName -Configuration $Configuration -ErrorAction Stop)
+                    Write-MandALog "Finished discovery for '$sourceName'." -Level SUCCESS 
+                }
+                catch { 
+                    Write-MandALog "ERROR: Discovery failed for '$sourceName': $($_.Exception.Message)" -Level ERROR
+                    $discoveryResults[$sourceName] = @{ Error = $_.Exception.Message; Success=$false } 
+                }
+            } else { 
+                Write-MandALog "WARN: Discovery function '$invokeFunctionName' not found for '$sourceName'." -Level WARN 
+            }
         }
         Write-MandALog "Discovery Phase Completed." -Level SUCCESS
-        # Discovery modules write their own files to "Raw" path. This function can return a summary.
         return $discoveryResults 
-    } catch { Write-MandALog "ERROR: Discovery phase failed: $($_.Exception.Message)" -Level ERROR; throw }
+    } catch { 
+        Write-MandALog "ERROR: Discovery phase failed: $($_.Exception.Message)" -Level ERROR
+        throw 
+    }
 }
 
 function Invoke-ProcessingPhaseInternal {
-    [CmdletBinding()] param([Parameter(Mandatory=$true)][hashtable]$Configuration)
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration
+    )
     try {
-        Write-MandALog "STARTING PROCESSING PHASE" -Level "HEADER"
-        # The DataAggregation.psm1 module reads from "Raw" and writes to "Processed"
-        if (Get-Command "Start-DataAggregation" -ErrorAction SilentlyContinue) {
-            Write-MandALog "Invoking Start-DataAggregation..." -Level INFO
-            $processingSuccess = Start-DataAggregation -Configuration $Configuration
+        Write-MandALog "STARTING PROCESSING PHASE (Invoke-ProcessingPhaseInternal)" -Level "HEADER" -Configuration $Configuration
+
+        # Define the primary processing function name
+        $processingFunction = "Start-DataAggregation"
+
+        # Check if the function is available
+        if (Get-Command $processingFunction -ErrorAction SilentlyContinue) {
+            Write-MandALog "Invoking '$processingFunction'..." -Level "INFO" -Configuration $Configuration
+            
+            # Call the black box function
+            $processingSuccess = & $processingFunction -Configuration $Configuration -ErrorAction Stop
+            
+            # Verify success
             if (-not $processingSuccess) {
-                throw "Data Aggregation (Start-DataAggregation) reported failure."
+                throw "The '$processingFunction' function reported failure."
             }
-            Write-MandALog "Data Aggregation completed successfully." -Level SUCCESS
+            
+            Write-MandALog "'$processingFunction' completed successfully." -Level "SUCCESS" -Configuration $Configuration
         } else {
-            throw "'Start-DataAggregation' function not found. Ensure Processing modules are loaded."
+            throw "CRITICAL: Processing function '$processingFunction' not found. Ensure 'DataAggregation.psm1' and other Processing modules are correctly loaded."
         }
-        # Add calls to UserProfileBuilder, WaveGeneration here if they are separate orchestrator-level steps
-        Write-MandALog "Processing Phase Completed." -Level SUCCESS
-        return $true 
-    } catch { Write-MandALog "ERROR: Processing phase failed: $($_.Exception.Message)" -Level ERROR; throw }
+
+        Write-MandALog "Processing Phase Completed Successfully." -Level "SUCCESS" -Configuration $Configuration
+        return $true
+    } catch {
+        Write-MandALog "ERROR: Processing phase (Invoke-ProcessingPhaseInternal) failed: $($_.Exception.Message)" -Level "ERROR" -Configuration $Configuration
+        throw
+    }
 }
 
 function Invoke-ExportPhaseInternal {
@@ -240,72 +325,112 @@ function Invoke-ExportPhaseInternal {
         [hashtable]$Configuration
     )
     try {
-        Write-MandALog "STARTING EXPORT PHASE" -Level "HEADER"
+        Write-MandALog "STARTING EXPORT PHASE (Invoke-ExportPhaseInternal)" -Level "HEADER" -Configuration $Configuration
         
+        # Define processed data path
         $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
-        Write-MandALog "Loading data for export from: $processedDataPath" -Level INFO
+        Write-MandALog "Loading processed data for export from: $processedDataPath" -Level "INFO" -Configuration $Configuration
         
-        # Load all processed .csv files into a hashtable to pass to export functions
+        # Initialize data container
         $dataToExport = @{}
+        
+        # Get all processed CSV files
         $processedFiles = Get-ChildItem -Path $processedDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
         
         if ($null -eq $processedFiles -or $processedFiles.Count -eq 0) {
-            throw "No processed CSV files found in '$processedDataPath'. Cannot proceed with export."
+            throw "No processed CSV files found in '$processedDataPath'. Ensure Processing phase ran."
         }
         
+        Write-MandALog "Found $($processedFiles.Count) processed files to load." -Level "DEBUG" -Configuration $Configuration
+        
+        # Load each processed file
         foreach ($file in $processedFiles) {
-            $dataKey = $file.BaseName # e.g., "Users", "Devices", "MigrationWaves"
+            $dataKey = $file.BaseName
+            Write-MandALog "Loading $($file.Name) for export..." -Level "DEBUG" -Configuration $Configuration
             try {
                 $dataToExport[$dataKey] = Import-Csv -Path $file.FullName -ErrorAction Stop
-                Write-MandALog "Loaded $($dataToExport[$dataKey].Count) records from $($file.Name) for export." -Level DEBUG
+                Write-MandALog "Loaded $($dataToExport[$dataKey].Count) records from $($file.Name) into key '$($dataKey)'." -Level "INFO" -Configuration $Configuration
             } catch {
-                Write-MandALog "ERROR: Failed to load processed file '$($file.FullName)' for export: $($_.Exception.Message)" -Level ERROR
-                # Optionally continue or throw, depending on desired strictness
+                throw "Failed to load processed file '$($file.Name)': $($_.Exception.Message)"
             }
         }
-
-        if ($dataToExport.Count -eq 0) {
-            throw "Failed to load any processed data for export."
+        
+        if ($dataToExport.Keys.Count -eq 0) {
+            throw "Failed to load any data into dataToExport hashtable."
         }
 
+        # Execute configured exporters
         $enabledFormats = @($Configuration.export.formats)
-        Write-MandALog "Executing $($enabledFormats.Count) configured export formats: $($enabledFormats -join ', ')" -Level INFO
+        Write-MandALog "Will execute $($enabledFormats.Count) export formats: $($enabledFormats -join ', ')" -Level "INFO" -Configuration $Configuration
+        
+        $overallExportSuccess = $true
         
         foreach ($formatName in $enabledFormats) {
             $exportFunctionName = ""
-            # Convention: Format "XYZ" calls "Start-XYZExport" or "Export-ForXYZ"
-            # Specific overrides for known modules:
-            if ($formatName -eq "PowerApps") { $exportFunctionName = "Export-ForPowerApps" }
-            elseif ($formatName -eq "CompanyControlSheet") { $exportFunctionName = "Start-CompanyControlSheetExport" }
-            elseif ($formatName -eq "CSV") { $exportFunctionName = "Start-CsvExport" } # Assuming a generic CSV exporter
-            elseif ($formatName -eq "JSON") { $exportFunctionName = "Start-JsonExport" } # Assuming a generic JSON exporter
-            else { $exportFunctionName = "Start-$($formatName)Export" } # Default convention
+            
+            # Map format names to function names
+            switch ($formatName) {
+                "PowerApps" { 
+                    $exportFunctionName = "Export-ForPowerApps" 
+                }
+                "CompanyControlSheet" { 
+                    $exportFunctionName = "Export-ToCompanyControlSheet" 
+                }
+                "CSV" { 
+                    $exportFunctionName = "Export-ToCSV"
+                }
+                "JSON" { 
+                    $exportFunctionName = "Export-ToJSON"
+                }
+                "Excel" {
+                    if ($Configuration.export.excelEnabled) {
+                        $exportFunctionName = "Export-ToExcel"
+                    } else {
+                        Write-MandALog "WARN: Excel format requested but excelEnabled is false. Skipping." -Level "WARN" -Configuration $Configuration
+                        continue
+                    }
+                }
+                default { 
+                    Write-MandALog "WARN: Export format '$formatName' is not specifically mapped. Skipping." -Level "WARN" -Configuration $Configuration
+                    continue
+                }
+            }
 
             if (Get-Command $exportFunctionName -ErrorAction SilentlyContinue) {
-                Write-MandALog "Invoking $exportFunctionName ..." -Level INFO
+                Write-MandALog "Invoking '$exportFunctionName' for format '$formatName'..." -Level "INFO" -Configuration $Configuration
                 try {
-                    # Pass the hashtable of all processed data tables
+                    # Call the export function
                     & $exportFunctionName -ProcessedData $dataToExport -Configuration $Configuration -ErrorAction Stop
-                    Write-MandALog "Successfully executed export for format '$formatName'." -Level SUCCESS
+                    Write-MandALog "Export for '$formatName' completed." -Level "SUCCESS" -Configuration $Configuration
                 } catch {
-                    Write-MandALog "ERROR: Export failed for format '$formatName' using '$exportFunctionName': $($_.Exception.Message)" -Level ERROR
+                    Write-MandALog "ERROR: Export for '$formatName' failed: $($_.Exception.Message)" -Level "ERROR" -Configuration $Configuration
+                    $overallExportSuccess = $false
                 }
             } else {
-                Write-MandALog "WARN: Export function '$exportFunctionName' not found for format '$formatName'. Skipping." -Level WARN
+                Write-MandALog "WARN: Export function '$exportFunctionName' for format '$formatName' not found. Skipping." -Level "WARN" -Configuration $Configuration
+                $overallExportSuccess = $false
             }
         }
         
-        Write-MandALog "Export Phase Completed." -Level SUCCESS
+        if (-not $overallExportSuccess) {
+            throw "One or more export formats failed."
+        }
+
+        Write-MandALog "Export Phase Completed Successfully." -Level "SUCCESS" -Configuration $Configuration
         return $true
-    } catch { Write-MandALog "ERROR: Export phase failed: $($_.Exception.Message)" -Level ERROR; throw }
+    } catch {
+        Write-MandALog "ERROR: Export phase (Invoke-ExportPhaseInternal) failed: $($_.Exception.Message)" -Level "ERROR" -Configuration $Configuration
+        throw
+    }
 }
 
 function Complete-MandADiscoveryInternal {
-    [CmdletBinding()] param([Parameter(Mandatory=$true)][hashtable]$Configuration)
-    Write-MandALog "FINALIZING M&A DISCOVERY SUITE EXECUTION (Orchestrator v4.4.1)" -Level "HEADER"
+    [CmdletBinding()] 
+    param([Parameter(Mandatory=$true)][hashtable]$Configuration)
+    Write-MandALog "FINALIZING M&A DISCOVERY SUITE EXECUTION (Orchestrator v4.5.1)" -Level "HEADER"
     Write-MandALog "Execution completed successfully." -Level SUCCESS
     Write-MandALog "  - Logs: $($global:MandA.Paths.LogOutput)" -Level INFO
-    Write-MandALog "  - Output: $($Configuration.environment.outputPath)" -Level INFO # This will now be the company-specific path
+    Write-MandALog "  - Output: $($Configuration.environment.outputPath)" -Level INFO
 }
 
 #===============================================================================
@@ -320,10 +445,8 @@ try {
         }
         Write-Host "Loading specified configuration file: $configPathToLoad" -ForegroundColor Yellow
         $script:CurrentConfig = Get-Content -Path $configPathToLoad -Raw | ConvertFrom-Json
-        # Merge with global base config if necessary or treat as complete override
-        # For simplicity here, it overrides. If merging is needed, $global:MandA.Config should be updated.
     } else {
-        $script:CurrentConfig = $global:MandA.Config # This is pre-loaded by Set-SuiteEnvironment.ps1
+        $script:CurrentConfig = $global:MandA.Config
     }
     
     if ($null -eq $script:CurrentConfig) {
@@ -332,17 +455,17 @@ try {
 
     # Ensure the CompanyName from parameter matches or updates the one in config metadata
     if ($script:CurrentConfig.metadata.companyName -ne $CompanyName) {
-        Write-MandALog "Updating configuration metadata with provided CompanyName: '$CompanyName' (was '$($script:CurrentConfig.metadata.companyName)')" -Level INFO -Configuration $script:CurrentConfig # Pass config for logging to be initialized
+        Write-MandALog "Updating configuration metadata with provided CompanyName: '$CompanyName' (was '$($script:CurrentConfig.metadata.companyName)')" -Level INFO
         $script:CurrentConfig.metadata.companyName = $CompanyName
     }
     
     if ($Force.IsPresent) { 
         $script:CurrentConfig.discovery.skipExistingFiles = $false 
-        Write-MandALog "Force mode enabled: discovery.skipExistingFiles set to false." -Level INFO -Configuration $script:CurrentConfig
+        Write-MandALog "Force mode enabled: discovery.skipExistingFiles set to false." -Level INFO
     }
     
-    Write-MandALog "M&A DISCOVERY SUITE v$($script:CurrentConfig.metadata.version) | Orchestrator v4.4.1" -Level "HEADER" -Configuration $script:CurrentConfig
-    Write-MandALog "Mode: $Mode | Company: $CompanyName | Config being used: (details in logs if overridden, else default)" -Level "INFO" -Configuration $script:CurrentConfig
+    Write-MandALog "M&A DISCOVERY SUITE v$($script:CurrentConfig.metadata.version) | Orchestrator v4.5.1" -Level "HEADER"
+    Write-MandALog "Mode: $Mode | Company: $CompanyName" -Level "INFO"
 
     Initialize-MandAEnvironmentInternal -Configuration $script:CurrentConfig -CurrentMode $Mode -IsValidateOnlyMode:$ValidateOnly
     
@@ -352,40 +475,53 @@ try {
         exit 0
     }
     
-    Write-MandALog "AUTHENTICATION & CONNECTION SETUP" -Level "HEADER"
-    $authContext = $null
-    # Ensure credential paths in $script:CurrentConfig are correct before calling auth
-    if ($global:MandA.Paths.CredentialFile) {
-        $script:CurrentConfig.authentication.credentialStorePath = Split-Path $global:MandA.Paths.CredentialFile -Parent
-        $script:CurrentConfig.authentication.credentialFileName = Split-Path $global:MandA.Paths.CredentialFile -Leaf
-    } else {
-        throw "Global credential file path (`$global:MandA.Paths.CredentialFile`) is not set. Critical for authentication."
-    }
-
-    $authResult = Initialize-MandAAuthentication -Configuration $script:CurrentConfig
-    if ($null -eq $authResult -or ($authResult -is [hashtable] -and $authResult.Authenticated -ne $true)) {
-        $authError = if($authResult -is [hashtable] -and $authResult.Error){$authResult.Error}else{"Unknown auth error"}
-        throw "Authentication failed: $authError"
-    }
-    $authContext = if ($authResult.Context) { $authResult.Context } else { $authResult }
-    Write-MandALog "Authentication successful. ClientID: $($authContext.ClientId), TenantID: $($authContext.TenantId)" -Level SUCCESS
-    
-    $connectionStatus = Initialize-AllConnections -Configuration $script:CurrentConfig -AuthContext $authContext
-    if ($null -eq $connectionStatus -or $connectionStatus.Count -eq 0) { throw "Connection initialization returned no results." }
-
-    $criticalFailure = $false
-    ($script:CurrentConfig.environment.connectivity.haltOnConnectionError) | ForEach-Object {
-        $serviceName = $_
-        $isConnected = $false
-        if ($connectionStatus.ContainsKey($serviceName)) {
-            $serviceStat = $connectionStatus.$serviceName
-            $isConnected = if ($serviceStat -is [bool]) { $serviceStat } elseif ($serviceStat -is [hashtable] -and $serviceStat.ContainsKey('Connected')) { $serviceStat.Connected } else { $false }
+    # Skip authentication for Processing or Export only modes
+    if ($Mode -in "Discovery", "Full") {
+        Write-MandALog "AUTHENTICATION & CONNECTION SETUP" -Level "HEADER"
+        $authContext = $null
+        
+        if ($global:MandA.Paths.CredentialFile) {
+            $script:CurrentConfig.authentication.credentialStorePath = Split-Path $global:MandA.Paths.CredentialFile -Parent
+            $script:CurrentConfig.authentication.credentialFileName = Split-Path $global:MandA.Paths.CredentialFile -Leaf
+        } else {
+            throw "Global credential file path (`$global:MandA.Paths.CredentialFile`) is not set. Critical for authentication."
         }
-        if (-not $isConnected) { Write-MandALog "CRITICAL: Required service '$serviceName' failed to connect." -Level ERROR; $criticalFailure = $true }
-        else { Write-MandALog "Critical service '$serviceName' connected." -Level SUCCESS }
-    }
-    if ($criticalFailure) { throw "Critical service connection failures detected." }
 
+        $authResult = Initialize-MandAAuthentication -Configuration $script:CurrentConfig
+        if ($null -eq $authResult -or ($authResult -is [hashtable] -and $authResult.Authenticated -ne $true)) {
+            $authError = if($authResult -is [hashtable] -and $authResult.Error){$authResult.Error}else{"Unknown auth error"}
+            throw "Authentication failed: $authError"
+        }
+        $authContext = if ($authResult.Context) { $authResult.Context } else { $authResult }
+        Write-MandALog "Authentication successful. ClientID: $($authContext.ClientId), TenantID: $($authContext.TenantId)" -Level SUCCESS
+        
+        $connectionStatus = Initialize-AllConnections -Configuration $script:CurrentConfig -AuthContext $authContext
+        if ($null -eq $connectionStatus -or $connectionStatus.Count -eq 0) { 
+            throw "Connection initialization returned no results." 
+        }
+
+        $criticalFailure = $false
+        ($script:CurrentConfig.environment.connectivity.haltOnConnectionError) | ForEach-Object {
+            $serviceName = $_
+            $isConnected = $false
+            if ($connectionStatus.ContainsKey($serviceName)) {
+                $serviceStat = $connectionStatus.$serviceName
+                $isConnected = if ($serviceStat -is [bool]) { $serviceStat } elseif ($serviceStat -is [hashtable] -and $serviceStat.ContainsKey('Connected')) { $serviceStat.Connected } else { $false }
+            }
+            if (-not $isConnected) { 
+                Write-MandALog "CRITICAL: Required service '$serviceName' failed to connect." -Level ERROR
+                $criticalFailure = $true 
+            }
+            else { 
+                Write-MandALog "Critical service '$serviceName' connected." -Level SUCCESS 
+            }
+        }
+        if ($criticalFailure) { 
+            throw "Critical service connection failures detected." 
+        }
+    }
+
+    # Execute phases based on mode
     if ($Mode -in "Discovery", "Full") {
         Invoke-DiscoveryPhaseInternal -Configuration $script:CurrentConfig
     }
@@ -399,14 +535,26 @@ try {
     Complete-MandADiscoveryInternal -Configuration $script:CurrentConfig
 } 
 catch {
-    Write-MandALog "ORCHESTRATOR CRITICAL ERROR: $($_.Exception.Message)" -Level "CRITICAL" -Configuration $script:CurrentConfig # Ensure logging has a config
-    if ($_.ScriptStackTrace) { Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG" -Configuration $script:CurrentConfig }
-    if ($Host.Name -eq "ConsoleHost") { $Host.SetShouldExit(1); exit 1 } else { throw }
+    # FIXED: Changed from -Level "CRITICAL" to -Level "ERROR"
+    Write-MandALog "ORCHESTRATOR ERROR: $($_.Exception.Message)" -Level "ERROR" -Configuration $script:CurrentConfig
+    if ($_.ScriptStackTrace) { 
+        Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG" -Configuration $script:CurrentConfig
+    }
+    if ($Host.Name -eq "ConsoleHost") { 
+        $Host.SetShouldExit(1)
+        exit 1 
+    } else { 
+        throw 
+    }
 } 
 finally {
-    Write-MandALog "Performing cleanup..." -Level INFO -Configuration $script:CurrentConfig # Ensure logging has a config
+    Write-MandALog "Performing cleanup..." -Level INFO -Configuration $script:CurrentConfig
     if (Get-Command 'Disconnect-AllServices' -ErrorAction SilentlyContinue) {
-        try { Disconnect-AllServices } catch { Write-MandALog "WARN: Error during service disconnection: $($_.Exception.Message)" -Level WARN -Configuration $script:CurrentConfig }
+        try { 
+            Disconnect-AllServices 
+        } catch { 
+            Write-MandALog "WARN: Error during service disconnection: $($_.Exception.Message)" -Level WARN -Configuration $script:CurrentConfig
+        }
     }
     Write-MandALog "Orchestrator execution completed at $(Get-Date)" -Level INFO -Configuration $script:CurrentConfig
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator

@@ -712,93 +712,114 @@ function Start-DiscoveryOnly {
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
+
 function Start-ProcessingOnly {
     Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
     Write-ColoredLog "                   STARTING PROCESSING PHASE ONLY                      " -Level "HEADER"
     Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
 
-    # Check if raw data exists
+    # Pre-condition Check 1: Check if raw data directory exists
     $rawDataPath = $global:MandA.Paths.RawDataOutput
-    if (-not (Test-Path $rawDataPath)) {
+    if (-not (Test-Path $rawDataPath -PathType Container)) {
         Write-ColoredLog "`n❌ Raw data directory not found: $rawDataPath" -Level "ERROR"
-        Write-ColoredLog "   Please run Discovery phase first (Option 4)" -Level "ERROR"
+        Write-ColoredLog "   Please run Discovery phase first (e.g., Option 4)" -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         return
     }
 
+    # Pre-condition Check 2: Check if raw data directory contains CSV files
     $csvFiles = Get-ChildItem -Path $rawDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
     if ($null -eq $csvFiles -or $csvFiles.Count -eq 0) {
-        Write-ColoredLog "`n❌ No CSV files found in raw data directory" -Level "ERROR"
-        Write-ColoredLog "   Please run Discovery phase first (Option 4)" -Level "ERROR"
+        Write-ColoredLog "`n❌ No CSV files found in raw data directory: $rawDataPath" -Level "ERROR"
+        Write-ColoredLog "   Please run Discovery phase first (e.g., Option 4)" -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         return
     }
 
-    Write-ColoredLog "`n✅ Found $($csvFiles.Count) raw data files to process" -Level "SUCCESS"
+    # Pre-conditions passed
+    Write-ColoredLog "`n✅ Found $($csvFiles.Count) raw data files. Proceeding with Processing phase." -Level "SUCCESS"
     
+    # Call the Orchestrator
+    Write-ColoredLog "`n🚀 Launching Orchestrator in Processing Mode..." -Level "INFO"
     try {
         $configPath = if ($ConfigFile) { $ConfigFile } else { $global:MandA.Paths.ConfigFile }
         & $global:MandA.Paths.Orchestrator -Mode "Processing" -ConfigurationFile $configPath -CompanyName $script:CompanyName -ErrorAction Stop
-        Write-ColoredLog "`n✅ Processing phase completed successfully!" -Level "SUCCESS"
-        Write-ColoredLog "   Processed data saved to: $($global:MandA.Paths.ProcessedDataOutput)" -Level "INFO"
+        Write-ColoredLog "`n✅ Processing phase completed successfully via Orchestrator!" -Level "SUCCESS"
+        Write-ColoredLog "   Processed data should be available in: $($global:MandA.Paths.ProcessedDataOutput)" -Level "INFO"
     } catch {
-        Write-ColoredLog "`n❌ Error during processing: $($_.Exception.Message)" -Level "ERROR"
+        Write-ColoredLog "`n❌ Error during Processing-Only run: $($_.Exception.Message)" -Level "ERROR"
         Write-ColoredLog "   ScriptStackTrace: $($_.ScriptStackTrace)" -Level "DEBUG"
     } finally {
         if ($global:MandA) { $global:MandA.OrchestratorRunCount = 0 }
+        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
-
-    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
+
+
+
 
 function Start-ExportOnly {
     Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
     Write-ColoredLog "                     STARTING EXPORT PHASE ONLY                        " -Level "HEADER"
     Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
 
-    # Check if processed data exists
+    # Pre-condition Check 1: Check if processed data directory exists
     $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
-    if (-not (Test-Path $processedDataPath)) {
+    if (-not (Test-Path $processedDataPath -PathType Container)) {
         Write-ColoredLog "`n❌ Processed data directory not found: $processedDataPath" -Level "ERROR"
-        Write-ColoredLog "   Please run Processing phase first (Option 5)" -Level "ERROR"
+        Write-ColoredLog "   Please run Processing phase first (e.g., Option 5)" -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         return
     }
 
+    # Pre-condition Check 2: Check for key processed files
+    $keyProcessedFile = Join-Path $processedDataPath "UserProfiles.csv"
     $csvFiles = Get-ChildItem -Path $processedDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
+    
     if ($null -eq $csvFiles -or $csvFiles.Count -eq 0) {
-        Write-ColoredLog "`n❌ No CSV files found in processed data directory" -Level "ERROR"
-        Write-ColoredLog "   Please run Processing phase first (Option 5)" -Level "ERROR"
+        Write-ColoredLog "`n❌ No CSV files found in processed data directory: $processedDataPath" -Level "ERROR"
+        Write-ColoredLog "   Please run Processing phase first (e.g., Option 5)" -Level "ERROR"
+        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
+    }
+    
+    if (-not (Test-Path $keyProcessedFile -PathType Leaf)) {
+        Write-ColoredLog "`n❌ Key processed file 'UserProfiles.csv' not found in $processedDataPath." -Level "ERROR"
+        Write-ColoredLog "   Please run Processing phase first (e.g., Option 5)" -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         return
     }
 
-    Write-ColoredLog "`n✅ Found $($csvFiles.Count) processed data files to export" -Level "SUCCESS"
+    # Pre-conditions passed
+    Write-ColoredLog "`n✅ Processed data found. Proceeding with Export phase." -Level "SUCCESS"
+    Write-ColoredLog "   Found $($csvFiles.Count) processed data files to export" -Level "INFO"
     
     # Show configured export formats
     if ($global:MandA.Config -and $global:MandA.Config.export -and $global:MandA.Config.export.formats) {
-        Write-ColoredLog "   Export formats: $($global:MandA.Config.export.formats -join ', ')" -Level "INFO"
+        Write-ColoredLog "   Configured Export formats: $($global:MandA.Config.export.formats -join ', ')" -Level "INFO"
     }
     
+    # Call the Orchestrator
+    Write-ColoredLog "`n🚀 Launching Orchestrator in Export Mode..." -Level "INFO"
     try {
         $configPath = if ($ConfigFile) { $ConfigFile } else { $global:MandA.Paths.ConfigFile }
         & $global:MandA.Paths.Orchestrator -Mode "Export" -ConfigurationFile $configPath -CompanyName $script:CompanyName -ErrorAction Stop
-        Write-ColoredLog "`n✅ Export phase completed successfully!" -Level "SUCCESS"
-        Write-ColoredLog "   Exported files saved to: $($global:MandA.Paths.CompanyProfileRoot)" -Level "INFO"
+        Write-ColoredLog "`n✅ Export phase completed successfully via Orchestrator!" -Level "SUCCESS"
+        Write-ColoredLog "   Exported files should be available in: $($global:MandA.Paths.CompanyProfileRoot)" -Level "INFO"
     } catch {
-        Write-ColoredLog "`n❌ Error during export: $($_.Exception.Message)" -Level "ERROR"
+        Write-ColoredLog "`n❌ Error during Export-Only run: $($_.Exception.Message)" -Level "ERROR"
         Write-ColoredLog "   ScriptStackTrace: $($_.ScriptStackTrace)" -Level "DEBUG"
     } finally {
         if ($global:MandA) { $global:MandA.OrchestratorRunCount = 0 }
+        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
-
-    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
 function Show-AzureADAppGuide {
