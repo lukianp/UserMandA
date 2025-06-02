@@ -2,7 +2,7 @@
 .SYNOPSIS
     Exchange Online discovery for M&A Discovery Suite
 .DESCRIPTION
-    Discovers Exchange Online mailboxes, distribution groups, permissions, and configurations
+    Discovers Exchange Online mailboxes, distribution groups, permissions, and configurations1
 #>
 
 function Invoke-ExchangeDiscovery {
