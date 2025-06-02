@@ -3,6 +3,9 @@
     Standardized error handling for M&A Discovery Suite
 .DESCRIPTION
     Provides consistent error handling, retry logic, and recovery mechanisms
+.NOTES
+    Version: 1.1.0
+    Updated to support company-specific directory structures
 #>
 
 function Invoke-WithRetry {
@@ -174,44 +177,78 @@ function Test-Prerequisites {
             }
         }
         
-        # Check output directory
-        $outputPath = $Configuration.environment.outputPath
-        if (-not (Test-Path $outputPath)) {
+        # Check output directory - UPDATED to use company-specific paths
+        $outputPath = if ($global:MandA.Paths.CompanyProfileRoot) {
+            $global:MandA.Paths.CompanyProfileRoot
+        } elseif ($Configuration.environment.outputPath) {
+            $Configuration.environment.outputPath
+        } elseif ($Configuration.environment.profilesBasePath) {
+            # Fallback: create a temp directory if we only have profilesBasePath
+            Join-Path $Configuration.environment.profilesBasePath "TempValidation"
+        } else {
+            $null
+        }
+        
+        if (-not $outputPath) {
+            $validationErrors += "No output path configured"
+        } elseif (-not (Test-Path $outputPath)) {
             try {
                 New-Item -Path $outputPath -ItemType Directory -Force | Out-Null
                 Write-MandALog "Created output directory: $outputPath" -Level "SUCCESS"
             } catch {
-                $validationErrors += "Cannot create output directory: $outputPath"
+                $validationErrors += "Cannot create output directory: $outputPath - $($_.Exception.Message)"
             }
         }
         
         # Check disk space
-        $drive = Split-Path $outputPath -Qualifier
-        $freeSpace = (Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='$drive'").FreeSpace / 1GB
-        $requiredSpace = $Configuration.performance.diskSpaceThresholdGB
-        
-        if ($freeSpace -lt $requiredSpace) {
-            $validationErrors += "Insufficient disk space. Required: ${requiredSpace}GB, Available: $([math]::Round($freeSpace, 2))GB"
+        if ($outputPath -and (Test-Path $outputPath)) {
+            $drive = Split-Path $outputPath -Qualifier
+            if ($drive) {
+                try {
+                    $freeSpace = (Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='$drive'" -ErrorAction Stop).FreeSpace / 1GB
+                    $requiredSpace = if ($Configuration.performance.diskSpaceThresholdGB) { 
+                        $Configuration.performance.diskSpaceThresholdGB 
+                    } else { 
+                        10 
+                    }
+                    
+                    if ($freeSpace -lt $requiredSpace) {
+                        $validationErrors += "Insufficient disk space. Required: ${requiredSpace}GB, Available: $([math]::Round($freeSpace, 2))GB"
+                    }
+                } catch {
+                    Write-MandALog "Warning: Could not check disk space for drive $drive" -Level "WARN"
+                }
+            }
         }
         
         # Check memory
-        $totalMemory = (Get-WmiObject -Class Win32_ComputerSystem).TotalPhysicalMemory / 1MB
-        $requiredMemory = $Configuration.performance.memoryThresholdMB
-        
-        if ($totalMemory -lt $requiredMemory) {
-            Write-MandALog "Warning: System memory ($([math]::Round($totalMemory, 0))MB) is below recommended ($requiredMemory MB)" -Level "WARN"
+        try {
+            $totalMemory = (Get-WmiObject -Class Win32_ComputerSystem -ErrorAction Stop).TotalPhysicalMemory / 1MB
+            $requiredMemory = if ($Configuration.performance.memoryThresholdMB) { 
+                $Configuration.performance.memoryThresholdMB 
+            } else { 
+                4096 
+            }
+            
+            if ($totalMemory -lt $requiredMemory) {
+                Write-MandALog "Warning: System memory ($([math]::Round($totalMemory, 0))MB) is below recommended ($requiredMemory MB)" -Level "WARN"
+            }
+        } catch {
+            Write-MandALog "Warning: Could not check system memory" -Level "WARN"
         }
         
-        # Check network connectivity
-        $endpoints = @("graph.microsoft.com", "login.microsoftonline.com")
-        foreach ($endpoint in $endpoints) {
-            try {
-                $result = Test-NetConnection -ComputerName $endpoint -Port 443 -InformationLevel Quiet -WarningAction SilentlyContinue
-                if (-not $result) {
-                    $validationErrors += "Cannot reach required endpoint: $endpoint"
+        # Check network connectivity (skip in validate-only mode)
+        if (-not $ValidateOnly) {
+            $endpoints = @("graph.microsoft.com", "login.microsoftonline.com")
+            foreach ($endpoint in $endpoints) {
+                try {
+                    $result = Test-NetConnection -ComputerName $endpoint -Port 443 -InformationLevel Quiet -WarningAction SilentlyContinue
+                    if (-not $result) {
+                        $validationErrors += "Cannot reach required endpoint: $endpoint"
+                    }
+                } catch {
+                    $validationErrors += "Network connectivity test failed for: $endpoint"
                 }
-            } catch {
-                $validationErrors += "Network connectivity test failed for: $endpoint"
             }
         }
         
@@ -236,26 +273,99 @@ function Initialize-OutputDirectories {
     param($Configuration)
     
     try {
-        $outputPath = $Configuration.environment.outputPath
-        $directories = @(
-            $outputPath,
-            (Join-Path $outputPath "Logs"),
-            (Join-Path $outputPath "Raw"),
-            (Join-Path $outputPath "Processed"),
-            (Join-Path $outputPath "Archive")
-        )
+        # UPDATED: Use company-specific paths if available
+        if ($global:MandA.Paths.CompanyProfileRoot) {
+            Write-MandALog "Using company-specific directory structure" -Level "INFO"
+            
+            $directories = @(
+                $global:MandA.Paths.CompanyProfileRoot,
+                $global:MandA.Paths.LogOutput,
+                $global:MandA.Paths.RawDataOutput,
+                $global:MandA.Paths.ProcessedDataOutput
+            )
+            
+            # Also create Archive and Temp directories
+            $archivePath = Join-Path $global:MandA.Paths.CompanyProfileRoot "Archive"
+            $tempPath = Join-Path $global:MandA.Paths.CompanyProfileRoot "Temp"
+            $directories += @($archivePath, $tempPath)
+            
+            # Store these paths back in global context for other modules
+            $global:MandA.Paths['Archive'] = $archivePath
+            $global:MandA.Paths['Temp'] = $tempPath
+            
+        } else {
+            # Fallback to configuration-based paths
+            Write-MandALog "Using configuration-based directory structure" -Level "INFO"
+            
+            $outputPath = $Configuration.environment.outputPath
+            if (-not $outputPath) {
+                # Try to construct from profilesBasePath if available
+                if ($Configuration.environment.profilesBasePath) {
+                    $outputPath = Join-Path $Configuration.environment.profilesBasePath "DefaultOutput"
+                    Write-MandALog "No outputPath configured, using fallback: $outputPath" -Level "WARN"
+                } else {
+                    throw "No output path found in configuration and no company-specific paths available"
+                }
+            }
+            
+            $directories = @(
+                $outputPath,
+                (Join-Path $outputPath "Logs"),
+                (Join-Path $outputPath "Raw"),
+                (Join-Path $outputPath "Processed"),
+                (Join-Path $outputPath "Archive"),
+                (Join-Path $outputPath "Temp")
+            )
+        }
         
+        # Create all directories
         foreach ($dir in $directories) {
             if (-not (Test-Path $dir)) {
                 New-Item -Path $dir -ItemType Directory -Force | Out-Null
                 Write-MandALog "Created directory: $dir" -Level "SUCCESS"
+            } else {
+                Write-MandALog "Directory already exists: $dir" -Level "DEBUG"
             }
         }
         
+        # Verify write access to all directories
+        $accessErrors = @()
+        foreach ($dir in $directories) {
+            if (-not (Test-DirectoryWriteAccess -DirectoryPath $dir)) {
+                $accessErrors += $dir
+            }
+        }
+        
+        if ($accessErrors.Count -gt 0) {
+            Write-MandALog "Write access denied for directories:" -Level "ERROR"
+            foreach ($dir in $accessErrors) {
+                Write-MandALog "  - $dir" -Level "ERROR"
+            }
+            return $false
+        }
+        
+        Write-MandALog "All output directories initialized successfully" -Level "SUCCESS"
         return $true
         
     } catch {
         Write-MandALog "Failed to initialize output directories: $($_.Exception.Message)" -Level "ERROR"
+        Write-MandALog "Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG"
+        return $false
+    }
+}
+
+function Test-DirectoryWriteAccess {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$DirectoryPath
+    )
+    
+    try {
+        $testFile = Join-Path $DirectoryPath "write_test_$(Get-Random).tmp"
+        "test" | Out-File -FilePath $testFile -ErrorAction Stop
+        Remove-Item $testFile -Force -ErrorAction SilentlyContinue
+        return $true
+    } catch {
         return $false
     }
 }
@@ -267,5 +377,6 @@ Export-ModuleMember -Function @(
     'Get-FriendlyErrorMessage',
     'Write-ErrorSummary',
     'Test-Prerequisites',
-    'Initialize-OutputDirectories'
+    'Initialize-OutputDirectories',
+    'Test-DirectoryWriteAccess'
 )
