@@ -18,26 +18,74 @@ function Invoke-TeamsDiscovery {
         
         $discoveryResults = @{}
         
-        # Verify Teams connection
+        # Verify Teams connection by actually testing a Teams cmdlet
+        $isConnected = $false
         try {
-            $testCmd = Get-Command Get-Team -ErrorAction Stop
+            # Try to get teams to verify connection
+            $testTeams = Get-Team -ErrorAction Stop | Select-Object -First 1
+            $isConnected = $true
             Write-MandALog "Microsoft Teams connection verified" -Level "SUCCESS"
         } catch {
-            Write-MandALog "Microsoft Teams not connected. Attempting connection..." -Level "WARN"
-            
-            # Try to connect using existing credentials
-            try {
-                Connect-MicrosoftTeams -ErrorAction Stop
-                Write-MandALog "Successfully connected to Microsoft Teams" -Level "SUCCESS"
-            } catch {
-                Write-MandALog "Failed to connect to Microsoft Teams. Skipping Teams discovery." -Level "ERROR"
+            if ($_.Exception.Message -like "*You must call the Connect-MicrosoftTeams*") {
+                Write-MandALog "Microsoft Teams not connected. Attempting connection..." -Level "WARN"
+                
+                # Try to connect using existing credentials
+                try {
+                    # First check if we have a stored credential or service principal
+                    if ($Configuration.authentication.useServicePrincipal) {
+                        # Get credentials from credential store
+                        $credPath = $Configuration.authentication.credentialStorePath
+                        if (Test-Path $credPath) {
+                            $credData = Get-Content $credPath | ConvertFrom-Json
+                            if ($credData.AppId -and $credData.TenantId) {
+                                # Convert secure string back to plain text for connection
+                                $securePassword = ConvertTo-SecureString $credData.ClientSecret -AsPlainText -Force
+                                $credential = New-Object System.Management.Automation.PSCredential($credData.AppId, $securePassword)
+                                
+                                # Connect using service principal
+                                Connect-MicrosoftTeams -Credential $credential -TenantId $credData.TenantId -ErrorAction Stop
+                                $isConnected = $true
+                                Write-MandALog "Successfully connected to Microsoft Teams using service principal" -Level "SUCCESS"
+                            }
+                        }
+                    }
+                    
+                    if (-not $isConnected) {
+                        # Try interactive connection as fallback
+                        Connect-MicrosoftTeams -ErrorAction Stop
+                        $isConnected = $true
+                        Write-MandALog "Successfully connected to Microsoft Teams interactively" -Level "SUCCESS"
+                    }
+                    
+                    # Verify connection worked
+                    $testTeams = Get-Team -ErrorAction Stop | Select-Object -First 1
+                    
+                } catch {
+                    Write-MandALog "Failed to connect to Microsoft Teams: $($_.Exception.Message)" -Level "ERROR"
+                    Write-MandALog "Teams discovery will be skipped." -Level "WARN"
+                    return @{}
+                }
+            } else {
+                # Some other error occurred
+                Write-MandALog "Error verifying Teams connection: $($_.Exception.Message)" -Level "ERROR"
                 return @{}
             }
+        }
+        
+        if (-not $isConnected) {
+            Write-MandALog "Unable to establish Teams connection. Skipping Teams discovery." -Level "WARN"
+            return @{}
         }
         
         # Teams
         Write-MandALog "Discovering Teams..." -Level "INFO"
         $discoveryResults.Teams = Get-TeamsData -OutputPath $rawPath -Configuration $Configuration
+        
+        # If no teams were found, skip remaining discovery
+        if ($null -eq $discoveryResults.Teams -or $discoveryResults.Teams.Count -eq 0) {
+            Write-MandALog "No teams found or error retrieving teams. Skipping detailed Teams discovery." -Level "WARN"
+            return $discoveryResults
+        }
         
         # Team Channels
         Write-MandALog "Discovering Team channels..." -Level "INFO"
@@ -68,7 +116,7 @@ function Invoke-TeamsDiscovery {
         
     } catch {
         Write-MandALog "Microsoft Teams discovery failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
+        return @{}
     }
 }
 
@@ -89,7 +137,23 @@ function Get-TeamsData {
     try {
         Write-MandALog "Retrieving all Teams..." -Level "INFO"
         
-        $teams = Get-Team -ErrorAction Stop
+        $teams = @()
+        try {
+            $teams = Get-Team -ErrorAction Stop
+        } catch {
+            if ($_.Exception.Message -like "*You must call the Connect-MicrosoftTeams*") {
+                Write-MandALog "Teams connection lost. Unable to retrieve teams." -Level "ERROR"
+                return @()
+            } else {
+                throw
+            }
+        }
+        
+        if ($null -eq $teams -or $teams.Count -eq 0) {
+            Write-MandALog "No teams found in the tenant" -Level "WARN"
+            return @()
+        }
+        
         Write-MandALog "Found $($teams.Count) teams" -Level "SUCCESS"
         
         $processedCount = 0
@@ -120,9 +184,27 @@ function Get-TeamsData {
                 }
                 
                 # Get owner and member counts
-                $owners = Get-TeamUser -GroupId $team.GroupId -Role Owner -ErrorAction SilentlyContinue
-                $members = Get-TeamUser -GroupId $team.GroupId -Role Member -ErrorAction SilentlyContinue
-                $guests = Get-TeamUser -GroupId $team.GroupId -Role Guest -ErrorAction SilentlyContinue
+                $owners = @()
+                $members = @()
+                $guests = @()
+                
+                try {
+                    $owners = @(Get-TeamUser -GroupId $team.GroupId -Role Owner -ErrorAction SilentlyContinue)
+                } catch {
+                    Write-MandALog "Could not get owners for team $($team.DisplayName)" -Level "DEBUG"
+                }
+                
+                try {
+                    $members = @(Get-TeamUser -GroupId $team.GroupId -Role Member -ErrorAction SilentlyContinue)
+                } catch {
+                    Write-MandALog "Could not get members for team $($team.DisplayName)" -Level "DEBUG"
+                }
+                
+                try {
+                    $guests = @(Get-TeamUser -GroupId $team.GroupId -Role Guest -ErrorAction SilentlyContinue)
+                } catch {
+                    Write-MandALog "Could not get guests for team $($team.DisplayName)" -Level "DEBUG"
+                }
                 
                 $teamsData.Add([PSCustomObject]@{
                     GroupId = $team.GroupId
@@ -132,11 +214,11 @@ function Get-TeamsData {
                     Archived = $team.Archived
                     MailNickName = $team.MailNickName
                     Classification = $team.Classification
-                    CreatedDateTime = $teamDetails.CreatedDateTime
-                    OwnerCount = ($owners | Measure-Object).Count
-                    MemberCount = ($members | Measure-Object).Count
-                    GuestCount = ($guests | Measure-Object).Count
-                    TotalMemberCount = ($owners | Measure-Object).Count + ($members | Measure-Object).Count + ($guests | Measure-Object).Count
+                    CreatedDateTime = if ($teamDetails.CreatedDateTime) { $teamDetails.CreatedDateTime } else { $null }
+                    OwnerCount = $owners.Count
+                    MemberCount = $members.Count
+                    GuestCount = $guests.Count
+                    TotalMemberCount = $owners.Count + $members.Count + $guests.Count
                     AllowCreateUpdateChannels = $teamSettings.AllowCreateUpdateChannels
                     AllowDeleteChannels = $teamSettings.AllowDeleteChannels
                     AllowAddRemoveApps = $teamSettings.AllowAddRemoveApps
@@ -149,7 +231,7 @@ function Get-TeamsData {
                     AllowChannelMentions = $teamSettings.AllowChannelMentions
                     AllowGuestCreateUpdateChannels = $teamSettings.AllowGuestCreateUpdateChannels
                     AllowGuestDeleteChannels = $teamSettings.AllowGuestDeleteChannels
-                    HasGuests = ($guests | Measure-Object).Count -gt 0
+                    HasGuests = $guests.Count -gt 0
                 })
                 
             } catch {
@@ -160,7 +242,9 @@ function Get-TeamsData {
         Write-Progress -Activity "Processing Teams" -Completed
         
         # Export to CSV
-        Export-DataToCSV -Data $teamsData -FilePath $outputFile
+        if ($teamsData.Count -gt 0) {
+            Export-DataToCSV -Data $teamsData -FilePath $outputFile
+        }
         
         return $teamsData
         
@@ -200,7 +284,12 @@ function Get-TeamChannelsData {
                 
                 foreach ($channel in $channels) {
                     # Get channel details
-                    $channelDetails = Get-TeamChannel -GroupId $team.GroupId -DisplayName $channel.DisplayName -ErrorAction SilentlyContinue
+                    $channelDetails = $null
+                    try {
+                        $channelDetails = Get-TeamChannel -GroupId $team.GroupId -DisplayName $channel.DisplayName -ErrorAction SilentlyContinue
+                    } catch {
+                        Write-MandALog "Could not get details for channel $($channel.DisplayName)" -Level "DEBUG"
+                    }
                     
                     $channelsData.Add([PSCustomObject]@{
                         TeamId = $team.GroupId
@@ -208,12 +297,12 @@ function Get-TeamChannelsData {
                         ChannelId = $channel.Id
                         ChannelDisplayName = $channel.DisplayName
                         Description = $channel.Description
-                        Email = $channelDetails.Email
+                        Email = if ($channelDetails) { $channelDetails.Email } else { $null }
                         IsFavoriteByDefault = $channel.IsFavoriteByDefault
                         MembershipType = $channel.MembershipType
-                        CreatedDateTime = $channelDetails.CreatedDateTime
+                        CreatedDateTime = if ($channelDetails) { $channelDetails.CreatedDateTime } else { $null }
                         Type = if ($channel.DisplayName -eq "General") { "Default" } else { "Standard" }
-                        ModerationSettings = if ($channelDetails.ModerationSettings) { 
+                        ModerationSettings = if ($channelDetails -and $channelDetails.ModerationSettings) { 
                             "$($channelDetails.ModerationSettings.AllowNewMessageFromBots);$($channelDetails.ModerationSettings.AllowNewMessageFromConnectors)" 
                         } else { "" }
                     })
@@ -228,7 +317,9 @@ function Get-TeamChannelsData {
         Write-MandALog "Found $($channelsData.Count) channels across all teams" -Level "SUCCESS"
         
         # Export to CSV
-        Export-DataToCSV -Data $channelsData -FilePath $outputFile
+        if ($channelsData.Count -gt 0) {
+            Export-DataToCSV -Data $channelsData -FilePath $outputFile
+        }
         
         return $channelsData
         
@@ -288,7 +379,9 @@ function Get-TeamMembersData {
         Write-MandALog "Found $($membersData.Count) team memberships" -Level "SUCCESS"
         
         # Export to CSV
-        Export-DataToCSV -Data $membersData -FilePath $outputFile
+        if ($membersData.Count -gt 0) {
+            Export-DataToCSV -Data $membersData -FilePath $outputFile
+        }
         
         return $membersData
         
@@ -337,7 +430,7 @@ function Get-TeamAppsData {
                         ExternalId = $app.ExternalId
                         IsPinned = $app.IsPinned
                         InstalledDate = $app.InstalledDate
-                        ConsentedPermissionSet = $app.ConsentedPermissionSet
+                        ConsentedPermissionSet = if ($app.ConsentedPermissionSet) { $app.ConsentedPermissionSet -join ";" } else { "" }
                     })
                 }
                 
@@ -351,7 +444,9 @@ function Get-TeamAppsData {
         Write-MandALog "Found $($appsData.Count) team app installations" -Level "SUCCESS"
         
         # Export to CSV
-        Export-DataToCSV -Data $appsData -FilePath $outputFile
+        if ($appsData.Count -gt 0) {
+            Export-DataToCSV -Data $appsData -FilePath $outputFile
+        }
         
         return $appsData
         
@@ -378,28 +473,52 @@ function Get-TeamsGuestUsersData {
     try {
         Write-MandALog "Retrieving Teams guest users..." -Level "INFO"
         
+        # Check if we have Graph connection
+        $graphContext = Get-MgContext -ErrorAction SilentlyContinue
+        if (-not $graphContext) {
+            Write-MandALog "Microsoft Graph not connected. Cannot retrieve guest users." -Level "WARN"
+            return @()
+        }
+        
         # Get all unique guest users from Graph
-        $guestUsers = Get-MgUser -Filter "userType eq 'Guest'" -All -ErrorAction Stop
+        $guestUsers = @()
+        try {
+            $guestUsers = Get-MgUser -Filter "userType eq 'Guest'" -All -ErrorAction Stop
+        } catch {
+            Write-MandALog "Error retrieving guest users from Graph: $($_.Exception.Message)" -Level "ERROR"
+            return @()
+        }
         
         Write-MandALog "Found $($guestUsers.Count) guest users in tenant" -Level "INFO"
         
+        $processedCount = 0
         foreach ($guest in $guestUsers) {
+            $processedCount++
+            if ($processedCount % 50 -eq 0) {
+                Write-Progress -Activity "Processing Guest Users" -Status "User $processedCount of $($guestUsers.Count)" -PercentComplete (($processedCount / $guestUsers.Count) * 100)
+            }
+            
             # Get group memberships for guest
-            $groupMemberships = Get-MgUserMemberOf -UserId $guest.Id -ErrorAction SilentlyContinue
             $teamMemberships = @()
             
-            foreach ($membership in $groupMemberships) {
-                if ($membership.AdditionalProperties["@odata.type"] -eq "#microsoft.graph.group") {
-                    # Check if this group is a Team
-                    try {
-                        $team = Get-Team -GroupId $membership.Id -ErrorAction Stop
-                        if ($team) {
-                            $teamMemberships += $team.DisplayName
+            try {
+                $groupMemberships = Get-MgUserMemberOf -UserId $guest.Id -ErrorAction SilentlyContinue
+                
+                foreach ($membership in $groupMemberships) {
+                    if ($membership.AdditionalProperties["@odata.type"] -eq "#microsoft.graph.group") {
+                        # Check if this group is a Team
+                        try {
+                            $team = Get-Team -GroupId $membership.Id -ErrorAction Stop
+                            if ($team) {
+                                $teamMemberships += $team.DisplayName
+                            }
+                        } catch {
+                            # Not a team, just a group
                         }
-                    } catch {
-                        # Not a team, just a group
                     }
                 }
+            } catch {
+                Write-MandALog "Could not get memberships for guest $($guest.UserPrincipalName)" -Level "DEBUG"
             }
             
             $guestData.Add([PSCustomObject]@{
@@ -420,10 +539,13 @@ function Get-TeamsGuestUsersData {
             })
         }
         
+        Write-Progress -Activity "Processing Guest Users" -Completed
         Write-MandALog "Processed $($guestData.Count) guest users" -Level "SUCCESS"
         
         # Export to CSV
-        Export-DataToCSV -Data $guestData -FilePath $outputFile
+        if ($guestData.Count -gt 0) {
+            Export-DataToCSV -Data $guestData -FilePath $outputFile
+        }
         
         return $guestData
         
@@ -463,6 +585,12 @@ function Get-TeamsPoliciesData {
         
         foreach ($policyType in $policyTypes) {
             try {
+                # Check if command exists
+                if (-not (Get-Command $policyType.Command -ErrorAction SilentlyContinue)) {
+                    Write-MandALog "Command $($policyType.Command) not available. Skipping $($policyType.Type)" -Level "DEBUG"
+                    continue
+                }
+                
                 $policies = & $policyType.Command -ErrorAction Stop
                 
                 foreach ($policy in $policies) {
@@ -496,7 +624,9 @@ function Get-TeamsPoliciesData {
         Write-MandALog "Retrieved total of $($policiesData.Count) Teams policies" -Level "SUCCESS"
         
         # Export to CSV
-        Export-DataToCSV -Data $policiesData -FilePath $outputFile
+        if ($policiesData.Count -gt 0) {
+            Export-DataToCSV -Data $policiesData -FilePath $outputFile
+        }
         
         return $policiesData
         
@@ -525,26 +655,31 @@ function Get-TeamsPhoneData {
         
         # Get phone number assignments
         try {
-            $phoneNumbers = Get-CsPhoneNumberAssignment -ErrorAction Stop
-            
-            foreach ($number in $phoneNumbers) {
-                $phoneData.Add([PSCustomObject]@{
-                    TelephoneNumber = $number.TelephoneNumber
-                    NumberType = $number.NumberType
-                    ActivationState = $number.ActivationState
-                    AssignedPstnTargetId = $number.AssignedPstnTargetId
-                    Capability = $number.Capability
-                    City = $number.City
-                    Country = $number.Country
-                    IsOperatorConnect = $number.IsOperatorConnect
-                    PortInOrderStatus = $number.PortInOrderStatus
-                    AssignmentStatus = $number.AssignmentStatus
-                    AssignedUser = $number.AssignedUser
-                    PstnAssignmentStatus = $number.PstnAssignmentStatus
-                })
+            if (Get-Command Get-CsPhoneNumberAssignment -ErrorAction SilentlyContinue) {
+                $phoneNumbers = Get-CsPhoneNumberAssignment -ErrorAction Stop
+                
+                foreach ($number in $phoneNumbers) {
+                    $phoneData.Add([PSCustomObject]@{
+                        ConfigurationType = "PhoneNumber"
+                        TelephoneNumber = $number.TelephoneNumber
+                        NumberType = $number.NumberType
+                        ActivationState = $number.ActivationState
+                        AssignedPstnTargetId = $number.AssignedPstnTargetId
+                        Capability = $number.Capability
+                        City = $number.City
+                        Country = $number.Country
+                        IsOperatorConnect = $number.IsOperatorConnect
+                        PortInOrderStatus = $number.PortInOrderStatus
+                        AssignmentStatus = $number.AssignmentStatus
+                        AssignedUser = $number.AssignedUser
+                        PstnAssignmentStatus = $number.PstnAssignmentStatus
+                    })
+                }
+                
+                Write-MandALog "Retrieved $($phoneNumbers.Count) phone number assignments" -Level "SUCCESS"
+            } else {
+                Write-MandALog "Get-CsPhoneNumberAssignment cmdlet not available" -Level "DEBUG"
             }
-            
-            Write-MandALog "Retrieved $($phoneNumbers.Count) phone number assignments" -Level "SUCCESS"
             
         } catch {
             Write-MandALog "Error retrieving phone numbers: $($_.Exception.Message)" -Level "WARN"
@@ -552,21 +687,37 @@ function Get-TeamsPhoneData {
         
         # Get voice routes
         try {
-            $voiceRoutes = Get-CsOnlineVoiceRoute -ErrorAction Stop
-            
-            foreach ($route in $voiceRoutes) {
-                $phoneData.Add([PSCustomObject]@{
-                    ConfigurationType = "VoiceRoute"
-                    Name = $route.Identity
-                    Description = $route.Description
-                    NumberPattern = $route.NumberPattern
-                    OnlinePstnUsages = ($route.OnlinePstnUsages -join ";")
-                    OnlinePstnGatewayList = ($route.OnlinePstnGatewayList -join ";")
-                    Priority = $route.Priority
-                })
+            if (Get-Command Get-CsOnlineVoiceRoute -ErrorAction SilentlyContinue) {
+                $voiceRoutes = Get-CsOnlineVoiceRoute -ErrorAction Stop
+                
+                foreach ($route in $voiceRoutes) {
+                    $phoneData.Add([PSCustomObject]@{
+                        ConfigurationType = "VoiceRoute"
+                        Name = $route.Identity
+                        Description = $route.Description
+                        NumberPattern = $route.NumberPattern
+                        OnlinePstnUsages = ($route.OnlinePstnUsages -join ";")
+                        OnlinePstnGatewayList = ($route.OnlinePstnGatewayList -join ";")
+                        Priority = $route.Priority
+                        TelephoneNumber = $null
+                        NumberType = $null
+                        ActivationState = $null
+                        AssignedPstnTargetId = $null
+                        Capability = $null
+                        City = $null
+                        Country = $null
+                        IsOperatorConnect = $null
+                        PortInOrderStatus = $null
+                        AssignmentStatus = $null
+                        AssignedUser = $null
+                        PstnAssignmentStatus = $null
+                    })
+                }
+                
+                Write-MandALog "Retrieved $($voiceRoutes.Count) voice routes" -Level "INFO"
+            } else {
+                Write-MandALog "Get-CsOnlineVoiceRoute cmdlet not available" -Level "DEBUG"
             }
-            
-            Write-MandALog "Retrieved $($voiceRoutes.Count) voice routes" -Level "INFO"
             
         } catch {
             Write-MandALog "No voice routes found or error retrieving: $($_.Exception.Message)" -Level "DEBUG"
@@ -581,6 +732,50 @@ function Get-TeamsPhoneData {
         
     } catch {
         Write-MandALog "Error retrieving Teams phone data: $($_.Exception.Message)" -Level "ERROR"
+        return @()
+    }
+}
+
+# Helper functions
+function Export-DataToCSV {
+    param(
+        [Parameter(Mandatory=$true)]
+        [object[]]$Data,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$FilePath
+    )
+    
+    if ($null -eq $Data -or $Data.Count -eq 0) {
+        Write-MandALog "No data to export to $FilePath" -Level "WARN"
+        return
+    }
+    
+    try {
+        $Data | Export-Csv -Path $FilePath -NoTypeInformation -Encoding UTF8
+        Write-MandALog "Exported $($Data.Count) records to $FilePath" -Level "SUCCESS"
+    } catch {
+        Write-MandALog "Failed to export data to $FilePath`: $($_.Exception.Message)" -Level "ERROR"
+    }
+}
+
+function Import-DataFromCSV {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$FilePath
+    )
+    
+    if (-not (Test-Path $FilePath)) {
+        Write-MandALog "CSV file not found: $FilePath" -Level "WARN"
+        return @()
+    }
+    
+    try {
+        $data = Import-Csv -Path $FilePath -Encoding UTF8
+        Write-MandALog "Imported $($data.Count) records from $FilePath" -Level "INFO"
+        return $data
+    } catch {
+        Write-MandALog "Failed to import CSV from $FilePath`: $($_.Exception.Message)" -Level "ERROR"
         return @()
     }
 }
