@@ -160,47 +160,57 @@ function Get-SQLInstancesFromSPN {
         
         Import-Module ActiveDirectory -Force
         
-        # Search for MSSQLSvc SPNs
-        $spnFilter = "servicePrincipalName=MSSQLSvc/*"
-        $computers = Get-ADComputer -Filter $spnFilter -Properties servicePrincipalName -ErrorAction SilentlyContinue
+        # FIXED: Use proper LDAP filter syntax
+        # Search for computers with MSSQLSvc SPNs
+        $spnFilter = "(servicePrincipalName=MSSQLSvc/*)"
         
-        foreach ($computer in $computers) {
-            foreach ($spn in $computer.servicePrincipalName) {
-                if ($spn -match "MSSQLSvc/([^:]+):?(\d+)?") {
-                    $serverName = $matches[1].Split('.')[0]  # Get just the hostname
-                    $port = if ($matches[2]) { $matches[2] } else { "1433" }
-                    
-                    # Determine instance name from port
-                    $instanceName = if ($port -eq "1433") { "MSSQLSERVER" } else { "UNKNOWN" }
-                    
-                    $instances += [PSCustomObject]@{
-                        ServerName = $serverName
-                        InstanceName = $instanceName
-                        Port = $port
-                        DiscoveryMethod = "SPN"
+        try {
+            $computers = Get-ADComputer -LDAPFilter $spnFilter -Properties servicePrincipalName -ErrorAction Stop
+            
+            foreach ($computer in $computers) {
+                foreach ($spn in $computer.servicePrincipalName) {
+                    if ($spn -match "MSSQLSvc/([^:]+):?(\d+)?") {
+                        $serverName = $matches[1].Split('.')[0]  # Get just the hostname
+                        $port = if ($matches[2]) { $matches[2] } else { "1433" }
+                        
+                        # Determine instance name from port
+                        $instanceName = if ($port -eq "1433") { "MSSQLSERVER" } else { "UNKNOWN" }
+                        
+                        $instances += [PSCustomObject]@{
+                            ServerName = $serverName
+                            InstanceName = $instanceName
+                            Port = $port
+                            DiscoveryMethod = "SPN"
+                        }
                     }
                 }
             }
+        } catch {
+            Write-MandALog "Error querying AD computers: $($_.Exception.Message)" -Level "WARN"
         }
         
         # Also check for service accounts with SQL SPNs
-        $users = Get-ADUser -Filter $spnFilter -Properties servicePrincipalName -ErrorAction SilentlyContinue
-        
-        foreach ($user in $users) {
-            foreach ($spn in $user.servicePrincipalName) {
-                if ($spn -match "MSSQLSvc/([^:]+):?(\d+)?") {
-                    $serverName = $matches[1].Split('.')[0]
-                    $port = if ($matches[2]) { $matches[2] } else { "1433" }
-                    $instanceName = if ($port -eq "1433") { "MSSQLSERVER" } else { "UNKNOWN" }
-                    
-                    $instances += [PSCustomObject]@{
-                        ServerName = $serverName
-                        InstanceName = $instanceName
-                        Port = $port
-                        DiscoveryMethod = "SPN"
+        try {
+            $users = Get-ADUser -LDAPFilter $spnFilter -Properties servicePrincipalName -ErrorAction Stop
+            
+            foreach ($user in $users) {
+                foreach ($spn in $user.servicePrincipalName) {
+                    if ($spn -match "MSSQLSvc/([^:]+):?(\d+)?") {
+                        $serverName = $matches[1].Split('.')[0]
+                        $port = if ($matches[2]) { $matches[2] } else { "1433" }
+                        $instanceName = if ($port -eq "1433") { "MSSQLSERVER" } else { "UNKNOWN" }
+                        
+                        $instances += [PSCustomObject]@{
+                            ServerName = $serverName
+                            InstanceName = $instanceName
+                            Port = $port
+                            DiscoveryMethod = "SPN"
+                        }
                     }
                 }
             }
+        } catch {
+            Write-MandALog "Error querying AD users: $($_.Exception.Message)" -Level "WARN"
         }
         
         Write-MandALog "Found $($instances.Count) instances via SPN discovery" -Level "INFO"
@@ -993,26 +1003,18 @@ function Get-SQLLinkedServers {
         
         Write-MandALog "Retrieved $($linkedServersData.Count) linked servers" -Level "SUCCESS"
         
-        # Export to CSV
-        Export-DataToCSV -Data $linkedServersData -FilePath $outputFile
-        Write-MandALog "Exported $($linkedServersData.Count) linked servers to CSV" -Level "SUCCESS"
+        # Only export if we have data
+        if ($linkedServersData.Count -gt 0) {
+            Export-DataToCSV -Data $linkedServersData -FilePath $outputFile
+            Write-MandALog "Exported $($linkedServersData.Count) linked servers to CSV" -Level "SUCCESS"
+        } else {
+            Write-MandALog "No linked servers found to export" -Level "INFO"
+        }
         
         return $linkedServersData
         
     } catch {
         Write-MandALog "Error retrieving linked servers: $($_.Exception.Message)" -Level "ERROR"
-        
-        # Create empty CSV with headers
-        $headers = [PSCustomObject]@{
-            InstanceName = $null; ServerId = $null; LinkedServerName = $null; Product = $null
-            Provider = $null; DataSource = $null; Location = $null; ProviderString = $null
-            Catalog = $null; ConnectTimeout = $null; QueryTimeout = $null; IsLinked = $null
-            IsRemoteLoginEnabled = $null; IsRpcOutEnabled = $null; IsDataAccessEnabled = $null
-            IsCollationCompatible = $null; UsesRemoteCollation = $null; CollationName = $null
-            ModifyDate = $null; LoginMappings = $null; DiscoveryTime = $null
-        }
-        Export-DataToCSV -Data @($headers) -FilePath $outputFile
-        
         return @()
     }
 }
@@ -1076,12 +1078,14 @@ function Get-SQLMaintenancePlans {
                 $tableExists = [int]$command.ExecuteScalar() -gt 0
                 
                 if ($tableExists) {
+                    # FIXED: Use correct column names from sysssispackages table
+                    # The 'owner' column should be 'ownersid' and we need to convert it
                     $query = "SELECT 
                         p.id,
                         p.name AS PlanName,
                         p.description,
                         p.createdate AS CreateDate,
-                        p.owner,
+                        SUSER_SNAME(p.ownersid) AS Owner,
                         p.packagedata.value('(/DTS:Executable/@DTS:CreationDate)[1]', 'datetime') AS PackageCreateDate,
                         p.packagedata.value('(/DTS:Executable/@DTS:LastModifiedProductVersion)[1]', 'varchar(50)') AS LastModifiedVersion
                     FROM msdb.dbo.sysssispackages p
@@ -1091,21 +1095,26 @@ function Get-SQLMaintenancePlans {
                     $command = New-Object System.Data.SqlClient.SqlCommand($query, $connection)
                     $adapter = New-Object System.Data.SqlClient.SqlDataAdapter($command)
                     $dataset = New-Object System.Data.DataSet
-                    $adapter.Fill($dataset) | Out-Null
                     
-                    foreach ($row in $dataset.Tables[0].Rows) {
-                        $maintenancePlansData.Add([PSCustomObject]@{
-                            InstanceName = $instanceName
-                            PlanId = $row["id"]
-                            PlanName = $row["PlanName"]
-                            Description = if ($row["description"] -ne [DBNull]::Value) { $row["description"] } else { "" }
-                            CreateDate = $row["CreateDate"]
-                            Owner = $row["owner"]
-                            PackageCreateDate = if ($row["PackageCreateDate"] -ne [DBNull]::Value) { $row["PackageCreateDate"] } else { $null }
-                            LastModifiedVersion = if ($row["LastModifiedVersion"] -ne [DBNull]::Value) { $row["LastModifiedVersion"] } else { "" }
-                            SubPlans = Get-MaintenanceSubPlans -InstanceName $instanceName -PlanId $row["id"]
-                            DiscoveryTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                        })
+                    try {
+                        $adapter.Fill($dataset) | Out-Null
+                        
+                        foreach ($row in $dataset.Tables[0].Rows) {
+                            $maintenancePlansData.Add([PSCustomObject]@{
+                                InstanceName = $instanceName
+                                PlanId = $row["id"]
+                                PlanName = $row["PlanName"]
+                                Description = if ($row["description"] -ne [DBNull]::Value) { $row["description"] } else { "" }
+                                CreateDate = $row["CreateDate"]
+                                Owner = if ($row["Owner"] -ne [DBNull]::Value) { $row["Owner"] } else { "Unknown" }
+                                PackageCreateDate = if ($row["PackageCreateDate"] -ne [DBNull]::Value) { $row["PackageCreateDate"] } else { $null }
+                                LastModifiedVersion = if ($row["LastModifiedVersion"] -ne [DBNull]::Value) { $row["LastModifiedVersion"] } else { "" }
+                                SubPlans = Get-MaintenanceSubPlans -InstanceName $instanceName -PlanId $row["id"]
+                                DiscoveryTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                            })
+                        }
+                    } catch {
+                        Write-MandALog "Error executing maintenance plan query on $instanceName`: $($_.Exception.Message)" -Level "WARN"
                     }
                 }
                 
@@ -1118,23 +1127,18 @@ function Get-SQLMaintenancePlans {
         
         Write-MandALog "Retrieved $($maintenancePlansData.Count) maintenance plans" -Level "SUCCESS"
         
-        # Export to CSV
-        Export-DataToCSV -Data $maintenancePlansData -FilePath $outputFile
-        Write-MandALog "Exported $($maintenancePlansData.Count) maintenance plans to CSV" -Level "SUCCESS"
+        # Only export if we have data
+        if ($maintenancePlansData.Count -gt 0) {
+            Export-DataToCSV -Data $maintenancePlansData -FilePath $outputFile
+            Write-MandALog "Exported $($maintenancePlansData.Count) maintenance plans to CSV" -Level "SUCCESS"
+        } else {
+            Write-MandALog "No maintenance plans found to export" -Level "INFO"
+        }
         
         return $maintenancePlansData
         
     } catch {
         Write-MandALog "Error retrieving maintenance plans: $($_.Exception.Message)" -Level "ERROR"
-        
-        # Create empty CSV with headers
-        $headers = [PSCustomObject]@{
-            InstanceName = $null; PlanId = $null; PlanName = $null; Description = $null
-            CreateDate = $null; Owner = $null; PackageCreateDate = $null
-            LastModifiedVersion = $null; SubPlans = $null; DiscoveryTime = $null
-        }
-        Export-DataToCSV -Data @($headers) -FilePath $outputFile
-        
         return @()
     }
 }
@@ -1254,6 +1258,50 @@ function Get-SQLServerConfigurations {
         }
         Export-DataToCSV -Data @($headers) -FilePath $outputFile
         
+        return @()
+    }
+}
+
+# Helper function to safely export data
+function Export-DataToCSV {
+    param(
+        [Parameter(Mandatory=$true)]
+        [object[]]$Data,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$FilePath
+    )
+    
+    if ($null -eq $Data -or $Data.Count -eq 0) {
+        Write-MandALog "No data to export to $FilePath" -Level "WARN"
+        return
+    }
+    
+    try {
+        $Data | Export-Csv -Path $FilePath -NoTypeInformation -Encoding UTF8
+        Write-MandALog "Exported $($Data.Count) records to $FilePath" -Level "SUCCESS"
+    } catch {
+        Write-MandALog "Failed to export data to $FilePath`: $($_.Exception.Message)" -Level "ERROR"
+    }
+}
+
+function Import-DataFromCSV {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$FilePath
+    )
+    
+    if (-not (Test-Path $FilePath)) {
+        Write-MandALog "CSV file not found: $FilePath" -Level "WARN"
+        return @()
+    }
+    
+    try {
+        $data = Import-Csv -Path $FilePath -Encoding UTF8
+        Write-MandALog "Imported $($data.Count) records from $FilePath" -Level "INFO"
+        return $data
+    } catch {
+        Write-MandALog "Failed to import CSV from $FilePath`: $($_.Exception.Message)" -Level "ERROR"
         return @()
     }
 }

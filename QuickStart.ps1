@@ -1,234 +1,843 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Quick start script for M&A Discovery Suite v4.1.4
+    M&A Discovery Suite - Enhanced Quick Start Menu
 .DESCRIPTION
-    A menu-driven launcher for all suite operations.
-    Includes $ErrorActionPreference = "Stop" for robust error handling.
-    NOW EMBEDS Set-SuiteEnvironment.ps1 logic to initialize $global:MandA.
-    Includes upfront PowerShell module check.
+    Provides a user-friendly interface to run the M&A Discovery Suite with improved
+    credential management, status indicators, and optimized module checking.
 .NOTES
-    Version: 4.1.4
-    Author: Gemini & User
-    Date: 2025-06-01
+    Version: 5.0.0
+    Author: Enhanced Version
+    Date: 2025-06-02
 #>
+
 [CmdletBinding()]
-param() # Defines that this script takes NO positional parameters
-
-# Ensure script halts on terminating errors from sourced scripts or cmdlets
-$OriginalErrorActionPreferenceForQuickStart = $ErrorActionPreference
-$ErrorActionPreference = "Stop"
-
-# --- BEGIN Embedded Set-SuiteEnvironment Logic (v3.0.4 equivalent) ---
-Write-Host "--- QuickStart.ps1 (v4.1.4) Initializing Environment (Embedded Logic) ---" -ForegroundColor Magenta
-
-function Test-MandASuiteStructureInternal_QS { # Renamed to avoid conflict if original is loaded elsewhere
-    param([string]$PathToTest)
-    $requiredSubDirs = @("Core", "Modules", "Scripts", "Configuration")
-    if (-not (Test-Path $PathToTest -PathType Container)) { return $false }
-    foreach ($subDir in $requiredSubDirs) {
-        if (-not (Test-Path (Join-Path $PathToTest $subDir) -PathType Container)) { return $false }
-    }
-    return $true
-}
-
-$SuiteRoot_QS = $null # Use script-local variables
-$determinedBy_QS = ""
-
-try {
-    Write-Host "Attempting to determine SuiteRoot..." -ForegroundColor Yellow
+param(
+    [Parameter(Mandatory=$false)]
+    [string]$ConfigFile,
     
-    $quickStartPathForEnv = $MyInvocation.MyCommand.Path
-    if ([string]::IsNullOrWhiteSpace($quickStartPathForEnv) -and $PSScriptRoot) {
-        $quickStartPathForEnv = Join-Path $PSScriptRoot $MyInvocation.MyCommand.Name
-    }
+    [Parameter(Mandatory=$false)]
+    [switch]$SkipModuleCheck,
     
-    if ([string]::IsNullOrWhiteSpace($quickStartPathForEnv)) {
-        throw "CRITICAL: Cannot determine the path of QuickStart.ps1 to establish SuiteRoot."
-    }
+    [Parameter(Mandatory=$false)]
+    [switch]$Verbose
+)
 
-    $SuiteRoot_QS = Split-Path $quickStartPathForEnv -Parent
-    Write-Host "SuiteRoot determined by QuickStart.ps1 location: '$SuiteRoot_QS'" -ForegroundColor DarkCyan
-
-    if (-not (Test-MandASuiteStructureInternal_QS -PathToTest $SuiteRoot_QS)) {
-        Write-Host "Structure test failed for '$SuiteRoot_QS'. Checking default 'C:\UserMigration'..." -ForegroundColor Gray
-        $defaultPath_QS = "C:\UserMigration"
-        if (Test-MandASuiteStructureInternal_QS -PathToTest $defaultPath_QS) {
-            $SuiteRoot_QS = Resolve-Path $defaultPath_QS | Select-Object -ExpandProperty Path
-            $determinedBy_QS = "default path ('$defaultPath_QS') after initial auto-detect failed"
-            Write-Host "SuiteRoot set by default path: $SuiteRoot_QS" -ForegroundColor Green
-        } else {
-            throw "CRITICAL: SuiteRoot '$SuiteRoot_QS' (from QuickStart location) is not a valid suite structure, and default path '$defaultPath_QS' also failed. Ensure QuickStart.ps1 is in the correct M&A Suite root directory."
-        }
-    } else {
-        $determinedBy_QS = "QuickStart.ps1 location"
-        Write-Host "SuiteRoot set by QuickStart.ps1 location: $SuiteRoot_QS" -ForegroundColor Green
-    }
-    
-} catch {
-    Write-Error "ERROR establishing SuiteRoot within QuickStart: $($_.Exception.Message)"
-    $ErrorActionPreference = $OriginalErrorActionPreferenceForQuickStart
-    exit 1 
+# Script-level variables
+$script:LastModuleCheck = $null
+$script:ModulesVerified = $false
+$script:ConnectionStatus = @{
+    Credentials = $false
+    AzureAD = $false
+    Exchange = $false
+    SharePoint = $false
+    Teams = $false
 }
 
-Write-Host "SuiteRoot successfully established: $SuiteRoot_QS" -ForegroundColor Green
+#region Helper Functions
 
-Write-Host "Loading and processing configuration file..." -ForegroundColor Yellow
-$configFilePath_QS = Join-Path $SuiteRoot_QS "Configuration/default-config.json"
-$configSchemaPath_QS = Join-Path $SuiteRoot_QS "Configuration/config.schema.json"
-
-if (-not (Test-Path $configFilePath_QS -PathType Leaf)) {
-    $errorMessage_QS = "CRITICAL: Configuration file 'default-config.json' not found at expected location: '$configFilePath_QS'"
-    Write-Error $errorMessage_QS; $ErrorActionPreference = $OriginalErrorActionPreferenceForQuickStart; exit 1
-}
-Write-Host "Configuration file found: $configFilePath_QS" -ForegroundColor Green
-if (-not (Test-Path $configSchemaPath_QS -PathType Leaf)) {
-    Write-Host "WARNING: Configuration schema 'config.schema.json' not found at '$configSchemaPath_QS'. Runtime configuration validation will be skipped." -ForegroundColor Yellow
-} else { Write-Host "Configuration schema file found: $configSchemaPath_QS" -ForegroundColor Green }
-
-$loadedConfig_QS = $null
-try {
-    $loadedConfig_QS = Get-Content $configFilePath_QS -Raw | ConvertFrom-Json -ErrorAction Stop
-    Write-Host "Configuration file parsed successfully." -ForegroundColor Green
-} catch {
-    $errorMessage_QS = "CRITICAL: Failed to parse 'default-config.json': $($_.Exception.Message)"
-    Write-Error $errorMessage_QS; $ErrorActionPreference = $OriginalErrorActionPreferenceForQuickStart; exit 1 
-}
-function ConvertTo-HashtableRecursiveInternal_QS { 
-    param($obj)
-    if ($obj -is [System.Management.Automation.PSCustomObject]) {
-        $hash = @{}; foreach ($prop in $obj.PSObject.Properties) { $hash[$prop.Name] = ConvertTo-HashtableRecursiveInternal_QS $prop.Value }; return $hash
-    } elseif ($obj -is [array]) { return @($obj | ForEach-Object { ConvertTo-HashtableRecursiveInternal_QS $_ }) } else { return $obj }
-}
-$configHashtable_QS = ConvertTo-HashtableRecursiveInternal_QS $loadedConfig_QS
-Write-Host "Configuration converted to Hashtable." -ForegroundColor DarkGray
-
-if ($null -eq $configHashtable_QS.environment -or [string]::IsNullOrWhiteSpace($configHashtable_QS.environment.outputPath)) {
-    $errorMessage_QS = "CRITICAL: 'environment.outputPath' is missing or empty in '$configFilePath_QS'."; Write-Error $errorMessage_QS; $ErrorActionPreference = $OriginalErrorActionPreferenceForQuickStart; exit 1
-}
-if ($null -eq $configHashtable_QS.authentication -or [string]::IsNullOrWhiteSpace($configHashtable_QS.authentication.credentialStorePath)) {
-    Write-Host "WARNING: 'authentication.credentialStorePath' is missing/empty. Defaulting." -ForegroundColor Yellow
-}
-$envOutputPath_QS = $configHashtable_QS.environment.outputPath 
-if (-not ([System.IO.Path]::IsPathRooted($envOutputPath_QS))) { $envOutputPath_QS = Join-Path $SuiteRoot_QS $envOutputPath_QS }
-$credentialStorePathFromConfig_QS = $configHashtable_QS.authentication.credentialStorePath 
-$resolvedCredentialPath_QS = if (-not [string]::IsNullOrWhiteSpace($credentialStorePathFromConfig_QS) -and [System.IO.Path]::IsPathRooted($credentialStorePathFromConfig_QS)) { 
-    $credentialStorePathFromConfig_QS } elseif (-not [string]::IsNullOrWhiteSpace($credentialStorePathFromConfig_QS)) { Join-Path $SuiteRoot_QS $credentialStorePathFromConfig_QS } else { Join-Path $SuiteRoot_QS "Output/credentials.config" }
-
-$global:MandA = @{
-    DeterminedBy = $determinedBy_QS; Config = $configHashtable_QS 
-    Paths = @{ SuiteRoot = $SuiteRoot_QS; Core = Join-Path $SuiteRoot_QS "Core"; Configuration = Join-Path $SuiteRoot_QS "Configuration"; Scripts = Join-Path $SuiteRoot_QS "Scripts"; Modules = Join-Path $SuiteRoot_QS "Modules"; Utilities = Join-Path $SuiteRoot_QS "Modules/Utilities"; Documentation = Join-Path $SuiteRoot_QS "Documentation"; ConfigFile = $configFilePath_QS; ConfigSchema = $configSchemaPath_QS; CsvSchemas = Join-Path $SuiteRoot_QS "Configuration/csv.schemas.json"; Orchestrator = Join-Path $SuiteRoot_QS "Core/MandA-Orchestrator.ps1"; QuickStart = Join-Path $SuiteRoot_QS "QuickStart.ps1"; ValidationScript = Join-Path $SuiteRoot_QS "Scripts/Validate-Installation.ps1"; AppRegScript = Join-Path $SuiteRoot_QS "Scripts/Setup-AppRegistration.ps1"; ModuleCheckScript = Join-Path $SuiteRoot_QS "Scripts/DiscoverySuiteModuleCheck.ps1"; RawDataOutput = Join-Path $envOutputPath_QS "Raw"; ProcessedDataOutput = Join-Path $envOutputPath_QS "Processed"; LogOutput = Join-Path $envOutputPath_QS "Logs"; CredentialFile = $resolvedCredentialPath_QS }
-}
-
-if ($null -eq $global:MandA -or $null -eq $global:MandA.Paths) { throw "CRITICAL: Failed to initialize `$global:MandA.Paths correctly within QuickStart.ps1." }
-
-$configValidationModulePath_QS = Join-Path $global:MandA.Paths.Utilities "ConfigurationValidation.psm1"
-if (Test-Path $configValidationModulePath_QS -PathType Leaf) {
-    try { Import-Module $configValidationModulePath_QS -Force -Global; if (Get-Command Test-SuiteConfigurationAgainstSchema -EA SilentlyContinue) { 
-        Write-Host "INFO: Validating configuration against schema '$($global:MandA.Paths.ConfigSchema)'..." -ForegroundColor Gray
-        $validationResult_QS = Test-SuiteConfigurationAgainstSchema -ConfigurationObject $global:MandA.Config -SchemaPath $global:MandA.Paths.ConfigSchema # Corrected param names
-        if (-not $validationResult_QS.IsValid) { Write-Warning "Config validation failed." } else { Write-Host "INFO: Config schema OK." -FG Green }
-    } else { Write-Warning "Test-SuiteConfigurationAgainstSchema not found."} } catch { Write-Warning "Failed to run ConfigValidation: $($_.Exception.Message)"}
-} else { Write-Warning "ConfigurationValidation.psm1 not found. Skipping schema validation."}
-
-Write-Host "M&A Discovery Suite Environment Initialized by QuickStart (v4.1.4)" -ForegroundColor Cyan
-Write-Host ("-" * 65) -ForegroundColor Cyan
-# --- END Embedded Set-SuiteEnvironment Logic ---
-
-# --- BEGIN Upfront PowerShell Module Check ---
-Write-Host "--- QuickStart: Performing Initial PowerShell Module Check ---" -ForegroundColor Magenta
-try {
-    if (Test-Path $global:MandA.Paths.ModuleCheckScript) {
-        # Run with AutoFix, but not Silent, so user is prompted by ShouldProcess for fixes.
-        & $global:MandA.Paths.ModuleCheckScript -AutoFix
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "DiscoverySuiteModuleCheck.ps1 reported issues. Some functionalities might be affected."
-            Write-Host "Press Enter to continue to menu, or Ctrl+C to exit and fix modules manually." -ForegroundColor Yellow
-            Read-Host | Out-Null
-        } else {
-            Write-Host "Initial PowerShell module check completed successfully." -ForegroundColor Green
-        }
-    } else {
-        Write-Warning "ModuleCheckScript not found at '$($global:MandA.Paths.ModuleCheckScript)'. Skipping upfront module check."
-    }
-} catch {
-     Write-Warning "Error during upfront module check: $($_.Exception.Message). Continuing to menu..."
-}
-# --- END Upfront PowerShell Module Check ---
-
-
-try {
-    Import-Module (Join-Path $global:MandA.Paths.Utilities "EnhancedLogging.psm1") -Force -Global
-} catch {
-    Write-Warning "Failed to load EnhancedLogging.psm1. Menu logging will be basic. Error: $($_.Exception.Message)"
-    function Write-MandALog { param([string]$Message, [string]$Level="INFO") Write-Host "[$Level] $Message" }
-}
-
-function Show-MenuInternal { 
-    Clear-Host
-    Write-Host "+==================================================================+" -ForegroundColor Cyan
-    Write-Host "|              M&A Discovery Suite v4.1.4 - Main Menu            |" -ForegroundColor Cyan
-    Write-Host "+==================================================================+" -ForegroundColor Cyan
-    Write-Host "  Suite Root: $($global:MandA.Paths.SuiteRoot)" -ForegroundColor DarkYellow
-    Write-Host "  Config File: $($global:MandA.Paths.ConfigFile)" -ForegroundColor DarkGray
-    Write-Host
-    Write-Host "  SETUP & CONFIGURATION" -ForegroundColor Yellow
-    Write-Host "  [1] Setup/Verify Azure AD App Registration (Recommended First Step)"
-    Write-Host
-    Write-Host "  ORCHESTRATOR EXECUTION" -ForegroundColor Yellow
-    Write-Host "  [F] Full Run: Discovery, Processing, and Export (Recommended)"
-    Write-Host "  [D] Discovery Only"
-    Write-Host "  [P] Processing Only (Uses existing Raw data)"
-    Write-Host "  [E] Export Only (Uses existing Processed data)"
-    Write-Host
-    Write-Host "  UTILITIES & VALIDATION" -ForegroundColor Yellow
-    Write-Host "  [V] Validate Full Installation & Configuration"
-    Write-Host "  [M] Check PowerShell Modules (Interactive with AutoFix)"
-    Write-Host "  [T] Test Configuration Only (Orchestrator Dry Run)"
-    Write-Host
-    Write-Host "  [Q] Quit" -ForegroundColor Yellow
-    Write-Host
-}
-
-function Invoke-OrchestratorInternal { 
+function Write-ColoredLog {
     param(
-        [Parameter(Mandatory=$true)]
-        [string]$Mode,
-        [Parameter(Mandatory=$false)]
-        [switch]$ValidateOnlyFlag 
+        [string]$Message,
+        [string]$Level = "INFO",
+        [switch]$NoNewLine
     )
-    if ($null -eq $global:MandA -or $null -eq $global:MandA.Paths -or $null -eq $global:MandA.Paths.Orchestrator -or $null -eq $global:MandA.Paths.ConfigFile) {
-        Write-MandALog "Critical error: `$global:MandA or its essential paths are not properly set." -Level "ERROR"; Request-UserToContinueInternal; return
+    
+    $color = switch ($Level) {
+        "SUCCESS" { "Green" }
+        "ERROR" { "Red" }
+        "WARN" { "Yellow" }
+        "INFO" { "White" }
+        "DEBUG" { "Gray" }
+        "HEADER" { "Cyan" }
+        default { "White" }
     }
-    $orchestratorParams = @{ ConfigurationFile = $global:MandA.Paths.ConfigFile; Mode = $Mode }
-    if ($ValidateOnlyFlag.IsPresent) { $orchestratorParams.ValidateOnly = $true }
-    try {
-        Write-MandALog "Preparing to launch Orchestrator (Mode: $Mode)..." -Level "HEADER"
-        Write-MandALog "Executing: & `"$($global:MandA.Paths.Orchestrator)`" @orchestratorParams" -Level "DEBUG"
-        & $global:MandA.Paths.Orchestrator @orchestratorParams
-        if ($LASTEXITCODE -eq 0) { Write-MandALog "Orchestrator (Mode: $Mode) completed successfully." -Level "SUCCESS" }
-        else { Write-MandALog "Orchestrator (Mode: $Mode) completed with Exit Code: $LASTEXITCODE. Check logs at '$($global:MandA.Paths.LogOutput)' for details." -Level "WARN" }
-    } catch { Write-MandALog "Orchestrator invocation (Mode: $Mode) failed: $($_.Exception.Message)" -Level "ERROR"; if ($_.ScriptStackTrace) { Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG" } }
-    Request-UserToContinueInternal
+    
+    $params = @{
+        Object = $Message
+        ForegroundColor = $color
+        NoNewline = $NoNewLine
+    }
+    
+    Write-Host @params
 }
 
-function Request-UserToContinueInternal { Write-Host "`nPress Enter to return to the menu..." -ForegroundColor Gray; Read-Host | Out-Null }
+function Test-Administrator {
+    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
 
-try {
-    do {
-        Show-MenuInternal
-        $choice = Read-Host "Enter your choice"
-        switch ($choice.ToUpper()) {
-            '1' { try { & $global:MandA.Paths.AppRegScript } catch { Write-MandALog "Error AppReg: $($_.Exception.Message)" -Level "ERROR"}; Request-UserToContinueInternal }
-            'F' { Invoke-OrchestratorInternal -Mode "Full" }
-            'D' { Invoke-OrchestratorInternal -Mode "Discovery" }
-            'P' { Invoke-OrchestratorInternal -Mode "Processing" }
-            'E' { Invoke-OrchestratorInternal -Mode "Export" }
-            'V' { try { & $global:MandA.Paths.ValidationScript } catch { Write-MandALog "Error Validation: $($_.Exception.Message)" -Level "ERROR"}; Request-UserToContinueInternal }
-            'M' { try { Write-MandALog "Running Module Check with -AutoFix (Interactive)..." -Level "INFO"; & $global:MandA.Paths.ModuleCheckScript -AutoFix } catch { Write-MandALog "Error ModuleCheck: $($_.Exception.Message)" -Level "ERROR"}; Request-UserToContinueInternal }
-            'T' { Invoke-OrchestratorInternal -Mode "Full" -ValidateOnlyFlag:$true } 
-            'Q' { Write-MandALog "Exiting M&A Discovery Suite QuickStart." -Level "INFO" }
-            default { Write-MandALog "Invalid choice." -Level "WARN"; Start-Sleep -Seconds 1 }
+function Initialize-Environment {
+    # Set up the global context
+    if ($null -eq $global:MandA) {
+        $global:MandA = @{
+            Paths = @{}
+            Config = @{}
+            Version = "5.0.0"
+            StartTime = Get-Date
         }
-    } while ($choice.ToUpper() -ne 'Q')
-} catch { Write-Error "Unexpected error in QuickStart.ps1: $($_.Exception.Message)"; Write-Error "$($_.ScriptStackTrace)" }
-finally { $ErrorActionPreference = $OriginalErrorActionPreferenceForQuickStart; Write-Host "QuickStart finished." -ForegroundColor DarkGray }
+    }
+    
+    # Define paths
+    $suiteRoot = Split-Path -Parent $PSScriptRoot
+    $global:MandA.Paths = @{
+        Root = $suiteRoot
+        Modules = Join-Path $suiteRoot "Modules"
+        Utilities = Join-Path $suiteRoot "Modules\Utilities"
+        Discovery = Join-Path $suiteRoot "Modules\Discovery"
+        Processing = Join-Path $suiteRoot "Modules\Processing"
+        Export = Join-Path $suiteRoot "Modules\Export"
+        Config = Join-Path $suiteRoot "Configuration"
+        Output = Join-Path $suiteRoot "Output"
+        Logs = Join-Path $suiteRoot "Output\Logs"
+        RawDataOutput = Join-Path $suiteRoot "Output\Raw"
+        ProcessedDataOutput = Join-Path $suiteRoot "Output\Processed"
+        Reports = Join-Path $suiteRoot "Output\Reports"
+        CredentialFile = Join-Path $suiteRoot "Output\credentials.config"
+    }
+    
+    # Create necessary directories
+    foreach ($path in $global:MandA.Paths.Values) {
+        if ($path -notmatch '\.(json|config|ps1|psm1)$' -and -not (Test-Path $path)) {
+            New-Item -Path $path -ItemType Directory -Force | Out-Null
+        }
+    }
+    
+    # Set environment script
+    $global:MandA.Paths.EnvironmentScript = Join-Path $suiteRoot "Set-SuiteEnvironment.ps1"
+    $global:MandA.Paths.OrchestratorScript = Join-Path $suiteRoot "Core\MandA-Orchestrator.ps1"
+    $global:MandA.Paths.ModuleCheckScript = Join-Path $suiteRoot "Tools\DiscoverySuiteModuleCheck.ps1"
+}
+
+function Update-ConnectionStatus {
+    # Check credentials file
+    $script:ConnectionStatus.Credentials = Test-Path $global:MandA.Paths.CredentialFile
+    
+    # Check Azure AD / Graph
+    $script:ConnectionStatus.AzureAD = $null -ne (Get-MgContext -ErrorAction SilentlyContinue)
+    
+    # Check Exchange
+    $script:ConnectionStatus.Exchange = $null -ne (Get-PSSession | Where-Object {
+        $_.ConfigurationName -eq "Microsoft.Exchange" -and $_.State -eq "Opened"
+    })
+    
+    # Check SharePoint
+    $script:ConnectionStatus.SharePoint = $null -ne (Get-Command Get-SPOSite -ErrorAction SilentlyContinue)
+    
+    # Check Teams
+    $script:ConnectionStatus.Teams = $null -ne (Get-Command Get-Team -ErrorAction SilentlyContinue)
+}
+
+function Should-CheckModules {
+    param([string]$Operation)
+    
+    # Skip if explicitly requested
+    if ($SkipModuleCheck) { return $false }
+    
+    # Always check for first run
+    if (-not $script:ModulesVerified) { return $true }
+    
+    # Check if it's been more than 1 hour since last check
+    if ($script:LastModuleCheck) {
+        $timeSinceCheck = (Get-Date) - $script:LastModuleCheck
+        if ($timeSinceCheck.TotalHours -gt 1) { return $true }
+    }
+    
+    # For different operations, decide if check is needed
+    switch ($Operation) {
+        "Full" { return $false }
+        "Discovery" { return $false }
+        "Processing" { return $false }
+        "Export" { return $false }
+        "Utilities" { return $true }
+        default { return $false }
+    }
+}
+
+#endregion
+
+#region Menu Display Functions
+
+function Show-MainMenu {
+    param(
+        [switch]$FirstRun
+    )
+    
+    Clear-Host
+    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║           M&A DISCOVERY SUITE - MAIN MENU v5.0                       ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    
+    # Update and show connection status
+    Update-ConnectionStatus
+    Show-ConnectionStatus
+    
+    Write-Host "`n  INITIAL SETUP (Run Once)" -ForegroundColor Yellow
+    Write-Host "  ========================" -ForegroundColor Yellow
+    Write-Host "  [1] Setup Azure AD App Registration (once only)"
+    Write-Host "  [2] Configure Credentials for Authentication"
+    
+    Write-Host "`n  DISCOVERY OPERATIONS" -ForegroundColor Green
+    Write-Host "  ====================" -ForegroundColor Green
+    Write-Host "  [3] Run FULL Discovery Suite (Discovery + Processing + Export)"
+    Write-Host "  [4] Run Discovery Phase Only"
+    Write-Host "  [5] Run Processing Phase Only (requires existing discovery data)"
+    Write-Host "  [6] Run Export Phase Only (requires processed data)"
+    
+    Write-Host "`n  UTILITIES & MAINTENANCE" -ForegroundColor Magenta
+    Write-Host "  =======================" -ForegroundColor Magenta
+    Write-Host "  [7] Update/Replace Stored Credentials"
+    Write-Host "  [8] Verify Module Dependencies"
+    Write-Host "  [9] Test Service Connections"
+    Write-Host "  [10] View Configuration Settings"
+    Write-Host "  [11] Clear Existing Data Files"
+    Write-Host "  [12] Generate Sample Report"
+    
+    Write-Host "`n  [Q] Quit" -ForegroundColor Red
+    Write-Host "`n═══════════════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
+    
+    if ($FirstRun -or -not $script:ConnectionStatus.Credentials) {
+        Write-Host "`n  📌 FIRST TIME?" -ForegroundColor Yellow
+        Write-Host "     Start with option [1] to setup your Azure AD App" -ForegroundColor Yellow
+        Write-Host "     Then use option [2] to configure credentials" -ForegroundColor Yellow
+    }
+    
+    Write-Host "`n  Enter your selection: " -ForegroundColor White -NoNewline
+}
+
+function Show-ConnectionStatus {
+    Write-Host "`n  Status: " -NoNewline
+    
+    # Credentials
+    Write-Host "Credentials " -NoNewline
+    if ($script:ConnectionStatus.Credentials) {
+        Write-Host "✓" -ForegroundColor Green -NoNewline
+    } else {
+        Write-Host "✗" -ForegroundColor Red -NoNewline
+    }
+    
+    # Azure AD
+    Write-Host " | Azure AD " -NoNewline
+    if ($script:ConnectionStatus.AzureAD) {
+        Write-Host "✓" -ForegroundColor Green -NoNewline
+    } else {
+        Write-Host "✗" -ForegroundColor Red -NoNewline
+    }
+    
+    # Exchange
+    Write-Host " | Exchange " -NoNewline
+    if ($script:ConnectionStatus.Exchange) {
+        Write-Host "✓" -ForegroundColor Green -NoNewline
+    } else {
+        Write-Host "✗" -ForegroundColor Red -NoNewline
+    }
+    
+    # SharePoint
+    Write-Host " | SharePoint " -NoNewline
+    if ($script:ConnectionStatus.SharePoint) {
+        Write-Host "✓" -ForegroundColor Green -NoNewline
+    } else {
+        Write-Host "✗" -ForegroundColor Red -NoNewline
+    }
+    
+    # Teams
+    Write-Host " | Teams " -NoNewline
+    if ($script:ConnectionStatus.Teams) {
+        Write-Host "✓" -ForegroundColor Green
+    } else {
+        Write-Host "✗" -ForegroundColor Red
+    }
+    
+    if ($script:LastModuleCheck) {
+        Write-Host "  Last module check: $($script:LastModuleCheck.ToString('HH:mm:ss'))" -ForegroundColor Gray
+    }
+}
+
+#endregion
+
+#region Credential Management Functions
+
+function Show-CredentialSetupMenu {
+    Clear-Host
+    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║              CONFIGURE AUTHENTICATION CREDENTIALS                     ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    
+    Write-Host "`n📋 WHAT YOU'LL NEED:" -ForegroundColor Yellow
+    Write-Host "===================" -ForegroundColor Yellow
+    
+    Write-Host "`n1️⃣  Application (Client) ID" -ForegroundColor Green
+    Write-Host "   • Found in: Azure Portal > App Registrations > Your App > Overview" -ForegroundColor Gray
+    Write-Host "   • Format: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX (GUID)" -ForegroundColor Gray
+    Write-Host "   • Example: 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" -ForegroundColor DarkGray
+    
+    Write-Host "`n2️⃣  Tenant ID" -ForegroundColor Green
+    Write-Host "   • Found in: Azure Portal > Azure Active Directory > Overview" -ForegroundColor Gray
+    Write-Host "   • Format: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX (GUID)" -ForegroundColor Gray
+    Write-Host "   • Example: 9z8y7x6w-5v4u-3t2s-1r0q-9p8o7n6m5l4k" -ForegroundColor DarkGray
+    
+    Write-Host "`n3️⃣  Client Secret" -ForegroundColor Green
+    Write-Host "   • Found in: Azure Portal > App Registrations > Your App > Certificates & Secrets" -ForegroundColor Gray
+    Write-Host "   • ⚠️  Only visible when first created - copy immediately!" -ForegroundColor Yellow
+    Write-Host "   • Format: Random string of characters" -ForegroundColor Gray
+    Write-Host "   • Example: xWw8Q~1AbCdEfGhIjKlMnOpQrStUvWxYz" -ForegroundColor DarkGray
+    
+    Write-Host "`n═══════════════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
+    Write-Host "`n🔒 Your credentials will be encrypted and stored locally at:" -ForegroundColor Cyan
+    Write-Host "   $($global:MandA.Paths.CredentialFile)" -ForegroundColor White
+    
+    Write-Host "`n⚡ Ready to continue? (Y/N): " -ForegroundColor Green -NoNewline
+    $continue = Read-Host
+    
+    if ($continue -eq 'Y' -or $continue -eq 'y') {
+        Set-CredentialConfiguration
+    } else {
+        Write-Host "`nReturning to main menu..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 1
+    }
+}
+
+function Set-CredentialConfiguration {
+    Write-Host "`n📝 ENTER YOUR CREDENTIALS" -ForegroundColor Yellow
+    Write-Host "========================" -ForegroundColor Yellow
+    
+    # Application ID
+    do {
+        Write-Host "`n1. Application (Client) ID: " -ForegroundColor Cyan -NoNewline
+        $appId = Read-Host
+        
+        if ($appId -match '^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$') {
+            Write-Host "   ✓ Valid GUID format" -ForegroundColor Green
+            $validAppId = $true
+        } else {
+            Write-Host "   ✗ Invalid format. Please enter a valid GUID." -ForegroundColor Red
+            Write-Host "   Example: 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" -ForegroundColor Yellow
+            $validAppId = $false
+        }
+    } while (-not $validAppId)
+    
+    # Tenant ID
+    do {
+        Write-Host "`n2. Tenant ID: " -ForegroundColor Cyan -NoNewline
+        $tenantId = Read-Host
+        
+        if ($tenantId -match '^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$') {
+            Write-Host "   ✓ Valid GUID format" -ForegroundColor Green
+            $validTenantId = $true
+        } else {
+            Write-Host "   ✗ Invalid format. Please enter a valid GUID." -ForegroundColor Red
+            Write-Host "   Example: 9z8y7x6w-5v4u-3t2s-1r0q-9p8o7n6m5l4k" -ForegroundColor Yellow
+            $validTenantId = $false
+        }
+    } while (-not $validTenantId)
+    
+    # Client Secret
+    Write-Host "`n3. Client Secret: " -ForegroundColor Cyan -NoNewline
+    $clientSecret = Read-Host -AsSecureString
+    Write-Host "   ✓ Secret captured (hidden for security)" -ForegroundColor Green
+    
+    # Show summary
+    Write-Host "`n📊 SUMMARY" -ForegroundColor Yellow
+    Write-Host "==========" -ForegroundColor Yellow
+    Write-Host "App ID:    $appId" -ForegroundColor White
+    Write-Host "Tenant ID: $tenantId" -ForegroundColor White
+    Write-Host "Secret:    ********** (hidden)" -ForegroundColor White
+    
+    Write-Host "`n💾 Save these credentials? (Y/N): " -ForegroundColor Green -NoNewline
+    $save = Read-Host
+    
+    if ($save -eq 'Y' -or $save -eq 'y') {
+        try {
+            # Convert secure string to encrypted standard string
+            $encryptedSecret = ConvertFrom-SecureString -SecureString $clientSecret
+            
+            # Create credential object
+            $credentialData = @{
+                AppId = $appId
+                TenantId = $tenantId
+                ClientSecret = $encryptedSecret
+                CreatedAt = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                CreatedBy = $env:USERNAME
+                MachineScope = $env:COMPUTERNAME
+            }
+            
+            # Save to file
+            $credPath = $global:MandA.Paths.CredentialFile
+            $credentialData | ConvertTo-Json | Set-Content -Path $credPath -Force
+            
+            Write-Host "`n✅ Credentials saved successfully!" -ForegroundColor Green
+            Write-Host "📁 Location: $credPath" -ForegroundColor Gray
+            
+            # Test the credentials
+            Write-Host "`n🔍 Would you like to test these credentials now? (Y/N): " -ForegroundColor Cyan -NoNewline
+            $test = Read-Host
+            
+            if ($test -eq 'Y' -or $test -eq 'y') {
+                Test-StoredCredentials -AppId $appId -TenantId $tenantId -ClientSecret $clientSecret
+            }
+            
+        } catch {
+            Write-Host "`n❌ Error saving credentials: $($_.Exception.Message)" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "`n❌ Credential setup cancelled." -ForegroundColor Yellow
+    }
+    
+    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Test-StoredCredentials {
+    param(
+        [string]$AppId,
+        [string]$TenantId,
+        [SecureString]$ClientSecret
+    )
+    
+    Write-Host "`n🧪 TESTING CREDENTIALS..." -ForegroundColor Yellow
+    Write-Host "========================" -ForegroundColor Yellow
+    
+    try {
+        # Convert SecureString back to plain text for testing
+        $ptr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ClientSecret)
+        $plainSecret = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($ptr)
+        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
+        
+        # Test Graph connection
+        Write-Host "`nTesting Microsoft Graph connection..." -ForegroundColor Cyan
+        $body = @{
+            grant_type    = "client_credentials"
+            scope         = "https://graph.microsoft.com/.default"
+            client_id     = $AppId
+            client_secret = $plainSecret
+        }
+        
+        $tokenResponse = Invoke-RestMethod -Method Post `
+            -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
+            -ContentType "application/x-www-form-urlencoded" `
+            -Body $body
+        
+        if ($tokenResponse.access_token) {
+            Write-Host "✅ Microsoft Graph authentication successful!" -ForegroundColor Green
+            
+            # Try to get organization info
+            $headers = @{ Authorization = "Bearer $($tokenResponse.access_token)" }
+            $org = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/organization" `
+                -Headers $headers -ErrorAction SilentlyContinue
+            
+            if ($org.value) {
+                Write-Host "✅ Connected to organization: $($org.value[0].displayName)" -ForegroundColor Green
+            }
+        }
+        
+    } catch {
+        Write-Host "❌ Authentication test failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "`n🔍 Common issues:" -ForegroundColor Yellow
+        Write-Host "   • Client secret may have expired" -ForegroundColor Gray
+        Write-Host "   • App registration may not have required permissions" -ForegroundColor Gray
+        Write-Host "   • Tenant ID or App ID may be incorrect" -ForegroundColor Gray
+    }
+}
+
+#endregion
+
+#region Operation Functions
+
+function Start-FullDiscovery {
+    Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+    Write-ColoredLog "                    STARTING FULL DISCOVERY SUITE                      " -Level "HEADER"
+    Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+    
+    # Check credentials
+    if (-not $script:ConnectionStatus.Credentials) {
+        Write-ColoredLog "`n⚠️  No credentials configured. Please set up credentials first (Option 2)." -Level "ERROR"
+        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
+    }
+    
+    # Run orchestrator
+    try {
+        # Load configuration
+        if (-not $ConfigFile) {
+            $ConfigFile = Join-Path $global:MandA.Paths.Config "default-config.json"
+        }
+        
+        # Set up environment
+        & $global:MandA.Paths.EnvironmentScript -ConfigFile $ConfigFile
+        
+        # Run orchestrator
+        & $global:MandA.Paths.OrchestratorScript -Mode "Full" -ConfigurationFile $ConfigFile
+        
+        Write-ColoredLog "`n✅ Full discovery suite completed successfully!" -Level "SUCCESS"
+    } catch {
+        Write-ColoredLog "`n❌ Error during discovery: $($_.Exception.Message)" -Level "ERROR"
+    }
+    
+    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Start-DiscoveryOnly {
+    Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+    Write-ColoredLog "                    STARTING DISCOVERY PHASE ONLY                      " -Level "HEADER"
+    Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+    
+    if (-not $script:ConnectionStatus.Credentials) {
+        Write-ColoredLog "`n⚠️  No credentials configured. Please set up credentials first (Option 2)." -Level "ERROR"
+        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
+    }
+    
+    try {
+        if (-not $ConfigFile) {
+            $ConfigFile = Join-Path $global:MandA.Paths.Config "default-config.json"
+        }
+        
+        & $global:MandA.Paths.EnvironmentScript -ConfigFile $ConfigFile
+        & $global:MandA.Paths.OrchestratorScript -Mode "Discovery" -ConfigurationFile $ConfigFile
+        
+        Write-ColoredLog "`n✅ Discovery phase completed successfully!" -Level "SUCCESS"
+    } catch {
+        Write-ColoredLog "`n❌ Error during discovery: $($_.Exception.Message)" -Level "ERROR"
+    }
+    
+    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Show-AzureADAppGuide {
+    Clear-Host
+    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║          AZURE AD APP REGISTRATION SETUP GUIDE                       ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    
+    Write-Host "`n📋 STEP-BY-STEP GUIDE:" -ForegroundColor Yellow
+    Write-Host "=====================" -ForegroundColor Yellow
+    
+    Write-Host "`n1️⃣  Navigate to Azure Portal" -ForegroundColor Green
+    Write-Host "   • Go to: https://portal.azure.com" -ForegroundColor Gray
+    Write-Host "   • Sign in with your admin account" -ForegroundColor Gray
+    
+    Write-Host "`n2️⃣  Create App Registration" -ForegroundColor Green
+    Write-Host "   • Navigate to: Azure Active Directory > App registrations" -ForegroundColor Gray
+    Write-Host "   • Click: '+ New registration'" -ForegroundColor Gray
+    Write-Host "   • Name: 'M&A Discovery Suite' (or your preferred name)" -ForegroundColor Gray
+    Write-Host "   • Account types: 'Single tenant' (recommended)" -ForegroundColor Gray
+    Write-Host "   • Redirect URI: Leave blank" -ForegroundColor Gray
+    Write-Host "   • Click: 'Register'" -ForegroundColor Gray
+    
+    Write-Host "`n3️⃣  Create Client Secret" -ForegroundColor Green
+    Write-Host "   • In your app, go to: 'Certificates & secrets'" -ForegroundColor Gray
+    Write-Host "   • Click: '+ New client secret'" -ForegroundColor Gray
+    Write-Host "   • Description: 'M&A Discovery Secret'" -ForegroundColor Gray
+    Write-Host "   • Expires: Choose appropriate duration" -ForegroundColor Gray
+    Write-Host "   • Click: 'Add'" -ForegroundColor Gray
+    Write-Host "   • ⚠️  IMPORTANT: Copy the secret value immediately!" -ForegroundColor Yellow
+    
+    Write-Host "`n4️⃣  Grant API Permissions" -ForegroundColor Green
+    Write-Host "   • Go to: 'API permissions'" -ForegroundColor Gray
+    Write-Host "   • Click: '+ Add a permission'" -ForegroundColor Gray
+    Write-Host "   • Select: 'Microsoft Graph'" -ForegroundColor Gray
+    Write-Host "   • Select: 'Application permissions'" -ForegroundColor Gray
+    Write-Host "`n   Add these permissions:" -ForegroundColor White
+    Write-Host "   • Directory.Read.All" -ForegroundColor DarkGray
+    Write-Host "   • User.Read.All" -ForegroundColor DarkGray
+    Write-Host "   • Group.Read.All" -ForegroundColor DarkGray
+    Write-Host "   • Application.Read.All" -ForegroundColor DarkGray
+    Write-Host "   • Policy.Read.All" -ForegroundColor DarkGray
+    Write-Host "   • DeviceManagementManagedDevices.Read.All" -ForegroundColor DarkGray
+    Write-Host "   • DeviceManagementConfiguration.Read.All" -ForegroundColor DarkGray
+    Write-Host "   • Reports.Read.All" -ForegroundColor DarkGray
+    
+    Write-Host "`n5️⃣  Grant Admin Consent" -ForegroundColor Green
+    Write-Host "   • After adding permissions, click: 'Grant admin consent for [Your Tenant]'" -ForegroundColor Gray
+    Write-Host "   • Confirm the consent dialog" -ForegroundColor Gray
+    Write-Host "   • All permissions should show '✓ Granted' status" -ForegroundColor Gray
+    
+    Write-Host "`n6️⃣  Note Your Values" -ForegroundColor Green
+    Write-Host "   • Application (client) ID: Found in 'Overview' page" -ForegroundColor Gray
+    Write-Host "   • Directory (tenant) ID: Found in 'Overview' page" -ForegroundColor Gray
+    Write-Host "   • Client secret: The value you copied in step 3" -ForegroundColor Gray
+    
+    Write-Host "`n═══════════════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
+    Write-Host "`n📌 NEXT STEPS:" -ForegroundColor Yellow
+    Write-Host "   Return to main menu and select option [2] to configure credentials" -ForegroundColor White
+    
+    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Invoke-ModuleCheck {
+    param([switch]$Verbose)
+    
+    Write-ColoredLog "`nChecking PowerShell module dependencies..." -Level "INFO"
+    
+    if (Test-Path $global:MandA.Paths.ModuleCheckScript) {
+        if ($Verbose) {
+            & $global:MandA.Paths.ModuleCheckScript -Verbose
+        } else {
+            & $global:MandA.Paths.ModuleCheckScript
+        }
+        $script:ModulesVerified = $true
+        $script:LastModuleCheck = Get-Date
+    } else {
+        Write-ColoredLog "Module check script not found: $($global:MandA.Paths.ModuleCheckScript)" -Level "ERROR"
+    }
+    
+    Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Test-ServiceConnections {
+    Clear-Host
+    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║                   TEST SERVICE CONNECTIONS                           ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    
+    Write-ColoredLog "`nTesting service connections..." -Level "INFO"
+    
+    # Test Graph
+    Write-Host "`n1. Microsoft Graph:" -ForegroundColor Yellow
+    try {
+        $context = Get-MgContext
+        if ($context) {
+            Write-Host "   ✅ Connected" -ForegroundColor Green
+            Write-Host "   • Tenant: $($context.TenantId)" -ForegroundColor Gray
+            Write-Host "   • Scopes: $($context.Scopes -join ', ')" -ForegroundColor Gray
+        } else {
+            Write-Host "   ❌ Not connected" -ForegroundColor Red
+        }
+    } catch {
+        Write-Host "   ❌ Not connected: $($_.Exception.Message)" -ForegroundColor Red
+    }
+    
+    # Test Azure
+    Write-Host "`n2. Azure Resource Manager:" -ForegroundColor Yellow
+    try {
+        $azContext = Get-AzContext
+        if ($azContext) {
+            Write-Host "   ✅ Connected" -ForegroundColor Green
+            Write-Host "   • Subscription: $($azContext.Subscription.Name)" -ForegroundColor Gray
+            Write-Host "   • Account: $($azContext.Account.Id)" -ForegroundColor Gray
+        } else {
+            Write-Host "   ❌ Not connected" -ForegroundColor Red
+        }
+    } catch {
+        Write-Host "   ❌ Module not available" -ForegroundColor Red
+    }
+    
+    # Test Exchange
+    Write-Host "`n3. Exchange Online:" -ForegroundColor Yellow
+    $exoSession = Get-PSSession | Where-Object {$_.ConfigurationName -eq "Microsoft.Exchange"}
+    if ($exoSession -and $exoSession.State -eq "Opened") {
+        Write-Host "   ✅ Connected" -ForegroundColor Green
+        Write-Host "   • Session: $($exoSession.Name)" -ForegroundColor Gray
+    } else {
+        Write-Host "   ❌ Not connected" -ForegroundColor Red
+    }
+    
+    # Test Active Directory
+    Write-Host "`n4. Active Directory:" -ForegroundColor Yellow
+    try {
+        $domain = Get-ADDomain -ErrorAction Stop
+        Write-Host "   ✅ Connected" -ForegroundColor Green
+        Write-Host "   • Domain: $($domain.DNSRoot)" -ForegroundColor Gray
+        Write-Host "   • Forest: $($domain.Forest)" -ForegroundColor Gray
+    } catch {
+        Write-Host "   ❌ Not available: $($_.Exception.Message)" -ForegroundColor Red
+    }
+    
+    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Show-Configuration {
+    Clear-Host
+    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║                    CONFIGURATION SETTINGS                            ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    
+    # Load configuration
+    $configFile = if ($ConfigFile) { $ConfigFile } else { Join-Path $global:MandA.Paths.Config "default-config.json" }
+    
+    if (Test-Path $configFile) {
+        $config = Get-Content $configFile | ConvertFrom-Json
+        
+        Write-Host "`n📁 Configuration File: $configFile" -ForegroundColor Yellow
+        Write-Host "`n🔧 Environment Settings:" -ForegroundColor Green
+        Write-Host "   Output Path: $($config.environment.outputPath)" -ForegroundColor Gray
+        Write-Host "   Domain Controller: $($config.environment.domainController)" -ForegroundColor Gray
+        Write-Host "   Global Catalog: $($config.environment.globalCatalog)" -ForegroundColor Gray
+        
+        Write-Host "`n🔍 Discovery Settings:" -ForegroundColor Green
+        Write-Host "   Skip Existing Files: $($config.discovery.skipExistingFiles)" -ForegroundColor Gray
+        Write-Host "   Enabled Sources: $($config.discovery.enabledSources -join ', ')" -ForegroundColor Gray
+        
+        Write-Host "`n📊 Processing Settings:" -ForegroundColor Green
+        Write-Host "   Batch Size: $($config.processing.batchSize)" -ForegroundColor Gray
+        Write-Host "   Parallel Jobs: $($config.processing.parallelJobs)" -ForegroundColor Gray
+        
+        Write-Host "`n📄 Export Settings:" -ForegroundColor Green
+        Write-Host "   Formats: $($config.export.formats -join ', ')" -ForegroundColor Gray
+        Write-Host "   Compress Output: $($config.export.compressOutput)" -ForegroundColor Gray
+    } else {
+        Write-Host "`n❌ Configuration file not found: $configFile" -ForegroundColor Red
+    }
+    
+    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Clear-DataFiles {
+    Clear-Host
+    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║                     CLEAR DATA FILES                                 ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    
+    Write-Host "`n⚠️  WARNING: This will delete all collected data!" -ForegroundColor Yellow
+    Write-Host "`nData directories to be cleared:" -ForegroundColor White
+    Write-Host "   • $($global:MandA.Paths.RawDataOutput)" -ForegroundColor Gray
+    Write-Host "   • $($global:MandA.Paths.ProcessedDataOutput)" -ForegroundColor Gray
+    Write-Host "   • $($global:MandA.Paths.Reports)" -ForegroundColor Gray
+    
+    Write-Host "`n❓ Are you sure you want to delete all data? (YES/NO): " -ForegroundColor Red -NoNewline
+    $confirm = Read-Host
+    
+    if ($confirm -eq "YES") {
+        try {
+            # Clear directories
+            @($global:MandA.Paths.RawDataOutput, $global:MandA.Paths.ProcessedDataOutput, $global:MandA.Paths.Reports) | ForEach-Object {
+                if (Test-Path $_) {
+                    Get-ChildItem -Path $_ -Recurse | Remove-Item -Force -Recurse
+                    Write-Host "   ✅ Cleared: $_" -ForegroundColor Green
+                }
+            }
+            Write-Host "`n✅ All data files have been cleared." -ForegroundColor Green
+        } catch {
+            Write-Host "`n❌ Error clearing files: $($_.Exception.Message)" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "`n❌ Operation cancelled." -ForegroundColor Yellow
+    }
+    
+    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+#endregion
+
+#region Main Program
+
+# Initialize environment
+Initialize-Environment
+
+# Check if running as administrator
+if (-not (Test-Administrator)) {
+    Write-ColoredLog "⚠️  WARNING: Not running as Administrator. Some features may not work correctly." -Level "WARN"
+    Write-ColoredLog "   Recommended: Run PowerShell as Administrator" -Level "WARN"
+    Start-Sleep -Seconds 3
+}
+
+# Show welcome message
+Clear-Host
+Write-Host @"
+╔══════════════════════════════════════════════════════════════════════╗
+║                                                                      ║
+║                    M&A DISCOVERY SUITE v5.0                          ║
+║                                                                      ║
+║            Comprehensive Infrastructure Discovery Tool                ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
+"@ -ForegroundColor Cyan
+
+Write-Host "`nInitializing..." -ForegroundColor Yellow
+Start-Sleep -Seconds 2
+
+# Main menu loop
+$firstRun = -not (Test-Path $global:MandA.Paths.CredentialFile)
+
+do {
+    Show-MainMenu -FirstRun:$firstRun
+    $selection = Read-Host
+    
+    switch ($selection) {
+        '1' {
+            # Setup Azure AD App Registration
+            Show-AzureADAppGuide
+        }
+        '2' {
+            # Configure Credentials
+            Show-CredentialSetupMenu
+            $firstRun = $false
+        }
+        '3' {
+            # Full Discovery
+            if (Should-CheckModules -Operation "Full") {
+                Write-Host "`nChecking module dependencies..." -ForegroundColor Yellow
+                Invoke-ModuleCheck
+            }
+            Start-FullDiscovery
+        }
+        '4' {
+            # Discovery Only
+            if (Should-CheckModules -Operation "Discovery") {
+                Write-Host "`nChecking module dependencies..." -ForegroundColor Yellow
+                Invoke-ModuleCheck
+            }
+            Start-DiscoveryOnly
+        }
+        '5' {
+            # Processing Only
+            Write-ColoredLog "`n⚠️  Processing phase not yet implemented" -Level "WARN"
+            Start-Sleep -Seconds 2
+        }
+        '6' {
+            # Export Only
+            Write-ColoredLog "`n⚠️  Export phase not yet implemented" -Level "WARN"
+            Start-Sleep -Seconds 2
+        }
+        '7' {
+            # Update Credentials
+            Show-CredentialSetupMenu
+        }
+        '8' {
+            # Verify Modules
+            Invoke-ModuleCheck -Verbose
+        }
+        '9' {
+            # Test Connections
+            Test-ServiceConnections
+        }
+        '10' {
+            # View Configuration
+            Show-Configuration
+        }
+        '11' {
+            # Clear Data Files
+            Clear-DataFiles
+        }
+        '12' {
+            # Generate Sample Report
+            Write-ColoredLog "`n⚠️  Report generation not yet implemented" -Level "WARN"
+            Start-Sleep -Seconds 2
+        }
+        'Q' {
+            Write-Host "`nExiting M&A Discovery Suite..." -ForegroundColor Yellow
+            Write-Host "Thank you for using the discovery tool!" -ForegroundColor Green
+            Start-Sleep -Seconds 1
+        }
+        'q' {
+            $selection = 'Q'
+        }
+        default {
+            Write-Host "`n⚠️  Invalid selection. Please try again." -ForegroundColor Red
+            Start-Sleep -Seconds 1
+        }
+    }
+    
+} while ($selection -ne 'Q')
+
+#endregion

@@ -119,7 +119,7 @@ function Get-IntuneDeviceSoftwareInternal {
     }
 
     if ($allDeviceSoftware.Count -gt 0) {
-        Export-DataToCSV -InputObject $allDeviceSoftware -FileName "IntuneDeviceSoftware.csv" -OutputPath $outputPath
+       Export-DataToCSV -Data $allGraphUsers -FileName  "IntuneDeviceSoftware.csv" -OutputPath $outputPath
         Write-MandALog "Successfully exported $($allDeviceSoftware.Count) detected software entries from all processed devices." -Level "SUCCESS"
     } else {
         Write-MandALog "No device software inventoried across all devices or export was not possible." -Level "INFO"
