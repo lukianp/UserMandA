@@ -25,8 +25,15 @@ function Initialize-Logging {
     try {
         $script:LoggingConfig.LogLevel = $Configuration.environment.logLevel
         
-        # Set up log file
-        $logPath = Join-Path $Configuration.environment.outputPath "Logs"
+        # Set up log file - use the global path if available
+        $logPath = if ($global:MandA.Paths.LogOutput) {
+            $global:MandA.Paths.LogOutput
+        } elseif ($Configuration.environment.outputPath) {
+            Join-Path $Configuration.environment.outputPath "Logs"
+        } else {
+            throw "No valid log output path found in configuration or global context"
+        }
+        
         if (-not (Test-Path $logPath)) {
             New-Item -Path $logPath -ItemType Directory -Force | Out-Null
         }
