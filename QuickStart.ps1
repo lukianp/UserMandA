@@ -1,19 +1,14 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    M&A Discovery Suite - Enhanced Quick Start Menu
+    M&A Discovery Suite - Enhanced Quick Start Menu with Debug Features
 .DESCRIPTION
     Provides a user-friendly interface to run the M&A Discovery Suite with improved
-    credential management, status indicators, and optimized module checking.
+    credential management, status indicators, optimized module checking, and debug capabilities.
 .NOTES
-    Version: 5.0.4
-    Author: Enhanced Version
+    Version: 5.1.0
+    Author: Enhanced Version with Debug
     Date: 2025-06-02
-    ChangeLog:
-    5.0.1 - Fixed duplicate 'Verbose' parameter definition.
-    5.0.2 - Renamed Should-CheckModules to Test-ShouldCheckModules (approved verb).
-    5.0.3 - Fixed suite root path calculation for proper directory structure.
-    5.0.4 - Added back unblock functionality at startup.
 #>
 
 [CmdletBinding()]
@@ -25,12 +20,16 @@ param(
     [string]$ConfigFile,
     
     [Parameter(Mandatory=$false)]
-    [switch]$SkipModuleCheck
+    [switch]$SkipModuleCheck,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$DebugMode
 )
 
 # Script-level variables
 $script:LastModuleCheck = $null
 $script:ModulesVerified = $false
+$script:DebugModeEnabled = $DebugMode.IsPresent
 $script:ConnectionStatus = @{
     Credentials = $false
     AzureAD = $false
@@ -136,11 +135,11 @@ function Initialize-Environment {
     $suiteRoot = $PSScriptRoot
     
     # Initialize global context
-   if ($null -eq $global:MandA) {
+    if ($null -eq $global:MandA) {
         $global:MandA = @{
             Paths = @{}
             Config = @{}
-            Version = "5.0.4"
+            Version = "5.1.0"
             StartTime = Get-Date
             ModulesChecked = $false  # Add flag to track module check status
         }
@@ -216,8 +215,8 @@ function Update-ConnectionStatus {
 function Test-ShouldCheckModules {
     param([string]$Operation)
     
-    # Skip if explicitly requested
-    if ($SkipModuleCheck) { return $false }
+    # Skip if explicitly requested or in debug mode
+    if ($SkipModuleCheck -or $script:DebugModeEnabled) { return $false }
     
     # Always check for first run
     if (-not $script:ModulesVerified) { return $true }
@@ -250,8 +249,11 @@ function Show-MainMenu {
     
     Clear-Host
     Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║           M&A DISCOVERY SUITE - MAIN MENU v5.0                       ║" -ForegroundColor Cyan
+    Write-Host "║           M&A DISCOVERY SUITE - MAIN MENU v5.1                       ║" -ForegroundColor Cyan
     Write-Host "║                  Company: $($script:CompanyName)                     " -ForegroundColor Yellow
+    if ($script:DebugModeEnabled) {
+        Write-Host "║                  🔧 DEBUG MODE ENABLED 🔧                            " -ForegroundColor Magenta
+    }
     Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     
     # Update and show connection status
@@ -278,6 +280,10 @@ function Show-MainMenu {
     Write-Host "  [10] View Configuration Settings"
     Write-Host "  [11] Clear Existing Data Files"
     Write-Host "  [12] Generate Sample Report"
+    
+    Write-Host "`n  DEBUG & DEVELOPMENT" -ForegroundColor Red
+    Write-Host "  ===================" -ForegroundColor Red
+    Write-Host "  [D] Open Debug Menu 🔧"
     
     Write-Host "`n  [Q] Quit" -ForegroundColor Red
     Write-Host "`n═══════════════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
@@ -337,6 +343,264 @@ function Show-ConnectionStatus {
     if ($script:LastModuleCheck) {
         Write-Host "  Last module check: $($script:LastModuleCheck.ToString('HH:mm:ss'))" -ForegroundColor Gray
     }
+}
+
+#endregion
+
+#region Debug Menu Functions
+
+function Show-DebugMenu {
+    Clear-Host
+    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+    Write-Host "║                    🔧 DEBUG MENU 🔧                                  ║" -ForegroundColor Red
+    Write-Host "║              Company: $($script:CompanyName)                         " -ForegroundColor Yellow
+    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+    
+    Write-Host "`n  INDIVIDUAL MODULE DISCOVERY" -ForegroundColor Yellow
+    Write-Host "  ===========================" -ForegroundColor Yellow
+    Write-Host "  [1] Active Directory Discovery"
+    Write-Host "  [2] Azure Discovery"
+    Write-Host "  [3] Environment Detection Discovery"
+    Write-Host "  [4] Exchange Online Discovery"
+    Write-Host "  [5] External Identity Discovery"
+    Write-Host "  [6] File Server Discovery"
+    Write-Host "  [7] GPO Discovery"
+    Write-Host "  [8] Graph Discovery"
+    Write-Host "  [9] Intune Discovery"
+    Write-Host "  [10] Licensing Discovery"
+    Write-Host "  [11] SharePoint Discovery"
+    Write-Host "  [12] Teams Discovery"
+    Write-Host "  [13] Network Infrastructure Discovery (if available)"
+    Write-Host "  [14] SQL Server Discovery (if available)"
+    
+    Write-Host "`n  DEBUG UTILITIES" -ForegroundColor Magenta
+    Write-Host "  ===============" -ForegroundColor Magenta
+    Write-Host "  [20] List All Discovery Modules"
+    Write-Host "  [21] Check Module Load Status"
+    Write-Host "  [22] View Current Configuration"
+    Write-Host "  [23] Test Single Connection"
+    Write-Host "  [24] Force Load All Modules"
+    Write-Host "  [25] View Global Context ($global:MandA)"
+    Write-Host "  [26] Run Module with Custom Config"
+    Write-Host "  [27] Export Debug Information"
+    
+    Write-Host "`n  DEBUG OPTIONS" -ForegroundColor Cyan
+    Write-Host "  =============" -ForegroundColor Cyan
+    Write-Host "  [30] Toggle Verbose Logging"
+    Write-Host "  [31] Toggle Error Action Preference"
+    Write-Host "  [32] Clear Module Cache"
+    Write-Host "  [33] Reset Global Context"
+    
+    Write-Host "`n  [B] Back to Main Menu" -ForegroundColor Green
+    Write-Host "`n═══════════════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
+    
+    Write-Host "`n⚠️  WARNING: Debug mode bypasses safety checks!" -ForegroundColor Yellow
+    Write-Host "   Use with caution. Some modules may fail without proper setup." -ForegroundColor Yellow
+    
+    Write-Host "`n  Enter your selection: " -ForegroundColor White -NoNewline
+}
+
+function Get-DiscoveryModules {
+    $discoveryPath = $global:MandA.Paths.Discovery
+    $modules = @()
+    
+    if (Test-Path $discoveryPath) {
+        $moduleFiles = Get-ChildItem -Path $discoveryPath -Filter "*Discovery.psm1" -File
+        
+        foreach ($file in $moduleFiles) {
+            $moduleName = $file.BaseName -replace 'Discovery$', ''
+            $modules += [PSCustomObject]@{
+                Name = $moduleName
+                FileName = $file.Name
+                FullPath = $file.FullName
+                Loaded = $null -ne (Get-Module -Name $file.BaseName)
+            }
+        }
+    }
+    
+    return $modules | Sort-Object Name
+}
+
+function Invoke-DebugDiscoveryModule {
+    param(
+        [string]$ModuleName,
+        [switch]$BypassChecks
+    )
+    
+    Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Red
+    Write-Host "                    DEBUG: $ModuleName Discovery                      " -ForegroundColor Red
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Red
+    
+    try {
+        # Load minimal required modules for logging
+        $loggingModule = Join-Path $global:MandA.Paths.Utilities "EnhancedLogging.psm1"
+        if (Test-Path $loggingModule) {
+            Import-Module $loggingModule -Force -Global
+            Write-Host "✓ Loaded logging module" -ForegroundColor Green
+        }
+        
+        # Load the specific discovery module
+        $moduleFileName = "${ModuleName}Discovery.psm1"
+        $modulePath = Join-Path $global:MandA.Paths.Discovery $moduleFileName
+        
+        if (-not (Test-Path $modulePath)) {
+            Write-Host "✗ Module not found: $modulePath" -ForegroundColor Red
+            return
+        }
+        
+        Write-Host "Loading module: $moduleFileName" -ForegroundColor Yellow
+        Import-Module $modulePath -Force -Global
+        Write-Host "✓ Module loaded successfully" -ForegroundColor Green
+        
+        # Create minimal configuration if needed
+        $config = $global:MandA.Config
+        if ($null -eq $config) {
+            Write-Host "⚠️  No configuration loaded. Using minimal config." -ForegroundColor Yellow
+            $config = @{
+                environment = @{
+                    outputPath = $global:MandA.Paths.CompanyProfileRoot
+                    logLevel = "DEBUG"
+                }
+                discovery = @{
+                    skipExistingFiles = $false
+                }
+            }
+        }
+        
+        # Ensure output path exists
+        if ($config.environment.outputPath) {
+            $rawPath = Join-Path $config.environment.outputPath "Raw"
+            if (-not (Test-Path $rawPath)) {
+                New-Item -Path $rawPath -ItemType Directory -Force | Out-Null
+                Write-Host "✓ Created output directory: $rawPath" -ForegroundColor Green
+            }
+        }
+        
+        # Call the discovery function
+        $functionName = "Invoke-${ModuleName}Discovery"
+        
+        if (Get-Command $functionName -ErrorAction SilentlyContinue) {
+            Write-Host "`nInvoking $functionName..." -ForegroundColor Cyan
+            Write-Host "═══════════════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
+            
+            $result = & $functionName -Configuration $config
+            
+            Write-Host "═══════════════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
+            Write-Host "✓ Discovery completed" -ForegroundColor Green
+            
+            # Show summary of results
+            if ($result) {
+                Write-Host "`nResults summary:" -ForegroundColor Yellow
+                if ($result -is [hashtable]) {
+                    foreach ($key in $result.Keys) {
+                        $value = $result[$key]
+                        $count = if ($value -is [array]) { $value.Count } elseif ($value.Count) { $value.Count } else { "N/A" }
+                        Write-Host "  - $key`: $count items" -ForegroundColor Cyan
+                    }
+                } else {
+                    Write-Host "  Result type: $($result.GetType().Name)" -ForegroundColor Cyan
+                }
+            }
+        } else {
+            Write-Host "✗ Function $functionName not found in module" -ForegroundColor Red
+        }
+        
+    } catch {
+        Write-Host "`n✗ Error during debug discovery: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Stack trace:" -ForegroundColor Yellow
+        Write-Host $_.ScriptStackTrace -ForegroundColor Gray
+    }
+    
+    Write-Host "`nPress any key to return to debug menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Show-ModuleLoadStatus {
+    Clear-Host
+    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║                    MODULE LOAD STATUS                                 ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    
+    $modules = Get-DiscoveryModules
+    
+    Write-Host "`nDiscovery Modules:" -ForegroundColor Yellow
+    Write-Host "==================" -ForegroundColor Yellow
+    
+    foreach ($module in $modules) {
+        $status = if ($module.Loaded) { "✓ Loaded" } else { "✗ Not Loaded" }
+        $color = if ($module.Loaded) { "Green" } else { "Red" }
+        
+        Write-Host ("  {0,-30} {1}" -f $module.Name, $status) -ForegroundColor $color
+    }
+    
+    Write-Host "`nCore Modules:" -ForegroundColor Yellow
+    Write-Host "=============" -ForegroundColor Yellow
+    
+    $coreModules = @(
+        "EnhancedLogging",
+        "FileOperations",
+        "ValidationHelpers",
+        "ConfigurationValidation",
+        "ErrorHandling",
+        "Authentication",
+        "CredentialManagement",
+        "EnhancedConnectionManager"
+    )
+    
+    foreach ($moduleName in $coreModules) {
+        $loaded = $null -ne (Get-Module -Name "*$moduleName*")
+        $status = if ($loaded) { "✓ Loaded" } else { "✗ Not Loaded" }
+        $color = if ($loaded) { "Green" } else { "Red" }
+        
+        Write-Host ("  {0,-30} {1}" -f $moduleName, $status) -ForegroundColor $color
+    }
+    
+    Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Show-GlobalContext {
+    Clear-Host
+    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║                    GLOBAL CONTEXT VIEWER                              ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    
+    if ($null -eq $global:MandA) {
+        Write-Host "`n✗ Global context not initialized!" -ForegroundColor Red
+    } else {
+        Write-Host "`n`$global:MandA Contents:" -ForegroundColor Yellow
+        Write-Host "======================" -ForegroundColor Yellow
+        
+        # Convert to JSON for nice display
+        $global:MandA | ConvertTo-Json -Depth 3 | Write-Host -ForegroundColor Cyan
+    }
+    
+    Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Force-LoadAllModules {
+    Write-Host "`nForce loading all discovery modules..." -ForegroundColor Yellow
+    
+    $modules = Get-DiscoveryModules
+    $successCount = 0
+    $failCount = 0
+    
+    foreach ($module in $modules) {
+        Write-Host "  Loading $($module.Name)... " -NoNewline
+        try {
+            Import-Module $module.FullPath -Force -Global -ErrorAction Stop
+            Write-Host "✓" -ForegroundColor Green
+            $successCount++
+        } catch {
+            Write-Host "✗ - $($_.Exception.Message)" -ForegroundColor Red
+            $failCount++
+        }
+    }
+    
+    Write-Host "`nSummary: $successCount loaded, $failCount failed" -ForegroundColor Cyan
+    Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
 #endregion
@@ -492,9 +756,7 @@ function Start-FullDiscovery {
         & $global:MandA.Paths.Orchestrator -Mode "Full" -ConfigurationFile $configPath -CompanyName $script:CompanyName
         
         Write-ColoredLog "`n✅ Full discovery suite completed successfully!" -Level "SUCCESS"
-  
-
-        } catch {
+    } catch {
         Write-ColoredLog "`n❌ Error during discovery: $($_.Exception.Message)" -Level "ERROR"
     } finally {
         # Reset orchestrator run count for next operation
@@ -502,7 +764,6 @@ function Start-FullDiscovery {
             $global:MandA.OrchestratorRunCount = 0
         }
     }
-
     
     Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -527,8 +788,7 @@ function Start-DiscoveryOnly {
         & $global:MandA.Paths.Orchestrator -Mode "Discovery" -ConfigurationFile $configPath -CompanyName $script:CompanyName
         
         Write-ColoredLog "`n✅ Discovery phase completed successfully!" -Level "SUCCESS"
-   
-} catch {
+    } catch {
         Write-ColoredLog "`n❌ Error during discovery: $($_.Exception.Message)" -Level "ERROR"
     } finally {
         # Reset orchestrator run count for next operation
@@ -536,8 +796,6 @@ function Start-DiscoveryOnly {
             $global:MandA.OrchestratorRunCount = 0
         }
     }
-
-
     
     Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -614,7 +872,7 @@ function Invoke-ModuleCheck {
         } else {
             & $global:MandA.Paths.ModuleCheckScript
         }
-         $script:ModulesVerified = $true
+        $script:ModulesVerified = $true
         $script:LastModuleCheck = Get-Date
         $global:MandA.ModulesChecked = $true  # Also set the global flag
     } else {
@@ -647,12 +905,16 @@ Clear-Host
 Write-Host @"
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                                                                      ║
-║                    M&A DISCOVERY SUITE v5.0                          ║
+║                    M&A DISCOVERY SUITE v5.1                          ║
 ║                                                                      ║
 ║            Comprehensive Infrastructure Discovery Tool                ║
 ║                                                                      ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 "@ -ForegroundColor Cyan
+
+if ($script:DebugModeEnabled) {
+    Write-Host "`n                    🔧 DEBUG MODE ENABLED 🔧" -ForegroundColor Magenta
+}
 
 Write-Host "`nInitializing..." -ForegroundColor Yellow
 Start-Sleep -Seconds 2
@@ -727,6 +989,124 @@ do {
             # Generate Sample Report
             Write-ColoredLog "`n⚠️  Report generation not yet implemented" -Level "WARN"
             Start-Sleep -Seconds 2
+        }
+        'D' {
+            # Enter Debug Menu
+            $inDebugMenu = $true
+            do {
+                Show-DebugMenu
+                $debugSelection = Read-Host
+                
+                switch ($debugSelection) {
+                    # Individual Module Discovery
+                    '1' { Invoke-DebugDiscoveryModule -ModuleName "ActiveDirectory" }
+                    '2' { Invoke-DebugDiscoveryModule -ModuleName "Azure" }
+                    '3' { Invoke-DebugDiscoveryModule -ModuleName "EnvironmentDetection" }
+                    '4' { Invoke-DebugDiscoveryModule -ModuleName "Exchange" }
+                    '5' { Invoke-DebugDiscoveryModule -ModuleName "ExternalIdentity" }
+                    '6' { Invoke-DebugDiscoveryModule -ModuleName "FileServer" }
+                    '7' { Invoke-DebugDiscoveryModule -ModuleName "GPO" }
+                    '8' { Invoke-DebugDiscoveryModule -ModuleName "Graph" }
+                    '9' { Invoke-DebugDiscoveryModule -ModuleName "Intune" }
+                    '10' { Invoke-DebugDiscoveryModule -ModuleName "Licensing" }
+                    '11' { Invoke-DebugDiscoveryModule -ModuleName "SharePoint" }
+                    '12' { Invoke-DebugDiscoveryModule -ModuleName "Teams" }
+                    '13' { Invoke-DebugDiscoveryModule -ModuleName "NetworkInfrastructure" }
+                    '14' { Invoke-DebugDiscoveryModule -ModuleName "SQLServer" }
+                    
+                    # Debug Utilities
+                    '20' {
+                        # List All Discovery Modules
+                        Clear-Host
+                        Write-Host "Available Discovery Modules:" -ForegroundColor Yellow
+                        Write-Host "===========================" -ForegroundColor Yellow
+                        $modules = Get-DiscoveryModules
+                        foreach ($module in $modules) {
+                            Write-Host "  $($module.Name)" -ForegroundColor Cyan
+                        }
+                        Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+                        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+                    }
+                    '21' { Show-ModuleLoadStatus }
+                    '22' {
+                        # View Current Configuration
+                        Clear-Host
+                        Write-Host "Current Configuration:" -ForegroundColor Yellow
+                        Write-Host "=====================" -ForegroundColor Yellow
+                        $global:MandA.Config | ConvertTo-Json -Depth 3 | Write-Host -ForegroundColor Cyan
+                        Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+                        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+                    }
+                    '23' {
+                        # Test Single Connection
+                        Write-ColoredLog "`n⚠️  Test single connection not yet implemented" -Level "WARN"
+                        Start-Sleep -Seconds 2
+                    }
+                    '24' { Force-LoadAllModules }
+                    '25' { Show-GlobalContext }
+                    '26' {
+                        # Run Module with Custom Config
+                        Write-ColoredLog "`n⚠️  Custom config runner not yet implemented" -Level "WARN"
+                        Start-Sleep -Seconds 2
+                    }
+                    '27' {
+                        # Export Debug Information
+                        Write-ColoredLog "`n⚠️  Debug export not yet implemented" -Level "WARN"
+                        Start-Sleep -Seconds 2
+                    }
+                    
+                    # Debug Options
+                    '30' {
+                        # Toggle Verbose Logging
+                        if ($VerbosePreference -eq 'Continue') {
+                            $VerbosePreference = 'SilentlyContinue'
+                            Write-Host "`nVerbose logging DISABLED" -ForegroundColor Yellow
+                        } else {
+                            $VerbosePreference = 'Continue'
+                            Write-Host "`nVerbose logging ENABLED" -ForegroundColor Green
+                        }
+                        Start-Sleep -Seconds 1
+                    }
+                    '31' {
+                        # Toggle Error Action Preference
+                        if ($ErrorActionPreference -eq 'Stop') {
+                            $ErrorActionPreference = 'Continue'
+                            Write-Host "`nError Action: Continue" -ForegroundColor Yellow
+                        } else {
+                            $ErrorActionPreference = 'Stop'
+                            Write-Host "`nError Action: Stop" -ForegroundColor Red
+                        }
+                        Start-Sleep -Seconds 1
+                    }
+                    '32' {
+                        # Clear Module Cache
+                        Write-Host "`nClearing module cache..." -ForegroundColor Yellow
+                        Get-Module | Where-Object { $_.Path -like "*MandA*" } | Remove-Module -Force
+                        Write-Host "Module cache cleared" -ForegroundColor Green
+                        Start-Sleep -Seconds 1
+                    }
+                    '33' {
+                        # Reset Global Context
+                        Write-Host "`nResetting global context..." -ForegroundColor Yellow
+                        $global:MandA.ModulesChecked = $false
+                        $global:MandA.OrchestratorRunCount = 0
+                        $script:ModulesVerified = $false
+                        $script:LastModuleCheck = $null
+                        Write-Host "Global context reset" -ForegroundColor Green
+                        Start-Sleep -Seconds 1
+                    }
+                    
+                    'B' { $inDebugMenu = $false }
+                    'b' { $inDebugMenu = $false }
+                    default {
+                        Write-Host "`n⚠️  Invalid selection. Please try again." -ForegroundColor Red
+                        Start-Sleep -Seconds 1
+                    }
+                }
+            } while ($inDebugMenu)
+        }
+        'd' {
+            $selection = 'D'
         }
         'Q' {
             Write-Host "`nExiting M&A Discovery Suite..." -ForegroundColor Yellow
