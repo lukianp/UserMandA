@@ -7,8 +7,8 @@
     Unified orchestrator for discovery, processing, and export with comprehensive error handling.
 
 .NOTES
-    Version: 4.3.0
-    Author: Enhanced Version
+    Version: 4.3.1
+    Author: Enhanced Version - Fixed
     Date: 2025-06-02
 #>
 
@@ -50,7 +50,6 @@ if ($global:MandA.OrchestratorRunCount -gt 3) {
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
     exit 1
 }
-
 
 # This script expects $global:MandA to be set by Set-SuiteEnvironment.ps1 (or embedded in QuickStart)
 if ($null -eq $global:MandA -or $null -eq $global:MandA.Paths) {
@@ -225,7 +224,6 @@ function Initialize-MandAEnvironmentInternal {
             throw "Failed to initialize output directories. Check permissions and paths in config."
         }
 
-        # Check PowerShell module dependencies
         # Check PowerShell module dependencies - but only once per session
         if (-not $global:MandA.ModulesChecked) {
             Write-MandALog "Checking PowerShell module dependencies..." -Level "INFO"
@@ -252,8 +250,6 @@ function Initialize-MandAEnvironmentInternal {
         } else {
             Write-MandALog "PowerShell module dependencies already checked in this session" -Level "INFO"
         }
-
-
         
         # Test prerequisites
         if (-not (Test-Prerequisites -Configuration $Configuration -ValidateOnly:$IsValidateOnlyMode)) { 
@@ -442,7 +438,7 @@ try {
     #---------------------------------------------------------------------------
     Write-MandALog "===============================================" -Level "HEADER"
     Write-MandALog "M&A DISCOVERY SUITE v$($script:CurrentConfig.metadata.version)" -Level "HEADER"
-    Write-MandALog "Orchestrator v4.3.0 (Enhanced)" -Level "HEADER"
+    Write-MandALog "Orchestrator v4.3.1 (Enhanced + Fixed)" -Level "HEADER"
     Write-MandALog "===============================================" -Level "HEADER"
     Write-MandALog "Mode: $Mode | Config: $($global:MandA.Paths.ConfigFile)" -Level "INFO"
 
@@ -466,6 +462,46 @@ try {
     
     # Initialize authentication
     $authContext = $null
+    
+    # FIX: Ensure credential path is properly set in configuration
+    Write-MandALog "Preparing credential configuration..." -Level "INFO"
+    
+    # Debug current state
+    Write-MandALog "DEBUG: Current credential configuration:" -Level "DEBUG"
+    Write-MandALog "  - Config credentialStorePath: $($script:CurrentConfig.authentication.credentialStorePath)" -Level "DEBUG"
+    Write-MandALog "  - Config credentialFileName: $($script:CurrentConfig.authentication.credentialFileName)" -Level "DEBUG"
+    Write-MandALog "  - Global CredentialFile path: $($global:MandA.Paths.CredentialFile)" -Level "DEBUG"
+    Write-MandALog "  - Company Config path: $($global:MandA.Paths.CompanyConfigPath)" -Level "DEBUG"
+    
+    # Fix the credential path in configuration
+    if ($global:MandA.Paths.CredentialFile) {
+        # Get the directory from the full credential file path
+        $credentialDirectory = Split-Path $global:MandA.Paths.CredentialFile -Parent
+        
+        # Update the configuration with the correct path
+        $script:CurrentConfig.authentication.credentialStorePath = $credentialDirectory
+        
+        # Also ensure the credentialFileName is just the filename, not a full path
+        $script:CurrentConfig.authentication.credentialFileName = Split-Path $global:MandA.Paths.CredentialFile -Leaf
+        
+        Write-MandALog "Updated credential configuration:" -Level "INFO"
+        Write-MandALog "  - credentialStorePath: $($script:CurrentConfig.authentication.credentialStorePath)" -Level "INFO"
+        Write-MandALog "  - credentialFileName: $($script:CurrentConfig.authentication.credentialFileName)" -Level "INFO"
+        
+        # Verify the credential file exists
+        if (Test-Path $global:MandA.Paths.CredentialFile) {
+            Write-MandALog "✅ Credential file exists at: $($global:MandA.Paths.CredentialFile)" -Level "SUCCESS"
+        } else {
+            Write-MandALog "ERROR: Credential file not found at: $($global:MandA.Paths.CredentialFile)" -Level "ERROR"
+            Write-MandALog "Please run option [2] from the main menu to configure credentials first." -Level "ERROR"
+            throw "Credential file not found. Please configure credentials first."
+        }
+    } else {
+        Write-MandALog "ERROR: Global credential file path not set. This should be set by Set-SuiteEnvironment.ps1" -Level "ERROR"
+        throw "Credential configuration not properly initialized"
+    }
+    
+    # Now call authentication with the fixed configuration
     $authResult = Initialize-MandAAuthentication -Configuration $script:CurrentConfig
     
     # Debug auth result
