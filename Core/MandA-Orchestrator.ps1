@@ -14,18 +14,21 @@
 
 [CmdletBinding()]
 param(
+    [Parameter(Mandatory=$true)] # Make CompanyName mandatory for the orchestrator
+    [string]$CompanyName,
+
     [Parameter(Mandatory=$false)]
-    [string]$ConfigurationFile = "Configuration/default-config.json", 
+    [string]$ConfigurationFile = "Configuration/default-config.json",
     
     [Parameter(Mandatory=$false)]
     [ValidateSet("Discovery", "Processing", "Export", "Full")]
     [string]$Mode = "Full",
     
     [Parameter(Mandatory=$false)]
-    [switch]$Force, 
+    [switch]$Force,
     
     [Parameter(Mandatory=$false)]
-    [switch]$ValidateOnly 
+    [switch]$ValidateOnly
 )
 
 #===============================================================================

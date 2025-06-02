@@ -9,7 +9,7 @@
         "lastUpdated": "2025-06-01"
     },
     "environment": {
-        "outputPath": "C:\\MandADiscovery\\Output",
+        "profilesBasePath": "C:\\MandADiscovery\\Profiles",
         "tempPath": "C:\\MandADiscovery\\Temp",
         "logLevel": "INFO",
         "maxRetries": 3,
@@ -38,7 +38,7 @@
     "authentication": {
         "useServicePrincipal": true,
         "useInteractiveAuth": false,
-        "credentialStorePath": "C:\\MandADiscovery\\Output\\credentials.config",
+        "credentialFileName": "credentials.config",
         "certificateThumbprint": "",
         "tokenRefreshThreshold": 600,
         "authenticationMethod": "ClientSecret"

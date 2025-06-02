@@ -14,6 +14,9 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
+    [string]$CompanyName, # Optional here, can be prompted in menu
+
+    [Parameter(Mandatory=$false)]
     [string]$ConfigFile,
     
     [Parameter(Mandatory=$false)]
@@ -69,45 +72,32 @@ function Test-Administrator {
 }
 
 function Initialize-Environment {
-    # Set up the global context
-    if ($null -eq $global:MandA) {
-        $global:MandA = @{
-            Paths = @{}
-            Config = @{}
-            Version = "5.0.0"
-            StartTime = Get-Date
+    # Prompt for CompanyName if not provided
+    if ([string]::IsNullOrWhiteSpace($CompanyName)) {
+        Write-Host "Please enter the Company Name for this session (e.g., Contoso, Fabrikam):" -ForegroundColor Yellow
+        $script:CompanyName = Read-Host
+        if ([string]::IsNullOrWhiteSpace($script:CompanyName)) {
+            Write-Error "CompanyName cannot be empty. Exiting."
+            exit 1
         }
+    } else {
+        $script:CompanyName = $CompanyName
     }
+
+    # Define suite root
+    $suiteRoot = $PSScriptRoot
     
-    # Define paths
-    $suiteRoot = Split-Path -Parent $PSScriptRoot
-    $global:MandA.Paths = @{
-        Root = $suiteRoot
-        Modules = Join-Path $suiteRoot "Modules"
-        Utilities = Join-Path $suiteRoot "Modules\Utilities"
-        Discovery = Join-Path $suiteRoot "Modules\Discovery"
-        Processing = Join-Path $suiteRoot "Modules\Processing"
-        Export = Join-Path $suiteRoot "Modules\Export"
-        Config = Join-Path $suiteRoot "Configuration"
-        Output = Join-Path $suiteRoot "Output"
-        Logs = Join-Path $suiteRoot "Output\Logs"
-        RawDataOutput = Join-Path $suiteRoot "Output\Raw"
-        ProcessedDataOutput = Join-Path $suiteRoot "Output\Processed"
-        Reports = Join-Path $suiteRoot "Output\Reports"
-        CredentialFile = Join-Path $suiteRoot "Output\credentials.config"
+    # Set environment script path
+    $envSetupScriptPath = Join-Path $suiteRoot "Scripts\Set-SuiteEnvironment.ps1"
+
+    if (Test-Path $envSetupScriptPath) {
+        Write-Host "Sourcing environment for Company: $($script:CompanyName)" -ForegroundColor Cyan
+        # Pass the CompanyName to Set-SuiteEnvironment.ps1
+        . $envSetupScriptPath -ProvidedSuiteRoot $suiteRoot -CompanyName $script:CompanyName
+    } else {
+        Write-Error "CRITICAL: Set-SuiteEnvironment.ps1 not found at '$envSetupScriptPath'."
+        exit 1
     }
-    
-    # Create necessary directories
-    foreach ($path in $global:MandA.Paths.Values) {
-        if ($path -notmatch '\.(json|config|ps1|psm1)$' -and -not (Test-Path $path)) {
-            New-Item -Path $path -ItemType Directory -Force | Out-Null
-        }
-    }
-    
-    # Set environment script
-    $global:MandA.Paths.EnvironmentScript = Join-Path $suiteRoot "Set-SuiteEnvironment.ps1"
-    $global:MandA.Paths.OrchestratorScript = Join-Path $suiteRoot "Core\MandA-Orchestrator.ps1"
-    $global:MandA.Paths.ModuleCheckScript = Join-Path $suiteRoot "Tools\DiscoverySuiteModuleCheck.ps1"
 }
 
 function Update-ConnectionStatus {
@@ -461,14 +451,11 @@ function Start-FullDiscovery {
     try {
         # Load configuration
         if (-not $ConfigFile) {
-            $ConfigFile = Join-Path $global:MandA.Paths.Config "default-config.json"
+            $ConfigFile = Join-Path $global:MandA.Paths.Configuration "default-config.json"
         }
         
-        # Set up environment
-        & $global:MandA.Paths.EnvironmentScript -ConfigFile $ConfigFile
-        
-        # Run orchestrator
-        & $global:MandA.Paths.OrchestratorScript -Mode "Full" -ConfigurationFile $ConfigFile
+        # Run orchestrator with CompanyName
+        & $global:MandA.Paths.Orchestrator -Mode "Full" -ConfigurationFile $ConfigFile -CompanyName $script:CompanyName
         
         Write-ColoredLog "`n✅ Full discovery suite completed successfully!" -Level "SUCCESS"
     } catch {
@@ -493,11 +480,11 @@ function Start-DiscoveryOnly {
     
     try {
         if (-not $ConfigFile) {
-            $ConfigFile = Join-Path $global:MandA.Paths.Config "default-config.json"
+            $ConfigFile = Join-Path $global:MandA.Paths.Configuration "default-config.json"
         }
         
-        & $global:MandA.Paths.EnvironmentScript -ConfigFile $ConfigFile
-        & $global:MandA.Paths.OrchestratorScript -Mode "Discovery" -ConfigurationFile $ConfigFile
+        # Run orchestrator with CompanyName
+        & $global:MandA.Paths.Orchestrator -Mode "Discovery" -ConfigurationFile $ConfigFile -CompanyName $script:CompanyName
         
         Write-ColoredLog "`n✅ Discovery phase completed successfully!" -Level "SUCCESS"
     } catch {
@@ -661,7 +648,7 @@ function Show-Configuration {
     Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     
     # Load configuration
-    $configFile = if ($ConfigFile) { $ConfigFile } else { Join-Path $global:MandA.Paths.Config "default-config.json" }
+    $configFile = if ($ConfigFile) { $ConfigFile } else { Join-Path $global:MandA.Paths.Configuration "default-config.json" }
     
     if (Test-Path $configFile) {
         $config = Get-Content $configFile | ConvertFrom-Json

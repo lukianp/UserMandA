@@ -34,6 +34,9 @@
 
 [CmdletBinding()]
 param(
+    [Parameter(Mandatory=$true)] # Make CompanyName mandatory for App Registration
+    [string]$CompanyName,
+
     [Parameter(Mandatory=$false, HelpMessage="Path for detailed execution log")]
     [ValidateNotNullOrEmpty()]
     [string]$LogPath,
@@ -74,13 +77,19 @@ try {
     if ($null -eq $global:MandA) {
         $envSetupScriptPath = Join-Path $PSScriptRoot "Set-SuiteEnvironment.ps1"
         if (Test-Path $envSetupScriptPath) {
-            . $envSetupScriptPath
+            # CRITICAL: Pass the $CompanyName received by Setup-AppRegistration.ps1
+            . $envSetupScriptPath -ProvidedSuiteRoot (Split-Path $PSScriptRoot -Parent) -CompanyName $CompanyName
         } else {
-            throw "Could not find 'Set-SuiteEnvironment.ps1'. This script must be run from the 'Scripts' directory of the M&A Discovery Suite."
+            throw "Could not find 'Set-SuiteEnvironment.ps1'."
         }
+    } elseif ($global:MandA.Paths.CompanyProfileRoot -notlike "*$CompanyName*") {
+        # If $global:MandA exists but is for a different company, re-initialize
+        Write-Warning "Global context exists but might be for a different company. Re-sourcing Set-SuiteEnvironment.ps1 for Company: $CompanyName"
+        $envSetupScriptPath = Join-Path $PSScriptRoot "Set-SuiteEnvironment.ps1"
+        . $envSetupScriptPath -ProvidedSuiteRoot (Split-Path $PSScriptRoot -Parent) -CompanyName $CompanyName
     }
 } catch {
-    Write-Error "CRITICAL: Failed to initialize M&A Suite environment: $($_.Exception.Message)"
+    Write-Error "CRITICAL: Failed to initialize M&A Suite environment for Company '$CompanyName': $($_.Exception.Message)"
     exit 1
 }
 
@@ -88,7 +97,11 @@ if (-not $PSBoundParameters.ContainsKey('LogPath')) {
     $LogPath = Join-Path $global:MandA.Paths.LogOutput "Setup-AppRegistration_$(Get-Date -Format 'yyyyMMddHHmmss').log"
 }
 if (-not $PSBoundParameters.ContainsKey('EncryptedOutputPath')) {
+    if ($null -eq $global:MandA.Paths.CredentialFile) {
+         throw "CRITICAL: global:MandA.Paths.CredentialFile is null after sourcing Set-SuiteEnvironment.ps1 with CompanyName '$CompanyName'. Cannot determine EncryptedOutputPath."
+    }
     $EncryptedOutputPath = $global:MandA.Paths.CredentialFile
+    Write-Host "Setup-AppRegistration: EncryptedOutputPath set to company-specific path: $EncryptedOutputPath" -ForegroundColor Cyan
 }
 # --- End Environment Initialization ---
 

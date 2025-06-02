@@ -15,7 +15,10 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ProvidedSuiteRoot
+    [string]$ProvidedSuiteRoot,
+
+    [Parameter(Mandatory=$true)] # Make CompanyName mandatory for this script
+    [string]$CompanyName
 )
 
 # Temporarily set ErrorActionPreference for this script's core logic
@@ -141,73 +144,86 @@ function ConvertTo-HashtableRecursiveInternal {
 $configHashtable = ConvertTo-HashtableRecursiveInternal $loadedConfig
 Write-Host "Configuration converted to Hashtable." -ForegroundColor DarkGray
 
-# Validate presence of critical configuration values needed for path construction
-if ($null -eq $configHashtable.environment -or [string]::IsNullOrWhiteSpace($configHashtable.environment.outputPath)) {
-    $errorMessage = "CRITICAL: 'environment.outputPath' is missing or empty in '$configFilePath'. This is required to define output paths."
-    Write-Host "ERROR: $errorMessage" -ForegroundColor Red
-    $ErrorActionPreference = $OriginalErrorActionPreference
-    throw $errorMessage
-}
-if ($null -eq $configHashtable.authentication -or [string]::IsNullOrWhiteSpace($configHashtable.authentication.credentialStorePath)) {
-    Write-Host "WARNING: Configuration key 'authentication.credentialStorePath' is missing or empty in '$configFilePath'. A default path will be used." -ForegroundColor Yellow
+# --- Start of new code block for dynamic paths ---
+Write-Host "Constructing dynamic paths for Company: $CompanyName" -ForegroundColor Yellow
+
+if ([string]::IsNullOrWhiteSpace($CompanyName)) {
+    throw "CRITICAL: CompanyName parameter is missing or empty. Cannot construct company-specific paths."
 }
 
-# Define paths, ensuring base paths are valid before joining
-$envOutputPath = $configHashtable.environment.outputPath 
-if (-not ([System.IO.Path]::IsPathRooted($envOutputPath))) {
-    $envOutputPath = Join-Path $SuiteRoot $envOutputPath
-}
-Write-Host "Resolved environment output path: $envOutputPath" -ForegroundColor DarkGray
-
-try {
-    if (-not (Test-Path $envOutputPath -PathType Container) -and -not (Test-Path (Split-Path $envOutputPath -Parent) -PathType Container)) {
-        Write-Host "WARNING: The configured environment.outputPath (resolved to '$envOutputPath') or its parent does not exist. Directory creation will be attempted by consuming functions." -ForegroundColor Yellow
-    }
-} catch {
-     Write-Host "WARNING: Could not validate environment.outputPath '$envOutputPath': $($_.Exception.Message)" -ForegroundColor Yellow
+$profilesBasePath = $configHashtable.environment.profilesBasePath
+if ([string]::IsNullOrWhiteSpace($profilesBasePath)) {
+    throw "CRITICAL: 'environment.profilesBasePath' is not defined in the configuration file '$configFilePath'."
 }
 
+$credentialFileName = $configHashtable.authentication.credentialFileName
+if ([string]::IsNullOrWhiteSpace($credentialFileName)) {
+    throw "CRITICAL: 'authentication.credentialFileName' is not defined in the configuration file '$configFilePath'."
+}
 
-$credentialStorePathFromConfig = $configHashtable.authentication.credentialStorePath 
-$resolvedCredentialPath = if (-not [string]::IsNullOrWhiteSpace($credentialStorePathFromConfig) -and [System.IO.Path]::IsPathRooted($credentialStorePathFromConfig)) { 
-                                $credentialStorePathFromConfig 
-                          } elseif (-not [string]::IsNullOrWhiteSpace($credentialStorePathFromConfig)) { 
-                                Join-Path $SuiteRoot $credentialStorePathFromConfig 
-                          } else {
-                                Write-Warning "authentication.credentialStorePath was missing or empty. Defaulting to SuiteRoot/Output/credentials.config"
-                                Join-Path $SuiteRoot "Output/credentials.config" 
-                          }
-Write-Host "Resolved credential file path: $resolvedCredentialPath" -ForegroundColor DarkGray
+$companyProfileRootPath = Join-Path $profilesBasePath $CompanyName
+Write-Host "Company Profile Root Path: $companyProfileRootPath" -ForegroundColor DarkGray
+
+# Define the new dynamic paths
+$dynamicPaths = @{
+    CompanyProfileRoot  = $companyProfileRootPath
+    LogOutput           = Join-Path $companyProfileRootPath "Logs"
+    RawDataOutput       = Join-Path $companyProfileRootPath "Raw"
+    ProcessedDataOutput = Join-Path $companyProfileRootPath "Processed"
+    CredentialFile      = Join-Path $companyProfileRootPath $credentialFileName
+    # Add other company-specific paths here if needed in the future (e.g., Temp, Reports)
+}
+
+# Ensure company-specific directories exist
+Write-Host "Ensuring company-specific directories exist..." -ForegroundColor Gray
+if (-not (Test-Path $dynamicPaths.CompanyProfileRoot -PathType Container)) {
+    New-Item -Path $dynamicPaths.CompanyProfileRoot -ItemType Directory -Force | Out-Null
+    Write-Host "Created Company Profile Root: $($dynamicPaths.CompanyProfileRoot)" -ForegroundColor Green
+}
+if (-not (Test-Path $dynamicPaths.LogOutput -PathType Container)) {
+    New-Item -Path $dynamicPaths.LogOutput -ItemType Directory -Force | Out-Null
+    Write-Host "Created LogOutput: $($dynamicPaths.LogOutput)" -ForegroundColor Green
+}
+if (-not (Test-Path $dynamicPaths.RawDataOutput -PathType Container)) {
+    New-Item -Path $dynamicPaths.RawDataOutput -ItemType Directory -Force | Out-Null
+    Write-Host "Created RawDataOutput: $($dynamicPaths.RawDataOutput)" -ForegroundColor Green
+}
+if (-not (Test-Path $dynamicPaths.ProcessedDataOutput -PathType Container)) {
+    New-Item -Path $dynamicPaths.ProcessedDataOutput -ItemType Directory -Force | Out-Null
+    Write-Host "Created ProcessedDataOutput: $($dynamicPaths.ProcessedDataOutput)" -ForegroundColor Green
+}
+# --- End of new code block for dynamic paths ---
 
 Write-Host "Setting up `$global:MandA context object..." -ForegroundColor Yellow
+
+$staticPaths = @{
+    SuiteRoot           = $SuiteRoot
+    Core                = Join-Path $SuiteRoot "Core"
+    Configuration       = Join-Path $SuiteRoot "Configuration"
+    Scripts             = Join-Path $SuiteRoot "Scripts"
+    Modules             = Join-Path $SuiteRoot "Modules"
+    Utilities           = Join-Path $SuiteRoot "Modules/Utilities"
+    Documentation       = Join-Path $SuiteRoot "Documentation"
+
+    ConfigFile          = $configFilePath
+    ConfigSchema        = $configSchemaPath
+    CsvSchemas          = Join-Path $SuiteRoot "Configuration/csv.schemas.json"
+
+    Orchestrator        = Join-Path $SuiteRoot "Core/MandA-Orchestrator.ps1"
+    QuickStart          = Join-Path $SuiteRoot "Scripts/QuickStart.ps1"
+    ValidationScript    = Join-Path $SuiteRoot "Scripts/Validate-Installation.ps1"
+    AppRegScript        = Join-Path $SuiteRoot "Scripts/Setup-AppRegistration.ps1"
+    ModuleCheckScript   = Join-Path $SuiteRoot "Scripts/DiscoverySuiteModuleCheck.ps1"
+}
+
 $global:MandA = @{
     DeterminedBy = $determinedBy
-    Config       = $configHashtable 
-    Paths        = @{
-        SuiteRoot           = $SuiteRoot
-        Core                = Join-Path $SuiteRoot "Core"
-        Configuration       = Join-Path $SuiteRoot "Configuration"
-        Scripts             = Join-Path $SuiteRoot "Scripts"
-        Modules             = Join-Path $SuiteRoot "Modules"
-        Utilities           = Join-Path $SuiteRoot "Modules/Utilities" 
-        Documentation       = Join-Path $SuiteRoot "Documentation"
-        
-        ConfigFile          = $configFilePath
-        ConfigSchema        = $configSchemaPath
-        CsvSchemas          = Join-Path $SuiteRoot "Configuration/csv.schemas.json"
-
-        Orchestrator        = Join-Path $SuiteRoot "Core/MandA-Orchestrator.ps1"
-        QuickStart          = Join-Path $SuiteRoot "Scripts/QuickStart.ps1" # Path to QuickStart itself
-        ValidationScript    = Join-Path $SuiteRoot "Scripts/Validate-Installation.ps1" 
-        AppRegScript        = Join-Path $SuiteRoot "Scripts/Setup-AppRegistration.ps1"  
-        ModuleCheckScript   = Join-Path $SuiteRoot "Scripts/DiscoverySuiteModuleCheck.ps1" 
-        
-        RawDataOutput       = Join-Path $envOutputPath "Raw"
-        ProcessedDataOutput = Join-Path $envOutputPath "Processed"
-        LogOutput           = Join-Path $envOutputPath "Logs"
-        CredentialFile      = $resolvedCredentialPath
-    }
+    Config       = $configHashtable
+    Paths        = $staticPaths.Clone() # Start with static paths
 }
+
+# Add dynamic paths to the global context
+$dynamicPaths.GetEnumerator() | ForEach-Object { $global:MandA.Paths[$_.Name] = $_.Value }
 
 if ($null -ne $global:MandA -and $null -ne $global:MandA.Paths) {
     Write-Host "`$global:MandA.Paths initialized successfully." -ForegroundColor Green
@@ -244,10 +260,13 @@ if (Test-Path $configValidationModulePath -PathType Leaf) {
 Write-Host "M&A Discovery Suite Environment Initialized (v3.0.4)" -ForegroundColor Cyan
 Write-Host ("=" * 65) -ForegroundColor Cyan
 Write-Host "Suite Root Path : $($global:MandA.Paths.SuiteRoot)" -ForegroundColor Green
+Write-Host "Company Name    : $CompanyName" -ForegroundColor Yellow
 Write-Host "Determined By   : $($global:MandA.DeterminedBy)" -ForegroundColor DarkGray
 Write-Host "Config File     : $($global:MandA.Paths.ConfigFile)" -ForegroundColor White
+Write-Host "Company Profile : $($global:MandA.Paths.CompanyProfileRoot)" -ForegroundColor White
 Write-Host "Log Output Path : $($global:MandA.Paths.LogOutput)" -ForegroundColor White
 Write-Host "Raw Data Path   : $($global:MandA.Paths.RawDataOutput)" -ForegroundColor White
+Write-Host "Processed Data  : $($global:MandA.Paths.ProcessedDataOutput)" -ForegroundColor White
 Write-Host "Credential File : $($global:MandA.Paths.CredentialFile)" -ForegroundColor White
 Write-Host "Global context object `$global:MandA has been set." -ForegroundColor White
 Write-Host ("-" * 65) -ForegroundColor Cyan
