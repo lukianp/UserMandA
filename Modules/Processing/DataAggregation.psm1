@@ -10,18 +10,20 @@
     output for the export phase. It is a prerequisite for generating any reports or
     PowerApps data.
 .NOTES
-    Version: 1.0.0
+    Version: 1.1.0
     Author: Gemini
     Creation Date: 2025-06-02
+    Modification:
+    - Renamed functions to use approved PowerShell verbs (Import, New).
 #>
 
 #region INTERNAL HELPER FUNCTIONS
 
 #===============================================================================
-# Load-RawDataSources
+# Import-RawDataSources
 # Imports all relevant CSV files from the 'Raw' output directory.
 #===============================================================================
-function Load-RawDataSources {
+function Import-RawDataSources {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -187,10 +189,10 @@ function Merge-DeviceProfiles {
 }
 
 #===============================================================================
-# Build-RelationshipGraph
+# New-RelationshipGraph
 # Enriches user and device profiles with relationship data.
 #===============================================================================
-function Build-RelationshipGraph {
+function New-RelationshipGraph {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -239,7 +241,7 @@ function Build-RelationshipGraph {
 #endregion
 
 #===============================================================================
-#                           INVOKE-DATAPROCESSING
+#                           START-DATAAGGREGATION
 # Main exported function for the module.
 #===============================================================================
 function Start-DataAggregation {
@@ -257,7 +259,7 @@ function Start-DataAggregation {
 
     try {
         # Step 1: Load all raw data
-        $dataSources = Load-RawDataSources -RawDataPath $rawDataPath
+        $dataSources = Import-RawDataSources -RawDataPath $rawDataPath
         if ($null -eq $dataSources -or $dataSources.Count -eq 0) {
             throw "No data sources were loaded. Halting processing."
         }
@@ -269,7 +271,7 @@ function Start-DataAggregation {
         $mergedDevices = Merge-DeviceProfiles -DataSources $dataSources
 
         # Step 4: Build Relationships (enrich user objects)
-        $finalUsers = Build-RelationshipGraph -Users $mergedUsers -Devices $mergedDevices -DataSources $dataSources
+        $finalUsers = New-RelationshipGraph -Users $mergedUsers -Devices $mergedDevices -DataSources $dataSources
 
         # Step 5: Export processed data to new CSV files
         Write-MandALog "Exporting processed data..." -Level INFO
