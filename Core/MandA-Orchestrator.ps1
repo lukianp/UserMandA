@@ -195,6 +195,15 @@ function Initialize-MandAEnvironmentInternal {
         Write-MandALog "INITIALIZING ENVIRONMENT FOR MODE: $CurrentMode" -Level "HEADER"
         Write-MandALog "===============================================" -Level "HEADER"
 
+        # ADD THIS: Update configuration with company-specific paths
+        if ($global:MandA.Paths.CompanyProfileRoot) {
+            # Add the company-specific outputPath to the configuration
+            $Configuration.environment['outputPath'] = $global:MandA.Paths.CompanyProfileRoot
+            Write-MandALog "Using company-specific output path: $($Configuration.environment.outputPath)" -Level "INFO"
+        } else {
+            throw "Company-specific paths not initialized. Ensure Set-SuiteEnvironment.ps1 has been run."
+        }
+
         # Initialize logging
         Initialize-Logging -Configuration $Configuration 
         
