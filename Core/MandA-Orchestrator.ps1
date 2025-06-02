@@ -39,6 +39,19 @@ param(
 $OriginalErrorActionPreferenceOrchestrator = $ErrorActionPreference
 $ErrorActionPreference = "Stop"
 
+# Safety counter to prevent infinite loops
+if (-not $global:MandA.OrchestratorRunCount) {
+    $global:MandA.OrchestratorRunCount = 0
+}
+$global:MandA.OrchestratorRunCount++
+
+if ($global:MandA.OrchestratorRunCount -gt 3) {
+    Write-Error "CRITICAL: Orchestrator has been called $($global:MandA.OrchestratorRunCount) times. Possible infinite loop detected. Exiting."
+    $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
+    exit 1
+}
+
+
 # This script expects $global:MandA to be set by Set-SuiteEnvironment.ps1 (or embedded in QuickStart)
 if ($null -eq $global:MandA -or $null -eq $global:MandA.Paths) {
     Write-Error "CRITICAL: The global context `$global:MandA (with Paths) is not set. Please run this script via QuickStart.ps1 or ensure Set-SuiteEnvironment.ps1 has been sourced correctly."
@@ -213,20 +226,34 @@ function Initialize-MandAEnvironmentInternal {
         }
 
         # Check PowerShell module dependencies
-        Write-MandALog "Checking PowerShell module dependencies..." -Level "INFO"
-        $moduleCheckScriptPath_local = $global:MandA.Paths.ModuleCheckScript
-        
-        if (Test-Path $moduleCheckScriptPath_local -PathType Leaf) { 
-            try {
-                & $moduleCheckScriptPath_local -AutoFix -Silent -ErrorAction Stop 
-                Write-MandALog "✅ PowerShell module dependency check completed" -Level "SUCCESS"
-            } catch {
-                Write-MandALog "ERROR: PowerShell module dependency check failed: $($_.Exception.Message)" -Level "ERROR"
-                throw "Module dependencies not met: $($_.Exception.Message)"
+        # Check PowerShell module dependencies - but only once per session
+        if (-not $global:MandA.ModulesChecked) {
+            Write-MandALog "Checking PowerShell module dependencies..." -Level "INFO"
+            $moduleCheckScriptPath_local = $global:MandA.Paths.ModuleCheckScript
+            
+            if (Test-Path $moduleCheckScriptPath_local -PathType Leaf) { 
+                try {
+                    & $moduleCheckScriptPath_local -Silent -ErrorAction Stop 
+                    Write-MandALog "✅ PowerShell module dependency check completed" -Level "SUCCESS"
+                    # Mark modules as checked for this session
+                    $global:MandA.ModulesChecked = $true
+                } catch {
+                    Write-MandALog "ERROR: PowerShell module dependency check failed: $($_.Exception.Message)" -Level "ERROR"
+                    # Still mark as checked to prevent infinite loops
+                    $global:MandA.ModulesChecked = $true
+                    # Don't throw here - just warn and continue
+                    Write-MandALog "WARN: Continuing despite module check failure. Some features may not work." -Level "WARN"
+                }
+            } else {
+                Write-MandALog "WARN: DiscoverySuiteModuleCheck.ps1 not found at '$moduleCheckScriptPath_local'" -Level "WARN"
+                # Even if script not found, mark as checked to prevent loops
+                $global:MandA.ModulesChecked = $true
             }
         } else {
-            Write-MandALog "WARN: DiscoverySuiteModuleCheck.ps1 not found at '$moduleCheckScriptPath_local'" -Level "WARN"
+            Write-MandALog "PowerShell module dependencies already checked in this session" -Level "INFO"
         }
+
+
         
         # Test prerequisites
         if (-not (Test-Prerequisites -Configuration $Configuration -ValidateOnly:$IsValidateOnlyMode)) { 
