@@ -144,13 +144,17 @@ function Get-UserLicenseAssignmentsData {
     try {
         Write-MandALog "Retrieving user license assignments..." -Level "INFO"
         
-        # Get all licensed users
-        $users = Get-MgUser -All -Filter "assignedLicenses/`$count ne 0" -ConsistencyLevel eventual -CountVariable licensedUserCount
+        # FIXED: Remove the filter and get all users, then filter locally
+        $allUsers = Get-MgUser -All -Property Id,UserPrincipalName,DisplayName,Department,UsageLocation,AccountEnabled,AssignedLicenses,CreatedDateTime -ErrorAction Stop
+        
+        # Filter users with licenses locally
+        $licensedUsers = $allUsers | Where-Object { $_.AssignedLicenses -and $_.AssignedLicenses.Count -gt 0 }
+        $licensedUserCount = ($licensedUsers | Measure-Object).Count
         
         Write-MandALog "Processing license assignments for $licensedUserCount users..." -Level "INFO"
         
         $processedCount = 0
-        foreach ($user in $users) {
+        foreach ($user in $licensedUsers) {
             $processedCount++
             if ($processedCount % 100 -eq 0) {
                 Write-Progress -Activity "Processing User Licenses" -Status "User $processedCount of $licensedUserCount" -PercentComplete (($processedCount / $licensedUserCount) * 100)
@@ -178,7 +182,7 @@ function Get-UserLicenseAssignmentsData {
                         LicenseSkuId = $license.SkuId
                         LicenseSkuPartNumber = $sku.SkuPartNumber
                         LicenseDisplayName = Get-FriendlyLicenseName -SkuPartNumber $sku.SkuPartNumber
-                        AssignmentDate = $user.CreatedDateTime # Note: actual assignment date not available via Graph
+                        AssignmentDate = $user.CreatedDateTime
                         DisabledPlansCount = $license.DisabledPlans.Count
                         DisabledPlans = ($disabledPlans -join ";")
                         EnabledPlansCount = $sku.ServicePlans.Count - $license.DisabledPlans.Count
@@ -191,8 +195,12 @@ function Get-UserLicenseAssignmentsData {
         Write-Progress -Activity "Processing User Licenses" -Completed
         Write-MandALog "Processed $($licenseData.Count) license assignments" -Level "SUCCESS"
         
-        # Export to CSV
-        Export-DataToCSV -Data $licenseData -FilePath $outputFile
+        # Only export if we have data
+        if ($licenseData.Count -gt 0) {
+            Export-DataToCSV -Data $licenseData -FilePath $outputFile
+        } else {
+            Write-MandALog "No license assignment data to export" -Level "WARN"
+        }
         
         return $licenseData
         
@@ -298,6 +306,7 @@ function Get-ServicePlanUsageData {
     
     try {
         Write-MandALog "Analyzing service plan usage..." -Level "INFO"
+        Write-MandALog "Checking service plan assignments for users..." -Level "INFO"
         
         # Get all SKUs and their service plans
         $allSkus = Get-MgSubscribedSku -All
@@ -328,13 +337,11 @@ function Get-ServicePlanUsageData {
             }
         }
         
-        # Now check actual usage by examining user assignments
-        Write-MandALog "Checking service plan assignments for users..." -Level "INFO"
+        # FIXED: Get sample users differently
+        $sampleUsers = Get-MgUser -Top 100 -Property Id,AssignedLicenses -ErrorAction Stop
+        $sampleLicensedUsers = $sampleUsers | Where-Object { $_.AssignedLicenses -and $_.AssignedLicenses.Count -gt 0 }
         
-        # Sample users to check service plan usage (full enumeration would be resource intensive)
-        $sampleUsers = Get-MgUser -All -Filter "assignedLicenses/`$count ne 0" -Top 100
-        
-        foreach ($user in $sampleUsers) {
+        foreach ($user in $sampleLicensedUsers) {
             foreach ($license in $user.AssignedLicenses) {
                 $sku = $allSkus | Where-Object { $_.SkuId -eq $license.SkuId }
                 
@@ -375,8 +382,12 @@ function Get-ServicePlanUsageData {
         
         Write-MandALog "Analyzed $($servicePlanData.Count) service plans" -Level "SUCCESS"
         
-        # Export to CSV
-        Export-DataToCSV -Data $servicePlanData -FilePath $outputFile
+        # Only export if we have data
+        if ($servicePlanData.Count -gt 0) {
+            Export-DataToCSV -Data $servicePlanData -FilePath $outputFile
+        } else {
+            Write-MandALog "No service plan data to export" -Level "WARN"
+        }
         
         return $servicePlanData
         
@@ -487,14 +498,25 @@ function Get-LicenseComplianceData {
     try {
         Write-MandALog "Checking license compliance..." -Level "INFO"
         
-        # Check for unlicensed users with activity
-        $unlicensedActiveUsers = Get-MgUser -All -Filter "assignedLicenses/`$count eq 0 and accountEnabled eq true" -ConsistencyLevel eventual -CountVariable unlicensedCount
+        # FIXED: Get all users and filter locally
+        $allUsers = Get-MgUser -All -Property Id,UserPrincipalName,AssignedLicenses,AccountEnabled,UsageLocation -ErrorAction Stop
+        
+        # Check for unlicensed active users
+        $unlicensedActiveUsers = $allUsers | Where-Object { 
+            $_.AccountEnabled -eq $true -and 
+            (-not $_.AssignedLicenses -or $_.AssignedLicenses.Count -eq 0) 
+        }
+        $unlicensedCount = ($unlicensedActiveUsers | Measure-Object).Count
         
         # Check for users without usage location
-        $usersWithoutLocation = Get-MgUser -All -Filter "usageLocation eq null and assignedLicenses/`$count ne 0" -ConsistencyLevel eventual -CountVariable noLocationCount
+        $usersWithoutLocation = $allUsers | Where-Object { 
+            (-not $_.UsageLocation -or $_.UsageLocation -eq "") -and 
+            $_.AssignedLicenses -and $_.AssignedLicenses.Count -gt 0 
+        }
+        $noLocationCount = ($usersWithoutLocation | Measure-Object).Count
         
         # Check for duplicate licenses
-        $allUserLicenses = Get-MgUser -All -Filter "assignedLicenses/`$count ne 0" -Property Id,UserPrincipalName,AssignedLicenses
+        $allUserLicenses = $allUsers | Where-Object { $_.AssignedLicenses -and $_.AssignedLicenses.Count -gt 0 }
         
         # Compliance checks
         $complianceChecks = @(
@@ -527,21 +549,24 @@ function Get-LicenseComplianceData {
         )
         
         # Check for over-licensing (users with multiple similar licenses)
-        $duplicateLicenseUsers = @()
-        $e3e5Users = $allUserLicenses | Where-Object { 
-            $licenses = $_.AssignedLicenses.SkuId
-            ($licenses -contains "05e9a617-0261-4cee-bb44-138d3ef5d965" -and # E3
-             $licenses -contains "06ebc4ee-1bb5-47dd-8120-11324bc54e06") -or # E5
-            ($licenses -contains "6fd2c87f-b296-42f0-b197-1e91e994b900" -and # Business Standard
-             $licenses -contains "cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46")     # Business Premium
-        }
+        $e3SkuId = "05e9a617-0261-4cee-bb44-138d3ef5d965"
+        $e5SkuId = "06ebc4ee-1bb5-47dd-8120-11324bc54e06"
+        $businessStandardSkuId = "6fd2c87f-b296-42f0-b197-1e91e994b900"
+        $businessPremiumSkuId = "cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46"
         
-        if ($e3e5Users.Count -gt 0) {
+        $e3e5Users = $allUserLicenses | Where-Object { 
+            $licenses = $_.AssignedLicenses | ForEach-Object { $_.SkuId }
+            ($licenses -contains $e3SkuId -and $licenses -contains $e5SkuId) -or
+            ($licenses -contains $businessStandardSkuId -and $licenses -contains $businessPremiumSkuId)
+        }
+        $duplicateLicenseCount = ($e3e5Users | Measure-Object).Count
+        
+        if ($duplicateLicenseCount -gt 0) {
             $complianceChecks += @{
                 CheckName = "Duplicate License Assignments"
                 Category = "License Optimization"
                 Status = "Warning"
-                Count = $e3e5Users.Count
+                Count = $duplicateLicenseCount
                 Severity = "Medium"
                 Recommendation = "Review users with multiple similar licenses (e.g., E3 and E5)"
                 Impact = "Unnecessary costs from duplicate licensing"
@@ -571,8 +596,12 @@ function Get-LicenseComplianceData {
         
         Write-MandALog "Completed license compliance checks" -Level "SUCCESS"
         
-        # Export to CSV
-        Export-DataToCSV -Data $complianceData -FilePath $outputFile
+        # Only export if we have data
+        if ($complianceData.Count -gt 0) {
+            Export-DataToCSV -Data $complianceData -FilePath $outputFile
+        } else {
+            Write-MandALog "No compliance data to export" -Level "WARN"
+        }
         
         return $complianceData
         
@@ -599,14 +628,23 @@ function Get-GroupBasedLicensingData {
     try {
         Write-MandALog "Discovering group-based licensing..." -Level "INFO"
         
-        # Get all groups with license assignments
-        $groups = Get-MgGroup -All -Filter "assignedLicenses/`$count ne 0" -ConsistencyLevel eventual
+        # FIXED: Get all groups and filter locally
+        $allGroups = Get-MgGroup -All -Property Id,DisplayName,GroupTypes,MailEnabled,SecurityEnabled,AssignedLicenses,CreatedDateTime -ErrorAction Stop
         
-        Write-MandALog "Found $($groups.Count) groups with license assignments" -Level "INFO"
+        # Filter groups with license assignments
+        $groupsWithLicenses = $allGroups | Where-Object { $_.AssignedLicenses -and $_.AssignedLicenses.Count -gt 0 }
         
-        foreach ($group in $groups) {
+        Write-MandALog "Found $($groupsWithLicenses.Count) groups with license assignments" -Level "INFO"
+        
+        foreach ($group in $groupsWithLicenses) {
             # Get group members count
-            $memberCount = Get-MgGroupMember -GroupId $group.Id -CountVariable count -ConsistencyLevel eventual
+            try {
+                $members = Get-MgGroupMember -GroupId $group.Id -All -ErrorAction Stop
+                $memberCount = ($members | Measure-Object).Count
+            } catch {
+                Write-MandALog "Could not get member count for group $($group.DisplayName): $($_.Exception.Message)" -Level "WARN"
+                $memberCount = 0
+            }
             
             foreach ($license in $group.AssignedLicenses) {
                 $sku = Get-MgSubscribedSku | Where-Object { $_.SkuId -eq $license.SkuId }
@@ -615,17 +653,17 @@ function Get-GroupBasedLicensingData {
                     $groupLicenseData.Add([PSCustomObject]@{
                         GroupId = $group.Id
                         GroupDisplayName = $group.DisplayName
-                        GroupType = $group.GroupTypes -join ";"
+                        GroupType = ($group.GroupTypes -join ";")
                         MailEnabled = $group.MailEnabled
                         SecurityEnabled = $group.SecurityEnabled
-                        MemberCount = $count
+                        MemberCount = $memberCount
                         LicenseSkuId = $license.SkuId
                         LicenseSkuPartNumber = $sku.SkuPartNumber
                         LicenseDisplayName = Get-FriendlyLicenseName -SkuPartNumber $sku.SkuPartNumber
                         DisabledPlansCount = $license.DisabledPlans.Count
                         CreatedDateTime = $group.CreatedDateTime
                         LicenseAssignmentState = "Active"
-                        EstimatedLicenseImpact = $count
+                        EstimatedLicenseImpact = $memberCount
                     })
                 }
             }
@@ -633,8 +671,12 @@ function Get-GroupBasedLicensingData {
         
         Write-MandALog "Processed $($groupLicenseData.Count) group license assignments" -Level "SUCCESS"
         
-        # Export to CSV
-        Export-DataToCSV -Data $groupLicenseData -FilePath $outputFile
+        # Only export if we have data
+        if ($groupLicenseData.Count -gt 0) {
+            Export-DataToCSV -Data $groupLicenseData -FilePath $outputFile
+        } else {
+            Write-MandALog "No group-based licensing data to export" -Level "WARN"
+        }
         
         return $groupLicenseData
         
@@ -754,6 +796,49 @@ function Get-EstimatedLicenseCost {
     
     $monthlyPrice = Get-EstimatedLicensePrice -SkuPartNumber $SkuPartNumber
     return [math]::Round($monthlyPrice * $Count * 12, 2) # Annual cost
+}
+
+function Export-DataToCSV {
+    param(
+        [Parameter(Mandatory=$true)]
+        [object[]]$Data,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$FilePath
+    )
+    
+    if ($null -eq $Data -or $Data.Count -eq 0) {
+        Write-MandALog "No data to export to $FilePath" -Level "WARN"
+        return
+    }
+    
+    try {
+        $Data | Export-Csv -Path $FilePath -NoTypeInformation -Encoding UTF8
+        Write-MandALog "Exported $($Data.Count) records to $FilePath" -Level "SUCCESS"
+    } catch {
+        Write-MandALog "Failed to export data to $FilePath`: $($_.Exception.Message)" -Level "ERROR"
+    }
+}
+
+function Import-DataFromCSV {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$FilePath
+    )
+    
+    if (-not (Test-Path $FilePath)) {
+        Write-MandALog "CSV file not found: $FilePath" -Level "WARN"
+        return @()
+    }
+    
+    try {
+        $data = Import-Csv -Path $FilePath -Encoding UTF8
+        Write-MandALog "Imported $($data.Count) records from $FilePath" -Level "INFO"
+        return $data
+    } catch {
+        Write-MandALog "Failed to import CSV from $FilePath`: $($_.Exception.Message)" -Level "ERROR"
+        return @()
+    }
 }
 
 # Export functions
