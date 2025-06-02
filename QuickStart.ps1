@@ -136,12 +136,13 @@ function Initialize-Environment {
     $suiteRoot = $PSScriptRoot
     
     # Initialize global context
-    if ($null -eq $global:MandA) {
+   if ($null -eq $global:MandA) {
         $global:MandA = @{
             Paths = @{}
             Config = @{}
             Version = "5.0.4"
             StartTime = Get-Date
+            ModulesChecked = $false  # Add flag to track module check status
         }
     }
     
@@ -491,9 +492,17 @@ function Start-FullDiscovery {
         & $global:MandA.Paths.Orchestrator -Mode "Full" -ConfigurationFile $configPath -CompanyName $script:CompanyName
         
         Write-ColoredLog "`n✅ Full discovery suite completed successfully!" -Level "SUCCESS"
-    } catch {
+  
+
+        } catch {
         Write-ColoredLog "`n❌ Error during discovery: $($_.Exception.Message)" -Level "ERROR"
+    } finally {
+        # Reset orchestrator run count for next operation
+        if ($global:MandA) {
+            $global:MandA.OrchestratorRunCount = 0
+        }
     }
+
     
     Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -518,9 +527,17 @@ function Start-DiscoveryOnly {
         & $global:MandA.Paths.Orchestrator -Mode "Discovery" -ConfigurationFile $configPath -CompanyName $script:CompanyName
         
         Write-ColoredLog "`n✅ Discovery phase completed successfully!" -Level "SUCCESS"
-    } catch {
+   
+} catch {
         Write-ColoredLog "`n❌ Error during discovery: $($_.Exception.Message)" -Level "ERROR"
+    } finally {
+        # Reset orchestrator run count for next operation
+        if ($global:MandA) {
+            $global:MandA.OrchestratorRunCount = 0
+        }
     }
+
+
     
     Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -597,8 +614,9 @@ function Invoke-ModuleCheck {
         } else {
             & $global:MandA.Paths.ModuleCheckScript
         }
-        $script:ModulesVerified = $true
+         $script:ModulesVerified = $true
         $script:LastModuleCheck = Get-Date
+        $global:MandA.ModulesChecked = $true  # Also set the global flag
     } else {
         Write-ColoredLog "Module check script not found: $($global:MandA.Paths.ModuleCheckScript)" -Level "ERROR"
     }
