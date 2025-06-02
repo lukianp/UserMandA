@@ -1,14 +1,14 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    M&A Discovery Suite - Main Orchestrator (Fixed Version)
+    M&A Discovery Suite - Main Orchestrator (Fixed Version 4.6.0)
 
 .DESCRIPTION
     Unified orchestrator for discovery, processing, and export.
-    This version fixes the CRITICAL log level error and implements proper processing/export phases.
+    This version fixes all log level issues and ensures proper global config setup.
 
 .NOTES
-    Version: 4.5.1 (Fixed)
+    Version: 4.6.0 (Comprehensive Fix)
     Author: Fixed Implementation
     Date: 2025-06-02
 #>
@@ -178,14 +178,29 @@ function Initialize-MandAEnvironmentInternal {
         # Load Processing modules if needed
         if ($CurrentMode -in "Processing", "Full") { 
             $processingModulePathBase = Join-Path $global:MandA.Paths.Modules "Processing"
-            $processingModulesToLoad = @(
-                "DataAggregation.psm1",
-                "UserProfileBuilder.psm1",
-                "WaveGeneration.psm1",
-                "DataValidation.psm1"
-            )
-            Write-MandALog "Loading processing modules..." -Level INFO
-            foreach ($moduleFile in $processingModulesToLoad) {
+            # Fix the DataAggregation module to replace CRITICAL log levels
+            $dataAggPath = Join-Path $processingModulePathBase "DataAggregation.psm1"
+            if (Test-Path $dataAggPath) {
+                # Read and fix the module content before loading
+                $content = Get-Content $dataAggPath -Raw
+                $content = $content -replace '-Level\s+"CRITICAL"', '-Level "ERROR"'
+                $content = $content -replace "-Level\s+'CRITICAL'", "-Level 'ERROR'"
+                # Create a temporary fixed version
+                $tempPath = [System.IO.Path]::GetTempFileName() + ".psm1"
+                Set-Content -Path $tempPath -Value $content -Force
+                try {
+                    Import-Module $tempPath -Force -Global -ErrorAction Stop
+                    Write-MandALog "Loaded processing module: DataAggregation.psm1 (with fixes)" -Level SUCCESS
+                } catch {
+                    Write-MandALog "ERROR: Failed to load DataAggregation.psm1: $($_.Exception.Message)" -Level ERROR
+                } finally {
+                    Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
+                }
+            }
+            
+            # Load other processing modules normally
+            $otherProcessingModules = @("UserProfileBuilder.psm1", "WaveGeneration.psm1", "DataValidation.psm1")
+            foreach ($moduleFile in $otherProcessingModules) {
                 $fullModulePath = Join-Path $processingModulePathBase $moduleFile
                 if (Test-Path $fullModulePath -PathType Leaf) {
                     try { 
@@ -288,32 +303,30 @@ function Invoke-ProcessingPhaseInternal {
         [hashtable]$Configuration
     )
     try {
-        Write-MandALog "STARTING PROCESSING PHASE (Invoke-ProcessingPhaseInternal)" -Level "HEADER" -Configuration $Configuration
+        Write-MandALog "STARTING PROCESSING PHASE (Invoke-ProcessingPhaseInternal)" -Level "HEADER"
 
-        # Define the primary processing function name
+        # The primary function from the processing modules is 'Start-DataAggregation'
         $processingFunction = "Start-DataAggregation"
 
-        # Check if the function is available
         if (Get-Command $processingFunction -ErrorAction SilentlyContinue) {
-            Write-MandALog "Invoking '$processingFunction'..." -Level "INFO" -Configuration $Configuration
+            Write-MandALog "Invoking '$processingFunction'..." -Level "INFO"
             
-            # Call the black box function
+            # The actual module DOES accept -Configuration parameter
             $processingSuccess = & $processingFunction -Configuration $Configuration -ErrorAction Stop
             
-            # Verify success
             if (-not $processingSuccess) {
                 throw "The '$processingFunction' function reported failure."
             }
             
-            Write-MandALog "'$processingFunction' completed successfully." -Level "SUCCESS" -Configuration $Configuration
+            Write-MandALog "'$processingFunction' completed successfully." -Level "SUCCESS"
         } else {
-            throw "CRITICAL: Processing function '$processingFunction' not found. Ensure 'DataAggregation.psm1' and other Processing modules are correctly loaded."
+            throw "Processing function '$processingFunction' not found. Ensure 'DataAggregation.psm1' and other Processing modules are correctly loaded."
         }
 
-        Write-MandALog "Processing Phase Completed Successfully." -Level "SUCCESS" -Configuration $Configuration
+        Write-MandALog "Processing Phase Completed Successfully." -Level "SUCCESS"
         return $true
     } catch {
-        Write-MandALog "ERROR: Processing phase (Invoke-ProcessingPhaseInternal) failed: $($_.Exception.Message)" -Level "ERROR" -Configuration $Configuration
+        Write-MandALog "ERROR: Processing phase (Invoke-ProcessingPhaseInternal) failed: $($_.Exception.Message)" -Level "ERROR"
         throw
     }
 }
@@ -325,31 +338,27 @@ function Invoke-ExportPhaseInternal {
         [hashtable]$Configuration
     )
     try {
-        Write-MandALog "STARTING EXPORT PHASE (Invoke-ExportPhaseInternal)" -Level "HEADER" -Configuration $Configuration
+        Write-MandALog "STARTING EXPORT PHASE (Invoke-ExportPhaseInternal)" -Level "HEADER"
         
-        # Define processed data path
         $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
-        Write-MandALog "Loading processed data for export from: $processedDataPath" -Level "INFO" -Configuration $Configuration
+        Write-MandALog "Loading processed data for export from: $processedDataPath" -Level "INFO"
         
-        # Initialize data container
+        # Load all processed .csv files into a hashtable to pass to export functions
         $dataToExport = @{}
-        
-        # Get all processed CSV files
         $processedFiles = Get-ChildItem -Path $processedDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
         
         if ($null -eq $processedFiles -or $processedFiles.Count -eq 0) {
             throw "No processed CSV files found in '$processedDataPath'. Ensure Processing phase ran."
         }
         
-        Write-MandALog "Found $($processedFiles.Count) processed files to load." -Level "DEBUG" -Configuration $Configuration
+        Write-MandALog "Found $($processedFiles.Count) processed files to load." -Level "DEBUG"
         
-        # Load each processed file
         foreach ($file in $processedFiles) {
             $dataKey = $file.BaseName
-            Write-MandALog "Loading $($file.Name) for export..." -Level "DEBUG" -Configuration $Configuration
+            Write-MandALog "Loading $($file.Name) for export..." -Level "DEBUG"
             try {
                 $dataToExport[$dataKey] = Import-Csv -Path $file.FullName -ErrorAction Stop
-                Write-MandALog "Loaded $($dataToExport[$dataKey].Count) records from $($file.Name) into key '$($dataKey)'." -Level "INFO" -Configuration $Configuration
+                Write-MandALog "Loaded $($dataToExport[$dataKey].Count) records from $($file.Name) into key '$($dataKey)'." -Level "INFO"
             } catch {
                 throw "Failed to load processed file '$($file.Name)': $($_.Exception.Message)"
             }
@@ -359,16 +368,15 @@ function Invoke-ExportPhaseInternal {
             throw "Failed to load any data into dataToExport hashtable."
         }
 
-        # Execute configured exporters
         $enabledFormats = @($Configuration.export.formats)
-        Write-MandALog "Will execute $($enabledFormats.Count) export formats: $($enabledFormats -join ', ')" -Level "INFO" -Configuration $Configuration
+        Write-MandALog "Will execute $($enabledFormats.Count) export formats: $($enabledFormats -join ', ')" -Level "INFO"
         
         $overallExportSuccess = $true
         
         foreach ($formatName in $enabledFormats) {
             $exportFunctionName = ""
             
-            # Map format names to function names
+            # Map format names to actual function names based on the export modules
             switch ($formatName) {
                 "PowerApps" { 
                     $exportFunctionName = "Export-ForPowerApps" 
@@ -386,28 +394,28 @@ function Invoke-ExportPhaseInternal {
                     if ($Configuration.export.excelEnabled) {
                         $exportFunctionName = "Export-ToExcel"
                     } else {
-                        Write-MandALog "WARN: Excel format requested but excelEnabled is false. Skipping." -Level "WARN" -Configuration $Configuration
+                        Write-MandALog "WARN: Excel format requested but excelEnabled is false. Skipping." -Level "WARN"
                         continue
                     }
                 }
                 default { 
-                    Write-MandALog "WARN: Export format '$formatName' is not specifically mapped. Skipping." -Level "WARN" -Configuration $Configuration
+                    Write-MandALog "WARN: Export format '$formatName' is not specifically mapped. Skipping." -Level "WARN"
                     continue
                 }
             }
 
             if (Get-Command $exportFunctionName -ErrorAction SilentlyContinue) {
-                Write-MandALog "Invoking '$exportFunctionName' for format '$formatName'..." -Level "INFO" -Configuration $Configuration
+                Write-MandALog "Invoking '$exportFunctionName' for format '$formatName'..." -Level "INFO"
                 try {
-                    # Call the export function
+                    # Call the export function with correct parameters
                     & $exportFunctionName -ProcessedData $dataToExport -Configuration $Configuration -ErrorAction Stop
-                    Write-MandALog "Export for '$formatName' completed." -Level "SUCCESS" -Configuration $Configuration
+                    Write-MandALog "Export for '$formatName' completed." -Level "SUCCESS"
                 } catch {
-                    Write-MandALog "ERROR: Export for '$formatName' failed: $($_.Exception.Message)" -Level "ERROR" -Configuration $Configuration
+                    Write-MandALog "ERROR: Export for '$formatName' failed: $($_.Exception.Message)" -Level "ERROR"
                     $overallExportSuccess = $false
                 }
             } else {
-                Write-MandALog "WARN: Export function '$exportFunctionName' for format '$formatName' not found. Skipping." -Level "WARN" -Configuration $Configuration
+                Write-MandALog "WARN: Export function '$exportFunctionName' for format '$formatName' not found. Skipping." -Level "WARN"
                 $overallExportSuccess = $false
             }
         }
@@ -416,10 +424,10 @@ function Invoke-ExportPhaseInternal {
             throw "One or more export formats failed."
         }
 
-        Write-MandALog "Export Phase Completed Successfully." -Level "SUCCESS" -Configuration $Configuration
+        Write-MandALog "Export Phase Completed Successfully." -Level "SUCCESS"
         return $true
     } catch {
-        Write-MandALog "ERROR: Export phase (Invoke-ExportPhaseInternal) failed: $($_.Exception.Message)" -Level "ERROR" -Configuration $Configuration
+        Write-MandALog "ERROR: Export phase (Invoke-ExportPhaseInternal) failed: $($_.Exception.Message)" -Level "ERROR"
         throw
     }
 }
@@ -427,7 +435,7 @@ function Invoke-ExportPhaseInternal {
 function Complete-MandADiscoveryInternal {
     [CmdletBinding()] 
     param([Parameter(Mandatory=$true)][hashtable]$Configuration)
-    Write-MandALog "FINALIZING M&A DISCOVERY SUITE EXECUTION (Orchestrator v4.5.1)" -Level "HEADER"
+    Write-MandALog "FINALIZING M&A DISCOVERY SUITE EXECUTION (Orchestrator v4.6.0)" -Level "HEADER"
     Write-MandALog "Execution completed successfully." -Level SUCCESS
     Write-MandALog "  - Logs: $($global:MandA.Paths.LogOutput)" -Level INFO
     Write-MandALog "  - Output: $($Configuration.environment.outputPath)" -Level INFO
@@ -464,7 +472,12 @@ try {
         Write-MandALog "Force mode enabled: discovery.skipExistingFiles set to false." -Level INFO
     }
     
-    Write-MandALog "M&A DISCOVERY SUITE v$($script:CurrentConfig.metadata.version) | Orchestrator v4.5.1" -Level "HEADER"
+    # CRITICAL: Update global config for black box modules
+    Write-MandALog "Finalizing active configuration for global context..." -Level "DEBUG"
+    $global:MandA.Config = $script:CurrentConfig
+    Write-MandALog "Global configuration context updated to reflect active settings." -Level "INFO"
+    
+    Write-MandALog "M&A DISCOVERY SUITE v$($script:CurrentConfig.metadata.version) | Orchestrator v4.6.0" -Level "HEADER"
     Write-MandALog "Mode: $Mode | Company: $CompanyName" -Level "INFO"
 
     Initialize-MandAEnvironmentInternal -Configuration $script:CurrentConfig -CurrentMode $Mode -IsValidateOnlyMode:$ValidateOnly
@@ -509,7 +522,7 @@ try {
                 $isConnected = if ($serviceStat -is [bool]) { $serviceStat } elseif ($serviceStat -is [hashtable] -and $serviceStat.ContainsKey('Connected')) { $serviceStat.Connected } else { $false }
             }
             if (-not $isConnected) { 
-                Write-MandALog "CRITICAL: Required service '$serviceName' failed to connect." -Level ERROR
+                Write-MandALog "Required service '$serviceName' failed to connect." -Level ERROR
                 $criticalFailure = $true 
             }
             else { 
@@ -536,9 +549,9 @@ try {
 } 
 catch {
     # FIXED: Changed from -Level "CRITICAL" to -Level "ERROR"
-    Write-MandALog "ORCHESTRATOR ERROR: $($_.Exception.Message)" -Level "ERROR" -Configuration $script:CurrentConfig
+    Write-MandALog "ORCHESTRATOR ERROR: $($_.Exception.Message)" -Level "ERROR"
     if ($_.ScriptStackTrace) { 
-        Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG" -Configuration $script:CurrentConfig
+        Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG"
     }
     if ($Host.Name -eq "ConsoleHost") { 
         $Host.SetShouldExit(1)
@@ -548,14 +561,14 @@ catch {
     }
 } 
 finally {
-    Write-MandALog "Performing cleanup..." -Level INFO -Configuration $script:CurrentConfig
+    Write-MandALog "Performing cleanup..." -Level INFO
     if (Get-Command 'Disconnect-AllServices' -ErrorAction SilentlyContinue) {
         try { 
             Disconnect-AllServices 
         } catch { 
-            Write-MandALog "WARN: Error during service disconnection: $($_.Exception.Message)" -Level WARN -Configuration $script:CurrentConfig
+            Write-MandALog "WARN: Error during service disconnection: $($_.Exception.Message)" -Level WARN
         }
     }
-    Write-MandALog "Orchestrator execution completed at $(Get-Date)" -Level INFO -Configuration $script:CurrentConfig
+    Write-MandALog "Orchestrator execution completed at $(Get-Date)" -Level INFO
     $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
 }
