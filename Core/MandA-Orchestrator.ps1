@@ -130,7 +130,7 @@ function Initialize-MandAEnvironmentInternal {
             $moduleCheckScriptPath = $global:MandA.Paths.ModuleCheckScript
             if (Test-Path $moduleCheckScriptPath -PathType Leaf) {
                 try { 
-                    & $moduleCheckScriptPath -Silent -ErrorAction Stop
+                    & $moduleCheckScriptPath  -ErrorAction Stop
                     $global:MandA.ModulesChecked = $true 
                 }
                 catch { 
