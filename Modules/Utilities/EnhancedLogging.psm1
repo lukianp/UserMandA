@@ -3,6 +3,12 @@
     Enhanced logging with improved visual output for M&A Discovery Suite
 .DESCRIPTION
     Provides structured logging with enhanced visual indicators, emojis, and better formatting
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 # Global logging configuration

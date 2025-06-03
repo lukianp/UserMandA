@@ -4,8 +4,11 @@
 .DESCRIPTION
     Provides consistent error handling, retry logic, and recovery mechanisms
 .NOTES
-    Version: 1.1.0
-    Updated to support company-specific directory structures
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 function Invoke-WithRetry {

@@ -3,6 +3,12 @@
     Exchange Online discovery for M&A Discovery Suite
 .DESCRIPTION
     Discovers Exchange Online mailboxes, distribution groups, permissions, and configurations
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 function Invoke-ExchangeDiscovery {

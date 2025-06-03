@@ -7,8 +7,11 @@
     It collects detailed information using Microsoft Graph and exports it to CSV files.
     Fixed version with corrected Export-DataToCSV calls and optional Policies module.
 .NOTES
-    Version: 2.0.0 (Fixed)
-    Date: 2025-06-02
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 # --- Helper Functions ---

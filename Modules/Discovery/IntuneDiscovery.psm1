@@ -1,7 +1,15 @@
-# Module: IntuneDiscovery.psm1
-# Description: Handles discovery of Intune (Microsoft Endpoint Manager) entities via Microsoft Graph.
-# Version: 1.2.0 (Added Device Software Inventory)
-# Date: 2025-05-31
+<#
+.SYNOPSIS
+    Handles discovery of Intune (Microsoft Endpoint Manager) entities via Microsoft Graph.
+.DESCRIPTION
+    Discovers Intune managed devices, device configurations, compliance policies, and managed apps
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
+#>
 
 #Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.DeviceManagement, Microsoft.Graph.Beta.DeviceManagement # DetectedApps often requires Beta
 

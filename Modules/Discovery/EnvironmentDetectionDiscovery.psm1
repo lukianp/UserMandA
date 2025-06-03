@@ -5,8 +5,11 @@
     Detects the type of environment (Cloud-only, Hybrid, On-prem only) and gathers
     environment configuration information including AD Connect status and identity mapping.
 .NOTES
-    Version: 2.0.0 (Fixed - Added Invoke function)
-    Date: 2025-06-02
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 #Requires -Modules ActiveDirectory
