@@ -13,8 +13,8 @@
         "tempPath": "C:\\MandADiscovery\\Temp",
         "logLevel": "INFO",
         "maxRetries": 3,
-        "domainController": "ad.zedra.com",
-        "globalCatalog": "ad.zedra.com",
+        "domainController": "ad.z.com",
+        "globalCatalog": "ad.z.com",
         "logging": {
             "useEmojis": true,
             "useColors": true,
