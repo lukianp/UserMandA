@@ -7,9 +7,9 @@
     credential management, status indicators, optimized module checking, and debug capabilities.
     This version fully implements all menu options, including Processing and Export phases.
 .NOTES
-    Version: 5.3.0
+    Version: 5.4.0
     Author: Enhanced Version with Complete Functionality
-    Date: 2025-06-02
+    Date: 2025-06-03
 #>
 
 [CmdletBinding()]
@@ -119,15 +119,52 @@ function Test-Administrator {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+function Get-ExistingCompanies {
+    $companies = @()
+    
+    # Check if profiles base path exists
+    $profilesBasePath = Join-Path $PSScriptRoot "Profiles"
+    if (Test-Path $profilesBasePath -PathType Container) {
+        $companyDirs = Get-ChildItem -Path $profilesBasePath -Directory -ErrorAction SilentlyContinue
+        foreach ($dir in $companyDirs) {
+            $companies += $dir.Name
+        }
+    }
+    
+    return $companies | Sort-Object
+}
+
 function Initialize-Environment {
+    # Check for existing companies
+    $existingCompanies = Get-ExistingCompanies
+    
     # Prompt for CompanyName if not provided
     if ([string]::IsNullOrWhiteSpace($CompanyName)) {
-        Write-Host "`nPlease enter the Company Name for this session (e.g., Contoso, Fabrikam):" -ForegroundColor Yellow
+        Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+        
+        if ($existingCompanies.Count -gt 0) {
+            Write-Host "`n📁 EXISTING COMPANIES FOUND:" -ForegroundColor Yellow
+            Write-Host "===========================" -ForegroundColor Yellow
+            foreach ($company in $existingCompanies) {
+                Write-Host "  • $company" -ForegroundColor Cyan
+            }
+            Write-Host "`nYou can enter one of the above or create a new company profile." -ForegroundColor Gray
+        }
+        
+        Write-Host "`nPlease enter the Company Name for this session:" -ForegroundColor Yellow
         $script:CompanyName = (Read-Host).Trim()
         if ([string]::IsNullOrWhiteSpace($script:CompanyName)) {
             Write-Error "CompanyName cannot be empty. Exiting."
             exit 1
         }
+        
+        if ($existingCompanies -contains $script:CompanyName) {
+            Write-Host "✓ Using existing company profile: $($script:CompanyName)" -ForegroundColor Green
+        } else {
+            Write-Host "✓ Creating new company profile: $($script:CompanyName)" -ForegroundColor Green
+        }
+        
+        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
     } else {
         $script:CompanyName = $CompanyName
     }
@@ -139,7 +176,7 @@ function Initialize-Environment {
         $global:MandA = @{
             Paths = @{}
             Config = @{}
-            Version = "5.3.0"
+            Version = "5.4.0"
             StartTime = Get-Date
             ModulesChecked = $false
         }
@@ -233,7 +270,7 @@ function Show-MainMenu {
 
     Clear-Host
     Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║           M&A DISCOVERY SUITE - MAIN MENU v5.3.0                     ║" -ForegroundColor Cyan
+    Write-Host "║           M&A DISCOVERY SUITE - MAIN MENU v5.4.0                     ║" -ForegroundColor Cyan
     Write-Host "║                  Company: $($script:CompanyName)                     " -ForegroundColor Yellow
     if ($script:DebugModeEnabled) {
         Write-Host "║                  🔧 DEBUG MODE ENABLED 🔧                            " -ForegroundColor Magenta
@@ -255,14 +292,19 @@ function Show-MainMenu {
     Write-Host "  [5] Run Processing Phase Only (requires existing discovery data)"
     Write-Host "  [6] Run Export Phase Only (requires processed data)"
 
+    Write-Host "`n  SPECIALIZED EXPORTS" -ForegroundColor Blue
+    Write-Host "  ===================" -ForegroundColor Blue
+    Write-Host "  [7] Generate Company Control Sheet (CSV/Excel format)"
+    Write-Host "  [8] Generate PowerApps Export (JSON format)"
+
     Write-Host "`n  UTILITIES & MAINTENANCE" -ForegroundColor Magenta
     Write-Host "  =======================" -ForegroundColor Magenta
-    Write-Host "  [7] Update/Replace Stored Credentials"
-    Write-Host "  [8] Verify Module Dependencies"
-    Write-Host "  [9] Test Service Connections"
-    Write-Host "  [10] View Configuration Settings"
-    Write-Host "  [11] Clear Existing Data Files"
-    Write-Host "  [12] Generate Sample Report"
+    Write-Host "  [9] Update/Replace Stored Credentials"
+    Write-Host "  [10] Verify Module Dependencies"
+    Write-Host "  [11] Test Service Connections"
+    Write-Host "  [12] View Configuration Settings"
+    Write-Host "  [13] Clear Existing Data Files"
+    Write-Host "  [14] Generate Sample Report"
 
     Write-Host "`n  DEBUG & DEVELOPMENT" -ForegroundColor Red
     Write-Host "  ===================" -ForegroundColor Red
@@ -330,6 +372,11 @@ function Show-DebugMenu {
     Write-Host "  [12] Teams Discovery"
     Write-Host "  [13] Network Infrastructure Discovery (if available)"
     Write-Host "  [14] SQL Server Discovery (if available)"
+
+    Write-Host "`n  SPECIALIZED EXPORTS (DEBUG)" -ForegroundColor Blue
+    Write-Host "  ===========================" -ForegroundColor Blue
+    Write-Host "  [15] Generate Company Control Sheet (Direct Module Call)"
+    Write-Host "  [16] Generate PowerApps Export (Direct Module Call)"
 
     Write-Host "`n  DEBUG UTILITIES" -ForegroundColor Magenta
     Write-Host "  ===============" -ForegroundColor Magenta
@@ -535,6 +582,308 @@ function Start-LoadAllModules {
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
+function Start-ModuleWithCustomConfig {
+    Clear-Host
+    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║                RUN MODULE WITH CUSTOM CONFIG                          ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+
+    # List available modules
+    $modules = Get-DiscoveryModules
+    Write-Host "`nAvailable Discovery Modules:" -ForegroundColor Yellow
+    $i = 1
+    foreach ($module in $modules) {
+        Write-Host "  [$i] $($module.Name)" -ForegroundColor Cyan
+        $i++
+    }
+    
+    Write-Host "`nSelect module number: " -ForegroundColor White -NoNewline
+    $moduleSelection = Read-Host
+    
+    try {
+        $selectedIndex = [int]$moduleSelection - 1
+        if ($selectedIndex -lt 0 -or $selectedIndex -ge $modules.Count) {
+            Write-Host "Invalid selection" -ForegroundColor Red
+            Start-Sleep -Seconds 2
+            return
+        }
+        
+        $selectedModule = $modules[$selectedIndex]
+        
+        # Ask for config file path
+        Write-Host "`nEnter path to custom config JSON file (or press Enter for default): " -ForegroundColor Yellow -NoNewline
+        $customConfigPath = Read-Host
+        
+        if ([string]::IsNullOrWhiteSpace($customConfigPath)) {
+            $config = $global:MandA.Config
+            Write-Host "Using current configuration" -ForegroundColor Gray
+        } else {
+            if (-not (Test-Path $customConfigPath -PathType Leaf)) {
+                Write-Host "Config file not found: $customConfigPath" -ForegroundColor Red
+                Start-Sleep -Seconds 2
+                return
+            }
+            
+            Write-Host "Loading custom configuration..." -ForegroundColor Yellow
+            $configContent = Get-Content $customConfigPath -Raw | ConvertFrom-Json
+            
+            # Convert to hashtable
+            $config = @{}
+            foreach ($prop in $configContent.PSObject.Properties) {
+                $config[$prop.Name] = $prop.Value
+            }
+        }
+        
+        # Load and run the module
+        Import-Module $selectedModule.FullPath -Force -Global -ErrorAction Stop
+        
+        $functionName = "Invoke-$($selectedModule.Name)Discovery"
+        if (Get-Command $functionName -ErrorAction SilentlyContinue) {
+            Write-Host "`nRunning $functionName with custom config..." -ForegroundColor Cyan
+            $result = & $functionName -Configuration $config -ErrorAction Stop
+            
+            Write-Host "`n✓ Module completed successfully" -ForegroundColor Green
+            
+            if ($result) {
+                Write-Host "`nResults:" -ForegroundColor Yellow
+                $result | ConvertTo-Json -Depth 2 | Write-Host -ForegroundColor Cyan
+            }
+        }
+        
+    } catch {
+        Write-Host "`n✗ Error: $($_.Exception.Message)" -ForegroundColor Red
+    }
+    
+    Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Export-DebugInformation {
+    Clear-Host
+    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║                    EXPORT DEBUG INFORMATION                           ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+
+    Write-Host "`n📋 Collecting debug information..." -ForegroundColor Yellow
+    
+    $debugPath = Join-Path $global:MandA.Paths.CompanyProfileRoot "Debug"
+    if (-not (Test-Path $debugPath)) {
+        New-Item -Path $debugPath -ItemType Directory -Force | Out-Null
+    }
+    
+    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+    $debugFile = Join-Path $debugPath "DebugInfo_$timestamp.json"
+    
+    $debugInfo = @{
+        Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        Company = $script:CompanyName
+        Environment = @{
+            PSVersion = $PSVersionTable.PSVersion.ToString()
+            OSVersion = [System.Environment]::OSVersion.ToString()
+            Username = $env:USERNAME
+            ComputerName = $env:COMPUTERNAME
+            IsAdmin = Test-Administrator
+        }
+        GlobalContext = $global:MandA
+        LoadedModules = @(Get-Module | Where-Object { $_.Path -like "*MandA*" } | Select-Object Name, Version, Path)
+        ConnectionStatus = $script:ConnectionStatus
+        Configuration = if ($global:MandA.Config) { $global:MandA.Config } else { @{} }
+        Paths = @{
+            CompanyProfileRoot = $global:MandA.Paths.CompanyProfileRoot
+            RawData = $global:MandA.Paths.RawDataOutput
+            ProcessedData = $global:MandA.Paths.ProcessedDataOutput
+            Logs = $global:MandA.Paths.LogOutput
+        }
+        DataFiles = @{
+            Raw = if (Test-Path $global:MandA.Paths.RawDataOutput) { 
+                @(Get-ChildItem -Path $global:MandA.Paths.RawDataOutput -Filter "*.csv" | Select-Object Name, Length, LastWriteTime)
+            } else { @() }
+            Processed = if (Test-Path $global:MandA.Paths.ProcessedDataOutput) { 
+                @(Get-ChildItem -Path $global:MandA.Paths.ProcessedDataOutput -Filter "*.csv" | Select-Object Name, Length, LastWriteTime)
+            } else { @() }
+        }
+        ErrorLog = @($Error | Select-Object -First 10 | ForEach-Object { 
+            @{
+                Message = $_.Exception.Message
+                Category = $_.CategoryInfo.Category
+                Script = $_.InvocationInfo.ScriptName
+                Line = $_.InvocationInfo.ScriptLineNumber
+            }
+        })
+    }
+    
+    try {
+        $debugInfo | ConvertTo-Json -Depth 10 | Set-Content -Path $debugFile -Encoding UTF8
+        Write-Host "`n✅ Debug information exported successfully!" -ForegroundColor Green
+        Write-Host "   Location: $debugFile" -ForegroundColor Gray
+        
+        # Also create a simplified text report
+        $textFile = Join-Path $debugPath "DebugInfo_$timestamp.txt"
+        $textContent = @"
+M&A Discovery Suite - Debug Information
+=======================================
+Generated: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+Company: $($script:CompanyName)
+
+ENVIRONMENT:
+- PowerShell Version: $($PSVersionTable.PSVersion.ToString())
+- OS: $([System.Environment]::OSVersion.ToString())
+- User: $env:USERNAME@$env:COMPUTERNAME
+- Running as Admin: $(Test-Administrator)
+
+PATHS:
+- Company Profile: $($global:MandA.Paths.CompanyProfileRoot)
+- Raw Data: $($global:MandA.Paths.RawDataOutput)
+- Processed Data: $($global:MandA.Paths.ProcessedDataOutput)
+- Logs: $($global:MandA.Paths.LogOutput)
+
+DATA FILES:
+- Raw CSV Files: $(if (Test-Path $global:MandA.Paths.RawDataOutput) { @(Get-ChildItem -Path $global:MandA.Paths.RawDataOutput -Filter "*.csv").Count } else { 0 })
+- Processed CSV Files: $(if (Test-Path $global:MandA.Paths.ProcessedDataOutput) { @(Get-ChildItem -Path $global:MandA.Paths.ProcessedDataOutput -Filter "*.csv").Count } else { 0 })
+
+CONNECTION STATUS:
+- Credentials: $($script:ConnectionStatus.Credentials)
+- Azure AD: $($script:ConnectionStatus.AzureAD)
+- Exchange: $($script:ConnectionStatus.Exchange)
+- SharePoint: $($script:ConnectionStatus.SharePoint)
+- Teams: $($script:ConnectionStatus.Teams)
+
+RECENT ERRORS: $(if ($Error.Count -gt 0) { "`n" + ($Error | Select-Object -First 5 | ForEach-Object { "- $($_.Exception.Message)" }) -join "`n" } else { "None" })
+"@
+        
+        $textContent | Set-Content -Path $textFile -Encoding UTF8
+        Write-Host "   Text report: $textFile" -ForegroundColor Gray
+        
+    } catch {
+        Write-Host "`n✗ Failed to export debug information: $($_.Exception.Message)" -ForegroundColor Red
+    }
+    
+    Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Invoke-DebugCompanyControlSheet {
+    Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Blue
+    Write-Host "         DEBUG: Direct Company Control Sheet Generation                " -ForegroundColor Blue
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Blue
+
+    try {
+        # Load required modules
+        $exportModule = Join-Path $global:MandA.Paths.Export "CompanyControlSheetExporter.psm1"
+        if (-not (Test-Path $exportModule)) {
+            Write-Host "✗ CompanyControlSheetExporter.psm1 not found!" -ForegroundColor Red
+            Start-Sleep -Seconds 2
+            return
+        }
+        
+        Import-Module $exportModule -Force -Global -ErrorAction Stop
+        Write-Host "✓ Loaded CompanyControlSheetExporter module" -ForegroundColor Green
+        
+        # Check for processed data
+        $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
+        if (-not (Test-Path $processedDataPath)) {
+            Write-Host "✗ No processed data directory found!" -ForegroundColor Red
+            Start-Sleep -Seconds 2
+            return
+        }
+        
+        # Load processed data
+        Write-Host "`nLoading processed data..." -ForegroundColor Yellow
+        $processedData = @{}
+        
+        $csvFiles = Get-ChildItem -Path $processedDataPath -Filter "*.csv" -File
+        foreach ($file in $csvFiles) {
+            $dataKey = $file.BaseName
+            Write-Host "  Loading $($file.Name)..." -ForegroundColor Gray
+            $processedData[$dataKey] = Import-Csv -Path $file.FullName
+        }
+        
+        if ($processedData.Count -eq 0) {
+            Write-Host "✗ No processed data found to export!" -ForegroundColor Red
+            Start-Sleep -Seconds 2
+            return
+        }
+        
+        Write-Host "`nLoaded $($processedData.Count) data sets" -ForegroundColor Green
+        
+        # Call the export function
+        Write-Host "`nGenerating Company Control Sheet..." -ForegroundColor Cyan
+        Export-ToCompanyControlSheet -ProcessedData $processedData -Configuration $global:MandA.Config
+        
+        Write-Host "`n✓ Company Control Sheet generation completed!" -ForegroundColor Green
+        Write-Host "   Check: $(Join-Path $global:MandA.Paths.CompanyProfileRoot 'CompanyControlSheetCSVs')" -ForegroundColor Gray
+        
+    } catch {
+        Write-Host "`n✗ Error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Stack trace:" -ForegroundColor Yellow
+        Write-Host $_.ScriptStackTrace -ForegroundColor Gray
+    }
+    
+    Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Invoke-DebugPowerAppsExport {
+    Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Blue
+    Write-Host "           DEBUG: Direct PowerApps Export Generation                   " -ForegroundColor Blue
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Blue
+
+    try {
+        # Load required modules
+        $exportModule = Join-Path $global:MandA.Paths.Export "PowerAppsExporter.psm1"
+        if (-not (Test-Path $exportModule)) {
+            Write-Host "✗ PowerAppsExporter.psm1 not found!" -ForegroundColor Red
+            Start-Sleep -Seconds 2
+            return
+        }
+        
+        Import-Module $exportModule -Force -Global -ErrorAction Stop
+        Write-Host "✓ Loaded PowerAppsExporter module" -ForegroundColor Green
+        
+        # Check for processed data
+        $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
+        if (-not (Test-Path $processedDataPath)) {
+            Write-Host "✗ No processed data directory found!" -ForegroundColor Red
+            Start-Sleep -Seconds 2
+            return
+        }
+        
+        # Load processed data
+        Write-Host "`nLoading processed data..." -ForegroundColor Yellow
+        $processedData = @{}
+        
+        $csvFiles = Get-ChildItem -Path $processedDataPath -Filter "*.csv" -File
+        foreach ($file in $csvFiles) {
+            $dataKey = $file.BaseName
+            Write-Host "  Loading $($file.Name)..." -ForegroundColor Gray
+            $processedData[$dataKey] = Import-Csv -Path $file.FullName
+        }
+        
+        if ($processedData.Count -eq 0) {
+            Write-Host "✗ No processed data found to export!" -ForegroundColor Red
+            Start-Sleep -Seconds 2
+            return
+        }
+        
+        Write-Host "`nLoaded $($processedData.Count) data sets" -ForegroundColor Green
+        
+        # Call the export function
+        Write-Host "`nGenerating PowerApps Export..." -ForegroundColor Cyan
+        Export-ForPowerApps -ProcessedData $processedData -Configuration $global:MandA.Config
+        
+        Write-Host "`n✓ PowerApps export generation completed!" -ForegroundColor Green
+        Write-Host "   Check: $(Join-Path $global:MandA.Paths.CompanyProfileRoot 'Processed\PowerApps')" -ForegroundColor Gray
+        
+    } catch {
+        Write-Host "`n✗ Error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Stack trace:" -ForegroundColor Yellow
+        Write-Host $_.ScriptStackTrace -ForegroundColor Gray
+    }
+    
+    Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
 #endregion
 
 #region Credential Management Functions
@@ -712,9 +1061,6 @@ function Start-DiscoveryOnly {
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
-
-
-
 function Start-ProcessingOnly {
     Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
     Write-ColoredLog "                   STARTING PROCESSING PHASE ONLY                      " -Level "HEADER"
@@ -723,6 +1069,17 @@ function Start-ProcessingOnly {
     # Start transcript to capture everything
     $transcriptPath = Join-Path $global:MandA.Paths.CompanyProfileRoot "Processing_Transcript_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
     Write-Host "`nStarting transcript at: $transcriptPath" -ForegroundColor Yellow
+    Write-Host "`nDEBUG: Transcript started. All output will be captured." -ForegroundColor Green
+Write-Host "DEBUG: Current verbosity settings:" -ForegroundColor Yellow
+Write-Host "  VerbosePreference: $VerbosePreference" -ForegroundColor Gray
+Write-Host "  DebugPreference: $DebugPreference" -ForegroundColor Gray
+ 
+$oldVerbose = $VerbosePreference
+$oldDebug = $DebugPreference
+$VerbosePreference = "Continue"
+$DebugPreference = "Continue"
+$global:MandA.ModulesChecked = $true
+    
     Start-Transcript -Path $transcriptPath -Force
 
     try {
@@ -831,6 +1188,9 @@ function Start-ProcessingOnly {
         Write-Host "`nFull Exception Details:" -ForegroundColor Red
         Write-Host $_.Exception | Format-List -Force | Out-String
     } finally {
+
+    $VerbosePreference = $oldVerbose
+    $DebugPreference = $oldDebug
         if ($global:MandA) { $global:MandA.OrchestratorRunCount = 0 }
         
         # Stop transcript
@@ -857,10 +1217,6 @@ function Start-ProcessingOnly {
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
 }
-
-
-
-
 
 function Start-ExportOnly {
     Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
@@ -921,6 +1277,203 @@ function Start-ExportOnly {
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
+}
+
+function Start-CompanyControlSheetGeneration {
+    Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+    Write-ColoredLog "             GENERATING COMPANY CONTROL SHEET (CSV/EXCEL)              " -Level "HEADER"
+    Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+
+    # Check if processed data exists
+    $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
+    if (-not (Test-Path $processedDataPath -PathType Container)) {
+        Write-ColoredLog "`n❌ No processed data directory found: $processedDataPath" -Level "ERROR"
+        Write-ColoredLog "   Please run Discovery and Processing phases first." -Level "ERROR"
+        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
+    }
+
+    $csvFiles = Get-ChildItem -Path $processedDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
+    if ($null -eq $csvFiles -or $csvFiles.Count -eq 0) {
+        Write-ColoredLog "`n❌ No processed data files found." -Level "ERROR"
+        Write-ColoredLog "   Please run Discovery and Processing phases first." -Level "ERROR"
+        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
+    }
+
+    Write-ColoredLog "`n✅ Found $($csvFiles.Count) processed data files." -Level "SUCCESS"
+
+    try {
+        # Load the Company Control Sheet exporter module
+        $exportModule = Join-Path $global:MandA.Paths.Export "CompanyControlSheetExporter.psm1"
+        if (-not (Test-Path $exportModule)) {
+            throw "CompanyControlSheetExporter.psm1 not found at: $exportModule"
+        }
+        
+        Import-Module $exportModule -Force -Global -ErrorAction Stop
+        Write-ColoredLog "✓ Loaded Company Control Sheet Exporter module" -Level "SUCCESS"
+        
+        # Load processed data
+        Write-ColoredLog "`nLoading processed data..." -Level "INFO"
+        $processedData = @{}
+        
+        foreach ($file in $csvFiles) {
+            $dataKey = $file.BaseName
+            Write-Host "  Loading $($file.Name)..." -ForegroundColor Gray
+            try {
+                $processedData[$dataKey] = Import-Csv -Path $file.FullName -ErrorAction Stop
+                Write-Host "    ✓ Loaded $($processedData[$dataKey].Count) records" -ForegroundColor Green
+            } catch {
+                Write-Host "    ✗ Failed to load: $($_.Exception.Message)" -ForegroundColor Red
+            }
+        }
+        
+        if ($processedData.Count -eq 0) {
+            throw "Failed to load any processed data"
+        }
+        
+        Write-ColoredLog "`n📊 Generating Company Control Sheet..." -Level "INFO"
+        
+        # Call the export function
+        Export-ToCompanyControlSheet -ProcessedData $processedData -Configuration $global:MandA.Config
+        
+        $outputPath = Join-Path $global:MandA.Paths.CompanyProfileRoot "CompanyControlSheetCSVs"
+        Write-ColoredLog "`n✅ Company Control Sheet generated successfully!" -Level "SUCCESS"
+        Write-ColoredLog "   Output location: $outputPath" -Level "INFO"
+        
+        # List the generated files
+        if (Test-Path $outputPath) {
+            $generatedFiles = Get-ChildItem -Path $outputPath -Filter "*.csv" -File
+            if ($generatedFiles) {
+                Write-Host "`nGenerated files:" -ForegroundColor Yellow
+                foreach ($file in $generatedFiles) {
+                    Write-Host "  • $($file.Name) ($('{0:N0}' -f $file.Length) bytes)" -ForegroundColor Cyan
+                }
+            }
+        }
+        
+        # Offer to open the directory
+        Write-Host "`nWould you like to open the output directory? (Y/N): " -ForegroundColor Yellow -NoNewline
+        $openDir = Read-Host
+        if ($openDir -eq 'Y' -or $openDir -eq 'y') {
+            Start-Process explorer.exe -ArgumentList $outputPath
+        }
+        
+    } catch {
+        Write-ColoredLog "`n❌ Error generating Company Control Sheet: $($_.Exception.Message)" -Level "ERROR"
+        Write-ColoredLog "   Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG"
+    }
+    
+    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Start-PowerAppsExportGeneration {
+    Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+    Write-ColoredLog "                GENERATING POWERAPPS EXPORT (JSON)                     " -Level "HEADER"
+    Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+
+    # Check if processed data exists
+    $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
+    if (-not (Test-Path $processedDataPath -PathType Container)) {
+        Write-ColoredLog "`n❌ No processed data directory found: $processedDataPath" -Level "ERROR"
+        Write-ColoredLog "   Please run Discovery and Processing phases first." -Level "ERROR"
+        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
+    }
+
+    $csvFiles = Get-ChildItem -Path $processedDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
+    if ($null -eq $csvFiles -or $csvFiles.Count -eq 0) {
+        Write-ColoredLog "`n❌ No processed data files found." -Level "ERROR"
+        Write-ColoredLog "   Please run Discovery and Processing phases first." -Level "ERROR"
+        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
+    }
+
+    Write-ColoredLog "`n✅ Found $($csvFiles.Count) processed data files." -Level "SUCCESS"
+
+    try {
+        # Load the PowerApps exporter module
+        $exportModule = Join-Path $global:MandA.Paths.Export "PowerAppsExporter.psm1"
+        if (-not (Test-Path $exportModule)) {
+            throw "PowerAppsExporter.psm1 not found at: $exportModule"
+        }
+        
+        Import-Module $exportModule -Force -Global -ErrorAction Stop
+        Write-ColoredLog "✓ Loaded PowerApps Exporter module" -Level "SUCCESS"
+        
+        # Load processed data
+        Write-ColoredLog "`nLoading processed data..." -Level "INFO"
+        $processedData = @{}
+        
+        foreach ($file in $csvFiles) {
+            $dataKey = $file.BaseName
+            Write-Host "  Loading $($file.Name)..." -ForegroundColor Gray
+            try {
+                $processedData[$dataKey] = Import-Csv -Path $file.FullName -ErrorAction Stop
+                Write-Host "    ✓ Loaded $($processedData[$dataKey].Count) records" -ForegroundColor Green
+            } catch {
+                Write-Host "    ✗ Failed to load: $($_.Exception.Message)" -ForegroundColor Red
+            }
+        }
+        
+        if ($processedData.Count -eq 0) {
+            throw "Failed to load any processed data"
+        }
+        
+        Write-ColoredLog "`n📱 Generating PowerApps Export..." -Level "INFO"
+        
+        # Call the export function
+        $result = Export-ForPowerApps -ProcessedData $processedData -Configuration $global:MandA.Config
+        
+        $outputPath = Join-Path $global:MandA.Paths.CompanyProfileRoot "Processed\PowerApps"
+        
+        if ($result) {
+            Write-ColoredLog "`n✅ PowerApps export generated successfully!" -Level "SUCCESS"
+            Write-ColoredLog "   Output location: $outputPath" -Level "INFO"
+            
+            # List the generated files
+            if (Test-Path $outputPath) {
+                $generatedFiles = Get-ChildItem -Path $outputPath -Filter "*.json" -File
+                if ($generatedFiles) {
+                    Write-Host "`nGenerated JSON files:" -ForegroundColor Yellow
+                    foreach ($file in $generatedFiles) {
+                        Write-Host "  • $($file.Name) ($('{0:N0}' -f $file.Length) bytes)" -ForegroundColor Cyan
+                    }
+                }
+            }
+            
+            # Show instructions
+            Write-Host "`n📱 POWERAPPS INTEGRATION INSTRUCTIONS:" -ForegroundColor Yellow
+            Write-Host "=====================================" -ForegroundColor Yellow
+            Write-Host "1. Upload all JSON files to a data source accessible by PowerApps"
+            Write-Host "   (e.g., SharePoint Document Library, Azure Blob Storage)"
+            Write-Host "2. In PowerApps, use the ParseJSON() function to load the data"
+            Write-Host "3. Start with 'powerapps_index.json' to verify all files are available"
+            Write-Host "4. Load each JSON file into collections for app-wide access"
+            Write-Host ""
+            
+            # Offer to open the directory
+            Write-Host "Would you like to open the output directory? (Y/N): " -ForegroundColor Yellow -NoNewline
+            $openDir = Read-Host
+            if ($openDir -eq 'Y' -or $openDir -eq 'y') {
+                Start-Process explorer.exe -ArgumentList $outputPath
+            }
+        } else {
+            Write-ColoredLog "`n❌ PowerApps export failed!" -Level "ERROR"
+        }
+        
+    } catch {
+        Write-ColoredLog "`n❌ Error generating PowerApps export: $($_.Exception.Message)" -Level "ERROR"
+        Write-ColoredLog "   Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG"
+    }
+    
+    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
 function Show-AzureADAppGuide {
@@ -1422,7 +1975,7 @@ Clear-Host
 Write-Host @"
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                                                                          ║
-║                    M&A DISCOVERY SUITE v5.3.0                            ║
+║                    M&A DISCOVERY SUITE v5.4.0                            ║
 ║                                                                          ║
 ║            Comprehensive Infrastructure Discovery Tool                    ║
 ║                                                                          ║
@@ -1456,12 +2009,14 @@ do {
         }
         '5' { Start-ProcessingOnly }
         '6' { Start-ExportOnly }
-        '7' { Show-CredentialSetupMenu }
-        '8' { Invoke-ModuleCheck }
-        '9' { Test-ServiceConnections }
-        '10' { Show-ConfigurationSettings }
-        '11' { Clear-ExistingDataFiles }
-        '12' { New-SampleReport }
+        '7' { Start-CompanyControlSheetGeneration }
+        '8' { Start-PowerAppsExportGeneration }
+        '9' { Show-CredentialSetupMenu }
+        '10' { Invoke-ModuleCheck }
+        '11' { Test-ServiceConnections }
+        '12' { Show-ConfigurationSettings }
+        '13' { Clear-ExistingDataFiles }
+        '14' { New-SampleReport }
         {$_ -eq 'D' -or $_ -eq 'd'} {
             # Debug menu
             $inDebugMenu = $true
@@ -1484,6 +2039,8 @@ do {
                     '12' { Invoke-DebugDiscoveryModule -ModuleName "Teams" }
                     '13' { Invoke-DebugDiscoveryModule -ModuleName "NetworkInfrastructure" }
                     '14' { Invoke-DebugDiscoveryModule -ModuleName "SQLServer" }
+                    '15' { Invoke-DebugCompanyControlSheet }
+                    '16' { Invoke-DebugPowerAppsExport }
                     '20' { 
                         Clear-Host
                         Write-Host "Available Discovery Modules:" -ForegroundColor Yellow
@@ -1504,8 +2061,8 @@ do {
                     '23' { Test-ServiceConnections }
                     '24' { Start-LoadAllModules }
                     '25' { Show-GlobalContext }
-                    '26' { Write-ColoredLog "`n⚠️  Custom config runner coming soon" -Level "WARN"; Start-Sleep -Seconds 1 }
-                    '27' { Write-ColoredLog "`n⚠️  Debug export coming soon" -Level "WARN"; Start-Sleep -Seconds 1 }
+                    '26' { Start-ModuleWithCustomConfig }
+                    '27' { Export-DebugInformation }
                     '30' { 
                         if ($VerbosePreference -eq 'Continue') { 
                             $VerbosePreference = 'SilentlyContinue'
@@ -1562,4 +2119,3 @@ do {
 } while ($selection -ne 'Q' -and $selection -ne 'q')
 
 #endregion
-
