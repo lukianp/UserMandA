@@ -1,0 +1,48 @@
+# Test script to verify Setup-AppRegistration.ps1 syntax and basic functionality
+param(
+    [switch]$TestSyntax,
+    [switch]$TestFunctions
+)
+
+Write-Host "Testing M&A Discovery Suite App Registration Script..." -ForegroundColor Cyan
+
+if ($TestSyntax) {
+    Write-Host "Checking PowerShell syntax..." -ForegroundColor Yellow
+    try {
+        $errors = $null
+        $tokens = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile("$PSScriptRoot\Setup-AppRegistration.ps1", [ref]$tokens, [ref]$errors)
+        
+        if ($errors.Count -eq 0) {
+            Write-Host "✅ Syntax check passed - no errors found" -ForegroundColor Green
+        } else {
+            Write-Host "❌ Syntax errors found:" -ForegroundColor Red
+            $errors | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
+        }
+    } catch {
+        Write-Host "❌ Syntax check failed: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+if ($TestFunctions) {
+    Write-Host "Testing function definitions..." -ForegroundColor Yellow
+    try {
+        # Load the script content without executing
+        $scriptContent = Get-Content "$PSScriptRoot\Setup-AppRegistration.ps1" -Raw
+        
+        # Count functions
+        $functionMatches = [regex]::Matches($scriptContent, 'function\s+([A-Za-z0-9-_]+)')
+        Write-Host "✅ Found $($functionMatches.Count) function definitions:" -ForegroundColor Green
+        
+        $functionMatches | ForEach-Object {
+            Write-Host "  - $($_.Groups[1].Value)" -ForegroundColor Cyan
+        }
+        
+    } catch {
+        Write-Host "❌ Function analysis failed: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+Write-Host "`nTest completed!" -ForegroundColor Green
+Write-Host "To run the actual app registration script:" -ForegroundColor Yellow
+Write-Host "  .\Scripts\Setup-AppRegistration.ps1 -TenantId 'your-tenant-id' -ValidateOnly" -ForegroundColor White
