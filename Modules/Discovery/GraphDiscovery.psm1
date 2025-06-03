@@ -1,7 +1,16 @@
-# Module: GraphDiscovery.psm1
-# Description: Handles discovery of Microsoft Graph entities.
-# Version: 1.2.0 (Error handling and pagination improvements)
-# Date: 2025-05-31
+<#
+.SYNOPSIS
+    Handles discovery of Microsoft Graph entities for M&A Discovery Suite
+.DESCRIPTION
+    This module provides comprehensive Microsoft Graph discovery capabilities
+    including users, groups, applications, and other Graph entities.
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
+#>
 
 #Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Users, Microsoft.Graph.Groups 
 # Add other Microsoft.Graph.* modules as needed by specific internal functions

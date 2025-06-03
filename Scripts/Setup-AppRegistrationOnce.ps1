@@ -71,10 +71,11 @@
 #     - Network connectivity to Microsoft Graph, Azure, and Exchange Online endpoints
 #
 # NOTES
-#     Author: Enhanced M&A Discovery Suite
-#     Version: 5.3.1
-#     Created: 2025
-#     Last Modified: 2025-05-30
+#     Author: Lukian Poleschtschuk
+#     Version: 1.0.0
+#     Created: 2025-06-03
+#     Last Modified: 2025-06-03
+#     Change Log: Initial version - any future changes require version increment
 #     
 #     Security: Credentials encrypted with Windows DPAPI for current user context
 #     Resume: Supports re-running without recreation of existing resources

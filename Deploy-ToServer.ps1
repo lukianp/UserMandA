@@ -11,10 +11,11 @@
 .EXAMPLE
     .\Deploy-ToServer.ps1 -TargetPath "C:\UserMigration" -Force
 .NOTES
-    Author: Lukian Poleschtschuk & Gemini
-    Version: 2.0.0
-    Created: 2025-05-31
-    Last Modified: 2025-06-01
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 [CmdletBinding(SupportsShouldProcess = $true)]

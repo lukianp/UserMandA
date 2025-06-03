@@ -4,10 +4,11 @@
 .DESCRIPTION
     Handles encrypted credential storage using DPAPI with standardized format
 .NOTES
-    Author: M&A Discovery Team
-    Version: 2.0.0
-    Created: 2025-05-31
-    Last Modified: 2025-01-10
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 # Import the credential format handler

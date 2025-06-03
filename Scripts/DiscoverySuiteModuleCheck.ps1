@@ -24,9 +24,11 @@
     Effectively makes -AutoFix non-interactive for PSGallery module and RSAT tool installations.
 
 .NOTES
-    Version: 2.0.8
-    Author: Gemini & User
-    Date: 2025-06-01
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 
     Instructions:
     1. Run this script on the machine where you intend to run the M&A Discovery Suite.

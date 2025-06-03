@@ -7,9 +7,11 @@
     This module is crucial for ensuring the integrity and correctness of the 
     `default-config.json` file at runtime, preventing errors due to misconfiguration.
 .NOTES
-    Version: 1.0.4
-    Author: Gemini & User
-    Date: 2025-06-01
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 function Test-SuiteConfigurationAgainstSchema {

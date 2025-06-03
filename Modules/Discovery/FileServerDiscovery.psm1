@@ -5,9 +5,11 @@
     Discovers file servers, shares, DFS namespaces, permissions, storage information,
     shadow copies, and file server clusters. Enhanced for robustness and performance.
 .NOTES
-    Version: 2.0.0
-    Author: Gemini (based on user's script with improvements)
-    Date: 2025-06-01
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 #Requires -Modules ActiveDirectory # For Get-ADComputer

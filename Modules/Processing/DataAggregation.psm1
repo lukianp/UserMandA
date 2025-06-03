@@ -8,9 +8,11 @@
     merges them into unified datasets, enriches the data with relationships,
     performs data quality checks, and prepares consolidated output for export.
 .NOTES
-    Version: 2.0.0
-    Author: Enhanced Version
-    Creation Date: 2025-06-03
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 #region Module Variables

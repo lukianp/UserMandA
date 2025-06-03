@@ -3,6 +3,12 @@
     Tests the credential file functionality
 .DESCRIPTION
     Diagnostic tool to test credential file reading/writing
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 param(

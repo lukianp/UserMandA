@@ -1,7 +1,16 @@
-#
-# EnhancedConnectionManager.psm1
-# Enhanced connection manager with robust authentication fallbacks and extensive debugging
-#
+<#
+.SYNOPSIS
+    Enhanced connection manager with robust authentication fallbacks and extensive debugging
+.DESCRIPTION
+    Manages connections to Microsoft Graph, Azure, Exchange Online, and Active Directory
+    with comprehensive error handling and retry logic for the M&A Discovery Suite.
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
+#>
 
 # Global connection status tracking
 $script:ConnectionStatus = @{

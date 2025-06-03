@@ -6,9 +6,11 @@
     and includes a robust PSCustomObject-to-Hashtable converter.
 
 .NOTES
-    Version: 1.2.4 (Fixed Update-TypeData -MemberName for PS 5.1 compatibility)
-    Author: M&A Discovery Suite Team (Claude & Gemini Collaboration)
-    Date: 2025-06-03
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 # This module assumes Write-MandALog is available globally from EnhancedLogging.psm1 for its exported functions.

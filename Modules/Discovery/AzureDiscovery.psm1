@@ -1,10 +1,16 @@
-# Module: AzureDiscovery.psm1
-# Description: Handles discovery of Azure resources.
-# Author: Lukian Poleschtschuk
-# Version: 1.2.1
-# Created: 2025-05-31
-# Last Modified: 2025-05-31
-# Notes: Fixes for export and empty collections
+<#
+.SYNOPSIS
+    Handles discovery of Azure resources for M&A Discovery Suite
+.DESCRIPTION
+    This module provides comprehensive Azure resource discovery capabilities
+    including subscriptions, resource groups, VMs, AD applications, and more.
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
+#>
 
 #Requires -Modules Az.Accounts, Az.Resources, Az.Compute, Az.Network, Az.PolicyInsights, Az.RecoveryServices, Az.Storage, Az.KeyVault, Az.ManagedServiceIdentity
 

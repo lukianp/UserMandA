@@ -7,9 +7,11 @@
     credential management, status indicators, optimized module checking, and debug capabilities.
     This version fully implements all menu options, including Processing and Export phases.
 .NOTES
-    Version: 5.4.0
-    Author: Enhanced Version with Complete Functionality
-    Date: 2025-06-03
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 [CmdletBinding()]

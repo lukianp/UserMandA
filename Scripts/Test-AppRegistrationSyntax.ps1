@@ -1,4 +1,16 @@
-# Test script to verify Setup-AppRegistration.ps1 syntax and basic functionality
+<#
+.SYNOPSIS
+    Test script to verify Setup-AppRegistration.ps1 syntax and basic functionality
+.DESCRIPTION
+    This script provides syntax checking and function analysis for the Setup-AppRegistration.ps1 script
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
+#>
+
 param(
     [switch]$TestSyntax,
     [switch]$TestFunctions

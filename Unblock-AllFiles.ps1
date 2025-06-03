@@ -11,8 +11,9 @@
 .NOTES
     Author: Lukian Poleschtschuk
     Version: 1.0.0
-    Created: 2025-05-31
-    Last Modified: 2025-05-31
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 [CmdletBinding()]

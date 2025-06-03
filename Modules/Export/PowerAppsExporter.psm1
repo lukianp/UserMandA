@@ -9,9 +9,11 @@
     including companies, users, waves, departments, applications, groups, devices, relationships, and summaries.
     Combines strengths of the original user script and the PowerApp design document requirements.
 .NOTES
-    Version: 2.1.1 - Syntax Corrected
-    Author: Gemini (incorporating User Logic)
-    Date: 2025-06-02
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 #region INTERNAL HELPER FUNCTIONS

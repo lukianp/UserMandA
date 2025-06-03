@@ -4,9 +4,11 @@
 .DESCRIPTION
     Ensures consistent credential file format across all components
 .NOTES
+    Author: Lukian Poleschtschuk
     Version: 1.0.0
-    Author: M&A Discovery Team
-    Date: 2025-01-10
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 # Define the standard credential file format version

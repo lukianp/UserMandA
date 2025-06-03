@@ -22,8 +22,11 @@
 
     # This function is typically called by the MandA-Orchestrator.ps1 during the Export phase.
 .NOTES
-    Author: Gemini
+    Author: Lukian Poleschtschuk
     Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
     Date: 2025-05-29
 
     Dependencies:

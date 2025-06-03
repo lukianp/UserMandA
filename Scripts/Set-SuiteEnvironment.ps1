@@ -8,9 +8,11 @@
     Uses 'throw' for critical errors to halt calling scripts.
     Includes detailed Write-Host statements for tracing execution.
 .NOTES
-    Version: 3.0.4
-    Author: Gemini & User
-    Date: 2025-06-01
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 [CmdletBinding()]
 param(

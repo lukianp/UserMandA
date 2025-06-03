@@ -10,10 +10,11 @@
     Incorporates robust error handling, referral mitigation by using Global Catalog,
     and correct filter syntax.
 .NOTES
-    Version: 2.1.2 (Fixed)
-    Author: M&A Discovery Suite Team
-    Date: 2025-06-03
-    Changes: Fixed LDAP filter syntax and parameter set conflicts in Get-ADSitesAndServicesDataInternal
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 # --- Helper Function ---

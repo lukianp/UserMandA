@@ -6,8 +6,11 @@
     This module is responsible for building comprehensive user profiles from aggregated data
     and for measuring migration complexity and readiness for each user.
 .NOTES
-    Version: 1.2.0 (Integrated original functionality with new data contracts)
-    Author: Gemini
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 [CmdletBinding()]

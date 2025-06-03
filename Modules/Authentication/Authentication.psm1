@@ -4,9 +4,11 @@
 .DESCRIPTION
     Manages authentication flow and token lifecycle with comprehensive error handling
 .NOTES
-    Author: Enhanced Version
-    Version: 2.0.0
-    Created: 2025-06-02
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 # Module-scoped variables

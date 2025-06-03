@@ -7,8 +7,11 @@
     This module is responsible for exporting processed data to Excel files.
     It requires the ImportExcel module to be installed.
 .NOTES
-    Version: 1.0.0 (Skeletal structure)
-    Author: Gemini
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 [CmdletBinding()]

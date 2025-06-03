@@ -26,10 +26,11 @@
 .PARAMETER ExistingClientId
     Optional. The Client ID (App ID) of an existing app registration to use or validate.
 .NOTES
-    Author: Lukian Poleschtschuk & Gemini
-    Version: 5.2.0
-    Created: 2025-05-31
-    Last Modified: 2025-06-01
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 [CmdletBinding()]

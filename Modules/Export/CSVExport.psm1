@@ -6,8 +6,11 @@
     This module is responsible for exporting processed data (user profiles,
     migration waves, complexity analysis, etc.) to CSV files.
 .NOTES
-    Version: 1.1.0 (Refactored for orchestrator data contracts)
-    Author: Gemini
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 [CmdletBinding()]

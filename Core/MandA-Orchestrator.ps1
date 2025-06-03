@@ -8,9 +8,11 @@
     This version fixes all log level issues and ensures proper global config setup.
 
 .NOTES
-    Version: 4.6.1 (Comprehensive Fix with Processing/Export fixes)
-    Author: Fixed Implementation
-    Date: 2025-06-02
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
 
 [CmdletBinding()]
