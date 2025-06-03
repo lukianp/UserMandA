@@ -6,7 +6,7 @@
     and includes a robust PSCustomObject-to-Hashtable converter.
 
 .NOTES
-    Version: 1.2.3 (Made Update-TypeData logging import-safe by using Write-Host)
+    Version: 1.2.4 (Fixed Update-TypeData -MemberName for PS 5.1 compatibility)
     Author: M&A Discovery Suite Team (Claude & Gemini Collaboration)
     Date: 2025-06-03
 #>
@@ -456,18 +456,18 @@ function Export-ValidationReport {
 # This script method allows using $myHashtable.HashtableContains('myKey')
 if (-not ([hashtable].GetMethods() | Where-Object Name -eq 'HashtableContains')) {
     $methodScriptBlock = [scriptblock]{ param([string]$Key) return $this.ContainsKey($Key) }
-    $psMethodParameters = @{
-        Name = 'HashtableContains'
+    # For PowerShell 5.1, New-Object is preferred for PSMethod, but Update-TypeData takes scriptblock directly for ScriptMethod
+    $typeDataParams = @{
+        TypeName = "System.Collections.Hashtable"
+        MemberName = 'HashtableContains'
         MemberType = 'ScriptMethod'
         Value = $methodScriptBlock
         Force = $true 
     }
     try {
-        Update-TypeData -TypeName System.Collections.Hashtable @psMethodParameters
-        # Use Write-Host for logging during module import to avoid issues with Write-MandALog context
+        Update-TypeData @typeDataParams # Splatting the parameters
         Write-Host "[DEBUG] (ValidationHelpers) Successfully added 'HashtableContains' method to System.Collections.Hashtable." -ForegroundColor Gray
     } catch {
-        # Use Write-Host here as well
         Write-Host "[WARN] (ValidationHelpers) Error adding 'HashtableContains' method to Hashtable: $($_.Exception.Message)" -ForegroundColor Yellow
     }
 }
@@ -476,4 +476,4 @@ if (-not ([hashtable].GetMethods() | Where-Object Name -eq 'HashtableContains'))
 # Export functions
 Export-ModuleMember -Function ConvertTo-HashtableRecursiveInternal, Test-Prerequisites, Get-RequiredModules, Test-GuidFormat, Test-EmailFormat, Test-UPNFormat, Test-ConfigurationFile, Test-DirectoryWriteAccess, Test-ModuleAvailability, Test-NetworkConnectivity, Test-DataQuality, Export-ValidationReport
 
-Write-Host "ValidationHelpers.psm1 (v1.2.3) loaded, includes PS 5.1 compatible HashtableContains helper and import-safe logging." -ForegroundColor DarkCyan
+Write-Host "ValidationHelpers.psm1 (v1.2.4) loaded." -ForegroundColor DarkCyan

@@ -297,7 +297,7 @@ function Start-DataAggregation {
         return $true
     }
     catch {
-        Write-MandALog "A critical error occurred during data aggregation: $($_.Exception.Message)" -Level CRITICAL
+        Write-MandALog "ERROR: A critical error occurred during data aggregation: $($_.Exception.Message)" -Level "ERROR"
         Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level DEBUG
         return $false
     }
