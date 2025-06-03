@@ -713,50 +713,151 @@ function Start-DiscoveryOnly {
 }
 
 
+
+
 function Start-ProcessingOnly {
     Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
     Write-ColoredLog "                   STARTING PROCESSING PHASE ONLY                      " -Level "HEADER"
     Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
 
-    # Pre-condition Check 1: Check if raw data directory exists
-    $rawDataPath = $global:MandA.Paths.RawDataOutput
-    if (-not (Test-Path $rawDataPath -PathType Container)) {
-        Write-ColoredLog "`n❌ Raw data directory not found: $rawDataPath" -Level "ERROR"
-        Write-ColoredLog "   Please run Discovery phase first (e.g., Option 4)" -Level "ERROR"
-        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-        return
-    }
+    # Start transcript to capture everything
+    $transcriptPath = Join-Path $global:MandA.Paths.CompanyProfileRoot "Processing_Transcript_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+    Write-Host "`nStarting transcript at: $transcriptPath" -ForegroundColor Yellow
+    Start-Transcript -Path $transcriptPath -Force
 
-    # Pre-condition Check 2: Check if raw data directory contains CSV files
-    $csvFiles = Get-ChildItem -Path $rawDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
-    if ($null -eq $csvFiles -or $csvFiles.Count -eq 0) {
-        Write-ColoredLog "`n❌ No CSV files found in raw data directory: $rawDataPath" -Level "ERROR"
-        Write-ColoredLog "   Please run Discovery phase first (e.g., Option 4)" -Level "ERROR"
-        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-        return
-    }
-
-    # Pre-conditions passed
-    Write-ColoredLog "`n✅ Found $($csvFiles.Count) raw data files. Proceeding with Processing phase." -Level "SUCCESS"
-    
-    # Call the Orchestrator
-    Write-ColoredLog "`n🚀 Launching Orchestrator in Processing Mode..." -Level "INFO"
     try {
+        # Show current paths for debugging
+        Write-Host "`nDEBUG: Current paths:" -ForegroundColor Cyan
+        Write-Host "  Company Profile Root: $($global:MandA.Paths.CompanyProfileRoot)" -ForegroundColor Gray
+        Write-Host "  Raw Data: $($global:MandA.Paths.RawDataOutput)" -ForegroundColor Gray
+        Write-Host "  Processed Data: $($global:MandA.Paths.ProcessedDataOutput)" -ForegroundColor Gray
+        Write-Host "  Logs: $($global:MandA.Paths.LogOutput)" -ForegroundColor Gray
+
+        # Pre-condition Check 1: Check if raw data directory exists
+        $rawDataPath = $global:MandA.Paths.RawDataOutput
+        if (-not (Test-Path $rawDataPath -PathType Container)) {
+            Write-ColoredLog "`n❌ Raw data directory not found: $rawDataPath" -Level "ERROR"
+            Write-ColoredLog "   Please run Discovery phase first (e.g., Option 4)" -Level "ERROR"
+            return
+        }
+
+        # Pre-condition Check 2: Check if raw data directory contains CSV files
+        $csvFiles = Get-ChildItem -Path $rawDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
+        if ($null -eq $csvFiles -or $csvFiles.Count -eq 0) {
+            Write-ColoredLog "`n❌ No CSV files found in raw data directory: $rawDataPath" -Level "ERROR"
+            Write-ColoredLog "   Please run Discovery phase first (e.g., Option 4)" -Level "ERROR"
+            return
+        }
+
+        # Pre-conditions passed
+        Write-ColoredLog "`n✅ Found $($csvFiles.Count) raw data files. Proceeding with Processing phase." -Level "SUCCESS"
+        
+        # List the files found
+        Write-Host "`nRaw data files found:" -ForegroundColor Cyan
+        $csvFiles | ForEach-Object { Write-Host "  - $($_.Name)" -ForegroundColor Gray }
+        
+        # Check if logging is initialized
+        Write-Host "`nDEBUG: Checking logging status..." -ForegroundColor Yellow
+        if ($null -eq $script:LoggingConfig -or $null -eq $script:LoggingConfig.LogFile) {
+            Write-Host "WARNING: Logging not initialized. Attempting to initialize..." -ForegroundColor Yellow
+            
+            # Try to load logging module
+            $loggingModule = Join-Path $global:MandA.Paths.Utilities "EnhancedLogging.psm1"
+            if (Test-Path $loggingModule) {
+                Import-Module $loggingModule -Force -Global
+                
+                # Initialize logging with current config
+                if ($global:MandA.Config) {
+                    Initialize-Logging -Configuration $global:MandA.Config
+                    Write-Host "Logging initialized successfully" -ForegroundColor Green
+                } else {
+                    Write-Host "WARNING: Could not initialize logging - no configuration available" -ForegroundColor Yellow
+                }
+            }
+        } else {
+            Write-Host "DEBUG: Logging is initialized. Log file: $($script:LoggingConfig.LogFile)" -ForegroundColor Green
+        }
+        
+        # Call the Orchestrator
+        Write-ColoredLog "`n🚀 Launching Orchestrator in Processing Mode..." -Level "INFO"
+        Write-Host "`n=== ORCHESTRATOR OUTPUT START ===" -ForegroundColor Magenta
+        
         $configPath = if ($ConfigFile) { $ConfigFile } else { $global:MandA.Paths.ConfigFile }
-        & $global:MandA.Paths.Orchestrator -Mode "Processing" -ConfigurationFile $configPath -CompanyName $script:CompanyName -ErrorAction Stop
-        Write-ColoredLog "`n✅ Processing phase completed successfully via Orchestrator!" -Level "SUCCESS"
-        Write-ColoredLog "   Processed data should be available in: $($global:MandA.Paths.ProcessedDataOutput)" -Level "INFO"
+        
+        # Capture orchestrator output
+        $orchestratorOutput = ""
+        $orchestratorSuccess = $false
+        
+        try {
+            # Run orchestrator and capture output
+            $orchestratorOutput = & $global:MandA.Paths.Orchestrator -Mode "Processing" -ConfigurationFile $configPath -CompanyName $script:CompanyName -ErrorAction Stop *>&1 | Out-String
+            $orchestratorSuccess = $true
+            Write-Host $orchestratorOutput
+        } catch {
+            Write-Host "`n❌ ORCHESTRATOR ERROR:" -ForegroundColor Red
+            Write-Host $_.Exception.Message -ForegroundColor Red
+            Write-Host "`nStack Trace:" -ForegroundColor Yellow
+            Write-Host $_.ScriptStackTrace -ForegroundColor Gray
+            $orchestratorOutput = $_.Exception.Message + "`n" + $_.ScriptStackTrace
+        }
+        
+        Write-Host "`n=== ORCHESTRATOR OUTPUT END ===" -ForegroundColor Magenta
+        
+        if ($orchestratorSuccess) {
+            Write-ColoredLog "`n✅ Processing phase completed successfully via Orchestrator!" -Level "SUCCESS"
+            Write-ColoredLog "   Processed data should be available in: $($global:MandA.Paths.ProcessedDataOutput)" -Level "INFO"
+            
+            # Check what was actually created
+            Write-Host "`nChecking processed output..." -ForegroundColor Yellow
+            $processedFiles = Get-ChildItem -Path $global:MandA.Paths.ProcessedDataOutput -Filter "*.csv" -ErrorAction SilentlyContinue
+            if ($processedFiles) {
+                Write-Host "Processed files created:" -ForegroundColor Green
+                $processedFiles | ForEach-Object { Write-Host "  - $($_.Name) ($('{0:N0}' -f $_.Length) bytes)" -ForegroundColor Gray }
+            } else {
+                Write-Host "WARNING: No processed CSV files found!" -ForegroundColor Yellow
+            }
+        } else {
+            Write-ColoredLog "`n❌ Processing phase failed!" -Level "ERROR"
+        }
+        
+        # Save orchestrator output to file
+        $outputFile = Join-Path $global:MandA.Paths.CompanyProfileRoot "Processing_OrchestratorOutput_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+        $orchestratorOutput | Out-File -FilePath $outputFile -Encoding UTF8
+        Write-Host "`nOrchestrator output saved to: $outputFile" -ForegroundColor Cyan
+        
     } catch {
         Write-ColoredLog "`n❌ Error during Processing-Only run: $($_.Exception.Message)" -Level "ERROR"
         Write-ColoredLog "   ScriptStackTrace: $($_.ScriptStackTrace)" -Level "DEBUG"
+        Write-Host "`nFull Exception Details:" -ForegroundColor Red
+        Write-Host $_.Exception | Format-List -Force | Out-String
     } finally {
         if ($global:MandA) { $global:MandA.OrchestratorRunCount = 0 }
+        
+        # Stop transcript
+        Write-Host "`nStopping transcript..." -ForegroundColor Yellow
+        Stop-Transcript
+        
+        # Show where logs and output were saved
+        Write-Host "`n📁 Output locations:" -ForegroundColor Cyan
+        Write-Host "  Transcript: $transcriptPath" -ForegroundColor Gray
+        Write-Host "  Logs directory: $($global:MandA.Paths.LogOutput)" -ForegroundColor Gray
+        Write-Host "  Processed data: $($global:MandA.Paths.ProcessedDataOutput)" -ForegroundColor Gray
+        
+        # List any log files
+        $logFiles = Get-ChildItem -Path $global:MandA.Paths.LogOutput -Filter "*.log" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 5
+        if ($logFiles) {
+            Write-Host "`nRecent log files:" -ForegroundColor Yellow
+            $logFiles | ForEach-Object { 
+                Write-Host "  - $($_.Name) (Modified: $($_.LastWriteTime))" -ForegroundColor Gray 
+            }
+        }
+        
+        Write-Host "`n=== PROCESSING PHASE COMPLETE ===" -ForegroundColor Green
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
 }
+
 
 
 

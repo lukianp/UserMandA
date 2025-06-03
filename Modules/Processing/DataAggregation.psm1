@@ -23,6 +23,11 @@
 # Import-RawDataSources
 # Imports all relevant CSV files from the 'Raw' output directory.
 #===============================================================================
+
+#===============================================================================
+# Import-RawDataSources
+# Imports all relevant CSV files from the 'Raw' output directory.
+#===============================================================================
 function Import-RawDataSources {
     [CmdletBinding()]
     param(
@@ -46,14 +51,100 @@ function Import-RawDataSources {
 
     Write-MandALog "Found $($csvFiles.Count) raw CSV files to process." -Level INFO
 
+    # Define mappings from actual file names to expected source names
+    $sourceNameMappings = @{
+        # User-related mappings
+        'ADUsers' = 'ActiveDirectory_Users'
+        'AD_Users' = 'ActiveDirectory_Users'
+        'ActiveDirectoryUsers' = 'ActiveDirectory_Users'
+        'GraphUsers' = 'Graph_Users'
+        'AADUsers' = 'Graph_Users'
+        'AzureADUsers' = 'Graph_Users'
+        'ExchangeMailboxUsers' = 'Exchange_MailboxUsers'
+        'ExchangeUsers' = 'Exchange_MailboxUsers'
+        'MailboxUsers' = 'Exchange_MailboxUsers'
+        
+        # Computer/Device mappings
+        'ADComputers' = 'ActiveDirectory_Computers'
+        'AD_Computers' = 'ActiveDirectory_Computers'
+        'ActiveDirectoryComputers' = 'ActiveDirectory_Computers'
+        'GraphDevices' = 'Graph_Devices'
+        'AADDevices' = 'Graph_Devices'
+        'AzureADDevices' = 'Graph_Devices'
+        'IntuneDevices' = 'Intune_Devices'
+        
+        # Group mappings
+        'ADGroups' = 'ActiveDirectory_Groups'
+        'AD_Groups' = 'ActiveDirectory_Groups'
+        'ActiveDirectoryGroups' = 'ActiveDirectory_Groups'
+        'GraphGroups' = 'Graph_Groups'
+        'AADGroups' = 'Graph_Groups'
+        'AzureADGroups' = 'Graph_Groups'
+        
+        # Keep original names for everything else
+    }
+
     foreach ($file in $csvFiles) {
         $sourceName = $file.BaseName
         Write-MandALog "Importing file: $($file.Name)" -Level DEBUG
+        
         try {
             $content = Import-Csv -Path $file.FullName -ErrorAction Stop
+            
             if ($null -ne $content) {
+                # Store with original name
                 $dataSources[$sourceName] = $content
                 Write-MandALog "Successfully imported '$sourceName' with $($content.Count) records." -Level SUCCESS
+                
+                # Also store with mapped name if mapping exists
+                if ($sourceNameMappings.ContainsKey($sourceName)) {
+                    $mappedName = $sourceNameMappings[$sourceName]
+                    $dataSources[$mappedName] = $content
+                    Write-MandALog "  Also mapped to '$mappedName' for compatibility." -Level DEBUG
+                }
+                
+                # Special handling for some data types
+                switch ($sourceName) {
+                    'ADUsers' {
+                        # Ensure UserPrincipalName exists for AD users
+                        if ($content.Count -gt 0 -and -not $content[0].PSObject.Properties['UserPrincipalName']) {
+                            Write-MandALog "  ADUsers missing UserPrincipalName field. Will attempt to construct from other fields." -Level WARN
+                            
+                            # Add UserPrincipalName based on mail or samAccountName
+                            foreach ($user in $content) {
+                                if ($user.PSObject.Properties['mail'] -and $user.mail) {
+                                    $user | Add-Member -NotePropertyName 'UserPrincipalName' -NotePropertyValue $user.mail -Force
+                                } elseif ($user.PSObject.Properties['SamAccountName'] -and $user.SamAccountName) {
+                                    # Try to get domain from DistinguishedName
+                                    $domain = "yourdomain.com" # Default
+                                    if ($user.PSObject.Properties['DistinguishedName'] -and $user.DistinguishedName) {
+                                        if ($user.DistinguishedName -match 'DC=([^,]+),DC=([^,]+)') {
+                                            $domain = "$($matches[1]).$($matches[2])"
+                                        }
+                                    }
+                                    $user | Add-Member -NotePropertyName 'UserPrincipalName' -NotePropertyValue "$($user.SamAccountName)@$domain" -Force
+                                }
+                            }
+                        }
+                    }
+                    
+                    'ADComputers' {
+                        # Ensure devices have a consistent identifier
+                        if ($content.Count -gt 0) {
+                            foreach ($computer in $content) {
+                                # Add a DeviceId property if not present
+                                if (-not $computer.PSObject.Properties['id'] -and $computer.PSObject.Properties['objectGUID']) {
+                                    $computer | Add-Member -NotePropertyName 'id' -NotePropertyValue $computer.objectGUID -Force
+                                }
+                                # Ensure DisplayName exists
+                                if (-not $computer.PSObject.Properties['DisplayName'] -and $computer.PSObject.Properties['Name']) {
+                                    $computer | Add-Member -NotePropertyName 'DisplayName' -NotePropertyValue $computer.Name -Force
+                                }
+                            }
+                        }
+                    }
+                }
+                
             } else {
                 Write-MandALog "File '$($file.Name)' is empty or could not be parsed. Skipping." -Level WARN
             }
@@ -63,13 +154,49 @@ function Import-RawDataSources {
         }
     }
 
+    # Log summary of what was loaded
+    Write-MandALog "`nData source loading summary:" -Level INFO
+    Write-MandALog "  Original sources loaded: $($csvFiles.Count)" -Level INFO
+    Write-MandALog "  Total mappings created: $($dataSources.Count)" -Level INFO
+    
+    # Check for critical user sources
+    $hasUserData = $false
+    $userSources = @('ActiveDirectory_Users', 'Graph_Users', 'Exchange_MailboxUsers', 'ADUsers')
+    foreach ($source in $userSources) {
+        if ($dataSources.ContainsKey($source) -and $dataSources[$source].Count -gt 0) {
+            $hasUserData = $true
+            Write-MandALog "  Found user data in: $source (Count: $($dataSources[$source].Count))" -Level INFO
+        }
+    }
+    
+    if (-not $hasUserData) {
+        Write-MandALog "WARNING: No user data sources found! Processing may fail." -Level WARN
+    }
+    
+    # Check for device sources
+    $hasDeviceData = $false
+    $deviceSources = @('ActiveDirectory_Computers', 'Graph_Devices', 'Intune_Devices', 'ADComputers')
+    foreach ($source in $deviceSources) {
+        if ($dataSources.ContainsKey($source) -and $dataSources[$source].Count -gt 0) {
+            $hasDeviceData = $true
+            Write-MandALog "  Found device data in: $source (Count: $($dataSources[$source].Count))" -Level INFO
+        }
+    }
+    
+    if (-not $hasDeviceData) {
+        Write-MandALog "  No device data sources found (this may be expected)." -Level INFO
+    }
+
     return $dataSources
 }
+
 
 #===============================================================================
 # Merge-UserProfiles
 # Merges user data from AD, Graph, and Exchange into a single canonical list.
 #===============================================================================
+
+
 function Merge-UserProfiles {
     [CmdletBinding()]
     param(
@@ -81,27 +208,66 @@ function Merge-UserProfiles {
     $canonicalUsers = @{}
 
     # Define the order of precedence for adding users.
-    # Users found in ActiveDirectory are added first.
+    # Updated to match actual file names
     $userSourcePrecedence = @(
-        'ActiveDirectory_Users',
-        'Graph_Users',
-        'Exchange_MailboxUsers'
+        'ADUsers',                    # Changed from 'ActiveDirectory_Users'
+        'Graph_Users',                # Keep as is if you have Graph discovery
+        'Exchange_MailboxUsers'       # Keep as is if you have Exchange discovery
     )
 
+    # Also check for legacy naming patterns
+    $alternativeNames = @{
+        'ADUsers' = @('ActiveDirectory_Users', 'AD_Users')
+        'Graph_Users' = @('GraphUsers', 'AAD_Users', 'AzureAD_Users')
+        'Exchange_MailboxUsers' = @('ExchangeUsers', 'Exchange_Users', 'MailboxUsers')
+    }
+
     foreach ($sourceName in $userSourcePrecedence) {
-        if (-not $DataSources.ContainsKey($sourceName)) {
+        $users = $null
+        
+        # Try primary name first
+        if ($DataSources.ContainsKey($sourceName)) {
+            $users = $DataSources[$sourceName]
+            Write-MandALog "Found users in '$sourceName'" -Level DEBUG
+        } else {
+            # Try alternative names
+            if ($alternativeNames.ContainsKey($sourceName)) {
+                foreach ($altName in $alternativeNames[$sourceName]) {
+                    if ($DataSources.ContainsKey($altName)) {
+                        $users = $DataSources[$altName]
+                        Write-MandALog "Found users in '$altName' (alternative for $sourceName)" -Level DEBUG
+                        break
+                    }
+                }
+            }
+        }
+
+        if ($null -eq $users) {
             Write-MandALog "User data source '$sourceName' not found, skipping." -Level DEBUG
             continue
         }
 
-        $users = $DataSources[$sourceName]
         Write-MandALog "Processing $($users.Count) users from '$sourceName'." -Level INFO
 
         foreach ($user in $users) {
             # Normalize the UserPrincipalName to be the primary key (case-insensitive)
             $upn = $null
-            if ($user.PSObject.Properties['UserPrincipalName']) {
-                $upn = $user.UserPrincipalName.ToLower().Trim()
+            
+            # Check various possible UPN field names
+            $upnFields = @('UserPrincipalName', 'userPrincipalName', 'UPN', 'upn', 'PrimarySmtpAddress')
+            foreach ($field in $upnFields) {
+                if ($user.PSObject.Properties[$field] -and $user.$field) {
+                    $upn = $user.$field.ToLower().Trim()
+                    break
+                }
+            }
+
+            # If no UPN, try to construct from SamAccountName and domain
+            if ([string]::IsNullOrWhiteSpace($upn) -and $user.PSObject.Properties['SamAccountName'] -and $user.SamAccountName) {
+                # You might need to adjust the domain based on your environment
+                $domain = if ($user.PSObject.Properties['Domain']) { $user.Domain } else { "yourdomain.com" }
+                $upn = "$($user.SamAccountName)@$domain".ToLower().Trim()
+                Write-MandALog "Constructed UPN from SamAccountName for user: $upn" -Level DEBUG
             }
 
             if ([string]::IsNullOrWhiteSpace($upn)) {
@@ -120,7 +286,7 @@ function Merge-UserProfiles {
             foreach ($prop in $user.PSObject.Properties) {
                 # Define properties that should NOT be overwritten if they already exist
                 # e.g., SamAccountName should only come from Active Directory
-                $protectedProperties = @('SamAccountName', 'SID')
+                $protectedProperties = @('SamAccountName', 'SID', 'ObjectGUID')
                 if ($canonicalUsers[$upn].PSObject.Properties[$prop.Name] -and ($prop.Name -in $protectedProperties)) {
                     continue # Skip if property exists and is protected
                 }
