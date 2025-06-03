@@ -296,8 +296,8 @@ function Merge-UserProfiles {
         }
     }
 
-    Write-MandALog "Completed user profile merging. Canonical user count: $($canonicalUsers.Count)." -Level SUCCESS
-    return $canonicalUsers.Values
+   Write-MandALog "Completed user profile merging. Canonical user count: $($canonicalUsers.Count)." -Level SUCCESS
+return @($canonicalUsers.Values)  # Ensure it returns an array
 }
 
 #===============================================================================
@@ -358,13 +358,17 @@ function Merge-DeviceProfiles {
 # New-RelationshipGraph
 # Enriches user and device profiles with relationship data.
 #===============================================================================
+
+
 function New-RelationshipGraph {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [System.Collections.Generic.IEnumerable[PSObject]]$Users,
+        [array]$Users,  # Changed from [System.Collections.Generic.IEnumerable[PSObject]]
+        
         [Parameter(Mandatory=$true)]
-        [System.Collections.Generic.IEnumerable[PSObject]]$Devices,
+        [array]$Devices,  # Changed from [System.Collections.Generic.IEnumerable[PSObject]]
+        
         [Parameter(Mandatory=$true)]
         [hashtable]$DataSources
     )
@@ -374,21 +378,25 @@ function New-RelationshipGraph {
     # Create a lookup table for devices for faster access
     $deviceLookup = @{}
     foreach($device in $Devices) {
-        $deviceLookup[$device.DeviceId] = $device
+        if ($device.PSObject.Properties['DeviceId'] -and $device.DeviceId) {
+            $deviceLookup[$device.DeviceId] = $device
+        }
     }
 
     # 1. Map Devices to Users
     Write-MandALog "Mapping devices to users..." -Level DEBUG
     foreach ($user in $Users) {
         $userUPN = $user.UserPrincipalName
-        $userDevices = [System.Collections.Generic.List[PSObject]]::new()
+        $userDevices = @()  # Changed from [System.Collections.Generic.List[PSObject]]::new()
 
         # Find devices registered to this user
-        $registeredDevices = $Devices | Where-Object { $_.registeredUsers -match $userUPN }
+        $registeredDevices = $Devices | Where-Object { 
+            $_.PSObject.Properties['registeredUsers'] -and 
+            $_.registeredUsers -match $userUPN 
+        }
+        
         if($registeredDevices) {
-            foreach($dev in $registeredDevices) {
-                $userDevices.Add($dev)
-            }
+            $userDevices = @($registeredDevices)
         }
 
         # Add a new property to the user object
