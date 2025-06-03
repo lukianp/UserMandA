@@ -10,9 +10,10 @@
     Incorporates robust error handling, referral mitigation by using Global Catalog,
     and correct filter syntax.
 .NOTES
-    Version: 2.1.1
-    Author: Gemini (incorporating user's v1.2.2 logic with improvements)
-    Date: 2025-06-01
+    Version: 2.1.2 (Fixed)
+    Author: M&A Discovery Suite Team
+    Date: 2025-06-03
+    Changes: Fixed LDAP filter syntax and parameter set conflicts in Get-ADSitesAndServicesDataInternal
 #>
 
 # --- Helper Function ---
@@ -313,19 +314,40 @@ function Get-ADSitesAndServicesDataInternal {
     $allSubnetData = [System.Collections.Generic.List[PSObject]]::new()
     $globalCatalog = $Configuration.environment.globalCatalog
     $serverParams = if ($globalCatalog) { @{ Server = $globalCatalog } } else { @{} }
+    
     try {
         Write-MandALog "Discovering AD Replication Sites..." -Level "INFO"
         $sites = Get-ADReplicationSite -Filter * -Properties Options @serverParams -ErrorAction Stop
-        if ($null -ne $sites) { # Corrected null check
+        if ($null -ne $sites) {
             foreach ($site in $sites) {
                 $serversInSite = @()
                 $dcInSite = @()
+                
+                # FIXED: Get non-DC computers in the site using proper PowerShell filter syntax
                 try {
-                    $serversInSite = Get-ADComputer -Filter '(!(userAccountControl:1.2.840.113556.1.4.803:=8192))' -SearchBase $site.DistinguishedName @serverParams -ErrorAction SilentlyContinue
-                } catch { Write-MandALog "Could not determine Member Servers for site '$($site.Name)': $($_.Exception.Message)" -Level "WARN" }
+                    # Using PowerShell's -band operator to check if computer is NOT a domain controller
+                    # Domain controllers have the SERVER_TRUST_ACCOUNT flag (8192) set in userAccountControl
+                    $nonDCFilter = "userAccountControl -band 8192 -eq 0"
+                    $serversInSite = Get-ADComputer -Filter $nonDCFilter -SearchBase $site.DistinguishedName @serverParams -ErrorAction SilentlyContinue
+                } catch { 
+                    Write-MandALog "Could not determine Member Servers for site '$($site.Name)': $($_.Exception.Message)" -Level "WARN" 
+                }
+                
+                # FIXED: Get domain controllers for the site without parameter conflicts
                 try {
-                    $dcInSite = Get-ADDomainController -Filter * -Site $site.Name @serverParams -ErrorAction SilentlyContinue
-                } catch { Write-MandALog "Could not determine Domain Controllers for site '$($site.Name)': $($_.Exception.Message)" -Level "WARN" }
+                    if ($serverParams.ContainsKey('Server')) {
+                        # If we have a specific server parameter, get all DCs and filter by site
+                        $allDCs = Get-ADDomainController -Filter * @serverParams -ErrorAction SilentlyContinue
+                        if ($allDCs) {
+                            $dcInSite = $allDCs | Where-Object { $_.Site -eq $site.Name }
+                        }
+                    } else {
+                        # If no server specified, use -Site parameter directly
+                        $dcInSite = Get-ADDomainController -Site $site.Name -ErrorAction SilentlyContinue
+                    }
+                } catch { 
+                    Write-MandALog "Could not determine Domain Controllers for site '$($site.Name)': $($_.Exception.Message)" -Level "WARN" 
+                }
 
                 $siteOptions = $site.Options
                 $allSiteData.Add([PSCustomObject]@{
@@ -336,17 +358,22 @@ function Get-ADSitesAndServicesDataInternal {
                     IntersiteTopologyGenerator  = if ($null -ne $siteOptions) { ($siteOptions -band [Microsoft.ActiveDirectory.Management.ADReplicationSiteOptions]::IntersiteTopologyGenerator) -as [bool] } else { $null }
                     IsStaleSite                 = if ($null -ne $siteOptions) { ($siteOptions -band [Microsoft.ActiveDirectory.Management.ADReplicationSiteOptions]::IsStaleSite) -as [bool] } else { $null }
                     GroupMembershipCaching      = if ($null -ne $siteOptions) { ($siteOptions -band [Microsoft.ActiveDirectory.Management.ADReplicationSiteOptions]::GroupMembershipCaching) -as [bool] } else { $null }
-                    ServersInSiteCount          = $serversInSite.Count
-                    DomainControllersInSiteCount= $dcInSite.Count
+                    ServersInSiteCount          = ($serversInSite | Measure-Object).Count
+                    DomainControllersInSiteCount= ($dcInSite | Measure-Object).Count
                 })
             }
-            if ($allSiteData.Count -gt 0) { Export-MandAData -Data $allSiteData -FileName "ADSites" -Configuration $Configuration }
-             else { Write-MandALog "No AD Site objects processed." -Level "INFO" }
-        } else { Write-MandALog "No AD Sites found." -Level "WARN" }
+            if ($allSiteData.Count -gt 0) { 
+                Export-MandAData -Data $allSiteData -FileName "ADSites" -Configuration $Configuration 
+            } else { 
+                Write-MandALog "No AD Site objects processed." -Level "INFO" 
+            }
+        } else { 
+            Write-MandALog "No AD Sites found." -Level "WARN" 
+        }
 
         Write-MandALog "Discovering AD Replication Site Links..." -Level "INFO"
         $siteLinks = Get-ADReplicationSiteLink -Filter * @serverParams -ErrorAction Stop
-        if ($null -ne $siteLinks) { # Corrected null check
+        if ($null -ne $siteLinks) {
             $siteLinks | ForEach-Object { 
                 $allSiteLinkData.Add([PSCustomObject]@{ 
                     Name = $_.Name
@@ -357,25 +384,38 @@ function Get-ADSitesAndServicesDataInternal {
                     Description = $_.Description 
                 }) 
             }
-            if ($allSiteLinkData.Count -gt 0) { Export-MandAData -Data $allSiteLinkData -FileName "ADSiteLinks" -Configuration $Configuration }
-             else { Write-MandALog "No AD Site Link objects processed." -Level "INFO" }
-        } else { Write-MandALog "No AD Site Links found." -Level "WARN" }
+            if ($allSiteLinkData.Count -gt 0) { 
+                Export-MandAData -Data $allSiteLinkData -FileName "ADSiteLinks" -Configuration $Configuration 
+            } else { 
+                Write-MandALog "No AD Site Link objects processed." -Level "INFO" 
+            }
+        } else { 
+            Write-MandALog "No AD Site Links found." -Level "WARN" 
+        }
         
         Write-MandALog "Discovering AD Replication Subnets..." -Level "INFO"
         $subnets = Get-ADReplicationSubnet -Filter * -Properties Site @serverParams -ErrorAction Stop
-        if ($null -ne $subnets) { # Corrected null check
+        if ($null -ne $subnets) {
             $subnets | ForEach-Object { 
                 $allSubnetData.Add([PSCustomObject]@{ 
                     Name = $_.Name
                     DistinguishedName = $_.DistinguishedName
                     Location = $_.Location
-                    Site = if ($null -ne $_.Site) { $_.Site.Name } else { $null } # Corrected null check
+                    Site = if ($null -ne $_.Site) { $_.Site.Name } else { $null }
                 }) 
             }
-            if ($allSubnetData.Count -gt 0) { Export-MandAData -Data $allSubnetData -FileName "ADSubnets" -Configuration $Configuration }
-            else { Write-MandALog "No AD Subnet objects processed." -Level "INFO" }
-        } else { Write-MandALog "No AD Subnets found." -Level "WARN" }
-    } catch { Write-MandALog "Error during AD Sites/Services Discovery: $($_.Exception.Message)" -Level "ERROR" }
+            if ($allSubnetData.Count -gt 0) { 
+                Export-MandAData -Data $allSubnetData -FileName "ADSubnets" -Configuration $Configuration 
+            } else { 
+                Write-MandALog "No AD Subnet objects processed." -Level "INFO" 
+            }
+        } else { 
+            Write-MandALog "No AD Subnets found." -Level "WARN" 
+        }
+    } catch { 
+        Write-MandALog "Error during AD Sites/Services Discovery: $($_.Exception.Message)" -Level "ERROR" 
+    }
+    
     Write-MandALog "Finished AD Sites and Services Discovery." -Level "INFO"
     return @{ Sites = $allSiteData; SiteLinks = $allSiteLinkData; Subnets = $allSubnetData }
 }
@@ -472,7 +512,7 @@ function Invoke-ActiveDirectoryDiscovery {
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration
     )
-    Write-MandALog "--- Starting Active Directory Discovery Phase (v2.1.1) ---" -Level "HEADER"
+    Write-MandALog "--- Starting Active Directory Discovery Phase (v2.1.2) ---" -Level "HEADER"
     $overallStatus = $true
     $discoveredData = @{}
 
