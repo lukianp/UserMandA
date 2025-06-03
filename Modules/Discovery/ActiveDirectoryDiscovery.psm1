@@ -1,559 +1,699 @@
 #Requires -Modules ActiveDirectory, DnsServer
 <#
 .SYNOPSIS
-    Handles discovery of on-premises Active Directory objects.
-    Includes users, groups, computers, OUs, Sites, Services, and DNS.
+    Enhanced Active Directory Discovery Module for M&A Discovery Suite
 .DESCRIPTION
-    This module provides comprehensive Active Directory discovery capabilities
-    for the M&A Discovery Suite. It collects detailed information and exports
-    it to CSV files in the specified 'Raw' output directory.
-    Incorporates robust error handling, referral mitigation by using Global Catalog,
-    and correct filter syntax.
+    Provides comprehensive Active Directory discovery with improved error handling,
+    simplified null checks, and context-based operations.
 .NOTES
-    Version: 2.1.2 (Fixed)
-    Author: M&A Discovery Suite Team
-    Date: 2025-06-03
-    Changes: Fixed LDAP filter syntax and parameter set conflicts in Get-ADSitesAndServicesDataInternal
+    Version: 2.0.0
+    Enhanced: 2025-01-03
 #>
 
-# --- Helper Function ---
-function Export-MandAData {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [object[]]$Data,
-        [Parameter(Mandatory=$true)]
-        [string]$FileName,
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration,
-        [Parameter(Mandatory=$false)]
-        [string]$SubFolder = "Raw" # Allows specifying a subfolder like "Raw/AD"
-    )
-    $baseOutputPath = $Configuration.environment.outputPath
-    $outputPath = Join-Path $baseOutputPath $SubFolder
-    
-    if (-not (Test-Path $outputPath -PathType Container)) {
-        try {
-            New-Item -Path $outputPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
-            Write-MandALog "Created directory: $outputPath" -Level "INFO"
-        } catch {
-            Write-MandALog "Failed to create directory $outputPath. Error: $($_.Exception.Message)" -Level "ERROR"
-            return # Cannot proceed without output path
-        }
-    }
+# Import shared utilities
+Import-Module "$PSScriptRoot\..\Utilities\DataExport.psm1" -Force
 
-    $fullPath = Join-Path $outputPath "$($FileName).csv"
-
-    if ($null -eq $Data -or $Data.Count -eq 0) {
-        Write-MandALog "No data provided to export for $FileName." -Level "WARN"
-        return
-    }
-
-    try {
-        Write-MandALog "Exporting $($Data.Count) records to $fullPath..." -Level "INFO"
-        $Data | Export-Csv -Path $fullPath -NoTypeInformation -Force -Encoding UTF8
-        Write-MandALog "Successfully exported $FileName to $fullPath" -Level "SUCCESS"
-    } catch {
-        Write-MandALog "Failed to export data to $fullPath. Error: $($_.Exception.Message)" -Level "ERROR"
-    }
-}
-
-# --- Private Functions (Specific to this module) ---
-
+# Private discovery functions
 function Get-ADUsersDataInternal {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
     )
-    Write-MandALog "Starting AD Users Discovery..." -Level "INFO"
+    
+    Write-MandALog "Starting AD Users Discovery..." -Level "INFO" -Context $Context
     $allUsers = [System.Collections.Generic.List[PSObject]]::new()
-    $globalCatalog = $Configuration.environment.globalCatalog
-    $serverParams = if ($globalCatalog) { @{ Server = $globalCatalog } } else { @{} }
-
+    
+    # Determine server parameters
+    $serverParams = @{}
+    if ($Configuration.environment.globalCatalog) {
+        $serverParams.Server = $Configuration.environment.globalCatalog
+    } elseif ($Configuration.environment.domainController) {
+        $serverParams.Server = $Configuration.environment.domainController
+    }
+    
     try {
         $userProperties = @(
-            'SamAccountName', 'UserPrincipalName', 'GivenName', 'Surname', 'DisplayName', 'Description',
-            'DistinguishedName', 'Enabled', 'LastLogonTimestamp', 'whenCreated', 'whenChanged',
-            'mail', 'proxyAddresses', 'Department', 'Title', 'Manager', 'employeeID',
-            'physicalDeliveryOfficeName', 'telephoneNumber', 'mobile', 'company', 'AccountExpirationDate',
-            'PasswordLastSet', 'PasswordNeverExpires', 'CannotChangePassword', 'PasswordNotRequired',
-            'msDS-UserPasswordExpiryTimeComputed'
+            'SamAccountName', 'UserPrincipalName', 'GivenName', 'Surname', 'DisplayName',
+            'Description', 'DistinguishedName', 'Enabled', 'LastLogonTimestamp',
+            'whenCreated', 'whenChanged', 'mail', 'proxyAddresses', 'Department',
+            'Title', 'Manager', 'employeeID', 'physicalDeliveryOfficeName',
+            'telephoneNumber', 'mobile', 'company', 'AccountExpirationDate',
+            'PasswordLastSet', 'PasswordNeverExpires', 'CannotChangePassword',
+            'PasswordNotRequired', 'msDS-UserPasswordExpiryTimeComputed'
         )
-        $filter = "*" # Add OU filtering logic here if needed from $Configuration.discovery.discoveryScope
+        
+        # Build filter based on discovery scope
+        $filter = BuildADFilter -Configuration $Configuration -ObjectType "User"
         
         $adUsers = Get-ADUser -Filter $filter -Properties $userProperties @serverParams -ErrorAction Stop
         
-        if ($null -ne $adUsers) {
+        if ($adUsers) {
             foreach ($user in $adUsers) {
-                $lastLogonDate = $null
-                try {
-                    if ($null -ne $user.LastLogonTimestamp -and 0 -ne $user.LastLogonTimestamp) { # Corrected null check
-                        if ($user.LastLogonTimestamp -gt 0) {
-                            $lastLogonDate = [datetime]::FromFileTime($user.LastLogonTimestamp)
-                        } else {
-                             Write-MandALog "Invalid (negative or zero) LastLogonTimestamp '$($user.LastLogonTimestamp)' for user '$($user.SamAccountName)'. Setting to null." -Level "DEBUG"
-                        }
-                    }
-                } catch { Write-MandALog "Could not convert LastLogonTimestamp '$($user.LastLogonTimestamp)' for user '$($user.SamAccountName)'. Error: $($_.Exception.Message)" -Level "WARN" }
-
-                $passwordExpiryDateValue = "Not Set/Error"
-                $expiryTimeComputed = $user.'msDS-UserPasswordExpiryTimeComputed'
-
-                if ($user.PasswordNeverExpires -eq $true) {
-                    $passwordExpiryDateValue = "PasswordNeverExpires (User Flag)"
-                } elseif ($null -ne $expiryTimeComputed) { # Corrected null check
-                    if (0 -eq $expiryTimeComputed) { # Corrected null check (though 0 isn't null)
-                        $passwordExpiryDateValue = "UserMustChangePasswordAtNextLogon (pwdLastSet=0)"
-                    } elseif ($expiryTimeComputed -eq ([long]::MaxValue)) {
-                        $passwordExpiryDateValue = "Never (Calculated as MaxValue)"
-                    } elseif ($expiryTimeComputed -lt 0) {
-                        Write-MandALog "Invalid (negative) msDS-UserPasswordExpiryTimeComputed '$expiryTimeComputed' for user '$($user.SamAccountName)'. Interpreting as 'SpecialCondition'." -Level "WARN"
-                        $passwordExpiryDateValue = "SpecialCondition (e.g., Negative FileTime)"
-                    } else {
-                        try {
-                            $passwordExpiryDateValue = [datetime]::FromFileTime($expiryTimeComputed)
-                        } catch {
-                            Write-MandALog "Could not convert msDS-UserPasswordExpiryTimeComputed '$expiryTimeComputed' for user '$($user.SamAccountName)'. Error: $($_.Exception.Message)" -Level "WARN"
-                            $passwordExpiryDateValue = "Invalid FileTime Value: $expiryTimeComputed"
-                        }
-                    }
-                }
-
-                $userObj = [PSCustomObject]@{
-                    SamAccountName      = $user.SamAccountName
-                    UserPrincipalName   = $user.UserPrincipalName
-                    DisplayName         = $user.DisplayName
-                    Enabled             = $user.Enabled
-                    LastLogonDate       = $lastLogonDate
-                    PasswordExpiryDate  = $passwordExpiryDateValue
-                    PasswordNeverExpires= $user.PasswordNeverExpires
-                    PasswordLastSet     = $user.PasswordLastSet
-                    GivenName           = $user.GivenName
-                    Surname             = $user.Surname
-                    Description         = $user.Description
-                    DistinguishedName   = $user.DistinguishedName
-                    CreatedDate         = $user.whenCreated
-                    ModifiedDate        = $user.whenChanged
-                    EmailAddress        = $user.mail
-                    ProxyAddresses      = ($user.proxyAddresses -join ';')
-                    Department          = $user.Department
-                    Title               = $user.Title
-                    Manager             = $user.Manager
-                    EmployeeID          = $user.employeeID
-                    Office              = $user.physicalDeliveryOfficeName
-                    TelephoneNumber     = $user.telephoneNumber
-                    MobileNumber        = $user.mobile
-                    Company             = $user.company
-                    AccountExpirationDate = $user.AccountExpirationDate
-                    CannotChangePassword= $user.CannotChangePassword
-                    PasswordNotRequired = $user.PasswordNotRequired
-                    Raw_msDSUserPasswordExpiryTimeComputed = $expiryTimeComputed
-                }
+                $userObj = ConvertTo-UserObject -ADUser $user -Context $Context
                 $allUsers.Add($userObj)
             }
-            if ($allUsers.Count -gt 0) {
-                Export-MandAData -Data $allUsers -FileName "ADUsers" -Configuration $Configuration
-            } else { Write-MandALog "No AD User objects were processed into the final list." -Level "INFO" }
+            
+            # Export data
+            Export-DataToCSV -Data $allUsers -FilePath (Join-Path $Context.Paths.RawDataOutput "ADUsers.csv") -Context $Context
+            
+            Write-MandALog "Discovered $($allUsers.Count) AD users" -Level "SUCCESS" -Context $Context
         } else {
-            Write-MandALog "No AD Users found or accessible from $globalCatalog." -Level "WARN"
+            Write-MandALog "No AD users found with current filter" -Level "WARN" -Context $Context
         }
-    } catch {
-        Write-MandALog "Error during AD Users Discovery: $($_.Exception.Message)" -Level "ERROR"
     }
+    catch {
+        $Context.ErrorCollector.AddError("ADUsers", "Failed to discover AD users", $_.Exception)
+        Write-MandALog "Error during AD Users Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+    }
+    
     return $allUsers
+}
+
+function ConvertTo-UserObject {
+    param(
+        [Microsoft.ActiveDirectory.Management.ADUser]$ADUser,
+        $Context
+    )
+    
+    # Simplified null checks and conversions
+    $lastLogonDate = if ($ADUser.LastLogonTimestamp -and $ADUser.LastLogonTimestamp -gt 0) {
+        try { [datetime]::FromFileTime($ADUser.LastLogonTimestamp) } catch { $null }
+    } else { $null }
+    
+    # Password expiry calculation
+    $passwordExpiryDate = Get-PasswordExpiryDate -User $ADUser -Context $Context
+    
+    return [PSCustomObject]@{
+        SamAccountName = $ADUser.SamAccountName
+        UserPrincipalName = $ADUser.UserPrincipalName
+        DisplayName = $ADUser.DisplayName
+        Enabled = $ADUser.Enabled
+        LastLogonDate = $lastLogonDate
+        PasswordExpiryDate = $passwordExpiryDate
+        PasswordNeverExpires = $ADUser.PasswordNeverExpires
+        PasswordLastSet = $ADUser.PasswordLastSet
+        GivenName = $ADUser.GivenName
+        Surname = $ADUser.Surname
+        Description = $ADUser.Description
+        DistinguishedName = $ADUser.DistinguishedName
+        CreatedDate = $ADUser.whenCreated
+        ModifiedDate = $ADUser.whenChanged
+        EmailAddress = $ADUser.mail
+        ProxyAddresses = ($ADUser.proxyAddresses -join ';')
+        Department = $ADUser.Department
+        Title = $ADUser.Title
+        Manager = $ADUser.Manager
+        EmployeeID = $ADUser.employeeID
+        Office = $ADUser.physicalDeliveryOfficeName
+        TelephoneNumber = $ADUser.telephoneNumber
+        MobileNumber = $ADUser.mobile
+        Company = $ADUser.company
+        AccountExpirationDate = $ADUser.AccountExpirationDate
+        CannotChangePassword = $ADUser.CannotChangePassword
+        PasswordNotRequired = $ADUser.PasswordNotRequired
+    }
+}
+
+function Get-PasswordExpiryDate {
+    param(
+        [Microsoft.ActiveDirectory.Management.ADUser]$User,
+        $Context
+    )
+    
+    if ($User.PasswordNeverExpires) {
+        return "Never (Policy)"
+    }
+    
+    $expiryTime = $User.'msDS-UserPasswordExpiryTimeComputed'
+    
+    if (-not $expiryTime) {
+        return "Not Set"
+    }
+    
+    if ($expiryTime -eq 0) {
+        return "Must Change at Next Logon"
+    }
+    
+    if ($expiryTime -eq [long]::MaxValue) {
+        return "Never (Computed)"
+    }
+    
+    if ($expiryTime -lt 0) {
+        $Context.ErrorCollector.AddWarning("ADUsers", "Invalid password expiry time for user: $($User.SamAccountName)")
+        return "Invalid"
+    }
+    
+    try {
+        return [datetime]::FromFileTime($expiryTime)
+    }
+    catch {
+        $Context.ErrorCollector.AddWarning("ADUsers", "Failed to convert password expiry time for user: $($User.SamAccountName)")
+        return "Conversion Error"
+    }
 }
 
 function Get-ADGroupsDataInternal {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
     )
-    Write-MandALog "Starting AD Groups Discovery..." -Level "INFO"
+    
+    Write-MandALog "Starting AD Groups Discovery..." -Level "INFO" -Context $Context
     $allGroups = [System.Collections.Generic.List[PSObject]]::new()
     $allGroupMembers = [System.Collections.Generic.List[PSObject]]::new()
-    $globalCatalog = $Configuration.environment.globalCatalog
-    $serverParams = if ($globalCatalog) { @{ Server = $globalCatalog } } else { @{} }
-
+    
+    $serverParams = Get-ServerParameters -Configuration $Configuration
+    
     try {
-        $groupProperties = @('SamAccountName', 'Name', 'GroupCategory', 'GroupScope', 'Description', 'DistinguishedName', 'whenCreated', 'whenChanged', 'mail', 'ManagedBy', 'member')
+        $groupProperties = @(
+            'SamAccountName', 'Name', 'GroupCategory', 'GroupScope',
+            'Description', 'DistinguishedName', 'whenCreated', 'whenChanged',
+            'mail', 'ManagedBy', 'member'
+        )
+        
         $adGroups = Get-ADGroup -Filter * -Properties $groupProperties @serverParams -ErrorAction Stop
         
-        if ($null -ne $adGroups) { # Corrected null check
+        if ($adGroups) {
             foreach ($group in $adGroups) {
+                # Add group object
                 $allGroups.Add([PSCustomObject]@{
-                    SamAccountName  = $group.SamAccountName
-                    Name            = $group.Name
-                    GroupCategory   = $group.GroupCategory
-                    GroupScope      = $group.GroupScope
-                    Description     = $group.Description
-                    DistinguishedName= $group.DistinguishedName
-                    CreatedDate     = $group.whenCreated
-                    ModifiedDate    = $group.whenChanged
-                    EmailAddress    = $group.mail
-                    ManagedBy       = $group.ManagedBy
-                    MemberCount     = ($group.member | Measure-Object).Count # Direct members
+                    SamAccountName = $group.SamAccountName
+                    Name = $group.Name
+                    GroupCategory = $group.GroupCategory
+                    GroupScope = $group.GroupScope
+                    Description = $group.Description
+                    DistinguishedName = $group.DistinguishedName
+                    CreatedDate = $group.whenCreated
+                    ModifiedDate = $group.whenChanged
+                    EmailAddress = $group.mail
+                    ManagedBy = $group.ManagedBy
+                    MemberCount = if ($group.member) { $group.member.Count } else { 0 }
                 })
-                if ($null -ne $group.member) { # Corrected null check
-                    foreach ($memberDN in $group.member) {
-                        try {
-                            $memberObj = Get-ADObject -Identity $memberDN -Properties SamAccountName, ObjectClass @serverParams -ErrorAction Stop
-                            if ($null -ne $memberObj) { # Corrected null check
-                                $allGroupMembers.Add([PSCustomObject]@{
-                                    GroupDN             = $group.DistinguishedName
-                                    GroupName           = $group.SamAccountName
-                                    MemberDN            = $memberDN
-                                    MemberSamAccountName= $memberObj.SamAccountName
-                                    MemberObjectClass   = $memberObj.ObjectClass
-                                })
-                            }
-                        } catch {
-                            Write-MandALog "Could not resolve member '$memberDN' for group '$($group.SamAccountName)': $($_.Exception.Message)" -Level "WARN"
-                        }
-                    }
+                
+                # Process group members
+                if ($group.member) {
+                    Process-GroupMembers -Group $group -Members $group.member -MembersList $allGroupMembers -ServerParams $serverParams -Context $Context
                 }
             }
-            if ($allGroups.Count -gt 0) {
-                Export-MandAData -Data $allGroups -FileName "ADGroups" -Configuration $Configuration
-            } else { Write-MandALog "No AD Group objects processed." -Level "INFO" }
-            if ($allGroupMembers.Count -gt 0) {
-                Export-MandAData -Data $allGroupMembers -FileName "ADGroupMembers" -Configuration $Configuration
-            } else { Write-MandALog "No AD Group Membership records processed." -Level "INFO" }
-        } else { Write-MandALog "No AD Groups found or accessible from $globalCatalog." -Level "WARN" }
-    } catch { Write-MandALog "Error during AD Groups Discovery: $($_.Exception.Message)." -Level "ERROR" }
-    return @{Groups = $allGroups; Members = $allGroupMembers }
+            
+            # Export data
+            Export-DataToCSV -Data $allGroups -FilePath (Join-Path $Context.Paths.RawDataOutput "ADGroups.csv") -Context $Context
+            Export-DataToCSV -Data $allGroupMembers -FilePath (Join-Path $Context.Paths.RawDataOutput "ADGroupMembers.csv") -Context $Context
+            
+            Write-MandALog "Discovered $($allGroups.Count) AD groups with $($allGroupMembers.Count) total memberships" -Level "SUCCESS" -Context $Context
+        }
+    }
+    catch {
+        $Context.ErrorCollector.AddError("ADGroups", "Failed to discover AD groups", $_.Exception)
+        Write-MandALog "Error during AD Groups Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+    }
+    
+    return @{
+        Groups = $allGroups
+        Members = $allGroupMembers
+    }
+}
+
+function Process-GroupMembers {
+    param(
+        $Group,
+        $Members,
+        $MembersList,
+        $ServerParams,
+        $Context
+    )
+    
+    foreach ($memberDN in $Members) {
+        try {
+            $memberObj = Get-ADObject -Identity $memberDN -Properties SamAccountName, ObjectClass @ServerParams -ErrorAction Stop
+            
+            if ($memberObj) {
+                $MembersList.Add([PSCustomObject]@{
+                    GroupDN = $Group.DistinguishedName
+                    GroupName = $Group.SamAccountName
+                    MemberDN = $memberDN
+                    MemberSamAccountName = $memberObj.SamAccountName
+                    MemberObjectClass = $memberObj.ObjectClass
+                })
+            }
+        }
+        catch {
+            $Context.ErrorCollector.AddWarning("ADGroups", "Failed to resolve member '$memberDN' for group '$($Group.SamAccountName)'")
+        }
+    }
 }
 
 function Get-ADComputersDataInternal {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
     )
-    Write-MandALog "Starting AD Computers Discovery..." -Level "INFO"
+    
+    Write-MandALog "Starting AD Computers Discovery..." -Level "INFO" -Context $Context
     $allComputers = [System.Collections.Generic.List[PSObject]]::new()
-    $globalCatalog = $Configuration.environment.globalCatalog
-    $serverParams = if ($globalCatalog) { @{ Server = $globalCatalog } } else { @{} }
-
+    
+    $serverParams = Get-ServerParameters -Configuration $Configuration
+    
     try {
-        $computerProperties = @('Name', 'DNSHostName', 'OperatingSystem', 'OperatingSystemVersion', 'OperatingSystemServicePack', 'Enabled', 'DistinguishedName', 'whenCreated', 'whenChanged', 'LastLogonTimestamp', 'Description', 'ManagedBy', 'MemberOf')
+        $computerProperties = @(
+            'Name', 'DNSHostName', 'OperatingSystem', 'OperatingSystemVersion',
+            'OperatingSystemServicePack', 'Enabled', 'DistinguishedName',
+            'whenCreated', 'whenChanged', 'LastLogonTimestamp', 'Description',
+            'ManagedBy', 'MemberOf'
+        )
+        
         $adComputers = Get-ADComputer -Filter * -Properties $computerProperties @serverParams -ErrorAction Stop
-        if ($null -ne $adComputers) { # Corrected null check
+        
+        if ($adComputers) {
             foreach ($computer in $adComputers) {
-                $lastLogon = $null
-                try { 
-                    if ($null -ne $computer.LastLogonTimestamp -and 0 -ne $computer.LastLogonTimestamp -and $computer.LastLogonTimestamp -gt 0) { # Corrected null check
-                        $lastLogon = [datetime]::FromFileTime($computer.LastLogonTimestamp) 
-                    } 
-                } catch { Write-MandALog "Could not convert LastLogonTimestamp '$($computer.LastLogonTimestamp)' for computer '$($computer.Name)'. Error: $($_.Exception.Message)" -Level "WARN"}
-                
-                $allComputers.Add([PSCustomObject]@{
-                    Name                    = $computer.Name
-                    DNSHostName             = $computer.DNSHostName
-                    OperatingSystem         = $computer.OperatingSystem
-                    OperatingSystemVersion  = $computer.OperatingSystemVersion
-                    OperatingSystemServicePack = $computer.OperatingSystemServicePack
-                    Enabled                 = $computer.Enabled
-                    DistinguishedName       = $computer.DistinguishedName
-                    CreatedDate             = $computer.whenCreated
-                    ModifiedDate            = $computer.whenChanged
-                    LastLogonDate           = $lastLogon
-                    Description             = $computer.Description
-                    ManagedBy               = $computer.ManagedBy
-                    MemberOfGroupsCount     = ($computer.MemberOf | Measure-Object).Count
-                })
+                $computerObj = ConvertTo-ComputerObject -ADComputer $computer -Context $Context
+                $allComputers.Add($computerObj)
             }
-            if ($allComputers.Count -gt 0) {
-                Export-MandAData -Data $allComputers -FileName "ADComputers" -Configuration $Configuration
-            } else { Write-MandALog "No AD Computer objects processed." -Level "INFO" }
-        } else { Write-MandALog "No AD Computers found from $globalCatalog." -Level "WARN" }
-    } catch { Write-MandALog "Error during AD Computers Discovery: $($_.Exception.Message)" -Level "ERROR" }
+            
+            Export-DataToCSV -Data $allComputers -FilePath (Join-Path $Context.Paths.RawDataOutput "ADComputers.csv") -Context $Context
+            
+            Write-MandALog "Discovered $($allComputers.Count) AD computers" -Level "SUCCESS" -Context $Context
+        }
+    }
+    catch {
+        $Context.ErrorCollector.AddError("ADComputers", "Failed to discover AD computers", $_.Exception)
+        Write-MandALog "Error during AD Computers Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+    }
+    
     return $allComputers
 }
 
-function Get-ADOUsDataInternal {
-    [CmdletBinding()]
+function ConvertTo-ComputerObject {
     param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration
+        [Microsoft.ActiveDirectory.Management.ADComputer]$ADComputer,
+        $Context
     )
-    Write-MandALog "Starting AD OUs Discovery..." -Level "INFO"
-    $allOUs = [System.Collections.Generic.List[PSObject]]::new()
-    $globalCatalog = $Configuration.environment.globalCatalog
-    $serverParams = if ($globalCatalog) { @{ Server = $globalCatalog } } else { @{} }
-    try {
-        $ouPropertiesToSelect = @('Name', 'DistinguishedName', 'Description', 'ManagedBy', 'ProtectedFromAccidentalDeletion', 'whenCreated', 'whenChanged')
-        $adOUs = Get-ADOrganizationalUnit -Filter * -Properties $ouPropertiesToSelect @serverParams -ErrorAction Stop
-        if ($null -ne $adOUs) { # Corrected null check
-            foreach ($ou in $adOUs) {
-                $ouData = @{}
-                foreach ($propName in $ouPropertiesToSelect) {
-                    if ($null -ne $ou.PSObject.Properties[$propName]) { $ouData[$propName] = $ou.PSObject.Properties[$propName].Value } # Corrected null check
-                    else { $ouData[$propName] = $null }
-                }
-                $allOUs.Add([PSCustomObject]$ouData)
-            }
-            if ($allOUs.Count -gt 0) {
-                Export-MandAData -Data $allOUs -FileName "ADOUs" -Configuration $Configuration
-            } else { Write-MandALog "No AD OU objects processed." -Level "INFO" }
-        } else { Write-MandALog "No AD OUs found from $globalCatalog." -Level "WARN" }
-    } catch { Write-MandALog "Error during AD OUs Discovery: $($_.Exception.Message)" -Level "ERROR" }
-    return $allOUs
+    
+    $lastLogonDate = if ($ADComputer.LastLogonTimestamp -and $ADComputer.LastLogonTimestamp -gt 0) {
+        try { [datetime]::FromFileTime($ADComputer.LastLogonTimestamp) } catch { $null }
+    } else { $null }
+    
+    return [PSCustomObject]@{
+        Name = $ADComputer.Name
+        DNSHostName = $ADComputer.DNSHostName
+        OperatingSystem = $ADComputer.OperatingSystem
+        OperatingSystemVersion = $ADComputer.OperatingSystemVersion
+        OperatingSystemServicePack = $ADComputer.OperatingSystemServicePack
+        Enabled = $ADComputer.Enabled
+        DistinguishedName = $ADComputer.DistinguishedName
+        CreatedDate = $ADComputer.whenCreated
+        ModifiedDate = $ADComputer.whenChanged
+        LastLogonDate = $lastLogonDate
+        Description = $ADComputer.Description
+        ManagedBy = $ADComputer.ManagedBy
+        MemberOfGroupsCount = if ($ADComputer.MemberOf) { $ADComputer.MemberOf.Count } else { 0 }
+    }
 }
 
 function Get-ADSitesAndServicesDataInternal {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
     )
-    Write-MandALog "Starting AD Sites and Services Discovery" -Level "INFO"
-    $allSiteData = [System.Collections.Generic.List[PSObject]]::new()
-    $allSiteLinkData = [System.Collections.Generic.List[PSObject]]::new()
-    $allSubnetData = [System.Collections.Generic.List[PSObject]]::new()
-    $globalCatalog = $Configuration.environment.globalCatalog
-    $serverParams = if ($globalCatalog) { @{ Server = $globalCatalog } } else { @{} }
     
-    try {
-        Write-MandALog "Discovering AD Replication Sites..." -Level "INFO"
-        $sites = Get-ADReplicationSite -Filter * -Properties Options @serverParams -ErrorAction Stop
-        if ($null -ne $sites) {
-            foreach ($site in $sites) {
-                $serversInSite = @()
-                $dcInSite = @()
-                
-                # FIXED: Get non-DC computers in the site using proper PowerShell filter syntax
-                try {
-                    # Using PowerShell's -band operator to check if computer is NOT a domain controller
-                    # Domain controllers have the SERVER_TRUST_ACCOUNT flag (8192) set in userAccountControl
-                    $nonDCFilter = "userAccountControl -band 8192 -eq 0"
-                    $serversInSite = Get-ADComputer -Filter $nonDCFilter -SearchBase $site.DistinguishedName @serverParams -ErrorAction SilentlyContinue
-                } catch { 
-                    Write-MandALog "Could not determine Member Servers for site '$($site.Name)': $($_.Exception.Message)" -Level "WARN" 
-                }
-                
-                # FIXED: Get domain controllers for the site without parameter conflicts
-                try {
-                    if ($serverParams.ContainsKey('Server')) {
-                        # If we have a specific server parameter, get all DCs and filter by site
-                        $allDCs = Get-ADDomainController -Filter * @serverParams -ErrorAction SilentlyContinue
-                        if ($allDCs) {
-                            $dcInSite = $allDCs | Where-Object { $_.Site -eq $site.Name }
-                        }
-                    } else {
-                        # If no server specified, use -Site parameter directly
-                        $dcInSite = Get-ADDomainController -Site $site.Name -ErrorAction SilentlyContinue
-                    }
-                } catch { 
-                    Write-MandALog "Could not determine Domain Controllers for site '$($site.Name)': $($_.Exception.Message)" -Level "WARN" 
-                }
-
-                $siteOptions = $site.Options
-                $allSiteData.Add([PSCustomObject]@{
-                    SiteName                    = $site.Name
-                    DistinguishedName           = $site.DistinguishedName
-                    Location                    = $site.Location
-                    Description                 = $site.Description
-                    IntersiteTopologyGenerator  = if ($null -ne $siteOptions) { ($siteOptions -band [Microsoft.ActiveDirectory.Management.ADReplicationSiteOptions]::IntersiteTopologyGenerator) -as [bool] } else { $null }
-                    IsStaleSite                 = if ($null -ne $siteOptions) { ($siteOptions -band [Microsoft.ActiveDirectory.Management.ADReplicationSiteOptions]::IsStaleSite) -as [bool] } else { $null }
-                    GroupMembershipCaching      = if ($null -ne $siteOptions) { ($siteOptions -band [Microsoft.ActiveDirectory.Management.ADReplicationSiteOptions]::GroupMembershipCaching) -as [bool] } else { $null }
-                    ServersInSiteCount          = ($serversInSite | Measure-Object).Count
-                    DomainControllersInSiteCount= ($dcInSite | Measure-Object).Count
-                })
-            }
-            if ($allSiteData.Count -gt 0) { 
-                Export-MandAData -Data $allSiteData -FileName "ADSites" -Configuration $Configuration 
-            } else { 
-                Write-MandALog "No AD Site objects processed." -Level "INFO" 
-            }
-        } else { 
-            Write-MandALog "No AD Sites found." -Level "WARN" 
-        }
-
-        Write-MandALog "Discovering AD Replication Site Links..." -Level "INFO"
-        $siteLinks = Get-ADReplicationSiteLink -Filter * @serverParams -ErrorAction Stop
-        if ($null -ne $siteLinks) {
-            $siteLinks | ForEach-Object { 
-                $allSiteLinkData.Add([PSCustomObject]@{ 
-                    Name = $_.Name
-                    DistinguishedName = $_.DistinguishedName
-                    Cost = $_.Cost
-                    ReplicationFrequencyInMinutes = $_.ReplicationFrequencyInMinutes
-                    SitesIncluded = ($_.SitesIncluded | ForEach-Object {$_.Name}) -join ';'
-                    Description = $_.Description 
-                }) 
-            }
-            if ($allSiteLinkData.Count -gt 0) { 
-                Export-MandAData -Data $allSiteLinkData -FileName "ADSiteLinks" -Configuration $Configuration 
-            } else { 
-                Write-MandALog "No AD Site Link objects processed." -Level "INFO" 
-            }
-        } else { 
-            Write-MandALog "No AD Site Links found." -Level "WARN" 
-        }
-        
-        Write-MandALog "Discovering AD Replication Subnets..." -Level "INFO"
-        $subnets = Get-ADReplicationSubnet -Filter * -Properties Site @serverParams -ErrorAction Stop
-        if ($null -ne $subnets) {
-            $subnets | ForEach-Object { 
-                $allSubnetData.Add([PSCustomObject]@{ 
-                    Name = $_.Name
-                    DistinguishedName = $_.DistinguishedName
-                    Location = $_.Location
-                    Site = if ($null -ne $_.Site) { $_.Site.Name } else { $null }
-                }) 
-            }
-            if ($allSubnetData.Count -gt 0) { 
-                Export-MandAData -Data $allSubnetData -FileName "ADSubnets" -Configuration $Configuration 
-            } else { 
-                Write-MandALog "No AD Subnet objects processed." -Level "INFO" 
-            }
-        } else { 
-            Write-MandALog "No AD Subnets found." -Level "WARN" 
-        }
-    } catch { 
-        Write-MandALog "Error during AD Sites/Services Discovery: $($_.Exception.Message)" -Level "ERROR" 
+    Write-MandALog "Starting AD Sites and Services Discovery" -Level "INFO" -Context $Context
+    
+    $result = @{
+        Sites = [System.Collections.Generic.List[PSObject]]::new()
+        SiteLinks = [System.Collections.Generic.List[PSObject]]::new()
+        Subnets = [System.Collections.Generic.List[PSObject]]::new()
     }
     
-    Write-MandALog "Finished AD Sites and Services Discovery." -Level "INFO"
-    return @{ Sites = $allSiteData; SiteLinks = $allSiteLinkData; Subnets = $allSubnetData }
+    $serverParams = Get-ServerParameters -Configuration $Configuration
+    
+    try {
+        # Discover Sites
+        $sites = Get-ADReplicationSite -Filter * -Properties * @serverParams -ErrorAction Stop
+        
+        foreach ($site in $sites) {
+            $siteObj = Process-ADSite -Site $site -ServerParams $serverParams -Context $Context
+            $result.Sites.Add($siteObj)
+        }
+        
+        # Discover Site Links
+        $siteLinks = Get-ADReplicationSiteLink -Filter * @serverParams -ErrorAction Stop
+        
+        foreach ($siteLink in $siteLinks) {
+            $result.SiteLinks.Add([PSCustomObject]@{
+                Name = $siteLink.Name
+                DistinguishedName = $siteLink.DistinguishedName
+                Cost = $siteLink.Cost
+                ReplicationFrequencyInMinutes = $siteLink.ReplicationFrequencyInMinutes
+                SitesIncluded = ($siteLink.SitesIncluded | ForEach-Object { $_.Name }) -join ';'
+                Description = $siteLink.Description
+            })
+        }
+        
+        # Discover Subnets
+        $subnets = Get-ADReplicationSubnet -Filter * -Properties Site @serverParams -ErrorAction Stop
+        
+        foreach ($subnet in $subnets) {
+            $result.Subnets.Add([PSCustomObject]@{
+                Name = $subnet.Name
+                DistinguishedName = $subnet.DistinguishedName
+                Location = $subnet.Location
+                Site = if ($subnet.Site) { $subnet.Site.Name } else { $null }
+            })
+        }
+        
+        # Export data
+        Export-DataToCSV -Data $result.Sites -FilePath (Join-Path $Context.Paths.RawDataOutput "ADSites.csv") -Context $Context
+        Export-DataToCSV -Data $result.SiteLinks -FilePath (Join-Path $Context.Paths.RawDataOutput "ADSiteLinks.csv") -Context $Context
+        Export-DataToCSV -Data $result.Subnets -FilePath (Join-Path $Context.Paths.RawDataOutput "ADSubnets.csv") -Context $Context
+        
+        Write-MandALog "Discovered $($result.Sites.Count) sites, $($result.SiteLinks.Count) site links, $($result.Subnets.Count) subnets" -Level "SUCCESS" -Context $Context
+    }
+    catch {
+        $Context.ErrorCollector.AddError("ADSitesServices", "Failed to discover AD Sites and Services", $_.Exception)
+        Write-MandALog "Error during AD Sites/Services Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+    }
+    
+    return $result
+}
+
+function Process-ADSite {
+    param($Site, $ServerParams, $Context)
+    
+    # Count domain controllers in site
+    $dcCount = 0
+    try {
+        if ($ServerParams.ContainsKey('Server')) {
+            $allDCs = Get-ADDomainController -Filter * @ServerParams -ErrorAction Stop
+            $dcCount = @($allDCs | Where-Object { $_.Site -eq $Site.Name }).Count
+        } else {
+            $siteDCs = Get-ADDomainController -Site $Site.Name -ErrorAction Stop
+            $dcCount = @($siteDCs).Count
+        }
+    }
+    catch {
+        $Context.ErrorCollector.AddWarning("ADSites", "Could not count DCs for site: $($Site.Name)")
+    }
+    
+    # Count servers in site
+    $serverCount = 0
+    try {
+        $filter = { userAccountControl -band 8192 -eq 0 }  # Non-DC computers
+        $servers = Get-ADComputer -Filter $filter -SearchBase $Site.DistinguishedName @ServerParams -ErrorAction Stop
+        $serverCount = @($servers).Count
+    }
+    catch {
+        # SearchBase might not work for sites, this is expected
+    }
+    
+    return [PSCustomObject]@{
+        SiteName = $Site.Name
+        DistinguishedName = $Site.DistinguishedName
+        Location = $Site.Location
+        Description = $Site.Description
+        DomainControllersInSiteCount = $dcCount
+        ServersInSiteCount = $serverCount
+        InterSiteTopologyGenerator = Test-SiteOption -Site $Site -Option 'IntersiteTopologyGenerator'
+        GroupMembershipCaching = Test-SiteOption -Site $Site -Option 'GroupMembershipCaching'
+    }
 }
 
 function Get-ADDNSZoneDataInternal {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
     )
-    Write-MandALog "Starting AD DNS Zone Discovery" -Level "INFO"
-    $allDNSZoneData = [System.Collections.Generic.List[PSObject]]::new()
-    $allDNSRecordData = [System.Collections.Generic.List[PSObject]]::new()
-
-    if (-not (Get-Module -Name DnsServer -ListAvailable)) {
-        Write-MandALog "DnsServer module not available. Skipping DNS Discovery. Install RSAT: DNS Server Tools if needed." -Level "WARN"
-        return @{Zones = $allDNSZoneData; Records = $allDNSRecordData}
-    }
-
-    $dnsServerParams = @{}
-    $targetDnsServer = $Configuration.discovery.adDns.dnsServer 
-    if (-not $targetDnsServer) { $targetDnsServer = $Configuration.environment.globalCatalog } 
-    if (-not $targetDnsServer) { $targetDnsServer = $Configuration.environment.domainController }
-
-    if ($targetDnsServer) {
-        $dnsServerParams.ComputerName = $targetDnsServer
-        Write-MandALog "Targeting DNS server: $targetDnsServer for DNS discovery." -Level "INFO"
-    } else {
-        Write-MandALog "No DNS server specified. Using local/default DNS server." -Level "WARN"
+    
+    Write-MandALog "Starting AD DNS Zone Discovery" -Level "INFO" -Context $Context
+    
+    $result = @{
+        Zones = [System.Collections.Generic.List[PSObject]]::new()
+        Records = [System.Collections.Generic.List[PSObject]]::new()
     }
     
-    $zonesToDetail = @($Configuration.discovery.adDns.detailedZones) 
-    if (-not $zonesToDetail) { $zonesToDetail = @() }
-
+    # Check if DnsServer module is available
+    if (-not (Get-Module -Name DnsServer -ListAvailable)) {
+        Write-MandALog "DnsServer module not available. Skipping DNS Discovery." -Level "WARN" -Context $Context
+        return $result
+    }
+    
+    # Determine DNS server
+    $dnsServer = Get-TargetDNSServer -Configuration $Configuration
+    $dnsServerParams = if ($dnsServer) { @{ComputerName = $dnsServer} } else { @{} }
+    
     try {
         $zones = Get-DnsServerZone @dnsServerParams -ErrorAction Stop
-        if ($null -ne $zones) { # Corrected null check
-            foreach ($zone in $zones) {
-                $replicationScopeValue = "N/A"
-                if ($zone.IsDsIntegrated -and $null -ne $zone.PSObject.Properties['ReplicationScope'] -and $null -ne $zone.ReplicationScope) { # Corrected null check
-                    try { $replicationScopeValue = $zone.ReplicationScope.ToString() } catch { $replicationScopeValue = "ErrorReadingScope" }
-                }
-                $allDNSZoneData.Add([PSCustomObject]@{
-                    ZoneName = $zone.ZoneName
-                    ZoneType = $zone.ZoneType.ToString()
-                    IsReverseLookupZone = $zone.IsReverseLookupZone
-                    IsDsIntegrated = $zone.IsDsIntegrated
-                    IsSigned = $zone.IsSigned
-                    DynamicUpdate = $zone.DynamicUpdate.ToString()
-                    ReplicationScope = $replicationScopeValue
-                })
-                if ($zonesToDetail -contains $zone.ZoneName -or ($zonesToDetail -contains "*")) {
-                    $records = Get-DnsServerResourceRecord -ZoneName $zone.ZoneName @dnsServerParams -RRType All -ErrorAction SilentlyContinue
-                    if ($null -ne $records) { # Corrected null check
-                        foreach ($record in $records) {
-                            $allDNSRecordData.Add([PSCustomObject]@{
-                                ZoneName    = $zone.ZoneName
-                                HostName    = $record.HostName
-                                RecordType  = $record.RecordType.ToString()
-                                Timestamp   = if ($null -ne $record.Timestamp) {$record.Timestamp} else {$null} # Corrected null check
-                                TimeToLive  = $record.TimeToLive.ToString()
-                                RecordData  = switch ($record.RecordType) {
-                                    "A"     { $record.RecordData.IPV4Address.IPAddressToString }
-                                    "AAAA"  { $record.RecordData.IPV6Address.IPAddressToString }
-                                    "CNAME" { $record.RecordData.HostNameAlias }
-                                    "MX"    { "Pref=$($record.RecordData.Preference);Exch=$($record.RecordData.MailExchange)" }
-                                    "NS"    { $record.RecordData.NameServer }
-                                    "PTR"   { $record.RecordData.PtrDomainName }
-                                    "SOA"   { "PriSrv=$($record.RecordData.PrimaryServer);RespP=$($record.RecordData.ResponsiblePerson);Serial=$($record.RecordData.SerialNumber)"}
-                                    "SRV"   { "Dom=$($record.RecordData.DomainName);Port=$($record.RecordData.Port);Pri=$($record.RecordData.Priority);Wght=$($record.RecordData.Weight)" }
-                                    "TXT"   { ($record.RecordData.DescriptiveText -join '; ') }
-                                    default { "Unhandled Type: $($record.RecordType); Data: $($record.RecordData | Out-String -Stream | Select-Object -First 1)" }
-                                }
-                            })
-                        }
-                    } else { Write-MandALog "No records found for detailed zone $($zone.ZoneName)." -Level "DEBUG" }
-                }
+        
+        foreach ($zone in $zones) {
+            $zoneObj = ConvertTo-DNSZoneObject -Zone $zone
+            $result.Zones.Add($zoneObj)
+            
+            # Check if detailed records should be collected
+            if (Should-CollectZoneDetails -ZoneName $zone.ZoneName -Configuration $Configuration) {
+                Collect-DNSRecords -Zone $zone -RecordsList $result.Records -ServerParams $dnsServerParams -Context $Context
             }
-            if ($allDNSZoneData.Count -gt 0) { Export-MandAData -Data $allDNSZoneData -FileName "ADDNSZones" -Configuration $Configuration }
-            else { Write-MandALog "No DNS Zone objects processed." -Level "INFO" }
-            if ($allDNSRecordData.Count -gt 0) { Export-MandAData -Data $allDNSRecordData -FileName "ADDNSRecords_Detailed" -Configuration $Configuration }
-            else { Write-MandALog "No detailed DNS Record objects processed (check configuration for 'detailedZones')." -Level "INFO" }
-        } else { Write-MandALog "No DNS Zones found from $targetDnsServer." -Level "WARN" }
-    } catch { Write-MandALog "Error during DNS Zone Discovery: $($_.Exception.Message)" -Level "ERROR" }
-    Write-MandALog "Finished AD DNS Zone Discovery." -Level "INFO"
-    return @{ Zones = $allDNSZoneData; Records = $allDNSRecordData }
+        }
+        
+        # Export data
+        Export-DataToCSV -Data $result.Zones -FilePath (Join-Path $Context.Paths.RawDataOutput "ADDNSZones.csv") -Context $Context
+        
+        if ($result.Records.Count -gt 0) {
+            Export-DataToCSV -Data $result.Records -FilePath (Join-Path $Context.Paths.RawDataOutput "ADDNSRecords_Detailed.csv") -Context $Context
+        }
+        
+        Write-MandALog "Discovered $($result.Zones.Count) DNS zones with $($result.Records.Count) detailed records" -Level "SUCCESS" -Context $Context
+    }
+    catch {
+        $Context.ErrorCollector.AddError("ADDNS", "Failed to discover DNS zones", $_.Exception)
+        Write-MandALog "Error during DNS Zone Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+    }
+    
+    return $result
 }
 
-# --- Public Function (Exported) ---
-function Invoke-ActiveDirectoryDiscovery {
-    [CmdletBinding()]
-    [OutputType([hashtable])]
+# Helper Functions
+function Get-ServerParameters {
+    param([hashtable]$Configuration)
+    
+    $params = @{}
+    
+    if ($Configuration.environment.globalCatalog) {
+        $params.Server = $Configuration.environment.globalCatalog
+    } elseif ($Configuration.environment.domainController) {
+        $params.Server = $Configuration.environment.domainController
+    }
+    
+    return $params
+}
+
+function BuildADFilter {
     param(
-        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [string]$ObjectType
+    )
+    
+    # Start with base filter
+    $filter = "*"
+    
+    # Add scope-based filtering if configured
+    if ($Configuration.discovery.discoveryScope) {
+        # This is a simplified example - expand based on your needs
+        if ($ObjectType -eq "User" -and $Configuration.discovery.excludeDisabledUsers) {
+            $filter = "Enabled -eq `$true"
+        }
+    }
+    
+    return $filter
+}
+
+function Test-SiteOption {
+    param($Site, [string]$Option)
+    
+    if (-not $Site.Options) { return $false }
+    
+    try {
+        $optionValue = [Microsoft.ActiveDirectory.Management.ADReplicationSiteOptions]::$Option
+        return ($Site.Options -band $optionValue) -as [bool]
+    }
+    catch {
+        return $false
+    }
+}
+
+function Get-TargetDNSServer {
+    param([hashtable]$Configuration)
+    
+    if ($Configuration.discovery.adDns.dnsServer) {
+        return $Configuration.discovery.adDns.dnsServer
+    } elseif ($Configuration.environment.globalCatalog) {
+        return $Configuration.environment.globalCatalog
+    } elseif ($Configuration.environment.domainController) {
+        return $Configuration.environment.domainController
+    }
+    
+    return $null
+}
+
+function Should-CollectZoneDetails {
+    param(
+        [string]$ZoneName,
         [hashtable]$Configuration
     )
-    Write-MandALog "--- Starting Active Directory Discovery Phase (v2.1.2) ---" -Level "HEADER"
-    $overallStatus = $true
-    $discoveredData = @{}
+    
+    $detailedZones = $Configuration.discovery.adDns.detailedZones
+    
+    if (-not $detailedZones) { return $false }
+    
+    return ($detailedZones -contains $ZoneName) -or ($detailedZones -contains "*")
+}
 
-    if (-not (Get-Module -Name ActiveDirectory -ListAvailable)) {
-        Write-MandALog "ActiveDirectory PowerShell module is not available. Please install RSAT: AD DS and AD LDS Tools." -Level "ERROR"
-        return $null
+function ConvertTo-DNSZoneObject {
+    param($Zone)
+    
+    $replicationScope = if ($Zone.IsDsIntegrated -and $Zone.ReplicationScope) {
+        try { $Zone.ReplicationScope.ToString() } catch { "Unknown" }
+    } else { "N/A" }
+    
+    return [PSCustomObject]@{
+        ZoneName = $Zone.ZoneName
+        ZoneType = $Zone.ZoneType.ToString()
+        IsReverseLookupZone = $Zone.IsReverseLookupZone
+        IsDsIntegrated = $Zone.IsDsIntegrated
+        IsSigned = $Zone.IsSigned
+        DynamicUpdate = $Zone.DynamicUpdate.ToString()
+        ReplicationScope = $replicationScope
     }
+}
 
-    $globalCatalog = $Configuration.environment.globalCatalog
-    if ([string]::IsNullOrWhiteSpace($globalCatalog)) {
-        Write-MandALog "Global Catalog server (`environment.globalCatalog`) not specified in config. This is highly recommended for multi-domain environments to resolve referrals. Falling back to `environment.domainController`." -Level "WARN"
-        $globalCatalog = $Configuration.environment.domainController
-    }
-    if (-not $globalCatalog) {
-        Write-MandALog "Neither Global Catalog nor Domain Controller specified in configuration. Skipping Active Directory Discovery." -Level "ERROR"
-        return $null
-    }
-    if (-not (Test-Connection -ComputerName $globalCatalog -Count 1 -Quiet -ErrorAction SilentlyContinue)) {
-        Write-MandALog "Target server '$globalCatalog' (GC/DC) is unreachable. Skipping Active Directory Discovery." -Level "ERROR"
-        return $null
-    }
-    Write-MandALog "Targeting AD server: '$globalCatalog' (GC or DC)." -Level "INFO"
-
+function Collect-DNSRecords {
+    param($Zone, $RecordsList, $ServerParams, $Context)
+    
     try {
-        $discoveredData.Users             = Get-ADUsersDataInternal -Configuration $Configuration
-        $discoveredData.GroupsAndMembers  = Get-ADGroupsDataInternal -Configuration $Configuration
-        $discoveredData.Computers         = Get-ADComputersDataInternal -Configuration $Configuration
-        $discoveredData.OUs               = Get-ADOUsDataInternal -Configuration $Configuration
-        $discoveredData.SitesAndServices  = Get-ADSitesAndServicesDataInternal -Configuration $Configuration
-        $discoveredData.DNSInfo           = Get-ADDNSZoneDataInternal -Configuration $Configuration
-    } catch {
-        Write-MandALog "A critical error occurred during the Active Directory Discovery Phase: $($_.Exception.Message)" -Level "ERROR"
-        $overallStatus = $false
+        $records = Get-DnsServerResourceRecord -ZoneName $Zone.ZoneName @ServerParams -RRType All -ErrorAction Stop
+        
+        foreach ($record in $records) {
+            $recordObj = ConvertTo-DNSRecordObject -Record $record -ZoneName $Zone.ZoneName
+            $RecordsList.Add($recordObj)
+        }
     }
+    catch {
+        $Context.ErrorCollector.AddWarning("ADDNS", "Failed to collect records for zone: $($Zone.ZoneName)")
+    }
+}
 
-    if ($overallStatus) {
-        Write-MandALog "--- Active Directory Discovery Phase Completed Successfully ---" -Level "SUCCESS"
-    } else {
-        Write-MandALog "--- Active Directory Discovery Phase Completed With Errors. Please review logs. ---" -Level "ERROR"
+function ConvertTo-DNSRecordObject {
+    param($Record, [string]$ZoneName)
+    
+    $recordData = switch ($Record.RecordType) {
+        "A" { $Record.RecordData.IPV4Address.IPAddressToString }
+        "AAAA" { $Record.RecordData.IPV6Address.IPAddressToString }
+        "CNAME" { $Record.RecordData.HostNameAlias }
+        "MX" { "Preference=$($Record.RecordData.Preference); Exchange=$($Record.RecordData.MailExchange)" }
+        "NS" { $Record.RecordData.NameServer }
+        "PTR" { $Record.RecordData.PtrDomainName }
+        "SOA" { 
+            "PrimaryServer=$($Record.RecordData.PrimaryServer); " +
+            "ResponsiblePerson=$($Record.RecordData.ResponsiblePerson); " +
+            "SerialNumber=$($Record.RecordData.SerialNumber)"
+        }
+        "SRV" { 
+            "Target=$($Record.RecordData.DomainName); " +
+            "Port=$($Record.RecordData.Port); " +
+            "Priority=$($Record.RecordData.Priority); " +
+            "Weight=$($Record.RecordData.Weight)"
+        }
+        "TXT" { ($Record.RecordData.DescriptiveText -join '; ') }
+        default { "Type: $($Record.RecordType)" }
     }
+    
+    return [PSCustomObject]@{
+        ZoneName = $ZoneName
+        HostName = $Record.HostName
+        RecordType = $Record.RecordType.ToString()
+        Timestamp = $Record.Timestamp
+        TimeToLive = $Record.TimeToLive.ToString()
+        RecordData = $recordData
+    }
+}
+
+# Main exported function
+function Invoke-ActiveDirectoryDiscovery {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$false)]
+        $Context
+    )
+    
+    # Create minimal context if not provided (backward compatibility)
+    if (-not $Context) {
+        $Context = @{
+            ErrorCollector = [PSCustomObject]@{
+                AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
+                AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
+            }
+            Paths = @{
+                RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
+            }
+        }
+    }
+    
+    Write-MandALog "--- Starting Active Directory Discovery Phase (v2.0.0) ---" -Level "HEADER" -Context $Context
+    
+    # Validate Active Directory module
+    if (-not (Get-Module -Name ActiveDirectory -ListAvailable)) {
+        $Context.ErrorCollector.AddError("ActiveDirectory", "ActiveDirectory PowerShell module is not available", $null)
+        Write-MandALog "ActiveDirectory module not available. Please install RSAT." -Level "ERROR" -Context $Context
+        return $null
+    }
+    
+    # Validate connectivity
+    $targetServer = $Configuration.environment.globalCatalog
+    if (-not $targetServer) { $targetServer = $Configuration.environment.domainController }
+    
+    if ($targetServer) {
+        if (-not (Test-Connection -ComputerName $targetServer -Count 1 -Quiet)) {
+            $Context.ErrorCollector.AddError("ActiveDirectory", "Cannot reach AD server: $targetServer", $null)
+            Write-MandALog "Target AD server unreachable: $targetServer" -Level "ERROR" -Context $Context
+            return $null
+        }
+    }
+    
+    # Execute discovery functions
+    $discoveredData = @{}
+    
+    try {
+        $discoveredData.Users = Get-ADUsersDataInternal -Configuration $Configuration -Context $Context
+        $discoveredData.GroupsAndMembers = Get-ADGroupsDataInternal -Configuration $Configuration -Context $Context
+        $discoveredData.Computers = Get-ADComputersDataInternal -Configuration $Configuration -Context $Context
+        $discoveredData.OUs = Get-ADOUsDataInternal -Configuration $Configuration -Context $Context
+        $discoveredData.SitesAndServices = Get-ADSitesAndServicesDataInternal -Configuration $Configuration -Context $Context
+        $discoveredData.DNSInfo = Get-ADDNSZoneDataInternal -Configuration $Configuration -Context $Context
+        
+        Write-MandALog "--- Active Directory Discovery Phase Completed Successfully ---" -Level "SUCCESS" -Context $Context
+    }
+    catch {
+        $Context.ErrorCollector.AddError("ActiveDirectory", "Critical error during discovery", $_.Exception)
+        Write-MandALog "Critical error during AD Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+    }
+    
     return $discoveredData
 }
 
-Export-ModuleMember -Function Invoke-ActiveDirectoryDiscovery
+# Export module members
+Export-ModuleMember -Function @('Invoke-ActiveDirectoryDiscovery')
