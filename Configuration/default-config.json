@@ -143,7 +143,7 @@
     },
     "performance": {
         "memoryThresholdMB": 4096,
-        "diskSpaceThresholdGB": 10,
+        "diskSpaceThresholdGB": 2,
         "throttleLimit": 100,
         "progressUpdateInterval": 100,
         "enableCaching": true,
