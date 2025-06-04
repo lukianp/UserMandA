@@ -4,11 +4,9 @@
 .DESCRIPTION
     Manages authentication flow and token lifecycle with comprehensive error handling
 .NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.0.0
-    Created: 2025-06-03
-    Last Modified: 2025-06-03
-    Change Log: Initial version - any future changes require version increment
+    Author: Enhanced Version
+    Version: 2.0.0
+    Created: 2025-06-02
 #>
 
 # Module-scoped variables
@@ -33,7 +31,18 @@ function Initialize-MandAAuthentication {
         # Clear any existing auth context
         $script:AuthContext = $null
         $script:LastAuthAttempt = Get-Date
+
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
         
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
+
         # Get credentials
         Write-MandALog "Retrieving credentials..." -Level "INFO"
         $credentials = Get-SecureCredentials -Configuration $Configuration
