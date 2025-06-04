@@ -204,17 +204,46 @@ class DiscoveryErrorCollector {
         }
         return $summary
     }
-    
     [void]ExportToFile([string]$FilePath) {
-        $report = @{
-            Summary = $this.GetSummary()
-            GeneratedAt = Get-Date
-            Errors = $this.Errors
-            Warnings = $this.Warnings
-            ErrorCounts = $this.ErrorCounts
+    # Create a cleaned version of errors for serialization
+    $cleanedErrors = $this.Errors | ForEach-Object {
+        @{
+            Timestamp = $_.Timestamp
+            Source = $_.Source
+            Message = $_.Message
+            ExceptionMessage = if ($_.Exception) { $_.Exception.Message } else { $null }
+            ExceptionType = if ($_.Exception) { $_.Exception.GetType().FullName } else { "Unknown" }
+            StackTrace = $_.StackTrace
         }
-        $report | ConvertTo-Json -Depth 10 | Set-Content -Path $FilePath -Encoding UTF8
     }
+    
+    $report = @{
+        Summary = $this.GetSummary()
+        GeneratedAt = Get-Date
+        Errors = $cleanedErrors
+        Warnings = $this.Warnings
+        ErrorCounts = $this.ErrorCounts
+    }
+    
+    try {
+        $report | ConvertTo-Json -Depth 10 -Compress | Set-Content -Path $FilePath -Encoding UTF8
+    }
+    catch {
+        # Fallback to simple text format if JSON serialization fails
+        $textReport = @"
+Error Report Generated: $(Get-Date)
+Summary: $($this.GetSummary())
+
+Errors:
+$($cleanedErrors | ForEach-Object { "[$($_.Timestamp)] $($_.Source): $($_.Message)" } | Out-String)
+
+Warnings:
+$($this.Warnings | ForEach-Object { "[$($_.Timestamp)] $($_.Source): $($_.Message)" } | Out-String)
+"@
+        $textReport | Set-Content -Path ($FilePath -replace '\.json$', '.txt') -Encoding UTF8
+    }
+}
+    
 }
 
 #===============================================================================
