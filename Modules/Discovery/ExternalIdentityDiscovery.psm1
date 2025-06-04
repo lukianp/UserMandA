@@ -25,10 +25,10 @@
 
 
 # Import base module
-$baseModule = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath "Utilities\DiscoveryModuleBase.psm1"
-if (Test-Path -Path $baseModule) {
-    Import-Module -Name $baseModule -Force
-}
+
+$authModulePathFromGlobal = Join-Path $global:MandA.Paths.Authentication "DiscoveryModuleBase.psm1"
+Import-Module $authModulePathFromGlobal -Force
+
 
 # Module-specific circuit breakers
 $script:GraphCircuitBreaker = [CircuitBreaker]::new("MicrosoftGraph")
