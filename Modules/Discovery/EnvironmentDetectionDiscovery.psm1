@@ -10,7 +10,233 @@
     Enhanced: 2025-01-03
 #>
 
+# Add progress module import at the top
+$progressModulePath = if ($global:MandA -and $global:MandA.Paths) {
+    Join-Path $global:MandA.Paths.Utilities "ProgressDisplay.psm1"
+} else {
+    Join-Path (Split-Path $PSScriptRoot -Parent) "..\Utilities\ProgressDisplay.psm1"
+}
+if (Test-Path $progressModulePath) {
+    Import-Module $progressModulePath -Force -Global
+}
 
+# Enhanced Test-OnPremisesAD
+function Test-OnPremisesAD {
+    param($EnvironmentInfo, $Context)
+    
+    try {
+        Write-ProgressStep "Checking for on-premises Active Directory..." -Status Progress
+        
+        $adDomain = Get-ADDomain -ErrorAction Stop
+        $adForest = Get-ADForest -ErrorAction Stop
+        
+        $EnvironmentInfo.HasOnPremAD = $true
+        $EnvironmentInfo.OnPremDomains += $adDomain.DNSRoot
+        $EnvironmentInfo.EnvironmentDetails.ADForestName = $adForest.Name
+        $EnvironmentInfo.EnvironmentDetails.ADForestMode = $adForest.ForestMode.ToString()
+        $EnvironmentInfo.EnvironmentDetails.ADDomainCount = @($adForest.Domains).Count
+        
+        Write-ProgressStep "On-premises AD detected: $($adDomain.DNSRoot)" -Status Success
+        
+        # Get user count with progress
+        try {
+            Write-ProgressStep "Counting AD users..." -Status Progress
+            $adUsers = @(Get-ADUser -Filter * -ErrorAction Stop)
+            $EnvironmentInfo.UserCorrelation.TotalOnPremUsers = $adUsers.Count
+            Write-ProgressStep "Found $($adUsers.Count) on-premises users" -Status Info
+        }
+        catch {
+            Write-ProgressStep "Could not retrieve AD user count" -Status Warning
+            $Context.ErrorCollector.AddWarning("EnvironmentDetection", "Could not retrieve AD user count")
+        }
+    }
+    catch {
+        Write-ProgressStep "No on-premises AD detected or not accessible" -Status Info
+    }
+    
+    return $EnvironmentInfo
+}
+
+# Enhanced Test-AzureAD
+function Test-AzureAD {
+    param($EnvironmentInfo, $Context)
+    
+    try {
+        Write-ProgressStep "Checking for Azure AD / Microsoft Graph connection..." -Status Progress
+        
+        $mgContext = Get-MgContext -ErrorAction SilentlyContinue
+        
+        if ($mgContext) {
+            $EnvironmentInfo.HasAzureAD = $true
+            $EnvironmentInfo.EnvironmentDetails.GraphAPIConnected = $true
+            $EnvironmentInfo.EnvironmentDetails.AzureTenantId = $mgContext.TenantId
+            
+            Write-ProgressStep "Azure AD detected: Tenant $($mgContext.TenantId)" -Status Success
+            
+            # Get organization details
+            Write-ProgressStep "Retrieving organization details..." -Status Progress
+            $EnvironmentInfo = Get-OrganizationDetails -EnvironmentInfo $EnvironmentInfo -Context $Context
+            
+            # Get domain information
+            Write-ProgressStep "Retrieving domain information..." -Status Progress
+            $EnvironmentInfo = Get-DomainInformation -EnvironmentInfo $EnvironmentInfo -Context $Context
+            
+            # Get user statistics
+            Write-ProgressStep "Analyzing cloud user statistics..." -Status Progress
+            $EnvironmentInfo = Get-CloudUserStatistics -EnvironmentInfo $EnvironmentInfo -Context $Context
+            
+            Write-ProgressStep "Azure AD analysis completed" -Status Success
+        }
+        else {
+            Write-ProgressStep "No Azure AD / Microsoft Graph connection detected" -Status Info
+        }
+    }
+    catch {
+        Write-ProgressStep "Error checking Azure AD: $($_.Exception.Message)" -Status Error
+        $Context.ErrorCollector.AddWarning("EnvironmentDetection", "Error checking Azure AD: $($_.Exception.Message)")
+    }
+    
+    return $EnvironmentInfo
+}
+
+# Enhanced Get-CloudUserStatistics
+function Get-CloudUserStatistics {
+    param($EnvironmentInfo, $Context)
+    
+    try {
+        Write-ProgressStep "Retrieving cloud user statistics..." -Status Progress
+        
+        # Use pagination for large environments
+        $pageSize = 999
+        $cloudUsers = @()
+        $pageCount = 0
+        
+        do {
+            $pageCount++
+            Write-ProgressStep "Fetching user batch $pageCount (size: $pageSize)..." -Status Progress
+            
+            $batch = Get-MgUser -Top $pageSize -Property OnPremisesSyncEnabled,UserPrincipalName -ErrorAction Stop
+            $cloudUsers += $batch
+            
+            Show-ProgressBar -Current $cloudUsers.Count -Total ($cloudUsers.Count + 1) `
+                -Activity "Loading cloud users"
+            
+        } while ($batch.Count -eq $pageSize)
+        
+        Write-Host "" # New line after progress
+        Write-ProgressStep "Retrieved $($cloudUsers.Count) cloud users" -Status Info
+        
+        # Analyze users
+        Write-ProgressStep "Analyzing user synchronization status..." -Status Progress
+        
+        $EnvironmentInfo.UserCorrelation.TotalCloudUsers = $cloudUsers.Count
+        $EnvironmentInfo.UserCorrelation.SyncedUsers = @($cloudUsers | Where-Object { $_.OnPremisesSyncEnabled -eq $true }).Count
+        $EnvironmentInfo.UserCorrelation.CloudOnlyUsers = @($cloudUsers | Where-Object { $_.OnPremisesSyncEnabled -ne $true }).Count
+        
+        Write-ProgressStep "Analysis complete - Total: $($cloudUsers.Count), Synced: $($EnvironmentInfo.UserCorrelation.SyncedUsers), Cloud-only: $($EnvironmentInfo.UserCorrelation.CloudOnlyUsers)" -Status Success
+    }
+    catch {
+        Write-ProgressStep "Could not retrieve cloud user statistics" -Status Warning
+        $Context.ErrorCollector.AddWarning("EnvironmentDetection", "Could not retrieve cloud user statistics")
+    }
+    
+    return $EnvironmentInfo
+}
+
+# Enhanced main function
+function Invoke-EnvironmentDetectionDiscovery {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$false)]
+        $Context
+    )
+    
+    # Create minimal context if not provided
+    if (-not $Context) {
+        $Context = @{
+            ErrorCollector = [PSCustomObject]@{
+                AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
+                AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
+            }
+            Paths = @{
+                RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
+            }
+        }
+    }
+    
+    try {
+        Write-ProgressStep "Starting Environment Detection Discovery (v3.0.0)" -Status Progress
+        
+        # Initialize environment info
+        $environmentInfo = Initialize-EnvironmentInfo
+        
+        # Step 1: Check on-premises
+        Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
+            -CurrentItem "Checking on-premises AD" -ItemsProcessed 1 -TotalItems 5
+        $environmentInfo = Test-OnPremisesAD -EnvironmentInfo $environmentInfo -Context $Context
+        
+        # Step 2: Check Azure AD
+        Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
+            -CurrentItem "Checking Azure AD" -ItemsProcessed 2 -TotalItems 5
+        $environmentInfo = Test-AzureAD -EnvironmentInfo $environmentInfo -Context $Context
+        
+        # Step 3: Check AD Connect
+        if ($environmentInfo.HasOnPremAD -and $environmentInfo.HasAzureAD) {
+            Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
+                -CurrentItem "Checking AD Connect" -ItemsProcessed 3 -TotalItems 5
+            $environmentInfo = Test-ADConnect -EnvironmentInfo $environmentInfo -Context $Context
+        }
+        
+        # Step 4: Check M365 services
+        if ($environmentInfo.HasAzureAD) {
+            Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
+                -CurrentItem "Checking Microsoft 365 services" -ItemsProcessed 4 -TotalItems 5
+            $environmentInfo = Test-Microsoft365Services -EnvironmentInfo $environmentInfo -Context $Context
+        }
+        
+        # Step 5: Determine environment type
+        Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
+            -CurrentItem "Analyzing environment type" -ItemsProcessed 5 -TotalItems 5
+        $environmentInfo.Type = Determine-EnvironmentType -EnvironmentInfo $environmentInfo
+        
+        # Write summary
+        Write-EnvironmentSummary -EnvironmentInfo $environmentInfo -Context $Context
+        
+        # Export data
+        Write-ProgressStep "Exporting environment detection results..." -Status Progress
+        $outputFile = Join-Path $Context.Paths.RawDataOutput "EnvironmentDetection.csv"
+        $envData = ConvertTo-EnvironmentDataObject -EnvironmentInfo $environmentInfo
+        Export-DataToCSV -Data @($envData) -FilePath $outputFile -Context $Context
+        
+        # Export AD Connect servers if found
+        if ($environmentInfo.ADConnectServers -and $environmentInfo.ADConnectServers.Count -gt 0) {
+            Write-ProgressStep "Exporting AD Connect server information..." -Status Progress
+            $adcOutputFile = Join-Path $Context.Paths.RawDataOutput "ADConnectServers.csv"
+            Export-DataToCSV -Data $environmentInfo.ADConnectServers -FilePath $adcOutputFile -Context $Context
+        }
+        
+        # Store in global context if available
+        if ($null -ne $global:MandA) {
+            $global:MandA.EnvironmentType = $environmentInfo.Type
+            $global:MandA.EnvironmentInfo = $environmentInfo
+        }
+        
+        Write-ProgressStep "Environment Detection Discovery Completed" -Status Success
+        return $environmentInfo
+        
+    }
+    catch {
+        Write-ProgressStep "Environment detection failed: $($_.Exception.Message)" -Status Error
+        $Context.ErrorCollector.AddError("EnvironmentDetection", "Discovery failed", $_.Exception)
+        
+        return @{
+            Type = "Unknown"
+            Error = $_.Exception.Message
+        }
+    }
+}
 
 
 # Main detection function
