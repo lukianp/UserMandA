@@ -7,9 +7,9 @@
     credential management, status indicators, optimized module checking, and debug capabilities.
     This version fully implements all menu options, including Processing and Export phases.
 .NOTES
-    Version: 5.4.0
+    Version: 5.5.0
     Author: Enhanced Version with Complete Functionality
-    Date: 2025-06-03
+    Date: 2025-01-15
 #>
 
 [CmdletBinding()]
@@ -46,7 +46,7 @@ function Unblock-SuiteFiles {
     Write-Host "Checking file execution policies..." -ForegroundColor Yellow
 
     try {
-        # Get all PS1, PSM1, and PSD1 files in the suite
+        # Get suite root from PSScriptRoot
         $suiteRoot = $PSScriptRoot
         $scriptFiles = Get-ChildItem -Path $suiteRoot -Recurse -Include "*.ps1", "*.psm1", "*.psd1" -ErrorAction SilentlyContinue
 
@@ -65,9 +65,9 @@ function Unblock-SuiteFiles {
                 $blockedFiles | ForEach-Object {
                     try {
                         Unblock-File -Path $_.FullName -ErrorAction Stop
-                        Write-Host "  ✓ Unblocked: $($_.Name)" -ForegroundColor Green
+                        Write-Host "  [OK] Unblocked: $($_.Name)" -ForegroundColor Green
                     } catch {
-                        Write-Host "  ✗ Failed to unblock: $($_.Name)" -ForegroundColor Red
+                        Write-Host "  [!!] Failed to unblock: $($_.Name)" -ForegroundColor Red
                     }
                 }
                 Write-Host "File unblocking complete." -ForegroundColor Green
@@ -122,8 +122,13 @@ function Test-Administrator {
 function Get-ExistingCompanies {
     $companies = @()
     
-    # Check if profiles base path exists
-    $profilesBasePath = Join-Path $PSScriptRoot "Profiles"
+    # Use global path if available, otherwise use default
+    $profilesBasePath = if ($global:MandA -and $global:MandA.Paths.ProfilesBasePath) {
+        $global:MandA.Paths.ProfilesBasePath
+    } else {
+        "C:\MandADiscovery\Profiles"
+    }
+    
     if (Test-Path $profilesBasePath -PathType Container) {
         $companyDirs = Get-ChildItem -Path $profilesBasePath -Directory -ErrorAction SilentlyContinue
         foreach ($dir in $companyDirs) {
@@ -140,13 +145,13 @@ function Initialize-Environment {
     
     # Prompt for CompanyName if not provided
     if ([string]::IsNullOrWhiteSpace($CompanyName)) {
-        Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+        Write-Host "`n=================================================================" -ForegroundColor Cyan
         
         if ($existingCompanies.Count -gt 0) {
-            Write-Host "`n📁 EXISTING COMPANIES FOUND:" -ForegroundColor Yellow
+            Write-Host "`n[i] EXISTING COMPANIES FOUND:" -ForegroundColor Yellow
             Write-Host "===========================" -ForegroundColor Yellow
             foreach ($company in $existingCompanies) {
-                Write-Host "  • $company" -ForegroundColor Cyan
+                Write-Host "  * $company" -ForegroundColor Cyan
             }
             Write-Host "`nYou can enter one of the above or create a new company profile." -ForegroundColor Gray
         }
@@ -159,64 +164,45 @@ function Initialize-Environment {
         }
         
         if ($existingCompanies -contains $script:CompanyName) {
-            Write-Host "✓ Using existing company profile: $($script:CompanyName)" -ForegroundColor Green
+            Write-Host "[OK] Using existing company profile: $($script:CompanyName)" -ForegroundColor Green
         } else {
-            Write-Host "✓ Creating new company profile: $($script:CompanyName)" -ForegroundColor Green
+            Write-Host "[OK] Creating new company profile: $($script:CompanyName)" -ForegroundColor Green
         }
         
-        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+        Write-Host "=================================================================" -ForegroundColor Cyan
     } else {
         $script:CompanyName = $CompanyName
     }
 
     $suiteRoot = $PSScriptRoot
 
-    # Initialize global context
-    if ($null -eq $global:MandA) {
-        $global:MandA = @{
-            Paths = @{}
-            Config = @{}
-            Version = "5.4.0"
-            StartTime = Get-Date
-            ModulesChecked = $false
-        }
-    }
-
-    # Set up paths structure
-    $global:MandA.Paths = @{
-        Root = $suiteRoot
-        Modules = Join-Path $suiteRoot "Modules"
-        Utilities = Join-Path $suiteRoot "Modules\Utilities"
-        Discovery = Join-Path $suiteRoot "Modules\Discovery"
-        Processing = Join-Path $suiteRoot "Modules\Processing"
-        Export = Join-Path $suiteRoot "Modules\Export"
-        Connectivity = Join-Path $suiteRoot "Modules\Connectivity"
-        Authentication = Join-Path $suiteRoot "Modules\Authentication"
-        Core = Join-Path $suiteRoot "Core"
-        Scripts = Join-Path $suiteRoot "Scripts"
-        Configuration = Join-Path $suiteRoot "Configuration"
-    }
-
-    # Define key scripts
-    $global:MandA.Paths.EnvironmentScript = Join-Path $global:MandA.Paths.Scripts "Set-SuiteEnvironment.ps1"
-    $global:MandA.Paths.Orchestrator = Join-Path $global:MandA.Paths.Core "MandA-Orchestrator.ps1"
-    $global:MandA.Paths.ModuleCheckScript = Join-Path $global:MandA.Paths.Scripts "DiscoverySuiteModuleCheck.ps1"
-    $global:MandA.Paths.ConfigFile = Join-Path $global:MandA.Paths.Configuration "default-config.json"
-
-    # Set environment script path
-    if (Test-Path $global:MandA.Paths.EnvironmentScript) {
+    # Set up Set-SuiteEnvironment script path
+    $envScriptPath = Join-Path $suiteRoot "Scripts\Set-SuiteEnvironment.ps1"
+    
+    if (Test-Path $envScriptPath -PathType Leaf) {
         Write-Host "Operating for Company: $($script:CompanyName)" -ForegroundColor Cyan
-        Write-Host "Sourcing environment for Company: $($script:CompanyName)..." -ForegroundColor Cyan
+        Write-Host "Initializing suite environment..." -ForegroundColor Cyan
 
         try {
-            . $global:MandA.Paths.EnvironmentScript -ProvidedSuiteRoot $suiteRoot -CompanyName $script:CompanyName
+            . $envScriptPath -ProvidedSuiteRoot $suiteRoot -CompanyName $script:CompanyName
             Write-ColoredLog "Environment initialized successfully" -Level "SUCCESS"
+            
+            # Verify global context was created
+            if ($null -eq $global:MandA) {
+                throw "Global context was not created by Set-SuiteEnvironment.ps1"
+            }
+            
+            # Update connection status for credentials
+            if ($global:MandA.Paths.CredentialFile) {
+                $script:ConnectionStatus.Credentials = Test-Path $global:MandA.Paths.CredentialFile
+            }
+            
         } catch {
             Write-ColoredLog "Failed to initialize environment: $($_.Exception.Message)" -Level "ERROR"
             exit 1
         }
     } else {
-        Write-ColoredLog "CRITICAL: Set-SuiteEnvironment.ps1 not found at '$($global:MandA.Paths.EnvironmentScript)'." -Level "ERROR"
+        Write-ColoredLog "CRITICAL: Set-SuiteEnvironment.ps1 not found at '$envScriptPath'." -Level "ERROR"
         exit 1
     }
 
@@ -269,13 +255,13 @@ function Show-MainMenu {
     )
 
     Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║           M&A DISCOVERY SUITE - MAIN MENU v5.4.0                     ║" -ForegroundColor Cyan
-    Write-Host "║                  Company: $($script:CompanyName)                     " -ForegroundColor Yellow
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "           M&A DISCOVERY SUITE - MAIN MENU v5.5.0                      " -ForegroundColor Cyan
+    Write-Host "                  Company: $($script:CompanyName)                      " -ForegroundColor Yellow
     if ($script:DebugModeEnabled) {
-        Write-Host "║                  🔧 DEBUG MODE ENABLED 🔧                            " -ForegroundColor Magenta
+        Write-Host "                  [DEBUG MODE ENABLED]                                 " -ForegroundColor Magenta
     }
-    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
 
     Update-ConnectionStatus
     Show-ConnectionStatus
@@ -291,30 +277,31 @@ function Show-MainMenu {
     Write-Host "  [4] Run Discovery Phase Only"
     Write-Host "  [5] Run Processing Phase Only (requires existing discovery data)"
     Write-Host "  [6] Run Export Phase Only (requires processed data)"
+    Write-Host "  [7] Run AZURE-ONLY Discovery (Cloud resources only)" -ForegroundColor Cyan
 
     Write-Host "`n  SPECIALIZED EXPORTS" -ForegroundColor Blue
     Write-Host "  ===================" -ForegroundColor Blue
-    Write-Host "  [7] Generate Company Control Sheet (CSV/Excel format)"
-    Write-Host "  [8] Generate PowerApps Export (JSON format)"
+    Write-Host "  [8] Generate Company Control Sheet (CSV/Excel format)"
+    Write-Host "  [9] Generate PowerApps Export (JSON format)"
 
     Write-Host "`n  UTILITIES & MAINTENANCE" -ForegroundColor Magenta
     Write-Host "  =======================" -ForegroundColor Magenta
-    Write-Host "  [9] Update/Replace Stored Credentials"
-    Write-Host "  [10] Verify Module Dependencies"
-    Write-Host "  [11] Test Service Connections"
-    Write-Host "  [12] View Configuration Settings"
-    Write-Host "  [13] Clear Existing Data Files"
-    Write-Host "  [14] Generate Sample Report"
+    Write-Host "  [10] Update/Replace Stored Credentials"
+    Write-Host "  [11] Verify Module Dependencies"
+    Write-Host "  [12] Test Service Connections"
+    Write-Host "  [13] View Configuration Settings"
+    Write-Host "  [14] Clear Existing Data Files"
+    Write-Host "  [15] Generate Sample Report"
 
     Write-Host "`n  DEBUG & DEVELOPMENT" -ForegroundColor Red
     Write-Host "  ===================" -ForegroundColor Red
-    Write-Host "  [D] Open Debug Menu 🔧"
+    Write-Host "  [D] Open Debug Menu [DEBUG]"
 
     Write-Host "`n  [Q] Quit" -ForegroundColor Red
-    Write-Host "`n═══════════════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
+    Write-Host "`n========================================================================" -ForegroundColor DarkGray
 
     if ($FirstRun -or -not $script:ConnectionStatus.Credentials) {
-        Write-Host "`n  📌 FIRST TIME?" -ForegroundColor Yellow
+        Write-Host "`n  [*] FIRST TIME?" -ForegroundColor Yellow
         Write-Host "     Start with option [1] to setup your Azure AD App" -ForegroundColor Yellow
         Write-Host "     Then use option [2] to configure credentials" -ForegroundColor Yellow
     }
@@ -326,19 +313,39 @@ function Show-ConnectionStatus {
     Write-Host "`n  Status: " -NoNewline
 
     Write-Host "Credentials " -NoNewline
-    if ($script:ConnectionStatus.Credentials) { Write-Host "✓" -ForegroundColor Green -NoNewline } else { Write-Host "✗" -ForegroundColor Red -NoNewline }
+    if ($script:ConnectionStatus.Credentials) { 
+        Write-Host "[OK]" -ForegroundColor Green -NoNewline 
+    } else { 
+        Write-Host "[X]" -ForegroundColor Red -NoNewline 
+    }
 
     Write-Host " | Azure AD " -NoNewline
-    if ($script:ConnectionStatus.AzureAD) { Write-Host "✓" -ForegroundColor Green -NoNewline } else { Write-Host "✗" -ForegroundColor Red -NoNewline }
+    if ($script:ConnectionStatus.AzureAD) { 
+        Write-Host "[OK]" -ForegroundColor Green -NoNewline 
+    } else { 
+        Write-Host "[X]" -ForegroundColor Red -NoNewline 
+    }
 
     Write-Host " | Exchange " -NoNewline
-    if ($script:ConnectionStatus.Exchange) { Write-Host "✓" -ForegroundColor Green -NoNewline } else { Write-Host "✗" -ForegroundColor Red -NoNewline }
+    if ($script:ConnectionStatus.Exchange) { 
+        Write-Host "[OK]" -ForegroundColor Green -NoNewline 
+    } else { 
+        Write-Host "[X]" -ForegroundColor Red -NoNewline 
+    }
 
     Write-Host " | SharePoint " -NoNewline
-    if ($script:ConnectionStatus.SharePoint) { Write-Host "✓" -ForegroundColor Green -NoNewline } else { Write-Host "✗" -ForegroundColor Red -NoNewline }
+    if ($script:ConnectionStatus.SharePoint) { 
+        Write-Host "[OK]" -ForegroundColor Green -NoNewline 
+    } else { 
+        Write-Host "[X]" -ForegroundColor Red -NoNewline 
+    }
 
     Write-Host " | Teams " -NoNewline
-    if ($script:ConnectionStatus.Teams) { Write-Host "✓" -ForegroundColor Green } else { Write-Host "✗" -ForegroundColor Red }
+    if ($script:ConnectionStatus.Teams) { 
+        Write-Host "[OK]" -ForegroundColor Green 
+    } else { 
+        Write-Host "[X]" -ForegroundColor Red 
+    }
 
     if ($script:LastModuleCheck) {
         Write-Host "  Last module check: $($script:LastModuleCheck.ToString('HH:mm:ss'))" -ForegroundColor Gray
@@ -351,10 +358,10 @@ function Show-ConnectionStatus {
 
 function Show-DebugMenu {
     Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
-    Write-Host "║                    🔧 DEBUG MENU 🔧                                  ║" -ForegroundColor Red
-    Write-Host "║              Company: $($script:CompanyName)                         " -ForegroundColor Yellow
-    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+    Write-Host "========================================================================" -ForegroundColor Red
+    Write-Host "                    [DEBUG MENU]                                       " -ForegroundColor Red
+    Write-Host "              Company: $($script:CompanyName)                          " -ForegroundColor Yellow
+    Write-Host "========================================================================" -ForegroundColor Red
 
     Write-Host "`n  INDIVIDUAL MODULE DISCOVERY" -ForegroundColor Yellow
     Write-Host "  ===========================" -ForegroundColor Yellow
@@ -385,7 +392,7 @@ function Show-DebugMenu {
     Write-Host "  [22] View Current Configuration"
     Write-Host "  [23] Test Single Connection"
     Write-Host "  [24] Force Load All Modules"
-    Write-Host "  [25] View Global Context (`$global:MandA)"
+    Write-Host "  [25] View Global Context ($global:MandA)"
     Write-Host "  [26] Run Module with Custom Config"
     Write-Host "  [27] Export Debug Information"
 
@@ -397,13 +404,18 @@ function Show-DebugMenu {
     Write-Host "  [33] Reset Global Context"
 
     Write-Host "`n  [B] Back to Main Menu" -ForegroundColor Green
-    Write-Host "`n═══════════════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
-    Write-Host "`n⚠️  WARNING: Debug mode bypasses safety checks!" -ForegroundColor Yellow
+    Write-Host "`n========================================================================" -ForegroundColor DarkGray
+    Write-Host "`n[!] WARNING: Debug mode bypasses safety checks!" -ForegroundColor Yellow
     Write-Host "   Use with caution. Some modules may fail without proper setup." -ForegroundColor Yellow
     Write-Host "`n  Enter your selection: " -ForegroundColor White -NoNewline
 }
 
 function Get-DiscoveryModules {
+    if ($null -eq $global:MandA -or $null -eq $global:MandA.Paths.Discovery) {
+        Write-Warning "Global environment not initialized"
+        return @()
+    }
+    
     $discoveryPath = $global:MandA.Paths.Discovery
     $modules = @()
 
@@ -426,84 +438,101 @@ function Invoke-DebugDiscoveryModule {
         [switch]$BypassChecks
     )
 
-    Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Red
-    Write-Host "                    DEBUG: $ModuleName Discovery                      " -ForegroundColor Red
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Red
+    Write-Host "`n=================================================================" -ForegroundColor Red
+    Write-Host "                    DEBUG: $ModuleName Discovery                  " -ForegroundColor Red
+    Write-Host "=================================================================" -ForegroundColor Red
+
+    # Ensure environment is initialized
+    if ($null -eq $global:MandA -or $null -eq $global:MandA.Paths) {
+        Write-Host "[ERROR] Global environment not initialized!" -ForegroundColor Red
+        Write-Host "Press any key to return..." -ForegroundColor Gray
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
+    }
 
     try {
+        # Load logging module using global path
         $loggingModule = Join-Path $global:MandA.Paths.Utilities "EnhancedLogging.psm1"
         if (Test-Path $loggingModule -PathType Leaf) {
             Import-Module $loggingModule -Force -Global -ErrorAction Stop
-            Write-Host "✓ Loaded logging module" -ForegroundColor Green
-        } else {
-            Write-Warning "Logging module not found at $loggingModule. Debug output may be limited."
+            Write-Host "[OK] Loaded logging module" -ForegroundColor Green
+            
+            # Initialize logging if not already done
+            if (-not $global:MandA.LoggingInitialized) {
+                Initialize-Logging -Configuration $global:MandA.Config
+                $global:MandA.LoggingInitialized = $true
+            }
         }
 
+        # Build module path using global paths
         $moduleFileName = "${ModuleName}Discovery.psm1"
         $modulePath = Join-Path $global:MandA.Paths.Discovery $moduleFileName
 
         if (-not (Test-Path $modulePath -PathType Leaf)) {
-            Write-Host "✗ Module not found: $modulePath" -ForegroundColor Red
+            Write-Host "[ERROR] Module not found: $modulePath" -ForegroundColor Red
             return
         }
 
         Write-Host "Loading module: $moduleFileName" -ForegroundColor Yellow
         Import-Module $modulePath -Force -Global -ErrorAction Stop
-        Write-Host "✓ Module loaded successfully" -ForegroundColor Green
+        Write-Host "[OK] Module loaded successfully" -ForegroundColor Green
 
+        # Use the global config
         $config = $global:MandA.Config
         if ($null -eq $config) {
-            Write-Host "⚠️  No configuration loaded. Using minimal config." -ForegroundColor Yellow
-            $config = @{
-                environment = @{
-                    outputPath = $global:MandA.Paths.CompanyProfileRoot
-                    logLevel = "DEBUG"
-                }
-                discovery = @{
-                    skipExistingFiles = $false
-                }
-            }
+            Write-Host "[ERROR] No configuration loaded!" -ForegroundColor Red
+            return
         }
         
-        if (-not $config.environment.outputPath -or -not (Test-Path $config.environment.outputPath -PathType Container)) {
-             Write-Error "CompanyProfileRoot (outputPath in config) is not set or invalid: $($config.environment.outputPath)"
-             return
-        }
-
-        $rawPath = Join-Path $config.environment.outputPath "Raw"
+        # Ensure output path is set to company profile
+        $config.environment.outputPath = $global:MandA.Paths.CompanyProfileRoot
+        
+        # Ensure raw data directory exists
+        $rawPath = $global:MandA.Paths.RawDataOutput
         if (-not (Test-Path $rawPath -PathType Container)) {
             New-Item -Path $rawPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
-            Write-Host "✓ Created output directory: $rawPath" -ForegroundColor Green
+            Write-Host "[OK] Created output directory: $rawPath" -ForegroundColor Green
         }
 
         $functionName = "Invoke-${ModuleName}Discovery"
         if (Get-Command $functionName -ErrorAction SilentlyContinue) {
             Write-Host "`nInvoking $functionName..." -ForegroundColor Cyan
-            Write-Host "═══════════════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
+            Write-Host "=================================================================" -ForegroundColor DarkGray
             
-            $result = & $functionName -Configuration $config -ErrorAction Stop
+            # Create minimal context for the discovery module
+            $context = [PSCustomObject]@{
+                Paths = $global:MandA.Paths
+                Config = $config
+                CompanyName = $global:MandA.CompanyName
+                ErrorCollector = [PSCustomObject]@{
+                    AddError = { param($s,$m,$e) Write-Host "[ERROR] $s : $m" -ForegroundColor Red }
+                    AddWarning = { param($s,$m) Write-Host "[WARN] $s : $m" -ForegroundColor Yellow }
+                }
+            }
             
-            Write-Host "═══════════════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
-            Write-Host "✓ Discovery completed" -ForegroundColor Green
+            $result = & $functionName -Configuration $config -Context $context -ErrorAction Stop
+            
+            Write-Host "=================================================================" -ForegroundColor DarkGray
+            Write-Host "[OK] Discovery completed" -ForegroundColor Green
 
             if ($result) {
                 Write-Host "`nResults summary:" -ForegroundColor Yellow
                 if ($result -is [hashtable]) {
                     foreach ($key in $result.Keys) {
                         $value = $result[$key]
-                        $count = if ($value -is [array]) { $value.Count } elseif ($value -is [System.Management.Automation.PSCustomObject] -and $value.PSObject.Properties['Count']) { $value.Count } else { "N/A" }
-                        Write-Host "  - $key`: $count items" -ForegroundColor Cyan
+                        $count = if ($value -is [array]) { $value.Count } else { "N/A" }
+                        Write-Host "  - $key : $count items" -ForegroundColor Cyan
                     }
                 } else {
                     Write-Host "  Result type: $($result.GetType().Name)" -ForegroundColor Cyan
                 }
             }
         } else {
-            Write-Host "✗ Function $functionName not found in module" -ForegroundColor Red
+            Write-Host "[ERROR] Function $functionName not found in module" -ForegroundColor Red
         }
 
     } catch {
-        Write-Host "`n✗ Error during debug discovery: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "`n[ERROR] Error during debug discovery: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host "Stack trace:" -ForegroundColor Yellow
         Write-Host $_.ScriptStackTrace -ForegroundColor Gray
     }
@@ -514,15 +543,22 @@ function Invoke-DebugDiscoveryModule {
 
 function Show-ModuleLoadStatus {
     Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                    MODULE LOAD STATUS                                 ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "                    MODULE LOAD STATUS                                  " -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
+
+    if ($null -eq $global:MandA) {
+        Write-Host "`n[ERROR] Global environment not initialized!" -ForegroundColor Red
+        Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
+    }
 
     $modules = Get-DiscoveryModules
     Write-Host "`nDiscovery Modules:" -ForegroundColor Yellow
     Write-Host "==================" -ForegroundColor Yellow
     foreach ($module in $modules) {
-        $status = if ($module.Loaded) { "✓ Loaded" } else { "✗ Not Loaded" }
+        $status = if ($module.Loaded) { "[OK] Loaded" } else { "[X] Not Loaded" }
         $color = if ($module.Loaded) { "Green" } else { "Red" }
         Write-Host ("  {0,-30} {1}" -f $module.Name, $status) -ForegroundColor $color
     }
@@ -532,10 +568,17 @@ function Show-ModuleLoadStatus {
     $coreModules = @("EnhancedLogging", "FileOperations", "ValidationHelpers", "ConfigurationValidation", "ErrorHandling", "Authentication", "CredentialManagement", "EnhancedConnectionManager")
     foreach ($moduleName in $coreModules) {
         $loaded = $null -ne (Get-Module -Name "*$moduleName*" -ErrorAction SilentlyContinue)
-        $status = if ($loaded) { "✓ Loaded" } else { "✗ Not Loaded" }
+        $status = if ($loaded) { "[OK] Loaded" } else { "[X] Not Loaded" }
         $color = if ($loaded) { "Green" } else { "Red" }
         Write-Host ("  {0,-30} {1}" -f $moduleName, $status) -ForegroundColor $color
     }
+
+    Write-Host "`nEnvironment Status:" -ForegroundColor Yellow
+    Write-Host "==================" -ForegroundColor Yellow
+    Write-Host "  Suite Root: $($global:MandA.Paths.SuiteRoot)" -ForegroundColor Gray
+    Write-Host "  Company: $($global:MandA.CompanyName)" -ForegroundColor Gray
+    Write-Host "  Profile Root: $($global:MandA.Paths.CompanyProfileRoot)" -ForegroundColor Gray
+    Write-Host "  Logging: $(if($global:MandA.LoggingInitialized){'[OK] Initialized'}else{'[X] Not Initialized'})" -ForegroundColor $(if($global:MandA.LoggingInitialized){'Green'}else{'Red'})
 
     Write-Host "`nPress any key to continue..." -ForegroundColor Gray
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -543,15 +586,38 @@ function Show-ModuleLoadStatus {
 
 function Show-GlobalContext {
     Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                    GLOBAL CONTEXT VIEWER                              ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "                    GLOBAL CONTEXT VIEWER                               " -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
 
     if ($null -eq $global:MandA) {
-        Write-Host "`n✗ Global context not initialized!" -ForegroundColor Red
+        Write-Host "`n[X] Global context not initialized!" -ForegroundColor Red
     } else {
         Write-Host "`n`$global:MandA Contents:" -ForegroundColor Yellow
         Write-Host "======================" -ForegroundColor Yellow
+        
+        # Show key information in readable format
+        Write-Host "`nVersion: $($global:MandA.Version)" -ForegroundColor Cyan
+        Write-Host "Company: $($global:MandA.CompanyName)" -ForegroundColor Cyan
+        Write-Host "Determined By: $($global:MandA.DeterminedBy)" -ForegroundColor Cyan
+        Write-Host "Logging Initialized: $($global:MandA.LoggingInitialized)" -ForegroundColor Cyan
+        
+        Write-Host "`nKey Paths:" -ForegroundColor Yellow
+        $importantPaths = @(
+            "SuiteRoot",
+            "CompanyProfileRoot",
+            "LogOutput",
+            "RawDataOutput",
+            "ProcessedDataOutput",
+            "CredentialFile"
+        )
+        foreach ($pathKey in $importantPaths) {
+            if ($global:MandA.Paths.ContainsKey($pathKey)) {
+                Write-Host "  $pathKey : $($global:MandA.Paths[$pathKey])" -ForegroundColor Gray
+            }
+        }
+        
+        Write-Host "`nFull JSON representation:" -ForegroundColor Yellow
         $global:MandA | ConvertTo-Json -Depth 3 | Write-Host -ForegroundColor Cyan
     }
 
@@ -569,10 +635,10 @@ function Start-LoadAllModules {
         Write-Host "  Loading $($module.Name)... " -NoNewline
         try {
             Import-Module $module.FullPath -Force -Global -ErrorAction Stop
-            Write-Host "✓" -ForegroundColor Green
+            Write-Host "[OK]" -ForegroundColor Green
             $successCount++
         } catch {
-            Write-Host "✗ - $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "[ERROR] - $($_.Exception.Message)" -ForegroundColor Red
             $failCount++
         }
     }
@@ -584,9 +650,9 @@ function Start-LoadAllModules {
 
 function Start-ModuleWithCustomConfig {
     Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                RUN MODULE WITH CUSTOM CONFIG                          ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "                RUN MODULE WITH CUSTOM CONFIG                           " -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
 
     # List available modules
     $modules = Get-DiscoveryModules
@@ -642,7 +708,7 @@ function Start-ModuleWithCustomConfig {
             Write-Host "`nRunning $functionName with custom config..." -ForegroundColor Cyan
             $result = & $functionName -Configuration $config -ErrorAction Stop
             
-            Write-Host "`n✓ Module completed successfully" -ForegroundColor Green
+            Write-Host "`n[OK] Module completed successfully" -ForegroundColor Green
             
             if ($result) {
                 Write-Host "`nResults:" -ForegroundColor Yellow
@@ -651,7 +717,7 @@ function Start-ModuleWithCustomConfig {
         }
         
     } catch {
-        Write-Host "`n✗ Error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "`n[ERROR]: $($_.Exception.Message)" -ForegroundColor Red
     }
     
     Write-Host "`nPress any key to continue..." -ForegroundColor Gray
@@ -660,11 +726,11 @@ function Start-ModuleWithCustomConfig {
 
 function Export-DebugInformation {
     Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                    EXPORT DEBUG INFORMATION                           ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "                    EXPORT DEBUG INFORMATION                            " -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
 
-    Write-Host "`n📋 Collecting debug information..." -ForegroundColor Yellow
+    Write-Host "`n[i] Collecting debug information..." -ForegroundColor Yellow
     
     $debugPath = Join-Path $global:MandA.Paths.CompanyProfileRoot "Debug"
     if (-not (Test-Path $debugPath)) {
@@ -714,7 +780,7 @@ function Export-DebugInformation {
     
     try {
         $debugInfo | ConvertTo-Json -Depth 10 | Set-Content -Path $debugFile -Encoding UTF8
-        Write-Host "`n✅ Debug information exported successfully!" -ForegroundColor Green
+        Write-Host "`n[OK] Debug information exported successfully!" -ForegroundColor Green
         Write-Host "   Location: $debugFile" -ForegroundColor Gray
         
         # Also create a simplified text report
@@ -755,7 +821,7 @@ RECENT ERRORS: $(if ($Error.Count -gt 0) { "`n" + ($Error | Select-Object -First
         Write-Host "   Text report: $textFile" -ForegroundColor Gray
         
     } catch {
-        Write-Host "`n✗ Failed to export debug information: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "`n[ERROR] Failed to export debug information: $($_.Exception.Message)" -ForegroundColor Red
     }
     
     Write-Host "`nPress any key to continue..." -ForegroundColor Gray
@@ -763,26 +829,26 @@ RECENT ERRORS: $(if ($Error.Count -gt 0) { "`n" + ($Error | Select-Object -First
 }
 
 function Invoke-DebugCompanyControlSheet {
-    Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Blue
-    Write-Host "         DEBUG: Direct Company Control Sheet Generation                " -ForegroundColor Blue
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Blue
+    Write-Host "`n=================================================================" -ForegroundColor Blue
+    Write-Host "         DEBUG: Direct Company Control Sheet Generation           " -ForegroundColor Blue
+    Write-Host "=================================================================" -ForegroundColor Blue
 
     try {
         # Load required modules
         $exportModule = Join-Path $global:MandA.Paths.Export "CompanyControlSheetExporter.psm1"
         if (-not (Test-Path $exportModule)) {
-            Write-Host "✗ CompanyControlSheetExporter.psm1 not found!" -ForegroundColor Red
+            Write-Host "[ERROR] CompanyControlSheetExporter.psm1 not found!" -ForegroundColor Red
             Start-Sleep -Seconds 2
             return
         }
         
         Import-Module $exportModule -Force -Global -ErrorAction Stop
-        Write-Host "✓ Loaded CompanyControlSheetExporter module" -ForegroundColor Green
+        Write-Host "[OK] Loaded CompanyControlSheetExporter module" -ForegroundColor Green
         
         # Check for processed data
         $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
         if (-not (Test-Path $processedDataPath)) {
-            Write-Host "✗ No processed data directory found!" -ForegroundColor Red
+            Write-Host "[ERROR] No processed data directory found!" -ForegroundColor Red
             Start-Sleep -Seconds 2
             return
         }
@@ -799,7 +865,7 @@ function Invoke-DebugCompanyControlSheet {
         }
         
         if ($processedData.Count -eq 0) {
-            Write-Host "✗ No processed data found to export!" -ForegroundColor Red
+            Write-Host "[ERROR] No processed data found to export!" -ForegroundColor Red
             Start-Sleep -Seconds 2
             return
         }
@@ -810,11 +876,11 @@ function Invoke-DebugCompanyControlSheet {
         Write-Host "`nGenerating Company Control Sheet..." -ForegroundColor Cyan
         Export-ToCompanyControlSheet -ProcessedData $processedData -Configuration $global:MandA.Config
         
-        Write-Host "`n✓ Company Control Sheet generation completed!" -ForegroundColor Green
+        Write-Host "`n[OK] Company Control Sheet generation completed!" -ForegroundColor Green
         Write-Host "   Check: $(Join-Path $global:MandA.Paths.CompanyProfileRoot 'CompanyControlSheetCSVs')" -ForegroundColor Gray
         
     } catch {
-        Write-Host "`n✗ Error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "`n[ERROR]: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host "Stack trace:" -ForegroundColor Yellow
         Write-Host $_.ScriptStackTrace -ForegroundColor Gray
     }
@@ -824,26 +890,26 @@ function Invoke-DebugCompanyControlSheet {
 }
 
 function Invoke-DebugPowerAppsExport {
-    Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Blue
-    Write-Host "           DEBUG: Direct PowerApps Export Generation                   " -ForegroundColor Blue
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Blue
+    Write-Host "`n=================================================================" -ForegroundColor Blue
+    Write-Host "           DEBUG: Direct PowerApps Export Generation              " -ForegroundColor Blue
+    Write-Host "=================================================================" -ForegroundColor Blue
 
     try {
         # Load required modules
         $exportModule = Join-Path $global:MandA.Paths.Export "PowerAppsExporter.psm1"
         if (-not (Test-Path $exportModule)) {
-            Write-Host "✗ PowerAppsExporter.psm1 not found!" -ForegroundColor Red
+            Write-Host "[ERROR] PowerAppsExporter.psm1 not found!" -ForegroundColor Red
             Start-Sleep -Seconds 2
             return
         }
         
         Import-Module $exportModule -Force -Global -ErrorAction Stop
-        Write-Host "✓ Loaded PowerAppsExporter module" -ForegroundColor Green
+        Write-Host "[OK] Loaded PowerAppsExporter module" -ForegroundColor Green
         
         # Check for processed data
         $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
         if (-not (Test-Path $processedDataPath)) {
-            Write-Host "✗ No processed data directory found!" -ForegroundColor Red
+            Write-Host "[ERROR] No processed data directory found!" -ForegroundColor Red
             Start-Sleep -Seconds 2
             return
         }
@@ -860,7 +926,7 @@ function Invoke-DebugPowerAppsExport {
         }
         
         if ($processedData.Count -eq 0) {
-            Write-Host "✗ No processed data found to export!" -ForegroundColor Red
+            Write-Host "[ERROR] No processed data found to export!" -ForegroundColor Red
             Start-Sleep -Seconds 2
             return
         }
@@ -871,11 +937,11 @@ function Invoke-DebugPowerAppsExport {
         Write-Host "`nGenerating PowerApps Export..." -ForegroundColor Cyan
         Export-ForPowerApps -ProcessedData $processedData -Configuration $global:MandA.Config
         
-        Write-Host "`n✓ PowerApps export generation completed!" -ForegroundColor Green
+        Write-Host "`n[OK] PowerApps export generation completed!" -ForegroundColor Green
         Write-Host "   Check: $(Join-Path $global:MandA.Paths.CompanyProfileRoot 'Processed\PowerApps')" -ForegroundColor Gray
         
     } catch {
-        Write-Host "`n✗ Error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "`n[ERROR]: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host "Stack trace:" -ForegroundColor Yellow
         Write-Host $_.ScriptStackTrace -ForegroundColor Gray
     }
@@ -890,18 +956,18 @@ function Invoke-DebugPowerAppsExport {
 
 function Show-CredentialSetupMenu {
     Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║              CONFIGURE AUTHENTICATION CREDENTIALS                     ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "              CONFIGURE AUTHENTICATION CREDENTIALS                      " -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
     
-    Write-Host "`n📋 PREREQUISITES" -ForegroundColor Yellow
+    Write-Host "`n[i] PREREQUISITES" -ForegroundColor Yellow
     Write-Host "================" -ForegroundColor Yellow
     Write-Host "You need the following from your Azure AD App Registration:"
-    Write-Host "  • Tenant ID (Directory ID)"
-    Write-Host "  • Client ID (Application ID)"
-    Write-Host "  • Client Secret (from Certificates & secrets)"
+    Write-Host "  * Tenant ID (Directory ID)"
+    Write-Host "  * Client ID (Application ID)"
+    Write-Host "  * Client Secret (from Certificates & secrets)"
     
-    Write-Host "`n⚠️  IMPORTANT: If you haven't created an Azure AD App yet, please" -ForegroundColor Red
+    Write-Host "`n[!] IMPORTANT: If you haven't created an Azure AD App yet, please" -ForegroundColor Red
     Write-Host "   go back to the main menu and select option [1] first." -ForegroundColor Red
     
     Write-Host "`nDo you want to continue? (Y/N): " -ForegroundColor Yellow -NoNewline
@@ -915,14 +981,14 @@ function Show-CredentialSetupMenu {
 }
 
 function Set-CredentialConfiguration {
-    Write-Host "`n📝 ENTER YOUR CREDENTIALS" -ForegroundColor Yellow
+    Write-Host "`n[i] ENTER YOUR CREDENTIALS" -ForegroundColor Yellow
     Write-Host "========================" -ForegroundColor Yellow
     
     # Get Tenant ID
     Write-Host "`nTenant ID: " -ForegroundColor Cyan -NoNewline
     $tenantId = Read-Host
     while ([string]::IsNullOrWhiteSpace($tenantId) -or $tenantId.Length -ne 36) {
-        Write-Host "  ⚠️  Tenant ID should be 36 characters (GUID format)" -ForegroundColor Red
+        Write-Host "  [!] Tenant ID should be 36 characters (GUID format)" -ForegroundColor Red
         Write-Host "Tenant ID: " -ForegroundColor Cyan -NoNewline
         $tenantId = Read-Host
     }
@@ -931,7 +997,7 @@ function Set-CredentialConfiguration {
     Write-Host "Client ID: " -ForegroundColor Cyan -NoNewline
     $clientId = Read-Host
     while ([string]::IsNullOrWhiteSpace($clientId) -or $clientId.Length -ne 36) {
-        Write-Host "  ⚠️  Client ID should be 36 characters (GUID format)" -ForegroundColor Red
+        Write-Host "  [!] Client ID should be 36 characters (GUID format)" -ForegroundColor Red
         Write-Host "Client ID: " -ForegroundColor Cyan -NoNewline
         $clientId = Read-Host
     }
@@ -940,7 +1006,7 @@ function Set-CredentialConfiguration {
     Write-Host "Client Secret: " -ForegroundColor Cyan -NoNewline
     $clientSecretPlain = Read-Host
     while ([string]::IsNullOrWhiteSpace($clientSecretPlain)) {
-        Write-Host "  ⚠️  Client Secret cannot be empty" -ForegroundColor Red
+        Write-Host "  [!] Client Secret cannot be empty" -ForegroundColor Red
         Write-Host "Client Secret: " -ForegroundColor Cyan -NoNewline
         $clientSecretPlain = Read-Host
     }
@@ -954,7 +1020,7 @@ function Set-CredentialConfiguration {
         CreatedBy = $env:USERNAME
     }
     
-    Write-Host "`n💾 SAVING CREDENTIALS..." -ForegroundColor Yellow
+    Write-Host "`n[i] SAVING CREDENTIALS..." -ForegroundColor Yellow
     
     try {
         # Load the credential format handler
@@ -965,20 +1031,20 @@ function Set-CredentialConfiguration {
             # Save credentials
             Save-CredentialFile -Path $global:MandA.Paths.CredentialFile -CredentialData $credentialData
             
-            Write-Host "✅ Credentials saved successfully!" -ForegroundColor Green
+            Write-Host "[OK] Credentials saved successfully!" -ForegroundColor Green
             Write-Host "   Location: $($global:MandA.Paths.CredentialFile)" -ForegroundColor Gray
             
             # Update status
             $script:ConnectionStatus.Credentials = $true
             
             # Test the credentials
-            Write-Host "`n🔍 Testing credentials..." -ForegroundColor Yellow
+            Write-Host "`n[i] Testing credentials..." -ForegroundColor Yellow
             Test-SavedCredentials
         } else {
             throw "Credential format handler module not found"
         }
     } catch {
-        Write-Host "❌ Failed to save credentials: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[ERROR] Failed to save credentials: $($_.Exception.Message)" -ForegroundColor Red
     }
     
     Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
@@ -994,12 +1060,12 @@ function Test-SavedCredentials {
         $savedCreds = Read-CredentialFile -Path $global:MandA.Paths.CredentialFile
         
         if ($savedCreds) {
-            Write-Host "✅ Credentials verified - can be read successfully" -ForegroundColor Green
+            Write-Host "[OK] Credentials verified - can be read successfully" -ForegroundColor Green
             Write-Host "   Tenant ID: $($savedCreds.TenantId)" -ForegroundColor Gray
             Write-Host "   Client ID: $($savedCreds.ClientId)" -ForegroundColor Gray
         }
     } catch {
-        Write-Host "⚠️  Warning: Could not verify credentials: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "[!] Warning: Could not verify credentials: $($_.Exception.Message)" -ForegroundColor Yellow
     }
 }
 
@@ -1008,12 +1074,12 @@ function Test-SavedCredentials {
 #region Operation Functions
 
 function Start-FullDiscovery {
-    Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
-    Write-ColoredLog "                    STARTING FULL DISCOVERY SUITE                      " -Level "HEADER"
-    Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+    Write-ColoredLog "`n=================================================================" -Level "HEADER"
+    Write-ColoredLog "                    STARTING FULL DISCOVERY SUITE                 " -Level "HEADER"
+    Write-ColoredLog "=================================================================" -Level "HEADER"
 
     if (-not $script:ConnectionStatus.Credentials) {
-        Write-ColoredLog "`n⚠️  No credentials configured. Please set up credentials first (Option 2)." -Level "ERROR"
+        Write-ColoredLog "`n[!] No credentials configured. Please set up credentials first (Option 2)." -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         return
@@ -1022,12 +1088,10 @@ function Start-FullDiscovery {
     try {
         $configPath = if ($ConfigFile) { $ConfigFile } else { $global:MandA.Paths.ConfigFile }
         & $global:MandA.Paths.Orchestrator -Mode "Full" -ConfigurationFile $configPath -CompanyName $script:CompanyName -ErrorAction Stop
-        Write-ColoredLog "`n✅ Full discovery suite completed successfully!" -Level "SUCCESS"
+        Write-ColoredLog "`n[OK] Full discovery suite completed successfully!" -Level "SUCCESS"
     } catch {
-        Write-ColoredLog "`n❌ Error during full run: $($_.Exception.Message)" -Level "ERROR"
+        Write-ColoredLog "`n[ERROR] Error during full run: $($_.Exception.Message)" -Level "ERROR"
         Write-ColoredLog "   ScriptStackTrace: $($_.ScriptStackTrace)" -Level "DEBUG"
-    } finally {
-        if ($global:MandA) { $global:MandA.OrchestratorRunCount = 0 }
     }
 
     Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
@@ -1035,12 +1099,12 @@ function Start-FullDiscovery {
 }
 
 function Start-DiscoveryOnly {
-    Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
-    Write-ColoredLog "                    STARTING DISCOVERY PHASE ONLY                      " -Level "HEADER"
-    Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+    Write-ColoredLog "`n=================================================================" -Level "HEADER"
+    Write-ColoredLog "                    STARTING DISCOVERY PHASE ONLY                 " -Level "HEADER"
+    Write-ColoredLog "=================================================================" -Level "HEADER"
 
     if (-not $script:ConnectionStatus.Credentials) {
-        Write-ColoredLog "`n⚠️  No credentials configured. Please set up credentials first (Option 2)." -Level "ERROR"
+        Write-ColoredLog "`n[!] No credentials configured. Please set up credentials first (Option 2)." -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         return
@@ -1049,12 +1113,10 @@ function Start-DiscoveryOnly {
     try {
         $configPath = if ($ConfigFile) { $ConfigFile } else { $global:MandA.Paths.ConfigFile }
         & $global:MandA.Paths.Orchestrator -Mode "Discovery" -ConfigurationFile $configPath -CompanyName $script:CompanyName -ErrorAction Stop
-        Write-ColoredLog "`n✅ Discovery phase completed successfully!" -Level "SUCCESS"
+        Write-ColoredLog "`n[OK] Discovery phase completed successfully!" -Level "SUCCESS"
     } catch {
-        Write-ColoredLog "`n❌ Error during discovery: $($_.Exception.Message)" -Level "ERROR"
+        Write-ColoredLog "`n[ERROR] Error during discovery: $($_.Exception.Message)" -Level "ERROR"
         Write-ColoredLog "   ScriptStackTrace: $($_.ScriptStackTrace)" -Level "DEBUG"
-    } finally {
-        if ($global:MandA) { $global:MandA.OrchestratorRunCount = 0 }
     }
 
     Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
@@ -1062,234 +1124,138 @@ function Start-DiscoveryOnly {
 }
 
 function Start-ProcessingOnly {
-    Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
-    Write-ColoredLog "                   STARTING PROCESSING PHASE ONLY                      " -Level "HEADER"
-    Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+    Write-ColoredLog "`n=================================================================" -Level "HEADER"
+    Write-ColoredLog "                   STARTING PROCESSING PHASE ONLY                 " -Level "HEADER"
+    Write-ColoredLog "=================================================================" -Level "HEADER"
 
-    # Start transcript to capture everything
-    $transcriptPath = Join-Path $global:MandA.Paths.CompanyProfileRoot "Processing_Transcript_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
-    Write-Host "`nStarting transcript at: $transcriptPath" -ForegroundColor Yellow
-    Write-Host "`nDEBUG: Transcript started. All output will be captured." -ForegroundColor Green
-    Write-Host "DEBUG: Current verbosity settings:" -ForegroundColor Yellow
-    Write-Host "  VerbosePreference: $VerbosePreference" -ForegroundColor Gray
-    Write-Host "  DebugPreference: $DebugPreference" -ForegroundColor Gray
-    
-    $oldVerbose = $VerbosePreference
-    $oldDebug = $DebugPreference
-    $VerbosePreference = "Continue"
-    $DebugPreference = "Continue"
-    $global:MandA.ModulesChecked = $true
-    
-    Start-Transcript -Path $transcriptPath -Force
-
-    try {
-        # Show current paths for debugging
-        Write-Host "`nDEBUG: Current paths:" -ForegroundColor Cyan
-        Write-Host "  Company Profile Root: $($global:MandA.Paths.CompanyProfileRoot)" -ForegroundColor Gray
-        Write-Host "  Raw Data: $($global:MandA.Paths.RawDataOutput)" -ForegroundColor Gray
-        Write-Host "  Processed Data: $($global:MandA.Paths.ProcessedDataOutput)" -ForegroundColor Gray
-        Write-Host "  Logs: $($global:MandA.Paths.LogOutput)" -ForegroundColor Gray
-
-        # Pre-condition Check 1: Check if raw data directory exists
-        $rawDataPath = $global:MandA.Paths.RawDataOutput
-        if (-not (Test-Path $rawDataPath -PathType Container)) {
-            Write-ColoredLog "`n❌ Raw data directory not found: $rawDataPath" -Level "ERROR"
-            Write-ColoredLog "   Please run Discovery phase first (e.g., Option 4)" -Level "ERROR"
-            return
-        }
-
-        # Pre-condition Check 2: Check if raw data directory contains CSV files
-        $csvFiles = Get-ChildItem -Path $rawDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
-        if ($null -eq $csvFiles -or $csvFiles.Count -eq 0) {
-            Write-ColoredLog "`n❌ No CSV files found in raw data directory: $rawDataPath" -Level "ERROR"
-            Write-ColoredLog "   Please run Discovery phase first (e.g., Option 4)" -Level "ERROR"
-            return
-        }
-
-        # Pre-conditions passed
-        Write-ColoredLog "`n✅ Found $($csvFiles.Count) raw data files. Proceeding with Processing phase." -Level "SUCCESS"
-        
-        # List the files found
-        Write-Host "`nRaw data files found:" -ForegroundColor Cyan
-        $csvFiles | ForEach-Object { Write-Host "  - $($_.Name)" -ForegroundColor Gray }
-        
-        # Check if logging is initialized
-        Write-Host "`nDEBUG: Checking logging status..." -ForegroundColor Yellow
-        if ($null -eq $script:LoggingConfig -or $null -eq $script:LoggingConfig.LogFile) {
-            Write-Host "WARNING: Logging not initialized. Attempting to initialize..." -ForegroundColor Yellow
-            
-            # Try to load logging module
-            $loggingModule = Join-Path $global:MandA.Paths.Utilities "EnhancedLogging.psm1"
-            if (Test-Path $loggingModule) {
-                Import-Module $loggingModule -Force -Global
-                
-                # Initialize logging with current config
-                if ($global:MandA.Config) {
-                    Initialize-Logging -Configuration $global:MandA.Config
-                    Write-Host "Logging initialized successfully" -ForegroundColor Green
-                } else {
-                    Write-Host "WARNING: Could not initialize logging - no configuration available" -ForegroundColor Yellow
-                }
-            }
-        } else {
-            Write-Host "DEBUG: Logging is initialized. Log file: $($script:LoggingConfig.LogFile)" -ForegroundColor Green
-        }
-        
-        # Call the Orchestrator
-        Write-ColoredLog "`n🚀 Launching Orchestrator in Processing Mode..." -Level "INFO"
-        Write-Host "`n=== ORCHESTRATOR OUTPUT START ===" -ForegroundColor Magenta
-        
-        $configPath = if ($ConfigFile) { $ConfigFile } else { $global:MandA.Paths.ConfigFile }
-        
-        # Capture orchestrator output
-        $orchestratorOutput = ""
-        $orchestratorSuccess = $false
-        
-        try {
-            # Run orchestrator and capture output
-            $orchestratorOutput = & $global:MandA.Paths.Orchestrator -Mode "Processing" -ConfigurationFile $configPath -CompanyName $script:CompanyName -ErrorAction Stop *>&1 | Out-String
-            $orchestratorSuccess = $true
-            Write-Host $orchestratorOutput
-        } catch {
-            Write-Host "`n❌ ORCHESTRATOR ERROR:" -ForegroundColor Red
-            Write-Host $_.Exception.Message -ForegroundColor Red
-            Write-Host "`nStack Trace:" -ForegroundColor Yellow
-            Write-Host $_.ScriptStackTrace -ForegroundColor Gray
-            $orchestratorOutput = $_.Exception.Message + "`n" + $_.ScriptStackTrace
-        }
-        
-        Write-Host "`n=== ORCHESTRATOR OUTPUT END ===" -ForegroundColor Magenta
-        
-        if ($orchestratorSuccess) {
-            Write-ColoredLog "`n✅ Processing phase completed successfully via Orchestrator!" -Level "SUCCESS"
-            Write-ColoredLog "   Processed data should be available in: $($global:MandA.Paths.ProcessedDataOutput)" -Level "INFO"
-            
-            # Check what was actually created
-            Write-Host "`nChecking processed output..." -ForegroundColor Yellow
-            $processedFiles = Get-ChildItem -Path $global:MandA.Paths.ProcessedDataOutput -Filter "*.csv" -ErrorAction SilentlyContinue
-            if ($processedFiles) {
-                Write-Host "Processed files created:" -ForegroundColor Green
-                $processedFiles | ForEach-Object { 
-                    $formattedSize = '{0:N0}' -f $_.Length
-                    Write-Host "  - $($_.Name) ($formattedSize bytes)" -ForegroundColor Gray 
-                }
-            } else {
-                Write-Host "WARNING: No processed CSV files found!" -ForegroundColor Yellow
-            }
-        } else {
-            Write-ColoredLog "`n❌ Processing phase failed!" -Level "ERROR"
-        }
-        
-        # Save orchestrator output to file
-        $outputFile = Join-Path $global:MandA.Paths.CompanyProfileRoot "Processing_OrchestratorOutput_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
-        $orchestratorOutput | Out-File -FilePath $outputFile -Encoding UTF8
-        Write-Host "`nOrchestrator output saved to: $outputFile" -ForegroundColor Cyan
-        
-    } catch {
-        Write-ColoredLog "`n❌ Error during Processing-Only run: $($_.Exception.Message)" -Level "ERROR"
-        Write-ColoredLog "   ScriptStackTrace: $($_.ScriptStackTrace)" -Level "DEBUG"
-        Write-Host "`nFull Exception Details:" -ForegroundColor Red
-        Write-Host $_.Exception | Format-List -Force | Out-String
-    } finally {
-        $VerbosePreference = $oldVerbose
-        $DebugPreference = $oldDebug
-        if ($global:MandA) { $global:MandA.OrchestratorRunCount = 0 }
-        
-        # Stop transcript
-        Write-Host "`nStopping transcript..." -ForegroundColor Yellow
-        Stop-Transcript
-        
-        # Show where logs and output were saved
-        Write-Host "`n📁 Output locations:" -ForegroundColor Cyan
-        Write-Host "  Transcript: $transcriptPath" -ForegroundColor Gray
-        Write-Host "  Logs directory: $($global:MandA.Paths.LogOutput)" -ForegroundColor Gray
-        Write-Host "  Processed data: $($global:MandA.Paths.ProcessedDataOutput)" -ForegroundColor Gray
-        
-        # List any log files
-        $logFiles = Get-ChildItem -Path $global:MandA.Paths.LogOutput -Filter "*.log" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 5
-        if ($logFiles) {
-            Write-Host "`nRecent log files:" -ForegroundColor Yellow
-            $logFiles | ForEach-Object { 
-                Write-Host "  - $($_.Name) (Modified: $($_.LastWriteTime))" -ForegroundColor Gray 
-            }
-        }
-        
-        Write-Host "`n=== PROCESSING PHASE COMPLETE ===" -ForegroundColor Green
+    # Pre-condition Check
+    $rawDataPath = $global:MandA.Paths.RawDataOutput
+    if (-not (Test-Path $rawDataPath -PathType Container)) {
+        Write-ColoredLog "`n[ERROR] Raw data directory not found: $rawDataPath" -Level "ERROR"
+        Write-ColoredLog "   Please run Discovery phase first (e.g., Option 4)" -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
     }
+
+    $csvFiles = Get-ChildItem -Path $rawDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
+    if ($null -eq $csvFiles -or $csvFiles.Count -eq 0) {
+        Write-ColoredLog "`n[ERROR] No CSV files found in raw data directory: $rawDataPath" -Level "ERROR"
+        Write-ColoredLog "   Please run Discovery phase first (e.g., Option 4)" -Level "ERROR"
+        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
+    }
+
+    Write-ColoredLog "`n[OK] Found $($csvFiles.Count) raw data files. Proceeding with Processing phase." -Level "SUCCESS"
+    
+    try {
+        $configPath = if ($ConfigFile) { $ConfigFile } else { $global:MandA.Paths.ConfigFile }
+        & $global:MandA.Paths.Orchestrator -Mode "Processing" -ConfigurationFile $configPath -CompanyName $script:CompanyName -ErrorAction Stop
+        Write-ColoredLog "`n[OK] Processing phase completed successfully!" -Level "SUCCESS"
+    } catch {
+        Write-ColoredLog "`n[ERROR] Error during processing: $($_.Exception.Message)" -Level "ERROR"
+        Write-ColoredLog "   ScriptStackTrace: $($_.ScriptStackTrace)" -Level "DEBUG"
+    }
+
+    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
 function Start-ExportOnly {
-    Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
-    Write-ColoredLog "                     STARTING EXPORT PHASE ONLY                        " -Level "HEADER"
-    Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+    Write-ColoredLog "`n=================================================================" -Level "HEADER"
+    Write-ColoredLog "                     STARTING EXPORT PHASE ONLY                   " -Level "HEADER"
+    Write-ColoredLog "=================================================================" -Level "HEADER"
 
-    # Pre-condition Check 1: Check if processed data directory exists
+    # Pre-condition Check
     $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
     if (-not (Test-Path $processedDataPath -PathType Container)) {
-        Write-ColoredLog "`n❌ Processed data directory not found: $processedDataPath" -Level "ERROR"
+        Write-ColoredLog "`n[ERROR] Processed data directory not found: $processedDataPath" -Level "ERROR"
         Write-ColoredLog "   Please run Processing phase first (e.g., Option 5)" -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         return
     }
 
-    # Pre-condition Check 2: Check for key processed files
-    $keyProcessedFile = Join-Path $processedDataPath "UserProfiles.csv"
     $csvFiles = Get-ChildItem -Path $processedDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
-    
     if ($null -eq $csvFiles -or $csvFiles.Count -eq 0) {
-        Write-ColoredLog "`n❌ No CSV files found in processed data directory: $processedDataPath" -Level "ERROR"
-        Write-ColoredLog "   Please run Processing phase first (e.g., Option 5)" -Level "ERROR"
-        Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-        return
-    }
-    
-    if (-not (Test-Path $keyProcessedFile -PathType Leaf)) {
-        Write-ColoredLog "`n❌ Key processed file 'UserProfiles.csv' not found in $processedDataPath." -Level "ERROR"
+        Write-ColoredLog "`n[ERROR] No CSV files found in processed data directory: $processedDataPath" -Level "ERROR"
         Write-ColoredLog "   Please run Processing phase first (e.g., Option 5)" -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         return
     }
 
-    # Pre-conditions passed
-    Write-ColoredLog "`n✅ Processed data found. Proceeding with Export phase." -Level "SUCCESS"
-    Write-ColoredLog "   Found $($csvFiles.Count) processed data files to export" -Level "INFO"
+    Write-ColoredLog "`n[OK] Found $($csvFiles.Count) processed data files. Proceeding with Export phase." -Level "SUCCESS"
     
-    # Show configured export formats
-    if ($global:MandA.Config -and $global:MandA.Config.export -and $global:MandA.Config.export.formats) {
-        Write-ColoredLog "   Configured Export formats: $($global:MandA.Config.export.formats -join ', ')" -Level "INFO"
-    }
-    
-    # Call the Orchestrator
-    Write-ColoredLog "`n🚀 Launching Orchestrator in Export Mode..." -Level "INFO"
     try {
         $configPath = if ($ConfigFile) { $ConfigFile } else { $global:MandA.Paths.ConfigFile }
         & $global:MandA.Paths.Orchestrator -Mode "Export" -ConfigurationFile $configPath -CompanyName $script:CompanyName -ErrorAction Stop
-        Write-ColoredLog "`n✅ Export phase completed successfully via Orchestrator!" -Level "SUCCESS"
-        Write-ColoredLog "   Exported files should be available in: $($global:MandA.Paths.CompanyProfileRoot)" -Level "INFO"
+        Write-ColoredLog "`n[OK] Export phase completed successfully!" -Level "SUCCESS"
     } catch {
-        Write-ColoredLog "`n❌ Error during Export-Only run: $($_.Exception.Message)" -Level "ERROR"
+        Write-ColoredLog "`n[ERROR] Error during export: $($_.Exception.Message)" -Level "ERROR"
         Write-ColoredLog "   ScriptStackTrace: $($_.ScriptStackTrace)" -Level "DEBUG"
-    } finally {
-        if ($global:MandA) { $global:MandA.OrchestratorRunCount = 0 }
+    }
+
+    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+function Start-AzureOnlyDiscovery {
+    Write-ColoredLog "`n=================================================================" -Level "HEADER"
+    Write-ColoredLog "                    STARTING AZURE-ONLY DISCOVERY                 " -Level "HEADER"
+    Write-ColoredLog "=================================================================" -Level "HEADER"
+
+    if (-not $script:ConnectionStatus.Credentials) {
+        Write-ColoredLog "`n[!] No credentials configured. Please set up credentials first (Option 2)." -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
     }
+
+    Write-ColoredLog "Azure-Only mode will discover:" -Level "INFO"
+    Write-ColoredLog "  [OK] Azure Resources" -Level "SUCCESS"
+    Write-ColoredLog "  [OK] Microsoft Graph (Users, Groups, Apps)" -Level "SUCCESS"
+    Write-ColoredLog "  [OK] Intune Devices and Policies" -Level "SUCCESS"
+    Write-ColoredLog "  [OK] Exchange Online" -Level "SUCCESS"
+    Write-ColoredLog "  [OK] SharePoint Online" -Level "SUCCESS"
+    Write-ColoredLog "  [OK] Teams" -Level "SUCCESS"
+    Write-ColoredLog "  [OK] Licensing" -Level "SUCCESS"
+    Write-ColoredLog "  [X] On-premises Active Directory" -Level "WARN"
+    Write-ColoredLog "  [X] File Servers" -Level "WARN"
+    Write-ColoredLog "  [X] Group Policy (GPO)" -Level "WARN"
+
+    try {
+        # Check modules first if needed
+        if (Test-ShouldCheckModules -Operation "AzureOnly") { 
+            Invoke-ModuleCheck 
+        }
+        
+        # Use the global paths
+        $configPath = if ($ConfigFile) { $ConfigFile } else { $global:MandA.Paths.ConfigFile }
+        
+        # Call orchestrator with AzureOnly mode
+        & $global:MandA.Paths.Orchestrator -Mode "AzureOnly" -ConfigurationFile $configPath -CompanyName $script:CompanyName -ErrorAction Stop
+        
+        Write-ColoredLog "`n[OK] Azure-Only discovery completed successfully!" -Level "SUCCESS"
+    } catch {
+        Write-ColoredLog "`n[ERROR] Error during Azure-Only discovery: $($_.Exception.Message)" -Level "ERROR"
+        Write-ColoredLog "   ScriptStackTrace: $($_.ScriptStackTrace)" -Level "DEBUG"
+    }
+
+    Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
 function Start-CompanyControlSheetGeneration {
-    Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
-    Write-ColoredLog "             GENERATING COMPANY CONTROL SHEET (CSV/EXCEL)              " -Level "HEADER"
-    Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+    Write-ColoredLog "`n=================================================================" -Level "HEADER"
+    Write-ColoredLog "             GENERATING COMPANY CONTROL SHEET (CSV/EXCEL)         " -Level "HEADER"
+    Write-ColoredLog "=================================================================" -Level "HEADER"
 
     # Check if processed data exists
     $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
     if (-not (Test-Path $processedDataPath -PathType Container)) {
-        Write-ColoredLog "`n❌ No processed data directory found: $processedDataPath" -Level "ERROR"
+        Write-ColoredLog "`n[ERROR] No processed data directory found: $processedDataPath" -Level "ERROR"
         Write-ColoredLog "   Please run Discovery and Processing phases first." -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -1298,14 +1264,14 @@ function Start-CompanyControlSheetGeneration {
 
     $csvFiles = Get-ChildItem -Path $processedDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
     if ($null -eq $csvFiles -or $csvFiles.Count -eq 0) {
-        Write-ColoredLog "`n❌ No processed data files found." -Level "ERROR"
+        Write-ColoredLog "`n[ERROR] No processed data files found." -Level "ERROR"
         Write-ColoredLog "   Please run Discovery and Processing phases first." -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         return
     }
 
-    Write-ColoredLog "`n✅ Found $($csvFiles.Count) processed data files." -Level "SUCCESS"
+    Write-ColoredLog "`n[OK] Found $($csvFiles.Count) processed data files." -Level "SUCCESS"
 
     try {
         # Load the Company Control Sheet exporter module
@@ -1315,7 +1281,7 @@ function Start-CompanyControlSheetGeneration {
         }
         
         Import-Module $exportModule -Force -Global -ErrorAction Stop
-        Write-ColoredLog "✓ Loaded Company Control Sheet Exporter module" -Level "SUCCESS"
+        Write-ColoredLog "[OK] Loaded Company Control Sheet Exporter module" -Level "SUCCESS"
         
         # Load processed data
         Write-ColoredLog "`nLoading processed data..." -Level "INFO"
@@ -1326,9 +1292,9 @@ function Start-CompanyControlSheetGeneration {
             Write-Host "  Loading $($file.Name)..." -ForegroundColor Gray
             try {
                 $processedData[$dataKey] = Import-Csv -Path $file.FullName -ErrorAction Stop
-                Write-Host "    ✓ Loaded $($processedData[$dataKey].Count) records" -ForegroundColor Green
+                Write-Host "    [OK] Loaded $($processedData[$dataKey].Count) records" -ForegroundColor Green
             } catch {
-                Write-Host "    ✗ Failed to load: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "    [ERROR] Failed to load: $($_.Exception.Message)" -ForegroundColor Red
             }
         }
         
@@ -1336,13 +1302,13 @@ function Start-CompanyControlSheetGeneration {
             throw "Failed to load any processed data"
         }
         
-        Write-ColoredLog "`n📊 Generating Company Control Sheet..." -Level "INFO"
+        Write-ColoredLog "`n[i] Generating Company Control Sheet..." -Level "INFO"
         
         # Call the export function
         Export-ToCompanyControlSheet -ProcessedData $processedData -Configuration $global:MandA.Config
         
         $outputPath = Join-Path $global:MandA.Paths.CompanyProfileRoot "CompanyControlSheetCSVs"
-        Write-ColoredLog "`n✅ Company Control Sheet generated successfully!" -Level "SUCCESS"
+        Write-ColoredLog "`n[OK] Company Control Sheet generated successfully!" -Level "SUCCESS"
         Write-ColoredLog "   Output location: $outputPath" -Level "INFO"
         
         # List the generated files
@@ -1351,7 +1317,7 @@ function Start-CompanyControlSheetGeneration {
             if ($generatedFiles) {
                 Write-Host "`nGenerated files:" -ForegroundColor Yellow
                 foreach ($file in $generatedFiles) {
-                    Write-Host "  • $($file.Name) ($('{0:N0}' -f $file.Length) bytes)" -ForegroundColor Cyan
+                    Write-Host "  * $($file.Name) ($('{0:N0}' -f $file.Length) bytes)" -ForegroundColor Cyan
                 }
             }
         }
@@ -1364,7 +1330,7 @@ function Start-CompanyControlSheetGeneration {
         }
         
     } catch {
-        Write-ColoredLog "`n❌ Error generating Company Control Sheet: $($_.Exception.Message)" -Level "ERROR"
+        Write-ColoredLog "`n[ERROR] Error generating Company Control Sheet: $($_.Exception.Message)" -Level "ERROR"
         Write-ColoredLog "   Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG"
     }
     
@@ -1373,14 +1339,14 @@ function Start-CompanyControlSheetGeneration {
 }
 
 function Start-PowerAppsExportGeneration {
-    Write-ColoredLog "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
-    Write-ColoredLog "                GENERATING POWERAPPS EXPORT (JSON)                     " -Level "HEADER"
-    Write-ColoredLog "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -Level "HEADER"
+    Write-ColoredLog "`n=================================================================" -Level "HEADER"
+    Write-ColoredLog "                GENERATING POWERAPPS EXPORT (JSON)                " -Level "HEADER"
+    Write-ColoredLog "=================================================================" -Level "HEADER"
 
     # Check if processed data exists
     $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
     if (-not (Test-Path $processedDataPath -PathType Container)) {
-        Write-ColoredLog "`n❌ No processed data directory found: $processedDataPath" -Level "ERROR"
+        Write-ColoredLog "`n[ERROR] No processed data directory found: $processedDataPath" -Level "ERROR"
         Write-ColoredLog "   Please run Discovery and Processing phases first." -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -1389,14 +1355,14 @@ function Start-PowerAppsExportGeneration {
 
     $csvFiles = Get-ChildItem -Path $processedDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
     if ($null -eq $csvFiles -or $csvFiles.Count -eq 0) {
-        Write-ColoredLog "`n❌ No processed data files found." -Level "ERROR"
+        Write-ColoredLog "`n[ERROR] No processed data files found." -Level "ERROR"
         Write-ColoredLog "   Please run Discovery and Processing phases first." -Level "ERROR"
         Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         return
     }
 
-    Write-ColoredLog "`n✅ Found $($csvFiles.Count) processed data files." -Level "SUCCESS"
+    Write-ColoredLog "`n[OK] Found $($csvFiles.Count) processed data files." -Level "SUCCESS"
 
     try {
         # Load the PowerApps exporter module
@@ -1406,7 +1372,7 @@ function Start-PowerAppsExportGeneration {
         }
         
         Import-Module $exportModule -Force -Global -ErrorAction Stop
-        Write-ColoredLog "✓ Loaded PowerApps Exporter module" -Level "SUCCESS"
+        Write-ColoredLog "[OK] Loaded PowerApps Exporter module" -Level "SUCCESS"
         
         # Load processed data
         Write-ColoredLog "`nLoading processed data..." -Level "INFO"
@@ -1417,9 +1383,9 @@ function Start-PowerAppsExportGeneration {
             Write-Host "  Loading $($file.Name)..." -ForegroundColor Gray
             try {
                 $processedData[$dataKey] = Import-Csv -Path $file.FullName -ErrorAction Stop
-                Write-Host "    ✓ Loaded $($processedData[$dataKey].Count) records" -ForegroundColor Green
+                Write-Host "    [OK] Loaded $($processedData[$dataKey].Count) records" -ForegroundColor Green
             } catch {
-                Write-Host "    ✗ Failed to load: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "    [ERROR] Failed to load: $($_.Exception.Message)" -ForegroundColor Red
             }
         }
         
@@ -1427,7 +1393,7 @@ function Start-PowerAppsExportGeneration {
             throw "Failed to load any processed data"
         }
         
-        Write-ColoredLog "`n📱 Generating PowerApps Export..." -Level "INFO"
+        Write-ColoredLog "`n[i] Generating PowerApps Export..." -Level "INFO"
         
         # Call the export function
         $result = Export-ForPowerApps -ProcessedData $processedData -Configuration $global:MandA.Config
@@ -1435,7 +1401,7 @@ function Start-PowerAppsExportGeneration {
         $outputPath = Join-Path $global:MandA.Paths.CompanyProfileRoot "Processed\PowerApps"
         
         if ($result) {
-            Write-ColoredLog "`n✅ PowerApps export generated successfully!" -Level "SUCCESS"
+            Write-ColoredLog "`n[OK] PowerApps export generated successfully!" -Level "SUCCESS"
             Write-ColoredLog "   Output location: $outputPath" -Level "INFO"
             
             # List the generated files
@@ -1444,13 +1410,13 @@ function Start-PowerAppsExportGeneration {
                 if ($generatedFiles) {
                     Write-Host "`nGenerated JSON files:" -ForegroundColor Yellow
                     foreach ($file in $generatedFiles) {
-                        Write-Host "  • $($file.Name) ($('{0:N0}' -f $file.Length) bytes)" -ForegroundColor Cyan
+                        Write-Host "  * $($file.Name) ($('{0:N0}' -f $file.Length) bytes)" -ForegroundColor Cyan
                     }
                 }
             }
             
             # Show instructions
-            Write-Host "`n📱 POWERAPPS INTEGRATION INSTRUCTIONS:" -ForegroundColor Yellow
+            Write-Host "`n[i] POWERAPPS INTEGRATION INSTRUCTIONS:" -ForegroundColor Yellow
             Write-Host "=====================================" -ForegroundColor Yellow
             Write-Host "1. Upload all JSON files to a data source accessible by PowerApps"
             Write-Host "   (e.g., SharePoint Document Library, Azure Blob Storage)"
@@ -1466,11 +1432,11 @@ function Start-PowerAppsExportGeneration {
                 Start-Process explorer.exe -ArgumentList $outputPath
             }
         } else {
-            Write-ColoredLog "`n❌ PowerApps export failed!" -Level "ERROR"
+            Write-ColoredLog "`n[ERROR] PowerApps export failed!" -Level "ERROR"
         }
         
     } catch {
-        Write-ColoredLog "`n❌ Error generating PowerApps export: $($_.Exception.Message)" -Level "ERROR"
+        Write-ColoredLog "`n[ERROR] Error generating PowerApps export: $($_.Exception.Message)" -Level "ERROR"
         Write-ColoredLog "   Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG"
     }
     
@@ -1480,31 +1446,31 @@ function Start-PowerAppsExportGeneration {
 
 function Show-AzureADAppGuide {
     Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║              AZURE AD APP REGISTRATION SETUP GUIDE                    ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "              AZURE AD APP REGISTRATION SETUP GUIDE                     " -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
     
-    Write-Host "`n📋 STEP-BY-STEP INSTRUCTIONS" -ForegroundColor Yellow
+    Write-Host "`n[i] STEP-BY-STEP INSTRUCTIONS" -ForegroundColor Yellow
     Write-Host "============================" -ForegroundColor Yellow
     
-    Write-Host "`n1️⃣  NAVIGATE TO AZURE PORTAL" -ForegroundColor Green
-    Write-Host "   • Go to: https://portal.azure.com"
-    Write-Host "   • Sign in with Global Administrator account"
+    Write-Host "`n1. NAVIGATE TO AZURE PORTAL" -ForegroundColor Green
+    Write-Host "   * Go to: https://portal.azure.com"
+    Write-Host "   * Sign in with Global Administrator account"
     
-    Write-Host "`n2️⃣  CREATE NEW APP REGISTRATION" -ForegroundColor Green
-    Write-Host "   • Navigate to: Azure Active Directory → App registrations"
-    Write-Host "   • Click: '+ New registration'"
-    Write-Host "   • Name: 'M&A Discovery Suite' (or similar)"
-    Write-Host "   • Supported account types: 'Single tenant'"
-    Write-Host "   • Redirect URI: Leave blank (not needed)"
-    Write-Host "   • Click: 'Register'"
+    Write-Host "`n2. CREATE NEW APP REGISTRATION" -ForegroundColor Green
+    Write-Host "   * Navigate to: Azure Active Directory -> App registrations"
+    Write-Host "   * Click: '+ New registration'"
+    Write-Host "   * Name: 'M&A Discovery Suite' (or similar)"
+    Write-Host "   * Supported account types: 'Single tenant'"
+    Write-Host "   * Redirect URI: Leave blank (not needed)"
+    Write-Host "   * Click: 'Register'"
     
-    Write-Host "`n3️⃣  CONFIGURE API PERMISSIONS" -ForegroundColor Green
-    Write-Host "   • Go to: API permissions"
-    Write-Host "   • Click: '+ Add a permission'"
-    Write-Host "   • Select: 'Microsoft Graph'"
-    Write-Host "   • Choose: 'Application permissions'"
-    Write-Host "   • Add these permissions:" -ForegroundColor Yellow
+    Write-Host "`n3. CONFIGURE API PERMISSIONS" -ForegroundColor Green
+    Write-Host "   * Go to: API permissions"
+    Write-Host "   * Click: '+ Add a permission'"
+    Write-Host "   * Select: 'Microsoft Graph'"
+    Write-Host "   * Choose: 'Application permissions'"
+    Write-Host "   * Add these permissions:" -ForegroundColor Yellow
     
     $permissions = @(
         "Directory.Read.All",
@@ -1520,35 +1486,35 @@ function Show-AzureADAppGuide {
     )
     
     foreach ($perm in $permissions) {
-        Write-Host "     ✓ $perm" -ForegroundColor Cyan
+        Write-Host "     [OK] $perm" -ForegroundColor Cyan
     }
     
-    Write-Host "`n   • For Exchange Online, add:" -ForegroundColor Yellow
-    Write-Host "     ✓ Exchange.ManageAsApp" -ForegroundColor Cyan
+    Write-Host "`n   * For Exchange Online, add:" -ForegroundColor Yellow
+    Write-Host "     [OK] Exchange.ManageAsApp" -ForegroundColor Cyan
     
-    Write-Host "`n   • Click: 'Add permissions'"
-    Write-Host "   • Click: 'Grant admin consent for [tenant]'" -ForegroundColor Red
-    Write-Host "   • Confirm the consent"
+    Write-Host "`n   * Click: 'Add permissions'"
+    Write-Host "   * Click: 'Grant admin consent for [tenant]'" -ForegroundColor Red
+    Write-Host "   * Confirm the consent"
     
-    Write-Host "`n4️⃣  CREATE CLIENT SECRET" -ForegroundColor Green
-    Write-Host "   • Go to: Certificates & secrets"
-    Write-Host "   • Click: '+ New client secret'"
-    Write-Host "   • Description: 'M&A Discovery Suite Secret'"
-    Write-Host "   • Expires: Choose appropriate duration"
-    Write-Host "   • Click: 'Add'"
-    Write-Host "   • COPY THE SECRET VALUE IMMEDIATELY!" -ForegroundColor Red
+    Write-Host "`n4. CREATE CLIENT SECRET" -ForegroundColor Green
+    Write-Host "   * Go to: Certificates & secrets"
+    Write-Host "   * Click: '+ New client secret'"
+    Write-Host "   * Description: 'M&A Discovery Suite Secret'"
+    Write-Host "   * Expires: Choose appropriate duration"
+    Write-Host "   * Click: 'Add'"
+    Write-Host "   * COPY THE SECRET VALUE IMMEDIATELY!" -ForegroundColor Red
     Write-Host "     (You won't be able to see it again)"
     
-    Write-Host "`n5️⃣  COLLECT REQUIRED INFORMATION" -ForegroundColor Green
+    Write-Host "`n5. COLLECT REQUIRED INFORMATION" -ForegroundColor Green
     Write-Host "   From the Overview page, copy:"
-    Write-Host "   • Application (client) ID"
-    Write-Host "   • Directory (tenant) ID"
-    Write-Host "   • Your client secret (from step 4)"
+    Write-Host "   * Application (client) ID"
+    Write-Host "   * Directory (tenant) ID"
+    Write-Host "   * Your client secret (from step 4)"
     
-    Write-Host "`n✅ READY!" -ForegroundColor Green
+    Write-Host "`n[OK] READY!" -ForegroundColor Green
     Write-Host "   You now have everything needed for option [2]"
     
-    Write-Host "`n🔗 USEFUL LINKS" -ForegroundColor Yellow
+    Write-Host "`n[i] USEFUL LINKS" -ForegroundColor Yellow
     Write-Host "   Azure Portal: https://portal.azure.com"
     Write-Host "   Documentation: https://docs.microsoft.com/azure/active-directory/develop/"
     
@@ -1574,11 +1540,11 @@ function Invoke-ModuleCheck {
 
 function Test-ServiceConnections {
     Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                    TEST SERVICE CONNECTIONS                           ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "                    TEST SERVICE CONNECTIONS                            " -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
     
-    Write-Host "`n🔍 Testing connectivity to Microsoft services..." -ForegroundColor Yellow
+    Write-Host "`n[i] Testing connectivity to Microsoft services..." -ForegroundColor Yellow
     
     # Load connection manager
     try {
@@ -1603,18 +1569,18 @@ function Test-ServiceConnections {
             try {
                 $result = Test-NetConnection -ComputerName $testEndpoint -Port $service.Port -InformationLevel Quiet -WarningAction SilentlyContinue
                 if ($result) {
-                    Write-Host " ✅ Connected" -ForegroundColor Green
+                    Write-Host " [OK] Connected" -ForegroundColor Green
                 } else {
-                    Write-Host " ❌ Failed" -ForegroundColor Red
+                    Write-Host " [ERROR] Failed" -ForegroundColor Red
                 }
             } catch {
-                Write-Host " ❌ Error: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host " [ERROR] Error: $($_.Exception.Message)" -ForegroundColor Red
             }
         }
         
         # Test authentication if credentials exist
         if ($script:ConnectionStatus.Credentials) {
-            Write-Host "`n🔐 Testing authentication..." -ForegroundColor Yellow
+            Write-Host "`n[i] Testing authentication..." -ForegroundColor Yellow
             
             try {
                 $authModule = Join-Path $global:MandA.Paths.Authentication "Authentication.psm1"
@@ -1622,19 +1588,19 @@ function Test-ServiceConnections {
                 
                 $authResult = Initialize-MandAAuthentication -Configuration $global:MandA.Config
                 if ($authResult -and $authResult.Authenticated) {
-                    Write-Host "✅ Authentication successful" -ForegroundColor Green
+                    Write-Host "[OK] Authentication successful" -ForegroundColor Green
                 } else {
-                    Write-Host "❌ Authentication failed" -ForegroundColor Red
+                    Write-Host "[ERROR] Authentication failed" -ForegroundColor Red
                 }
             } catch {
-                Write-Host "❌ Authentication error: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "[ERROR] Authentication error: $($_.Exception.Message)" -ForegroundColor Red
             }
         } else {
-            Write-Host "`n⚠️  No credentials configured. Skipping authentication test." -ForegroundColor Yellow
+            Write-Host "`n[!] No credentials configured. Skipping authentication test." -ForegroundColor Yellow
         }
         
     } catch {
-        Write-Host "`n❌ Error loading connection manager: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "`n[ERROR] Error loading connection manager: $($_.Exception.Message)" -ForegroundColor Red
     }
     
     Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
@@ -1643,14 +1609,14 @@ function Test-ServiceConnections {
 
 function Show-ConfigurationSettings {
     Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                    CONFIGURATION SETTINGS                             ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "                    CONFIGURATION SETTINGS                              " -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
     
     if ($null -eq $global:MandA.Config) {
-        Write-Host "`n❌ Configuration not loaded!" -ForegroundColor Red
+        Write-Host "`n[ERROR] Configuration not loaded!" -ForegroundColor Red
     } else {
-        Write-Host "`n📋 Current Configuration:" -ForegroundColor Yellow
+        Write-Host "`n[i] Current Configuration:" -ForegroundColor Yellow
         Write-Host "========================" -ForegroundColor Yellow
         
         # Metadata
@@ -1685,7 +1651,7 @@ function Show-ConfigurationSettings {
         Write-Host "  Processed Data: $($global:MandA.Paths.ProcessedDataOutput)"
         Write-Host "  Logs: $($global:MandA.Paths.LogOutput)"
         
-        Write-Host "`n💡 To modify settings, edit:" -ForegroundColor Yellow
+        Write-Host "`n[i] To modify settings, edit:" -ForegroundColor Yellow
         Write-Host "   $($global:MandA.Paths.ConfigFile)" -ForegroundColor Gray
     }
     
@@ -1695,11 +1661,11 @@ function Show-ConfigurationSettings {
 
 function Clear-ExistingDataFiles {
     Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                    CLEAR EXISTING DATA FILES                          ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "                    CLEAR EXISTING DATA FILES                           " -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
     
-    Write-Host "`n⚠️  WARNING: This will delete all discovery data!" -ForegroundColor Red
+    Write-Host "`n[!] WARNING: This will delete all discovery data!" -ForegroundColor Red
     Write-Host "   Company: $($script:CompanyName)" -ForegroundColor Yellow
     
     # Show current data statistics
@@ -1717,7 +1683,7 @@ function Clear-ExistingDataFiles {
         $logFiles = Get-ChildItem -Path $global:MandA.Paths.LogOutput -Filter "*.log" -File -ErrorAction SilentlyContinue
     }
     
-    Write-Host "`n📊 Current Data:" -ForegroundColor Cyan
+    Write-Host "`n[i] Current Data:" -ForegroundColor Cyan
     Write-Host "  Raw Data Files: $($rawFiles.Count)"
     Write-Host "  Processed Data Files: $($processedFiles.Count)"
     Write-Host "  Log Files: $($logFiles.Count)"
@@ -1737,7 +1703,7 @@ function Clear-ExistingDataFiles {
             if ($rawFiles.Count -gt 0) {
                 Write-Host "`nDeleting $($rawFiles.Count) raw data files..." -ForegroundColor Yellow
                 $rawFiles | Remove-Item -Force
-                Write-Host "✅ Raw data cleared" -ForegroundColor Green
+                Write-Host "[OK] Raw data cleared" -ForegroundColor Green
             } else {
                 Write-Host "No raw data files to delete" -ForegroundColor Gray
             }
@@ -1746,7 +1712,7 @@ function Clear-ExistingDataFiles {
             if ($processedFiles.Count -gt 0) {
                 Write-Host "`nDeleting $($processedFiles.Count) processed data files..." -ForegroundColor Yellow
                 $processedFiles | Remove-Item -Force
-                Write-Host "✅ Processed data cleared" -ForegroundColor Green
+                Write-Host "[OK] Processed data cleared" -ForegroundColor Green
             } else {
                 Write-Host "No processed data files to delete" -ForegroundColor Gray
             }
@@ -1757,13 +1723,13 @@ function Clear-ExistingDataFiles {
                 Write-Host "`nDeleting $totalFiles data files..." -ForegroundColor Yellow
                 $rawFiles | Remove-Item -Force -ErrorAction SilentlyContinue
                 $processedFiles | Remove-Item -Force -ErrorAction SilentlyContinue
-                Write-Host "✅ All data cleared" -ForegroundColor Green
+                Write-Host "[OK] All data cleared" -ForegroundColor Green
             } else {
                 Write-Host "No data files to delete" -ForegroundColor Gray
             }
         }
         '4' {
-            Write-Host "`n⚠️  Are you SURE? This will delete ALL data and logs! (Y/N): " -ForegroundColor Red -NoNewline
+            Write-Host "`n[!] Are you SURE? This will delete ALL data and logs! (Y/N): " -ForegroundColor Red -NoNewline
             $confirm = Read-Host
             if ($confirm -eq 'Y' -or $confirm -eq 'y') {
                 $totalFiles = $rawFiles.Count + $processedFiles.Count + $logFiles.Count
@@ -1771,7 +1737,7 @@ function Clear-ExistingDataFiles {
                 $rawFiles | Remove-Item -Force -ErrorAction SilentlyContinue
                 $processedFiles | Remove-Item -Force -ErrorAction SilentlyContinue
                 $logFiles | Remove-Item -Force -ErrorAction SilentlyContinue
-                Write-Host "✅ All data and logs cleared" -ForegroundColor Green
+                Write-Host "[OK] All data and logs cleared" -ForegroundColor Green
             } else {
                 Write-Host "Operation cancelled" -ForegroundColor Yellow
             }
@@ -1790,17 +1756,17 @@ function Clear-ExistingDataFiles {
 
 function New-SampleReport {
     Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                    GENERATE SAMPLE REPORT                             ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host "                    GENERATE SAMPLE REPORT                              " -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
     
-    Write-Host "`n📊 Generating sample discovery report..." -ForegroundColor Yellow
+    Write-Host "`n[i] Generating sample discovery report..." -ForegroundColor Yellow
     
     try {
         # Check if we have processed data
         $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
         if (-not (Test-Path $processedDataPath)) {
-            Write-Host "`n❌ No processed data found. Please run Discovery and Processing first." -ForegroundColor Red
+            Write-Host "`n[ERROR] No processed data found. Please run Discovery and Processing first." -ForegroundColor Red
             Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
             $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             return
@@ -1892,17 +1858,17 @@ function New-SampleReport {
             <tr>
                 <td>Enabled Users</td>
                 <td>$enabledUsers</td>
-                <td class="status-good">✓</td>
+                <td class="status-good">[OK]</td>
             </tr>
             <tr>
                 <td>Disabled Users</td>
                 <td>$disabledUsers</td>
-                <td class="status-warning">⚠</td>
+                <td class="status-warning">[!]</td>
             </tr>
             <tr>
                 <td>Users with Mailboxes</td>
                 <td>$(@($userData | Where-Object { $_.HasExchangeMailbox -eq 'True' }).Count)</td>
-                <td class="status-good">✓</td>
+                <td class="status-good">[OK]</td>
             </tr>
         </table>
     </div>
@@ -1915,10 +1881,10 @@ function New-SampleReport {
         <h2>Migration Readiness</h2>
         <p>Based on the processed data, here's a high-level readiness assessment:</p>
         <ul>
-            <li>✅ Discovery completed successfully</li>
-            <li>✅ Data processing completed</li>
-            <li>⚠️  Review user complexity scores before migration</li>
-            <li>⚠️  Validate all service dependencies</li>
+            <li>[OK] Discovery completed successfully</li>
+            <li>[OK] Data processing completed</li>
+            <li>[!] Review user complexity scores before migration</li>
+            <li>[!] Validate all service dependencies</li>
         </ul>
     </div>
     
@@ -1938,7 +1904,7 @@ function New-SampleReport {
         # Save report
         $html | Out-File -FilePath $reportFile -Encoding UTF8
         
-        Write-Host "`n✅ Sample report generated successfully!" -ForegroundColor Green
+        Write-Host "`n[OK] Sample report generated successfully!" -ForegroundColor Green
         Write-Host "   Location: $reportFile" -ForegroundColor Gray
         
         # Offer to open the report
@@ -1949,7 +1915,7 @@ function New-SampleReport {
         }
         
     } catch {
-        Write-Host "`n❌ Error generating report: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "`n[ERROR] Error generating report: $($_.Exception.Message)" -ForegroundColor Red
     }
     
     Write-Host "`nPress any key to return to main menu..." -ForegroundColor Gray
@@ -1968,24 +1934,24 @@ Initialize-Environment
 
 # Check if running as administrator
 if (-not (Test-Administrator)) {
-    Write-ColoredLog "⚠️  WARNING: Not running as Administrator. Some features may not work correctly." -Level "WARN"
+    Write-ColoredLog "[!] WARNING: Not running as Administrator. Some features may not work correctly." -Level "WARN"
     Start-Sleep -Seconds 3
 }
 
 # Display welcome screen
 Clear-Host
 Write-Host @"
-╔══════════════════════════════════════════════════════════════════════════╗
-║                                                                          ║
-║                    M&A DISCOVERY SUITE v5.4.0                            ║
-║                                                                          ║
-║            Comprehensive Infrastructure Discovery Tool                    ║
-║                                                                          ║
-╚══════════════════════════════════════════════════════════════════════════╝
+========================================================================
+                                                                        
+                    M&A DISCOVERY SUITE v5.5.0                          
+                                                                        
+            Comprehensive Infrastructure Discovery Tool                  
+                                                                        
+========================================================================
 "@ -ForegroundColor Cyan
 
 if ($script:DebugModeEnabled) {
-    Write-Host "`n                    🔧 DEBUG MODE ENABLED 🔧" -ForegroundColor Magenta
+    Write-Host "`n                    [DEBUG MODE ENABLED]" -ForegroundColor Magenta
 }
 
 Write-Host "`nInitializing..." -ForegroundColor Yellow
@@ -2011,14 +1977,15 @@ do {
         }
         '5' { Start-ProcessingOnly }
         '6' { Start-ExportOnly }
-        '7' { Start-CompanyControlSheetGeneration }
-        '8' { Start-PowerAppsExportGeneration }
-        '9' { Show-CredentialSetupMenu }
-        '10' { Invoke-ModuleCheck }
-        '11' { Test-ServiceConnections }
-        '12' { Show-ConfigurationSettings }
-        '13' { Clear-ExistingDataFiles }
-        '14' { New-SampleReport }
+        '7' { Start-AzureOnlyDiscovery }
+        '8' { Start-CompanyControlSheetGeneration }
+        '9' { Start-PowerAppsExportGeneration }
+        '10' { Show-CredentialSetupMenu }
+        '11' { Invoke-ModuleCheck }
+        '12' { Test-ServiceConnections }
+        '13' { Show-ConfigurationSettings }
+        '14' { Clear-ExistingDataFiles }
+        '15' { New-SampleReport }
         {$_ -eq 'D' -or $_ -eq 'd'} {
             # Debug menu
             $inDebugMenu = $true
@@ -2102,7 +2069,7 @@ do {
                     }
                     {$_ -eq 'B' -or $_ -eq 'b'} { $inDebugMenu = $false }
                     default {
-                        Write-Host "`n⚠️  Invalid selection in debug menu. Please try again." -ForegroundColor Red
+                        Write-Host "`n[!] Invalid selection in debug menu. Please try again." -ForegroundColor Red
                         Start-Sleep -Seconds 1
                     }
                 }
@@ -2114,7 +2081,7 @@ do {
             Start-Sleep -Seconds 1
         }
         default {
-            Write-Host "`n⚠️  Invalid selection. Please try again." -ForegroundColor Red
+            Write-Host "`n[!] Invalid selection. Please try again." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }
