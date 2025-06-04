@@ -16,6 +16,7 @@
 }
 
 
+# Module initialization - no global dependency at load time
 $script:ConnectionStatus = @{
     Graph = @{ Connected = $false; LastError = $null; ConnectedTime = $null; Context = $null; Method = $null }
     Azure = @{ Connected = $false; LastError = $null; ConnectedTime = $null; Context = $null; Method = $null }
