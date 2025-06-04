@@ -13,6 +13,21 @@
 # Import shared utilities
 Import-Module "$PSScriptRoot\..\Utilities\DataExport.psm1" -Force
 
+
+
+
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
+
+
 # Main detection function
 function Get-EnvironmentType {
     param(
