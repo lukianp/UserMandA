@@ -4,14 +4,22 @@
 .DESCRIPTION
     Handles encrypted credential storage using DPAPI with standardized format
 .NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.0.0
-    Created: 2025-06-03
-    Last Modified: 2025-06-03
-    Change Log: Initial version - any future changes require version increment
+    Author: M&A Discovery Team
+    Version: 2.0.0
+    Created: 2025-05-31
+    Last Modified: 2025-01-10
 #>
 
 # Import the credential format handler
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
 $formatHandlerPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\CredentialFormatHandler.psm1"
 if (Test-Path $formatHandlerPath) {
     Import-Module $formatHandlerPath -Force
