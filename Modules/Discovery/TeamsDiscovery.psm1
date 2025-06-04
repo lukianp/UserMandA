@@ -6,6 +6,8 @@
 #>
 
 # Modules/Discovery/TeamsDiscovery.psm1
+#Cannot use $outputpath as its used internally here
+
 
 function Invoke-TeamsDiscovery {
     param([hashtable]$Configuration)
@@ -13,7 +15,15 @@ function Invoke-TeamsDiscovery {
     try {
         Write-MandALog "Starting Microsoft Teams discovery" -Level "HEADER"
         
-        $outputPath = $Configuration.environment.outputPath
+   #Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
         $rawPath = Join-Path $outputPath "Raw"
         
         $discoveryResults = @{}
