@@ -23,11 +23,10 @@
     New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
 }
 
-# Import base module
-$baseModule = Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\DiscoveryModuleBase.psm1"
-if (Test-Path $baseModule) {
-    Import-Module $baseModule -Force
-}
+
+
+$authModulePathFromGlobal = Join-Path $global:MandA.Paths.Authentication "DiscoveryModuleBase.psm1"
+Import-Module $authModulePathFromGlobal -Force
 
 # Module-specific variables
 $script:PerformanceTracker = $null
