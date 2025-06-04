@@ -447,8 +447,8 @@ function Initialize-MandAEnvironment {
             "FileOperations.psm1",
             "ValidationHelpers.psm1",
             "ConfigurationValidation.psm1",
-            "ErrorHandling.psm1",
-            "DataExport.psm1"
+            "ErrorHandling.psm1"
+            
         )
         
         foreach ($module in $utilityModules) {
