@@ -12,8 +12,7 @@
 
 # Import shared utilities
 
-$authModulePathFromGlobal = Join-Path $global:MandA.Paths.Authentication "DataExport.psm1"
-Import-Module $authModulePathFromGlobal -Force
+
 
 # API Throttling Configuration
 $script:ThrottleConfig = @{
@@ -155,6 +154,244 @@ function Get-AzureResourceGroupsInternal {
     
     return $allRGs
 }
+
+#adding extra modules
+
+function Get-AzureStorageAccountsInternal {
+    param(
+        [hashtable]$Configuration,
+        $SubscriptionContext,
+        $Context
+    )
+    
+    Write-MandALog "Discovering Storage Accounts in subscription '$($SubscriptionContext.Name)'..." -Level "INFO" -Context $Context
+    $allStorage = [System.Collections.Generic.List[PSObject]]::new()
+    
+    try {
+        $storageAccounts = Invoke-AzureOperationWithThrottling -Operation {
+            Get-AzStorageAccount -ErrorAction Stop
+        } -OperationName "GetStorageAccounts_$($SubscriptionContext.Name)" -Context $Context
+        
+        if ($storageAccounts) {
+            foreach ($sa in $storageAccounts) {
+                $allStorage.Add([PSCustomObject]@{
+                    SubscriptionId = $SubscriptionContext.Id
+                    SubscriptionName = $SubscriptionContext.Name
+                    StorageAccountName = $sa.StorageAccountName
+                    ResourceGroupName = $sa.ResourceGroupName
+                    Location = $sa.Location
+                    Kind = $sa.Kind
+                    SkuName = $sa.Sku.Name
+                    SkuTier = $sa.Sku.Tier
+                    AccessTier = $sa.AccessTier
+                    CreationTime = $sa.CreationTime
+                    EnableHttpsTrafficOnly = $sa.EnableHttpsTrafficOnly
+                    MinimumTlsVersion = $sa.MinimumTlsVersion
+                    PrimaryLocation = $sa.PrimaryLocation
+                    SecondaryLocation = $sa.SecondaryLocation
+                    StatusOfPrimary = $sa.StatusOfPrimary
+                    Tags = if ($sa.Tags) { $sa.Tags | ConvertTo-Json -Compress } else { $null }
+                })
+            }
+        }
+    }
+    catch {
+        $Context.ErrorCollector.AddError("Azure_StorageAccounts", "Failed to retrieve storage accounts from '$($SubscriptionContext.Name)'", $_.Exception)
+    }
+    
+    return $allStorage
+}
+
+
+function Get-AzureSQLDatabasesInternal {
+    param(
+        [hashtable]$Configuration,
+        $SubscriptionContext,
+        $Context
+    )
+    
+    Write-MandALog "Discovering SQL Databases in subscription '$($SubscriptionContext.Name)'..." -Level "INFO" -Context $Context
+    $allDatabases = [System.Collections.Generic.List[PSObject]]::new()
+    
+    try {
+        # First get SQL servers
+        $sqlServers = Invoke-AzureOperationWithThrottling -Operation {
+            Get-AzSqlServer -ErrorAction Stop
+        } -OperationName "GetSqlServers_$($SubscriptionContext.Name)" -Context $Context
+        
+        if ($sqlServers) {
+            foreach ($server in $sqlServers) {
+                # Get databases for each server
+                $databases = Invoke-AzureOperationWithThrottling -Operation {
+                    Get-AzSqlDatabase -ServerName $server.ServerName -ResourceGroupName $server.ResourceGroupName -ErrorAction Stop
+                } -OperationName "GetSqlDatabases_$($server.ServerName)" -Context $Context
+                
+                foreach ($db in $databases | Where-Object { $_.DatabaseName -ne "master" }) {
+                    $allDatabases.Add([PSCustomObject]@{
+                        SubscriptionId = $SubscriptionContext.Id
+                        SubscriptionName = $SubscriptionContext.Name
+                        ServerName = $server.ServerName
+                        DatabaseName = $db.DatabaseName
+                        ResourceGroupName = $db.ResourceGroupName
+                        Location = $db.Location
+                        DatabaseId = $db.DatabaseId
+                        Edition = $db.Edition
+                        ServiceObjectiveName = $db.CurrentServiceObjectiveName
+                        MaxSizeBytes = $db.MaxSizeBytes
+                        Status = $db.Status
+                        CreationDate = $db.CreationDate
+                        EarliestRestoreDate = $db.EarliestRestoreDate
+                        Tags = if ($db.Tags) { $db.Tags | ConvertTo-Json -Compress } else { $null }
+                    })
+                }
+            }
+        }
+    }
+    catch {
+        $Context.ErrorCollector.AddError("Azure_SQLDatabases", "Failed to retrieve SQL databases from '$($SubscriptionContext.Name)'", $_.Exception)
+    }
+    
+    return $allDatabases
+}
+
+
+function Get-AzureWebAppsInternal {
+    param(
+        [hashtable]$Configuration,
+        $SubscriptionContext,
+        $Context
+    )
+    
+    Write-MandALog "Discovering Web Apps in subscription '$($SubscriptionContext.Name)'..." -Level "INFO" -Context $Context
+    $allWebApps = [System.Collections.Generic.List[PSObject]]::new()
+    
+    try {
+        $webApps = Invoke-AzureOperationWithThrottling -Operation {
+            Get-AzWebApp -ErrorAction Stop
+        } -OperationName "GetWebApps_$($SubscriptionContext.Name)" -Context $Context
+        
+        if ($webApps) {
+            foreach ($app in $webApps) {
+                $allWebApps.Add([PSCustomObject]@{
+                    SubscriptionId = $SubscriptionContext.Id
+                    SubscriptionName = $SubscriptionContext.Name
+                    Name = $app.Name
+                    ResourceGroup = $app.ResourceGroup
+                    Location = $app.Location
+                    State = $app.State
+                    HostNames = $app.HostNames -join ";"
+                    AppServicePlan = $app.ServerFarmId
+                    Kind = $app.Kind
+                    HttpsOnly = $app.HttpsOnly
+                    ClientCertEnabled = $app.ClientCertEnabled
+                    Enabled = $app.Enabled
+                    AvailabilityState = $app.AvailabilityState
+                    RuntimeStack = if ($app.SiteConfig.LinuxFxVersion) { $app.SiteConfig.LinuxFxVersion } else { $app.SiteConfig.WindowsFxVersion }
+                    Tags = if ($app.Tags) { $app.Tags | ConvertTo-Json -Compress } else { $null }
+                })
+            }
+        }
+    }
+    catch {
+        $Context.ErrorCollector.AddError("Azure_WebApps", "Failed to retrieve web apps from '$($SubscriptionContext.Name)'", $_.Exception)
+    }
+    
+    return $allWebApps
+}
+
+
+
+function Get-AzureKeyVaultsInternal {
+    param(
+        [hashtable]$Configuration,
+        $SubscriptionContext,
+        $Context
+    )
+    
+    Write-MandALog "Discovering Key Vaults in subscription '$($SubscriptionContext.Name)'..." -Level "INFO" -Context $Context
+    $allKeyVaults = [System.Collections.Generic.List[PSObject]]::new()
+    
+    try {
+        $keyVaults = Invoke-AzureOperationWithThrottling -Operation {
+            Get-AzKeyVault -ErrorAction Stop
+        } -OperationName "GetKeyVaults_$($SubscriptionContext.Name)" -Context $Context
+        
+        if ($keyVaults) {
+            foreach ($kv in $keyVaults) {
+                # Get detailed info for each vault
+                $kvDetail = Invoke-AzureOperationWithThrottling -Operation {
+                    Get-AzKeyVault -VaultName $kv.VaultName -ResourceGroupName $kv.ResourceGroupName -ErrorAction Stop
+                } -OperationName "GetKeyVaultDetail_$($kv.VaultName)" -Context $Context
+                
+                $allKeyVaults.Add([PSCustomObject]@{
+                    SubscriptionId = $SubscriptionContext.Id
+                    SubscriptionName = $SubscriptionContext.Name
+                    VaultName = $kvDetail.VaultName
+                    ResourceGroupName = $kvDetail.ResourceGroupName
+                    Location = $kvDetail.Location
+                    VaultUri = $kvDetail.VaultUri
+                    EnabledForDeployment = $kvDetail.EnabledForDeployment
+                    EnabledForTemplateDeployment = $kvDetail.EnabledForTemplateDeployment
+                    EnabledForDiskEncryption = $kvDetail.EnabledForDiskEncryption
+                    EnableSoftDelete = $kvDetail.EnableSoftDelete
+                    EnablePurgeProtection = $kvDetail.EnablePurgeProtection
+                    Sku = $kvDetail.Sku
+                    TenantId = $kvDetail.TenantId
+                    Tags = if ($kvDetail.Tags) { $kvDetail.Tags | ConvertTo-Json -Compress } else { $null }
+                })
+            }
+        }
+    }
+    catch {
+        $Context.ErrorCollector.AddError("Azure_KeyVaults", "Failed to retrieve key vaults from '$($SubscriptionContext.Name)'", $_.Exception)
+    }
+    
+    return $allKeyVaults
+}
+
+
+function Get-AzureNSGsInternal {
+    param(
+        [hashtable]$Configuration,
+        $SubscriptionContext,
+        $Context
+    )
+    
+    Write-MandALog "Discovering Network Security Groups in subscription '$($SubscriptionContext.Name)'..." -Level "INFO" -Context $Context
+    $allNSGs = [System.Collections.Generic.List[PSObject]]::new()
+    
+    try {
+        $nsgs = Invoke-AzureOperationWithThrottling -Operation {
+            Get-AzNetworkSecurityGroup -ErrorAction Stop
+        } -OperationName "GetNSGs_$($SubscriptionContext.Name)" -Context $Context
+        
+        if ($nsgs) {
+            foreach ($nsg in $nsgs) {
+                $allNSGs.Add([PSCustomObject]@{
+                    SubscriptionId = $SubscriptionContext.Id
+                    SubscriptionName = $SubscriptionContext.Name
+                    Name = $nsg.Name
+                    ResourceGroupName = $nsg.ResourceGroupName
+                    Location = $nsg.Location
+                    SecurityRuleCount = $nsg.SecurityRules.Count
+                    DefaultSecurityRuleCount = $nsg.DefaultSecurityRules.Count
+                    NetworkInterfaceCount = $nsg.NetworkInterfaces.Count
+                    SubnetCount = $nsg.Subnets.Count
+                    Tags = if ($nsg.Tags) { $nsg.Tags | ConvertTo-Json -Compress } else { $null }
+                })
+            }
+        }
+    }
+    catch {
+        $Context.ErrorCollector.AddError("Azure_NSGs", "Failed to retrieve NSGs from '$($SubscriptionContext.Name)'", $_.Exception)
+    }
+    
+    return $allNSGs
+}
+
+
+
+#end of extras
 
 function Get-AzureVMsDataInternal {
     param(
@@ -497,6 +734,11 @@ function Initialize-AzureDiscoveryResults {
         ADApplicationOwners = [System.Collections.Generic.List[PSObject]]::new()
         ServicePrincipals = [System.Collections.Generic.List[PSObject]]::new()
         ServicePrincipalOwners = [System.Collections.Generic.List[PSObject]]::new()
+        StorageAccounts = [System.Collections.Generic.List[PSObject]]::new()
+        SQLDatabases = [System.Collections.Generic.List[PSObject]]::new()
+        WebApps = [System.Collections.Generic.List[PSObject]]::new()
+        KeyVaults = [System.Collections.Generic.List[PSObject]]::new()
+        NetworkSecurityGroups = [System.Collections.Generic.List[PSObject]]::new()
     }
 }
 
@@ -545,7 +787,25 @@ function Process-SubscriptionLevelResources {
         $vms = Get-AzureVMsDataInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
         if ($vms) { $DiscoveredData.VirtualMachines.AddRange($vms) }
         
-        # Add other resource types as needed...
+       # Get Storage Accounts
+$storage = Get-AzureStorageAccountsInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
+if ($storage) { $DiscoveredData.StorageAccounts.AddRange($storage) }
+
+# Get SQL Databases
+$sqlDbs = Get-AzureSQLDatabasesInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
+if ($sqlDbs) { $DiscoveredData.SQLDatabases.AddRange($sqlDbs) }
+
+# Get Web Apps
+$webApps = Get-AzureWebAppsInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
+if ($webApps) { $DiscoveredData.WebApps.AddRange($webApps) }
+
+# Get Key Vaults
+$keyVaults = Get-AzureKeyVaultsInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
+if ($keyVaults) { $DiscoveredData.KeyVaults.AddRange($keyVaults) }
+
+# Get NSGs
+$nsgs = Get-AzureNSGsInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
+if ($nsgs) { $DiscoveredData.NetworkSecurityGroups.AddRange($nsgs) }
         
     }
     catch {
