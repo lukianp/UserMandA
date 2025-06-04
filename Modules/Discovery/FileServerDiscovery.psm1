@@ -11,6 +11,18 @@
     Last Modified: 2024-01-20
 #>
 
+
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
+
 # Import base module
 $baseModule = Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\DiscoveryModuleBase.psm1"
 if (Test-Path $baseModule) {
