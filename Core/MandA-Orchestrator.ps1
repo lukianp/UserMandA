@@ -538,25 +538,56 @@ function Import-DiscoveryModules {
     $enabledSources = @($Context.Config.discovery.enabledSources)
     
     Write-MandALog "Loading discovery modules for $($enabledSources.Count) sources" -Level "INFO" -Context $Context
+    Write-MandALog "DEBUG: Enabled sources: $($enabledSources -join ', ')" -Level "DEBUG" -Context $Context
+    
+    $loadedCount = 0
+    $failedCount = 0
     
     foreach ($source in $enabledSources) {
         try {
+            # ADD DEBUG OUTPUT
+            Write-MandALog "DEBUG: Attempting to load module for source: $source" -Level "DEBUG" -Context $Context
+            
             # Validate module configuration first
             Test-ModuleConfiguration -Configuration $Context.Config -ModuleName $source
             
             $moduleFile = "${source}Discovery.psm1"
             $modulePath = Join-Path $discoveryPath $moduleFile
             
+            Write-MandALog "DEBUG: Looking for module at: $modulePath" -Level "DEBUG" -Context $Context
+            
             if (Test-Path $modulePath) {
-                Import-ModuleWithManifest -ModulePath $modulePath -Context $Context
+                Write-MandALog "DEBUG: Module file found, attempting import..." -Level "DEBUG" -Context $Context
+                $result = Import-ModuleWithManifest -ModulePath $modulePath -Context $Context
+                
+                if ($result) {
+                    $loadedCount++
+                    Write-MandALog "DEBUG: Successfully loaded $source module" -Level "DEBUG" -Context $Context
+                } else {
+                    $failedCount++
+                    Write-MandALog "DEBUG: Failed to load $source module" -Level "DEBUG" -Context $Context
+                }
             } else {
+                $failedCount++
                 $Context.ErrorCollector.AddWarning($source, "Discovery module not found: $moduleFile")
+                Write-MandALog "WARNING: Discovery module not found: $moduleFile at $modulePath" -Level "WARN" -Context $Context
+                
+                # Check for common naming issues
+                $possibleFiles = Get-ChildItem -Path $discoveryPath -Filter "*${source}*.psm1" -ErrorAction SilentlyContinue
+                if ($possibleFiles) {
+                    Write-MandALog "DEBUG: Found similar files: $($possibleFiles.Name -join ', ')" -Level "DEBUG" -Context $Context
+                }
             }
         }
         catch {
+            $failedCount++
             $Context.ErrorCollector.AddError($source, "Failed to load discovery module", $_.Exception)
+            Write-MandALog "ERROR: Exception loading $source module: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            Write-MandALog "DEBUG: Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG" -Context $Context
         }
     }
+    
+    Write-MandALog "Discovery module loading complete: $loadedCount loaded, $failedCount failed" -Level "INFO" -Context $Context
 }
 
 function Import-ProcessingModules {
