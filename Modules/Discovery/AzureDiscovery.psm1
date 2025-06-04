@@ -11,7 +11,249 @@
 #>
 
 # Import shared utilities
+# Add at the top after imports
+# Import progress display module
+$progressModulePath = if ($global:MandA -and $global:MandA.Paths) {
+    Join-Path $global:MandA.Paths.Utilities "ProgressDisplay.psm1"
+} else {
+    Join-Path (Split-Path $PSScriptRoot -Parent) "..\Utilities\ProgressDisplay.psm1"
+}
+if (Test-Path $progressModulePath) {
+    Import-Module $progressModulePath -Force -Global
+}
 
+# Enhanced Get-AzureSubscriptionsInternal with progress
+function Get-AzureSubscriptionsInternal {
+    param(
+        [hashtable]$Configuration,
+        $Context
+    )
+    
+    Write-ProgressStep "Discovering Azure Subscriptions..." -Status Progress
+    $allSubscriptions = [System.Collections.Generic.List[PSObject]]::new()
+    
+    try {
+        $subscriptions = Invoke-AzureOperationWithThrottling -Operation {
+            Get-AzSubscription -ErrorAction Stop
+        } -OperationName "GetSubscriptions" -Context $Context
+        
+        if ($subscriptions) {
+            Write-ProgressStep "Found $($subscriptions.Count) subscriptions to process" -Status Info
+            
+            $processedCount = 0
+            foreach ($sub in $subscriptions) {
+                $processedCount++
+                Show-ProgressBar -Current $processedCount -Total $subscriptions.Count `
+                    -Activity "Processing subscription: $($sub.Name)"
+                
+                $allSubscriptions.Add([PSCustomObject]@{
+                    SubscriptionId = $sub.Id
+                    SubscriptionName = $sub.Name
+                    TenantId = $sub.TenantId
+                    State = $sub.State.ToString()
+                })
+            }
+            
+            Write-Host "" # New line after progress
+            Write-ProgressStep "Retrieved $($allSubscriptions.Count) Azure Subscriptions" -Status Success
+        }
+    }
+    catch {
+        Write-ProgressStep "Error retrieving subscriptions: $($_.Exception.Message)" -Status Error
+        $Context.ErrorCollector.AddError("Azure_Subscriptions", "Failed to retrieve subscriptions", $_.Exception)
+        throw
+    }
+    
+    return $allSubscriptions
+}
+
+# Enhanced Get-AzureVMsDataInternal with progress
+function Get-AzureVMsDataInternal {
+    param(
+        [hashtable]$Configuration,
+        $SubscriptionContext,
+        $Context
+    )
+    
+    Write-ProgressStep "Discovering VMs in subscription '$($SubscriptionContext.Name)'..." -Status Progress
+    $allVMs = [System.Collections.Generic.List[PSObject]]::new()
+    
+    try {
+        $vms = Invoke-AzureOperationWithThrottling -Operation {
+            Get-AzVM -Status -ErrorAction Stop
+        } -OperationName "GetVMs_$($SubscriptionContext.Name)" -Context $Context
+        
+        if ($vms) {
+            Write-ProgressStep "Found $($vms.Count) VMs to process" -Status Info
+            
+            $processedCount = 0
+            foreach ($vm in $vms) {
+                $processedCount++
+                
+                # Update progress every 5 VMs or at the end
+                if ($processedCount % 5 -eq 0 -or $processedCount -eq $vms.Count) {
+                    Show-ProgressBar -Current $processedCount -Total $vms.Count `
+                        -Activity "Processing VM: $($vm.Name)"
+                }
+                
+                $vmObj = ConvertTo-VMObject -VM $vm -SubscriptionContext $SubscriptionContext -Context $Context
+                $allVMs.Add($vmObj)
+            }
+            
+            Write-Host "" # New line after progress
+            Write-ProgressStep "Processed $($allVMs.Count) VMs successfully" -Status Success
+        }
+    }
+    catch {
+        Write-ProgressStep "Error retrieving VMs: $($_.Exception.Message)" -Status Error
+        $Context.ErrorCollector.AddError("Azure_VMs", "Failed to retrieve VMs from '$($SubscriptionContext.Name)'", $_.Exception)
+        throw
+    }
+    
+    return $allVMs
+}
+
+# Enhanced main Invoke-AzureDiscovery function
+function Invoke-AzureDiscovery {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$false)]
+        $Context
+    )
+    
+    # Create minimal context if not provided
+    if (-not $Context) {
+        $Context = @{
+            ErrorCollector = [PSCustomObject]@{
+                AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
+                AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
+            }
+            Paths = @{
+                RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
+            }
+        }
+    }
+    
+    Write-ProgressStep "Starting Azure Discovery Phase (v2.0.0)" -Status Progress
+    
+    # Validate Azure connection
+    Write-ProgressStep "Validating Azure connection..." -Status Progress
+    
+    if (-not (Get-Module -Name Az.Accounts -ListAvailable)) {
+        Write-ProgressStep "Az.Accounts module not available" -Status Error
+        $Context.ErrorCollector.AddError("Azure", "Az.Accounts module not available", $null)
+        return $null
+    }
+    
+    $currentAzContext = Get-AzContext -ErrorAction SilentlyContinue
+    if (-not $currentAzContext) {
+        Write-ProgressStep "Not connected to Azure" -Status Error
+        $Context.ErrorCollector.AddError("Azure", "Not connected to Azure", $null)
+        return $null
+    }
+    
+    Write-ProgressStep "Azure context: $($currentAzContext.Name) | Tenant: $($currentAzContext.Tenant.Id)" -Status Info
+    
+    # Initialize result structure
+    $allDiscoveredData = Initialize-AzureDiscoveryResults
+    
+    try {
+        # Get subscriptions
+        $subscriptions = Get-AzureSubscriptionsInternal -Configuration $Configuration -Context $Context
+        
+        if ($subscriptions -and $subscriptions.Count -gt 0) {
+            $allDiscoveredData.Subscriptions.AddRange($subscriptions)
+            
+            # Show overall progress
+            Write-ProgressStep "Processing $($subscriptions.Count) subscriptions..." -Status Progress
+            
+            # Process tenant-level resources once per tenant
+            $processedTenants = @{}
+            $subProcessedCount = 0
+            
+            foreach ($sub in $subscriptions) {
+                $subProcessedCount++
+                
+                # Update main progress
+                Show-DiscoveryProgress -Module "Azure" -Status "Running" `
+                    -CurrentItem "Subscription $subProcessedCount/$($subscriptions.Count): $($sub.SubscriptionName)" `
+                    -ItemsProcessed $subProcessedCount -TotalItems $subscriptions.Count
+                
+                # Process tenant-level resources
+                if (-not $processedTenants.ContainsKey($sub.TenantId)) {
+                    Write-ProgressStep "Processing tenant-level resources for: $($sub.TenantId)" -Status Progress
+                    Process-TenantLevelResources -TenantId $sub.TenantId -SubscriptionContext $sub -DiscoveredData $allDiscoveredData -Configuration $Configuration -Context $Context
+                    $processedTenants[$sub.TenantId] = $true
+                }
+                
+                # Process subscription-level resources
+                Write-ProgressStep "Processing subscription: $($sub.SubscriptionName)" -Status Progress
+                Process-SubscriptionLevelResources -Subscription $sub -DiscoveredData $allDiscoveredData -Configuration $Configuration -Context $Context
+            }
+        }
+        
+        # Export all collected data
+        Write-ProgressStep "Exporting discovery data..." -Status Progress
+        Export-AzureDiscoveryData -DiscoveredData $allDiscoveredData -Context $Context
+        
+        Write-ProgressStep "Azure Discovery Phase Completed Successfully" -Status Success
+    }
+    catch {
+        Write-ProgressStep "Critical error in Azure Discovery: $($_.Exception.Message)" -Status Error
+        $Context.ErrorCollector.AddError("Azure", "Critical error during discovery", $_.Exception)
+        throw
+    }
+    
+    return $allDiscoveredData
+}
+
+# Enhanced Process-SubscriptionLevelResources
+function Process-SubscriptionLevelResources {
+    param($Subscription, $DiscoveredData, $Configuration, $Context)
+    
+    Write-ProgressStep "Processing subscription: $($Subscription.SubscriptionName)" -Status Progress
+    
+    try {
+        # Set subscription context
+        Write-ProgressStep "Setting subscription context..." -Status Progress
+        Invoke-AzureOperationWithThrottling -Operation {
+            Set-AzContext -SubscriptionId $Subscription.SubscriptionId -TenantId $Subscription.TenantId -ErrorAction Stop | Out-Null
+        } -OperationName "SetContext_Sub_$($Subscription.SubscriptionName)" -Context $Context
+        
+        # Track progress through resource types
+        $resourceTypes = @(
+            @{Name="Resource Groups"; Function="Get-AzureResourceGroupsInternal"; Collection="ResourceGroups"},
+            @{Name="Virtual Machines"; Function="Get-AzureVMsDataInternal"; Collection="VirtualMachines"},
+            @{Name="Storage Accounts"; Function="Get-AzureStorageAccountsInternal"; Collection="StorageAccounts"},
+            @{Name="SQL Databases"; Function="Get-AzureSQLDatabasesInternal"; Collection="SQLDatabases"},
+            @{Name="Web Apps"; Function="Get-AzureWebAppsInternal"; Collection="WebApps"},
+            @{Name="Key Vaults"; Function="Get-AzureKeyVaultsInternal"; Collection="KeyVaults"},
+            @{Name="Network Security Groups"; Function="Get-AzureNSGsInternal"; Collection="NetworkSecurityGroups"}
+        )
+        
+        $typeProcessed = 0
+        foreach ($resType in $resourceTypes) {
+            $typeProcessed++
+            Show-ProgressBar -Current $typeProcessed -Total $resourceTypes.Count `
+                -Activity "Discovering $($resType.Name)"
+            
+            $resources = & $resType.Function -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
+            if ($resources) { 
+                $DiscoveredData[$resType.Collection].AddRange($resources) 
+            }
+        }
+        
+        Write-Host "" # New line after progress
+        Write-ProgressStep "Completed processing subscription: $($Subscription.SubscriptionName)" -Status Success
+    }
+    catch {
+        Write-ProgressStep "Failed to process subscription: $($Subscription.SubscriptionName)" -Status Error
+        $Context.ErrorCollector.AddError("Azure_Subscription", "Failed to process subscription: $($Subscription.SubscriptionName)", $_.Exception)
+        throw
+    }
+}
 
 
 # API Throttling Configuration
