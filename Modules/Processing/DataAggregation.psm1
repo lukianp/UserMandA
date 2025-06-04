@@ -857,10 +857,10 @@ function Start-DataAggregation {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration, # This is $Context.Config from Orchestrator
-        [Parameter(Mandatory=$true)]
-        # [MandAContext]$Context # Using untyped $Context for now to match user's current definition, but [MandAContext] is preferred
-        $Context
+        [hashtable]$Configuration,
+        
+        [Parameter(Mandatory=$false)]
+        $Context = $null
     )
 
     # Initialize statistics for this run
@@ -876,104 +876,232 @@ function Start-DataAggregation {
         Errors = [System.Collections.ArrayList]::new()
     }
     
-    # Define local logging wrappers that use the passed $Context
-    $LogInfo = { param($MessageParam, $LevelParam="INFO") Write-MandALog -Message $MessageParam -Level $LevelParam -Component "DataAggregation" -Context $Context }
-    $LogError = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "ERROR" -Component "DataAggregation" -Context $Context }
-    $LogHeader = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "HEADER" -Component "DataAggregation" -Context $Context }
-    $LogDebug = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "DEBUG" -Component "DataAggregation" -Context $Context }
-    $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
-
-    # Validate Context has necessary Paths, which come from $global:MandA via Orchestrator's context creation
-    if (-not ($Context -and $Context.PSObject.Properties['Paths'] -and $Context.Paths.PSObject.Properties['RawDataOutput'] -and $Context.Paths.PSObject.Properties['ProcessedDataOutput'])) {
-        $errMsg = "Start-DataAggregation: Context, Context.Paths, RawDataOutput path, or ProcessedDataOutput path is missing or invalid."
-        # Use Write-Host for critical bootstrap error if Write-MandALog might not be ready or context is bad
+    # Validate and normalize Context
+    try {
+        if ($null -eq $Context) {
+            # Try to create context from global environment
+            if ($null -ne $global:MandA -and $null -ne $global:MandA.Paths) {
+                $Context = [PSCustomObject]@{
+                    Paths = $global:MandA.Paths
+                    Config = $Configuration
+                    CompanyName = if ($global:MandA.CompanyName) { $global:MandA.CompanyName } else { $Configuration.metadata.companyName }
+                    ErrorCollector = [PSCustomObject]@{
+                        AddError = { param($s,$m,$e) Write-Host "[ERROR] $s : $m" -ForegroundColor Red }
+                        AddWarning = { param($s,$m) Write-Host "[WARN] $s : $m" -ForegroundColor Yellow }
+                    }
+                }
+                Write-Host "[INFO] Created Context from global environment" -ForegroundColor Gray
+            } else {
+                throw "No Context provided and global environment not available"
+            }
+        }
+        
+        # Validate Context structure
+        if ($null -eq $Context) {
+            throw "Context is null after initialization attempt"
+        }
+        
+        # Check if Context has Paths property
+        if (-not ($Context.PSObject.Properties.Name -contains 'Paths')) {
+            throw "Context does not contain 'Paths' property"
+        }
+        
+        if ($null -eq $Context.Paths) {
+            throw "Context.Paths is null"
+        }
+        
+        # Check for required path properties
+        $requiredPaths = @('RawDataOutput', 'ProcessedDataOutput')
+        $missingPaths = @()
+        
+        foreach ($pathName in $requiredPaths) {
+            if (-not ($Context.Paths.PSObject.Properties.Name -contains $pathName)) {
+                $missingPaths += $pathName
+            } elseif ([string]::IsNullOrWhiteSpace($Context.Paths.$pathName)) {
+                $missingPaths += "$pathName (empty)"
+            }
+        }
+        
+        if ($missingPaths.Count -gt 0) {
+            throw "Context.Paths is missing required properties: $($missingPaths -join ', ')"
+        }
+        
+        # Validate paths exist
+        $rawDataPath = $Context.Paths.RawDataOutput
+        $processedDataPath = $Context.Paths.ProcessedDataOutput
+        
+        if (-not (Test-Path $rawDataPath -PathType Container)) {
+            throw "Raw data path does not exist: $rawDataPath"
+        }
+        
+        # Create processed data path if it doesn't exist
+        if (-not (Test-Path $processedDataPath -PathType Container)) {
+            try {
+                New-Item -Path $processedDataPath -ItemType Directory -Force | Out-Null
+                Write-Host "[INFO] Created processed data directory: $processedDataPath" -ForegroundColor Gray
+            } catch {
+                throw "Failed to create processed data directory: $processedDataPath - $_"
+            }
+        }
+        
+    } catch {
+        $errMsg = "Context validation failed: $($_.Exception.Message)"
         Write-Host "[CRITICAL ERROR][DataAggregation] $errMsg" -ForegroundColor Red
         throw $errMsg
     }
-    $processedDataPath = $Context.Paths.ProcessedDataOutput
-    $rawDataPath = $Context.Paths.RawDataOutput
+    
+    # Define local logging wrappers that use the passed $Context
+    $LogInfo = { 
+        param($MessageParam, $LevelParam="INFO") 
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+            Write-MandALog -Message $MessageParam -Level $LevelParam -Component "DataAggregation" -Context $Context
+        } else {
+            Write-Host "[$LevelParam][DataAggregation] $MessageParam" -ForegroundColor $(
+                switch ($LevelParam) {
+                    "ERROR" { "Red" }
+                    "WARN" { "Yellow" }
+                    "SUCCESS" { "Green" }
+                    "HEADER" { "Cyan" }
+                    "DEBUG" { "Gray" }
+                    default { "White" }
+                }
+            )
+        }
+    }
+    
+    $LogError = { param($MessageParam) & $LogInfo $MessageParam "ERROR" }
+    $LogHeader = { param($MessageParam) & $LogInfo $MessageParam "HEADER" }
+    $LogDebug = { param($MessageParam) & $LogInfo $MessageParam "DEBUG" }
+    $LogSuccess = { param($MessageParam) & $LogInfo $MessageParam "SUCCESS" }
+    $LogWarn = { param($MessageParam) & $LogInfo $MessageParam "WARN" }
 
-    & $LogHeader "STARTING DATA AGGREGATION PHASE"
-    & $LogInfo "Configuration Provided: $($Configuration.metadata.companyName)" # $Configuration is $Context.Config
-    & $LogInfo "Raw data path: $rawDataPath"
-    & $LogInfo "Processed data output path: $processedDataPath"
-    & $LogInfo "Start time: $($script:AggregationStats.StartTime)"
+    & $LogHeader "═══════════════════════════════════════════════════════════════════════"
+    & $LogHeader "            STARTING DATA AGGREGATION PHASE"
+    & $LogHeader "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "Configuration:"
+    & $LogInfo "  Company: $($Configuration.metadata.companyName)"
+    & $LogInfo "  Raw data path: $rawDataPath"
+    & $LogInfo "  Output path: $processedDataPath"
+    & $LogInfo "  Start time: $($script:AggregationStats.StartTime)"
     & $LogInfo "═══════════════════════════════════════════════════════════════════════"
 
     try {
+        # Step 1: Load all raw data
+        & $LogInfo ""
         & $LogHeader "PHASE 1: Loading Raw Data Sources"
         $dataSources = Import-RawDataSources -RawDataPath $rawDataPath -Context $Context
         
-        if ($null -eq $dataSources -or $dataSources.Keys.Count -eq 0) {
+        if ($null -eq $dataSources -or $dataSources.Count -eq 0) {
             throw "No data sources were loaded. Halting processing."
         }
 
+        # Step 2: Merge User Profiles
+        & $LogInfo ""
         & $LogHeader "PHASE 2: Merging User Profiles"
         $mergedUsers = Merge-UserProfiles -DataSources $dataSources -Context $Context
+        
+        if ($null -eq $mergedUsers) {
+            & $LogWarn "No users returned from merge operation"
+            $mergedUsers = @()
+        }
 
+        # Step 3: Merge Device Profiles
+        & $LogInfo ""
         & $LogHeader "PHASE 3: Merging Device Profiles"
         $mergedDevices = Merge-DeviceProfiles -DataSources $dataSources -Context $Context
         
+        if ($null -eq $mergedDevices) {
+            & $LogWarn "No devices returned from merge operation"
+            $mergedDevices = @()
+        }
+
+        # Step 4: Build Relationships
+        & $LogInfo ""
         & $LogHeader "PHASE 4: Building Relationship Graph"
         $enrichedUsers = New-RelationshipGraph -Users $mergedUsers -Devices $mergedDevices -DataSources $dataSources -Context $Context
+        
+        if ($null -eq $enrichedUsers) {
+            & $LogWarn "Relationship building returned null, using original merged users"
+            $enrichedUsers = $mergedUsers
+        }
 
-        & $LogHeader "PHASE 5: Exporting Processed Data to '$($processedDataPath)'"
+        # Step 5: Export processed data
+        & $LogInfo ""
+        & $LogHeader "PHASE 5: Exporting Processed Data"
         $exportStats = Export-ProcessedData -ProcessedDataPath $processedDataPath -Users $enrichedUsers -Devices $mergedDevices -DataSources $dataSources -Context $Context
 
+        # Calculate final statistics
         $script:AggregationStats.EndTime = Get-Date
         $duration = $script:AggregationStats.EndTime - $script:AggregationStats.StartTime
 
-        & $LogHeader "DATA AGGREGATION COMPLETED SUCCESSFULLY"
-        & $LogInfo "Summary:" 
-        & $LogInfo "  Duration: $($duration.ToString('hh\:mm\:ss\.fff'))" # More precise duration
-        & $LogInfo "  Source files considered: $($script:AggregationStats.TotalSourceFiles)" 
-        & $LogInfo "  Total raw records imported: $($script:AggregationStats.TotalRecordsProcessed)" 
-        & $LogInfo "  Merged User/Device Records: $($script:AggregationStats.MergeOperations)" 
-        & $LogInfo "  Relationships created: $($script:AggregationStats.RelationshipsCreated)" 
-        & $LogInfo ("  Data quality issues noted: $($script:AggregationStats.DataQualityIssues)") -LevelParam $(if ($script:AggregationStats.DataQualityIssues -gt 0) { "WARN" } else { "INFO" })
-        & $LogInfo ("  Warnings logged: $($script:AggregationStats.Warnings.Count)") -LevelParam $(if ($script:AggregationStats.Warnings.Count -gt 0) { "WARN" } else { "INFO" })
-        & $LogInfo ("  Errors logged: $($script:AggregationStats.Errors.Count)") -LevelParam $(if ($script:AggregationStats.Errors.Count -gt 0) { "ERROR" } else { "INFO" })
-        & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+        # Final summary
+        & $LogInfo ""
+        & $LogHeader "═══════════════════════════════════════════════════════════════════════"
+        & $LogHeader "            DATA AGGREGATION COMPLETED SUCCESSFULLY"
+        & $LogHeader "═══════════════════════════════════════════════════════════════════════"
+        & $LogInfo "Summary:"
+        & $LogInfo "  Duration: $($duration.ToString('mm\:ss'))"
+        & $LogInfo "  Source files processed: $($script:AggregationStats.TotalSourceFiles)"
+        & $LogInfo "  Total records processed: $($script:AggregationStats.TotalRecordsProcessed)"
+        & $LogInfo "  Merge operations: $($script:AggregationStats.MergeOperations)"
+        & $LogInfo "  Relationships created: $($script:AggregationStats.RelationshipsCreated)"
+        & $LogInfo "  Data quality issues: $($script:AggregationStats.DataQualityIssues)" -LevelParam $(if ($script:AggregationStats.DataQualityIssues -gt 0) { "WARN" } else { "INFO" })
+        & $LogInfo "  Warnings: $($script:AggregationStats.Warnings.Count)" -LevelParam $(if ($script:AggregationStats.Warnings.Count -gt 0) { "WARN" } else { "INFO" })
+        & $LogInfo "  Errors: $($script:AggregationStats.Errors.Count)" -LevelParam $(if ($script:AggregationStats.Errors.Count -gt 0) { "ERROR" } else { "INFO" })
+        & $LogHeader "═══════════════════════════════════════════════════════════════════════"
 
-        # Store the aggregated data in the context if other processing modules need it directly
-        # Or rely on them reading from the CSVs exported by Export-ProcessedData
-        if ($Context.PSObject.Properties.ContainsKey('AggregatedData')) {
-            $Context.AggregatedData = @{
-                Users = $enrichedUsers
-                Devices = $mergedDevices
-                DataSources = $dataSources # Potentially large, consider if needed in context
-                Stats = $script:AggregationStats
+        # Store aggregated data in context if needed by other modules
+        try {
+            if ($Context.PSObject.Properties.Name -contains 'AggregatedData') {
+                $Context.AggregatedData = @{
+                    Users = $enrichedUsers
+                    Devices = $mergedDevices
+                    DataSources = $dataSources
+                    Stats = $script:AggregationStats
+                }
+            } else {
+                $Context | Add-Member -MemberType NoteProperty -Name 'AggregatedData' -Value @{
+                    Users = $enrichedUsers
+                    Devices = $mergedDevices
+                    DataSources = $dataSources
+                    Stats = $script:AggregationStats
+                } -Force
             }
-        } else {
-             $Context | Add-Member -MemberType NoteProperty -Name 'AggregatedData' -Value @{
-                Users = $enrichedUsers
-                Devices = $mergedDevices
-                DataSources = $dataSources
-                Stats = $script:AggregationStats
-            } -Force
+        } catch {
+            & $LogWarn "Could not store aggregated data in context: $_"
         }
 
-
-        return $true # Indicate success
-    }
-    catch {
+        return $true
+        
+    } catch {
         $script:AggregationStats.EndTime = Get-Date
-        $null = $script:AggregationStats.Errors.Add("Fatal error in Start-DataAggregation: $($_.Exception.Message)")
+        $script:AggregationStats.Errors.Add("Fatal error: $($_.Exception.Message)") | Out-Null
         
         & $LogError "═══════════════════════════════════════════════════════════════════════"
-        & $LogError "DATA AGGREGATION FAILED"
+        & $LogError "            DATA AGGREGATION FAILED"
         & $LogError "═══════════════════════════════════════════════════════════════════════"
         & $LogError "ERROR: A critical error occurred during data aggregation: $($_.Exception.Message)"
         & $LogDebug "Stack Trace: $($_.ScriptStackTrace)"
         
+        # Log all accumulated errors
         if ($script:AggregationStats.Errors.Count -gt 0) {
-            & $LogError "`nAll errors encountered during aggregation:"
-            foreach ($errorItemSplat in $script:AggregationStats.Errors) { # Renamed to avoid conflict
-                & $LogError "  - $errorItemSplat"
+            & $LogError ""
+            & $LogError "All errors encountered:"
+            foreach ($errorItem in $script:AggregationStats.Errors) {
+                & $LogError "  - $errorItem"
             }
         }
         
-        return $false # Indicate failure
+        # Log all accumulated warnings
+        if ($script:AggregationStats.Warnings.Count -gt 0) {
+            & $LogWarn ""
+            & $LogWarn "All warnings encountered:"
+            foreach ($warningItem in $script:AggregationStats.Warnings) {
+                & $LogWarn "  - $warningItem"
+            }
+        }
+        
+        return $false
     }
 }
 
