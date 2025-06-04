@@ -1241,16 +1241,20 @@ try {
     
     # Handle Azure-only mode
     if ($Mode -eq "AzureOnly") {
-        Write-Host "`nAzure-Only mode selected. Limiting discovery to cloud sources." -ForegroundColor Cyan
-        
-        # Filter enabled sources to only Azure-related
-        $currentSources = $configuration.discovery.enabledSources
-        $configuration.discovery.enabledSources = $currentSources | Where-Object { $_ -in $script:AzureOnlySources }
-        
-        Write-Host "Enabled sources for Azure-Only: $($configuration.discovery.enabledSources -join ', ')" -ForegroundColor Yellow
-        
-        # Set mode to Full to run all phases but with limited sources
-        $Mode = "Full"
+    Write-Host "`nAzure-Only mode selected. Limiting discovery to cloud sources." -ForegroundColor Cyan
+    
+    # Filter enabled sources to only Azure-related
+    $currentSources = $configuration.discovery.enabledSources
+    $configuration.discovery.enabledSources = $currentSources | Where-Object { $_ -in $script:AzureOnlySources }
+    
+    Write-Host "Enabled sources for Azure-Only: $($configuration.discovery.enabledSources -join ', ')" -ForegroundColor Yellow
+    
+    # Set mode to Full to run all phases but with limited sources
+    $Mode = "Full"
+    
+    # Ensure all required modules are loaded
+    Import-ProcessingModules -Context $script:Context
+    Import-ExportModules -Context $script:Context
     }
     
     # Create context

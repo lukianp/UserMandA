@@ -12,6 +12,13 @@
     Date: 2025-01-15
 #>
 
+
+if (-not $global:MandA) {
+    Write-Host "Initializing global environment first..." -ForegroundColor Yellow
+    . ".\Scripts\Set-SuiteEnvironment.ps1" -CompanyName $CompanyName
+}
+
+
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
