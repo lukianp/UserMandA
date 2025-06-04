@@ -13,15 +13,6 @@
 
 
 
-#Updated global logging thingy
-        if ($null -eq $global:MandA) {
-    throw "Global environment not initialized"
-}
-        $outputPath = $Context.Paths.RawDataOutput
-
-        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
-    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
-}
 
 
 # Import base module
