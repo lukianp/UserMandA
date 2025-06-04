@@ -1,18 +1,21 @@
-<#
-.SYNOPSIS
-    Enhanced connection manager with robust authentication fallbacks and extensive debugging
-.DESCRIPTION
-    Manages connections to Microsoft Graph, Azure, Exchange Online, and Active Directory
-    with comprehensive error handling and retry logic for the M&A Discovery Suite.
-.NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.0.0
-    Created: 2025-06-03
-    Last Modified: 2025-06-03
-    Change Log: Initial version - any future changes require version increment
-#>
+#
+# EnhancedConnectionManager.psm1
+# Enhanced connection manager with robust authentication fallbacks and extensive debugging
+#
 
 # Global connection status tracking
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
+
+
 $script:ConnectionStatus = @{
     Graph = @{ Connected = $false; LastError = $null; ConnectedTime = $null; Context = $null; Method = $null }
     Azure = @{ Connected = $false; LastError = $null; ConnectedTime = $null; Context = $null; Method = $null }
