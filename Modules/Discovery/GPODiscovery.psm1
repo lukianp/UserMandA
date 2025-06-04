@@ -5,11 +5,8 @@
     Handles Group Policy Object discovery with improved XML parsing, namespace resolution, and error handling
     Fixed version with Invoke-GPODiscovery function added
 .NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.0.0
-    Created: 2025-06-03
-    Last Modified: 2025-06-03
-    Change Log: Initial version - any future changes require version increment
+    Version: 2.0.0 (Fixed)
+    Date: 2025-06-02
 #>
 
 #Requires -Modules ActiveDirectory, GroupPolicy
@@ -457,7 +454,17 @@ function Invoke-GPODiscovery {
         Import-Module ActiveDirectory -ErrorAction Stop
         
         # Set up paths and parameters
-        $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
+       
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
         $domainController = $Configuration.environment.domainController
         
         if (-not $domainController) {
