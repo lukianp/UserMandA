@@ -26,9 +26,6 @@
 
 
 
-[CmdletBinding()]
-param()
-
 # Helper to load data if not passed directly (for "Export Only" mode)
 function Get-ProcessedDataForExcelExport {
     param(
