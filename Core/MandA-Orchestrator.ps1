@@ -1,13 +1,13 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    M&A Discovery Suite - Main Orchestrator (Enhanced Version 5.1.0)
+    M&A Discovery Suite - Main Orchestrator (Enhanced Version 5.5.0)
 .DESCRIPTION
     Unified orchestrator for discovery, processing, and export with improved
     state management, error handling, and parallel processing support.
 .NOTES
     Author: Enhanced Version
-    Version: 5.1.0
+    Version: 5.5.0
     Created: 2025-01-03
     Last Modified: 2025-01-03
 #>
@@ -50,18 +50,31 @@ class MandAContext {
     
     MandAContext([hashtable]$config, [string]$companyName) {
         $this.Config = $config
-        $this.Version = "5.1.0"
+        $this.Version = "5.5.0"
         $this.StartTime = Get-Date
         $this.ModulesChecked = $false
         $this.ErrorCollector = [DiscoveryErrorCollector]::new()
         $this.OrchestratorState = [OrchestratorState]::new()
-        $this.InitializePaths($companyName)
+        
+        # Use global paths if available, otherwise initialize
+        if ($null -ne $global:MandA -and $null -ne $global:MandA.Paths) {
+            Write-Verbose "Using paths from global environment"
+            $this.Paths = $global:MandA.Paths.Clone()
+        } else {
+            Write-Verbose "Global environment not found, initializing paths"
+            $this.InitializePaths($companyName)
+        }
     }
     
     [void]InitializePaths([string]$companyName) {
-        $suiteRoot = Split-Path $PSScriptRoot -Parent
+        # Only initialize if global paths aren't available
+        if ($null -ne $global:MandA -and $null -ne $global:MandA.Paths) {
+            $this.Paths = $global:MandA.Paths.Clone()
+            return
+        }
         
-        # Use fixed base path for consistency
+        # Fallback initialization
+        $suiteRoot = Split-Path $PSScriptRoot -Parent
         $profilesBasePath = "C:\MandADiscovery\Profiles"
         
         $this.Paths = @{
@@ -186,7 +199,7 @@ class DiscoveryErrorCollector {
         if ($this.ErrorCounts.Count -gt 0) {
             $summary += "`nError breakdown by source:"
             foreach ($source in $this.ErrorCounts.Keys | Sort-Object) {
-                $summary += "`n  - $source`: $($this.ErrorCounts[$source])"
+                $summary += "`n  - $source - $($this.ErrorCounts[$source])"
             }
         }
         return $summary
@@ -679,7 +692,7 @@ function Invoke-DiscoveryPhase {
                     }
                     catch {
                         $Context.ErrorCollector.AddError($source, "Discovery failed", $_.Exception)
-                        Write-MandALog "Discovery failed for $source`: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+                        Write-MandALog "Discovery failed for $source - $($_.Exception.Message)" -Level "ERROR" -Context $Context
                     }
                 } else {
                     $Context.ErrorCollector.AddWarning($source, "Discovery function not found: $functionName")
@@ -871,34 +884,57 @@ function Complete-MandADiscovery {
 #===============================================================================
 
 try {
+    # Check if global environment is available
+    if ($null -eq $global:MandA) {
+        Write-Host "Global environment not initialized. Loading Set-SuiteEnvironment.ps1..." -ForegroundColor Yellow
+        
+        $envScript = Join-Path (Split-Path $PSScriptRoot -Parent) "Scripts\Set-SuiteEnvironment.ps1"
+        if (Test-Path $envScript) {
+            . $envScript -CompanyName $CompanyName
+        } else {
+            Write-Warning "Set-SuiteEnvironment.ps1 not found. Using fallback initialization."
+        }
+    }
+    
     # Get company name if not provided
     if ([string]::IsNullOrWhiteSpace($CompanyName)) {
-        $CompanyName = Get-CompanySelection
+        if ($null -ne $global:MandA -and $null -ne $global:MandA.CompanyName) {
+            $CompanyName = $global:MandA.CompanyName
+            Write-Host "Using company name from global context: $CompanyName" -ForegroundColor Green
+        } else {
+            $CompanyName = Get-CompanySelection
+        }
     }
     
     # Sanitize company name for filesystem
     $CompanyName = $CompanyName -replace '[<>:"/\\|?*]', '_'
     
     # Load configuration
-    $configPath = if ($ConfigurationFile) {
-        if ([System.IO.Path]::IsPathRooted($ConfigurationFile)) {
-            $ConfigurationFile
-        } else {
-            Join-Path (Split-Path $PSScriptRoot -Parent) $ConfigurationFile
-        }
+    if ($null -ne $global:MandA -and $null -ne $global:MandA.Config) {
+        Write-Host "Using configuration from global context" -ForegroundColor Green
+        $configuration = $global:MandA.Config
     } else {
-        Join-Path (Split-Path $PSScriptRoot -Parent) "Configuration\default-config.json"
+        # Load from file
+        $configPath = if ($ConfigurationFile) {
+            if ([System.IO.Path]::IsPathRooted($ConfigurationFile)) {
+                $ConfigurationFile
+            } else {
+                Join-Path (Split-Path $PSScriptRoot -Parent) $ConfigurationFile
+            }
+        } else {
+            Join-Path (Split-Path $PSScriptRoot -Parent) "Configuration\default-config.json"
+        }
+        
+        if (-not (Test-Path $configPath)) {
+            throw "Configuration file not found: $configPath"
+        }
+        
+        # Load and convert configuration
+        $configContent = Get-Content -Path $configPath -Raw | ConvertFrom-Json
+        $configuration = ConvertTo-HashtableRecursive -InputObject $configContent
     }
     
-    if (-not (Test-Path $configPath)) {
-        throw "Configuration file not found: $configPath"
-    }
-    
-    # Load and convert configuration
-    $configContent = Get-Content -Path $configPath -Raw | ConvertFrom-Json
-    $configuration = ConvertTo-HashtableRecursive -InputObject $configContent
-    
-    # Update company name
+    # Update company name in config
     $configuration.metadata.companyName = $CompanyName
     
     # Handle Force flag
