@@ -6,15 +6,23 @@
     This module is responsible for exporting processed data (user profiles,
     migration waves, complexity analysis, etc.) to CSV files.
 .NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.0.0
-    Created: 2025-06-03
-    Last Modified: 2025-06-03
-    Change Log: Initial version - any future changes require version increment
+    Version: 1.1.0 (Refactored for orchestrator data contracts)
+    Author: Gemini
 #>
 
-[CmdletBinding()]
-param()
+#[CmdletBinding()]
+#param()
+
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
 
 # Main function to export data to CSV files
 function Export-ToCSV {
