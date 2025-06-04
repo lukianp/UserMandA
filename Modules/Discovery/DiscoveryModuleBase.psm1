@@ -45,7 +45,7 @@ class DiscoveryPerformanceTracker {
         $this.Operations[$OperationName] = @{
             StartTime = Get-Date
             Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-            MemoryBefore = (Get-Process -Id ([System.Diagnostics.Process]::GetCurrentProcess().Id)).WorkingSet64
+            MemoryBefore = [System.Diagnostics.Process]::GetCurrentProcess().WorkingSet64
         }
     }
     
@@ -55,7 +55,7 @@ class DiscoveryPerformanceTracker {
             $op.Stopwatch.Stop()
             $op.Duration = $op.Stopwatch.Elapsed
             $op.ItemsProcessed = $ItemsProcessed
-            $op.MemoryAfter = (Get-Process -Id ([System.Diagnostics.Process]::GetCurrentProcess().Id)).WorkingSet64
+            $op.MemoryAfter = [System.Diagnostics.Process]::GetCurrentProcess().WorkingSet64
             $op.MemoryDelta = $op.MemoryAfter - $op.MemoryBefore
             
             if ($ItemsProcessed -gt 0 -and $op.Duration.TotalSeconds -gt 0) {
