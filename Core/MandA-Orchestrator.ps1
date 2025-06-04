@@ -330,6 +330,7 @@ function ConvertTo-HashtableRecursive {
     }
 }
 
+
 function Test-ModuleConfiguration {
     param(
         [hashtable]$Configuration,
@@ -338,9 +339,10 @@ function Test-ModuleConfiguration {
     
     $requiredSettings = @{
         'ActiveDirectory' = @('environment.domainController', 'environment.globalCatalog')
-        'Azure' = @('authentication.tenantId', 'authentication.clientId')
+        # Remove tenant/client ID requirements since they come from credentials
+        'Azure' = @()  # Was: @('authentication.tenantId', 'authentication.clientId')
         'Exchange' = @('authentication.authenticationMethod')
-        'Graph' = @('authentication.tenantId')
+        'Graph' = @()  # Was: @('authentication.tenantId')
         'EnvironmentDetection' = @('environment.outputPath')
     }
     
@@ -372,6 +374,8 @@ function Test-ModuleConfiguration {
     
     return $true
 }
+
+
 
 
 
