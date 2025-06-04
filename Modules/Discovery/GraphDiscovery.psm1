@@ -77,7 +77,7 @@ function Get-GraphGroupsDataInternal {
         [hashtable]$Configuration
     )
     Write-MandALog "Starting Graph Groups Discovery..." -Level "INFO"
-    $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
+   
     $allGraphGroups = [System.Collections.Generic.List[PSObject]]::new()
     $allGraphGroupMembers = [System.Collections.Generic.List[PSObject]]::new()
 
