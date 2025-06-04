@@ -11,7 +11,15 @@
 
 [CmdletBinding()]
 param()
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
 
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
 # Main function to generate migration waves with dependency awareness
 function New-MigrationWaves {
     [CmdletBinding()]
