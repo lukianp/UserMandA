@@ -13,6 +13,20 @@
 
 #Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.DeviceManagement, Microsoft.Graph.Beta.DeviceManagement # DetectedApps often requires Beta
 
+
+
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
+
+
 # --- Helper Functions (Assumed to be available globally) ---
 # Export-DataToCSV
 # Write-MandALog
@@ -26,7 +40,7 @@ function Get-IntuneManagedDevicesInternal {
         [hashtable]$Configuration
     )
     Write-MandALog "Starting Intune Managed Devices Discovery..." -Level "INFO"
-    $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
+
     $allManagedDevices = [System.Collections.Generic.List[PSObject]]::new()
 
     $selectFields = $Configuration.discovery.intune.selectFields.managedDevices
@@ -71,7 +85,7 @@ function Get-IntuneDeviceSoftwareInternal {
         [hashtable]$Configuration
     )
     Write-MandALog "Starting Intune Device Software Inventory..." -Level "INFO"
-    $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
+   
     $allDeviceSoftware = [System.Collections.Generic.List[PSObject]]::new()
 
     if (-not $ManagedDevices -or $ManagedDevices.Count -eq 0) {
