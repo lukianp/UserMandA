@@ -474,7 +474,8 @@ function Initialize-MandAEnvironment {
             "FileOperations.psm1",
             "ValidationHelpers.psm1",
             "ConfigurationValidation.psm1",
-            "ErrorHandling.psm1"
+            "ErrorHandling.psm1",
+            "ProgressDisplay.psm1" 
             
         )
         
@@ -719,52 +720,106 @@ function Invoke-DiscoveryPhase {
     param([MandAContext]$Context)
     
     if (-not $Context.OrchestratorState.CanExecute("Discovery")) {
-        throw "Discovery phase execution limit exceeded or circular dependency detected. Path: $($Context.OrchestratorState.GetExecutionPath())"
+        throw "Discovery phase execution limit exceeded or circular dependency detected."
     }
     
     $Context.OrchestratorState.PushExecution("Discovery")
     
     try {
-        Write-MandALog "STARTING DISCOVERY PHASE" -Level "HEADER" -Context $Context
+        Write-ProgressHeader -Title "DISCOVERY PHASE"
         
         $enabledSources = @($Context.Config.discovery.enabledSources)
-        $useParallel = $Context.Config.discovery.parallelProcessing -and $enabledSources.Count -gt 1
+        $totalSources = $enabledSources.Count
         
-        if ($useParallel) {
-            $throttle = if ($Context.Config.discovery.maxConcurrentJobs) { 
-                $Context.Config.discovery.maxConcurrentJobs 
-            } else { 5 }
+        Write-ProgressStep "Initializing discovery for $totalSources sources" -Status Info
+        Write-Host ""
+        
+        # Show discovery plan
+        Write-Host "Discovery Plan:" -ForegroundColor Cyan
+        Write-Host ("-" * 50) -ForegroundColor Gray
+        foreach ($source in $enabledSources) {
+            Write-Host "  [ ] $source" -ForegroundColor Gray
+        }
+        Write-Host ("-" * 50) -ForegroundColor Gray
+        Write-Host ""
+        
+        $discoveryResults = @{}
+        $currentSource = 0
+        
+        foreach ($source in $enabledSources) {
+            $currentSource++
+            $startTime = Get-Date
             
-            $discoveryResults = Invoke-ParallelDiscovery -EnabledSources $enabledSources -Context $Context -ThrottleLimit $throttle
-        } else {
-            # Sequential discovery
-            $discoveryResults = @{}
-            foreach ($source in $enabledSources) {
-                $functionName = "Invoke-${source}Discovery"
-                if (Get-Command $functionName -ErrorAction SilentlyContinue) {
-                    try {
-                        Write-MandALog "Invoking $functionName" -Level "INFO" -Context $Context
-                        $result = & $functionName -Configuration $Context.Config -Context $Context
-                        $discoveryResults[$source] = $result
-                        Write-MandALog "Completed discovery for $source" -Level "SUCCESS" -Context $Context
+            # Update progress
+            Write-Host "`r" -NoNewline
+            Write-Host ("Processing: [{0}/{1}] {2}" -f $currentSource, $totalSources, $source.PadRight(30)) -ForegroundColor Yellow -NoNewline
+            
+            $functionName = "Invoke-${source}Discovery"
+            
+            if (Get-Command $functionName -ErrorAction SilentlyContinue) {
+                try {
+                    # Show that we're working
+                    $discoveryStart = Get-Date
+                    Show-DiscoveryProgress -Module $source -Status "Running" -CurrentItem "Initializing..."
+                    
+                    # Run discovery
+                    $result = & $functionName -Configuration $Context.Config -Context $Context
+                    
+                    # Calculate stats
+                    $duration = ((Get-Date) - $discoveryStart).TotalSeconds
+                    $recordCount = if ($result -is [hashtable]) {
+                        ($result.Values | ForEach-Object { 
+                            if ($_ -is [array]) { $_.Count } else { 1 }
+                        } | Measure-Object -Sum).Sum
+                    } else { 0 }
+                    
+                    $discoveryResults[$source] = @{
+                        Success = $true
+                        Data = $result
+                        RecordCount = $recordCount
+                        Duration = $duration
                     }
-                    catch {
-                        $Context.ErrorCollector.AddError($source, "Discovery failed", $_.Exception)
-                        Write-MandALog "Discovery failed for $source - $($_.Exception.Message)" -Level "ERROR" -Context $Context
+                    
+                    Show-DiscoveryProgress -Module $source -Status "Completed" `
+                        -Stats @{
+                            Records = $recordCount
+                            Time = "$([Math]::Round($duration, 1))s"
+                        }
+                    
+                } catch {
+                    $Context.ErrorCollector.AddError($source, "Discovery failed", $_.Exception)
+                    
+                    Show-DiscoveryProgress -Module $source -Status "Failed" `
+                        -Stats @{Error = $_.Exception.Message}
+                    
+                    $discoveryResults[$source] = @{
+                        Success = $false
+                        Error = $_.Exception.Message
+                        RecordCount = 0
                     }
-                } else {
-                    $Context.ErrorCollector.AddWarning($source, "Discovery function not found: $functionName")
                 }
+            } else {
+                Show-DiscoveryProgress -Module $source -Status "Skipped" `
+                    -Stats @{Reason = "Function not found"}
+                
+                $Context.ErrorCollector.AddWarning($source, "Discovery function not found: $functionName")
             }
         }
         
-        Write-MandALog "Discovery Phase Completed. Summary: $($Context.ErrorCollector.GetSummary())" -Level "SUCCESS" -Context $Context
+        Write-Host ""
+        Write-Host ""
+        
+        # Show summary
+        Show-DiscoverySummary -Results $discoveryResults
+        
         return $discoveryResults
-    }
-    finally {
+        
+    } finally {
         $Context.OrchestratorState.PopExecution()
     }
 }
+
+
 
 function Invoke-ProcessingPhase {
     [CmdletBinding()]
