@@ -10,12 +10,6 @@
     Enhanced: 2025-01-03
 #>
 
-# Import shared utilities
-Import-Module "$PSScriptRoot\..\Utilities\DataExport.psm1" -Force
-
-
-
-
 
 #Updated global logging thingy
         if ($null -eq $global:MandA) {
