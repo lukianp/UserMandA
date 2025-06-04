@@ -5,15 +5,9 @@
 
 # Global connection status tracking
 
-#Updated global logging thingy
-        if ($null -eq $global:MandA) {
-    throw "Global environment not initialized"
-}
-        $outputPath = $Context.Paths.RawDataOutput
 
-        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
-    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
-}
+# Fix-ConnectionManager.ps1
+$modulePath = ".\Modules\Connectivity\EnhancedConnectionManager.psm1"
 
 
 # Module initialization - no global dependency at load time
