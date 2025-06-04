@@ -11,7 +11,7 @@
     Author: Gemini & User
     Date: 2025-06-01
 #>
-
+$outputPath = $Context.Paths.RawDataOutput
 function Test-SuiteConfigurationAgainstSchema {
     [CmdletBinding()]
     param(

@@ -12,7 +12,7 @@
 
 [CmdletBinding()]
 param()
-
+$outputPath = $Context.Paths.RawDataOutput
 function Convert-MailboxSizeToMB {
     param([string]$SizeString)
     

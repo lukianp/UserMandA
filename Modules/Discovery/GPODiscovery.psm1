@@ -10,7 +10,7 @@
 #>
 
 #Requires -Modules ActiveDirectory, GroupPolicy
-
+$outputPath = $Context.Paths.RawDataOutput
 # --- Helper Functions ---
 function Export-DataToCSV {
     [CmdletBinding()]
@@ -454,7 +454,7 @@ function Invoke-GPODiscovery {
         Import-Module ActiveDirectory -ErrorAction Stop
         
         # Set up paths and parameters
-        $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
+       $outputPath = $Context.Paths.RawDataOutput
         $domainController = $Configuration.environment.domainController
         
         if (-not $domainController) {

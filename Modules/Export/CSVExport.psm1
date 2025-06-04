@@ -9,7 +9,7 @@
     Version: 1.1.0 (Refactored for orchestrator data contracts)
     Author: Gemini
 #>
-
+$outputPath = $Context.Paths.RawDataOutput
 [CmdletBinding()]
 param()
 

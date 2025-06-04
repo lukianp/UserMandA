@@ -5,7 +5,7 @@
 .DESCRIPTION
     Provides standardized file I/O operations with error handling
 #>
-
+$outputPath = $Context.Paths.RawDataOutput
 function Import-DataFromCSV {
     param(
         [Parameter(Mandatory=$true)]

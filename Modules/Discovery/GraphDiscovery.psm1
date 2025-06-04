@@ -19,7 +19,7 @@ function Get-GraphUsersDataInternal {
         [hashtable]$Configuration
     )
     Write-MandALog "Starting Graph Users Discovery..." -Level "INFO"
-    $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
+    $outputPath = $Context.Paths.RawDataOutput
     $allGraphUsers = [System.Collections.Generic.List[PSObject]]::new()
     
     $selectFields = $Configuration.graphAPI.selectFields.users
@@ -68,7 +68,7 @@ function Get-GraphGroupsDataInternal {
         [hashtable]$Configuration
     )
     Write-MandALog "Starting Graph Groups Discovery..." -Level "INFO"
-    $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
+    $outputPath = $Context.Paths.RawDataOutput
     $allGraphGroups = [System.Collections.Generic.List[PSObject]]::new()
     $allGraphGroupMembers = [System.Collections.Generic.List[PSObject]]::new()
 

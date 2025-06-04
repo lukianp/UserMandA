@@ -11,6 +11,7 @@
 #>
 
 # Import the credential format handler
+$outputPath = $Context.Paths.RawDataOutput
 $formatHandlerPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\CredentialFormatHandler.psm1"
 if (Test-Path $formatHandlerPath) {
     Import-Module $formatHandlerPath -Force

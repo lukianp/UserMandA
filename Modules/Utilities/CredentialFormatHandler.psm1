@@ -11,7 +11,7 @@
 
 # Define the standard credential file format version
 $script:CREDENTIAL_FORMAT_VERSION = "2.0"
-
+$outputPath = $Context.Paths.RawDataOutput
 function ConvertTo-StandardCredentialFormat {
     param(
         [Parameter(Mandatory=$true)]

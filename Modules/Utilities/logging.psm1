@@ -4,7 +4,7 @@
 .DESCRIPTION
     Provides structured logging with enhanced visual indicators, emojis, and better formatting
 #>
-
+$outputPath = $Context.Paths.RawDataOutput
 # Global logging configuration
 $script:LoggingConfig = @{
     LogLevel = "INFO"

@@ -13,7 +13,7 @@
 
 # This module assumes Write-MandALog is available globally from EnhancedLogging.psm1 for its exported functions.
 # Logging during module-scope execution (like Update-TypeData) uses Write-Host to avoid context issues.
-
+$outputPath = $Context.Paths.RawDataOutput
 # --- Internal Helper for Logging Fallback ---
 function _Write-ValidationLogInternal {
     param(

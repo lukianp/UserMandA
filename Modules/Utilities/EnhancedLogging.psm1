@@ -2,9 +2,17 @@
 .SYNOPSIS
     Enhanced logging with improved visual output for M&A Discovery Suite
 .DESCRIPTION
-    Provides structured logging with enhanced visual indicators, emojis, and better formatting
+    Provides structured logging with enhanced visual indicators and better formatting
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.1.0
+    Created: 2025-06-03
+    Last Modified: 2025-01-15
+    Change Log: 
+        - 1.1.0: Fixed to use global paths and added Context parameter support
+        - Removed Unicode characters for PowerShell 5.1 compatibility
 #>
-
+$outputPath = $Context.Paths.RawDataOutput
 # Global logging configuration
 $script:LoggingConfig = @{
     LogLevel = "INFO"
@@ -26,7 +34,7 @@ function Initialize-Logging {
         $script:LoggingConfig.LogLevel = $Configuration.environment.logLevel
         
         # Set up log file - use the global path if available
-        $logPath = if ($global:MandA.Paths.LogOutput) {
+        $logPath = if ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.LogOutput) {
             $global:MandA.Paths.LogOutput
         } elseif ($Configuration.environment.outputPath) {
             Join-Path $Configuration.environment.outputPath "Logs"
@@ -41,6 +49,16 @@ function Initialize-Logging {
         $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
         $logFileName = "MandA_Discovery_$timestamp.log"
         $script:LoggingConfig.LogFile = Join-Path $logPath $logFileName
+        
+        # Update logging preferences from config
+        if ($Configuration.environment.logging) {
+            $script:LoggingConfig.UseEmojis = $Configuration.environment.logging.useEmojis
+            $script:LoggingConfig.UseColors = $Configuration.environment.logging.useColors
+            $script:LoggingConfig.ShowTimestamp = $Configuration.environment.logging.showTimestamp
+            $script:LoggingConfig.ShowComponent = $Configuration.environment.logging.showComponent
+            $script:LoggingConfig.MaxLogSizeMB = $Configuration.environment.logging.maxLogSizeMB
+            $script:LoggingConfig.LogRetentionDays = $Configuration.environment.logging.logRetentionDays
+        }
         
         # Clean up old log files
         Clear-OldLogFiles -LogPath $logPath
@@ -68,12 +86,24 @@ function Write-MandALog {
         [string]$Level = "INFO",
         
         [Parameter(Mandatory=$false)]
-        [string]$Component = "Main"
+        [string]$Component = "Main",
+        
+        [Parameter(Mandatory=$false)]
+        $Context = $null
     )
     
     # Check if message should be logged based on level
     if (-not (Test-LogMessage -Level $Level)) {
         return
+    }
+    
+    # Try to get component from context if not specified
+    if ($Component -eq "Main" -and $Context) {
+        if ($Context.PSObject.Properties['CurrentPhase']) {
+            $Component = $Context.CurrentPhase
+        } elseif ($Context.PSObject.Properties['ModuleName']) {
+            $Component = $Context.ModuleName
+        }
     }
     
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -88,9 +118,9 @@ function Write-MandALog {
         switch ($Level) {
             "HEADER" {
                 Write-Host ""
-                Write-Host "=" * 100 -ForegroundColor $color
+                Write-Host ("=" * 100) -ForegroundColor $color
                 Write-Host "$emoji $Message" -ForegroundColor $color
-                Write-Host "=" * 100 -ForegroundColor $color
+                Write-Host ("=" * 100) -ForegroundColor $color
                 Write-Host ""
             }
             "PROGRESS" {
@@ -98,7 +128,7 @@ function Write-MandALog {
                 Write-Host $progressMessage -ForegroundColor $color
             }
             "IMPORTANT" {
-                $importantMessage = if ($script:LoggingConfig.UseEmojis) { "$emoji $Message" } else { "! $Message" }
+                $importantMessage = if ($script:LoggingConfig.UseEmojis) { "$emoji $Message" } else { "[!] $Message" }
                 Write-Host $importantMessage -ForegroundColor $color
             }
             default {
@@ -114,8 +144,8 @@ function Write-MandALog {
     # File output (always include full details)
     if ($script:LoggingConfig.FileOutput -and $script:LoggingConfig.LogFile) {
         try {
-            # Clean message for file output (remove emojis if needed)
-           $fileMessage = $Message -replace '[\uD83C-\uDBFF\uDC00-\uDFFF]+', ''
+            # Clean message for file output (remove any special characters)
+            $fileMessage = $Message
             $fileLogEntry = "[$timestamp] [$Level] [$Component] $fileMessage"
             
             Add-Content -Path $script:LoggingConfig.LogFile -Value $fileLogEntry -Encoding UTF8
@@ -178,16 +208,17 @@ function Get-LogEmoji {
         return ""
     }
     
+    # Using ASCII equivalents instead of Unicode for PowerShell 5.1 compatibility
     switch ($Level) {
-        "DEBUG" { return "[DEBUG]" }
-        "INFO" { return "[INFO]" }
-        "WARN" { return "[WARN]" }
-        "ERROR" { return "[ERROR]" }
-        "SUCCESS" { return "[SUCCESS]" }
-        "HEADER" { return "[HEADER]" }
-        "PROGRESS" { return "[PROGRESS]" }
-        "IMPORTANT" { return "[IMPORTANT]" }
-        default { return "[LOG]" }
+        "DEBUG" { return "[.]" }
+        "INFO" { return "[i]" }
+        "WARN" { return "[!]" }
+        "ERROR" { return "[X]" }
+        "SUCCESS" { return "[OK]" }
+        "HEADER" { return "[=]" }
+        "PROGRESS" { return "[~]" }
+        "IMPORTANT" { return "[*]" }
+        default { return "" }
     }
 }
 
@@ -206,7 +237,7 @@ function Write-ProgressBar {
     $completed = [math]::Floor(($Current / $Total) * $Width)
     $remaining = $Width - $completed
     
-    $progressBar = "#" * $completed + "-" * $remaining
+    $progressBar = ("#" * $completed) + ("-" * $remaining)
     $progressText = "$Activity [$progressBar] $percentComplete% $Status"
     
     Write-Host "`r$progressText" -NoNewline -ForegroundColor Cyan
@@ -227,7 +258,7 @@ function Write-StatusTable {
     $maxKeyLength = ($StatusData.Keys | Measure-Object -Property Length -Maximum).Maximum
     $tableWidth = [math]::Max($maxKeyLength + 20, 60)
     
-    Write-Host "+" + ("-" * ($tableWidth - 2)) + "+" -ForegroundColor Gray
+    Write-Host ("+" + ("-" * ($tableWidth - 2)) + "+") -ForegroundColor Gray
     
     foreach ($item in $StatusData.GetEnumerator()) {
         $key = $item.Key.PadRight($maxKeyLength)
@@ -248,7 +279,7 @@ function Write-StatusTable {
         Write-Host " |" -ForegroundColor Gray
     }
     
-    Write-Host "+" + ("-" * ($tableWidth - 2)) + "+" -ForegroundColor Gray
+    Write-Host ("+" + ("-" * ($tableWidth - 2)) + "+") -ForegroundColor Gray
     Write-Host ""
 }
 
@@ -290,7 +321,7 @@ function Move-LogFile {
         $logName = Split-Path $script:LoggingConfig.LogFile -LeafBase
         $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
         
-        $rotatedLogFile = Join-Path $logDir "$logName`_$timestamp.log"
+        $rotatedLogFile = Join-Path $logDir "${logName}_${timestamp}.log"
         Move-Item $script:LoggingConfig.LogFile $rotatedLogFile -Force
         
         Write-MandALog "Log file rotated to: $rotatedLogFile" -Level "INFO"

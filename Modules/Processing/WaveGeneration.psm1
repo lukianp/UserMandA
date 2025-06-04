@@ -11,7 +11,7 @@
 
 [CmdletBinding()]
 param()
-
+$outputPath = $Context.Paths.RawDataOutput
 # Main function to generate migration waves with dependency awareness
 function New-MigrationWaves {
     [CmdletBinding()]

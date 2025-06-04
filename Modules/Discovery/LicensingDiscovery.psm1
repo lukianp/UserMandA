@@ -13,7 +13,7 @@ function Invoke-LicensingDiscovery {
     try {
         Write-MandALog "Starting Microsoft 365 Licensing discovery" -Level "HEADER"
         
-        $outputPath = $Configuration.environment.outputPath
+        $outputPath = $Context.Paths.RawDataOutput
         $rawPath = Join-Path $outputPath "Raw"
         
         $discoveryResults = @{}

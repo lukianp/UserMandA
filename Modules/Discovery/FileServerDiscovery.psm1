@@ -20,6 +20,7 @@
 
 # --- Main Exported Function ---
 
+$outputPath = $Context.Paths.RawDataOutput
 function Invoke-FileServerDiscovery {
     [CmdletBinding()]
     param(

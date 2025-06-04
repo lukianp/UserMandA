@@ -12,6 +12,7 @@
 #>
 
 # Import base module
+$outputPath = $Context.Paths.RawDataOutput
 $baseModule = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath "Utilities\DiscoveryModuleBase.psm1"
 if (Test-Path -Path $baseModule) {
     Import-Module -Name $baseModule -Force

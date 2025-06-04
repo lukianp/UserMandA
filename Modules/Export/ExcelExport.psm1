@@ -10,7 +10,7 @@
     Version: 1.0.0 (Skeletal structure)
     Author: Gemini
 #>
-
+$outputPath = $Context.Paths.RawDataOutput
 [CmdletBinding()]
 param()
 

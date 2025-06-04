@@ -36,6 +36,8 @@
     corresponding data was not discovered or aggregated. Column headers are suggestive and aim for
     comprehensiveness; actual data presence will vary.
 #>
+$outputPath = $Context.Paths.RawDataOutput
+
 function Export-ToCompanyControlSheet {
     [CmdletBinding()]
     param(

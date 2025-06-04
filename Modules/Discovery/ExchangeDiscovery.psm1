@@ -11,7 +11,7 @@ function Invoke-ExchangeDiscovery {
     try {
         Write-MandALog "Starting Exchange Online discovery" -Level "HEADER"
         
-        $outputPath = $Configuration.environment.outputPath
+        $outputPath = $Context.Paths.RawDataOutput
         $rawPath = Join-Path $outputPath "Raw"
         
         $discoveryResults = @{}

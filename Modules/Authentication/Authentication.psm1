@@ -31,7 +31,7 @@ function Initialize-MandAAuthentication {
         # Clear any existing auth context
         $script:AuthContext = $null
         $script:LastAuthAttempt = Get-Date
-        
+        $outputPath = $Context.Paths.RawDataOutput
         # Get credentials
         Write-MandALog "Retrieving credentials..." -Level "INFO"
         $credentials = Get-SecureCredentials -Configuration $Configuration

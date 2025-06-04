@@ -45,6 +45,10 @@
     .\DiscoverySuiteModuleCheck.ps1 -AutoFix -Silent
 #>
 
+
+$outputPath = $Context.Paths.RawDataOutput
+
+
 [CmdletBinding(SupportsShouldProcess = $true)] 
 param(
     [Parameter(Mandatory = $false)]

@@ -18,7 +18,7 @@ function Get-IntuneManagedDevicesInternal {
         [hashtable]$Configuration
     )
     Write-MandALog "Starting Intune Managed Devices Discovery..." -Level "INFO"
-    $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
+    $outputPath = $Context.Paths.RawDataOutput
     $allManagedDevices = [System.Collections.Generic.List[PSObject]]::new()
 
     $selectFields = $Configuration.discovery.intune.selectFields.managedDevices
@@ -63,7 +63,7 @@ function Get-IntuneDeviceSoftwareInternal {
         [hashtable]$Configuration
     )
     Write-MandALog "Starting Intune Device Software Inventory..." -Level "INFO"
-    $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
+    $outputPath = $Context.Paths.RawDataOutput
     $allDeviceSoftware = [System.Collections.Generic.List[PSObject]]::new()
 
     if (-not $ManagedDevices -or $ManagedDevices.Count -eq 0) {

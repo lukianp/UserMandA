@@ -13,7 +13,7 @@
     Author: Gemini (incorporating User Logic)
     Date: 2025-06-02
 #>
-
+$outputPath = $Context.Paths.RawDataOutput
 #region INTERNAL HELPER FUNCTIONS
 
 #===============================================================================

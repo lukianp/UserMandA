@@ -12,7 +12,7 @@
 
 [CmdletBinding()]
 param()
-
+$outputPath = $Context.Paths.RawDataOutput
 # Main function to test data quality
 function Test-DataQuality {
     [CmdletBinding()]

@@ -9,7 +9,7 @@
     Version: 1.1.1 (Corrected JSON depth handling)
     Author: Lukian Poleschtschuk
 #>
-
+$outputPath = $Context.Paths.RawDataOutput
 [CmdletBinding()]
 param()
 

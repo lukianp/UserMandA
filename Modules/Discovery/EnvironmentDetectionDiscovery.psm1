@@ -262,7 +262,7 @@ function Invoke-EnvironmentDetectionDiscovery {
         $environmentInfo = Get-EnvironmentType -Configuration $Configuration
         
         # Prepare output
-        $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
+        $outputPath = $Context.Paths.RawDataOutput
         if (-not (Test-Path $outputPath)) {
             New-Item -Path $outputPath -ItemType Directory -Force | Out-Null
         }

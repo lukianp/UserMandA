@@ -13,7 +13,7 @@ function Invoke-TeamsDiscovery {
     try {
         Write-MandALog "Starting Microsoft Teams discovery" -Level "HEADER"
         
-        $outputPath = $Configuration.environment.outputPath
+        $outputPath = $Context.Paths.RawDataOutput
         $rawPath = Join-Path $outputPath "Raw"
         
         $discoveryResults = @{}

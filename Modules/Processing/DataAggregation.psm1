@@ -12,7 +12,7 @@
     Author: Enhanced Version
     Creation Date: 2025-06-03
 #>
-
+$outputPath = $Context.Paths.RawDataOutput
 #region Module Variables
 $script:AggregationStats = @{
     StartTime = $null

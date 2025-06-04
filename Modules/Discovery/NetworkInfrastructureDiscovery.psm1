@@ -11,7 +11,7 @@ function Invoke-NetworkInfrastructureDiscovery {
     try {
         Write-MandALog "Starting Network Infrastructure discovery" -Level "HEADER"
         
-        $outputPath = $Configuration.environment.outputPath
+        $outputPath = $Context.Paths.RawDataOutput
         $discoveryResults = @{}
         
         # DHCP Discovery

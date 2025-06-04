@@ -4,7 +4,7 @@
 .DESCRIPTION
     Provides real-time progress monitoring and ETA calculation
 #>
-
+$outputPath = $Context.Paths.RawDataOutput
 # Global progress tracking state
 $script:ProgressState = @{
     CurrentPhase = $null

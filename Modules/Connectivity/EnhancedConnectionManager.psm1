@@ -4,6 +4,10 @@
 #
 
 # Global connection status tracking
+
+$outputPath = $Context.Paths.RawDataOutput
+
+
 $script:ConnectionStatus = @{
     Graph = @{ Connected = $false; LastError = $null; ConnectedTime = $null; Context = $null; Method = $null }
     Azure = @{ Connected = $false; LastError = $null; ConnectedTime = $null; Context = $null; Method = $null }
