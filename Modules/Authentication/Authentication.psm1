@@ -5,8 +5,9 @@
     Manages authentication flow and token lifecycle with comprehensive error handling
 .NOTES
     Author: Enhanced Version
-    Version: 2.0.0
+    Version: 2.1.0
     Created: 2025-06-02
+    Fixed: 2025-01-15 - Removed global dependency at module load time
 #>
 
 # Module-scoped variables
@@ -31,17 +32,6 @@ function Initialize-MandAAuthentication {
         # Clear any existing auth context
         $script:AuthContext = $null
         $script:LastAuthAttempt = Get-Date
-
-
-#Updated global logging thingy
-        if ($null -eq $global:MandA) {
-    throw "Global environment not initialized"
-}
-        
-
-        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
-    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
-}
 
         # Get credentials
         Write-MandALog "Retrieving credentials..." -Level "INFO"
@@ -321,6 +311,29 @@ function Get-AuthenticationStatus {
     }
 }
 
+# Helper function for logging when Write-MandALog might not be available
+function Write-MandALog {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO"
+    )
+    
+    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue -CommandType Function) {
+        & Write-MandALog $Message -Level $Level
+    } else {
+        $color = switch ($Level) {
+            "ERROR" { "Red" }
+            "WARN" { "Yellow" }
+            "SUCCESS" { "Green" }
+            "INFO" { "White" }
+            "HEADER" { "Cyan" }
+            "DEBUG" { "Gray" }
+            default { "Gray" }
+        }
+        Write-Host "[Authentication] $Message" -ForegroundColor $color
+    }
+}
+
 # Export functions
 Export-ModuleMember -Function @(
     'Initialize-MandAAuthentication',
@@ -331,4 +344,4 @@ Export-ModuleMember -Function @(
     'Get-AuthenticationStatus'
 )
 
-Write-MandALog "Authentication module loaded successfully" -Level "DEBUG"
+Write-Host "[Authentication] Module loaded successfully" -ForegroundColor Gray
