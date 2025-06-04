@@ -554,7 +554,17 @@ function Process-SubscriptionLevelResources {
 function Export-AzureDiscoveryData {
     param($DiscoveredData, $Context)
     
-    $outputPath = $Context.Paths.RawDataOutput
+   
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
     
     foreach ($key in $DiscoveredData.Keys) {
         $dataList = $DiscoveredData[$key]
