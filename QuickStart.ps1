@@ -7,11 +7,9 @@
     credential management, status indicators, optimized module checking, and debug capabilities.
     This version fully implements all menu options, including Processing and Export phases.
 .NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.0.0
-    Created: 2025-06-03
-    Last Modified: 2025-06-03
-    Change Log: Initial version - any future changes require version increment
+    Version: 5.4.0
+    Author: Enhanced Version with Complete Functionality
+    Date: 2025-06-03
 #>
 
 [CmdletBinding()]
@@ -1072,15 +1070,15 @@ function Start-ProcessingOnly {
     $transcriptPath = Join-Path $global:MandA.Paths.CompanyProfileRoot "Processing_Transcript_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
     Write-Host "`nStarting transcript at: $transcriptPath" -ForegroundColor Yellow
     Write-Host "`nDEBUG: Transcript started. All output will be captured." -ForegroundColor Green
-Write-Host "DEBUG: Current verbosity settings:" -ForegroundColor Yellow
-Write-Host "  VerbosePreference: $VerbosePreference" -ForegroundColor Gray
-Write-Host "  DebugPreference: $DebugPreference" -ForegroundColor Gray
- 
-$oldVerbose = $VerbosePreference
-$oldDebug = $DebugPreference
-$VerbosePreference = "Continue"
-$DebugPreference = "Continue"
-$global:MandA.ModulesChecked = $true
+    Write-Host "DEBUG: Current verbosity settings:" -ForegroundColor Yellow
+    Write-Host "  VerbosePreference: $VerbosePreference" -ForegroundColor Gray
+    Write-Host "  DebugPreference: $DebugPreference" -ForegroundColor Gray
+    
+    $oldVerbose = $VerbosePreference
+    $oldDebug = $DebugPreference
+    $VerbosePreference = "Continue"
+    $DebugPreference = "Continue"
+    $global:MandA.ModulesChecked = $true
     
     Start-Transcript -Path $transcriptPath -Force
 
@@ -1171,7 +1169,10 @@ $global:MandA.ModulesChecked = $true
             $processedFiles = Get-ChildItem -Path $global:MandA.Paths.ProcessedDataOutput -Filter "*.csv" -ErrorAction SilentlyContinue
             if ($processedFiles) {
                 Write-Host "Processed files created:" -ForegroundColor Green
-                $processedFiles | ForEach-Object { Write-Host "  - $($_.Name) ($('{0:N0}' -f $_.Length) bytes)" -ForegroundColor Gray }
+                $processedFiles | ForEach-Object { 
+                    $formattedSize = '{0:N0}' -f $_.Length
+                    Write-Host "  - $($_.Name) ($formattedSize bytes)" -ForegroundColor Gray 
+                }
             } else {
                 Write-Host "WARNING: No processed CSV files found!" -ForegroundColor Yellow
             }
@@ -1190,9 +1191,8 @@ $global:MandA.ModulesChecked = $true
         Write-Host "`nFull Exception Details:" -ForegroundColor Red
         Write-Host $_.Exception | Format-List -Force | Out-String
     } finally {
-
-    $VerbosePreference = $oldVerbose
-    $DebugPreference = $oldDebug
+        $VerbosePreference = $oldVerbose
+        $DebugPreference = $oldDebug
         if ($global:MandA) { $global:MandA.OrchestratorRunCount = 0 }
         
         # Stop transcript
