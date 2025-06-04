@@ -414,8 +414,26 @@ function Import-ModuleWithManifest {
         [MandAContext]$Context
     )
     
+    # Add comprehensive validation
+    if ([string]::IsNullOrWhiteSpace($ModulePath)) {
+        Write-MandALog "Module path is null or empty" -Level "ERROR" -Context $Context
+        return $false
+    }
+    
+    if (-not (Test-Path $ModulePath)) {
+        Write-MandALog "Module file not found: $ModulePath" -Level "ERROR" -Context $Context
+        return $false
+    }
+    
     $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($ModulePath)
     $moduleDir = Split-Path $ModulePath -Parent
+    
+    # Validate moduleDir is not null
+    if ([string]::IsNullOrWhiteSpace($moduleDir)) {
+        Write-MandALog "Could not determine module directory for: $ModulePath" -Level "ERROR" -Context $Context
+        return $false
+    }
+    
     $manifestPath = Join-Path $moduleDir "$moduleName.psd1"
     
     try {
@@ -428,9 +446,16 @@ function Import-ModuleWithManifest {
         
         # Check for manifest
         if (Test-Path $manifestPath) {
+            Write-MandALog "Loading module from manifest: $manifestPath" -Level "DEBUG" -Context $Context
             Import-Module $manifestPath -Force -Global -ErrorAction Stop
             Write-MandALog "Loaded module from manifest: $moduleName" -Level "SUCCESS" -Context $Context
         } else {
+            # Import module directly - ensure ModulePath is not null here
+            if ([string]::IsNullOrWhiteSpace($ModulePath)) {
+                throw "ModulePath became null before Import-Module call"
+            }
+            
+            Write-MandALog "Loading module directly from: $ModulePath" -Level "DEBUG" -Context $Context
             Import-Module $ModulePath -Force -Global -ErrorAction Stop
             Write-MandALog "Loaded module directly: $moduleName" -Level "SUCCESS" -Context $Context
         }
@@ -444,8 +469,9 @@ function Import-ModuleWithManifest {
         # Clear temporary variables on error
         Remove-Variable -Name "_MandALoadingContext" -Scope Global -ErrorAction SilentlyContinue
         
-        $Context.ErrorCollector.AddError("ModuleLoader", "Failed to load module: $moduleName", $_.Exception)
+        $Context.ErrorCollector.AddError("ModuleLoader", "Failed to load module: $moduleName - $($_.Exception.Message)", $_.Exception)
         Write-MandALog "Failed to load module: $moduleName - $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-MandALog "Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG" -Context $Context
         return $false
     }
 }
@@ -624,10 +650,25 @@ function Import-DiscoveryModules {
     Write-MandALog "Discovery module loading complete: $loadedCount loaded, $failedCount failed" -Level "INFO" -Context $Context
 }
 
+
+
 function Import-ProcessingModules {
     param([MandAContext]$Context)
     
+    # Validate Context and Paths
+    if ($null -eq $Context -or $null -eq $Context.Paths -or $null -eq $Context.Paths.Modules) {
+        Write-MandALog "Invalid context or missing Modules path" -Level "ERROR" -Context $Context
+        return
+    }
+    
     $processingPath = Join-Path $Context.Paths.Modules "Processing"
+    
+    # Validate the processing path exists
+    if (-not (Test-Path $processingPath)) {
+        Write-MandALog "Processing modules directory not found: $processingPath" -Level "ERROR" -Context $Context
+        return
+    }
+    
     $processingModules = @(
         "DataAggregation.psm1",
         "UserProfileBuilder.psm1",
@@ -635,18 +676,47 @@ function Import-ProcessingModules {
         "DataValidation.psm1"
     )
     
-    Write-MandALog "Loading processing modules" -Level "INFO" -Context $Context
+    Write-MandALog "Loading processing modules from: $processingPath" -Level "INFO" -Context $Context
     
     foreach ($module in $processingModules) {
+        if ([string]::IsNullOrWhiteSpace($module)) {
+            Write-MandALog "Skipping empty module name" -Level "WARN" -Context $Context
+            continue
+        }
+        
         $modulePath = Join-Path $processingPath $module
+        
+        # Debug output
+        Write-MandALog "Attempting to load module: $module from path: $modulePath" -Level "DEBUG" -Context $Context
+        
+        # Double-check the path isn't null before passing it
+        if ([string]::IsNullOrWhiteSpace($modulePath)) {
+            Write-MandALog "Module path is null for module: $module" -Level "ERROR" -Context $Context
+            continue
+        }
+        
         Import-ModuleWithManifest -ModulePath $modulePath -Context $Context
     }
 }
 
+
 function Import-ExportModules {
     param([MandAContext]$Context)
     
+    # Validate Context and Paths
+    if ($null -eq $Context -or $null -eq $Context.Paths -or $null -eq $Context.Paths.Modules) {
+        Write-MandALog "Invalid context or missing Modules path" -Level "ERROR" -Context $Context
+        return
+    }
+    
     $exportPath = Join-Path $Context.Paths.Modules "Export"
+    
+    # Validate the export path exists
+    if (-not (Test-Path $exportPath)) {
+        Write-MandALog "Export modules directory not found: $exportPath" -Level "ERROR" -Context $Context
+        return
+    }
+    
     $enabledFormats = @($Context.Config.export.formats)
     
     Write-MandALog "Loading export modules for formats: $($enabledFormats -join ', ')" -Level "INFO" -Context $Context
@@ -662,7 +732,23 @@ function Import-ExportModules {
     foreach ($format in $enabledFormats) {
         if ($formatMapping.ContainsKey($format)) {
             $moduleFile = $formatMapping[$format]
+            
+            if ([string]::IsNullOrWhiteSpace($moduleFile)) {
+                Write-MandALog "Module filename is empty for format: $format" -Level "WARN" -Context $Context
+                continue
+            }
+            
             $modulePath = Join-Path $exportPath $moduleFile
+            
+            # Debug output
+            Write-MandALog "Attempting to load export module: $moduleFile from path: $modulePath" -Level "DEBUG" -Context $Context
+            
+            # Double-check the path isn't null before passing it
+            if ([string]::IsNullOrWhiteSpace($modulePath)) {
+                Write-MandALog "Module path is null for format: $format" -Level "ERROR" -Context $Context
+                continue
+            }
+            
             Import-ModuleWithManifest -ModulePath $modulePath -Context $Context
         } else {
             $Context.ErrorCollector.AddWarning("Export", "Unknown export format: $format")
