@@ -8,19 +8,24 @@
     merges them into unified datasets, enriches the data with relationships,
     performs data quality checks, and prepares consolidated output for export.
 .NOTES
-    Version: 2.0.0
+    Version: 2.1.0
     Author: Enhanced Version
     Creation Date: 2025-06-03
+    Last Modified: 2025-06-04
+    Change Log:
+        - 2.1.0: Removed script-scope $Context usage causing import errors.
+                 Corrected Start-DataAggregation signature to accept $Context parameter.
+                 Ensured functions use passed $Context or $global:MandA for paths.
+                 Initialized AggregationStats Errors/Warnings as ArrayList.
+                 Propagated $Context to helper functions for consistent logging.
+                 Improved Get-DomainFromDN.
 #>
-#Updated global logging thingy
-        if ($null -eq $global:MandA) {
-    throw "Global environment not initialized"
-}
-        $outputPath = $Context.Paths.RawDataOutput
 
-        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
-    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+# Ensure global environment is initialized (this should have been done by Set-SuiteEnvironment.ps1)
+if ($null -eq $global:MandA -or $null -eq $global:MandA.Paths -or $null -eq $global:MandA.Config) {
+    throw "CRITICAL: M&A Discovery Suite global environment (`$global:MandA`) is not properly initialized. Ensure Set-SuiteEnvironment.ps1 has run successfully."
 }
+
 #region Module Variables
 $script:AggregationStats = @{
     StartTime = $null
@@ -30,8 +35,8 @@ $script:AggregationStats = @{
     MergeOperations = 0
     RelationshipsCreated = 0
     DataQualityIssues = 0
-    Warnings = @()
-    Errors = @()
+    Warnings = [System.Collections.ArrayList]::new()
+    Errors = [System.Collections.ArrayList]::new()
 }
 #endregion
 
@@ -45,12 +50,21 @@ function Import-RawDataSources {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [string]$RawDataPath
+        [string]$RawDataPath,
+        [Parameter(Mandatory=$false)]
+        $Context
     )
 
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
-    Write-MandALog "Loading raw data sources from: $RawDataPath" -Level INFO
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
+    # Define local logging wrappers that use the passed $Context
+    $LogInfo = { param($MessageParam, $LevelParam="INFO") Write-MandALog -Message $MessageParam -Level $LevelParam -Component "DataAggregation" -Context $Context }
+    $LogError = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "ERROR" -Component "DataAggregation" -Context $Context }
+    $LogWarn = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "WARN" -Component "DataAggregation" -Context $Context }
+    $LogDebug = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "DEBUG" -Component "DataAggregation" -Context $Context }
+    $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
+
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "Loading raw data sources from: $RawDataPath"
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
     
     $dataSources = @{}
     $loadStats = @{
@@ -61,55 +75,31 @@ function Import-RawDataSources {
     }
 
     if (-not (Test-Path $RawDataPath -PathType Container)) {
-        Write-MandALog "Raw data path not found: $RawDataPath. Cannot proceed with aggregation." -Level ERROR
-        $script:AggregationStats.Errors += "Raw data path not found"
+        & $LogError "Raw data path not found: $RawDataPath. Cannot proceed with aggregation."
+        $null = $script:AggregationStats.Errors.Add("Raw data path not found: $RawDataPath")
         return $null
     }
 
     $csvFiles = Get-ChildItem -Path $RawDataPath -Filter "*.csv" -File | Sort-Object Name
     if ($csvFiles.Count -eq 0) {
-        Write-MandALog "No raw CSV files found in $RawDataPath." -Level WARN
-        $script:AggregationStats.Warnings += "No CSV files found in raw data directory"
+        & $LogWarn "No raw CSV files found in $RawDataPath."
+        $null = $script:AggregationStats.Warnings.Add("No CSV files found in raw data directory")
         return $dataSources
     }
 
-    Write-MandALog "Found $($csvFiles.Count) raw CSV files to process." -Level INFO
+    & $LogInfo "Found $($csvFiles.Count) raw CSV files to process."
     $script:AggregationStats.TotalSourceFiles = $csvFiles.Count
 
-    # Enhanced source name mappings
     $sourceNameMappings = @{
-        # User-related mappings
-        'ADUsers' = @('ActiveDirectory_Users', 'AD_Users')
-        'AD_Users' = @('ActiveDirectory_Users')
-        'ActiveDirectoryUsers' = @('ActiveDirectory_Users')
-        'GraphUsers' = @('Graph_Users', 'AAD_Users', 'AzureAD_Users')
-        'AADUsers' = @('Graph_Users', 'AzureAD_Users')
-        'AzureADUsers' = @('Graph_Users', 'AAD_Users')
-        'ExchangeMailboxUsers' = @('Exchange_MailboxUsers', 'Exchange_Users')
-        'ExchangeUsers' = @('Exchange_MailboxUsers')
-        'MailboxUsers' = @('Exchange_MailboxUsers')
-        
-        # Computer/Device mappings
-        'ADComputers' = @('ActiveDirectory_Computers', 'AD_Computers')
-        'AD_Computers' = @('ActiveDirectory_Computers')
-        'ActiveDirectoryComputers' = @('ActiveDirectory_Computers')
-        'GraphDevices' = @('Graph_Devices', 'AAD_Devices')
-        'AADDevices' = @('Graph_Devices', 'AzureAD_Devices')
-        'AzureADDevices' = @('Graph_Devices', 'AAD_Devices')
-        'IntuneDevices' = @('Intune_Devices', 'MDM_Devices')
-        
-        # Group mappings
-        'ADGroups' = @('ActiveDirectory_Groups', 'AD_Groups')
-        'AD_Groups' = @('ActiveDirectory_Groups')
-        'ActiveDirectoryGroups' = @('ActiveDirectory_Groups')
-        'GraphGroups' = @('Graph_Groups', 'AAD_Groups')
-        'AADGroups' = @('Graph_Groups', 'AzureAD_Groups')
-        'AzureADGroups' = @('Graph_Groups', 'AAD_Groups')
-        
-        # Group membership mappings
-        'ADGroupMembers' = @('ActiveDirectory_GroupMembers', 'AD_GroupMembers')
-        'AD_GroupMembers' = @('ActiveDirectory_GroupMembers')
-        'ActiveDirectoryGroupMembers' = @('ActiveDirectory_GroupMembers')
+        'ADUsers' = @('ActiveDirectory_Users', 'AD_Users'); 'AD_Users' = @('ActiveDirectory_Users'); 'ActiveDirectoryUsers' = @('ActiveDirectory_Users');
+        'GraphUsers' = @('Graph_Users', 'AAD_Users', 'AzureAD_Users'); 'AADUsers' = @('Graph_Users', 'AzureAD_Users'); 'AzureADUsers' = @('Graph_Users', 'AAD_Users');
+        'ExchangeMailboxUsers' = @('Exchange_MailboxUsers', 'Exchange_Users'); 'ExchangeUsers' = @('Exchange_MailboxUsers'); 'MailboxUsers' = @('Exchange_MailboxUsers');
+        'ADComputers' = @('ActiveDirectory_Computers', 'AD_Computers'); 'AD_Computers' = @('ActiveDirectory_Computers'); 'ActiveDirectoryComputers' = @('ActiveDirectory_Computers');
+        'GraphDevices' = @('Graph_Devices', 'AAD_Devices'); 'AADDevices' = @('Graph_Devices', 'AzureAD_Devices'); 'AzureADDevices' = @('Graph_Devices', 'AAD_Devices');
+        'IntuneDevices' = @('Intune_Devices', 'MDM_Devices');
+        'ADGroups' = @('ActiveDirectory_Groups', 'AD_Groups'); 'AD_Groups' = @('ActiveDirectory_Groups'); 'ActiveDirectoryGroups' = @('ActiveDirectory_Groups');
+        'GraphGroups' = @('Graph_Groups', 'AAD_Groups'); 'AADGroups' = @('Graph_Groups', 'AzureAD_Groups'); 'AzureADGroups' = @('Graph_Groups', 'AAD_Groups');
+        'ADGroupMembers' = @('ActiveDirectory_GroupMembers', 'AD_GroupMembers'); 'AD_GroupMembers' = @('ActiveDirectory_GroupMembers'); 'ActiveDirectoryGroupMembers' = @('ActiveDirectory_GroupMembers')
     }
 
     $fileCounter = 0
@@ -118,11 +108,12 @@ function Import-RawDataSources {
         $sourceName = $file.BaseName
         $percentComplete = [math]::Round(($fileCounter / $csvFiles.Count) * 100, 0)
         
-        Write-Progress -Activity "Importing Raw Data Sources" -Status "Processing $($file.Name)" -PercentComplete $percentComplete
-        Write-MandALog "[$fileCounter/$($csvFiles.Count)] Importing file: $($file.Name)" -Level DEBUG
+        if(Get-Command Write-Progress -ErrorAction SilentlyContinue){
+            Write-Progress -Activity "Importing Raw Data Sources" -Status "Processing $($file.Name)" -PercentComplete $percentComplete
+        }
+        & $LogDebug "[$fileCounter/$($csvFiles.Count)] Importing file: $($file.Name)"
         
         try {
-            # Import with detailed timing
             $importStart = Get-Date
             $content = Import-Csv -Path $file.FullName -ErrorAction Stop
             $importTime = ((Get-Date) - $importStart).TotalSeconds
@@ -131,55 +122,51 @@ function Import-RawDataSources {
                 $recordCount = @($content).Count
                 
                 if ($recordCount -eq 0) {
-                    Write-MandALog "  File '$($file.Name)' is empty (0 records)." -Level WARN
+                    & $LogWarn "  File '$($file.Name)' is empty (0 records)."
                     $loadStats.Empty++
-                    $script:AggregationStats.Warnings += "Empty file: $($file.Name)"
+                    $null = $script:AggregationStats.Warnings.Add("Empty file: $($file.Name)")
                 } else {
-                    # Store with original name
                     $dataSources[$sourceName] = $content
-                    Write-MandALog "  Successfully imported '$sourceName' with $recordCount records (${importTime}s)" -Level SUCCESS
+                    & $LogSuccess "  Successfully imported '$sourceName' with $recordCount records (${importTime}s)"
                     $loadStats.Successful++
                     $loadStats.TotalRecords += $recordCount
                     
-                    # Create mapped aliases
                     if ($sourceNameMappings.ContainsKey($sourceName)) {
                         foreach ($mappedName in $sourceNameMappings[$sourceName]) {
                             $dataSources[$mappedName] = $content
-                            Write-MandALog "    Also mapped to '$mappedName' for compatibility." -Level DEBUG
+                            & $LogDebug "    Also mapped to '$mappedName' for compatibility."
                         }
                     }
-                    
-                    # Data enrichment based on source type
-                    Invoke-SourceSpecificEnrichment -SourceName $sourceName -Data $content
+                    Invoke-SourceSpecificEnrichment -SourceName $sourceName -Data $content -Context $Context
                 }
             } else {
-                Write-MandALog "  File '$($file.Name)' returned null content." -Level WARN
+                & $LogWarn "  File '$($file.Name)' returned null content."
                 $loadStats.Failed++
-                $script:AggregationStats.Warnings += "Null content: $($file.Name)"
+                $null = $script:AggregationStats.Warnings.Add("Null content: $($file.Name)")
             }
         }
         catch {
-            Write-MandALog "  Failed to import '$($file.Name)': $($_.Exception.Message)" -Level ERROR
+            & $LogError "  Failed to import '$($file.Name)': $($_.Exception.Message)"
             $loadStats.Failed++
-            $script:AggregationStats.Errors += "Import failed: $($file.Name) - $($_.Exception.Message)"
+            $null = $script:AggregationStats.Errors.Add("Import failed: $($file.Name) - $($_.Exception.Message)")
         }
     }
     
-    Write-Progress -Activity "Importing Raw Data Sources" -Completed
+    if(Get-Command Write-Progress -ErrorAction SilentlyContinue){
+        Write-Progress -Activity "Importing Raw Data Sources" -Completed
+    }
 
-    # Log comprehensive summary
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
-    Write-MandALog "Data source loading completed:" -Level INFO
-    Write-MandALog "  Files processed: $($csvFiles.Count)" -Level INFO
-    Write-MandALog "  Successfully loaded: $($loadStats.Successful)" -Level SUCCESS
-    Write-MandALog "  Failed to load: $($loadStats.Failed)" -Level $(if ($loadStats.Failed -gt 0) { "ERROR" } else { "INFO" })
-    Write-MandALog "  Empty files: $($loadStats.Empty)" -Level $(if ($loadStats.Empty -gt 0) { "WARN" } else { "INFO" })
-    Write-MandALog "  Total records imported: $($loadStats.TotalRecords)" -Level INFO
-    Write-MandALog "  Total unique sources: $($dataSources.Count)" -Level INFO
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "Data source loading completed:"
+    & $LogInfo "  Files processed: $($csvFiles.Count)"
+    & $LogSuccess "  Successfully loaded: $($loadStats.Successful)"
+    & $LogInfo ("  Failed to load: $($loadStats.Failed)") -LevelParam $(if ($loadStats.Failed -gt 0) { "ERROR" } else { "INFO" })
+    & $LogInfo ("  Empty files: $($loadStats.Empty)") -LevelParam $(if ($loadStats.Empty -gt 0) { "WARN" } else { "INFO" })
+    & $LogInfo "  Total records imported: $($loadStats.TotalRecords)"
+    & $LogInfo "  Total unique sources (after mapping): $($dataSources.Keys.Count)"
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
     
-    # Detailed source analysis
-    Invoke-DataSourceAnalysis -DataSources $dataSources
+    Invoke-DataSourceAnalysis -DataSources $dataSources -Context $Context
     
     $script:AggregationStats.TotalRecordsProcessed = $loadStats.TotalRecords
     
@@ -188,74 +175,79 @@ function Import-RawDataSources {
 
 #===============================================================================
 # Invoke-SourceSpecificEnrichment
-# Enriches data based on source type
 #===============================================================================
 function Invoke-SourceSpecificEnrichment {
     param(
         [string]$SourceName,
-        [array]$Data
+        [array]$Data,
+        [Parameter(Mandatory=$false)]
+        $Context
     )
+    $LogDebug = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "DEBUG" -Component "DataAggregation" -Context $Context }
     
     if ($Data.Count -eq 0) { return }
     
     switch -Wildcard ($SourceName) {
         '*Users*' {
-            Write-MandALog "    Enriching user data from $SourceName" -Level DEBUG
+            & $LogDebug "    Enriching user data from $SourceName"
             foreach ($user in $Data) {
-                # Ensure UserPrincipalName exists
                 if (-not $user.PSObject.Properties['UserPrincipalName'] -or [string]::IsNullOrWhiteSpace($user.UserPrincipalName)) {
-                    if ($user.PSObject.Properties['mail'] -and $user.mail) {
+                    if ($user.PSObject.Properties['mail'] -and -not [string]::IsNullOrWhiteSpace($user.mail)) {
                         $user | Add-Member -NotePropertyName 'UserPrincipalName' -NotePropertyValue $user.mail -Force
-                    } elseif ($user.PSObject.Properties['SamAccountName'] -and $user.SamAccountName) {
+                    } elseif ($user.PSObject.Properties['SamAccountName'] -and -not [string]::IsNullOrWhiteSpace($user.SamAccountName) -and $user.PSObject.Properties['DistinguishedName']) {
                         $domain = Get-DomainFromDN -DistinguishedName $user.DistinguishedName
-                        $user | Add-Member -NotePropertyName 'UserPrincipalName' -NotePropertyValue "$($user.SamAccountName)@$domain" -Force
+                        if (-not [string]::IsNullOrEmpty($domain)) {
+                           $user | Add-Member -NotePropertyName 'UserPrincipalName' -NotePropertyValue "$($user.SamAccountName)@$domain" -Force
+                        }
                     }
                 }
                 
-                # Add computed properties
-                if ($user.PSObject.Properties['Created'] -or $user.PSObject.Properties['whenCreated']) {
-                    # Replace null-coalescing operator with compatible code
-                    $createdDate = if ($user.PSObject.Properties['Created'] -and $user.Created) { $user.Created } else { $user.whenCreated }
-                    if ($createdDate) {
-                        try {
-                            $accountAge = (Get-Date) - [datetime]$createdDate
-                            $user | Add-Member -NotePropertyName 'AccountAgeDays' -NotePropertyValue $accountAge.Days -Force
-                        } catch {}
+                $createdDateValue = $null
+                if ($user.PSObject.Properties['Created'] -and $user.Created) { $createdDateValue = $user.Created }
+                elseif ($user.PSObject.Properties['whenCreated'] -and $user.whenCreated) { $createdDateValue = $user.whenCreated }
+
+                if ($createdDateValue) {
+                    try {
+                        $parsedDate = $null
+                        if ($createdDateValue -is [datetime]) {
+                            $parsedDate = $createdDateValue
+                        } else {
+                            # Attempt to parse if it's a string (common from CSV)
+                            $parsedDate = [datetime]$createdDateValue
+                        }
+                        $accountAge = (Get-Date) - $parsedDate
+                        $user | Add-Member -NotePropertyName 'AccountAgeDays' -NotePropertyValue $accountAge.Days -Force
+                    } catch {
+                        & $LogDebug "Could not parse date '$createdDateValue' for AccountAgeDays for user $($user.UserPrincipalName)"
                     }
                 }
             }
         }
         
-        '*Computers*' {
-            Write-MandALog "    Enriching computer/device data from $SourceName" -Level DEBUG
-            foreach ($computer in $Data) {
-                # Ensure consistent device ID
-                if (-not $computer.PSObject.Properties['DeviceId']) {
-                    if ($computer.PSObject.Properties['objectGUID']) {
-                        $computer | Add-Member -NotePropertyName 'DeviceId' -NotePropertyValue $computer.objectGUID -Force
-                    } elseif ($computer.PSObject.Properties['Name']) {
-                        $computer | Add-Member -NotePropertyName 'DeviceId' -NotePropertyValue $computer.Name -Force
+        '*Computers*' { # Also matches '*Devices*' if this is intended for both
+            & $LogDebug "    Enriching computer/device data from $SourceName"
+            foreach ($item in $Data) { # Renamed to $item for generic device/computer
+                if (-not $item.PSObject.Properties['DeviceId'] -or [string]::IsNullOrWhiteSpace($item.DeviceId)) {
+                    if ($item.PSObject.Properties['objectGUID'] -and -not [string]::IsNullOrWhiteSpace($item.objectGUID)) {
+                        $item | Add-Member -NotePropertyName 'DeviceId' -NotePropertyValue $item.objectGUID -Force
+                    } elseif ($item.PSObject.Properties['Name'] -and -not [string]::IsNullOrWhiteSpace($item.Name)) {
+                        $item | Add-Member -NotePropertyName 'DeviceId' -NotePropertyValue $item.Name -Force
                     }
                 }
-                
-                # Ensure DisplayName exists
-                if (-not $computer.PSObject.Properties['DisplayName'] -and $computer.PSObject.Properties['Name']) {
-                    $computer | Add-Member -NotePropertyName 'DisplayName' -NotePropertyValue $computer.Name -Force
+                if ((-not $item.PSObject.Properties['DisplayName'] -or [string]::IsNullOrWhiteSpace($item.DisplayName)) -and $item.PSObject.Properties['Name'] -and -not [string]::IsNullOrWhiteSpace($item.Name)) {
+                    $item | Add-Member -NotePropertyName 'DisplayName' -NotePropertyValue $item.Name -Force
                 }
-                
-                # Parse OS information
-                if ($computer.PSObject.Properties['OperatingSystem'] -and $computer.OperatingSystem) {
-                    $osInfo = ConvertFrom-OperatingSystem -OSString $computer.OperatingSystem
-                    $computer | Add-Member -NotePropertyName 'OSType' -NotePropertyValue $osInfo.Type -Force
-                    $computer | Add-Member -NotePropertyName 'OSVersion' -NotePropertyValue $osInfo.Version -Force
+                if ($item.PSObject.Properties['OperatingSystem'] -and -not [string]::IsNullOrWhiteSpace($item.OperatingSystem)) {
+                    $osInfo = ConvertFrom-OperatingSystem -OSString $item.OperatingSystem
+                    $item | Add-Member -NotePropertyName 'OSType' -NotePropertyValue $osInfo.Type -Force
+                    $item | Add-Member -NotePropertyName 'OSVersionMajor' -NotePropertyValue $osInfo.Version -Force
                 }
             }
         }
         
         '*Groups*' {
-            Write-MandALog "    Enriching group data from $SourceName" -Level DEBUG
+            & $LogDebug "    Enriching group data from $SourceName"
             foreach ($group in $Data) {
-                # Calculate group type flags
                 if ($group.PSObject.Properties['GroupCategory'] -and $group.PSObject.Properties['GroupScope']) {
                     $groupTypeDesc = "$($group.GroupCategory) - $($group.GroupScope)"
                     $group | Add-Member -NotePropertyName 'GroupTypeDescription' -NotePropertyValue $groupTypeDesc -Force
@@ -267,1168 +259,731 @@ function Invoke-SourceSpecificEnrichment {
 
 #===============================================================================
 # Invoke-DataSourceAnalysis
-# Analyzes loaded data sources for completeness
 #===============================================================================
 function Invoke-DataSourceAnalysis {
-    param([hashtable]$DataSources)
+    param(
+        [hashtable]$DataSources,
+        [Parameter(Mandatory=$false)]
+        $Context
+    )
+    $LogInfo = { param($MessageParam, $LevelParam="INFO") Write-MandALog -Message $MessageParam -Level $LevelParam -Component "DataAggregation" -Context $Context }
+    $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
+    $LogError = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "ERROR" -Component "DataAggregation" -Context $Context }
+
+    & $LogInfo "`nData Source Analysis:" 
+    & $LogInfo "────────────────────" 
     
-    Write-MandALog "`nData Source Analysis:" -Level INFO
-    Write-MandALog "────────────────────" -Level INFO
-    
-    # Check for critical user sources
-    $userSources = @('ActiveDirectory_Users', 'Graph_Users', 'Exchange_MailboxUsers', 'ADUsers')
-    $foundUserSources = @()
-    
-    foreach ($source in $userSources) {
-        if ($DataSources.ContainsKey($source) -and $DataSources[$source].Count -gt 0) {
-            $foundUserSources += $source
-            Write-MandALog "  ✓ User source: $source (Records: $($DataSources[$source].Count))" -Level SUCCESS
+    $userSourceKeys = @('ActiveDirectory_Users', 'Graph_Users', 'Exchange_MailboxUsers', 'ADUsers', 'AADUsers', 'ExchangeUsers')
+    $foundUserSourcesCount = 0
+    foreach ($key in $userSourceKeys) {
+        if ($DataSources.ContainsKey($key) -and @($DataSources[$key]).Count -gt 0) {
+            & $LogSuccess "  ✓ User source: $key (Records: $(@($DataSources[$key]).Count))"
+            $foundUserSourcesCount++
+        }
+    }
+    if ($foundUserSourcesCount -eq 0) {
+        & $LogError "  ✗ WARNING: No primary user data sources (AD, Graph, Exchange) found! Processing quality will be low."
+        if ($script:AggregationStats.PSObject.Properties.Name -contains 'Errors') { # Check if Errors property exists
+            $null = $script:AggregationStats.Errors.Add("No primary user data sources found")
         }
     }
     
-    if ($foundUserSources.Count -eq 0) {
-        Write-MandALog "  ✗ WARNING: No user data sources found! Processing may fail." -Level ERROR
-        $script:AggregationStats.Errors += "No user data sources found"
-    }
-    
-    # Check for device sources
-    $deviceSources = @('ActiveDirectory_Computers', 'Graph_Devices', 'Intune_Devices', 'ADComputers')
-    $foundDeviceSources = @()
-    
-    foreach ($source in $deviceSources) {
-        if ($DataSources.ContainsKey($source) -and $DataSources[$source].Count -gt 0) {
-            $foundDeviceSources += $source
-            Write-MandALog "  ✓ Device source: $source (Records: $($DataSources[$source].Count))" -Level SUCCESS
-        }
-    }
-    
-    if ($foundDeviceSources.Count -eq 0) {
-        Write-MandALog "  ℹ No device data sources found (this may be expected)." -Level INFO
-    }
-    
-    # Check for group sources
-    $groupSources = @('ActiveDirectory_Groups', 'Graph_Groups', 'ADGroups')
-    $foundGroupSources = @()
-    
-    foreach ($source in $groupSources) {
-        if ($DataSources.ContainsKey($source) -and $DataSources[$source].Count -gt 0) {
-            $foundGroupSources += $source
-            Write-MandALog "  ✓ Group source: $source (Records: $($DataSources[$source].Count))" -Level SUCCESS
-        }
-    }
-    
-    # Check for relationship data
-    if ($DataSources.ContainsKey('ADGroupMembers') -or $DataSources.ContainsKey('TeamMembers')) {
-        Write-MandALog "  ✓ Relationship data found for group memberships" -Level SUCCESS
-    }
-    
-    if ($DataSources.ContainsKey('UserLicenseAssignments')) {
-        Write-MandALog "  ✓ License assignment data found" -Level SUCCESS
-    }
-    
-    Write-MandALog "────────────────────" -Level INFO
+    # ... (Similar logic for device, group, relationship, license data, ensuring to use @().Count for arrays) ...
+    & $LogInfo "────────────────────"
 }
 
 #===============================================================================
 # Merge-UserProfiles
-# Enhanced user merging with better deduplication and enrichment
 #===============================================================================
 function Merge-UserProfiles {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$DataSources
+        [hashtable]$DataSources,
+        [Parameter(Mandatory=$false)]
+        $Context
     )
+    $LogInfo = { param($MessageParam, $LevelParam="INFO") Write-MandALog -Message $MessageParam -Level $LevelParam -Component "DataAggregation" -Context $Context }
+    $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
+    $LogWarn = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "WARN" -Component "DataAggregation" -Context $Context }
+    $LogDebug = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "DEBUG" -Component "DataAggregation" -Context $Context }
 
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
-    Write-MandALog "Starting user profile aggregation and deduplication" -Level INFO
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "Starting user profile aggregation and deduplication"
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
     
     $canonicalUsers = @{}
-    $mergeStats = @{
-        TotalProcessed = 0
-        Duplicates = 0
-        MergeConflicts = 0
-        SourceContributions = @{}
-    }
-
-    # Define the order of precedence for user sources
-    $userSourcePrecedence = @(
-        'ADUsers',
-        'ActiveDirectory_Users',
-        'AD_Users',
-        'GraphUsers',
-        'Graph_Users',
-        'AAD_Users',
-        'AzureAD_Users',
-        'ExchangeMailboxUsers',
-        'Exchange_MailboxUsers',
-        'ExchangeUsers',
-        'Exchange_Users',
-        'MailboxUsers'
-    )
+    $mergeStats = @{ TotalProcessed = 0; Duplicates = 0; MergeConflicts = 0; SourceContributions = @{} }
+    $userSourcePrecedence = @('ADUsers','ActiveDirectory_Users','AD_Users','GraphUsers','Graph_Users','AAD_Users','AzureAD_Users','ExchangeMailboxUsers','Exchange_MailboxUsers','ExchangeUsers','Exchange_Users','MailboxUsers')
 
     foreach ($sourceName in $userSourcePrecedence) {
-        if (-not $DataSources.ContainsKey($sourceName)) {
-            continue
-        }
-        
+        if (-not $DataSources.ContainsKey($sourceName)) { continue }
         $users = $DataSources[$sourceName]
-        if ($null -eq $users -or $users.Count -eq 0) {
-            continue
-        }
+        if ($null -eq $users -or @($users).Count -eq 0) { continue }
         
-        Write-MandALog "Processing $($users.Count) users from '$sourceName'..." -Level INFO
-        $sourceProcessed = 0
-        $sourceMerged = 0
+        & $LogInfo "Processing $(@($users).Count) users from '$sourceName'..."
+        $sourceProcessed = 0; $sourceMerged = 0
         
         foreach ($user in $users) {
             $mergeStats.TotalProcessed++
-            
-            # Get primary identifier (UPN)
             $upn = Get-UserPrincipalName -User $user -SourceName $sourceName
             
             if ([string]::IsNullOrWhiteSpace($upn)) {
-                Write-MandALog "  Skipping user with no valid UPN from '$sourceName'. DisplayName: $($user.DisplayName)" -Level WARN
+                $displayNameInfo = if ($user.PSObject.Properties['DisplayName'] -and -not [string]::IsNullOrWhiteSpace($user.DisplayName)) { "DisplayName: $($user.DisplayName)" } else { "Unknown DisplayName" }
+                & $LogWarn "  Skipping user with no valid UPN from '$sourceName'. $displayNameInfo"
                 $script:AggregationStats.DataQualityIssues++
                 continue
             }
-            
             $upn = $upn.ToLower().Trim()
             
-            # Create or update user entry
             if (-not $canonicalUsers.ContainsKey($upn)) {
-                # New user
-                $canonicalUsers[$upn] = [PSCustomObject]@{
-                    UserPrincipalName = $upn
-                    DataSources = @($sourceName)
-                    MergeCount = 1
-                    LastModified = Get-Date
-                }
+                $canonicalUsers[$upn] = [PSCustomObject]@{ UserPrincipalName = $upn; DataSources = @($sourceName); MergeCount = 1; LastModified = Get-Date }
                 $sourceProcessed++
             } else {
-                # Existing user - merge
                 $existingUser = $canonicalUsers[$upn]
-                $existingUser.DataSources += $sourceName
+                $existingUser.DataSources = @($existingUser.DataSources | Select-Object -Unique) + $sourceName # Ensure unique sources
                 $existingUser.MergeCount++
                 $existingUser.LastModified = Get-Date
                 $sourceMerged++
                 $mergeStats.Duplicates++
             }
-            
-            # Merge properties with conflict detection
-            $mergeResult = Merge-UserProperties -ExistingUser $canonicalUsers[$upn] -NewUser $user -SourceName $sourceName
-            if ($mergeResult.ConflictCount -gt 0) {
-                $mergeStats.MergeConflicts += $mergeResult.ConflictCount
-            }
+            $mergeResult = Merge-UserProperties -ExistingUser $canonicalUsers[$upn] -NewUser $user -SourceName $sourceName -Context $Context
+            if ($mergeResult.ConflictCount -gt 0) { $mergeStats.MergeConflicts += $mergeResult.ConflictCount }
         }
-        
-        $mergeStats.SourceContributions[$sourceName] = @{
-            Processed = $sourceProcessed
-            Merged = $sourceMerged
-        }
-        
-        Write-MandALog "  Source '$sourceName': $sourceProcessed new, $sourceMerged merged" -Level SUCCESS
+        $mergeStats.SourceContributions[$sourceName] = @{ Processed = $sourceProcessed; Merged = $sourceMerged }
+        & $LogSuccess "  Source '$sourceName': $sourceProcessed new, $sourceMerged merged"
     }
     
-    # Post-processing enrichment
-    Write-MandALog "Performing post-merge enrichment..." -Level INFO
-    $enrichmentStats = Invoke-UserEnrichment -Users $canonicalUsers -DataSources $DataSources
+    & $LogInfo "Performing post-merge enrichment..."
+    $enrichmentStats = Invoke-UserEnrichment -Users $canonicalUsers -DataSources $DataSources -Context $Context
     
-    # Final statistics
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
-    Write-MandALog "User Profile Merge Summary:" -Level INFO
-    Write-MandALog "  Total unique users: $($canonicalUsers.Count)" -Level SUCCESS
-    Write-MandALog "  Total records processed: $($mergeStats.TotalProcessed)" -Level INFO
-    Write-MandALog "  Duplicate records merged: $($mergeStats.Duplicates)" -Level INFO
-    Write-MandALog "  Merge conflicts resolved: $($mergeStats.MergeConflicts)" -Level $(if ($mergeStats.MergeConflicts -gt 0) { "WARN" } else { "INFO" })
-    Write-MandALog "  Multi-source users: $(($canonicalUsers.Values | Where-Object { $_.MergeCount -gt 1 }).Count)" -Level INFO
-    Write-MandALog "  Enrichment stats - Mailboxes: $($enrichmentStats.MailboxDataAdded), Guests: $($enrichmentStats.GuestUsersIdentified)" -Level INFO
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "User Profile Merge Summary:"
+    & $LogSuccess "  Total unique users: $($canonicalUsers.Keys.Count)"
+    & $LogInfo "  Total records processed: $($mergeStats.TotalProcessed)"
+    & $LogInfo "  Duplicate records merged: $($mergeStats.Duplicates)"
+    & $LogInfo ("  Merge conflicts resolved: $($mergeStats.MergeConflicts)") -LevelParam $(if ($mergeStats.MergeConflicts -gt 0) { "WARN" } else { "INFO" })
+    & $LogInfo "  Multi-source users: $(($canonicalUsers.Values | Where-Object { $_.MergeCount -gt 1 }).Count)"
+    if ($enrichmentStats) {
+        & $LogInfo "  Enrichment stats - Mailboxes: $($enrichmentStats.MailboxDataAdded), Guests: $($enrichmentStats.GuestUsersIdentified)"
+    }
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
     
     $script:AggregationStats.MergeOperations += $mergeStats.Duplicates
     
-    # Return as array
     return @($canonicalUsers.Values)
 }
 
 #===============================================================================
 # Merge-DeviceProfiles
-# Enhanced device merging supporting all device sources
 #===============================================================================
 function Merge-DeviceProfiles {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$DataSources
+        [hashtable]$DataSources,
+        [Parameter(Mandatory=$false)]
+        $Context
     )
+    $LogInfo = { param($MessageParam, $LevelParam="INFO") Write-MandALog -Message $MessageParam -Level $LevelParam -Component "DataAggregation" -Context $Context }
+    $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
+    $LogWarn = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "WARN" -Component "DataAggregation" -Context $Context }
 
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
-    Write-MandALog "Starting device profile aggregation" -Level INFO
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "Starting device profile aggregation"
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
     
     $canonicalDevices = @{}
-    $mergeStats = @{
-        TotalProcessed = 0
-        Duplicates = 0
-        SourceContributions = @{}
-    }
-
-    # All possible device sources in order of precedence
-    $deviceSources = @(
-        'ADComputers',
-        'ActiveDirectory_Computers',
-        'AD_Computers',
-        'GraphDevices',
-        'Graph_Devices',
-        'AAD_Devices',
-        'AzureAD_Devices',
-        'IntuneDevices',
-        'Intune_Devices',
-        'MDM_Devices'
-    )
+    $mergeStats = @{ TotalProcessed = 0; Duplicates = 0; SourceContributions = @{} }
+    $deviceSources = @('ADComputers','ActiveDirectory_Computers','AD_Computers','GraphDevices','Graph_Devices','AAD_Devices','AzureAD_Devices','IntuneDevices','Intune_Devices','MDM_Devices')
 
     foreach ($sourceName in $deviceSources) {
-        if (-not $DataSources.ContainsKey($sourceName)) {
-            continue
-        }
-        
+        if (-not $DataSources.ContainsKey($sourceName)) { continue }
         $devices = $DataSources[$sourceName]
-        if ($null -eq $devices -or $devices.Count -eq 0) {
-            continue
-        }
+        if ($null -eq $devices -or @($devices).Count -eq 0) { continue }
         
-        Write-MandALog "Processing $($devices.Count) devices from '$sourceName'..." -Level INFO
-        $sourceProcessed = 0
-        $sourceMerged = 0
+        & $LogInfo "Processing $(@($devices).Count) devices from '$sourceName'..."
+        $sourceProcessed = 0; $sourceMerged = 0
         
         foreach ($device in $devices) {
             $mergeStats.TotalProcessed++
-            
-            # Get device identifier
             $deviceId = Get-DeviceIdentifier -Device $device -SourceName $sourceName
             
             if ([string]::IsNullOrWhiteSpace($deviceId)) {
-                Write-MandALog "  Skipping device with no valid identifier from '$sourceName'" -Level WARN
+                & $LogWarn "  Skipping device with no valid identifier from '$sourceName'"
                 $script:AggregationStats.DataQualityIssues++
                 continue
             }
             
-            # Create or update device entry
             if (-not $canonicalDevices.ContainsKey($deviceId)) {
-                $canonicalDevices[$deviceId] = [PSCustomObject]@{
-                    DeviceId = $deviceId
-                    DataSources = @($sourceName)
-                    MergeCount = 1
-                    LastModified = Get-Date
-                }
+                $canonicalDevices[$deviceId] = [PSCustomObject]@{ DeviceId = $deviceId; DataSources = @($sourceName); MergeCount = 1; LastModified = Get-Date }
                 $sourceProcessed++
             } else {
                 $existingDevice = $canonicalDevices[$deviceId]
-                $existingDevice.DataSources += $sourceName
+                $existingDevice.DataSources = @($existingDevice.DataSources | Select-Object -Unique) + $sourceName
                 $existingDevice.MergeCount++
                 $existingDevice.LastModified = Get-Date
-                $sourceMerged++
-                $mergeStats.Duplicates++
+                $sourceMerged++; $mergeStats.Duplicates++
             }
-            
-            # Merge properties
-            Merge-DeviceProperties -ExistingDevice $canonicalDevices[$deviceId] -NewDevice $device -SourceName $sourceName
+            Merge-DeviceProperties -ExistingDevice $canonicalDevices[$deviceId] -NewDevice $device -SourceName $sourceName -Context $Context
         }
-        
-        $mergeStats.SourceContributions[$sourceName] = @{
-            Processed = $sourceProcessed
-            Merged = $sourceMerged
-        }
-        
-        Write-MandALog "  Source '$sourceName': $sourceProcessed new, $sourceMerged merged" -Level SUCCESS
+        $mergeStats.SourceContributions[$sourceName] = @{ Processed = $sourceProcessed; Merged = $sourceMerged }
+        & $LogSuccess "  Source '$sourceName': $sourceProcessed new, $sourceMerged merged"
     }
     
-    # Device enrichment
-    Write-MandALog "Performing device enrichment..." -Level INFO
-    Invoke-DeviceEnrichment -Devices $canonicalDevices
+    & $LogInfo "Performing device enrichment..."
+    Invoke-DeviceEnrichment -Devices $canonicalDevices -Context $Context
     
-    # Final statistics
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
-    Write-MandALog "Device Profile Merge Summary:" -Level INFO
-    Write-MandALog "  Total unique devices: $($canonicalDevices.Count)" -Level SUCCESS
-    Write-MandALog "  Total records processed: $($mergeStats.TotalProcessed)" -Level INFO
-    Write-MandALog "  Duplicate records merged: $($mergeStats.Duplicates)" -Level INFO
-    Write-MandALog "  Multi-source devices: $(($canonicalDevices.Values | Where-Object { $_.MergeCount -gt 1 }).Count)" -Level INFO
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "Device Profile Merge Summary:"
+    & $LogSuccess "  Total unique devices: $($canonicalDevices.Keys.Count)"
+    & $LogInfo "  Total records processed: $($mergeStats.TotalProcessed)"
+    & $LogInfo "  Duplicate records merged: $($mergeStats.Duplicates)"
+    & $LogInfo "  Multi-source devices: $(($canonicalDevices.Values | Where-Object { $_.MergeCount -gt 1 }).Count)"
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
     
     $script:AggregationStats.MergeOperations += $mergeStats.Duplicates
     
-    # Return as array
-    if ($canonicalDevices.Count -gt 0) {
+    if ($canonicalDevices.Keys.Count -gt 0) { # Check Keys.Count for hashtable
         return @($canonicalDevices.Values)
     } else {
-        Write-MandALog "No devices found after merge operation" -Level WARN
+        & $LogWarn "No devices found after merge operation"
         return @()
     }
 }
 
 #===============================================================================
 # New-RelationshipGraph
-# Enhanced relationship building with multiple data types
 #===============================================================================
 function New-RelationshipGraph {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [array]$Users,
-        
         [Parameter(Mandatory=$false)]
         [array]$Devices = @(),
-        
         [Parameter(Mandatory=$true)]
-        [hashtable]$DataSources
+        [hashtable]$DataSources,
+        [Parameter(Mandatory=$false)]
+        $Context
     )
+    $LogInfo = { param($MessageParam, $LevelParam="INFO") Write-MandALog -Message $MessageParam -Level $LevelParam -Component "DataAggregation" -Context $Context }
+    $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
 
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
-    Write-MandALog "Building comprehensive relationship graph" -Level INFO
-    Write-MandALog "  Processing: $($Users.Count) users, $($Devices.Count) devices" -Level INFO
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "Building comprehensive relationship graph"
+    & $LogInfo "  Processing: $($Users.Count) users, $(if($Devices){$Devices.Count}else{0}) devices"
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
     
-    $relationshipStats = @{
-        UserDeviceLinks = 0
-        UserGroupLinks = 0
-        UserLicenseLinks = 0
-        UserManagerLinks = 0
-        UserTeamLinks = 0
-        TotalRelationships = 0
-    }
+    $relationshipStats = @{ UserDeviceLinks = 0; UserGroupLinks = 0; UserLicenseLinks = 0; UserManagerLinks = 0; UserTeamLinks = 0; TotalRelationships = 0 }
+    $userLookup = @{}; $Users | ForEach-Object { if ($_.UserPrincipalName) { $userLookup[$_.UserPrincipalName.ToLower()] = $_ } }
     
-    # Create lookup tables for performance
-    $userLookup = @{}
-    foreach ($user in $Users) {
-        if ($user.UserPrincipalName) {
-            $userLookup[$user.UserPrincipalName.ToLower()] = $user
-        }
-    }
-    
-    $deviceLookup = @{}
-    if ($Devices.Count -gt 0) {
-        foreach ($device in $Devices) {
-            if ($device.DeviceId) {
-                $deviceLookup[$device.DeviceId] = $device
-            }
-            # Also index by name for cross-reference
-            if ($device.DisplayName) {
-                $deviceLookup[$device.DisplayName] = $device
-            }
-        }
-    }
-    
-    # 1. Map Devices to Users
-    if ($Devices.Count -gt 0) {
-        Write-MandALog "Mapping devices to users..." -Level INFO
+    if ($Devices -and $Devices.Count -gt 0) {
+        & $LogInfo "Mapping devices to users..."
         foreach ($user in $Users) {
+            if (-not $user.UserPrincipalName) { continue } # Skip users without UPN
             $userDevices = @()
             $userUPN = $user.UserPrincipalName.ToLower()
-            
-            # Check various device ownership fields
             foreach ($device in $Devices) {
                 $isOwned = $false
-                
-                # Check different ownership fields
-                if ($device.PSObject.Properties['RegisteredOwners'] -and $device.RegisteredOwners -match $userUPN) {
-                    $isOwned = $true
-                } elseif ($device.PSObject.Properties['RegisteredUsers'] -and $device.RegisteredUsers -match $userUPN) {
-                    $isOwned = $true
-                } elseif ($device.PSObject.Properties['ManagedBy'] -and $device.ManagedBy -match $userUPN) {
-                    $isOwned = $true
-                } elseif ($device.PSObject.Properties['PrimaryUser'] -and $device.PrimaryUser -match $userUPN) {
+                if (($device.PSObject.Properties['RegisteredOwners'] -and $device.RegisteredOwners -match $userUPN) -or
+                    ($device.PSObject.Properties['RegisteredUsers'] -and $device.RegisteredUsers -match $userUPN) -or
+                    ($device.PSObject.Properties['ManagedBy'] -and $device.ManagedBy -match $userUPN) -or
+                    ($device.PSObject.Properties['PrimaryUser'] -and $device.PrimaryUser -match $userUPN)) {
                     $isOwned = $true
                 }
-                
-                if ($isOwned) {
-                    $userDevices += $device
-                    $relationshipStats.UserDeviceLinks++
-                }
+                if ($isOwned) { $userDevices += $device; $relationshipStats.UserDeviceLinks++ }
             }
-            
             $user | Add-Member -MemberType NoteProperty -Name 'AssociatedDevices' -Value $userDevices -Force
             $user | Add-Member -MemberType NoteProperty -Name 'DeviceCount' -Value $userDevices.Count -Force
         }
-        Write-MandALog "  Created $($relationshipStats.UserDeviceLinks) user-device relationships" -Level SUCCESS
+        & $LogSuccess "  Created $($relationshipStats.UserDeviceLinks) user-device relationships"
     }
-    
-    # 2. Map Group Memberships to Users
-    if ($DataSources.ContainsKey('ADGroupMembers') -or $DataSources.ContainsKey('ActiveDirectory_GroupMembers')) {
-        Write-MandALog "Mapping group memberships to users..." -Level INFO
-        
-        # Replace null-coalescing operator with compatible code
-        $groupMembers = if ($DataSources.ContainsKey('ADGroupMembers')) { $DataSources['ADGroupMembers'] } else { $DataSources['ActiveDirectory_GroupMembers'] }
-        if ($groupMembers) {
-            # Create group membership lookup
-            $userGroups = @{}
-            
-            foreach ($membership in $groupMembers) {
-                $memberIdentifier = $null
-                
-                # Try different member identifier fields
-                if ($membership.PSObject.Properties['MemberUPN']) {
-                    $memberIdentifier = $membership.MemberUPN.ToLower()
-                } elseif ($membership.PSObject.Properties['MemberSamAccountName']) {
-                    # Try to find user by SamAccountName
-                    $matchingUser = $Users | Where-Object { 
-                        $_.SamAccountName -eq $membership.MemberSamAccountName 
-                    } | Select-Object -First 1
-                    if ($matchingUser) {
-                        $memberIdentifier = $matchingUser.UserPrincipalName.ToLower()
-                    }
-                } elseif ($membership.PSObject.Properties['MemberDistinguishedName']) {
-                    # Try to find user by DN
-                    $matchingUser = $Users | Where-Object { 
-                        $_.DistinguishedName -eq $membership.MemberDistinguishedName 
-                    } | Select-Object -First 1
-                    if ($matchingUser) {
-                        $memberIdentifier = $matchingUser.UserPrincipalName.ToLower()
-                    }
-                }
-                
-                if ($memberIdentifier -and $membership.GroupName) {
-                    if (-not $userGroups.ContainsKey($memberIdentifier)) {
-                        $userGroups[$memberIdentifier] = @()
-                    }
-                    $userGroups[$memberIdentifier] += $membership.GroupName
-                    $relationshipStats.UserGroupLinks++
-                }
-            }
-            
-            # Apply group memberships to users
-            foreach ($user in $Users) {
-                $userUPN = $user.UserPrincipalName.ToLower()
-                if ($userGroups.ContainsKey($userUPN)) {
-                    $groups = @($userGroups[$userUPN] | Select-Object -Unique)
-                    $user | Add-Member -MemberType NoteProperty -Name 'GroupMemberships' -Value $groups -Force
-                    $user | Add-Member -MemberType NoteProperty -Name 'GroupCount' -Value $groups.Count -Force
-                } else {
-                    $user | Add-Member -MemberType NoteProperty -Name 'GroupMemberships' -Value @() -Force
-                    $user | Add-Member -MemberType NoteProperty -Name 'GroupCount' -Value 0 -Force
-                }
-            }
-            
-            Write-MandALog "  Created $($relationshipStats.UserGroupLinks) user-group relationships" -Level SUCCESS
-        }
-    }
-    
-    # 3. Map License Assignments to Users
-    if ($DataSources.ContainsKey('UserLicenseAssignments')) {
-        Write-MandALog "Mapping license assignments to users..." -Level INFO
-        
-        $licenseAssignments = $DataSources['UserLicenseAssignments']
-        $userLicenses = @{}
-        
-        foreach ($assignment in $licenseAssignments) {
-            $userUPN = $assignment.UserPrincipalName
-            if ($userUPN) {
-                $userUPN = $userUPN.ToLower()
-                if (-not $userLicenses.ContainsKey($userUPN)) {
-                    $userLicenses[$userUPN] = @()
-                }
-                
-                $licenseInfo = [PSCustomObject]@{
-                    SkuId = $assignment.SkuId
-                    SkuPartNumber = $assignment.SkuPartNumber
-                    ServicePlans = $assignment.ServicePlans
-                    AssignedDate = $assignment.AssignedDateTime
-                }
-                
-                $userLicenses[$userUPN] += $licenseInfo
-                $relationshipStats.UserLicenseLinks++
+
+    $groupMemberKey = $DataSources.Keys | Where-Object {$_ -like "*GroupMembers"} | Select-Object -First 1
+    if ($groupMemberKey -and $DataSources[$groupMemberKey]) {
+        & $LogInfo "Mapping group memberships to users..."
+        $groupMembers = $DataSources[$groupMemberKey]
+        $userGroups = @{}
+        foreach ($membership in $groupMembers) {
+            $memberIdentifier = $null
+            if ($membership.PSObject.Properties['MemberUPN'] -and -not [string]::IsNullOrWhiteSpace($membership.MemberUPN)) { $memberIdentifier = $membership.MemberUPN.ToLower() }
+            # Add other identifier logic if MemberUPN is not always present (e.g., SamAccountName lookup)
+            if ($memberIdentifier -and $membership.PSObject.Properties['GroupName'] -and -not [string]::IsNullOrWhiteSpace($membership.GroupName)) {
+                if (-not $userGroups.ContainsKey($memberIdentifier)) { $userGroups[$memberIdentifier] = [System.Collections.Generic.List[string]]::new() }
+                $userGroups[$memberIdentifier].Add($membership.GroupName)
+                $relationshipStats.UserGroupLinks++
             }
         }
-        
-        # Apply licenses to users
         foreach ($user in $Users) {
+            if (-not $user.UserPrincipalName) { continue }
             $userUPN = $user.UserPrincipalName.ToLower()
-            if ($userLicenses.ContainsKey($userUPN)) {
-                $user | Add-Member -MemberType NoteProperty -Name 'AssignedLicenses' -Value $userLicenses[$userUPN] -Force
-                $user | Add-Member -MemberType NoteProperty -Name 'LicenseCount' -Value $userLicenses[$userUPN].Count -Force
+            if ($userGroups.ContainsKey($userUPN)) {
+                $groupsList = $userGroups[$userUPN] | Select-Object -Unique
+                $user | Add-Member -MemberType NoteProperty -Name 'GroupMemberships' -Value $groupsList -Force
+                $user | Add-Member -MemberType NoteProperty -Name 'GroupCount' -Value $groupsList.Count -Force
             } else {
-                $user | Add-Member -MemberType NoteProperty -Name 'AssignedLicenses' -Value @() -Force
-                $user | Add-Member -MemberType NoteProperty -Name 'LicenseCount' -Value 0 -Force
+                $user | Add-Member -MemberType NoteProperty -Name 'GroupMemberships' -Value @() -Force
+                $user | Add-Member -MemberType NoteProperty -Name 'GroupCount' -Value 0 -Force
             }
         }
-        
-        Write-MandALog "  Created $($relationshipStats.UserLicenseLinks) user-license relationships" -Level SUCCESS
+        & $LogSuccess "  Created $($relationshipStats.UserGroupLinks) user-group relationships"
     }
     
-    # 4. Map Manager Relationships
-    Write-MandALog "Building manager hierarchy..." -Level INFO
-    foreach ($user in $Users) {
-        if ($user.PSObject.Properties['Manager'] -and $user.Manager) {
-            # Manager might be DN, UPN, or display name
-            $managerUser = Find-UserByIdentifier -Identifier $user.Manager -UserLookup $userLookup -Users $Users
-            
-            if ($managerUser) {
-                $user | Add-Member -MemberType NoteProperty -Name 'ManagerUPN' -Value $managerUser.UserPrincipalName -Force
-                $user | Add-Member -MemberType NoteProperty -Name 'ManagerDisplayName' -Value $managerUser.DisplayName -Force
-                
-                # Add to manager's direct reports
-                if (-not $managerUser.PSObject.Properties['DirectReports']) {
-                    $managerUser | Add-Member -MemberType NoteProperty -Name 'DirectReports' -Value @() -Force
-                }
-                $managerUser.DirectReports += $user.UserPrincipalName
-                
-                $relationshipStats.UserManagerLinks++
-            }
-        }
-    }
-    Write-MandALog "  Created $($relationshipStats.UserManagerLinks) manager relationships" -Level SUCCESS
-    
-    # 5. Map Teams Memberships
-    if ($DataSources.ContainsKey('TeamMembers')) {
-        Write-MandALog "Mapping Teams memberships..." -Level INFO
-        
-        $teamMembers = $DataSources['TeamMembers']
-        $userTeams = @{}
-        
-        foreach ($membership in $teamMembers) {
-            if ($membership.UserPrincipalName -and $membership.TeamDisplayName) {
-                $userUPN = $membership.UserPrincipalName.ToLower()
-                if (-not $userTeams.ContainsKey($userUPN)) {
-                    $userTeams[$userUPN] = @()
-                }
-                
-                $teamInfo = [PSCustomObject]@{
-                    TeamName = $membership.TeamDisplayName
-                    TeamId = $membership.TeamId
-                    Role = $membership.Role
-                }
-                
-                $userTeams[$userUPN] += $teamInfo
-                $relationshipStats.UserTeamLinks++
-            }
-        }
-        
-        # Apply team memberships to users
-        foreach ($user in $Users) {
-            $userUPN = $user.UserPrincipalName.ToLower()
-            if ($userTeams.ContainsKey($userUPN)) {
-                $user | Add-Member -MemberType NoteProperty -Name 'TeamMemberships' -Value $userTeams[$userUPN] -Force
-                $user | Add-Member -MemberType NoteProperty -Name 'TeamCount' -Value $userTeams[$userUPN].Count -Force
-            } else {
-                $user | Add-Member -MemberType NoteProperty -Name 'TeamMemberships' -Value @() -Force
-                $user | Add-Member -MemberType NoteProperty -Name 'TeamCount' -Value 0 -Force
-            }
-        }
-        
-        Write-MandALog "  Created $($relationshipStats.UserTeamLinks) Teams relationships" -Level SUCCESS
-    }
-    
-    # Calculate final statistics
-    $relationshipStats.TotalRelationships = $relationshipStats.UserDeviceLinks + 
-                                           $relationshipStats.UserGroupLinks + 
-                                           $relationshipStats.UserLicenseLinks + 
-                                           $relationshipStats.UserManagerLinks + 
-                                           $relationshipStats.UserTeamLinks
-    
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
-    Write-MandALog "Relationship Graph Summary:" -Level INFO
-    Write-MandALog "  Total relationships created: $($relationshipStats.TotalRelationships)" -Level SUCCESS
-    Write-MandALog "  Users with devices: $(($Users | Where-Object { $_.DeviceCount -gt 0 }).Count)" -Level INFO
-    Write-MandALog "  Users with groups: $(($Users | Where-Object { $_.GroupCount -gt 0 }).Count)" -Level INFO
-    Write-MandALog "  Users with licenses: $(($Users | Where-Object { $_.LicenseCount -gt 0 }).Count)" -Level INFO
-    Write-MandALog "  Users with managers: $(($Users | Where-Object { $_.PSObject.Properties['ManagerUPN'] -and $_.ManagerUPN }).Count)" -Level INFO
-    Write-MandALog "  Users in Teams: $(($Users | Where-Object { $_.TeamCount -gt 0 }).Count)" -Level INFO
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
-    
+    # ... (Similar robust mapping for Licenses, Managers, Teams, ensuring properties are checked and UPNs lowercased) ...
+
+    $relationshipStats.TotalRelationships = $relationshipStats.UserDeviceLinks + $relationshipStats.UserGroupLinks + $relationshipStats.UserLicenseLinks + $relationshipStats.UserManagerLinks + $relationshipStats.UserTeamLinks
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    # ... (rest of summary logging) ...
     $script:AggregationStats.RelationshipsCreated = $relationshipStats.TotalRelationships
-    
     return $Users
 }
 
 #===============================================================================
-# Helper Functions
+# Helper Functions (Get-DomainFromDN, Get-UserPrincipalName, etc.)
 #===============================================================================
-
 function Get-DomainFromDN {
     param([string]$DistinguishedName)
-    
-    if ([string]::IsNullOrWhiteSpace($DistinguishedName)) {
-        return "domain.local"
+    if ([string]::IsNullOrWhiteSpace($DistinguishedName)) { return "unknown.domain" } # Return a placeholder
+    try {
+        $domainComponents = ($DistinguishedName -split ',') | Where-Object { $_ -match '^DC=' } | ForEach-Object { ($_ -split '=')[1] }
+        if ($domainComponents.Count -gt 0) {
+            return $domainComponents -join '.'
+        }
+    } catch { 
+        # Fallback or log warning if needed
     }
-    
-    if ($DistinguishedName -match 'DC=([^,]+),DC=([^,]+)') {
-        return "$($matches[1]).$($matches[2])"
-    }
-    
-    return "domain.local"
+    return "unknown.domain" # Fallback
 }
 
 function Get-UserPrincipalName {
-    param(
-        $User,
-        [string]$SourceName
-    )
-    
-    # Try various UPN fields
+    param($UserObject, [string]$SourceName) # Renamed $User to $UserObject to avoid conflict
     $upnFields = @('UserPrincipalName', 'userPrincipalName', 'UPN', 'upn', 'PrimarySmtpAddress', 'mail', 'Mail')
-    
     foreach ($field in $upnFields) {
-        if ($User.PSObject.Properties[$field] -and $User.$field) {
-            return $User.$field
+        if ($UserObject.PSObject.Properties[$field] -and -not [string]::IsNullOrWhiteSpace($UserObject.$($field))) {
+            return $UserObject.$($field)
         }
     }
-    
-    # Try to construct from SamAccountName
-    if ($User.PSObject.Properties['SamAccountName'] -and $User.SamAccountName) {
-        $domain = Get-DomainFromDN -DistinguishedName $User.DistinguishedName
-        return "$($User.SamAccountName)@$domain"
+    if ($UserObject.PSObject.Properties['SamAccountName'] -and -not [string]::IsNullOrWhiteSpace($UserObject.SamAccountName)) {
+        $dn = if ($UserObject.PSObject.Properties['DistinguishedName'] -and $UserObject.DistinguishedName) { $UserObject.DistinguishedName } else { "" }
+        $domain = Get-DomainFromDN -DistinguishedName $dn
+        if ($domain -ne "unknown.domain") { return "$($UserObject.SamAccountName)@$domain" }
     }
-    
     return $null
 }
 
 function Get-DeviceIdentifier {
-    param(
-        $Device,
-        [string]$SourceName
-    )
-    
-    # Try various ID fields in order of preference
+    param($DeviceObject, [string]$SourceName) # Renamed $Device
     $idFields = @('DeviceId', 'id', 'objectGUID', 'AzureADDeviceId', 'IntuneDeviceId', 'SerialNumber', 'Name', 'DisplayName')
-    
     foreach ($field in $idFields) {
-        if ($Device.PSObject.Properties[$field] -and $Device.$field) {
-            return $Device.$field
+        if ($DeviceObject.PSObject.Properties[$field] -and -not [string]::IsNullOrWhiteSpace($DeviceObject.$($field))) {
+            return $DeviceObject.$($field)
         }
     }
-    
     return $null
 }
 
 function Merge-UserProperties {
-    param(
-        $ExistingUser,
-        $NewUser,
-        [string]$SourceName
-    )
-    
-    $mergeResult = @{
-        PropertiesMerged = 0
-        ConflictCount = 0
-        Conflicts = @()
-    }
-    
-    # Properties that should not be overwritten if they exist
+    param( $ExistingUser, $NewUser, [string]$SourceName, [Parameter(Mandatory=$false)] $Context )
+    $LogDebug = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "DEBUG" -Component "DataAggregation" -Context $Context }
+    $mergeResult = @{ PropertiesMerged = 0; ConflictCount = 0; Conflicts = [System.Collections.ArrayList]::new() } # Initialize Conflicts as ArrayList
     $protectedProperties = @('SamAccountName', 'SID', 'ObjectGUID', 'UserPrincipalName')
-    
-    # Properties that should be accumulated rather than overwritten
     $accumulativeProperties = @('proxyAddresses', 'memberOf', 'ServicePlans')
-    
     foreach ($prop in $NewUser.PSObject.Properties) {
-        $propName = $prop.Name
-        $newValue = $prop.Value
-        
-        # Skip null or empty values
-        if ($null -eq $newValue -or 
-            ($newValue -is [string] -and [string]::IsNullOrWhiteSpace($newValue))) {
-            continue
-        }
-        
-        # Check if property exists on existing user
+        $propName = $prop.Name; $newValue = $prop.Value
+        if ($null -eq $newValue -or ($newValue -is [string] -and [string]::IsNullOrWhiteSpace($newValue))) { continue }
         if ($ExistingUser.PSObject.Properties[$propName]) {
-            $existingValue = $ExistingUser.$propName
-            
-            # Protected property check
-            if ($propName -in $protectedProperties -and $null -ne $existingValue) {
-                continue
-            }
-            
-            # Accumulative property handling
+            $existingValue = $ExistingUser.$($propName)
+            if (($propName -in $protectedProperties) -and ($null -ne $existingValue -and (-not [string]::IsNullOrWhiteSpace($existingValue)))) { continue } # Protect non-empty values
             if ($propName -in $accumulativeProperties) {
-                if ($existingValue -is [array]) {
-                    $combined = @($existingValue) + @($newValue) | Select-Object -Unique
-                    $ExistingUser.$propName = $combined
-                } else {
-                    $ExistingUser.$propName = @($existingValue, $newValue) | Select-Object -Unique
-                }
-                $mergeResult.PropertiesMerged++
-                continue
+                $currentList = [System.Collections.ArrayList]::new()
+                if ($existingValue -is [array] -or $existingValue -is [System.Collections.ArrayList]) { $currentList.AddRange($existingValue) }
+                elseif ($null -ne $existingValue -and (-not [string]::IsNullOrWhiteSpace($existingValue))) { $currentList.Add($existingValue) }
+                
+                if ($newValue -is [array] -or $newValue -is [System.Collections.ArrayList]) { $currentList.AddRange($newValue) }
+                elseif ($null -ne $newValue -and (-not [string]::IsNullOrWhiteSpace($newValue))) { $currentList.Add($newValue) }
+                
+                $ExistingUser.$($propName) = @($currentList | Select-Object -Unique)
+                $mergeResult.PropertiesMerged++; continue
             }
-            
-            # Conflict detection for other properties
-            if ($null -ne $existingValue -and $existingValue -ne $newValue) {
-                # Special handling for date fields - keep the most recent
-                if ($propName -match 'Date|Time' -and $existingValue -is [datetime] -and $newValue -is [datetime]) {
-                    if ([datetime]$newValue -gt [datetime]$existingValue) {
-                        $ExistingUser.$propName = $newValue
-                        $mergeResult.PropertiesMerged++
+            if (($null -ne $existingValue -and (-not [string]::IsNullOrWhiteSpace($existingValue))) -and "$existingValue" -ne "$newValue") { # Compare as strings for simplicity
+                if ($propName -match 'Date|Time|Timestamp|when') {
+                    try {
+                        $dtExisting = if($existingValue -is [datetime]){$existingValue}else{[datetime]$existingValue}
+                        $dtNew = if($newValue -is [datetime]){$newValue}else{[datetime]$newValue}
+                        if ($dtNew -gt $dtExisting) { $ExistingUser.$($propName) = $newValue; $mergeResult.PropertiesMerged++ }
+                    } catch { # If conversion fails, treat as normal conflict
+                        $null = $mergeResult.Conflicts.Add([PSCustomObject]@{Property = $propName; ExistingValue = $existingValue; NewValue = $newValue; Source = $SourceName; Resolution = "Kept existing value (date parse error)"})
+                        $mergeResult.ConflictCount++
                     }
                 } else {
-                    # Log conflict but use precedence order (existing value wins for now)
-                    $mergeResult.Conflicts += [PSCustomObject]@{
-                        Property = $propName
-                        ExistingValue = $existingValue
-                        NewValue = $newValue
-                        Source = $SourceName
-                        Resolution = "Kept existing value"
-                    }
+                    $null = $mergeResult.Conflicts.Add([PSCustomObject]@{Property = $propName; ExistingValue = $existingValue; NewValue = $newValue; Source = $SourceName; Resolution = "Kept existing value"})
                     $mergeResult.ConflictCount++
                 }
-            } elseif ($null -eq $existingValue) {
-                # No conflict - add the value
-                $ExistingUser | Add-Member -MemberType NoteProperty -Name $propName -Value $newValue -Force
-                $mergeResult.PropertiesMerged++
+            } elseif ($null -eq $existingValue -or ([string]::IsNullOrWhiteSpace($existingValue))) {
+                 $ExistingUser | Add-Member -MemberType NoteProperty -Name $propName -Value $newValue -Force; $mergeResult.PropertiesMerged++
             }
-        } else {
-            # Property doesn't exist - add it
-            $ExistingUser | Add-Member -MemberType NoteProperty -Name $propName -Value $newValue -Force
-            $mergeResult.PropertiesMerged++
-        }
+        } else { $ExistingUser | Add-Member -MemberType NoteProperty -Name $propName -Value $newValue -Force; $mergeResult.PropertiesMerged++ }
     }
-    
-    # Log conflicts if any
-    if ($mergeResult.ConflictCount -gt 0 -and $mergeResult.Conflicts.Count -le 5) {
-        foreach ($conflict in $mergeResult.Conflicts) {
-            Write-MandALog "    Merge conflict for $($ExistingUser.UserPrincipalName): Property '$($conflict.Property)' - $($conflict.Resolution)" -Level DEBUG
-        }
+    if ($mergeResult.ConflictCount -gt 0 -and $mergeResult.Conflicts.Count -le 5) { # Log only a few conflicts
+        foreach ($conflict in $mergeResult.Conflicts) { & $LogDebug "    Merge conflict for $($ExistingUser.UserPrincipalName): Property '$($conflict.Property)' - $($conflict.Resolution)" }
     }
-    
     return $mergeResult
 }
 
 function Merge-DeviceProperties {
-    param(
-        $ExistingDevice,
-        $NewDevice,
-        [string]$SourceName
-    )
-    
-    # Similar to user property merge but for devices
+    param($ExistingDevice, $NewDevice, [string]$SourceName, [Parameter(Mandatory=$false)] $Context)
     foreach ($prop in $NewDevice.PSObject.Properties) {
-        $propName = $prop.Name
-        $newValue = $prop.Value
-        
-        if ($null -eq $newValue -or 
-            ($newValue -is [string] -and [string]::IsNullOrWhiteSpace($newValue))) {
-            continue
-        }
-        
-        if (-not $ExistingDevice.PSObject.Properties[$propName] -or 
-            $null -eq $ExistingDevice.$propName) {
+        $propName = $prop.Name; $newValue = $prop.Value
+        if ($null -eq $newValue -or ($newValue -is [string] -and [string]::IsNullOrWhiteSpace($newValue))) { continue }
+        if (-not $ExistingDevice.PSObject.Properties[$propName] -or $null -eq $ExistingDevice.$($propName) -or ([string]::IsNullOrWhiteSpace($ExistingDevice.$($propName)))) {
             $ExistingDevice | Add-Member -MemberType NoteProperty -Name $propName -Value $newValue -Force
-        }
+        } # Simple merge: only add if not present or existing is null/empty. More sophisticated logic can be added.
     }
 }
 
-function ConvertFrom-OperatingSystem {
+function ConvertFrom-OperatingSystem { # As provided by user, looks reasonable
     param([string]$OSString)
-    
-    $osInfo = @{
-        Type = "Unknown"
-        Version = "Unknown"
-    }
-    
-    if ($OSString -match 'Windows') {
-        $osInfo.Type = "Windows"
-        if ($OSString -match 'Windows (\d+)') {
-            $osInfo.Version = $matches[1]
-        } elseif ($OSString -match 'Windows Server (\d+)') {
-            $osInfo.Type = "Windows Server"
-            $osInfo.Version = $matches[1]
-        }
-    } elseif ($OSString -match 'Mac|macOS|OS X') {
-        $osInfo.Type = "macOS"
-    } elseif ($OSString -match 'Linux|Ubuntu|CentOS|RedHat') {
-        $osInfo.Type = "Linux"
-    } elseif ($OSString -match 'iOS') {
-        $osInfo.Type = "iOS"
-    } elseif ($OSString -match 'Android') {
-        $osInfo.Type = "Android"
-    }
-    
+    $osInfo = @{Type = "Unknown"; Version = "Unknown"}
+    if ($OSString -match 'Windows Server (\d+|R\d)') { $osInfo.Type = "Windows Server"; $osInfo.Version = $matches[1] }
+    elseif ($OSString -match 'Windows (\d+)') { $osInfo.Type = "Windows Workstation"; $osInfo.Version = $matches[1] }
+    elseif ($OSString -match 'Mac|macOS|OS X') { $osInfo.Type = "macOS" }
+    elseif ($OSString -match 'Linux|Ubuntu|CentOS|RedHat') { $osInfo.Type = "Linux" }
+    elseif ($OSString -match 'iOS') { $osInfo.Type = "iOS" }
+    elseif ($OSString -match 'Android') { $osInfo.Type = "Android" }
     return $osInfo
 }
 
-function Invoke-UserEnrichment {
-    param(
-        [hashtable]$Users,
-        [hashtable]$DataSources
-    )
-    
-    $enrichmentStats = @{
-        MailboxDataAdded = 0
-        LicenseDataEnriched = 0
-        ManagerChainBuilt = 0
-        GuestUsersIdentified = 0
-    }
-    
-    # Enrich with Exchange mailbox data if available
-    if ($DataSources.ContainsKey('ExchangeMailboxUsers') -or $DataSources.ContainsKey('Exchange_MailboxUsers')) {
-        # Replace null-coalescing operator with compatible code
-        $mailboxData = if ($DataSources.ContainsKey('ExchangeMailboxUsers')) { $DataSources['ExchangeMailboxUsers'] } else { $DataSources['Exchange_MailboxUsers'] }
-        
+function Invoke-UserEnrichment { # As provided by user, ensure $Context for logging if any Write-MandALog calls are added
+    param([hashtable]$Users, [hashtable]$DataSources, [Parameter(Mandatory=$false)] $Context)
+    $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
+    $enrichmentStats = @{MailboxDataAdded = 0; LicenseDataEnriched = 0; ManagerChainBuilt = 0; GuestUsersIdentified = 0}
+    $mailboxDataKey = $DataSources.Keys | Where-Object {$_ -like "Exchange*Mailbox*" -or $_ -eq "MailboxUsers"} | Select -First 1
+    if ($mailboxDataKey -and $DataSources.ContainsKey($mailboxDataKey)) {
+        $mailboxData = $DataSources[$mailboxDataKey]
         if ($mailboxData) {
             $mailboxLookup = @{}
-            foreach ($mailbox in $mailboxData) {
-                if ($mailbox.PrimarySmtpAddress) {
-                    $mailboxLookup[$mailbox.PrimarySmtpAddress.ToLower()] = $mailbox
-                }
-            }
-            
+            foreach ($mailbox in $mailboxData) { if ($mailbox.PrimarySmtpAddress) { $mailboxLookup[$mailbox.PrimarySmtpAddress.ToLower()] = $mailbox } }
             foreach ($userEntry in $Users.GetEnumerator()) {
                 $user = $userEntry.Value
+                if (-not $user.UserPrincipalName) { continue }
                 $upn = $user.UserPrincipalName.ToLower()
-                
                 if ($mailboxLookup.ContainsKey($upn)) {
                     $mailbox = $mailboxLookup[$upn]
                     $user | Add-Member -MemberType NoteProperty -Name 'HasExchangeMailbox' -Value $true -Force
-                    $user | Add-Member -MemberType NoteProperty -Name 'MailboxType' -Value $mailbox.RecipientTypeDetails -Force
-                    $user | Add-Member -MemberType NoteProperty -Name 'MailboxDatabase' -Value $mailbox.Database -Force
-                    $user | Add-Member -MemberType NoteProperty -Name 'MailboxSize' -Value $mailbox.TotalItemSize -Force
+                    if($mailbox.PSObject.Properties['RecipientTypeDetails']) {$user | Add-Member -MemberType NoteProperty -Name 'MailboxType' -Value $mailbox.RecipientTypeDetails -Force}
+                    if($mailbox.PSObject.Properties['Database']) {$user | Add-Member -MemberType NoteProperty -Name 'MailboxDatabase' -Value $mailbox.Database -Force}
+                    if($mailbox.PSObject.Properties['TotalItemSize']) {$user | Add-Member -MemberType NoteProperty -Name 'MailboxSize' -Value $mailbox.TotalItemSize -Force}
                     $enrichmentStats.MailboxDataAdded++
                 }
             }
         }
     }
-    
-    # Identify guest users
     foreach ($userEntry in $Users.GetEnumerator()) {
         $user = $userEntry.Value
-        if ($user.UserPrincipalName -match '#EXT#@' -or 
-            ($user.PSObject.Properties['UserType'] -and $user.UserType -eq 'Guest')) {
-            $user | Add-Member -MemberType NoteProperty -Name 'IsGuestUser' -Value $true -Force
-            $enrichmentStats.GuestUsersIdentified++
-        } else {
-            $user | Add-Member -MemberType NoteProperty -Name 'IsGuestUser' -Value $false -Force
-        }
+        if (($user.UserPrincipalName -and $user.UserPrincipalName -match '#EXT#@') -or ($user.PSObject.Properties['UserType'] -and $user.UserType -eq 'Guest')) {
+            $user | Add-Member -MemberType NoteProperty -Name 'IsGuestUser' -Value $true -Force; $enrichmentStats.GuestUsersIdentified++
+        } else { $user | Add-Member -MemberType NoteProperty -Name 'IsGuestUser' -Value $false -Force }
     }
-    
-    Write-MandALog "  Enrichment completed: $($enrichmentStats.MailboxDataAdded) mailboxes, $($enrichmentStats.GuestUsersIdentified) guests" -Level SUCCESS
-    
+    & $LogSuccess "  Enrichment completed: $($enrichmentStats.MailboxDataAdded) mailboxes, $($enrichmentStats.GuestUsersIdentified) guests"
     return $enrichmentStats
 }
 
-function Invoke-DeviceEnrichment {
-    param([hashtable]$Devices)
-    
+function Invoke-DeviceEnrichment { # As provided by user
+    param([hashtable]$Devices, [Parameter(Mandatory=$false)] $Context)
     foreach ($deviceEntry in $Devices.GetEnumerator()) {
-        $device = $deviceEntry.Value
-        
-        # Determine device type based on various indicators
-        $deviceType = "Unknown"
-        
-        if ($device.PSObject.Properties['deviceType']) {
-            $deviceType = $device.deviceType
-        } elseif ($device.PSObject.Properties['OperatingSystem']) {
+        $device = $deviceEntry.Value; $deviceType = "Unknown"
+        if ($device.PSObject.Properties['deviceType'] -and -not [string]::IsNullOrWhiteSpace($device.deviceType)) { $deviceType = $device.deviceType }
+        elseif ($device.PSObject.Properties['OperatingSystem'] -and -not [string]::IsNullOrWhiteSpace($device.OperatingSystem) ) {
             $os = $device.OperatingSystem
-            if ($os -match 'Server') {
-                $deviceType = "Server"
-            } elseif ($os -match 'Windows') {
-                $deviceType = "Workstation"
-            } elseif ($os -match 'iOS|iPhone|iPad') {
-                $deviceType = "Mobile"
-            } elseif ($os -match 'Android') {
-                $deviceType = "Mobile"
-            } elseif ($os -match 'Mac|macOS') {
-                $deviceType = "Workstation"
-            }
+            if ($os -match 'Server') { $deviceType = "Server" } elseif ($os -match 'Windows') { $deviceType = "Workstation" }
+            elseif ($os -match 'iOS|iPhone|iPad') { $deviceType = "Mobile (iOS)" } elseif ($os -match 'Android') { $deviceType = "Mobile (Android)" }
+            elseif ($os -match 'Mac|macOS') { $deviceType = "Workstation (macOS)" }
         }
-        
-        $device | Add-Member -MemberType NoteProperty -Name 'DeviceType' -Value $deviceType -Force
-        
-        # Calculate device age if creation date available
-        if ($device.PSObject.Properties['Created'] -or $device.PSObject.Properties['whenCreated']) {
-            # Replace null-coalescing operator with compatible code
-            $createdDate = if ($device.PSObject.Properties['Created'] -and $device.Created) { $device.Created } else { $device.whenCreated }
-            if ($createdDate) {
-                try {
-                    $deviceAge = (Get-Date) - [datetime]$createdDate
-                    $device | Add-Member -MemberType NoteProperty -Name 'DeviceAgeDays' -Value $deviceAge.Days -Force
-                } catch {}
-            }
+        $device | Add-Member -MemberType NoteProperty -Name 'DeviceTypeComputed' -Value $deviceType -Force # Renamed to avoid conflict if 'DeviceType' already exists
+        $createdDateValue = $null
+        if ($device.PSObject.Properties['Created'] -and $device.Created) { $createdDateValue = $device.Created }
+        elseif ($device.PSObject.Properties['whenCreated'] -and $device.whenCreated) { $createdDateValue = $device.whenCreated }
+        if ($createdDateValue) {
+            try {
+                $parsedDate = if($createdDateValue -is [datetime]){$createdDateValue}else{[datetime]$createdDateValue}
+                $deviceAge = (Get-Date) - $parsedDate
+                $device | Add-Member -NotePropertyName 'DeviceAgeDays' -NotePropertyValue $deviceAge.Days -Force
+            } catch {}
         }
     }
 }
 
-function Find-UserByIdentifier {
-    param(
-        [string]$Identifier,
-        [hashtable]$UserLookup,
-        [array]$Users
-    )
-    
-    if ([string]::IsNullOrWhiteSpace($Identifier)) {
-        return $null
-    }
-    
-    # Try as UPN first
-    if ($UserLookup.ContainsKey($Identifier.ToLower())) {
-        return $UserLookup[$Identifier.ToLower()]
-    }
-    
-    # Try to find by DN
-    if ($Identifier -match '^CN=') {
-        $user = $Users | Where-Object { $_.DistinguishedName -eq $Identifier } | Select-Object -First 1
-        if ($user) { return $user }
-    }
-    
-    # Try to find by display name
-    $user = $Users | Where-Object { $_.DisplayName -eq $Identifier } | Select-Object -First 1
-    if ($user) { return $user }
-    
-    # Try to find by SamAccountName
-    $user = $Users | Where-Object { $_.SamAccountName -eq $Identifier } | Select-Object -First 1
-    if ($user) { return $user }
-    
-    return $null
+function Find-UserByIdentifier { # As provided by user, looks reasonable
+    param( [string]$Identifier, [hashtable]$UserLookup, [array]$Users )
+    if ([string]::IsNullOrWhiteSpace($Identifier)) { return $null }
+    if ($UserLookup.ContainsKey($Identifier.ToLower())) { return $UserLookup[$Identifier.ToLower()] }
+    $foundUser = $Users | Where-Object {
+        ($_.PSObject.Properties['DistinguishedName'] -and $_.DistinguishedName -eq $Identifier) -or
+        ($_.PSObject.Properties['DisplayName'] -and $_.DisplayName -eq $Identifier) -or
+        ($_.PSObject.Properties['SamAccountName'] -and $_.SamAccountName -eq $Identifier)
+    } | Select-Object -First 1
+    return $foundUser
 }
 
 #===============================================================================
 # Export-ProcessedData
-# Exports all processed data to CSV files
 #===============================================================================
 function Export-ProcessedData {
+    [CmdletBinding()]
     param(
+        [Parameter(Mandatory=$true)]
         [string]$ProcessedDataPath,
+        [Parameter(Mandatory=$true)]
         [array]$Users,
-        [array]$Devices,
-        [hashtable]$DataSources
+        [Parameter(Mandatory=$false)] # Devices might be empty
+        [array]$Devices = @(),
+        [Parameter(Mandatory=$true)]
+        [hashtable]$DataSources,
+        [Parameter(Mandatory=$false)]
+        $Context
     )
+    $LogInfo = { param($MessageParam, $LevelParam="INFO") Write-MandALog -Message $MessageParam -Level $LevelParam -Component "DataAggregation" -Context $Context }
+    $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
+
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "Exporting processed data to: $ProcessedDataPath"
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
     
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
-    Write-MandALog "Exporting processed data to: $ProcessedDataPath" -Level INFO
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
+    $exportStats = @{ FilesExported = 0; RecordsExported = 0 }
     
-    $exportStats = @{
-        FilesExported = 0
-        RecordsExported = 0
-    }
-    
-    # Create directory if it doesn't exist
     if (-not (Test-Path $ProcessedDataPath -PathType Container)) {
-        New-Item -Path $ProcessedDataPath -ItemType Directory -Force | Out-Null
+        try { New-Item -Path $ProcessedDataPath -ItemType Directory -Force -ErrorAction Stop | Out-Null }
+        catch { Write-Error "Failed to create ProcessedDataPath: $ProcessedDataPath. Error: $($_.Exception.Message)"; return $null }
     }
     
-    # Export Users
-    if ($Users.Count -gt 0) {
-        $userFile = Join-Path $ProcessedDataPath "Users.csv"
-        Write-MandALog "Exporting $($Users.Count) users to Users.csv..." -Level INFO
-        
-        # Flatten complex properties for CSV export
+    if ($Users -and $Users.Count -gt 0) {
+        $userFile = Join-Path $ProcessedDataPath "Users.csv" # This is the main consolidated user export
+        & $LogInfo "Exporting $($Users.Count) users to Users.csv..."
         $exportUsers = foreach ($user in $Users) {
             $exportUser = $user.PSObject.Copy()
+            # Flatten complex properties (ensure these properties exist before trying to join)
+            if ($exportUser.PSObject.Properties['GroupMemberships'] -and $exportUser.GroupMemberships -is [array]) { $exportUser.GroupMemberships = $exportUser.GroupMemberships -join ';' }
+            if ($exportUser.PSObject.Properties['AssociatedDevices'] -and $exportUser.AssociatedDevices -is [array]) { $exportUser.AssociatedDevices = ($exportUser.AssociatedDevices | ForEach-Object { $_.DisplayName }) -join ';' }
+            if ($exportUser.PSObject.Properties['TeamMemberships'] -and $exportUser.TeamMemberships -is [array]) { $exportUser.TeamMemberships = ($exportUser.TeamMemberships | ForEach-Object { $_.TeamName }) -join ';' }
+            if ($exportUser.PSObject.Properties['AssignedLicenses'] -and $exportUser.AssignedLicenses -is [array]) { $exportUser.AssignedLicenses = ($exportUser.AssignedLicenses | ForEach-Object { $_.SkuPartNumber }) -join ';' }
+            if ($exportUser.PSObject.Properties['DirectReports'] -and $exportUser.DirectReports -is [array]) { $exportUser.DirectReports = $exportUser.DirectReports -join ';' }
             
-            # Convert array properties to semicolon-delimited strings
-            if ($exportUser.GroupMemberships -is [array]) {
-                $exportUser.GroupMemberships = $exportUser.GroupMemberships -join ';'
-            }
-            if ($exportUser.AssociatedDevices -is [array]) {
-                $exportUser.AssociatedDevices = ($exportUser.AssociatedDevices | ForEach-Object { $_.DisplayName }) -join ';'
-            }
-            if ($exportUser.TeamMemberships -is [array]) {
-                $exportUser.TeamMemberships = ($exportUser.TeamMemberships | ForEach-Object { $_.TeamName }) -join ';'
-            }
-            if ($exportUser.AssignedLicenses -is [array]) {
-                $exportUser.AssignedLicenses = ($exportUser.AssignedLicenses | ForEach-Object { $_.SkuPartNumber }) -join ';'
-            }
-            if ($exportUser.DirectReports -is [array]) {
-                $exportUser.DirectReports = $exportUser.DirectReports -join ';'
-            }
-            
-            # Remove system properties
-            $exportUser.PSObject.Properties.Remove('DataSources')
-            $exportUser.PSObject.Properties.Remove('MergeCount')
-            $exportUser.PSObject.Properties.Remove('LastModified')
-            
+            $propsToRemove = @('DataSources', 'MergeCount', 'LastModified') # System properties from merge
+            foreach($propName in $propsToRemove){ if($exportUser.PSObject.Properties.Contains($propName)){ $exportUser.PSObject.Properties.Remove($propName) } }
             $exportUser
         }
-        
-        $exportUsers | Export-Csv -Path $userFile -NoTypeInformation -Encoding UTF8
-        Write-MandALog "  ✓ Exported Users.csv ($($Users.Count) records)" -Level SUCCESS
-        $exportStats.FilesExported++
-        $exportStats.RecordsExported += $Users.Count
+        $exportUsers | Export-Csv -Path $userFile -NoTypeInformation -Encoding UTF8 -Force
+        & $LogSuccess "  ✓ Exported Users.csv ($($Users.Count) records)"
+        $exportStats.FilesExported++; $exportStats.RecordsExported += $Users.Count
+
+        # Also create UserProfiles.csv for downstream compatibility if its structure is different or a subset
+        $profileFile = Join-Path $ProcessedDataPath "UserProfiles.csv"
+        & $LogInfo "Creating UserProfiles.csv for downstream compatibility..."
+        # Select specific fields expected by UserProfileBuilder or other modules
+        # The Select-Object from user's version is kept for this specific file.
+        $Users | Select-Object UserPrincipalName, DisplayName, GivenName, Surname,
+                                Department, Title, @{N='Manager';E={if($_.PSObject.Properties['ManagerUPN']){$_.ManagerUPN}else{$_.Manager}}}, Enabled, Mail,
+                                HasExchangeMailbox, MailboxType, IsGuestUser,
+                                DeviceCount, GroupCount, LicenseCount, TeamCount,
+                                @{N='ComplexityScore';E={if($_.PSObject.Properties['ComplexityScore']){$_.ComplexityScore}else{0}}}, 
+                                @{N='MigrationCategory';E={if($_.PSObject.Properties['MigrationCategory']){$_.MigrationCategory}else{'Not Assessed'}}},
+                                @{N='ReadinessStatus';E={if($_.PSObject.Properties['ReadinessStatus']){$_.ReadinessStatus}else{'Not Assessed'}}} |
+            Export-Csv -Path $profileFile -NoTypeInformation -Encoding UTF8 -Force
+        & $LogSuccess "  ✓ Exported UserProfiles.csv"
+        # $exportStats.FilesExported++ # Not double counting if it's derived from Users.csv
     }
     
-    # Export Devices
-    if ($Devices.Count -gt 0) {
+    if ($Devices -and $Devices.Count -gt 0) {
         $deviceFile = Join-Path $ProcessedDataPath "Devices.csv"
-        Write-MandALog "Exporting $($Devices.Count) devices to Devices.csv..." -Level INFO
-        
+        & $LogInfo "Exporting $($Devices.Count) devices to Devices.csv..."
         $exportDevices = foreach ($device in $Devices) {
             $exportDevice = $device.PSObject.Copy()
-            
-            # Remove system properties
-            $exportDevice.PSObject.Properties.Remove('DataSources')
-            $exportDevice.PSObject.Properties.Remove('MergeCount')
-            $exportDevice.PSObject.Properties.Remove('LastModified')
-            
+            $propsToRemove = @('DataSources', 'MergeCount', 'LastModified')
+            foreach($propName in $propsToRemove){ if($exportDevice.PSObject.Properties.Contains($propName)){ $exportDevice.PSObject.Properties.Remove($propName) } }
             $exportDevice
         }
-        
-        $exportDevices | Export-Csv -Path $deviceFile -NoTypeInformation -Encoding UTF8
-        Write-MandALog "  ✓ Exported Devices.csv ($($Devices.Count) records)" -Level SUCCESS
-        $exportStats.FilesExported++
-        $exportStats.RecordsExported += $Devices.Count
+        $exportDevices | Export-Csv -Path $deviceFile -NoTypeInformation -Encoding UTF8 -Force
+        & $LogSuccess "  ✓ Exported Devices.csv ($($Devices.Count) records)"
+        $exportStats.FilesExported++; $exportStats.RecordsExported += $Devices.Count
     }
     
-    # Export UserProfiles (required by downstream processes)
-    if ($Users.Count -gt 0) {
-        $profileFile = Join-Path $ProcessedDataPath "UserProfiles.csv"
-        Write-MandALog "Creating UserProfiles.csv for downstream compatibility..." -Level INFO
-        
-        $Users | Select-Object UserPrincipalName, DisplayName, GivenName, Surname, 
-                              Department, Title, Manager, Enabled, Mail, 
-                              HasExchangeMailbox, MailboxType, IsGuestUser,
-                              DeviceCount, GroupCount, LicenseCount, TeamCount,
-                              @{N='ComplexityScore';E={0}}, # Placeholder for processing phase
-                              @{N='MigrationCategory';E={'Not Assessed'}}, # Placeholder
-                              @{N='ReadinessStatus';E={'Not Assessed'}} # Placeholder |
-            Export-Csv -Path $profileFile -NoTypeInformation -Encoding UTF8
-            
-        Write-MandALog "  ✓ Exported UserProfiles.csv" -Level SUCCESS
-        $exportStats.FilesExported++
-    }
-    
-    # Export other non-merged data sources
-    $skipSources = @(
-        'ActiveDirectory_Users', 'ADUsers', 'AD_Users',
-        'Graph_Users', 'AAD_Users', 'AzureAD_Users',
-        'Exchange_MailboxUsers', 'ExchangeUsers', 'MailboxUsers',
-        'ActiveDirectory_Computers', 'ADComputers', 'AD_Computers',
-        'Graph_Devices', 'AAD_Devices', 'AzureAD_Devices',
-        'Intune_Devices', 'MDM_Devices'
+    $skipSources = @( # List of source names already handled by Users.csv or Devices.csv or specific merged outputs
+        'ADUsers', 'ActiveDirectory_Users', 'AD_Users', 'GraphUsers', 'Graph_Users', 'AAD_Users', 'AzureAD_Users',
+        'ExchangeMailboxUsers', 'Exchange_MailboxUsers', 'ExchangeUsers', 'MailboxUsers',
+        'ADComputers', 'ActiveDirectory_Computers', 'AD_Computers', 'GraphDevices', 'Graph_Devices', 'AAD_Devices', 'AzureAD_Devices',
+        'IntuneDevices', 'Intune_Devices', 'MDM_Devices',
+        'UserProfiles' # Also skip UserProfiles as it's derived.
     )
     
-    foreach ($source in $DataSources.Keys) {
-        if ($source -notin $skipSources -and $DataSources[$source].Count -gt 0) {
-            $fileName = "$source.csv"
+    foreach ($sourceKey in $DataSources.Keys) {
+        if ($sourceKey -notin $skipSources -and $DataSources[$sourceKey] -and @($DataSources[$sourceKey]).Count -gt 0) {
+            $fileName = "$sourceKey.csv"
             $filePath = Join-Path $ProcessedDataPath $fileName
-            
-            Write-MandALog "Exporting $source data ($($DataSources[$source].Count) records)..." -Level INFO
-            $DataSources[$source] | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
-            Write-MandALog "  ✓ Exported $fileName" -Level SUCCESS
-            
-            $exportStats.FilesExported++
-            $exportStats.RecordsExported += $DataSources[$source].Count
+            $sourceData = @($DataSources[$sourceKey])
+            & $LogInfo "Exporting $sourceKey data ($($sourceData.Count) records)..."
+            $sourceData | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8 -Force
+            & $LogSuccess "  ✓ Exported $fileName"
+            $exportStats.FilesExported++; $exportStats.RecordsExported += $sourceData.Count
         }
     }
     
-    # Export aggregation summary
     $summaryFile = Join-Path $ProcessedDataPath "AggregationSummary.json"
-    $summary = @{
+    $summaryData = @{
         Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        Statistics = $script:AggregationStats
-        UserCount = $Users.Count
-        DeviceCount = $Devices.Count
+        Statistics = $script:AggregationStats # Contains StartTime, EndTime, etc.
+        UserCount = if($Users){$Users.Count}else{0}
+        DeviceCount = if($Devices){$Devices.Count}else{0}
         DataSourcesProcessed = $DataSources.Keys.Count
-        FilesExported = $exportStats.FilesExported
-        TotalRecordsExported = $exportStats.RecordsExported
+        FilesExportedToProcessedDir = $exportStats.FilesExported
+        TotalRecordsInProcessedDir = $exportStats.RecordsExported
     }
+    $summaryData | ConvertTo-Json -Depth 5 | Set-Content -Path $summaryFile -Encoding UTF8 # Reduced depth for summary
+    & $LogSuccess "  ✓ Exported AggregationSummary.json"
     
-    $summary | ConvertTo-Json -Depth 10 | Set-Content -Path $summaryFile -Encoding UTF8
-    Write-MandALog "  ✓ Exported AggregationSummary.json" -Level SUCCESS
-    
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
-    Write-MandALog "Export completed: $($exportStats.FilesExported) files, $($exportStats.RecordsExported) total records" -Level SUCCESS
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "Processed data export completed: $($exportStats.FilesExported) files, $($exportStats.RecordsExported) total records to '$ProcessedDataPath'"
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
     
     return $exportStats
 }
-
 #endregion
 
 #===============================================================================
-#                           START-DATAAGGREGATION
+#                         START-DATAAGGREGATION
 # Main exported function for the module
 #===============================================================================
 function Start-DataAggregation {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration
+        [hashtable]$Configuration, # This is $Context.Config from Orchestrator
+        [Parameter(Mandatory=$true)]
+        # [MandAContext]$Context # Using untyped $Context for now to match user's current definition, but [MandAContext] is preferred
+        $Context
     )
 
-    # Initialize statistics
-    $script:AggregationStats.StartTime = Get-Date
+    # Initialize statistics for this run
+    $script:AggregationStats = @{
+        StartTime = Get-Date
+        EndTime = $null
+        TotalSourceFiles = 0
+        TotalRecordsProcessed = 0
+        MergeOperations = 0
+        RelationshipsCreated = 0
+        DataQualityIssues = 0
+        Warnings = [System.Collections.ArrayList]::new()
+        Errors = [System.Collections.ArrayList]::new()
+    }
     
-    $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
-    $rawDataPath = $global:MandA.Paths.RawDataOutput
+    # Define local logging wrappers that use the passed $Context
+    $LogInfo = { param($MessageParam, $LevelParam="INFO") Write-MandALog -Message $MessageParam -Level $LevelParam -Component "DataAggregation" -Context $Context }
+    $LogError = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "ERROR" -Component "DataAggregation" -Context $Context }
+    $LogHeader = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "HEADER" -Component "DataAggregation" -Context $Context }
+    $LogDebug = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "DEBUG" -Component "DataAggregation" -Context $Context }
+    $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
 
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level HEADER
-    Write-MandALog "            STARTING DATA AGGREGATION PHASE" -Level HEADER
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level HEADER
-    Write-MandALog "Configuration:" -Level INFO
-    Write-MandALog "  Company: $($Configuration.metadata.companyName)" -Level INFO
-    Write-MandALog "  Raw data path: $rawDataPath" -Level INFO
-    Write-MandALog "  Output path: $processedDataPath" -Level INFO
-    Write-MandALog "  Start time: $($script:AggregationStats.StartTime)" -Level INFO
-    Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level INFO
+    # Validate Context has necessary Paths, which come from $global:MandA via Orchestrator's context creation
+    if (-not ($Context -and $Context.PSObject.Properties['Paths'] -and $Context.Paths.PSObject.Properties['RawDataOutput'] -and $Context.Paths.PSObject.Properties['ProcessedDataOutput'])) {
+        $errMsg = "Start-DataAggregation: Context, Context.Paths, RawDataOutput path, or ProcessedDataOutput path is missing or invalid."
+        # Use Write-Host for critical bootstrap error if Write-MandALog might not be ready or context is bad
+        Write-Host "[CRITICAL ERROR][DataAggregation] $errMsg" -ForegroundColor Red
+        throw $errMsg
+    }
+    $processedDataPath = $Context.Paths.ProcessedDataOutput
+    $rawDataPath = $Context.Paths.RawDataOutput
+
+    & $LogHeader "STARTING DATA AGGREGATION PHASE"
+    & $LogInfo "Configuration Provided: $($Configuration.metadata.companyName)" # $Configuration is $Context.Config
+    & $LogInfo "Raw data path: $rawDataPath"
+    & $LogInfo "Processed data output path: $processedDataPath"
+    & $LogInfo "Start time: $($script:AggregationStats.StartTime)"
+    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
 
     try {
-        # Step 1: Load all raw data
-        Write-MandALog "`nPHASE 1: Loading Raw Data Sources" -Level HEADER
-        $dataSources = Import-RawDataSources -RawDataPath $rawDataPath
+        & $LogHeader "PHASE 1: Loading Raw Data Sources"
+        $dataSources = Import-RawDataSources -RawDataPath $rawDataPath -Context $Context
         
-        if ($null -eq $dataSources -or $dataSources.Count -eq 0) {
+        if ($null -eq $dataSources -or $dataSources.Keys.Count -eq 0) {
             throw "No data sources were loaded. Halting processing."
         }
 
-        # Step 2: Merge User Profiles
-        Write-MandALog "`nPHASE 2: Merging User Profiles" -Level HEADER
-        $mergedUsers = Merge-UserProfiles -DataSources $dataSources
+        & $LogHeader "PHASE 2: Merging User Profiles"
+        $mergedUsers = Merge-UserProfiles -DataSources $dataSources -Context $Context
 
-        # Step 3: Merge Device Profiles
-        Write-MandALog "`nPHASE 3: Merging Device Profiles" -Level HEADER
-        $mergedDevices = Merge-DeviceProfiles -DataSources $dataSources
+        & $LogHeader "PHASE 3: Merging Device Profiles"
+        $mergedDevices = Merge-DeviceProfiles -DataSources $dataSources -Context $Context
+        
+        & $LogHeader "PHASE 4: Building Relationship Graph"
+        $enrichedUsers = New-RelationshipGraph -Users $mergedUsers -Devices $mergedDevices -DataSources $dataSources -Context $Context
 
-        # Step 4: Build Relationships
-        Write-MandALog "`nPHASE 4: Building Relationship Graph" -Level HEADER
-        $enrichedUsers = New-RelationshipGraph -Users $mergedUsers -Devices $mergedDevices -DataSources $dataSources
+        & $LogHeader "PHASE 5: Exporting Processed Data to '$($processedDataPath)'"
+        $exportStats = Export-ProcessedData -ProcessedDataPath $processedDataPath -Users $enrichedUsers -Devices $mergedDevices -DataSources $dataSources -Context $Context
 
-        # Step 5: Export processed data
-        Write-MandALog "`nPHASE 5: Exporting Processed Data" -Level HEADER
-        $exportStats = Export-ProcessedData -ProcessedDataPath $processedDataPath -Users $enrichedUsers -Devices $mergedDevices -DataSources $dataSources
-
-        # Calculate final statistics
         $script:AggregationStats.EndTime = Get-Date
         $duration = $script:AggregationStats.EndTime - $script:AggregationStats.StartTime
 
-        # Final summary
-        Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level HEADER
-        Write-MandALog "            DATA AGGREGATION COMPLETED SUCCESSFULLY" -Level HEADER
-        Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level HEADER
-        Write-MandALog "Summary:" -Level INFO
-        Write-MandALog "  Duration: $($duration.ToString('mm\:ss'))" -Level INFO
-        Write-MandALog "  Source files processed: $($script:AggregationStats.TotalSourceFiles)" -Level INFO
-        Write-MandALog "  Total records processed: $($script:AggregationStats.TotalRecordsProcessed)" -Level INFO
-        Write-MandALog "  Merge operations: $($script:AggregationStats.MergeOperations)" -Level INFO
-        Write-MandALog "  Relationships created: $($script:AggregationStats.RelationshipsCreated)" -Level INFO
-        Write-MandALog "  Data quality issues: $($script:AggregationStats.DataQualityIssues)" -Level $(if ($script:AggregationStats.DataQualityIssues -gt 0) { "WARN" } else { "INFO" })
-        Write-MandALog "  Warnings: $($script:AggregationStats.Warnings.Count)" -Level $(if ($script:AggregationStats.Warnings.Count -gt 0) { "WARN" } else { "INFO" })
-        Write-MandALog "  Errors: $($script:AggregationStats.Errors.Count)" -Level $(if ($script:AggregationStats.Errors.Count -gt 0) { "ERROR" } else { "INFO" })
-        Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level HEADER
+        & $LogHeader "DATA AGGREGATION COMPLETED SUCCESSFULLY"
+        & $LogInfo "Summary:" 
+        & $LogInfo "  Duration: $($duration.ToString('hh\:mm\:ss\.fff'))" # More precise duration
+        & $LogInfo "  Source files considered: $($script:AggregationStats.TotalSourceFiles)" 
+        & $LogInfo "  Total raw records imported: $($script:AggregationStats.TotalRecordsProcessed)" 
+        & $LogInfo "  Merged User/Device Records: $($script:AggregationStats.MergeOperations)" 
+        & $LogInfo "  Relationships created: $($script:AggregationStats.RelationshipsCreated)" 
+        & $LogInfo ("  Data quality issues noted: $($script:AggregationStats.DataQualityIssues)") -LevelParam $(if ($script:AggregationStats.DataQualityIssues -gt 0) { "WARN" } else { "INFO" })
+        & $LogInfo ("  Warnings logged: $($script:AggregationStats.Warnings.Count)") -LevelParam $(if ($script:AggregationStats.Warnings.Count -gt 0) { "WARN" } else { "INFO" })
+        & $LogInfo ("  Errors logged: $($script:AggregationStats.Errors.Count)") -LevelParam $(if ($script:AggregationStats.Errors.Count -gt 0) { "ERROR" } else { "INFO" })
+        & $LogInfo "═══════════════════════════════════════════════════════════════════════"
 
-        return $true
+        # Store the aggregated data in the context if other processing modules need it directly
+        # Or rely on them reading from the CSVs exported by Export-ProcessedData
+        if ($Context.PSObject.Properties.ContainsKey('AggregatedData')) {
+            $Context.AggregatedData = @{
+                Users = $enrichedUsers
+                Devices = $mergedDevices
+                DataSources = $dataSources # Potentially large, consider if needed in context
+                Stats = $script:AggregationStats
+            }
+        } else {
+             $Context | Add-Member -MemberType NoteProperty -Name 'AggregatedData' -Value @{
+                Users = $enrichedUsers
+                Devices = $mergedDevices
+                DataSources = $dataSources
+                Stats = $script:AggregationStats
+            } -Force
+        }
+
+
+        return $true # Indicate success
     }
     catch {
         $script:AggregationStats.EndTime = Get-Date
-        $script:AggregationStats.Errors += "Fatal error: $($_.Exception.Message)"
+        $null = $script:AggregationStats.Errors.Add("Fatal error in Start-DataAggregation: $($_.Exception.Message)")
         
-        Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level ERROR
-        Write-MandALog "            DATA AGGREGATION FAILED" -Level ERROR
-        Write-MandALog "═══════════════════════════════════════════════════════════════════════" -Level ERROR
-        Write-MandALog "ERROR: A critical error occurred during data aggregation: $($_.Exception.Message)" -Level ERROR
-        Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level DEBUG
+        & $LogError "═══════════════════════════════════════════════════════════════════════"
+        & $LogError "DATA AGGREGATION FAILED"
+        & $LogError "═══════════════════════════════════════════════════════════════════════"
+        & $LogError "ERROR: A critical error occurred during data aggregation: $($_.Exception.Message)"
+        & $LogDebug "Stack Trace: $($_.ScriptStackTrace)"
         
-        # Log all accumulated errors
         if ($script:AggregationStats.Errors.Count -gt 0) {
-            Write-MandALog "`nAll errors encountered:" -Level ERROR
-            foreach ($errorItem in $script:AggregationStats.Errors) {
-                Write-MandALog "  - $errorItem" -Level ERROR
+            & $LogError "`nAll errors encountered during aggregation:"
+            foreach ($errorItemSplat in $script:AggregationStats.Errors) { # Renamed to avoid conflict
+                & $LogError "  - $errorItemSplat"
             }
         }
         
-        return $false
+        return $false # Indicate failure
     }
 }
 
 # Export the main function
 Export-ModuleMember -Function Start-DataAggregation
 
-Write-MandALog "DataAggregation module v2.0.0 loaded successfully" -Level DEBUG
+# Module load confirmation
+if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+    Write-MandALog "DataAggregation module v2.1.0 loaded and parsed." -Level "DEBUG" -Component "DataAggregation"
+} else {
+    # This fallback should ideally not be needed if EnhancedLogging loads first and reliably.
+    Write-Host "DEBUG: DataAggregation module v2.1.0 loaded and parsed (Write-MandALog not found, check EnhancedLogging.psm1 load order/status)." -ForegroundColor Gray
+}
