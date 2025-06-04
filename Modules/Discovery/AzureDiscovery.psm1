@@ -11,7 +11,9 @@
 #>
 
 # Import shared utilities
-Import-Module "$PSScriptRoot\..\Utilities\DataExport.psm1" -Force
+
+$authModulePathFromGlobal = Join-Path $global:MandA.Paths.Authentication "DataExport.psm1"
+Import-Module $authModulePathFromGlobal -Force
 
 # API Throttling Configuration
 $script:ThrottleConfig = @{
