@@ -679,7 +679,6 @@ function Invoke-ParallelDiscovery {
     
     Write-MandALog "Starting parallel discovery for $($EnabledSources.Count) sources (Throttle: $ThrottleLimit)" -Level "INFO" -Context $Context
     
-    # For PowerShell 5.1 compatibility, we'll use jobs
     $discoveryJobs = @()
     
     foreach ($source in $EnabledSources) {
@@ -687,22 +686,39 @@ function Invoke-ParallelDiscovery {
             param($source, $contextData, $modulesPath)
             
             try {
+                # Set error preference locally
+                $ErrorActionPreference = "Stop"
+                
                 # Reconstruct minimal context in job
                 $moduleFile = "${source}Discovery.psm1"
                 $modulePath = Join-Path $modulesPath "Discovery\$moduleFile"
                 
-                if (Test-Path $modulePath) {
-                    Import-Module $modulePath -Force
-                    $result = & "Invoke-${source}Discovery" -Configuration $contextData.Config -Context $contextData
-                    
-                    return [PSCustomObject]@{
-                        Source = $source
-                        Success = $true
-                        Data = $result
-                        Error = $null
-                    }
-                } else {
+                if (-not (Test-Path $modulePath)) {
                     throw "Module not found: $modulePath"
+                }
+                
+                Import-Module $modulePath -Force
+                
+                # Check if function exists
+                $functionName = "Invoke-${source}Discovery"
+                if (-not (Get-Command $functionName -ErrorAction SilentlyContinue)) {
+                    throw "Function $functionName not found in module"
+                }
+                
+                # Create a basic context object for the discovery function
+                $context = [PSCustomObject]@{
+                    Paths = $contextData.Paths
+                    Config = $contextData.Config
+                    CompanyName = $contextData.CompanyName
+                }
+                
+                $result = & $functionName -Configuration $contextData.Config -Context $context
+                
+                return [PSCustomObject]@{
+                    Source = $source
+                    Success = $true
+                    Data = $result
+                    Error = $null
                 }
             }
             catch {
@@ -712,9 +728,14 @@ function Invoke-ParallelDiscovery {
                     Data = $null
                     Error = $_.Exception.Message
                     StackTrace = $_.ScriptStackTrace
+                    FullError = $_
                 }
             }
-        } -ArgumentList $source, @{Config = $Context.Config; Paths = $Context.Paths}, $Context.Paths.Modules
+        } -ArgumentList $source, @{
+            Config = $Context.Config
+            Paths = $Context.Paths
+            CompanyName = $Context.Config.metadata.companyName
+        }, $Context.Paths.Modules
         
         $discoveryJobs += $job
         
@@ -726,20 +747,49 @@ function Invoke-ParallelDiscovery {
     
     # Wait for all jobs and collect results
     $results = @{}
-    $completedJobs = $discoveryJobs | Wait-Job | Receive-Job
     
-    foreach ($jobResult in $completedJobs) {
-        if ($jobResult.Success) {
-            $results[$jobResult.Source] = $jobResult.Data
-            Write-MandALog "Discovery completed for $($jobResult.Source)" -Level "SUCCESS" -Context $Context
-        } else {
-            $Context.ErrorCollector.AddError($jobResult.Source, $jobResult.Error, $null)
-            Write-MandALog "Discovery failed for $($jobResult.Source): $($jobResult.Error)" -Level "ERROR" -Context $Context
+    foreach ($job in $discoveryJobs) {
+        $jobResult = $null
+        try {
+            # Wait with timeout
+            $completed = Wait-Job -Job $job -Timeout 300
+            if ($completed) {
+                $jobResult = Receive-Job -Job $job -ErrorAction Stop
+            } else {
+                Stop-Job -Job $job
+                $jobResult = [PSCustomObject]@{
+                    Source = $job.Name -replace '^Discovery_'
+                    Success = $false
+                    Data = $null
+                    Error = "Job timed out after 300 seconds"
+                }
+            }
+        }
+        catch {
+            $jobResult = [PSCustomObject]@{
+                Source = $job.Name -replace '^Discovery_'
+                Success = $false
+                Data = $null
+                Error = "Failed to receive job results: $($_.Exception.Message)"
+            }
+        }
+        
+        if ($jobResult) {
+            if ($jobResult.Success) {
+                $results[$jobResult.Source] = $jobResult.Data
+                Write-MandALog "Discovery completed for $($jobResult.Source)" -Level "SUCCESS" -Context $Context
+            } else {
+                $Context.ErrorCollector.AddError($jobResult.Source, $jobResult.Error, $null)
+                Write-MandALog "Discovery failed for $($jobResult.Source): $($jobResult.Error)" -Level "ERROR" -Context $Context
+                if ($jobResult.StackTrace) {
+                    Write-MandALog "Stack trace: $($jobResult.StackTrace)" -Level "DEBUG" -Context $Context
+                }
+            }
         }
     }
     
     # Clean up jobs
-    $discoveryJobs | Remove-Job -Force
+    $discoveryJobs | Remove-Job -Force -ErrorAction SilentlyContinue
     
     return $results
 }
