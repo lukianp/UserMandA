@@ -23,6 +23,7 @@
 $formatHandlerPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\CredentialFormatHandler.psm1"
 if (Test-Path $formatHandlerPath) {
    $formatHandlerPathFromGlobal = Join-Path $global:MandA.Paths.Utilities "CredentialFormatHandler.psm1"
+$formatHandlerPathFromGlobal = Join-Path $global:MandA.Paths.Utilities "CredentialFormatHandler.psm1"
 Import-Module $formatHandlerPathFromGlobal -Force
 } else {
     throw "Cannot find CredentialFormatHandler.psm1 at: $formatHandlerPath"
