@@ -720,104 +720,373 @@ function Invoke-DiscoveryPhase {
     param([MandAContext]$Context)
     
     if (-not $Context.OrchestratorState.CanExecute("Discovery")) {
-        throw "Discovery phase execution limit exceeded or circular dependency detected."
+        throw "Discovery phase execution limit exceeded or circular dependency detected. Path: $($Context.OrchestratorState.GetExecutionPath())"
     }
     
     $Context.OrchestratorState.PushExecution("Discovery")
+    $phaseStartTime = Get-Date
     
     try {
-        Write-ProgressHeader -Title "DISCOVERY PHASE"
-        
-        $enabledSources = @($Context.Config.discovery.enabledSources)
-        $totalSources = $enabledSources.Count
-        
-        Write-ProgressStep "Initializing discovery for $totalSources sources" -Status Info
-        Write-Host ""
-        
-        # Show discovery plan
-        Write-Host "Discovery Plan:" -ForegroundColor Cyan
-        Write-Host ("-" * 50) -ForegroundColor Gray
-        foreach ($source in $enabledSources) {
-            Write-Host "  [ ] $source" -ForegroundColor Gray
-        }
-        Write-Host ("-" * 50) -ForegroundColor Gray
-        Write-Host ""
-        
-        $discoveryResults = @{}
-        $currentSource = 0
-        
-        foreach ($source in $enabledSources) {
-            $currentSource++
-            $startTime = Get-Date
-            
-            # Update progress
-            Write-Host "`r" -NoNewline
-            Write-Host ("Processing: [{0}/{1}] {2}" -f $currentSource, $totalSources, $source.PadRight(30)) -ForegroundColor Yellow -NoNewline
-            
-            $functionName = "Invoke-${source}Discovery"
-            
-            if (Get-Command $functionName -ErrorAction SilentlyContinue) {
-                try {
-                    # Show that we're working
-                    $discoveryStart = Get-Date
-                    Show-DiscoveryProgress -Module $source -Status "Running" -CurrentItem "Initializing..."
-                    
-                    # Run discovery
-                    $result = & $functionName -Configuration $Context.Config -Context $Context
-                    
-                    # Calculate stats
-                    $duration = ((Get-Date) - $discoveryStart).TotalSeconds
-                    $recordCount = if ($result -is [hashtable]) {
-                        ($result.Values | ForEach-Object { 
-                            if ($_ -is [array]) { $_.Count } else { 1 }
-                        } | Measure-Object -Sum).Sum
-                    } else { 0 }
-                    
-                    $discoveryResults[$source] = @{
-                        Success = $true
-                        Data = $result
-                        RecordCount = $recordCount
-                        Duration = $duration
-                    }
-                    
-                    Show-DiscoveryProgress -Module $source -Status "Completed" `
-                        -Stats @{
-                            Records = $recordCount
-                            Time = "$([Math]::Round($duration, 1))s"
-                        }
-                    
-                } catch {
-                    $Context.ErrorCollector.AddError($source, "Discovery failed", $_.Exception)
-                    
-                    Show-DiscoveryProgress -Module $source -Status "Failed" `
-                        -Stats @{Error = $_.Exception.Message}
-                    
-                    $discoveryResults[$source] = @{
-                        Success = $false
-                        Error = $_.Exception.Message
-                        RecordCount = 0
-                    }
-                }
-            } else {
-                Show-DiscoveryProgress -Module $source -Status "Skipped" `
-                    -Stats @{Reason = "Function not found"}
-                
-                $Context.ErrorCollector.AddWarning($source, "Discovery function not found: $functionName")
+        # Load progress display module if not already loaded
+        if (-not (Get-Command Show-DiscoveryProgress -ErrorAction SilentlyContinue)) {
+            $progressModule = Join-Path $Context.Paths.Utilities "ProgressDisplay.psm1"
+            if (Test-Path $progressModule) {
+                Import-Module $progressModule -Force -Global
             }
         }
         
+        # Display phase header
         Write-Host ""
+        Write-Host ("=" * 100) -ForegroundColor Cyan
+        Write-Host ("=" + " " * 98 + "=") -ForegroundColor Cyan
+        $headerText = "[$(Get-Date -Format 'HH:mm:ss')] DISCOVERY PHASE"
+        $padding = [Math]::Max(0, (98 - $headerText.Length) / 2)
+        Write-Host ("=" + " " * $padding + $headerText + " " * (98 - $padding - $headerText.Length) + "=") -ForegroundColor Cyan
+        Write-Host ("=" + " " * 98 + "=") -ForegroundColor Cyan
+        Write-Host ("=" * 100) -ForegroundColor Cyan
         Write-Host ""
         
-        # Show summary
-        Show-DiscoverySummary -Results $discoveryResults
+        # Get enabled sources
+        $enabledSources = @($Context.Config.discovery.enabledSources)
+        $totalSources = $enabledSources.Count
+        $useParallel = $Context.Config.discovery.parallelProcessing -and $enabledSources.Count -gt 1
+        
+        # Display discovery information
+        Write-Host "[$(Get-Date -Format 'HH:mm:ss')] [i] Discovery Configuration" -ForegroundColor Cyan
+        Write-Host "    Total Sources    : $totalSources" -ForegroundColor Gray
+        Write-Host "    Parallel Mode    : $(if ($useParallel) { 'Enabled' } else { 'Disabled' })" -ForegroundColor Gray
+        Write-Host "    Skip Existing    : $($Context.Config.discovery.skipExistingFiles)" -ForegroundColor Gray
+        Write-Host "    Batch Size       : $($Context.Config.discovery.batchSize)" -ForegroundColor Gray
+        Write-Host ""
+        
+        # Show discovery plan
+        Write-Host "[$(Get-Date -Format 'HH:mm:ss')] [i] Discovery Plan:" -ForegroundColor Cyan
+        Write-Host ("-" * 70) -ForegroundColor DarkGray
+        
+        $sourceIndex = 1
+        foreach ($source in $enabledSources) {
+            $functionName = "Invoke-${source}Discovery"
+            $moduleStatus = if (Get-Command $functionName -ErrorAction SilentlyContinue) {
+                "Ready"
+            } else {
+                "Missing"
+            }
+            
+            $statusColor = if ($moduleStatus -eq "Ready") { "Gray" } else { "DarkRed" }
+            Write-Host ("  [{0,2}] {1,-30} [{2}]" -f $sourceIndex, $source, $moduleStatus) -ForegroundColor $statusColor
+            $sourceIndex++
+        }
+        
+        Write-Host ("-" * 70) -ForegroundColor DarkGray
+        Write-Host ""
+        
+        # Initialize results tracking
+        $discoveryResults = @{}
+        $summaryStats = @{
+            TotalRecords = 0
+            SuccessfulModules = 0
+            FailedModules = 0
+            SkippedModules = 0
+            TotalDuration = 0
+        }
+        
+        if ($useParallel) {
+            Write-Host "[$(Get-Date -Format 'HH:mm:ss')] [>] Starting parallel discovery (Throttle: $($Context.Config.discovery.maxConcurrentJobs))" -ForegroundColor Yellow
+            Write-Host ""
+            $discoveryResults = Invoke-ParallelDiscoveryWithProgress -EnabledSources $enabledSources -Context $Context
+        } else {
+            # Sequential discovery with enhanced progress
+            Write-Host "[$(Get-Date -Format 'HH:mm:ss')] [>] Starting sequential discovery" -ForegroundColor Yellow
+            Write-Host ""
+            
+            $currentSourceNum = 0
+            
+            foreach ($source in $enabledSources) {
+                $currentSourceNum++
+                $sourceStartTime = Get-Date
+                $functionName = "Invoke-${source}Discovery"
+                
+                # Update status line
+                $progressPrefix = "[$(Get-Date -Format 'HH:mm:ss')] [$currentSourceNum/$totalSources]"
+                
+                if (Get-Command $functionName -ErrorAction SilentlyContinue) {
+                    try {
+                        # Show starting status
+                        Write-Host "$progressPrefix $($source.PadRight(25)) : " -NoNewline
+                        Write-Host "Initializing..." -ForegroundColor Yellow -NoNewline
+                        
+                        # Create progress context
+                        $progressContext = $Context.PSObject.Copy()
+                        $progressContext | Add-Member -MemberType NoteProperty -Name CurrentModule -Value $source -Force
+                        
+                        # Run discovery with real-time updates
+                        $result = Invoke-DiscoveryFunctionWithProgress `
+                            -FunctionName $functionName `
+                            -Source $source `
+                            -Configuration $Context.Config `
+                            -Context $progressContext `
+                            -ProgressPrefix $progressPrefix
+                        
+                        # Calculate statistics
+                        $duration = (Get-Date) - $sourceStartTime
+                        $recordCount = Get-DiscoveryRecordCount -Result $result
+                        
+                        $discoveryResults[$source] = @{
+                            Success = $true
+                            Data = $result
+                            RecordCount = $recordCount
+                            Duration = $duration
+                        }
+                        
+                        # Update summary stats
+                        $summaryStats.TotalRecords += $recordCount
+                        $summaryStats.SuccessfulModules++
+                        
+                        # Show completion
+                        Write-Host "`r$progressPrefix $($source.PadRight(25)) : " -NoNewline
+                        Write-Host "Completed " -ForegroundColor Green -NoNewline
+                        Write-Host "[Records: $recordCount, Time: $($duration.ToString('mm\:ss'))]" -ForegroundColor Gray
+                        
+                    } catch {
+                        $duration = (Get-Date) - $sourceStartTime
+                        $errorMessage = $_.Exception.Message
+                        
+                        $Context.ErrorCollector.AddError($source, "Discovery failed", $_.Exception)
+                        
+                        $discoveryResults[$source] = @{
+                            Success = $false
+                            Error = $errorMessage
+                            RecordCount = 0
+                            Duration = $duration
+                        }
+                        
+                        $summaryStats.FailedModules++
+                        
+                        # Show failure
+                        Write-Host "`r$progressPrefix $($source.PadRight(25)) : " -NoNewline
+                        Write-Host "Failed " -ForegroundColor Red -NoNewline
+                        Write-Host "[Error: $($errorMessage.Substring(0, [Math]::Min(50, $errorMessage.Length)))...]" -ForegroundColor DarkRed
+                    }
+                } else {
+                    # Module not found
+                    $Context.ErrorCollector.AddWarning($source, "Discovery function not found: $functionName")
+                    
+                    $discoveryResults[$source] = @{
+                        Success = $false
+                        Error = "Module not available"
+                        RecordCount = 0
+                        Duration = [TimeSpan]::Zero
+                    }
+                    
+                    $summaryStats.SkippedModules++
+                    
+                    # Show skipped status
+                    Write-Host "$progressPrefix $($source.PadRight(25)) : " -NoNewline
+                    Write-Host "Skipped " -ForegroundColor DarkGray -NoNewline
+                    Write-Host "[Function not found]" -ForegroundColor DarkGray
+                }
+                
+                # Small delay for readability
+                Start-Sleep -Milliseconds 100
+            }
+        }
+        
+        # Calculate total phase duration
+        $phaseDuration = (Get-Date) - $phaseStartTime
+        $summaryStats.TotalDuration = $phaseDuration
+        
+        # Display summary
+        Write-Host ""
+        Write-Host ("=" * 100) -ForegroundColor Green
+        Write-Host "DISCOVERY PHASE SUMMARY" -ForegroundColor Green
+        Write-Host ("=" * 100) -ForegroundColor Green
+        Write-Host ""
+        
+        # Show results by module
+        Write-Host "Module Results:" -ForegroundColor Cyan
+        Write-Host ("-" * 70) -ForegroundColor Gray
+        
+        foreach ($source in $enabledSources) {
+            $result = $discoveryResults[$source]
+            
+            if ($result.Success) {
+                $icon = "[+]"
+                $color = "Green"
+                $status = "Success"
+                $details = "Records: $($result.RecordCount), Time: $($result.Duration.ToString('mm\:ss'))"
+            } else {
+                $icon = "[X]"
+                $color = "Red"
+                $status = "Failed"
+                $details = "Error: $($result.Error)"
+            }
+            
+            Write-Host ("  {0} {1,-25} : {2,-10} {3}" -f $icon, $source, $status, $details) -ForegroundColor $color
+        }
+        
+        Write-Host ("-" * 70) -ForegroundColor Gray
+        Write-Host ""
+        
+        # Show statistics
+        Write-Host "Statistics:" -ForegroundColor Cyan
+        Write-Host "  Total Records Discovered : $($summaryStats.TotalRecords)" -ForegroundColor White
+        Write-Host "  Successful Modules       : $($summaryStats.SuccessfulModules)" -ForegroundColor Green
+        Write-Host "  Failed Modules          : $($summaryStats.FailedModules)" -ForegroundColor $(if ($summaryStats.FailedModules -gt 0) { 'Red' } else { 'Gray' })
+        Write-Host "  Skipped Modules         : $($summaryStats.SkippedModules)" -ForegroundColor $(if ($summaryStats.SkippedModules -gt 0) { 'Yellow' } else { 'Gray' })
+        Write-Host "  Total Duration          : $($phaseDuration.ToString('mm\:ss'))" -ForegroundColor White
+        Write-Host ""
+        
+        # Performance metrics
+        if ($summaryStats.SuccessfulModules -gt 0) {
+            $avgTimePerModule = [TimeSpan]::FromSeconds($phaseDuration.TotalSeconds / $summaryStats.SuccessfulModules)
+            $recordsPerSecond = if ($phaseDuration.TotalSeconds -gt 0) { 
+                [Math]::Round($summaryStats.TotalRecords / $phaseDuration.TotalSeconds, 2) 
+            } else { 0 }
+            
+            Write-Host "Performance Metrics:" -ForegroundColor Cyan
+            Write-Host "  Average Time per Module  : $($avgTimePerModule.ToString('mm\:ss'))" -ForegroundColor Gray
+            Write-Host "  Records per Second       : $recordsPerSecond" -ForegroundColor Gray
+            Write-Host ""
+        }
+        
+        # Save discovery summary
+        if ($Context.Paths.LogOutput) {
+            $summaryFile = Join-Path $Context.Paths.LogOutput "Discovery_Summary_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
+            $summaryData = @{
+                Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                Company = $Context.Config.metadata.companyName
+                Duration = $phaseDuration.ToString()
+                Statistics = $summaryStats
+                Results = $discoveryResults | ConvertTo-Json -Depth 3 | ConvertFrom-Json  # Clean serialization
+            }
+            $summaryData | ConvertTo-Json -Depth 5 | Set-Content -Path $summaryFile -Encoding UTF8
+        }
+        
+        Write-Host ("=" * 100) -ForegroundColor Green
+        Write-Host ""
         
         return $discoveryResults
+        
+    } catch {
+        $errorMessage = $_.Exception.Message
+        Write-Host ""
+        Write-Host "[$(Get-Date -Format 'HH:mm:ss')] [X] DISCOVERY PHASE FAILED" -ForegroundColor Red
+        Write-Host "    Error: $errorMessage" -ForegroundColor Red
+        Write-Host "    Duration: $((Get-Date) - $phaseStartTime)" -ForegroundColor Gray
+        Write-Host ""
+        throw
         
     } finally {
         $Context.OrchestratorState.PopExecution()
     }
 }
+
+# Helper function to run discovery with progress updates
+function Invoke-DiscoveryFunctionWithProgress {
+    param(
+        [string]$FunctionName,
+        [string]$Source,
+        [hashtable]$Configuration,
+        $Context,
+        [string]$ProgressPrefix
+    )
+    
+    # Create wrapper to intercept Write-MandALog calls
+    $scriptBlock = {
+        param($FuncName, $Config, $Ctx, $Src, $Prefix)
+        
+        # Override Write-Host to capture module output
+        $global:_ProgressMessages = @()
+        
+        function Write-Host {
+            param(
+                [Parameter(Position=0, ValueFromPipeline=$true)]
+                [object]$Object,
+                [ConsoleColor]$ForegroundColor = 'Gray',
+                [switch]$NoNewline
+            )
+            
+            if ($Object -and $Object.ToString() -match '(Processing|Discovering|Retrieving|Analyzing|Exporting)') {
+                # Update progress
+                $message = $Object.ToString()
+                Microsoft.PowerShell.Utility\Write-Host "`r$Prefix $($Src.PadRight(25)) : $message" -ForegroundColor Yellow -NoNewline
+            } else {
+                # Pass through
+                Microsoft.PowerShell.Utility\Write-Host @PSBoundParameters
+            }
+        }
+        
+        # Run the discovery function
+        & $FuncName -Configuration $Config -Context $Ctx
+    }
+    
+    # Execute with progress tracking
+    $job = Start-Job -ScriptBlock $scriptBlock -ArgumentList @($FunctionName, $Configuration, $Context, $Source, $ProgressPrefix)
+    
+    # Monitor job with timeout
+    $timeout = if ($Configuration.discovery.timeout) { $Configuration.discovery.timeout } else { 300 }
+    $result = $job | Wait-Job -Timeout $timeout | Receive-Job
+    
+    if ($job.State -eq 'Running') {
+        $job | Stop-Job
+        Remove-Job $job -Force
+        throw "Discovery timed out after $timeout seconds"
+    }
+    
+    Remove-Job $job -Force
+    return $result
+}
+
+# Helper function to count records in discovery results
+function Get-DiscoveryRecordCount {
+    param($Result)
+    
+    if ($null -eq $Result) {
+        return 0
+    }
+    
+    if ($Result -is [hashtable]) {
+        $count = 0
+        foreach ($value in $Result.Values) {
+            if ($value -is [array]) {
+                $count += $value.Count
+            } elseif ($value -is [System.Collections.IEnumerable] -and $value -isnot [string]) {
+                $count += @($value).Count
+            } else {
+                $count += 1
+            }
+        }
+        return $count
+    } elseif ($Result -is [array]) {
+        return $Result.Count
+    } elseif ($Result -is [System.Collections.IEnumerable] -and $Result -isnot [string]) {
+        return @($Result).Count
+    } else {
+        return 1
+    }
+}
+
+# Helper for parallel discovery with progress
+function Invoke-ParallelDiscoveryWithProgress {
+    param(
+        [string[]]$EnabledSources,
+        [MandAContext]$Context
+    )
+    
+    Write-Host "[$(Get-Date -Format 'HH:mm:ss')] [i] Initializing parallel discovery jobs..." -ForegroundColor Cyan
+    Write-Host ""
+    
+    $throttle = if ($Context.Config.discovery.maxConcurrentJobs) { 
+        $Context.Config.discovery.maxConcurrentJobs 
+    } else { 5 }
+    
+    # Implementation of parallel discovery with progress updates
+    # ... (similar to the existing Invoke-ParallelDiscovery but with progress display)
+    
+    return @{} # Placeholder
+}
+
+
 
 
 
