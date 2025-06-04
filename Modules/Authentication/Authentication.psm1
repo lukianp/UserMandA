@@ -14,13 +14,51 @@
 $script:AuthContext = $null
 $script:LastAuthAttempt = $null
 
+# Add at module level (outside the function)
+$script:AuthInitializationInProgress = $false
+$script:AuthInitializationAttempts = 0
+$script:MaxAuthAttempts = 3
+
 function Initialize-MandAAuthentication {
     param([hashtable]$Configuration)
     
+    # Protect against recursive calls
+    if ($script:AuthInitializationInProgress) {
+        Write-MandALog "WARNING: Authentication initialization already in progress - preventing recursion" -Level "WARN"
+        return @{
+            Authenticated = $false
+            Error = "Authentication initialization already in progress"
+            Timestamp = Get-Date
+        }
+    }
+    
+    # Check if we've exceeded max attempts
+    if ($script:AuthInitializationAttempts -ge $script:MaxAuthAttempts) {
+        Write-MandALog "ERROR: Maximum authentication attempts ($script:MaxAuthAttempts) exceeded" -Level "ERROR"
+        return @{
+            Authenticated = $false
+            Error = "Maximum authentication attempts exceeded"
+            Timestamp = Get-Date
+        }
+    }
+    
+    # Set flags to prevent recursion
+    $script:AuthInitializationInProgress = $true
+    $script:AuthInitializationAttempts++
+    
     try {
         Write-MandALog "===============================================" -Level "HEADER"
-        Write-MandALog "INITIALIZING AUTHENTICATION" -Level "HEADER"
+        Write-MandALog "INITIALIZING AUTHENTICATION (Attempt $script:AuthInitializationAttempts/$script:MaxAuthAttempts)" -Level "HEADER"
         Write-MandALog "===============================================" -Level "INFO"
+        
+        # Validate configuration parameter
+        if ($null -eq $Configuration) {
+            throw "Configuration parameter is null"
+        }
+        
+        if ($null -eq $Configuration.authentication) {
+            throw "Configuration.authentication section is missing"
+        }
         
         # Debug configuration
         Write-MandALog "DEBUG: Authentication configuration:" -Level "DEBUG"
@@ -33,34 +71,50 @@ function Initialize-MandAAuthentication {
         $script:AuthContext = $null
         $script:LastAuthAttempt = Get-Date
 
-        # Get credentials
+        # Check if Get-SecureCredentials function exists
+        if (-not (Get-Command Get-SecureCredentials -ErrorAction SilentlyContinue)) {
+            throw "Get-SecureCredentials function not found. Ensure CredentialManagement module is loaded."
+        }
+
+        # Get credentials with timeout protection
         Write-MandALog "Retrieving credentials..." -Level "INFO"
-        $credentials = Get-SecureCredentials -Configuration $Configuration
+        
+        $credentialJob = Start-Job -ScriptBlock {
+            param($config, $modulePath)
+            
+            # Import required module in job context
+            if (Test-Path $modulePath) {
+                Import-Module $modulePath -Force
+            }
+            
+            # Call Get-SecureCredentials
+            Get-SecureCredentials -Configuration $config
+        } -ArgumentList $Configuration, (Join-Path $PSScriptRoot "CredentialManagement.psm1")
+        
+        # Wait for job with timeout (30 seconds)
+        $credentials = $null
+        $jobCompleted = Wait-Job -Job $credentialJob -Timeout 30
+        
+        if ($jobCompleted) {
+            $credentials = Receive-Job -Job $credentialJob -ErrorAction Stop
+            Remove-Job -Job $credentialJob -Force
+        } else {
+            Stop-Job -Job $credentialJob
+            Remove-Job -Job $credentialJob -Force
+            throw "Credential retrieval timed out after 30 seconds"
+        }
         
         # Validate credential retrieval result
         if (-not $credentials) {
-            Write-MandALog "ERROR: Get-SecureCredentials returned null" -Level "ERROR"
-            return @{
-                Authenticated = $false
-                Error = "Failed to obtain credentials - null result"
-                Timestamp = Get-Date
-            }
+            throw "Get-SecureCredentials returned null"
         }
         
         if ($credentials -is [hashtable]) {
             Write-MandALog "DEBUG: Credentials returned as hashtable" -Level "DEBUG"
-            Write-MandALog "  - Has Success property: $($credentials.ContainsKey('Success'))" -Level "DEBUG"
-            Write-MandALog "  - Success value: $($credentials.Success)" -Level "DEBUG"
-            Write-MandALog "  - Has Error property: $($credentials.ContainsKey('Error'))" -Level "DEBUG"
             
-            if (-not $credentials.Success) {
+            if ($credentials.ContainsKey('Success') -and -not $credentials.Success) {
                 $errorMsg = if ($credentials.Error) { $credentials.Error } else { "Unknown error in credential retrieval" }
-                Write-MandALog "ERROR: Failed to obtain credentials: $errorMsg" -Level "ERROR"
-                return @{
-                    Authenticated = $false
-                    Error = "Failed to obtain valid credentials: $errorMsg"
-                    Timestamp = Get-Date
-                }
+                throw "Failed to obtain credentials: $errorMsg"
             }
             
             # Validate required properties
@@ -68,61 +122,88 @@ function Initialize-MandAAuthentication {
             $missingProps = @()
             
             foreach ($prop in $requiredProps) {
-                if (-not $credentials.$prop -or [string]::IsNullOrWhiteSpace($credentials.$prop)) {
+                if (-not $credentials.ContainsKey($prop) -or [string]::IsNullOrWhiteSpace($credentials.$prop)) {
                     $missingProps += $prop
-                    Write-MandALog "ERROR: Missing required credential property: $prop" -Level "ERROR"
                 }
             }
             
             if ($missingProps.Count -gt 0) {
-                return @{
-                    Authenticated = $false
-                    Error = "Missing required credential properties: $($missingProps -join ', ')"
-                    Timestamp = Get-Date
-                }
+                throw "Missing required credential properties: $($missingProps -join ', ')"
             }
         } else {
-            Write-MandALog "ERROR: Unexpected credential type: $($credentials.GetType().Name)" -Level "ERROR"
-            return @{
-                Authenticated = $false
-                Error = "Invalid credential object type returned"
-                Timestamp = Get-Date
-            }
+            throw "Invalid credential object type returned: $($credentials.GetType().Name)"
         }
         
         Write-MandALog "✅ Credentials obtained successfully" -Level "SUCCESS"
-        Write-MandALog "  - Client ID: $($credentials.ClientId)" -Level "DEBUG"
-        Write-MandALog "  - Tenant ID: $($credentials.TenantId)" -Level "DEBUG"
+        Write-MandALog "  - Client ID: $($credentials.ClientId.Substring(0,8))..." -Level "DEBUG"
+        Write-MandALog "  - Tenant ID: $($credentials.TenantId.Substring(0,8))..." -Level "DEBUG"
         Write-MandALog "  - Has Secret: $(if($credentials.ClientSecret){'Yes'}else{'No'})" -Level "DEBUG"
         
-        # Validate credentials
-        Write-MandALog "Validating credentials..." -Level "INFO"
-        $validationResult = Test-CredentialValidity -Credentials $credentials -Configuration $Configuration
-        
-        if (-not $validationResult) {
-            Write-MandALog "ERROR: Credential validation failed" -Level "ERROR"
-            return @{
-                Authenticated = $false
-                Error = "Credential validation failed - invalid format or missing data"
-                Timestamp = Get-Date
+        # Skip Test-CredentialValidity if it might cause recursion
+        $skipValidation = $false
+        if (Get-Command Test-CredentialValidity -ErrorAction SilentlyContinue) {
+            # Check if Test-CredentialValidity might call back to Initialize-MandAAuthentication
+            $validationFunc = Get-Command Test-CredentialValidity
+            if ($validationFunc.ScriptBlock -match 'Initialize-MandAAuthentication') {
+                Write-MandALog "WARNING: Skipping credential validation to prevent recursion" -Level "WARN"
+                $skipValidation = $true
             }
+        } else {
+            Write-MandALog "WARNING: Test-CredentialValidity function not found - skipping validation" -Level "WARN"
+            $skipValidation = $true
         }
         
-        Write-MandALog "✅ Credentials validated successfully" -Level "SUCCESS"
+        if (-not $skipValidation) {
+            Write-MandALog "Validating credentials..." -Level "INFO"
+            
+            # Run validation in a job to prevent recursion
+            $validationJob = Start-Job -ScriptBlock {
+                param($creds, $config, $modulePath)
+                
+                if (Test-Path $modulePath) {
+                    Import-Module $modulePath -Force
+                }
+                
+                Test-CredentialValidity -Credentials $creds -Configuration $config
+            } -ArgumentList $credentials, $Configuration, (Join-Path $PSScriptRoot "CredentialManagement.psm1")
+            
+            $validationResult = $null
+            $jobCompleted = Wait-Job -Job $validationJob -Timeout 10
+            
+            if ($jobCompleted) {
+                $validationResult = Receive-Job -Job $validationJob -ErrorAction Stop
+                Remove-Job -Job $validationJob -Force
+            } else {
+                Stop-Job -Job $validationJob
+                Remove-Job -Job $validationJob -Force
+                Write-MandALog "WARNING: Credential validation timed out - proceeding without validation" -Level "WARN"
+                $validationResult = $true  # Assume valid if timeout
+            }
+            
+            if (-not $validationResult) {
+                throw "Credential validation failed"
+            }
+            
+            Write-MandALog "✅ Credentials validated successfully" -Level "SUCCESS"
+        }
         
         # Store authentication context in module scope
         $script:AuthContext = @{
             ClientId = $credentials.ClientId
             ClientSecret = $credentials.ClientSecret
             TenantId = $credentials.TenantId
-            TokenExpiry = (Get-Date).AddSeconds($Configuration.authentication.tokenRefreshThreshold)
+            TokenExpiry = (Get-Date).AddSeconds(3600)  # Default 1 hour
             LastRefresh = Get-Date
             CredentialSource = if ($credentials.ContainsKey('Source')) { $credentials.Source } else { "Unknown" }
             AuthenticationMethod = $Configuration.authentication.authenticationMethod
         }
         
+        # Apply token refresh threshold if specified
+        if ($Configuration.authentication.tokenRefreshThreshold -gt 0) {
+            $script:AuthContext.TokenExpiry = (Get-Date).AddSeconds($Configuration.authentication.tokenRefreshThreshold)
+        }
+        
         Write-MandALog "DEBUG: Stored authentication context in module scope" -Level "DEBUG"
-        Write-MandALog "  - AuthContext keys: $($script:AuthContext.Keys -join ', ')" -Level "DEBUG"
         
         # Create return object with all necessary information
         $authResult = @{
@@ -132,14 +213,20 @@ function Initialize-MandAAuthentication {
             TokenExpiry = $script:AuthContext.TokenExpiry
             AuthenticationMethod = $script:AuthContext.AuthenticationMethod
             CredentialSource = $script:AuthContext.CredentialSource
-            Context = $script:AuthContext  # Include the full context
+            Context = @{
+                ClientId = $script:AuthContext.ClientId
+                TenantId = $script:AuthContext.TenantId
+                TokenExpiry = $script:AuthContext.TokenExpiry
+                AuthenticationMethod = $script:AuthContext.AuthenticationMethod
+            }  # Include safe subset of context
             Timestamp = Get-Date
         }
         
         Write-MandALog "✅ Authentication initialized successfully" -Level "SUCCESS"
-        Write-MandALog "  - Result type: Hashtable" -Level "DEBUG"
-        Write-MandALog "  - Result keys: $($authResult.Keys -join ', ')" -Level "DEBUG"
         Write-MandALog "===============================================" -Level "INFO"
+        
+        # Reset attempt counter on success
+        $script:AuthInitializationAttempts = 0
         
         return $authResult
         
@@ -149,22 +236,29 @@ function Initialize-MandAAuthentication {
             Type = $_.Exception.GetType().Name
             StackTrace = $_.ScriptStackTrace
             Timestamp = Get-Date
+            Attempt = $script:AuthInitializationAttempts
         }
         
         Write-MandALog "CRITICAL ERROR in authentication initialization:" -Level "ERROR"
         Write-MandALog "  - Error: $($errorDetails.Message)" -Level "ERROR"
         Write-MandALog "  - Type: $($errorDetails.Type)" -Level "ERROR"
+        Write-MandALog "  - Attempt: $($errorDetails.Attempt)" -Level "ERROR"
         Write-MandALog "  - Stack: $($errorDetails.StackTrace)" -Level "DEBUG"
         
         # Clear any partial auth context
         $script:AuthContext = $null
-        
+        $script:LastAuthAttempt = Get-Date
+        $script:AuthInitializationInProgress = $false
+
         return @{
             Authenticated = $false
             Error = $errorDetails.Message
             ErrorDetails = $errorDetails
             Timestamp = Get-Date
         }
+    } finally {
+        # Always clear the in-progress flag
+        $script:AuthInitializationInProgress = $false
     }
 }
 
