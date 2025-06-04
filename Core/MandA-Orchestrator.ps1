@@ -373,6 +373,8 @@ function Test-ModuleConfiguration {
     return $true
 }
 
+
+
 function Import-ModuleWithManifest {
     param(
         [string]$ModulePath,
@@ -384,6 +386,13 @@ function Import-ModuleWithManifest {
     $manifestPath = Join-Path $moduleDir "$moduleName.psd1"
     
     try {
+        # Set temporary global variables for module initialization
+        $global:_MandALoadingContext = @{
+            Paths = $Context.Paths
+            Config = $Context.Config
+            CompanyName = $Context.Config.metadata.companyName
+        }
+        
         # Check for manifest
         if (Test-Path $manifestPath) {
             Import-Module $manifestPath -Force -Global -ErrorAction Stop
@@ -392,14 +401,23 @@ function Import-ModuleWithManifest {
             Import-Module $ModulePath -Force -Global -ErrorAction Stop
             Write-MandALog "Loaded module directly: $moduleName" -Level "SUCCESS" -Context $Context
         }
+        
+        # Clear temporary variables
+        Remove-Variable -Name "_MandALoadingContext" -Scope Global -ErrorAction SilentlyContinue
+        
         return $true
     }
     catch {
+        # Clear temporary variables on error
+        Remove-Variable -Name "_MandALoadingContext" -Scope Global -ErrorAction SilentlyContinue
+        
         $Context.ErrorCollector.AddError("ModuleLoader", "Failed to load module: $moduleName", $_.Exception)
         Write-MandALog "Failed to load module: $moduleName - $($_.Exception.Message)" -Level "ERROR" -Context $Context
         return $false
     }
 }
+
+
 
 #===============================================================================
 #                    CORE ORCHESTRATION FUNCTIONS
@@ -419,9 +437,14 @@ function Initialize-MandAEnvironment {
     try {
         Write-MandALog "INITIALIZING ENVIRONMENT FOR MODE: $CurrentMode" -Level "HEADER" -Context $Context
         
-        # Validate context
-        if (-not $Context.ValidateContext()) {
-            throw "Context validation failed. Required paths are missing."
+        # Ensure global context is available for modules that need it
+        if ($null -eq $global:MandA) {
+            $global:MandA = @{
+                Paths = $Context.Paths
+                Config = $Context.Config
+                CompanyName = $Context.Config.metadata.companyName
+                Version = $Context.Version
+            }
         }
         
         # Initialize output directories
