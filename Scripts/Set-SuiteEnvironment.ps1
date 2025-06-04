@@ -230,20 +230,50 @@ $coreModules = @(
     "ErrorHandling.psm1"
 )
 
-foreach ($module in $coreModules) {
-    $modulePath = Join-Path $global:MandA.Paths.Utilities $module
-    if (Test-Path $modulePath -PathType Leaf) {
+Write-Host "DEBUG: Set-SuiteEnvironment.ps1 - Path to Utilities directory: $($global:MandA.Paths.Utilities)" -ForegroundColor Magenta
+
+foreach ($moduleFile in $coreModules) { # Renamed variable for clarity
+    $modulePath = Join-Path $global:MandA.Paths.Utilities $moduleFile
+    
+    Write-Host "DEBUG: Set-SuiteEnvironment.ps1 - Attempting to load '$moduleFile' from: $modulePath" -ForegroundColor Magenta
+    $moduleExists = Test-Path $modulePath -PathType Leaf
+    Write-Host "DEBUG: Set-SuiteEnvironment.ps1 - Module '$moduleFile' exists at path: $moduleExists" -ForegroundColor Magenta
+
+    if ($moduleExists) {
         try {
             Import-Module $modulePath -Force -Global -ErrorAction Stop
-            Write-Host "Loaded core module: $module" -ForegroundColor Green
+            Write-Host "Successfully loaded core module: $moduleFile" -ForegroundColor Green
+            
+            # Specifically test if Write-MandALog is available after importing EnhancedLogging.psm1
+            if ($moduleFile -eq "EnhancedLogging.psm1") {
+                $isWriteMandALogAvailable = Get-Command Write-MandALog -ErrorAction SilentlyContinue
+                Write-Host "DEBUG: Set-SuiteEnvironment.ps1 - Write-MandALog available after import: $(!!$isWriteMandALogAvailable)" -ForegroundColor Magenta
+                if (-not $isWriteMandALogAvailable) {
+                    throw "CRITICAL: Write-MandALog function NOT available after importing $moduleFile."
+                }
+            }
         } catch {
-            Write-Warning "Failed to load $module : $_"
+            if ($moduleFile -in @("EnhancedLogging.psm1", "ErrorHandling.psm1")) {
+                throw "CRITICAL: Failed to load essential utility module '$moduleFile' from '$modulePath'. Suite cannot continue. Error: $($_.Exception.Message)"
+            } else {
+                Write-Warning "Failed to load non-critical utility module '$moduleFile': $($_.Exception.Message)"
+            }
         }
+    } Else {
+         if ($moduleFile -in @("EnhancedLogging.psm1", "ErrorHandling.psm1")) {
+            throw "CRITICAL: Essential utility module file '$moduleFile' not found at '$modulePath'. Suite cannot continue."
+         } else {
+            Write-Warning "Non-critical utility module file '$moduleFile' not found at '$modulePath'."
+         }
     }
 }
 
 # Initialize logging if module is available
-if (Get-Command Initialize-Logging -ErrorAction SilentlyContinue) {
+# Test for Initialize-Logging command availability
+$isInitializeLoggingAvailable = Get-Command Initialize-Logging -ErrorAction SilentlyContinue
+Write-Host "DEBUG: Set-SuiteEnvironment.ps1 - Initialize-Logging available: $(!!$isInitializeLoggingAvailable)" -ForegroundColor Magenta
+
+if ($isInitializeLoggingAvailable) {
     try {
         # Ensure log configuration uses company profile path
         $global:MandA.Config.environment.logPath = $global:MandA.Paths.LogOutput
