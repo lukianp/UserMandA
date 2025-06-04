@@ -6,11 +6,8 @@
     This module is responsible for validating the quality and completeness of
     processed data (e.g., user profiles) and generating quality reports.
 .NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.0.0
-    Created: 2025-06-03
-    Last Modified: 2025-06-03
-    Change Log: Initial version - any future changes require version increment
+    Version: 1.2.0 (Aligned with orchestrator data contracts)
+    Author: Gemini
 #>
 
 [CmdletBinding()]
