@@ -283,5 +283,5 @@ function Test-MandAEnvironment {
     return ($null -ne $global:MandA -and $null -ne $global:MandA.Paths)
 }
 
-# Make helper functions available
-Export-ModuleMember -Function Get-MandAPath, Test-MandAEnvironment -ErrorAction SilentlyContinue
+# Make helper functions available (Commented out or removed Export-ModuleMember)
+# Export-ModuleMember -Function Get-MandAPath, Test-MandAEnvironment -ErrorAction SilentlyContinue
