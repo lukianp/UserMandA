@@ -6,12 +6,28 @@
     This module is responsible for validating the quality and completeness of
     processed data (e.g., user profiles) and generating quality reports.
 .NOTES
-    Version: 1.2.0 (Aligned with orchestrator data contracts)
+    Version: 1.2.1 (Corrected context access at module scope)
     Author: Gemini
 #>
 
 [CmdletBinding()]
 param()
+
+# Access context information provided by the orchestrator during module import
+# $global:_MandALoadingContext is set by the orchestrator's Import-ModuleWithManifest function.
+
+if ($null -eq $global:_MandALoadingContext -or $null -eq $global:_MandALoadingContext.Paths -or $null -eq $global:_MandALoadingContext.Config) {
+    throw "DataValidation: Critical loading context (_MandALoadingContext, its Paths, or its Config) is not available. Module cannot initialize."
+}
+
+# Use the loading context to get necessary paths and configuration
+$ModuleScope_ContextPaths = $global:_MandALoadingContext.Paths
+# $ModuleScope_Configuration = $global:_MandALoadingContext.Config # Used by functions via parameter
+
+if ($null -eq $ModuleScope_ContextPaths -or -not $ModuleScope_ContextPaths.ContainsKey('RawDataOutput')) { # Or ProcessedDataOutput if that's more relevant
+    throw "DataValidation: Relevant output path (e.g., RawDataOutput or ProcessedDataOutput) is missing in the loading context."
+}
+# $ModuleScope_RelevantPath = $ModuleScope_ContextPaths.RawDataOutput # Example
 
 # Main function to test data quality
 function Test-DataQuality {
@@ -23,30 +39,31 @@ function Test-DataQuality {
         [Parameter(Mandatory = $true)]
         [hashtable]$Configuration
     )
+    # Use Write-MandALog if available, otherwise Write-Host
+    $LogFn = if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) { Get-Command Write-MandALog } else { Get-Command Write-Host }
 
-    Write-MandALog "Starting Data Quality Validation for $($Profiles.Count) profiles..." -Level "INFO"
+    $LogFn.Invoke("Starting Data Quality Validation for $($Profiles.Count) profiles..." , "INFO")
     $issuesFound = [System.Collections.Generic.List[object]]::new()
     $validRecords = 0
     $invalidRecords = 0 # Tracks profiles with at least one issue
 
     if ($null -eq $Profiles -or $Profiles.Count -eq 0) {
-        Write-MandALog "No user profiles provided. Skipping data quality validation." -Level "WARN"
+        $LogFn.Invoke("No user profiles provided. Skipping data quality validation.", "WARN")
         return @{ TotalRecords = 0; ValidRecords = 0; InvalidRecords = 0; TotalIssues = 0; QualityScore = 100; Issues = $issuesFound }
     }
     
     $processedCount = 0
-    foreach ($profile in $Profiles) {
+    foreach ($userProfile in $Profiles) {
         $processedCount++
-        Update-Progress -Activity "Validating Data Quality" -Status "Profile $processedCount of $($Profiles.Count)" -PercentComplete (($processedCount / $Profiles.Count) * 100)
-
+        if (Get-Command Update-Progress -ErrorAction SilentlyContinue) {
+            Update-Progress -Activity "Validating Data Quality" -Status "Profile $processedCount of $($Profiles.Count)" -PercentComplete (($processedCount / $Profiles.Count) * 100)
+        }
         $currentProfileIssueCount = 0
         
-        # --- Detailed Data Validation Rules ---
-
         # Rule 1: Check for missing UserPrincipalName (Critical)
-        if ([string]::IsNullOrWhiteSpace($profile.UserPrincipalName)) {
+        if ([string]::IsNullOrWhiteSpace($userProfile.UserPrincipalName)) {
             $issuesFound.Add([PSCustomObject]@{
-                Identifier  = $profile.DisplayName # Fallback identifier
+                Identifier  = $userProfile.DisplayName # Fallback identifier
                 IssueType   = "Missing Critical Data"
                 Field       = "UserPrincipalName"
                 Description = "UserPrincipalName is missing or empty. This is a critical identifier."
@@ -57,9 +74,9 @@ function Test-DataQuality {
         }
 
         # Rule 2: Check for missing DisplayName
-        if ([string]::IsNullOrWhiteSpace($profile.DisplayName)) {
+        if ([string]::IsNullOrWhiteSpace($userProfile.DisplayName)) {
             $issuesFound.Add([PSCustomObject]@{
-                Identifier  = $profile.UserPrincipalName # Use UPN if DisplayName is missing
+                Identifier  = $userProfile.UserPrincipalName # Use UPN if DisplayName is missing
                 IssueType   = "Missing Identifying Data"
                 Field       = "DisplayName"
                 Description = "DisplayName is missing or empty."
@@ -70,9 +87,9 @@ function Test-DataQuality {
         }
         
         # Rule 3: Check if MigrationCategory was assessed
-        if ($profile.PSObject.Properties["MigrationCategory"] -and $profile.MigrationCategory -eq "Not Assessed") {
+        if ($userProfile.PSObject.Properties["MigrationCategory"] -and $userProfile.MigrationCategory -eq "Not Assessed") {
             $issuesFound.Add([PSCustomObject]@{
-                Identifier  = $profile.UserPrincipalName
+                Identifier  = $userProfile.UserPrincipalName
                 IssueType   = "Processing Incomplete"
                 Field       = "MigrationCategory"
                 Description = "Migration category is 'Not Assessed'. Complexity scoring might not have run fully or user fits no defined category."
@@ -83,9 +100,9 @@ function Test-DataQuality {
         }
 
         # Rule 4: Check if Department is populated if generating waves by department
-        if ($Configuration.processing.ContainsKey('generateWavesByDepartment') -and $Configuration.processing.generateWavesByDepartment -and [string]::IsNullOrWhiteSpace($profile.Department)) {
+        if ($Configuration.processing.ContainsKey('generateWavesByDepartment') -and $Configuration.processing.generateWavesByDepartment -and [string]::IsNullOrWhiteSpace($userProfile.Department)) {
             $issuesFound.Add([PSCustomObject]@{
-                Identifier  = $profile.UserPrincipalName
+                Identifier  = $userProfile.UserPrincipalName
                 IssueType   = "Missing Configuration Data for Waves"
                 Field       = "Department"
                 Description = "Department is missing, but wave generation is configured by department. This user may be excluded or miscategorized."
@@ -96,12 +113,12 @@ function Test-DataQuality {
         }
 
         # Rule 5: Check for potentially invalid email format in Mail property (simple check)
-        if (-not [string]::IsNullOrWhiteSpace($profile.Mail) -and $profile.Mail -notmatch "^\S+@\S+\.\S+$") {
+        if (-not [string]::IsNullOrWhiteSpace($userProfile.Mail) -and $userProfile.Mail -notmatch "^\S+@\S+\.\S+$") {
              $issuesFound.Add([PSCustomObject]@{
-                Identifier  = $profile.UserPrincipalName
+                Identifier  = $userProfile.UserPrincipalName
                 IssueType   = "Invalid Data Format"
                 Field       = "Mail"
-                Description = "Mail property '$($profile.Mail)' does not appear to be a valid email format."
+                Description = "Mail property '$($userProfile.Mail)' does not appear to be a valid email format."
                 Severity    = "Low"
                 Recommendation = "Verify the email address format for this user."
             })
@@ -109,12 +126,12 @@ function Test-DataQuality {
         }
         
         # Rule 6: Check if LastLogon date is very old, indicating potential stale account
-        if ($profile.PSObject.Properties["LastLogon"] -and $profile.LastLogon) {
+        if ($userProfile.PSObject.Properties["LastLogon"] -and $userProfile.LastLogon) {
             try {
-                $lastLogonDate = [datetime]$profile.LastLogon
+                $lastLogonDate = [datetime]$userProfile.LastLogon
                 if ($lastLogonDate -lt (Get-Date).AddYears(-2)) { # Example: older than 2 years
                      $issuesFound.Add([PSCustomObject]@{
-                        Identifier  = $profile.UserPrincipalName
+                        Identifier  = $userProfile.UserPrincipalName
                         IssueType   = "Stale Data Indication"
                         Field       = "LastLogon"
                         Description = "Last logon date ($($lastLogonDate.ToString('yyyy-MM-dd'))) is older than 2 years."
@@ -124,15 +141,9 @@ function Test-DataQuality {
                     $currentProfileIssueCount++
                 }
             } catch {
-                 Write-MandALog "Could not parse LastLogon date '$($profile.LastLogon)' for data validation on $($profile.UserPrincipalName)." -Level "DEBUG"
+                 $LogFn.Invoke("Could not parse LastLogon date '$($userProfile.LastLogon)' for data validation on $($userProfile.UserPrincipalName).", "DEBUG")
             }
         }
-
-        # Add more specific validation rules as per your suite's requirements.
-        # For example:
-        # - Check if HasADAccount and HasGraphAccount are consistent with expectations for synced users.
-        # - Check if MailboxSizeMB is a non-negative number.
-        # - Validate specific license assignments if you have a list of expected/problematic ones.
 
         if ($currentProfileIssueCount -gt 0) {
             $invalidRecords++ # This profile has one or more issues
@@ -140,7 +151,7 @@ function Test-DataQuality {
             $validRecords++
         }
     }
-    Write-Progress -Activity "Validating Data Quality" -Completed
+    if (Get-Command Write-Progress -ErrorAction SilentlyContinue) { Write-Progress -Activity "Validating Data Quality" -Completed }
 
     $totalRecords = $Profiles.Count
     $qualityScore = 100.0 # Default to 100 if no records
@@ -148,8 +159,8 @@ function Test-DataQuality {
         $qualityScore = [math]::Round(($validRecords / $totalRecords) * 100, 2)
     }
 
-    Write-MandALog "Data Quality Validation completed." -Level "SUCCESS"
-    Write-MandALog "Total Profiles: $totalRecords, Profiles with Issues: $invalidRecords, Valid Profiles: $validRecords, Quality Score: $qualityScore %" -Level "INFO"
+    $LogFn.Invoke("Data Quality Validation completed.", "SUCCESS")
+    $LogFn.Invoke("Total Profiles: $totalRecords, Profiles with Issues: $invalidRecords, Valid Profiles: $validRecords, Quality Score: $qualityScore %", "INFO")
 
     return @{
         TotalRecords   = $totalRecords
@@ -174,20 +185,19 @@ function New-QualityReport {
         [Parameter(Mandatory = $false)]
         [string]$ReportFileName = "DataQualityReport_$(Get-Date -Format 'yyyyMMddHHmmss').txt"
     )
-
-    Write-MandALog "Generating Data Quality Report..." -Level "INFO"
+    $LogFn = if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) { Get-Command Write-MandALog } else { Get-Command Write-Host }
+    $LogFn.Invoke("Generating Data Quality Report...", "INFO")
     
     $reportFilePath = Join-Path $OutputPath $ReportFileName
 
-    # Ensure directory exists
-    $outputDir = Split-Path $reportFilePath -Resolve # Use -Resolve to get full path if $OutputPath is relative
-    if (-not (Test-Path $outputDir)) {
+    $outputDirToEnsure = Split-Path $reportFilePath -Resolve # Renamed $outputDir
+    if (-not (Test-Path $outputDirToEnsure)) {
         try {
-            New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
-            Write-MandALog "Created directory for quality report: $outputDir" -Level "DEBUG"
+            New-Item -Path $outputDirToEnsure -ItemType Directory -Force | Out-Null
+            $LogFn.Invoke("Created directory for quality report: $outputDirToEnsure", "DEBUG")
         } catch {
-             Write-MandALog "Failed to create directory for quality report '$outputDir': $($_.Exception.Message)" -Level "ERROR"
-             return # Cannot proceed
+             $LogFn.Invoke("Failed to create directory for quality report '$outputDirToEnsure': $($_.Exception.Message)", "ERROR")
+             return 
         }
     }
 
@@ -209,19 +219,18 @@ Detailed Issues Found ($($ValidationResults.Issues.Count)):
 "@
 
     if ($ValidationResults.Issues.Count -gt 0) {
-        # Group issues by type for better readability in the report
         $groupedIssues = $ValidationResults.Issues | Group-Object IssueType | Sort-Object Name
         foreach ($group in $groupedIssues) {
             $reportContent += "`nIssue Type: $($group.Name) ($($group.Count) occurrences)`n"
-            $reportContent += ("-" * ($group.Name.Length + 23)) + "`n" # Dynamic underline
-            $group.Group | Sort-Object Severity, Identifier | ForEach-Object { # Sort issues within the group
+            $reportContent += ("-" * ($group.Name.Length + 23)) + "`n" 
+            $group.Group | Sort-Object Severity, Identifier | ForEach-Object { 
                 $reportContent += @"
-    Identifier:     $($_.Identifier)
-    Field:          $($_.Field)
-    Severity:       $($_.Severity)
-    Description:    $($_.Description)
-    Recommendation: $($_.Recommendation)
-    ----------
+  Identifier:     $($_.Identifier)
+  Field:          $($_.Field)
+  Severity:       $($_.Severity)
+  Description:    $($_.Description)
+  Recommendation: $($_.Recommendation)
+  ----------
 "@
             }
         }
@@ -231,9 +240,9 @@ Detailed Issues Found ($($ValidationResults.Issues.Count)):
 
     try {
         Set-Content -Path $reportFilePath -Value $reportContent -Encoding UTF8
-        Write-MandALog "Data Quality Report generated: $reportFilePath" -Level "SUCCESS"
+        $LogFn.Invoke("Data Quality Report generated: $reportFilePath", "SUCCESS")
     } catch {
-        Write-MandALog "Failed to generate Data Quality Report: $($_.Exception.Message)" -Level "ERROR"
+        $LogFn.Invoke("Failed to generate Data Quality Report: $($_.Exception.Message)", "ERROR")
     }
 }
 
