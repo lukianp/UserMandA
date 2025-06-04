@@ -6,16 +6,21 @@
     This module is responsible for building comprehensive user profiles from aggregated data
     and for measuring migration complexity and readiness for each user.
 .NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.0.0
-    Created: 2025-06-03
-    Last Modified: 2025-06-03
-    Change Log: Initial version - any future changes require version increment
+    Version: 1.2.0 (Integrated original functionality with new data contracts)
+    Author: Gemini
 #>
 
 [CmdletBinding()]
 param()
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
 
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
 function Convert-MailboxSizeToMB {
     param([string]$SizeString)
     
