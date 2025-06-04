@@ -33,6 +33,7 @@ function Initialize-IntuneDiscovery {
     }
 }
 
+
 function Get-IntuneManagedDevicesInternal {
     [CmdletBinding()]
     param(
@@ -40,32 +41,33 @@ function Get-IntuneManagedDevicesInternal {
         [hashtable]$Configuration
     )
     
-    Write-MandALog "Starting Enhanced Intune Managed Devices Discovery..." -Level "INFO"
+    Write-ProgressStep "Starting Enhanced Intune Managed Devices Discovery..." -Status Progress
     $allManagedDevices = [System.Collections.Generic.List[PSObject]]::new()
 
-    # Enhanced fields for better user mapping and device information
-    $selectFields = @(
-        "id", "deviceName", "userPrincipalName", "userDisplayName", "userId",
-        "managedDeviceOwnerType", "operatingSystem", "osVersion", 
-        "complianceState", "trustType", "isCompliant", "isManaged",
-        "lastSyncDateTime", "enrolledDateTime", "deviceRegistrationState",
-        "model", "manufacturer", "serialNumber", "imei", "meid",
-        "azureADDeviceId", "azureADRegistered", "deviceCategoryDisplayName",
-        "managementAgent", "managementState", "deviceType",
-        "totalStorageSpaceInBytes", "freeStorageSpaceInBytes",
-        "physicalMemoryInBytes", "jailBroken", "autopilotEnrolled",
-        "isEncrypted", "isSupervised", "exchangeAccessState",
-        "exchangeAccessStateReason", "emailAddress"
-    )
-    
     try {
-        Write-MandALog "Fetching Intune Managed Devices with enhanced fields..." -Level "INFO"
+        Write-ProgressStep "Fetching Intune Managed Devices..." -Status Progress
+        
+        # Get initial count
+        $countQuery = Get-MgDeviceManagementManagedDevice -Top 1 -Count
+        $totalDevices = $countQuery.Count
+        
+        Write-ProgressStep "Found $totalDevices Intune managed devices" -Status Info
         
         # Use pagination for large environments
         $devices = Get-MgDeviceManagementManagedDevice -All -ErrorAction Stop
         
         if ($devices) {
+            $processedCount = 0
+            
             foreach($device in $devices) {
+                $processedCount++
+                
+                # Update progress every 20 devices
+                if ($processedCount % 20 -eq 0 -or $processedCount -eq $totalDevices) {
+                    Show-ProgressBar -Current $processedCount -Total $totalDevices `
+                        -Activity "Processing device: $($device.DeviceName)"
+                }
+                
                 $deviceObj = [PSCustomObject]@{
                     # Core identification
                     DeviceId = $device.Id
@@ -122,19 +124,109 @@ function Get-IntuneManagedDevicesInternal {
                 $allManagedDevices.Add($deviceObj)
             }
 
+            Write-Host "" # Clear progress bar line
+
             if ($allManagedDevices.Count -gt 0) {
+                Write-ProgressStep "Exporting $($allManagedDevices.Count) Intune devices to CSV..." -Status Progress
                 Export-DataToCSV -Data $allManagedDevices -FileName "IntuneManagedDevices.csv" -OutputPath $script:outputPath
-                Write-MandALog "Successfully exported $($allManagedDevices.Count) Intune Managed Devices." -Level "SUCCESS"
+                Write-ProgressStep "Successfully exported Intune Managed Devices" -Status Success
             }
         } else {
-            Write-MandALog "No Intune Managed Devices found." -Level "WARN"
+            Write-ProgressStep "No Intune Managed Devices found" -Status Warning
         }
     } catch {
-        Write-MandALog "Error during Intune Managed Devices Discovery: $($_.Exception.Message)" -Level "ERROR"
+        Write-ProgressStep "Error during Intune Managed Devices Discovery: $($_.Exception.Message)" -Status Error
+        throw
     }
     
     return $allManagedDevices
 }
+
+function Get-IntuneDeviceSoftwareInternal {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.Collections.Generic.List[PSObject]]$ManagedDevices,
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration
+    )
+    
+    Write-ProgressStep "Starting Intune Device Software Inventory..." -Status Progress
+    $allDeviceSoftware = [System.Collections.Generic.List[PSObject]]::new()
+
+    if (-not $ManagedDevices -or $ManagedDevices.Count -eq 0) {
+        Write-ProgressStep "No managed devices provided. Skipping software inventory." -Status Warning
+        return $allDeviceSoftware
+    }
+
+    # Check if we should use beta endpoint
+    $useBeta = $false
+    if ($Configuration.graphAPI -and $Configuration.graphAPI.useBetaEndpoint) {
+        $useBeta = $true
+        Select-MgProfile -Name "beta"
+    }
+
+    $totalDevices = $ManagedDevices.Count
+    $currentDeviceNum = 0
+    
+    Write-ProgressStep "Retrieving software for $totalDevices devices..." -Status Progress
+
+    foreach ($device in $ManagedDevices) {
+        $currentDeviceNum++
+        
+        Show-ProgressBar -Current $currentDeviceNum -Total $totalDevices `
+            -Activity "Getting software for: $($device.DeviceName)"
+        
+        try {
+            # Get detected apps for the device
+            $detectedApps = $null
+            if ($useBeta) {
+                $detectedApps = Get-MgBetaDeviceManagementManagedDeviceDetectedApp -ManagedDeviceId $device.DeviceId -All -ErrorAction SilentlyContinue
+            } else {
+                $detectedApps = Get-MgDeviceManagementManagedDeviceDetectedApp -ManagedDeviceId $device.DeviceId -All -ErrorAction SilentlyContinue
+            }
+
+            if ($detectedApps) {
+                foreach ($app in $detectedApps) {
+                    $allDeviceSoftware.Add([PSCustomObject]@{
+                        ManagedDeviceId = $device.DeviceId
+                        DeviceName = $device.DeviceName
+                        UserPrincipalName = $device.UserPrincipalName
+                        UserId = $device.UserId
+                        SoftwareDisplayName = $app.DisplayName
+                        SoftwareVersion = $app.Version
+                        Publisher = if ($app.Publisher) { $app.Publisher } else { "Unknown" }
+                        Platform = if ($app.Platform) { $app.Platform } else { $device.OperatingSystem }
+                        SizeInMB = if ($app.SizeInByte) { [math]::Round($app.SizeInByte / 1MB, 2) } else { $null }
+                        DetectedAppId = $app.Id
+                    })
+                }
+            }
+            
+            # Small delay to avoid throttling every 20 devices
+            if ($currentDeviceNum % 20 -eq 0) {
+                Start-Sleep -Milliseconds 500
+            }
+            
+        } catch {
+            Write-ProgressStep "Error retrieving software for device '$($device.DeviceName)'" -Status Warning -Details @{Error=$_.Exception.Message}
+        }
+    }
+
+    Write-Host "" # Clear progress bar line
+
+    if ($allDeviceSoftware.Count -gt 0) {
+        Write-ProgressStep "Exporting $($allDeviceSoftware.Count) software entries to CSV..." -Status Progress
+        Export-DataToCSV -Data $allDeviceSoftware -FileName "IntuneDeviceSoftware.csv" -OutputPath $script:outputPath
+        Write-ProgressStep "Successfully exported device software inventory" -Status Success
+    } else {
+        Write-ProgressStep "No device software found across all devices" -Status Info
+    }
+    
+    return $allDeviceSoftware
+}
+
+
 
 function Get-IntuneDeviceSoftwareInternal {
     [CmdletBinding()]
