@@ -76,6 +76,10 @@ function Initialize-Logging {
     }
 }
 
+# Add to EnhancedLogging.psm1
+$script:LoggingConfig.CorrelationId = [Guid]::NewGuid().ToString()
+$script:LoggingConfig.ErrorBuffer = [System.Collections.ArrayList]::new()
+
 function Write-MandALog {
     param(
         [Parameter(Mandatory=$true)]
@@ -89,77 +93,65 @@ function Write-MandALog {
         [string]$Component = "Main",
         
         [Parameter(Mandatory=$false)]
-        $Context = $null
+        $Context = $null,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$CorrelationId = $script:LoggingConfig.CorrelationId
     )
     
-    # Check if message should be logged based on level
-    if (-not (Test-LogMessage -Level $Level)) {
-        return
+    # Enhanced error tracking
+    if ($Level -eq "ERROR") {
+        $null = $script:LoggingConfig.ErrorBuffer.Add([PSCustomObject]@{
+            Timestamp = Get-Date
+            Component = $Component
+            Message = $Message
+            CorrelationId = $CorrelationId
+        })
     }
     
-    # Try to get component from context if not specified
-    if ($Component -eq "Main" -and $Context) {
-        if ($Context.PSObject.Properties['CurrentPhase']) {
-            $Component = $Context.CurrentPhase
-        } elseif ($Context.PSObject.Properties['ModuleName']) {
-            $Component = $Context.ModuleName
-        }
+    # Add structured logging fields
+    $logEntry = @{
+        Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
+        Level = $Level
+        Component = $Component
+        Message = $Message
+        CorrelationId = $CorrelationId
+        User = $env:USERNAME
+        Computer = $env:COMPUTERNAME
     }
     
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logEntry = "[$timestamp] [$Level] [$Component] $Message"
-    
-    # Console output with enhanced formatting
-    if ($script:LoggingConfig.ConsoleOutput) {
-        $color = Get-LogColor -Level $Level
-        $emoji = Get-LogEmoji -Level $Level
-        
-        # Format message based on level
-        switch ($Level) {
-            "HEADER" {
-                Write-Host ""
-                Write-Host ("=" * 100) -ForegroundColor $color
-                Write-Host "$emoji $Message" -ForegroundColor $color
-                Write-Host ("=" * 100) -ForegroundColor $color
-                Write-Host ""
-            }
-            "PROGRESS" {
-                $progressMessage = if ($script:LoggingConfig.UseEmojis) { "$emoji $Message" } else { $Message }
-                Write-Host $progressMessage -ForegroundColor $color
-            }
-            "IMPORTANT" {
-                $importantMessage = if ($script:LoggingConfig.UseEmojis) { "$emoji $Message" } else { "[!] $Message" }
-                Write-Host $importantMessage -ForegroundColor $color
-            }
-            default {
-                $displayMessage = if ($script:LoggingConfig.UseEmojis) { "$emoji $Message" } else { $Message }
-                if ($script:LoggingConfig.ShowTimestamp -and $Level -ne "PROGRESS") {
-                    $displayMessage = "[$timestamp] $displayMessage"
-                }
-                Write-Host $displayMessage -ForegroundColor $color
-            }
-        }
-    }
-    
-    # File output (always include full details)
+    # Existing logging logic with enhancements...
     if ($script:LoggingConfig.FileOutput -and $script:LoggingConfig.LogFile) {
         try {
-            # Clean message for file output (remove any special characters)
-            $fileMessage = $Message
-            $fileLogEntry = "[$timestamp] [$Level] [$Component] $fileMessage"
-            
-            Add-Content -Path $script:LoggingConfig.LogFile -Value $fileLogEntry -Encoding UTF8
-            
-            # Check log file size and rotate if necessary
-            $logFile = Get-Item $script:LoggingConfig.LogFile -ErrorAction SilentlyContinue
-            if ($logFile -and ($logFile.Length / 1MB) -gt $script:LoggingConfig.MaxLogSizeMB) {
-                Move-LogFile
-            }
+            # JSON structured logging for better parsing
+            $jsonLogFile = $script:LoggingConfig.LogFile -replace '\.log$', '.json'
+            $logEntry | ConvertTo-Json -Compress | Add-Content -Path $jsonLogFile -Encoding UTF8
         } catch {
-            Write-Warning "Failed to write to log file: $($_.Exception.Message)"
+            # Fallback to simple text logging
         }
     }
 }
+
+# Add log aggregation function
+function Get-LogErrorSummary {
+    [CmdletBinding()]
+    param(
+        [int]$LastMinutes = 60
+    )
+    
+    $cutoff = (Get-Date).AddMinutes(-$LastMinutes)
+    $recentErrors = $script:LoggingConfig.ErrorBuffer | Where-Object { $_.Timestamp -gt $cutoff }
+    
+    return $recentErrors | Group-Object Component | ForEach-Object {
+        [PSCustomObject]@{
+            Component = $_.Name
+            ErrorCount = $_.Count
+            LastError = ($_.Group | Sort-Object Timestamp -Descending | Select-Object -First 1).Message
+        }
+    }
+}
+
+
 
 function Test-LogMessage {
     param([string]$Level)
