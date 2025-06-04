@@ -11,7 +11,7 @@
 #>
 
 # Import shared utilities
-Import-Module "$PSScriptRoot\..\Utilities\DataExport.psm1" -Force
+
 #Updated global logging thingy
         if ($null -eq $global:MandA) {
     throw "Global environment not initialized"
