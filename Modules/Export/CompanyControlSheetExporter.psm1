@@ -39,6 +39,20 @@
     corresponding data was not discovered or aggregated. Column headers are suggestive and aim for
     comprehensiveness; actual data presence will vary.
 #>
+
+
+
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
+
 function Export-ToCompanyControlSheet {
     [CmdletBinding()]
     param(
