@@ -1378,11 +1378,12 @@ try {
         exit 0
     }
     
-    # Initialize authentication for Discovery mode
-    if ($Mode -in "Discovery", "Full") {
-        Write-MandALog "AUTHENTICATION & CONNECTION SETUP" -Level "HEADER" -Context $script:Context
-        
-        if (Get-Command "Initialize-MandAAuthentication" -ErrorAction SilentlyContinue) {
+# Initialize authentication for Discovery mode
+if ($Mode -in "Discovery", "Full", "AzureOnly") {
+    Write-MandALog "AUTHENTICATION & CONNECTION SETUP" -Level "HEADER" -Context $script:Context
+    
+    if (Get-Command "Initialize-MandAAuthentication" -ErrorAction SilentlyContinue) {
+        try {
             $authResult = Initialize-MandAAuthentication -Configuration $configuration -Context $script:Context
             
             if ($authResult -and $authResult.Authenticated) {
@@ -1405,14 +1406,32 @@ try {
                     }
                 }
             } else {
-                $script:Context.ErrorCollector.AddError("Authentication", "Authentication failed", $null)
+                $errorMsg = if ($authResult -and $authResult.Error) { $authResult.Error } else { "Authentication failed - no error details available" }
+                $script:Context.ErrorCollector.AddError("Authentication", $errorMsg, $null)
+                Write-MandALog "Authentication failed: $errorMsg" -Level "ERROR" -Context $script:Context
                 
                 if ($configuration.environment.connectivity.haltOnConnectionError -contains "Authentication") {
-                    throw "Authentication failed and is configured as critical"
+                    throw "Authentication failed and is configured as critical: $errorMsg"
                 }
             }
         }
+        catch {
+            # Capture the actual error message
+            $errorMsg = $_.Exception.Message
+            $script:Context.ErrorCollector.AddError("Authentication", "Authentication initialization failed: $errorMsg", $_.Exception)
+            Write-MandALog "Authentication error: $errorMsg" -Level "ERROR" -Context $script:Context
+            Write-MandALog "Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG" -Context $script:Context
+            
+            # For Azure-only mode, authentication is critical
+            if ($Mode -eq "AzureOnly") {
+                throw "Authentication is required for Azure-only discovery. Error: $errorMsg"
+            }
+        }
+    } else {
+        Write-MandALog "Authentication module not found" -Level "ERROR" -Context $script:Context
+        throw "Initialize-MandAAuthentication function not found. Please ensure Authentication module is loaded."
     }
+}
     
     # Execute phases based on mode
     switch ($Mode) {
