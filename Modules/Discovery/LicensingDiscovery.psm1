@@ -3,15 +3,10 @@
     Microsoft 365 Licensing discovery for M&A Discovery Suite
 .DESCRIPTION
     Discovers license inventory, assignments, costs, and compliance
-.NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.0.0
-    Created: 2025-06-03
-    Last Modified: 2025-06-03
-    Change Log: Initial version - any future changes require version increment
 #>
 
 # Modules/Discovery/LicensingDiscovery.psm1
+#Cant use the global thingy fix here because outputpath is used in the  functions
 
 function Invoke-LicensingDiscovery {
     param([hashtable]$Configuration)
