@@ -1,26 +1,27 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    M&A Discovery Suite - Main Orchestrator (Enhanced Version 5.0.0)
+    M&A Discovery Suite - Main Orchestrator (Enhanced Version 5.1.0)
 .DESCRIPTION
     Unified orchestrator for discovery, processing, and export with improved
     state management, error handling, and parallel processing support.
 .NOTES
     Author: Enhanced Version
-    Version: 5.0.0
+    Version: 5.1.0
     Created: 2025-01-03
+    Last Modified: 2025-01-03
 #>
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory=$false)]
     [string]$CompanyName,
 
     [Parameter(Mandatory=$false)]
     [string]$ConfigurationFile,
     
     [Parameter(Mandatory=$false)]
-    [ValidateSet("Discovery", "Processing", "Export", "Full")]
+    [ValidateSet("Discovery", "Processing", "Export", "Full", "AzureOnly")]
     [string]$Mode = "Full",
     
     [Parameter(Mandatory=$false)]
@@ -49,7 +50,7 @@ class MandAContext {
     
     MandAContext([hashtable]$config, [string]$companyName) {
         $this.Config = $config
-        $this.Version = "5.0.0"
+        $this.Version = "5.1.0"
         $this.StartTime = Get-Date
         $this.ModulesChecked = $false
         $this.ErrorCollector = [DiscoveryErrorCollector]::new()
@@ -59,14 +60,13 @@ class MandAContext {
     
     [void]InitializePaths([string]$companyName) {
         $suiteRoot = Split-Path $PSScriptRoot -Parent
-        $profilesBasePath = if ($this.Config.environment.profilesBasePath) {
-            $this.Config.environment.profilesBasePath
-        } else {
-            Join-Path $suiteRoot "Profiles"
-        }
+        
+        # Use fixed base path for consistency
+        $profilesBasePath = "C:\MandADiscovery\Profiles"
         
         $this.Paths = @{
             SuiteRoot = $suiteRoot
+            ProfilesBasePath = $profilesBasePath
             CompanyProfileRoot = Join-Path $profilesBasePath $companyName
             Modules = Join-Path $suiteRoot "Modules"
             Utilities = Join-Path $suiteRoot "Modules\Utilities"
@@ -80,6 +80,7 @@ class MandAContext {
         $this.Paths.ProcessedDataOutput = Join-Path $this.Paths.CompanyProfileRoot "Processed"
         $this.Paths.LogOutput = Join-Path $this.Paths.CompanyProfileRoot "Logs"
         $this.Paths.ExportOutput = Join-Path $this.Paths.CompanyProfileRoot "Exports"
+        $this.Paths.TempPath = Join-Path $this.Paths.CompanyProfileRoot "Temp"
         
         # Update config with resolved path
         $this.Config.environment.outputPath = $this.Paths.CompanyProfileRoot
@@ -213,9 +214,83 @@ $ProgressPreference = "Continue"
 # Initialize context
 $script:Context = $null
 
+# Define Azure-only sources
+$script:AzureOnlySources = @(
+    "Azure",
+    "Graph", 
+    "Intune",
+    "Licensing",
+    "ExternalIdentity",
+    "SharePoint",
+    "Teams",
+    "Exchange"
+)
+
 #===============================================================================
 #                    UTILITY FUNCTIONS
 #===============================================================================
+
+function Get-CompanySelection {
+    [CmdletBinding()]
+    param()
+    
+    $profilesBasePath = "C:\MandADiscovery\Profiles"
+    
+    # Create profiles directory if it doesn't exist
+    if (-not (Test-Path $profilesBasePath)) {
+        New-Item -Path $profilesBasePath -ItemType Directory -Force | Out-Null
+    }
+    
+    # Get existing company profiles
+    $existingProfiles = Get-ChildItem -Path $profilesBasePath -Directory -ErrorAction SilentlyContinue | 
+        Select-Object -ExpandProperty Name | 
+        Sort-Object
+    
+    if ($existingProfiles.Count -gt 0) {
+        Write-Host "`n=== Company Profile Selection ===" -ForegroundColor Cyan
+        Write-Host "Existing company profiles found:" -ForegroundColor Yellow
+        
+        for ($i = 0; $i -lt $existingProfiles.Count; $i++) {
+            Write-Host "  $($i + 1). $($existingProfiles[$i])" -ForegroundColor White
+        }
+        
+        Write-Host "  N. Create new company profile" -ForegroundColor Green
+        Write-Host ""
+        
+        do {
+            $selection = Read-Host "Select a profile (1-$($existingProfiles.Count)) or 'N' for new"
+            
+            if ($selection -eq 'N' -or $selection -eq 'n') {
+                $companyName = Read-Host "Enter new company name"
+                if ([string]::IsNullOrWhiteSpace($companyName)) {
+                    Write-Host "Company name cannot be empty" -ForegroundColor Red
+                    continue
+                }
+                # Sanitize company name for filesystem
+                $companyName = $companyName -replace '[<>:"/\\|?*]', '_'
+                return $companyName
+            }
+            elseif ($selection -match '^\d+$') {
+                $index = [int]$selection - 1
+                if ($index -ge 0 -and $index -lt $existingProfiles.Count) {
+                    return $existingProfiles[$index]
+                }
+            }
+            
+            Write-Host "Invalid selection. Please try again." -ForegroundColor Red
+        } while ($true)
+    }
+    else {
+        Write-Host "`nNo existing company profiles found." -ForegroundColor Yellow
+        $companyName = Read-Host "Enter company name for new profile"
+        if ([string]::IsNullOrWhiteSpace($companyName)) {
+            throw "Company name cannot be empty"
+        }
+        # Sanitize company name for filesystem
+        $companyName = $companyName -replace '[<>:"/\\|?*]', '_'
+        return $companyName
+    }
+}
 
 function ConvertTo-HashtableRecursive {
     param(
@@ -342,7 +417,8 @@ function Initialize-MandAEnvironment {
             $Context.Paths.RawDataOutput,
             $Context.Paths.ProcessedDataOutput,
             $Context.Paths.LogOutput,
-            $Context.Paths.ExportOutput
+            $Context.Paths.ExportOutput,
+            $Context.Paths.TempPath
         )
         
         foreach ($dir in $directories) {
@@ -359,7 +435,7 @@ function Initialize-MandAEnvironment {
             "ValidationHelpers.psm1",
             "ConfigurationValidation.psm1",
             "ErrorHandling.psm1",
-            "DataExport.psm1"  # New centralized export module
+            "DataExport.psm1"
         )
         
         foreach ($module in $utilityModules) {
@@ -369,6 +445,11 @@ function Initialize-MandAEnvironment {
                     throw "Critical utility module failed to load: $module"
                 }
             }
+        }
+        
+        # Initialize logging
+        if (Get-Command Initialize-Logging -ErrorAction SilentlyContinue) {
+            Initialize-Logging -Configuration $Context.Config
         }
         
         # Load authentication modules
@@ -393,13 +474,13 @@ function Initialize-MandAEnvironment {
         
         # Load mode-specific modules
         switch ($CurrentMode) {
-            { $_ -in "Discovery", "Full" } {
+            { $_ -in "Discovery", "Full", "AzureOnly" } {
                 Import-DiscoveryModules -Context $Context
             }
-            { $_ -in "Processing", "Full" } {
+            { $_ -in "Processing", "Full", "AzureOnly" } {
                 Import-ProcessingModules -Context $Context
             }
-            { $_ -in "Export", "Full" } {
+            { $_ -in "Export", "Full", "AzureOnly" } {
                 Import-ExportModules -Context $Context
             }
         }
@@ -497,7 +578,7 @@ function Invoke-ParallelDiscovery {
     
     Write-MandALog "Starting parallel discovery for $($EnabledSources.Count) sources (Throttle: $ThrottleLimit)" -Level "INFO" -Context $Context
     
-    # For PowerShell 5.1 compatibility, we'll use jobs instead of ForEach-Object -Parallel
+    # For PowerShell 5.1 compatibility, we'll use jobs
     $discoveryJobs = @()
     
     foreach ($source in $EnabledSources) {
@@ -511,7 +592,7 @@ function Invoke-ParallelDiscovery {
                 
                 if (Test-Path $modulePath) {
                     Import-Module $modulePath -Force
-                    $result = & "Invoke-${source}Discovery" -Configuration $contextData.Config
+                    $result = & "Invoke-${source}Discovery" -Configuration $contextData.Config -Context $contextData
                     
                     return [PSCustomObject]@{
                         Source = $source
@@ -532,7 +613,7 @@ function Invoke-ParallelDiscovery {
                     StackTrace = $_.ScriptStackTrace
                 }
             }
-        } -ArgumentList $source, @{Config = $Context.Config}, $Context.Paths.Modules
+        } -ArgumentList $source, @{Config = $Context.Config; Paths = $Context.Paths}, $Context.Paths.Modules
         
         $discoveryJobs += $job
         
@@ -790,6 +871,14 @@ function Complete-MandADiscovery {
 #===============================================================================
 
 try {
+    # Get company name if not provided
+    if ([string]::IsNullOrWhiteSpace($CompanyName)) {
+        $CompanyName = Get-CompanySelection
+    }
+    
+    # Sanitize company name for filesystem
+    $CompanyName = $CompanyName -replace '[<>:"/\\|?*]', '_'
+    
     # Load configuration
     $configPath = if ($ConfigurationFile) {
         if ([System.IO.Path]::IsPathRooted($ConfigurationFile)) {
@@ -815,6 +904,20 @@ try {
     # Handle Force flag
     if ($Force.IsPresent) {
         $configuration.discovery.skipExistingFiles = $false
+    }
+    
+    # Handle Azure-only mode
+    if ($Mode -eq "AzureOnly") {
+        Write-Host "`nAzure-Only mode selected. Limiting discovery to cloud sources." -ForegroundColor Cyan
+        
+        # Filter enabled sources to only Azure-related
+        $currentSources = $configuration.discovery.enabledSources
+        $configuration.discovery.enabledSources = $currentSources | Where-Object { $_ -in $script:AzureOnlySources }
+        
+        Write-Host "Enabled sources for Azure-Only: $($configuration.discovery.enabledSources -join ', ')" -ForegroundColor Yellow
+        
+        # Set mode to Full to run all phases but with limited sources
+        $Mode = "Full"
     }
     
     # Create context
