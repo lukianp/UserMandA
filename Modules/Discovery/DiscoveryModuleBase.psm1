@@ -9,6 +9,8 @@
     Version: 2.0.0
 #>
 
+
+#Cant use $outputPath here, as it is used in the module 
 # Base discovery result class
 class DiscoveryResult {
     [bool]$Success
