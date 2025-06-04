@@ -14,6 +14,64 @@
 #>
 
 # Global logging configuration
+
+# Add to EnhancedLogging.psm1
+$script:LoggingConfig.StructuredLogging = @{
+    EnableJsonLogging = $true
+    EnableMetrics = $true
+    MetricsInterval = 60  # seconds
+}
+
+function Write-StructuredLog {
+    param(
+        [string]$Message,
+        [string]$Level,
+        [hashtable]$Properties = @{},
+        [string]$OperationId = [Guid]::NewGuid().ToString()
+    )
+    
+    $logEntry = @{
+        Timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ"
+        Level = $Level
+        Message = $Message
+        OperationId = $OperationId
+        MachineName = $env:COMPUTERNAME
+        ProcessId = $PID
+        ThreadId = [System.Threading.Thread]::CurrentThread.ManagedThreadId
+        Properties = $Properties
+    }
+    
+    if ($script:LoggingConfig.StructuredLogging.EnableJsonLogging) {
+        $jsonLog = $logEntry | ConvertTo-Json -Compress
+        Add-Content -Path "$($script:LoggingConfig.LogFile).json" -Value $jsonLog -Encoding UTF8
+    }
+}
+
+# Add performance metrics logging
+function Write-PerformanceMetric {
+    param(
+        [string]$MetricName,
+        [double]$Value,
+        [string]$Unit = "ms",
+        [hashtable]$Tags = @{}
+    )
+    
+    $metric = @{
+        Timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ"
+        Metric = $MetricName
+        Value = $Value
+        Unit = $Unit
+        Tags = $Tags
+    }
+    
+    if ($script:LoggingConfig.StructuredLogging.EnableMetrics) {
+        $metricsFile = "$($script:LoggingConfig.LogFile).metrics.json"
+        $metric | ConvertTo-Json -Compress | Add-Content -Path $metricsFile -Encoding UTF8
+    }
+}
+
+
+
 $script:LoggingConfig = @{
     LogLevel = "INFO"
     LogFile = $null
