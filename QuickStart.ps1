@@ -13,11 +13,6 @@
 #>
 
 
-if (-not $global:MandA) {
-    Write-Host "Initializing global environment first..." -ForegroundColor Yellow
-    . ".\Scripts\Set-SuiteEnvironment.ps1" -CompanyName $CompanyName
-}
-
 
 [CmdletBinding()]
 param(
@@ -33,6 +28,13 @@ param(
     [Parameter(Mandatory=$false)]
     [switch]$DebugMode
 )
+
+
+if (-not $global:MandA) {
+    Write-Host "Initializing global environment first..." -ForegroundColor Yellow
+    . ".\Scripts\Set-SuiteEnvironment.ps1" -CompanyName $CompanyName
+}
+
 
 # Script-level variables
 $script:LastModuleCheck = $null
