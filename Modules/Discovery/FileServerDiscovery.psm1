@@ -163,26 +163,24 @@ function Get-FileServersEnhanced {
     $processedServers = [System.Collections.Generic.HashSet[string]]::new()
     
     try {
-        Write-MandALog "Identifying file servers..." -Level "INFO" -Context $Context
+        Write-ProgressStep "Starting file server discovery..." -Status Progress
         
         # Get target servers
         $targetServers = @()
         
         if ($Configuration.TargetServers -and $Configuration.TargetServers.Count -gt 0) {
-            # Use configured target servers
-            Write-MandALog "Using configured target server list: $($Configuration.TargetServers.Count) servers" -Level "INFO" -Context $Context
+            Write-ProgressStep "Using configured target server list: $($Configuration.TargetServers.Count) servers" -Status Info
             
             foreach ($serverName in $Configuration.TargetServers) {
                 try {
                     $serverAD = Get-ADComputer -Identity $serverName -Properties OperatingSystem, Description, DNSHostName -ErrorAction Stop
                     $targetServers += $serverAD
                 } catch {
-                    Write-MandALog "Could not find server '$serverName' in AD: $($_.Exception.Message)" -Level "WARN" -Context $Context
+                    Write-ProgressStep "Could not find server '$serverName' in AD" -Status Warning
                 }
             }
         } else {
-            # Discover servers from AD
-            Write-MandALog "Discovering servers from Active Directory..." -Level "INFO" -Context $Context
+            Write-ProgressStep "Discovering servers from Active Directory..." -Status Progress
             
             $targetServers = Get-ADComputer -Filter { 
                 OperatingSystem -like "*Server*" -and 
@@ -190,19 +188,20 @@ function Get-FileServersEnhanced {
             } -Properties OperatingSystem, Description, DNSHostName -ErrorAction Stop
         }
         
+        Write-ProgressStep "Found $($targetServers.Count) potential file servers" -Status Info
+        
         # Filter excluded servers
         $excludedServers = [System.Collections.Generic.HashSet[string]]::new($Configuration.ExcludedServers, [System.StringComparer]::OrdinalIgnoreCase)
         
-        # Process servers in batches
+        # Process servers in batches with progress
         $serverBatches = Split-ArrayIntoBatches -Array $targetServers -BatchSize $Configuration.MaxConcurrentServers
-        $batchCount = 0
+        $totalServers = $targetServers.Count
+        $processedCount = 0
         
-        foreach ($batch in $serverBatches) {
-            $batchCount++
-            Write-Progress -Activity "Discovering File Servers" `
-                          -Status "Batch $batchCount of $($serverBatches.Count)" `
-                          -PercentComplete (($batchCount / $serverBatches.Count) * 100) `
-                          -Id 1
+        foreach ($batchIndex in 0..($serverBatches.Count - 1)) {
+            $batch = $serverBatches[$batchIndex]
+            
+            Write-ProgressStep "Processing batch $($batchIndex + 1) of $($serverBatches.Count)" -Status Progress
             
             # Process batch in parallel
             $batchResults = $batch | ForEach-Object -Parallel {
@@ -299,25 +298,115 @@ function Get-FileServersEnhanced {
                 
             } -ThrottleLimit $Configuration.MaxConcurrentServers
             
-            # Add non-null results
+            # Add non-null results and update progress
             foreach ($result in $batchResults) {
                 if ($null -ne $result -and -not $processedServers.Contains($result.ServerName)) {
                     $fileServers.Add($result)
                     $processedServers.Add($result.ServerName)
+                    $processedCount++
+                    
+                    # Update progress
+                    Show-ProgressBar -Current $processedCount -Total $totalServers `
+                        -Activity "Discovered file server: $($result.ServerName)"
                 }
             }
         }
         
-        Write-Progress -Activity "Discovering File Servers" -Completed -Id 1
-        
-        Write-MandALog "Identified $($fileServers.Count) file servers" -Level "SUCCESS" -Context $Context
+        Write-Host "" # Clear progress bar line
+        Write-ProgressStep "Identified $($fileServers.Count) file servers" -Status Success
         return $fileServers
         
     } catch {
-        Write-MandALog "Error discovering file servers: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-ProgressStep "Error discovering file servers: $($_.Exception.Message)" -Status Error
         throw
     }
 }
+
+function Get-FileSharesEnhanced {
+    param(
+        [array]$ServerList,
+        [hashtable]$Configuration,
+        [MandAContext]$Context,
+        [PSCredential]$Credential
+    )
+    
+    $fileShares = [System.Collections.Generic.List[PSObject]]::new()
+    $totalServers = $ServerList.Count
+    $currentServer = 0
+    
+    try {
+        Write-ProgressStep "Discovering shares on $totalServers servers..." -Status Progress
+        
+        foreach ($server in $ServerList) {
+            $currentServer++
+            $serverName = $server.ServerName
+            
+            Show-ProgressBar -Current $currentServer -Total $totalServers `
+                -Activity "Server: $serverName"
+            
+            # Get circuit breaker for this server
+            if (-not $script:ServerCircuitBreakers.ContainsKey($serverName)) {
+                $script:ServerCircuitBreakers[$serverName] = [CircuitBreaker]::new($serverName)
+            }
+            $circuitBreaker = $script:ServerCircuitBreakers[$serverName]
+            
+            if (-not $circuitBreaker.CanAttempt()) {
+                Write-ProgressStep "Skipping $serverName - circuit breaker is open" -Status Warning
+                continue
+            }
+            
+            try {
+                # Get shares
+                $shares = Get-ServerShares -ServerName $serverName -Configuration $Configuration -Credential $Credential
+                
+                if ($null -eq $shares -or $shares.Count -eq 0) {
+                    continue
+                }
+                
+                Write-ProgressStep "Processing $($shares.Count) shares on $serverName" -Status Info
+                
+                # Process shares with sub-progress
+                $shareCount = 0
+                foreach ($share in $shares) {
+                    $shareCount++
+                    
+                    # Update sub-progress every 5 shares
+                    if ($shareCount % 5 -eq 0 -or $shareCount -eq $shares.Count) {
+                        Write-Host "`r  Processing share $shareCount of $($shares.Count): $($share.Name)..." -NoNewline -ForegroundColor Gray
+                    }
+                    
+                    $shareInfo = Get-ShareDetails -ServerName $serverName `
+                                                 -Share $share `
+                                                 -Configuration $Configuration `
+                                                 -Context $Context `
+                                                 -Credential $Credential
+                    
+                    if ($shareInfo) {
+                        $fileShares.Add($shareInfo)
+                    }
+                }
+                
+                Write-Host "`r" + (" " * 80) + "`r" -NoNewline # Clear sub-progress line
+                
+                # Record success
+                $circuitBreaker.RecordSuccess()
+                
+            } catch {
+                $circuitBreaker.RecordFailure($_.Exception)
+                Write-ProgressStep "Error processing shares on $serverName`: $($_.Exception.Message)" -Status Error
+            }
+        }
+        
+        Write-Host "" # Clear progress bar line
+        Write-ProgressStep "Discovered $($fileShares.Count) file shares" -Status Success
+        return $fileShares
+        
+    } catch {
+        Write-ProgressStep "Error discovering file shares: $($_.Exception.Message)" -Status Error
+        throw
+    }
+}
+
 
 function Get-FileSharesEnhanced {
     param(
