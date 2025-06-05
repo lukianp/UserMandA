@@ -9,13 +9,14 @@
     This script is CRITICAL and MUST be sourced by QuickStart.ps1 before any other 
     suite operation, including invoking MandA-Orchestrator.ps1.
     It ensures that critical helper functions and type data modifications are available globally.
+    This version fixes the path key for the Configuration directory to be 'Configuration' instead of 'ConfigurationDir'.
 .PARAMETER ProvidedSuiteRoot
     Optional. Override the automatic suite root detection. Useful if running Set-SuiteEnvironment.ps1
     directly from a location different from its standard 'Scripts' directory.
 .PARAMETER CompanyName
     Mandatory. The company name for profile-specific paths.
 .NOTES
-    Version: 5.2.0
+    Version: 5.2.1
     Change Log:
     - FAULT 1 FIX: Correctly clear $global:MandA if it exists and is a Hashtable, or re-initialize.
     - Ensured Get-OrElse and HashtableContains are defined early and globally.
@@ -24,6 +25,7 @@
     - Enhanced logging for initialization steps.
     - Ensured script outputs confirm its successful execution if verbose.
     - Improved validation of default-config.json structure for essential root sections.
+    - Corrected Configuration directory path key from 'ConfigurationDir' to 'Configuration'.
 #>
 [CmdletBinding()]
 param(
@@ -36,11 +38,10 @@ param(
 
 # --- Script Initialization & Global Utilities ---
 $ErrorActionPreference = "Stop" # Ensures script halts on unexpected errors
-Write-Host "=== [Set-SuiteEnvironment.ps1 v5.2.0] Initializing M&A Discovery Suite Environment ===" -ForegroundColor Cyan
+Write-Host "=== [Set-SuiteEnvironment.ps1 v5.2.1] Initializing M&A Discovery Suite Environment ===" -ForegroundColor Cyan
 Write-Host "[Set-SuiteEnvironment] Timestamp: $(Get-Date)" -ForegroundColor Gray
 
 # Define Get-OrElse globally IF it doesn't exist. Critical for many modules and scripts.
-# FAULT 2 NOTE: Definition here ensures availability for subsequent scripts like Orchestrator.
 if (-not (Get-Command global:Get-OrElse -ErrorAction SilentlyContinue)) {
     function global:Get-OrElse {
         param($Value, $Default)
@@ -82,7 +83,7 @@ function ConvertTo-HashtableRecursiveSSE {
         return ,@($InputObject | ForEach-Object { ConvertTo-HashtableRecursiveSSE $_ })
     }
     if ($InputObject -is [PSCustomObject]) {
-        $hash = @{} # Standard hashtable for PS 5.1 compatibility with .ContainsKey()
+        $hash = @{} 
         $InputObject.PSObject.Properties | ForEach-Object { $hash[$_.Name] = ConvertTo-HashtableRecursiveSSE $_.Value }
         return $hash
     }
@@ -104,7 +105,6 @@ if (-not [string]::IsNullOrWhiteSpace($ProvidedSuiteRoot)) {
         throw "Provided SuiteRoot '$ProvidedSuiteRoot' is invalid or does not have the required structure (Core, Modules, Scripts, Configuration subdirectories)."
     }
 } elseif ($PSScriptRoot) {
-    # If PSScriptRoot is available, assume this script is in "Scripts" subdirectory
     $parentOfScriptsDir = Split-Path $PSScriptRoot -Parent
     if (Test-MandASuiteStructureInternal -PathToTest $parentOfScriptsDir) {
         $determinedSuiteRoot = Resolve-Path $parentOfScriptsDir | Select-Object -ExpandProperty Path
@@ -112,7 +112,6 @@ if (-not [string]::IsNullOrWhiteSpace($ProvidedSuiteRoot)) {
     }
 }
 
-# Fallback if PSScriptRoot didn't yield a valid structure (e.g., script moved or PSScriptRoot is null)
 if (-not $determinedSuiteRoot) {
     $scriptFileDir = Split-Path $MyInvocation.MyCommand.Path -Parent
     $potentialPathFromMyInvocation = Split-Path $scriptFileDir -Parent
@@ -120,7 +119,6 @@ if (-not $determinedSuiteRoot) {
         $determinedSuiteRoot = Resolve-Path $potentialPathFromMyInvocation | Select-Object -ExpandProperty Path
         $determinationMethod = "auto-detection relative to MyInvocation '$($MyInvocation.MyCommand.Path)'"
     } else {
-        # Final fallback: current location's parent. This is less reliable.
         $currentLocationParent = Split-Path (Get-Location).Path -Parent
         if (Test-MandASuiteStructureInternal -PathToTest $currentLocationParent) {
             $determinedSuiteRoot = Resolve-Path $currentLocationParent | Select-Object -ExpandProperty Path
@@ -158,10 +156,9 @@ if ($null -eq $configContent) {
 $configurationHashtable = ConvertTo-HashtableRecursiveSSE -InputObject $configContent
 Write-Host "[Set-SuiteEnvironment] Configuration loaded from '$configFilePath'" -ForegroundColor Green
 
-# Validate essential config structure
 $requiredRootSections = @("metadata", "environment", "authentication", "discovery", "processing", "export")
 foreach ($sectionName in $requiredRootSections) {
-    if (-not $configurationHashtable.HashtableContains($sectionName)) { # Using custom method for clarity
+    if (-not $configurationHashtable.HashtableContains($sectionName)) { 
         throw "CRITICAL: Configuration file '$configFilePath' is missing the essential root section: '$sectionName'."
     }
     if (-not ($configurationHashtable[$sectionName] -is [hashtable])) {
@@ -170,7 +167,6 @@ foreach ($sectionName in $requiredRootSections) {
 }
 Write-Host "[Set-SuiteEnvironment] Essential root sections in configuration validated." -ForegroundColor Green
 
-# Ensure companyName exists in metadata, set/override from parameter.
 if (-not $configurationHashtable.metadata.HashtableContains('companyName') -or [string]::IsNullOrWhiteSpace($configurationHashtable.metadata.companyName)) {
     Write-Warning "[Set-SuiteEnvironment] companyName not found or empty in config metadata. Setting from parameter: '$SanitizedCompanyName'."
     $configurationHashtable.metadata.companyName = $SanitizedCompanyName
@@ -193,7 +189,7 @@ $resolvedPaths = @{
     Core                = Join-Path $determinedSuiteRoot "Core"
     Modules             = Join-Path $determinedSuiteRoot "Modules"
     Scripts             = Join-Path $determinedSuiteRoot "Scripts"
-    ConfigurationDir    = Join-Path $determinedSuiteRoot "Configuration" 
+    Configuration       = Join-Path $determinedSuiteRoot "Configuration" # MODIFIED KEY HERE
     Documentation       = Join-Path $determinedSuiteRoot "Documentation"
     Utilities           = Join-Path $determinedSuiteRoot "Modules\Utilities"
     Discovery           = Join-Path $determinedSuiteRoot "Modules\Discovery"
@@ -219,7 +215,6 @@ $resolvedPaths = @{
 }
 
 # 5. Initialize or Update $global:MandA
-# FAULT 1 FIX: Correctly clear or re-initialize $global:MandA
 if ($null -eq $global:MandA) { 
     $global:MandA = @{} 
     Write-Host "[Set-SuiteEnvironment] Initialized `$global:MandA as new Hashtable." -ForegroundColor DarkGray
@@ -230,25 +225,23 @@ if ($null -eq $global:MandA) {
     Write-Warning "[Set-SuiteEnvironment] `$global:MandA exists but is not a Hashtable. Re-initializing."
     $global:MandA = @{}
 }
-# $global:MandA.PSObject.Properties.Clear() # This was the FAULTY line
 
-$global:MandA.Version             = $configurationHashtable.metadata.version | global:Get-OrElse "5.2.0" # Updated version
+$global:MandA.Version             = $configurationHashtable.metadata.version | global:Get-OrElse "5.2.1" 
 $global:MandA.SuiteRoot           = $determinedSuiteRoot 
 $global:MandA.CompanyName         = $SanitizedCompanyName
 $global:MandA.Config              = $configurationHashtable 
-$global:MandA.Paths               = $resolvedPaths
+$global:MandA.Paths               = $resolvedPaths # This now contains 'Configuration' not 'ConfigurationDir'
 $global:MandA.Initialized         = $true 
 $global:MandA.ModulesChecked      = $false 
 $global:MandA.LoggingInitialized  = $false 
 $global:MandA.ConnectionStatus    = @{ Credentials = $false; AzureAD = $false; Exchange = $false; SharePoint = $false; Teams = $false }
 $global:MandA.OrchestratorRunCount = 0 
 
-# Update config paths to reflect resolved company-specific locations
 $global:MandA.Config.environment.outputPath = $resolvedPaths.CompanyProfileRoot
 $global:MandA.Config.environment.tempPath = $resolvedPaths.TempPath
 $global:MandA.Config.authentication.credentialStorePath = $resolvedPaths.CredentialFile 
 
-Write-Host "[Set-SuiteEnvironment] Populated `$global:MandA with suite context." -ForegroundColor Green
+Write-Host "[Set-SuiteEnvironment] Populated `$global:MandA with suite context. Configuration path key is now 'Configuration'." -ForegroundColor Green
 
 # 6. Create Company-Specific Directories
 Write-Host "[Set-SuiteEnvironment] Ensuring company profile directories exist for '$SanitizedCompanyName'..." -ForegroundColor Yellow
@@ -265,7 +258,7 @@ foreach ($dirToCreate in $dirsToCreate) {
     }
 }
 
-# 7. Early Load Critical Utilities (EnhancedLogging first for Write-MandALog)
+# 7. Early Load Critical Utilities
 Write-Host "[Set-SuiteEnvironment] Attempting to load critical utility modules..." -ForegroundColor DarkCyan
 $criticalUtilModulesForEarlyLoad = @("EnhancedLogging.psm1", "ErrorHandling.psm1") 
 foreach ($utilModuleFile in $criticalUtilModulesForEarlyLoad) {
@@ -285,18 +278,15 @@ foreach ($utilModuleFile in $criticalUtilModulesForEarlyLoad) {
 # 8. Initialize Logging System using Write-MandALog if available
 if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
     try {
-        # Ensure the logPath in the working config reflects the company-specific path
         if (-not $global:MandA.Config.environment.HashtableContains('logPath') -or $global:MandA.Config.environment.logPath -ne $resolvedPaths.LogOutput) {
             $global:MandA.Config.environment.logPath = $resolvedPaths.LogOutput
-             Write-MandALog -Message "[Set-SuiteEnvironment] Corrected logPath in working config to: $($resolvedPaths.LogOutput)" -Level DEBUG -Context $global:MandA # Pass context
+             Write-MandALog -Message "[Set-SuiteEnvironment] Corrected logPath in working config to: $($resolvedPaths.LogOutput)" -Level DEBUG -Context $global:MandA 
         }
-        Initialize-Logging -Configuration $global:MandA.Config # Assumes Initialize-Logging uses the config's logPath
+        Initialize-Logging -Configuration $global:MandA.Config 
         $global:MandA.LoggingInitialized = $true
         Write-MandALog -Message "[Set-SuiteEnvironment] Logging initialized. Log file target directory: $($resolvedPaths.LogOutput)" -Level INFO -Context $global:MandA
     } catch {
-        # Fallback to Write-Host if Write-MandALog itself fails during this critical setup
         Write-Warning "[Set-SuiteEnvironment] Failed to initialize logging via Initialize-Logging: $($_.Exception.Message). Check EnhancedLogging.psm1 and config."
-        # Try to use Write-MandALog one last time for the error, it might partially work or log to console
         if(Get-Command Write-MandALog -ErrorAction SilentlyContinue){
             Write-MandALog -Message "[Set-SuiteEnvironment] Failed to initialize logging system. Error: $($_.Exception.Message)" -Level "ERROR" -Context $global:MandA
         }
@@ -305,7 +295,6 @@ if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
     Write-Warning "[Set-SuiteEnvironment] Initialize-Logging command (from EnhancedLogging.psm1) not found. Enhanced logging will not be available from Set-SuiteEnvironment.ps1. Ensure EnhancedLogging.psm1 is in the Utilities folder and loaded correctly."
 }
 
-# Use Write-MandALog if available for final messages, otherwise Write-Host
 $finalSuccessMessage = "[Set-SuiteEnvironment] M&A Discovery Suite Environment Initialized for Company: '$SanitizedCompanyName'"
 $finalInfoMessage = "[Set-SuiteEnvironment]   Global context `$global:MandA` is now populated."
 
@@ -319,4 +308,3 @@ if (Get-Command Write-MandALog -ErrorAction SilentlyContinue -and $global:MandA.
 
 Write-Host "[Set-SuiteEnvironment] Environment setup complete for '$SanitizedCompanyName'." -ForegroundColor Cyan
 Write-Host ""
-
