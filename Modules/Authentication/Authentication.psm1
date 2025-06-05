@@ -43,136 +43,345 @@ function _AuthLog {
 }
 
 function Initialize-MandAAuthentication {
+    <#
+    .SYNOPSIS
+        Initializes authentication for M&A Discovery Suite operations
+    .DESCRIPTION
+        Handles authentication initialization with support for both Configuration hashtable
+        and Context objects. Includes enhanced error handling and debug output.
+    .PARAMETER Configuration
+        Hashtable containing the suite configuration
+    .PARAMETER Context
+        Alternative parameter accepting a context object with embedded configuration
+    .EXAMPLE
+        Initialize-MandAAuthentication -Configuration $config
+    .EXAMPLE
+        Initialize-MandAAuthentication -Context $global:MandA
+    #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false, ParameterSetName='Configuration')]
         [hashtable]$Configuration,
-
-        [Parameter(Mandatory=$false)] # Make $Context mandatory if it's always needed
-        [MandAContext]$Context 
+        
+        [Parameter(Mandatory=$false, ParameterSetName='Context')]
+        [object]$Context
     )
     
-    if ($script:AuthInitializationInProgress) {
-        _AuthLog "WARNING: Authentication initialization already in progress - preventing recursion." -Level "WARN" -ContextForLog $Context
-        return @{ Authenticated = $false; Error = "Authentication initialization already in progress"; Timestamp = Get-Date }
+    # Initialize result object
+    $authResult = @{
+        Authenticated = $false
+        Context = $null
+        Error = $null
+        Timestamp = Get-Date
+        Method = $null
     }
-    
-    if ($script:AuthInitializationAttempts -ge $script:MaxAuthInitializationAttempts) {
-        _AuthLog "ERROR: Maximum authentication attempts ($script:MaxAuthInitializationAttempts) exceeded." -Level "ERROR" -ContextForLog $Context
-        return @{ Authenticated = $false; Error = "Maximum authentication attempts exceeded"; Timestamp = Get-Date }
-    }
-    
-    $script:AuthInitializationInProgress = $true
-    $script:AuthInitializationAttempts++
     
     try {
-        _AuthLog "===============================================" -Level "HEADER" -ContextForLog $Context
-        _AuthLog "INITIALIZING AUTHENTICATION (Attempt $($script:AuthInitializationAttempts)/$($script:MaxAuthInitializationAttempts))" -Level "HEADER" -ContextForLog $Context
-        _AuthLog "===============================================" -Level "INFO" -ContextForLog $Context
+        Write-Verbose "[Initialize-MandAAuthentication] Starting authentication initialization..."
+        Write-Verbose "[Initialize-MandAAuthentication] Parameter set: $($PSCmdlet.ParameterSetName)"
         
-        if ($null -eq $Configuration) { throw "Configuration parameter is null" }
-        if ($null -eq $Configuration.authentication) { throw "Configuration.authentication section is missing" }
-
-        _AuthLog "DEBUG: Auth Config - Use SP: $($Configuration.authentication.useServicePrincipal), Interactive: $($Configuration.authentication.useInteractiveAuth), Method: $($Configuration.authentication.authenticationMethod)" -Level "DEBUG" -ContextForLog $Context
-        _AuthLog "DEBUG: Auth Config - Credential Store Path: $($Configuration.authentication.credentialStorePath)" -Level "DEBUG" -ContextForLog $Context
+        # Determine configuration source
+        $workingConfig = $null
+        $configSource = ""
         
-        $script:AuthContext = $null # Clear previous context
-        $script:LastAuthAttemptTimestamp = Get-Date
-
-        if (-not (Get-Command Get-SecureCredentials -ErrorAction SilentlyContinue)) {
-            throw "Get-SecureCredentials function not found. Ensure CredentialManagement.psm1 module is loaded."
+        if ($PSCmdlet.ParameterSetName -eq 'Configuration' -and $Configuration) {
+            $workingConfig = $Configuration
+            $configSource = "Configuration parameter"
+            Write-Verbose "[Initialize-MandAAuthentication] Using configuration from: $configSource"
         }
-
-        _AuthLog "Retrieving credentials directly..." -Level "INFO" -ContextForLog $Context
-        # Direct credential retrieval as per user feedback (removed Start-Job)
-        $credentials = Get-SecureCredentials -Configuration $Configuration -Context $Context # Pass Context if Get-SecureCredentials needs it for logging
-        
-        if (-not $credentials) { throw "Get-SecureCredentials returned null or empty." }
-
-        if ($credentials -is [hashtable]) {
-             _AuthLog "DEBUG: Credentials obtained: $($credentials.Keys -join ', ')" -Level "DEBUG" -ContextForLog $Context
-            if ($credentials.ContainsKey('Success') -and -not $credentials.Success) {
-                $errorMsg = $credentials.Error | Get-OrElse "Unknown error in credential retrieval"
-                throw "Failed to obtain credentials: $errorMsg"
+        elseif ($PSCmdlet.ParameterSetName -eq 'Context' -and $Context) {
+            # Handle different context object types
+            if ($Context -is [hashtable] -and $Context.ContainsKey('Config')) {
+                $workingConfig = $Context.Config
+                $configSource = "Context.Config (hashtable)"
             }
-            $requiredProps = @('ClientId', 'ClientSecret', 'TenantId')
-            $missingProps = $requiredProps | Where-Object { -not $credentials.ContainsKey($_) -or [string]::IsNullOrWhiteSpace($credentials.$_) }
-            if ($missingProps.Count -gt 0) {
-                throw "Missing required credential properties: $($missingProps -join ', ')"
+            elseif ($Context.PSObject.Properties['Config']) {
+                $workingConfig = $Context.Config
+                $configSource = "Context.Config (PSCustomObject)"
             }
-        } else {
-            throw "Invalid credential object type returned: $($credentials.GetType().Name)"
+            elseif ($Context -is [hashtable]) {
+                # Context itself might be the configuration
+                $workingConfig = $Context
+                $configSource = "Context as configuration"
+            }
+            else {
+                throw "Context parameter provided but no Config property found"
+            }
+            Write-Verbose "[Initialize-MandAAuthentication] Using configuration from: $configSource"
         }
-
-        _AuthLog "Credentials obtained successfully." -Level "SUCCESS" -ContextForLog $Context
-        _AuthLog "  - Client ID: $($credentials.ClientId.Substring(0,[System.Math]::Min($credentials.ClientId.Length, 8)))..." -Level "DEBUG" -ContextForLog $Context
-        
-        # The actual connection and token acquisition using these credentials would typically happen
-        # in the Connectivity modules (e.g., Connect-MandAGraph in EnhancedConnectionManager.psm1).
-        # Initialize-MandAAuthentication primarily ensures credentials are valid and available.
-        # A simple validation (like Test-CredentialValidity) can be done here if it doesn't create recursive calls.
-
-        $skipValidation = $false
-        if (Get-Command Test-CredentialValidity -ErrorAction SilentlyContinue) {
-            # This is a conceptual check. If Test-CredentialValidity makes a Graph call that itself needs this auth context,
-            # it could lead to issues if not handled carefully.
-            # For simplicity, assume Test-CredentialValidity is a lightweight check or handles its own minimal auth.
-            _AuthLog "Validating credentials (conceptual call)..." -Level "INFO" -ContextForLog $Context
-            if (-not (Test-CredentialValidity -Credentials $credentials -Configuration $Configuration -Context $Context)) { # Pass Context
-                 throw "Credential validation failed by Test-CredentialValidity."
+        else {
+            # Fallback to global context
+            if ($global:MandA -and $global:MandA.Config) {
+                $workingConfig = $global:MandA.Config
+                $configSource = "Global MandA context"
+                Write-Verbose "[Initialize-MandAAuthentication] Using configuration from: $configSource"
             }
-            _AuthLog "Credentials conceptually validated." -Level "SUCCESS" -ContextForLog $Context
-        } else {
-            _AuthLog "Test-CredentialValidity function not found. Skipping active validation of credentials." -Level "WARN" -ContextForLog $Context
-            # $skipValidation = $true # Or decide to throw if validation is critical
+            else {
+                throw "No configuration provided and global context not available"
+            }
         }
         
-        $tokenExpirySeconds = $Configuration.authentication.tokenRefreshThreshold | Get-OrElse 3600
+        # Validate configuration
+        if (-not $workingConfig) {
+            throw "No valid configuration found from source: $configSource"
+        }
+        
+        Write-Verbose "[Initialize-MandAAuthentication] Configuration type: $($workingConfig.GetType().FullName)"
+        
+        # Validate required configuration sections
+        $requiredSections = @('authentication')
+        foreach ($section in $requiredSections) {
+            if (-not $workingConfig.$section) {
+                throw "Required configuration section missing: $section"
+            }
+        }
+        
+        # Log authentication configuration (without sensitive data)
+        Write-Verbose "[Initialize-MandAAuthentication] Authentication configuration:"
+        Write-Verbose "  Method: $($workingConfig.authentication.authenticationMethod)"
+        Write-Verbose "  UseServicePrincipal: $($workingConfig.authentication.useServicePrincipal)"
+        Write-Verbose "  UseInteractiveAuth: $($workingConfig.authentication.useInteractiveAuth)"
+        Write-Verbose "  TokenRefreshThreshold: $($workingConfig.authentication.tokenRefreshThreshold)"
+        
+        # Clear any existing authentication context
+        if ($script:AuthContext) {
+            Write-Verbose "[Initialize-MandAAuthentication] Clearing existing authentication context"
+            $script:AuthContext = $null
+        }
+        
+        # Initialize authentication timestamp
+        $script:LastAuthAttempt = Get-Date
+        
+        # Get credentials
+        Write-Verbose "[Initialize-MandAAuthentication] Retrieving credentials..."
+        $credentials = Get-SecureCredentials -Configuration $workingConfig
+        
+        if (-not $credentials -or $credentials.Error) {
+            $errorMsg = if ($credentials.Error) { $credentials.Error } else { "Unknown error in credential retrieval" }
+            throw "Failed to retrieve credentials: $errorMsg"
+        }
+        
+        Write-Verbose "[Initialize-MandAAuthentication] Credentials retrieved successfully"
+        Write-Verbose "[Initialize-MandAAuthentication] Credential type: $($credentials.GetType().FullName)"
+        
+        # Validate credentials based on authentication method
+        $authMethod = $workingConfig.authentication.authenticationMethod
+        Write-Verbose "[Initialize-MandAAuthentication] Validating credentials for method: $authMethod"
+        
+        switch ($authMethod) {
+            "ClientSecret" {
+                $requiredProps = @('ClientId', 'ClientSecret', 'TenantId')
+                $missingProps = @()
+                
+                foreach ($prop in $requiredProps) {
+                    if (-not $credentials.$prop -or [string]::IsNullOrWhiteSpace($credentials.$prop)) {
+                        $missingProps += $prop
+                    }
+                }
+                
+                if ($missingProps.Count -gt 0) {
+                    throw "Missing required credential properties for ClientSecret authentication: $($missingProps -join ', ')"
+                }
+                
+                Write-Verbose "[Initialize-MandAAuthentication] All required properties present for ClientSecret authentication"
+                $authResult.Method = "ClientSecret"
+            }
+            
+            "Certificate" {
+                if (-not $credentials.ClientId -or -not $credentials.TenantId) {
+                    throw "Certificate authentication requires ClientId and TenantId"
+                }
+                
+                $certThumbprint = $workingConfig.authentication.certificateThumbprint
+                if ([string]::IsNullOrWhiteSpace($certThumbprint)) {
+                    throw "Certificate authentication requires certificateThumbprint in configuration"
+                }
+                
+                Write-Verbose "[Initialize-MandAAuthentication] Certificate thumbprint: $certThumbprint"
+                $authResult.Method = "Certificate"
+            }
+            
+            "Interactive" {
+                Write-Verbose "[Initialize-MandAAuthentication] Interactive authentication selected"
+                $authResult.Method = "Interactive"
+            }
+            
+            default {
+                throw "Unsupported authentication method: $authMethod"
+            }
+        }
+        
+        # Additional validation
+        Write-Verbose "[Initialize-MandAAuthentication] Performing additional credential validation..."
+        $validationResult = Test-CredentialValidity -Credentials $credentials -Configuration $workingConfig
+        
+        if (-not $validationResult.IsValid) {
+            throw "Credential validation failed: $($validationResult.Error)"
+        }
+        
+        # Create authentication context
+        Write-Verbose "[Initialize-MandAAuthentication] Creating authentication context..."
         $script:AuthContext = @{
-            ClientId             = $credentials.ClientId
-            ClientSecret         = $credentials.ClientSecret # Storing plain text secret here; ensure it's handled securely
-            TenantId             = $credentials.TenantId
-            TokenExpiry          = (Get-Date).AddSeconds($tokenExpirySeconds)
-            LastRefresh          = Get-Date
-            CredentialSource     = $credentials.Source | Get-OrElse "StoredCredentialFile"
-            AuthenticationMethod = $Configuration.authentication.authenticationMethod | Get-OrElse "ClientSecret"
+            ClientId = $credentials.ClientId
+            TenantId = $credentials.TenantId
+            ClientSecret = $credentials.ClientSecret
+            CertificateThumbprint = if ($authMethod -eq "Certificate") { $workingConfig.authentication.certificateThumbprint } else { $null }
+            AuthenticationMethod = $authMethod
+            TokenExpiry = (Get-Date).AddMinutes(60)  # Default 60 minutes, will be updated by actual token
+            LastRefresh = Get-Date
+            UseServicePrincipal = $workingConfig.authentication.useServicePrincipal
+            UseInteractiveAuth = $workingConfig.authentication.useInteractiveAuth
+            Configuration = $workingConfig
         }
-        _AuthLog "Authentication context stored in module scope." -Level "DEBUG" -ContextForLog $Context
-
-        $script:AuthInitializationAttempts = 0 # Reset attempts on success
         
-        return @{
-            Authenticated        = $true
-            Context              = $script:AuthContext # Return the created context
-            Error                = $null
-            Timestamp            = Get-Date
+        # Log success (without sensitive data)
+        Write-Verbose "[Initialize-MandAAuthentication] Authentication context created successfully"
+        Write-Verbose "[Initialize-MandAAuthentication] Context details:"
+        Write-Verbose "  ClientId: $($script:AuthContext.ClientId.Substring(0, 8))..."
+        Write-Verbose "  TenantId: $($script:AuthContext.TenantId)"
+        Write-Verbose "  Method: $($script:AuthContext.AuthenticationMethod)"
+        Write-Verbose "  UseServicePrincipal: $($script:AuthContext.UseServicePrincipal)"
+        
+        # Update result
+        $authResult.Authenticated = $true
+        $authResult.Context = $script:AuthContext
+        $authResult.Method = $authMethod
+        
+        # Write success message
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+            Write-MandALog -Message "Authentication initialized successfully using $authMethod" -Level "SUCCESS" -Component "Authentication"
+        } else {
+            Write-Host "[SUCCESS] Authentication initialized successfully using $authMethod" -ForegroundColor Green
         }
         
     } catch {
+        # Capture error details
         $errorDetails = @{
-            Message       = $_.Exception.Message
-            Type          = $_.Exception.GetType().Name
-            StackTrace    = $_.ScriptStackTrace
-            Timestamp     = Get-Date
-            Attempt       = $script:AuthInitializationAttempts
+            Message = $_.Exception.Message
+            Type = $_.Exception.GetType().FullName
+            StackTrace = $_.ScriptStackTrace
+            Timestamp = Get-Date
         }
-        _AuthLog "CRITICAL ERROR in authentication initialization: $($errorDetails.Message)" -Level "ERROR" -ContextForLog $Context
-        _AuthLog "  - Type: $($errorDetails.Type), Attempt: $($errorDetails.Attempt)" -Level "ERROR" -ContextForLog $Context
-        _AuthLog "  - Stack: $($errorDetails.StackTrace)" -Level "DEBUG" -ContextForLog $Context
         
+        $authResult.Error = $errorDetails.Message
+        
+        # Log error
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+            Write-MandALog -Message "Authentication initialization failed: $($errorDetails.Message)" -Level "ERROR" -Component "Authentication"
+        } else {
+            Write-Host "[ERROR] Authentication initialization failed: $($errorDetails.Message)" -ForegroundColor Red
+        }
+        
+        Write-Verbose "[Initialize-MandAAuthentication] Error details:"
+        Write-Verbose "  Type: $($errorDetails.Type)"
+        Write-Verbose "  Stack: $($errorDetails.StackTrace)"
+        
+        # Clear any partial context
         $script:AuthContext = $null
-        $script:LastAuthAttemptTimestamp = Get-Date
-        
-        return @{
-            Authenticated = $false
-            Error         = $errorDetails.Message
-            ErrorDetails  = $errorDetails
-            Timestamp     = Get-Date
-        }
-    } finally {
-        $script:AuthInitializationInProgress = $false # CRITICAL: Always reset this flag
+        $script:LastAuthAttempt = $null
     }
+    
+    # Return result
+    return $authResult
 }
+
+# Helper function to test credential validity
+function Test-CredentialValidity {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        $Credentials,
+        
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration
+    )
+    
+    $result = @{
+        IsValid = $true
+        Error = $null
+    }
+    
+    try {
+        Write-Verbose "[Test-CredentialValidity] Starting credential validation..."
+        
+        # Basic property validation
+        if (-not $Credentials) {
+            throw "Credentials object is null"
+        }
+        
+        # Check for ClientId (always required)
+        if ([string]::IsNullOrWhiteSpace($Credentials.ClientId)) {
+            throw "ClientId is missing or empty"
+        }
+        
+        # Validate ClientId format (basic GUID check)
+        try {
+            $null = [System.Guid]::Parse($Credentials.ClientId)
+            Write-Verbose "[Test-CredentialValidity] ClientId format valid"
+        } catch {
+            throw "ClientId is not a valid GUID format"
+        }
+        
+        # Check for TenantId (always required)
+        if ([string]::IsNullOrWhiteSpace($Credentials.TenantId)) {
+            throw "TenantId is missing or empty"
+        }
+        
+        # Validate TenantId format
+        try {
+            $null = [System.Guid]::Parse($Credentials.TenantId)
+            Write-Verbose "[Test-CredentialValidity] TenantId format valid"
+        } catch {
+            # TenantId might be a domain name
+            if ($Credentials.TenantId -notmatch '\.') {
+                throw "TenantId is neither a valid GUID nor a domain name"
+            }
+            Write-Verbose "[Test-CredentialValidity] TenantId appears to be a domain name"
+        }
+        
+        # Method-specific validation
+        $authMethod = $Configuration.authentication.authenticationMethod
+        
+        switch ($authMethod) {
+            "ClientSecret" {
+                if ([string]::IsNullOrWhiteSpace($Credentials.ClientSecret)) {
+                    throw "ClientSecret is required for ClientSecret authentication method"
+                }
+                Write-Verbose "[Test-CredentialValidity] ClientSecret present"
+            }
+            
+            "Certificate" {
+                $thumbprint = $Configuration.authentication.certificateThumbprint
+                if ([string]::IsNullOrWhiteSpace($thumbprint)) {
+                    throw "Certificate thumbprint not found in configuration"
+                }
+                
+                # Try to find certificate
+                $cert = Get-ChildItem -Path "Cert:\CurrentUser\My\$thumbprint" -ErrorAction SilentlyContinue
+                if (-not $cert) {
+                    $cert = Get-ChildItem -Path "Cert:\LocalMachine\My\$thumbprint" -ErrorAction SilentlyContinue
+                }
+                
+                if (-not $cert) {
+                    throw "Certificate with thumbprint $thumbprint not found in certificate store"
+                }
+                
+                Write-Verbose "[Test-CredentialValidity] Certificate found: $($cert.Subject)"
+            }
+        }
+        
+        Write-Verbose "[Test-CredentialValidity] Credential validation passed"
+        
+    } catch {
+        $result.IsValid = $false
+        $result.Error = $_.Exception.Message
+        Write-Verbose "[Test-CredentialValidity] Validation failed: $($_.Exception.Message)"
+    }
+    
+    return $result
+}
+
+
 
 function Test-AuthenticationStatus {
     [CmdletBinding()]
