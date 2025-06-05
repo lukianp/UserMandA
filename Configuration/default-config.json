@@ -74,7 +74,74 @@
         },
         "compressionEnabled": true,
         "powershellModules": {
-            "Microsoft.Graph.Policies": { "RequiredVersion": "2.10.0", "Notes": "For policy-related discovery."}
+            "Microsoft.Graph.Authentication": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "Essential for all Microsoft Graph API authentication."
+            },
+            "Microsoft.Graph.Users": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For Azure AD user discovery."
+            },
+            "Microsoft.Graph.Groups": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For Azure AD group discovery."
+            },
+            "Microsoft.Graph.Applications": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For Azure AD App Registrations, Enterprise Apps."
+            },
+            "Microsoft.Graph.Identity.DirectoryManagement": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For Directory Roles, Organization Info."
+            },
+            "Microsoft.Graph.Identity.SignIns": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For user sign-in activity."
+            },
+            "Microsoft.Graph.Reports": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For usage reports."
+            },
+            "Microsoft.Graph.DeviceManagement": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For Intune device and policy discovery."
+            },
+            "ExchangeOnlineManagement": {
+                "RequiredVersion": "3.2.0",
+                "Notes": "For all Exchange Online discovery."
+            },
+            "ActiveDirectory": {
+                "RequiredVersion": "1.0.1.0",
+                "Notes": "For on-premises AD discovery."
+            },
+            "DnsServer": {
+                "RequiredVersion": "2.0.0.0",
+                "Notes": "For DNS discovery."
+            },
+            "GroupPolicy": {
+                "RequiredVersion": "1.0.0.0",
+                "Notes": "For GPO discovery."
+            },
+            "DfsMgmt": {
+                "RequiredVersion": "2.0.0.0",
+                "Notes": "For DFS discovery."
+            },
+            "FailoverClusters": {
+                "RequiredVersion": "2.0.0.0",
+                "Notes": "For File Server Cluster discovery."
+            },
+            "Az.Accounts": {
+                "RequiredVersion": "2.12.0",
+                "Notes": "For Azure Resource Manager authentication."
+            },
+            "Az.Resources": {
+                "RequiredVersion": "6.5.0",
+                "Notes": "For Azure Resource discovery."
+            },
+            "ImportExcel": {
+                "RequiredVersion": "7.8.5",
+                "Notes": "For generating reports in Excel format."
+            }
         },
         "adDns": {
             "dnsServer": null,
@@ -88,20 +155,27 @@
             "recentGuestCountForInvitationFallback": 50
         },
         "fileServer": {
-          "targetServers": [], 
-          "excludedServers": [],
-          "useSmbShareForEnumeration": true, 
-          "timeoutPerServerRemoteCommandSeconds": 120, 
-          "collectShareDetailsLevel": "Basic", 
-          "timeoutPerShareAclSeconds": 60, 
-          "timeoutPerShareSizeSeconds": 300, 
-          "maxSharePathDepthForSize": 1, 
-          "excludedShareNames": ["ADMIN$", "IPC$", "PRINT$", "FAX$", "SYSVOL", "NETLOGON"],
-          "discoverDFS": true,
-          "discoverStorageAnalysis": true,
-          "discoverShadowCopies": true,
-          "discoverClusters": true,
-          "skipShareSizeCalculationForPathDepthExceeding": 1000000
+            "targetServers": [],
+            "excludedServers": [],
+            "useSmbShareForEnumeration": true,
+            "timeoutPerServerRemoteCommandSeconds": 120,
+            "collectShareDetailsLevel": "Basic",
+            "timeoutPerShareAclSeconds": 60,
+            "timeoutPerShareSizeSeconds": 300,
+            "maxSharePathDepthForSize": 1,
+            "excludedShareNames": [
+                "ADMIN$",
+                "IPC$",
+                "PRINT$",
+                "FAX$",
+                "SYSVOL",
+                "NETLOGON"
+            ],
+            "discoverDFS": true,
+            "discoverStorageAnalysis": true,
+            "discoverShadowCopies": true,
+            "discoverClusters": true,
+            "skipShareSizeCalculationForPathDepthExceeding": 1000000
         }
     },
     "processing": {
@@ -126,7 +200,10 @@
         }
     },
     "export": {
-        "formats": ["CSV", "JSON"],
+        "formats": [
+            "CSV",
+            "JSON"
+        ],
         "excelEnabled": true,
         "powerAppsOptimized": true,
         "includeMetadata": true,
@@ -166,7 +243,9 @@
         "smtpPort": 587,
         "useSSL": true,
         "from": "manda-discovery@contoso.com",
-        "to": ["it-team@contoso.com"],
+        "to": [
+            "it-team@contoso.com"
+        ],
         "sendOnCompletion": true,
         "sendOnError": true
     },
@@ -175,10 +254,49 @@
         "useBetaEndpoint": false,
         "pageSize": 999,
         "selectFields": {
-            "users": ["id", "userPrincipalName", "displayName", "mail", "department", "jobTitle", "createdDateTime", "accountEnabled", "lastSignInDateTime", "onPremisesSyncEnabled", "onPremisesImmutableId", "companyName", "usageLocation", "assignedLicenses", "memberOf"],
-            "groups": ["id", "displayName", "description", "mailEnabled", "securityEnabled", "groupTypes", "visibility"],
-            "applications": ["id", "appId", "displayName", "publisherDomain", "signInAudience"],
-            "servicePrincipals": ["id", "appId", "displayName", "servicePrincipalType", "accountEnabled", "appRoles", "oauth2PermissionScopes", "owners"]
+            "users": [
+                "id",
+                "userPrincipalName",
+                "displayName",
+                "mail",
+                "department",
+                "jobTitle",
+                "createdDateTime",
+                "accountEnabled",
+                "lastSignInDateTime",
+                "onPremisesSyncEnabled",
+                "onPremisesImmutableId",
+                "companyName",
+                "usageLocation",
+                "assignedLicenses",
+                "memberOf"
+            ],
+            "groups": [
+                "id",
+                "displayName",
+                "description",
+                "mailEnabled",
+                "securityEnabled",
+                "groupTypes",
+                "visibility"
+            ],
+            "applications": [
+                "id",
+                "appId",
+                "displayName",
+                "publisherDomain",
+                "signInAudience"
+            ],
+            "servicePrincipals": [
+                "id",
+                "appId",
+                "displayName",
+                "servicePrincipalType",
+                "accountEnabled",
+                "appRoles",
+                "oauth2PermissionScopes",
+                "owners"
+            ]
         }
     },
     "exchangeOnline": {
