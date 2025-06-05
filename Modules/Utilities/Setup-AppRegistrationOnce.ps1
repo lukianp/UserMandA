@@ -305,9 +305,9 @@ function Write-EnhancedLog {
     
     # Add icons for better visibility
     $icon = switch ($Level) {
-        "SUCCESS" { "✅" }
-        "ERROR" { "❌" }
-        "WARN" { "⚠️" }
+        "SUCCESS" { "[OK]" }
+        "ERROR" { "[X]" }
+        "WARN" { "[!]" }
         "CRITICAL" { "🚨" }
         "IMPORTANT" { "📌" }
         "PROGRESS" { "🔄" }
@@ -364,9 +364,9 @@ function Write-OperationResult {
         [timespan]$Duration
     )
     
-    $icon = if ($Success) { "✅" } else { "❌" }
+    $icon = if ($Success) { "[OK]" } else { "[X]" }
     $level = if ($Success) { "SUCCESS" } else { "ERROR" }
-    $durationText = if ($Duration) { " (⏱️ $('{0:F2}' -f $Duration.TotalSeconds)s)" } else { "" }
+    $durationText = if ($Duration) { " ([TIME] $('{0:F2}' -f $Duration.TotalSeconds)s)" } else { "" }
     
     $message = "$Operation$durationText"
     if ($Details) {

@@ -230,13 +230,13 @@ separator="="∗(separator = "=" * (
 separator="="∗(headerMessage.Length + 4 | Out-String | Select-Object -First 1).Trim().Length
 
 icon=if(icon = if (
-icon=if(Success) { "✅" } else { "❌" }
+icon=if(Success) { "[OK]" } else { "[X]" }
 
 level=if(level = if (
 level=if(Success) { "SUCCESS" } else { "ERROR" }
 
 durationText=if(durationText = if (
-durationText=if(Duration) { " (⏱️ $('{0
+durationText=if(Duration) { " ([TIME] $('{0
 :F2}' -f $Duration.TotalSeconds)s)" } else { "" }
 message="message = "
 message="Operation$durationText"
@@ -343,13 +343,13 @@ displayMessage="icon $logMessage"
 
 $separator = "═" * 90
 icon=if(icon = if (
-icon=if(Success) { "✅" } else { "❌" }
+icon=if(Success) { "[OK]" } else { "[X]" }
 
 level=if(level = if (
 level=if(Success) { "SUCCESS" } else { "ERROR" }
 
 durationText=if(durationText = if (
-durationText=if(Duration) { " (⏱️ $('{0
+durationText=if(Duration) { " ([TIME] $('{0
 :F2}' -f $Duration.TotalSeconds)s)" } else { "" }
 message="message = "
 message="Operation$durationText"

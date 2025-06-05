@@ -56,9 +56,9 @@ $script:QuickStartTime = Get-Date
 $script:QuickStartVersion = "6.0.0 (Rewritten)"
 
 Write-Host "`n" -NoNewline
-Write-Host "╔══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║        M&A Discovery Suite v$($script:QuickStartVersion) - Quick Start        ║" -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "        M&A Discovery Suite v$($script:QuickStartVersion) - Quick Start        " -ForegroundColor Cyan
+Write-Host "════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host "`n"
 
 try {
@@ -142,7 +142,7 @@ try {
     if (-not $global:MandA -or -not $global:MandA.Initialized) {
         throw "CRITICAL: Failed to initialize global M&A environment context (`$global:MandA`) via Set-SuiteEnvironment.ps1."
     }
-    Write-Host "[QuickStart] ✓ M&A Suite Environment initialized successfully for '$($global:MandA.CompanyName)'." -ForegroundColor Green
+    Write-Host "[QuickStart] [OK] M&A Suite Environment initialized successfully for '$($global:MandA.CompanyName)'." -ForegroundColor Green
     Write-Host "[QuickStart]   Log output path: $($global:MandA.Paths.LogOutput)" -ForegroundColor DarkGray
     Write-Host "[QuickStart]   Credential file path: $($global:MandA.Paths.CredentialFile)" -ForegroundColor DarkGray
 
@@ -176,21 +176,21 @@ try {
     Write-Host "  Company: $($OrchestratorParams.CompanyName)" -ForegroundColor White
     Write-Host "  Mode: $($OrchestratorParams.Mode)" -ForegroundColor White
     Write-Host "  Configuration: $(if ($OrchestratorParams.ConfigurationFile) { $OrchestratorParams.ConfigurationFile } else { $global:MandA.Paths.ConfigFile })" -ForegroundColor White
-    Write-Host "  Force Mode: $($OrchestratorParams.Force | Out-String).Trim()" -ForegroundColor White
-    Write-Host "  Validate Only: $($OrchestratorParams.ValidateOnly | Out-String).Trim()" -ForegroundColor White
-    Write-Host "  Parallel Throttle (Parameter): $($OrchestratorParams.ParallelThrottle | Out-String).Trim()" -ForegroundColor White
+Write-Host "  Force Mode: $(if ($Force) { 'Yes' } else { 'No' })" -ForegroundColor White
+Write-Host "  Validate Only: $(if ($ValidateOnly) { 'Yes' } else { 'No' })" -ForegroundColor White
+Write-Host "  Parallel Throttle (Parameter): $ParallelThrottle" -ForegroundColor White
     Write-Host ""
 
     # --- Launch Orchestrator ---
     Write-Host "[QuickStart] Launching M&A Discovery Suite Orchestrator..." -ForegroundColor Yellow
-    Write-Host ("═" * 75) -ForegroundColor DarkGray
+    Write-Host ("=" * 75) -ForegroundColor DarkGray
 
     & $OrchestratorPath @OrchestratorParams
     $ExitCode = $LASTEXITCODE
 
     # --- Display Completion Status ---
     $Duration = (Get-Date) - $script:QuickStartTime
-    Write-Host "`n" + ("═" * 75) -ForegroundColor DarkGray
+    Write-Host "`n" + ("=" * 75) -ForegroundColor DarkGray
 
     #FIX: Replaced emojis with ASCII equivalents
     switch ($ExitCode) {
@@ -213,8 +213,8 @@ try {
 
     exit $ExitCode
 
-catch { 
-    Write-Host "`n[ERROR] FATAL ERROR in QuickStart.ps1" -ForegroundColor Red 
+} catch {
+    Write-Host "`n[ERROR] FATAL ERROR in QuickStart.ps1" -ForegroundColor Red
     Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
     if ($_.ScriptStackTrace) {
         Write-Host "`nStack Trace:" -ForegroundColor DarkRed
@@ -226,8 +226,6 @@ catch {
     Write-Host "  3. Check permissions for the suite directory and output paths." -ForegroundColor Gray
     Write-Host "  4. If this is the first run, ensure the CompanyName '$CompanyName' is valid and profile directories can be created." -ForegroundColor Gray
     exit 99
-} 
-
-finally { # This is line 230 in the previous version
+} finally {
     Write-Host "[QuickStart] QuickStart.ps1 execution finished." -ForegroundColor DarkGray
 }

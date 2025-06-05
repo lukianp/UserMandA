@@ -43,7 +43,7 @@ function Test-Component {
             $result.Status = "Warning"
             $result.Message = $testResult
             $script:ValidationResults.Warnings++
-            Write-Host "⚠ $Name - $testResult" -ForegroundColor Yellow
+            Write-Host "[!] $Name - $testResult" -ForegroundColor Yellow
         } else {
             $result.Status = "Failed"
             $result.Message = "Test returned false"

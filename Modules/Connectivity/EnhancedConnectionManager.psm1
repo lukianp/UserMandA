@@ -160,7 +160,7 @@ function Connect-MandAGraphEnhanced {
                     try {
                         # Test the connection
                         $org = Get-MgOrganization -Top 1 -ErrorAction Stop
-                        Write-MandALog "✅ Using existing valid Graph connection" -Level "SUCCESS"
+                        Write-MandALog "[OK] Using existing valid Graph connection" -Level "SUCCESS"
                         $script:ConnectionStatus.Graph.Connected = $true
                         $script:ConnectionStatus.Graph.Context = $existingContext
                         $script:ConnectionStatus.Graph.ConnectedTime = Get-Date
@@ -207,7 +207,7 @@ function Connect-MandAGraphEnhanced {
                 # Test functionality
                 $org = Get-MgOrganization -Top 1 -ErrorAction Stop
                 
-                Write-MandALog "✅ Successfully connected to Microsoft Graph" -Level "SUCCESS"
+                Write-MandALog "[OK] Successfully connected to Microsoft Graph" -Level "SUCCESS"
                 Write-MandALog "  - Organization: $($org.DisplayName)" -Level "INFO"
                 Write-MandALog "  - Tenant ID: $($context.TenantId)" -Level "INFO"
                 Write-MandALog "  - Client App ID: $($context.ClientId)" -Level "INFO"
@@ -298,7 +298,7 @@ function Connect-MandAAzureEnhanced {
                         # Test the connection
                         $testSub = Get-AzSubscription -ErrorAction Stop | Select-Object -First 1
                         if ($testSub) {
-                            Write-MandALog "✅ Using existing valid Azure connection" -Level "SUCCESS"
+                            Write-MandALog "[OK] Using existing valid Azure connection" -Level "SUCCESS"
                             $script:ConnectionStatus.Azure.Connected = $true
                             $script:ConnectionStatus.Azure.Context = $currentContext
                             $script:ConnectionStatus.Azure.ConnectedTime = Get-Date
@@ -321,7 +321,7 @@ function Connect-MandAAzureEnhanced {
                 $azContext = Connect-AzAccount -ServicePrincipal -Credential $credential -TenantId $AuthContext.TenantId -ErrorAction Stop
                 
                 if ($azContext) {
-                    Write-MandALog "✅ Successfully connected to Azure" -Level "SUCCESS"
+                    Write-MandALog "[OK] Successfully connected to Azure" -Level "SUCCESS"
                     Write-MandALog "  - Tenant: $($azContext.Context.Tenant.Id)" -Level "INFO"
                     Write-MandALog "  - Account: $($azContext.Context.Account.Id)" -Level "INFO"
                     
@@ -453,7 +453,7 @@ function Connect-MandAExchangeEnhanced {
                 Write-MandALog "DEBUG: Testing Exchange connection..." -Level "DEBUG"
                 $mailbox = Get-Mailbox -ResultSize 1 -ErrorAction Stop
                 
-                Write-MandALog "✅ Successfully connected to Exchange Online" -Level "SUCCESS"
+                Write-MandALog "[OK] Successfully connected to Exchange Online" -Level "SUCCESS"
                 Write-MandALog "  - Connection method: $($script:ConnectionStatus.ExchangeOnline.Method)" -Level "INFO"
                 
                 $script:ConnectionStatus.ExchangeOnline.Connected = $true
@@ -504,7 +504,7 @@ function Connect-MandAActiveDirectory {
         
         try {
             $adTest = Get-ADDomain -Server $domainController -ErrorAction Stop
-            Write-MandALog "✅ Successfully connected to Active Directory" -Level "SUCCESS"
+            Write-MandALog "[OK] Successfully connected to Active Directory" -Level "SUCCESS"
             Write-MandALog "  - Domain: $($adTest.Name)" -Level "INFO"
             Write-MandALog "  - Forest: $($adTest.Forest)" -Level "INFO"
             Write-MandALog "  - Domain Controller: $domainController" -Level "INFO"
@@ -552,7 +552,7 @@ function Disconnect-AllServices {
             try {
                 Write-MandALog "DEBUG: Disconnecting from Microsoft Graph..." -Level "DEBUG"
                 Disconnect-MgGraph -ErrorAction SilentlyContinue
-                Write-MandALog "✅ Disconnected from Microsoft Graph" -Level "SUCCESS"
+                Write-MandALog "[OK] Disconnected from Microsoft Graph" -Level "SUCCESS"
             } catch {
                 Write-MandALog "WARN: Error disconnecting from Graph: $($_.Exception.Message)" -Level "WARN"
             }
@@ -563,7 +563,7 @@ function Disconnect-AllServices {
             try {
                 Write-MandALog "DEBUG: Disconnecting from Azure..." -Level "DEBUG"
                 Disconnect-AzAccount -ErrorAction SilentlyContinue
-                Write-MandALog "✅ Disconnected from Azure" -Level "SUCCESS"
+                Write-MandALog "[OK] Disconnected from Azure" -Level "SUCCESS"
             } catch {
                 Write-MandALog "WARN: Error disconnecting from Azure: $($_.Exception.Message)" -Level "WARN"
             }
@@ -574,7 +574,7 @@ function Disconnect-AllServices {
             try {
                 Write-MandALog "DEBUG: Disconnecting from Exchange Online..." -Level "DEBUG"
                 Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue
-                Write-MandALog "✅ Disconnected from Exchange Online" -Level "SUCCESS"
+                Write-MandALog "[OK] Disconnected from Exchange Online" -Level "SUCCESS"
             } catch {
                 Write-MandALog "WARN: Error disconnecting from Exchange: $($_.Exception.Message)" -Level "WARN"
             }
@@ -588,7 +588,7 @@ function Disconnect-AllServices {
             $script:ConnectionStatus[$service].Method = $null
         }
         
-        Write-MandALog "✅ All services disconnected" -Level "SUCCESS"
+        Write-MandALog "[OK] All services disconnected" -Level "SUCCESS"
         
     } catch {
         Write-MandALog "ERROR during service disconnection: $($_.Exception.Message)" -Level "ERROR"

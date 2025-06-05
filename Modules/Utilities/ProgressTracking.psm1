@@ -345,7 +345,7 @@ function Show-ProgressSummaryReport {
     if ($null -eq $metrics) { return }
 
     if ($showSectionHeaderAvailable) {
-        Show-SectionHeader -Title "Progress Summary: $($metrics.OverallPhase)" -Icon "⏱️" -Context $Context
+        Show-SectionHeader -Title "Progress Summary: $($metrics.OverallPhase)" -Icon "[TIME]" -Context $Context
     } else { Write-Host "`n--- Progress Summary: $($metrics.OverallPhase) ---" }
     
     $summaryData = [ordered]@{ # Use ordered for predictable display

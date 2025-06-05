@@ -192,10 +192,30 @@ function Initialize-OrchestratorModules {
 }
 
 function Load-DiscoveryModules {
+    # Fix: Properly handle enabledSources configuration
     $enabledSources = $global:MandA.Config.discovery.enabledSources
+    
+    # Validate enabledSources is an array
+    if ($enabledSources -is [System.Collections.Hashtable]) {
+        Write-OrchestratorLog -Message "ERROR: enabledSources is a Hashtable, expected array. Using empty array." -Level "ERROR"
+        $enabledSources = @()
+    } elseif ($enabledSources -isnot [array]) {
+        if ($null -eq $enabledSources) {
+            $enabledSources = @()
+        } else {
+            $enabledSources = @($enabledSources)
+        }
+    }
+    
     Write-OrchestratorLog -Message "Loading discovery modules for $($enabledSources.Count) sources" -Level "INFO"
     
     foreach ($source in $enabledSources) {
+        # Skip if source is not a string
+        if ($source -isnot [string]) {
+            Write-OrchestratorLog -Message "Skipping invalid source type: $($source.GetType().Name)" -Level "WARN"
+            continue
+        }
+        
         $modulePath = Join-Path $global:MandA.Paths.Discovery "${source}Discovery.psm1"
         if (Test-Path $modulePath) {
             try {
@@ -283,7 +303,9 @@ function Invoke-DiscoveryPhase {
         # Initialize authentication if needed
         if (Get-Command Initialize-MandAAuthentication -ErrorAction SilentlyContinue) {
             Write-OrchestratorLog -Message "Initializing authentication..." -Level "INFO"
-            $authResult = Initialize-MandAAuthentication
+            
+            # Fix: Pass context instead of configuration
+            $authResult = Initialize-MandAAuthentication -Context $global:MandA
             
             if (-not $authResult -or -not $authResult.Authenticated) {
                 throw "Authentication failed: $($authResult.Error)"
@@ -307,6 +329,15 @@ function Invoke-DiscoveryPhase {
         
         # Execute discovery
         $enabledSources = $global:MandA.Config.discovery.enabledSources
+        
+        # Fix: Validate enabledSources
+        if ($enabledSources -is [System.Collections.Hashtable]) {
+            Write-OrchestratorLog -Message "Converting enabledSources from Hashtable to array" -Level "WARN"
+            $enabledSources = @($enabledSources.Keys)
+        } elseif ($enabledSources -isnot [array]) {
+            $enabledSources = @($enabledSources)
+        }
+        
         $parallelEnabled = $global:MandA.Config.discovery.parallelProcessing -and $enabledSources.Count -gt 1
         
         if ($parallelEnabled) {
@@ -651,6 +682,14 @@ try {
     # Handle AzureOnly mode
     if ($Mode -eq "AzureOnly") {
         $allSources = $global:MandA.Config.discovery.enabledSources
+        
+        # Fix: Ensure sources is an array
+        if ($allSources -is [System.Collections.Hashtable]) {
+            $allSources = @($allSources.Keys)
+        } elseif ($allSources -isnot [array]) {
+            $allSources = @($allSources)
+        }
+        
         $global:MandA.Config.discovery.enabledSources = $allSources | 
             Where-Object { $_ -in $script:AzureOnlySources }
         Write-OrchestratorLog -Message "Azure-only mode: Limited to cloud sources" -Level "INFO"

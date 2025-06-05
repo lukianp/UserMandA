@@ -60,10 +60,10 @@ try {
         $plainText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
             [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureString)
         )
-        Write-Host "   ✅ Successfully decrypted with UTF8!" -ForegroundColor Green
+        Write-Host "   [OK] Successfully decrypted with UTF8!" -ForegroundColor Green
         Write-Host "   Decrypted content (first 100 chars): $($plainText.Substring(0, [Math]::Min(100, $plainText.Length)))" -ForegroundColor Green
     } catch {
-        Write-Host "   ❌ UTF8 decrypt failed: $_" -ForegroundColor Red
+        Write-Host "   [X] UTF8 decrypt failed: $_" -ForegroundColor Red
     }
 } catch {
     Write-Host "2. Failed to read UTF8: $_" -ForegroundColor Red
@@ -81,10 +81,10 @@ try {
         $plainText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
             [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureString)
         )
-        Write-Host "   ✅ Successfully decrypted with ASCII!" -ForegroundColor Green
+        Write-Host "   [OK] Successfully decrypted with ASCII!" -ForegroundColor Green
         Write-Host "   Decrypted content (first 100 chars): $($plainText.Substring(0, [Math]::Min(100, $plainText.Length)))" -ForegroundColor Green
     } catch {
-        Write-Host "   ❌ ASCII decrypt failed: $_" -ForegroundColor Red
+        Write-Host "   [X] ASCII decrypt failed: $_" -ForegroundColor Red
     }
 } catch {
     Write-Host "3. Failed to read ASCII: $_" -ForegroundColor Red

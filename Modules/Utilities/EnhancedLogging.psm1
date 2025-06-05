@@ -401,3 +401,15 @@ function Clear-OldLogFiles {
 }
 
 Write-Host "[EnhancedLogging.psm1] Module loaded. (v1.0.2 - Text Emojis)" -ForegroundColor DarkGray
+
+
+# Export all public functions
+Export-ModuleMember -Function @(
+    'Initialize-Logging',
+    'Write-MandALog',
+    'Move-LogFile',
+    'Clear-OldLogFiles',
+    'Get-EffectiveLoggingSetting',
+    'Get-LogColorInternal',
+    'Get-LogEmojiInternal'
+)

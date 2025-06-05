@@ -121,9 +121,9 @@ function Get-InteractiveCredentials {
             $clientId = Read-Host "Client ID (App ID)"
             $clientId = $clientId.Trim()
             if ([string]::IsNullOrWhiteSpace($clientId)) {
-                Write-Host "❌ Client ID cannot be empty" -ForegroundColor Red
+                Write-Host "[X] Client ID cannot be empty" -ForegroundColor Red
             } elseif ($clientId -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
-                Write-Host "❌ Client ID must be a valid GUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)" -ForegroundColor Red
+                Write-Host "[X] Client ID must be a valid GUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)" -ForegroundColor Red
                 $clientId = $null
             }
         } while ([string]::IsNullOrWhiteSpace($clientId))
@@ -133,9 +133,9 @@ function Get-InteractiveCredentials {
             $tenantId = Read-Host "Tenant ID"
             $tenantId = $tenantId.Trim()
             if ([string]::IsNullOrWhiteSpace($tenantId)) {
-                Write-Host "❌ Tenant ID cannot be empty" -ForegroundColor Red
+                Write-Host "[X] Tenant ID cannot be empty" -ForegroundColor Red
             } elseif ($tenantId -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
-                Write-Host "❌ Tenant ID must be a valid GUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)" -ForegroundColor Red
+                Write-Host "[X] Tenant ID must be a valid GUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)" -ForegroundColor Red
                 $tenantId = $null
             }
         } while ([string]::IsNullOrWhiteSpace($tenantId))
@@ -147,20 +147,20 @@ function Get-InteractiveCredentials {
                 [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($clientSecretSecure)
             )
             if ([string]::IsNullOrWhiteSpace($clientSecret)) {
-                Write-Host "❌ Client Secret cannot be empty" -ForegroundColor Red
+                Write-Host "[X] Client Secret cannot be empty" -ForegroundColor Red
             }
         } while ([string]::IsNullOrWhiteSpace($clientSecret))
         
-        Write-Host "`n✅ Credentials collected successfully`n" -ForegroundColor Green
+        Write-Host "`n[OK] Credentials collected successfully`n" -ForegroundColor Green
         
         # Ask to save credentials
         $saveChoice = Read-Host "Save credentials securely for future use? (y/N)"
         if ($saveChoice -eq 'y' -or $saveChoice -eq 'Y') {
             $saved = Set-SecureCredentials -ClientId $clientId -ClientSecret $clientSecret -TenantId $tenantId -Configuration $Configuration
             if ($saved) {
-                Write-Host "✅ Credentials saved successfully" -ForegroundColor Green
+                Write-Host "[OK] Credentials saved successfully" -ForegroundColor Green
             } else {
-                Write-Host "⚠️  Failed to save credentials, but will continue with current session" -ForegroundColor Yellow
+                Write-Host "[!]  Failed to save credentials, but will continue with current session" -ForegroundColor Yellow
             }
         }
         

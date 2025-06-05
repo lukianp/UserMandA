@@ -40,9 +40,9 @@ if ($CreateTest) {
     
     try {
         Save-CredentialFile -Path $CredentialFile -CredentialData $testData
-        Write-Host "✅ Test credential file created successfully" -ForegroundColor Green
+        Write-Host "[OK] Test credential file created successfully" -ForegroundColor Green
     } catch {
-        Write-Host "❌ Failed to create test file: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[X] Failed to create test file: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
@@ -54,7 +54,7 @@ if ($ReadTest -or -not ($CreateTest -or $FixFormat)) {
         
         try {
             $data = Read-CredentialFile -Path $CredentialFile
-            Write-Host "✅ Successfully read credential file" -ForegroundColor Green
+            Write-Host "[OK] Successfully read credential file" -ForegroundColor Green
             Write-Host "`nCredential data:" -ForegroundColor Cyan
             Write-Host "  Client ID: $($data.ClientId)" -ForegroundColor White
             Write-Host "  Tenant ID: $($data.TenantId)" -ForegroundColor White
@@ -66,7 +66,7 @@ if ($ReadTest -or -not ($CreateTest -or $FixFormat)) {
                 Write-Host "  Expires: $($data.ExpiryDate)" -ForegroundColor White
             }
         } catch {
-            Write-Host "❌ Failed to read credential file: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "[X] Failed to read credential file: $($_.Exception.Message)" -ForegroundColor Red
             
             # Try to diagnose the issue
             Write-Host "`nDiagnostic information:" -ForegroundColor Yellow
@@ -78,7 +78,7 @@ if ($ReadTest -or -not ($CreateTest -or $FixFormat)) {
             Write-Host "  Computer: $env:COMPUTERNAME" -ForegroundColor Gray
         }
     } else {
-        Write-Host "❌ Credential file not found at: $CredentialFile" -ForegroundColor Red
+        Write-Host "[X] Credential file not found at: $CredentialFile" -ForegroundColor Red
     }
 }
 
@@ -98,7 +98,7 @@ if ($FixFormat) {
             
             $data = $plainText | ConvertFrom-Json
             
-            Write-Host "✅ Successfully decoded credential file" -ForegroundColor Green
+            Write-Host "[OK] Successfully decoded credential file" -ForegroundColor Green
             
             # Rewrite in standard format
             $hashtable = @{}
@@ -107,11 +107,11 @@ if ($FixFormat) {
             }
             
             Save-CredentialFile -Path "$CredentialFile.fixed" -CredentialData $hashtable
-            Write-Host "✅ Fixed credential file saved to: $CredentialFile.fixed" -ForegroundColor Green
+            Write-Host "[OK] Fixed credential file saved to: $CredentialFile.fixed" -ForegroundColor Green
             Write-Host "   You can rename this to replace the original file" -ForegroundColor Yellow
             
         } catch {
-            Write-Host "❌ Could not fix credential file: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "[X] Could not fix credential file: $($_.Exception.Message)" -ForegroundColor Red
         }
     }
 }

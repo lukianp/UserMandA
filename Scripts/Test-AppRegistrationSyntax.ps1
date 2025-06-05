@@ -26,13 +26,13 @@ if ($TestSyntax) {
         $ast = [System.Management.Automation.Language.Parser]::ParseFile("$PSScriptRoot\Setup-AppRegistration.ps1", [ref]$tokens, [ref]$errors)
         
         if ($errors.Count -eq 0) {
-            Write-Host "✅ Syntax check passed - no errors found" -ForegroundColor Green
+            Write-Host "[OK] Syntax check passed - no errors found" -ForegroundColor Green
         } else {
-            Write-Host "❌ Syntax errors found:" -ForegroundColor Red
+            Write-Host "[X] Syntax errors found:" -ForegroundColor Red
             $errors | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
         }
     } catch {
-        Write-Host "❌ Syntax check failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[X] Syntax check failed: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
@@ -44,14 +44,14 @@ if ($TestFunctions) {
         
         # Count functions
         $functionMatches = [regex]::Matches($scriptContent, 'function\s+([A-Za-z0-9-_]+)')
-        Write-Host "✅ Found $($functionMatches.Count) function definitions:" -ForegroundColor Green
+        Write-Host "[OK] Found $($functionMatches.Count) function definitions:" -ForegroundColor Green
         
         $functionMatches | ForEach-Object {
             Write-Host "  - $($_.Groups[1].Value)" -ForegroundColor Cyan
         }
         
     } catch {
-        Write-Host "❌ Function analysis failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[X] Function analysis failed: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
