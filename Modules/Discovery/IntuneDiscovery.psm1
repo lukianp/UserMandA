@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 <#
 .SYNOPSIS
     Enhanced Intune Discovery Module for M&A Discovery Suite

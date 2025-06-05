@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 <#
 .SYNOPSIS
     Helper functions for M&A Discovery Suite modules

@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 <#
 .SYNOPSIS
     Handles discovery of Microsoft Graph entities for M&A Discovery Suite

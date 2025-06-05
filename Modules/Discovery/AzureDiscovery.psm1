@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 #Requires -Modules Az.Accounts, Az.Resources, Az.Compute, Az.Network, Az.PolicyInsights, Az.RecoveryServices
 <#
 .SYNOPSIS

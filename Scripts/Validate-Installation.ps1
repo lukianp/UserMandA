@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 <#
 .SYNOPSIS
     Comprehensive installation validation script for M&A Discovery Suite v4.2

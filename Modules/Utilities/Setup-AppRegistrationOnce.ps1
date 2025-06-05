@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 # Script Summary:
 # This enhanced M&A Discovery Suite script creates and configures an Azure AD application
 # with comprehensive read-only permissions for organizational discovery. It follows PowerShell

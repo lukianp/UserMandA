@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 #Requires -Modules ActiveDirectory
 <#
 .SYNOPSIS

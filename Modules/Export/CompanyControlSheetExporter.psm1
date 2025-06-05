@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 <#
 .SYNOPSIS
     Exports processed M&A discovery data to a series of CSV files formatted for a Company Control Sheet.

@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 #Requires -Modules EnhancedLogging, FileOperations # Assuming these are globally available via Orchestrator
 

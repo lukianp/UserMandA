@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 # -*- coding: utf-8-bom -*-
 <#

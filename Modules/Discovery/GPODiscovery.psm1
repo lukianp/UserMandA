@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 <#
 .SYNOPSIS
     Enhanced GPO discovery module with robust XML parsing and namespace handling

@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 #
 # EnhancedConnectionManager.psm1
 # Enhanced connection manager with robust authentication fallbacks and extensive debugging
@@ -18,6 +19,16 @@ $script:ConnectionStatus = @{
     ActiveDirectory = @{ Connected = $false; LastError = $null; ConnectedTime = $null; Context = $null; Method = $null }
 }
 
+
+function Initialize-MandAAuthentication {
+    param(
+        [Parameter(Mandatory=$false)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$false)]
+        $Context
+    )
+    # Handle both parameter types
+}
 function Initialize-AllConnections {
     [CmdletBinding()]
     param(
