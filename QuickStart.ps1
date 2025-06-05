@@ -229,3 +229,5 @@ Write-Host "  Parallel Throttle (Parameter): $ParallelThrottle" -ForegroundColor
 } finally {
     Write-Host "[QuickStart] QuickStart.ps1 execution finished." -ForegroundColor DarkGray
 }
+
+# End of QuickStart.ps1
