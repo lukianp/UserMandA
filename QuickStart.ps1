@@ -231,3 +231,6 @@ Write-Host "  Parallel Throttle (Parameter): $ParallelThrottle" -ForegroundColor
 }
 
 # End of QuickStart.ps1
+# This script serves as the entry point for the M&A Discovery Suite, initializing the environment
+# and launching the orchestrator with the specified parameters.
+# It ensures the suite is ready for operations and provides a user-friendly interface for starting the suite.
