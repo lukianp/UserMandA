@@ -5,10 +5,11 @@
 .DESCRIPTION
     Unified orchestrator for discovery, processing, and export with improved
     state management, error handling, and parallel processing support.
-    This version addresses an initialization order issue with Write-MandALog.
+    This version addresses an initialization order issue with Write-MandALog and
+    improves MandAContext path validation for the 'Configuration' directory.
 .NOTES
     Author: Enhanced Version (with fixes by Gemini)
-    Version: 5.5.1 
+    Version: 5.5.2
     Created: 2025-01-03
     Last Modified: 2025-06-05 
 #>
@@ -48,42 +49,57 @@ class MandAContext {
     [bool]$ModulesChecked
     [DiscoveryErrorCollector]$ErrorCollector
     [OrchestratorState]$OrchestratorState
-    [string]$CompanyName # Added for direct access
+    [string]$CompanyName 
 
     MandAContext([hashtable]$initialConfig, [string]$currentCompanyNameParam) {
         if ($null -eq $initialConfig) { throw "MandAContext: initialConfig cannot be null." }
         if ([string]::IsNullOrWhiteSpace($currentCompanyNameParam)) { throw "MandAContext: currentCompanyNameParam cannot be null or empty." }
 
-        $this.Config = ConvertTo-HashtableRecursive -InputObject $initialConfig
-        $this.Version = "5.5.1" # Updated version
+        $this.Config = ConvertTo-HashtableRecursive -InputObject $initialConfig # Do this first
+        $this.Version = "5.5.2" # Updated version
         $this.StartTime = Get-Date
         $this.ModulesChecked = $false
         $this.ErrorCollector = [DiscoveryErrorCollector]::new()
         $this.OrchestratorState = [OrchestratorState]::new()
         $this.CompanyName = $currentCompanyNameParam
 
+        $pathsTakenFromGlobal = $false
+        # Check if a valid global context for the current company exists and contains SuiteRoot
         if (($null -ne $global:MandA) -and ($global:MandA -is [hashtable]) -and `
-            ($global:MandA.ContainsKey('Paths')) -and ($null -ne $global:MandA.Paths) -and `
-            ($global:MandA.ContainsKey('CompanyName')) -and ($global:MandA.CompanyName -eq $currentCompanyNameParam)) {
+            ($global:MandA.ContainsKey('Paths')) -and ($null -ne $global:MandA.Paths) -and ($global:MandA.Paths -is [hashtable]) -and `
+            ($global:MandA.ContainsKey('CompanyName')) -and ($global:MandA.CompanyName -eq $currentCompanyNameParam) -and `
+            ($global:MandA.Paths.ContainsKey('SuiteRoot')) -and (-not ([string]::IsNullOrWhiteSpace($global:MandA.Paths.SuiteRoot))) ) {
             
-            if ($global:MandA.Paths -is [hashtable]) {
-                $this.Paths = $global:MandA.Paths.Clone() 
-                Write-Verbose "[MandAContext] Using paths from established global environment for company '$currentCompanyNameParam'."
-            } else {
-                Write-Warning "[MandAContext] global:MandA.Paths is not a hashtable. Initializing paths."
-                $this.InitializePaths($currentCompanyNameParam)
+            $this.Paths = $global:MandA.Paths.Clone() 
+            Write-Verbose "[MandAContext] Initialized Paths by cloning from global:MandA.Paths for company '$currentCompanyNameParam'."
+            
+            # After cloning, ensure 'Configuration' key points to the correct path derived from SuiteRoot.
+            # This handles if Set-SuiteEnvironment.ps1 used 'ConfigurationDir' or if 'Configuration' key was missing/incorrect in the clone.
+            $expectedConfigurationPath = Join-Path $this.Paths.SuiteRoot "Configuration"
+            
+            if ($this.Paths.ContainsKey('ConfigurationDir') -and (-not $this.Paths.ContainsKey('Configuration') -or $this.Paths.Configuration -ne $expectedConfigurationPath)) {
+                $this.Paths['Configuration'] = $expectedConfigurationPath
+                Write-Verbose "[MandAContext] Mapped/corrected 'Configuration' path in this.Paths from SuiteRoot, potentially using 'ConfigurationDir' value: '$expectedConfigurationPath'"
+            } elseif (-not $this.Paths.ContainsKey('Configuration')) {
+                # If 'Configuration' key is missing entirely (and 'ConfigurationDir' wasn't there or wasn't relevant)
+                $this.Paths['Configuration'] = $expectedConfigurationPath
+                 Write-Verbose "[MandAContext] Set 'Configuration' path in this.Paths based on SuiteRoot: '$expectedConfigurationPath'"
             }
-        } else {
-            # Determine logging for this early stage
-            $logOutputAction = { param($Message, $Color) Write-Host $Message -ForegroundColor $Color }
-            if ($null -eq $global:MandA) {
-                $logOutputAction.Invoke("[MandAContext] Global environment (\$global:MandA) not found. Initializing paths for '$currentCompanyNameParam'.", "Yellow")
-            } elseif (-not ($global:MandA -is [hashtable])) {
-                 $logOutputAction.Invoke("[MandAContext] \$global:MandA is not a hashtable. Re-initializing for '$currentCompanyNameParam'.", "Yellow")
+            $pathsTakenFromGlobal = $true
+        }
+        
+        if (-not $pathsTakenFromGlobal) {
+            # This block runs if global context wasn't suitable (e.g., different company, missing SuiteRoot, or $global:MandA was null).
+            # InitializePaths will correctly set $this.Paths.Configuration using its own determined $suiteRoot.
+            $logOutputAction = { param($Message, $Color) Write-Host $Message -ForegroundColor $Color } 
+            if ($null -eq $global:MandA) { 
+                $logOutputAction.Invoke("[MandAContext] Global context (\$global:MandA) not found. Freshly initializing paths for '$currentCompanyNameParam'.", "Yellow") 
+            } elseif (-not ($global:MandA.Paths.ContainsKey('SuiteRoot')) -or ([string]::IsNullOrWhiteSpace($global:MandA.Paths.SuiteRoot))) {
+                $logOutputAction.Invoke("[MandAContext] Global context found, but SuiteRoot was missing or empty. Freshly initializing paths for '$currentCompanyNameParam'.", "Yellow")
             } elseif ($global:MandA.CompanyName -ne $currentCompanyNameParam) {
-                $logOutputAction.Invoke("[MandAContext] Global environment company ('$($global:MandA.CompanyName)') differs from current ('$currentCompanyNameParam'). Re-initializing paths.", "Yellow")
-            } else {
-                $logOutputAction.Invoke("[MandAContext] Global environment incomplete or paths missing. Initializing paths for '$currentCompanyNameParam'.", "Yellow")
+                 $logOutputAction.Invoke("[MandAContext] Global context company ('$($global:MandA.CompanyName)') differs from current ('$currentCompanyNameParam'). Freshly initializing paths.", "Yellow")
+            } else { 
+                $logOutputAction.Invoke("[MandAContext] Global context unsuitable or incomplete. Freshly initializing paths for '$currentCompanyNameParam'.", "Yellow") 
             }
             $this.InitializePaths($currentCompanyNameParam) 
         }
@@ -91,13 +107,25 @@ class MandAContext {
     
     [void]InitializePaths([string]$currentCompanyNameParam) {
         $suiteRoot = $null
-        if ($null -ne $global:MandA -and ($global:MandA -is [hashtable]) -and $global:MandA.ContainsKey('Paths') -and $null -ne $global:MandA.Paths -and $global:MandA.Paths.ContainsKey('SuiteRoot')) {
+        # Priority 1: If this script (QuickStart.ps1) is at the SuiteRoot, $PSScriptRoot is the SuiteRoot.
+        if ($PSScriptRoot) { 
+            $suiteRoot = $PSScriptRoot 
+            Write-Verbose "[MandAContext.InitializePaths] Using PSScriptRoot of QuickStart.ps1 as SuiteRoot: '$suiteRoot'"
+        } 
+        # Priority 2: Fallback to global:MandA.Paths.SuiteRoot if PSScriptRoot was null for some reason
+        elseif ($null -ne $global:MandA -and ($global:MandA -is [hashtable]) -and $global:MandA.ContainsKey('Paths') -and $null -ne $global:MandA.Paths -and $global:MandA.Paths.ContainsKey('SuiteRoot') -and -not ([string]::IsNullOrWhiteSpace($global:MandA.Paths.SuiteRoot))) {
             $suiteRoot = $global:MandA.Paths.SuiteRoot
-        } elseif ($PSScriptRoot) { 
-            $suiteRoot = Split-Path $PSScriptRoot -Parent 
-        } else {
+            Write-Verbose "[MandAContext.InitializePaths] Using SuiteRoot from global:MandA as fallback: '$suiteRoot'"
+        }
+        # Fallback (less reliable)
+        else {
             try { $suiteRoot = Split-Path (Get-Location).Path -Parent } catch { $suiteRoot = Resolve-Path ".\" }
-            Write-Warning "[MandAContext.InitializePaths] Could not reliably determine SuiteRoot. Using '$suiteRoot'."
+            Write-Warning "[MandAContext.InitializePaths] Could not reliably determine SuiteRoot from PSScriptRoot or global context. Using current location's parent: '$suiteRoot'."
+        }
+
+        # Ensure SuiteRoot is not null or empty before proceeding
+        if ([string]::IsNullOrWhiteSpace($suiteRoot)) {
+            throw "[MandAContext.InitializePaths] CRITICAL: SuiteRoot could not be determined. Cannot initialize paths."
         }
 
         $profilesBasePath = if ($this.Config -and $this.Config.environment -and $this.Config.environment.profilesBasePath) {
@@ -114,7 +142,7 @@ class MandAContext {
             Utilities           = Join-Path $suiteRoot "Modules\Utilities"
             Core                = Join-Path $suiteRoot "Core"
             Scripts             = Join-Path $suiteRoot "Scripts"
-            Configuration       = Join-Path $suiteRoot "Configuration"
+            Configuration       = Join-Path $suiteRoot "Configuration" # Key is 'Configuration'
             Discovery           = Join-Path $suiteRoot "Modules\Discovery" 
             Processing          = Join-Path $suiteRoot "Modules\Processing" 
             Export              = Join-Path $suiteRoot "Modules\Export" 
@@ -139,9 +167,10 @@ class MandAContext {
                 Write-Warning "[MandAContext.ValidateContext] Critical path key '$pathKey' is missing or empty."
                 return $false
             }
-            if ($pathKey -in @('SuiteRoot', 'Modules', 'Utilities', 'Core', 'Configuration')) {
+            # For critical structure paths, verify they exist as directories
+            if ($pathKey -in @('SuiteRoot', 'Modules', 'Utilities', 'Core', 'Configuration')) { # Added 'Configuration' here
                 if (-not (Test-Path $this.Paths[$pathKey] -PathType Container -ErrorAction SilentlyContinue)) {
-                    Write-Warning "[MandAContext.ValidateContext] Critical suite structure path '$($this.Paths[$pathKey])' for '$pathKey' does not exist."
+                    Write-Warning "[MandAContext.ValidateContext] Critical suite structure path '$($this.Paths[$pathKey])' for '$pathKey' does not exist or is not a directory."
                     return $false
                 }
             }
@@ -279,15 +308,12 @@ class DiscoveryErrorCollector {
 #                       INITIALIZATION
 #===============================================================================
 
-# Preserve original ErrorActionPreference and set to Stop for the script's main execution.
 $OriginalErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = "Stop"
-$ProgressPreference = "Continue" # Ensure progress bars are shown
+$ProgressPreference = "Continue" 
 
-# Initialize context variable that will hold the MandAContext object.
 $script:Context = $null
 
-# Define Azure-only sources
 $script:AzureOnlySources = @(
     "Azure", "Graph", "Intune", "Licensing", 
     "ExternalIdentity", "SharePoint", "Teams", "Exchange"
@@ -301,7 +327,7 @@ function Get-CompanySelection {
     [CmdletBinding()]
     param()
     
-    $profilesBasePath = "C:\MandADiscovery\Profiles" # Standard path, consider making this configurable if needed.
+    $profilesBasePath = "C:\MandADiscovery\Profiles" 
     
     if (-not (Test-Path $profilesBasePath -PathType Container)) {
         try {
@@ -335,7 +361,7 @@ function Get-CompanySelection {
                     Write-Host "Company name cannot be empty. Please try again." -ForegroundColor Red
                     continue
                 }
-                return $newCompanyName -replace '[<>:"/\\|?*]', '_' # Sanitize immediately
+                return $newCompanyName -replace '[<>:"/\\|?*]', '_' 
             }
             elseif ($selection -match '^\d+$') {
                 $index = [int]$selection - 1
@@ -352,7 +378,7 @@ function Get-CompanySelection {
         if ([string]::IsNullOrWhiteSpace($newCompanyName)) {
             throw "Company name cannot be empty when creating the first profile."
         }
-        return $newCompanyName -replace '[<>:"/\\|?*]', '_' # Sanitize immediately
+        return $newCompanyName -replace '[<>:"/\\|?*]', '_' 
     }
 }
 
@@ -381,7 +407,7 @@ function Test-ModuleConfiguration {
     param(
         [hashtable]$Configuration,
         [string]$ModuleName,
-        [MandAContext]$ContextForLog # Pass context for logging
+        [MandAContext]$ContextForLog 
     )
     
     $requiredSettings = @{
@@ -423,11 +449,10 @@ function Test-ModuleConfiguration {
 
 function Import-ModuleWithManifest {
     param(
-        [string]$ModulePathToImport, # Renamed from ModulePath to avoid conflict
-        [MandAContext]$Context # Pass the main context for logging
+        [string]$ModulePathToImport, 
+        [MandAContext]$Context 
     )
     
-    # Logging function selection (fallback to Write-Host if Write-MandALog not ready)
     $doLog = { param($m, $l="INFO", $c=$Context) if (Get-Command Write-MandALog -ErrorAction SilentlyContinue -and $global:MandA.LoggingInitialized) { Write-MandALog -Message $m -Level $l -Context $c } else { Write-Host "[$l] $m" } }
 
     if ([string]::IsNullOrWhiteSpace($ModulePathToImport)) {
@@ -448,7 +473,7 @@ function Import-ModuleWithManifest {
     $moduleDirOnly = Split-Path $ModulePathToImport -Parent
     $manifestPathFile = Join-Path $moduleDirOnly "$moduleNameOnly.psd1"
     
-    $global:_MandALoadingContext = $Context # Used by some modules during their import
+    $global:_MandALoadingContext = $Context 
         
     try {
         if (Test-Path $manifestPathFile -PathType Leaf) {
@@ -493,24 +518,17 @@ function Initialize-MandAEnvironment {
         [switch]$IsValidateOnlyMode
     )
     
-    # Use Write-Host for initial messages before EnhancedLogging is confirmed.
     Write-Host "=== [QuickStart.Initialize-MandAEnvironment] INITIALIZING ENVIRONMENT FOR MODE: $CurrentMode ===" -ForegroundColor Cyan
     
     try {
-        # Ensure global context is available
         if ($null -eq $global:MandA -or -not $global:MandA.Initialized) {
-            # This situation implies Set-SuiteEnvironment.ps1 didn't run or failed critically.
-            # The main block of QuickStart.ps1 already attempts to source Set-SuiteEnvironment.ps1.
-            # If we reach here and it's still not set, it's a fatal setup error.
             throw "CRITICAL: Global M&A environment context (`$global:MandA`) is not initialized. Ensure Set-SuiteEnvironment.ps1 runs successfully first."
         }
-         # Synchronize $global:MandA with the current context for this specific run if Orchestrator is called with different params.
         $global:MandA.Paths = $Context.Paths
         $global:MandA.Config = $Context.Config
         $global:MandA.CompanyName = $Context.CompanyName
         $global:MandA.Version = $Context.Version
 
-        # Create output directories (idempotent)
         $directories = @(
             $Context.Paths.CompanyProfileRoot, $Context.Paths.RawDataOutput, 
             $Context.Paths.ProcessedDataOutput, $Context.Paths.LogOutput,
@@ -523,75 +541,62 @@ function Initialize-MandAEnvironment {
             }
         }
         
-        # Load EnhancedLogging.psm1 FIRST
         $loggingModulePath = Join-Path $Context.Paths.Utilities "EnhancedLogging.psm1"
         $loggingLoaded = $false
         if (Test-Path $loggingModulePath -PathType Leaf) {
             if (Import-ModuleWithManifest -ModulePathToImport $loggingModulePath -Context $Context) {
                 Write-Host "Successfully loaded EnhancedLogging.psm1." -ForegroundColor Green
                 if (Get-Command Initialize-Logging -ErrorAction SilentlyContinue) {
-                    Initialize-Logging -Configuration $Context.Config # Assumes Context.Config is ready
-                    $global:MandA.LoggingInitialized = $true # Explicitly mark logging as ready
+                    Initialize-Logging -Configuration $Context.Config 
+                    $global:MandA.LoggingInitialized = $true 
                     Write-MandALog "Logging system initialized." -Level "INFO" -Context $Context
                     $loggingLoaded = $true
-                } else {
-                    Write-Warning "Initialize-Logging function not found after loading EnhancedLogging.psm1."
-                }
-            } else {
-                Write-Warning "Failed to load EnhancedLogging.psm1. Logging will be basic."
-            }
-        } else {
-            Write-Warning "EnhancedLogging.psm1 not found at '$loggingModulePath'. Logging will be basic."
-        }
+                } else { Write-Warning "Initialize-Logging function not found after loading EnhancedLogging.psm1." }
+            } else { Write-Warning "Failed to load EnhancedLogging.psm1. Logging will be basic." }
+        } else { Write-Warning "EnhancedLogging.psm1 not found at '$loggingModulePath'. Logging will be basic." }
 
-        # Now use Write-MandALog if available, otherwise fallback.
-        $logAction = if ($loggingLoaded) { $ judíos:Write-MandALog } else { $ { Write-Host } } # Simplified
-        $logParam = if ($loggingLoaded) { @{Level = ($args[1] | Get-OrElse "INFO"); Context = $Context} } else { @{} }
+        $logAction = if ($loggingLoaded -and (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) { ${function:Write-MandALog} } else { ${function:Write-Host} }
+        $logParamsTemplate = if ($loggingLoaded -and (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) { @{Context = $Context} } else { @{} }
         
-        $logAction.Invoke("Starting environment initialization for mode: $CurrentMode", $logParam) # Use @logParam for splatting
+        $logAction.Invoke("Starting environment initialization for mode: $CurrentMode", (@{Level="INFO"} + $logParamsTemplate))
         
-        # Load other core utilities
         $utilityModules = @("FileOperations.psm1", "ValidationHelpers.psm1", "ConfigurationValidation.psm1", "ErrorHandling.psm1", "ProgressDisplay.psm1")
-        $logAction.Invoke("Loading other utility modules...", $logParam)
+        $logAction.Invoke("Loading other utility modules...", (@{Level="INFO"} + $logParamsTemplate))
         foreach ($moduleFile in $utilityModules) {
             $modulePath = Join-Path $Context.Paths.Utilities $moduleFile
-            Import-ModuleWithManifest -ModulePathToImport $modulePath -Context $Context # Relies on its internal logging
+            Import-ModuleWithManifest -ModulePathToImport $modulePath -Context $Context 
         }
         
-        # Load authentication and connectivity modules
         $authModules = @("Authentication\Authentication.psm1", "Authentication\CredentialManagement.psm1", "Connectivity\EnhancedConnectionManager.psm1")
-        $logAction.Invoke("Loading authentication and connectivity modules...", $logParam)
+        $logAction.Invoke("Loading authentication and connectivity modules...", (@{Level="INFO"} + $logParamsTemplate))
         foreach ($moduleRelPath in $authModules) {
             $modulePath = Join-Path $Context.Paths.Modules $moduleRelPath
             Import-ModuleWithManifest -ModulePathToImport $modulePath -Context $Context
         }
         
-        # Validate prerequisites (if function exists and not in ValidateOnly mode)
         if (-not $IsValidateOnlyMode) {
             if (Get-Command Test-Prerequisites -ErrorAction SilentlyContinue) {
-                $logAction.Invoke("Performing system prerequisites validation...", $logParam)
+                $logAction.Invoke("Performing system prerequisites validation...", (@{Level="INFO"} + $logParamsTemplate))
                 if (-not (Test-Prerequisites -Configuration $Context.Config -Context $Context)) {
                     throw "System prerequisites validation failed."
                 }
-                $logAction.Invoke("System prerequisites validated successfully.", @{Level="SUCCESS"; Context=$Context})
+                $logAction.Invoke("System prerequisites validated successfully.", (@{Level="SUCCESS"} + $logParamsTemplate))
             } else {
-                 $logAction.Invoke("Test-Prerequisites function not found. Skipping prerequisites check.", @{Level="WARN"; Context=$Context})
+                 $logAction.Invoke("Test-Prerequisites function not found. Skipping prerequisites check.", (@{Level="WARN"} + $logParamsTemplate))
             }
         }
         
-        # Load mode-specific modules
         switch ($CurrentMode) {
             { $_ -in "Discovery", "Full", "AzureOnly" } { Import-DiscoveryModules -Context $Context }
             { $_ -in "Processing", "Full", "AzureOnly" } { Import-ProcessingModules -Context $Context }
             { $_ -in "Export", "Full", "AzureOnly" } { Import-ExportModules -Context $Context }
         }
         
-        $logAction.Invoke("Environment initialization completed.", @{Level="SUCCESS"; Context=$Context})
+        $logAction.Invoke("Environment initialization completed.", (@{Level="SUCCESS"} + $logParamsTemplate))
         return $true
     }
     catch {
         $errorMessageText = "QuickStart.Initialize-MandAEnvironment FAILED: $($_.Exception.Message)"
-        # Fallback logging if Write-MandALog isn't set up or fails
         if (Get-Command Write-MandALog -ErrorAction SilentlyContinue -and $global:MandA.LoggingInitialized) {
             Write-MandALog -Message $errorMessageText -Level "ERROR" -Context $Context
             if ($Context.Config.advancedSettings.debugMode) {
@@ -604,14 +609,14 @@ function Initialize-MandAEnvironment {
         if ($Context -and $Context.ErrorCollector) {
              $Context.ErrorCollector.AddError("EnvironmentInit_QuickStart", "Initialization failed in QuickStart", $_.Exception)
         }
-        throw # Re-throw to stop execution
+        throw 
     }
 }
 
 function Import-DiscoveryModules {
     param([MandAContext]$Context)
     
-    $discoveryPath = $Context.Paths.Discovery # Corrected path
+    $discoveryPath = $Context.Paths.Discovery 
     $enabledSources = @($Context.Config.discovery.enabledSources)
     
     Write-MandALog "Loading discovery modules for $($enabledSources.Count) sources from '$discoveryPath'." -Level "INFO" -Context $Context
@@ -647,7 +652,7 @@ function Import-DiscoveryModules {
 function Import-ProcessingModules {
     param([MandAContext]$Context)
     
-    $processingPath = $Context.Paths.Processing # Corrected path
+    $processingPath = $Context.Paths.Processing 
     $processingModules = @("DataAggregation.psm1", "UserProfileBuilder.psm1", "WaveGeneration.psm1", "DataValidation.psm1")
     
     Write-MandALog "Loading processing modules from '$processingPath'." -Level "INFO" -Context $Context
@@ -660,7 +665,7 @@ function Import-ProcessingModules {
 function Import-ExportModules {
     param([MandAContext]$Context)
     
-    $exportPath = $Context.Paths.Export # Corrected path
+    $exportPath = $Context.Paths.Export 
     $enabledFormats = @($Context.Config.export.formats)
     
     Write-MandALog "Loading export modules for formats: $($enabledFormats -join ', ') from '$exportPath'." -Level "INFO" -Context $Context
@@ -688,7 +693,7 @@ function Invoke-ParallelDiscoveryWithProgress {
         [Parameter(Mandatory=$true)][MandAContext]$Context
     )
     
-    $throttleLimit = $Context.Config.discovery.maxConcurrentJobs | Get-OrElse 5 # Use Get-OrElse from $global
+    $throttleLimit = $Context.Config.discovery.maxConcurrentJobs | Get-OrElse 5 
     Write-MandALog "Starting parallel discovery for $($EnabledSources.Count) sources (Throttle: $throttleLimit)" -Level "INFO" -Context $Context
 
     $runspacePool = [runspacefactory]::CreateRunspacePool(1, $throttleLimit)
@@ -744,7 +749,7 @@ function Invoke-ParallelDiscoveryWithProgress {
             
             $runspaceModuleContext = [PSCustomObject]@{
                 Paths = $PassedPaths; Config = $PassedConfig; CompanyName = $PassedCompanyName; Version = $PassedVersion
-                ErrorCollector = $null # Errors collected via catch
+                ErrorCollector = $null 
             }
             
             Write-RunspaceLog "Invoking '$invokeFunctionName'..."
@@ -772,7 +777,7 @@ function Invoke-ParallelDiscoveryWithProgress {
         [void]$powershellInstance.AddArgument($Context.Version)
         [void]$powershellInstance.AddArgument($Context.Paths.Modules)
         [void]$powershellInstance.AddArgument($Context.Paths.Utilities)
-        [void]$powershellInstance.AddArgument($global:MandA) # Pass the current orchestrator's global context
+        [void]$powershellInstance.AddArgument($global:MandA)
 
         $powershellInstance.RunspacePool = $runspacePool
         $runspaces.Add([PSCustomObject]@{
@@ -782,8 +787,7 @@ function Invoke-ParallelDiscoveryWithProgress {
     }
 
     $totalTasks = $runspaces.Count; $completedTasksCount = 0
-    # Progress display logic omitted for brevity but should call a function from ProgressDisplay.psm1
-
+    
     while ($runspaces.Count -gt 0) {
         $doneTasks = $runspaces | Where-Object { $_.Handle.IsCompleted } 
         foreach ($taskItem in $doneTasks) { 
@@ -809,13 +813,13 @@ function Invoke-ParallelDiscoveryWithProgress {
                 if ($taskItem.Instance) { $taskItem.Instance.Dispose() }
                 $runspaces.Remove($taskItem) 
             }
-             if (Get-Command Write-DiscoveryProgress -ErrorAction SilentlyContinue) { # Assuming Write-DiscoveryProgress from ProgressDisplay.psm1
+             if (Get-Command Write-DiscoveryProgress -ErrorAction SilentlyContinue) { 
                 Write-DiscoveryProgress -Total $totalTasks -Completed $completedTasksCount -CurrentSource $taskItem.Source -Context $Context
             } else { Write-Host "`rProgress: $completedTasksCount / $totalTasks tasks completed. Last: $($taskItem.Source)" -NoNewline }
         }
         if ($runspaces.Count -gt 0) { Start-Sleep -Milliseconds 250 }
     }
-    if (-not (Get-Command Write-DiscoveryProgress -ErrorAction SilentlyContinue)) { Write-Host "" } # Newline after basic progress
+    if (-not (Get-Command Write-DiscoveryProgress -ErrorAction SilentlyContinue)) { Write-Host "" } 
 
     if ($runspacePool) { $runspacePool.Close(); $runspacePool.Dispose() }
     $failedTasksCount = $totalTasks - $allResults.Keys.Count
@@ -838,7 +842,7 @@ function Invoke-DiscoveryPhase {
         Write-MandALog "STARTING DISCOVERY PHASE" -Level "HEADER" -Context $Context
         
         if (Get-Command Test-DiscoveryPrerequisites -ErrorAction SilentlyContinue) {
-             if (-not (Test-DiscoveryPrerequisites -Context $Context)) {
+             if (-not (Test-DiscoveryPrerequisites -Context $Context)) { 
                 throw "Discovery prerequisites not met."
             }
         } else { Write-MandALog "Test-DiscoveryPrerequisites not found, skipping." -Level "WARN" -Context $Context}
@@ -850,28 +854,40 @@ function Invoke-DiscoveryPhase {
         
         Write-MandALog ("Discovery Configuration: Total Sources={0}, Parallel={1}, SkipExisting={2}, BatchSize={3}" -f $totalSources, $useParallel, $Context.Config.discovery.skipExistingFiles, $Context.Config.discovery.batchSize) -Level "INFO" -Context $Context
         
-        $discoveryResults = @{}; $summaryStats = @{ TotalRecords = 0; SuccessfulModules = 0; FailedModules = 0; SkippedModules = 0 }
+        $discoveryResults = @{}; $summaryStats = @{ TotalRecords = 0; SuccessfulModules = 0; FailedModules = 0; SkippedModules = 0; TotalDuration = [TimeSpan]::Zero }
+
 
         if ($useParallel) {
             Write-MandALog "Starting parallel discovery (Throttle: $($Context.Config.discovery.maxConcurrentJobs))" -Level "INFO" -Context $Context
-            $discoveryResults = Invoke-ParallelDiscoveryWithProgress -EnabledSources $enabledSources -Context $Context
-            # Summary stats need to be aggregated from the results of parallel discovery if it doesn't return them
-            foreach($sourceKey in $discoveryResults.Keys){
-                if($discoveryResults[$sourceKey] -is [hashtable] -and $discoveryResults[$sourceKey].ContainsKey('Success') ) { # Assuming structure from Invoke-ParallelDiscoveryWithProgress
-                    if($discoveryResults[$sourceKey].Success){
+            $parallelJobResults = Invoke-ParallelDiscoveryWithProgress -EnabledSources $enabledSources -Context $Context
+            
+            foreach($sourceKey in $parallelJobResults.Keys){
+                 $jobRes = $parallelJobResults[$sourceKey] 
+                 if($jobRes -is [hashtable] -and $jobRes.ContainsKey('Success')) { 
+                     if($jobRes.Success){
+                        $discoveryResults[$sourceKey] = $jobRes 
                         $summaryStats.SuccessfulModules++
-                        # Add logic to count records if Invoke-ParallelDiscoveryWithProgress's result objects contain it
-                        # $summaryStats.TotalRecords += Get-DiscoveryRecordCount -Result $discoveryResults[$sourceKey].Data
+                        $summaryStats.TotalRecords += Get-DiscoveryRecordCount -Result $jobRes.Data
                     } else {
+                        $discoveryResults[$sourceKey] = $jobRes
                         $summaryStats.FailedModules++
                     }
-                } else { # If direct data is returned, assume success
+                 } elseif ($jobRes -is [PSCustomObject] -and $jobRes.PSObject.Properties.Name -contains 'Success') { 
+                    if($jobRes.Success){
+                        $discoveryResults[$sourceKey] = $jobRes 
+                        $summaryStats.SuccessfulModules++
+                        $summaryStats.TotalRecords += Get-DiscoveryRecordCount -Result $jobRes.Data
+                    } else {
+                        $discoveryResults[$sourceKey] = $jobRes
+                        $summaryStats.FailedModules++
+                    }
+                } else { 
+                    $discoveryResults[$sourceKey] = [PSCustomObject]@{ Success = $true; Data = $jobRes; RecordCount = (Get-DiscoveryRecordCount -Result $jobRes); Duration = [TimeSpan]::Zero } 
                     $summaryStats.SuccessfulModules++
-                    # $summaryStats.TotalRecords += Get-DiscoveryRecordCount -Result $discoveryResults[$sourceKey]
+                    $summaryStats.TotalRecords += Get-DiscoveryRecordCount -Result $jobRes
                 }
             }
-
-        } else {
+        } else { 
             Write-MandALog "Starting sequential discovery" -Level "INFO" -Context $Context
             $currentSourceNum = 0
             foreach ($source in $enabledSources) {
@@ -907,15 +923,21 @@ function Invoke-DiscoveryPhase {
         $phaseDuration = (Get-Date) - $phaseStartTime
         $summaryStats.TotalDuration = $phaseDuration
         
-        # Log summary (similar to the original, adapt if needed)
         Write-MandALog "DISCOVERY PHASE SUMMARY" -Level "HEADER" -Context $Context
-        $discoveryResults.GetEnumerator() | ForEach-Object {
+        $discoveryResults.GetEnumerator() | ForEach-Object { 
             $sourceName = $_.Name
-            $res = $_.Value
-            $statusText = if ($res.Success) { "SUCCESS (Records: $($res.RecordCount), Time: $($res.Duration.ToString('mm\:ss')))" } else { "FAILED (Error: $($res.Error))" }
+            $res = $_.Value 
+            $statusText = ""
+            if ($res -is [hashtable] -and $res.ContainsKey('Success')) { 
+                 $statusText = if ($res.Success) { "SUCCESS (Records: $($res.RecordCount), Time: $($res.Duration.ToString('mm\:ss')))" } else { "FAILED (Error: $($res.Error))" }
+            } elseif ($res -is [PSCustomObject] -and $res.PSObject.Properties.Name -contains 'Success') { 
+                 $statusText = if ($res.Success) { "SUCCESS (Data records estimate: $(Get-DiscoveryRecordCount -Result $res.Data))" } else { "FAILED (Error: $($res.Error))" }
+            } else {
+                $statusText = "UNKNOWN RESULT STRUCTURE for $sourceName"
+            }
             Write-MandALog "  $sourceName : $statusText" -Level INFO -Context $Context
         }
-        Write-MandALog ("Statistics: TotalRecords={0}, SuccessfulModules={1}, FailedModules={2}, SkippedModules={3}, TotalDuration={4}" -f $summaryStats.TotalRecords, $summaryStats.SuccessfulModules, $summaryStats.FailedModules, $summaryStats.SkippedModules, $summaryStats.TotalDuration.ToString('hh\:mm\:ss')) -Level "INFO" -Context $Context
+        Write-MandALog ("Statistics: TotalRecords (Sequential Estimate)={0}, SuccessfulModules={1}, FailedModules={2}, SkippedModules={3}, TotalDuration={4}" -f $summaryStats.TotalRecords, $summaryStats.SuccessfulModules, $summaryStats.FailedModules, $summaryStats.SkippedModules, $summaryStats.TotalDuration.ToString('hh\:mm\:ss')) -Level "INFO" -Context $Context
 
         return $discoveryResults
     } catch {
@@ -928,8 +950,7 @@ function Invoke-DiscoveryPhase {
     }
 }
 
-# Helper function to count records (simplified from original)
-function Get-DiscoveryRecordCount { param($Result) if ($null -eq $Result) { return 0 }; if ($Result -is [array]) { return $Result.Count }; return 1 }
+function Get-DiscoveryRecordCount { param($Result) if ($null -eq $Result) { return 0 }; if ($Result -is [array]) { return $Result.Count }; if ($Result -is [System.Collections.IDictionary] -and $Result.Values){ return ($Result.Values | ForEach-Object { if($_ -is [array]) {$_.Count} else {1} } | Measure-Object -Sum).Sum }; return 1 }
 
 
 function Invoke-ProcessingPhase {
@@ -952,7 +973,7 @@ function Invoke-ProcessingPhase {
         Write-MandALog "Found $($csvFiles.Count) raw data files to process" -Level "INFO" -Context $Context
         
         if (Get-Command "Start-DataAggregation" -ErrorAction SilentlyContinue) {
-            $processingResult = Start-DataAggregation -Context $Context # Pass full context
+            $processingResult = Start-DataAggregation -Context $Context 
             if (-not $processingResult) { throw "Data aggregation failed" }
             Write-MandALog "Processing Phase Completed Successfully" -Level "SUCCESS" -Context $Context
             return $true
@@ -986,7 +1007,7 @@ function Invoke-ExportPhase {
 
         foreach ($file in $processedFiles) {
             $dataKey = $file.BaseName
-            try { $dataToExport[$dataKey] = Import-Csv -Path $file.FullName -Encoding UTF8 } # Specify Encoding
+            try { $dataToExport[$dataKey] = Import-Csv -Path $file.FullName -Encoding UTF8 } 
             catch { $Context.ErrorCollector.AddError("Export_Load", "Failed to load file: $($file.Name)", $_.Exception) }
         }
         
@@ -1000,7 +1021,7 @@ function Invoke-ExportPhase {
             if (Get-Command $functionName -ErrorAction SilentlyContinue) {
                 try {
                     Write-MandALog "Executing $functionName for format '$format'" -Level "INFO" -Context $Context
-                    & $functionName -ProcessedData $dataToExport -Context $Context # Pass full context
+                    & $functionName -ProcessedData $dataToExport -Context $Context 
                     Write-MandALog "Export completed for format '$format'" -Level "SUCCESS" -Context $Context
                 } catch {
                     $Context.ErrorCollector.AddError("Export_$format", "Export failed: $($_.Exception.Message)", $_.Exception)
@@ -1023,7 +1044,7 @@ function Invoke-ExportPhase {
 }
 
 function Get-ExportFunctionName {
-    param([string]$Format, [MandAContext]$Context) # Added Context for logging
+    param([string]$Format, [MandAContext]$Context) 
     $mapping = @{
         "PowerApps" = "Export-ForPowerApps"; "CompanyControlSheet" = "Export-ToCompanyControlSheet";
         "CSV" = "Export-ToCSV"; "JSON" = "Export-ToJSON"; "Excel" = "Export-ToExcel"
@@ -1043,24 +1064,22 @@ function Complete-MandADiscovery {
     [CmdletBinding()]
     param([MandAContext]$Context)
 
-    # Logging function selection
-    $logOutput = if (Get-Command Write-MandALog -ErrorAction SilentlyContinue -and $Context -and $Context.PSObject.Properties['LoggingInitialized'] -and $Context.LoggingInitialized) { ${function:Write-MandALog} } else { ${function:Write-Host} }
+    $logOutput = if (Get-Command Write-MandALog -ErrorAction SilentlyContinue -and $Context -and $Context.PSObject.Properties.Name -contains 'LoggingInitialized' -and $Context.LoggingInitialized) { ${function:Write-MandALog} } else { ${function:Write-Host} } 
     $logParams = if ($logOutput.Name -eq 'Write-MandALog') { @{Context=$Context} } else { @{} }
 
-    $logOutput.Invoke("FINALIZING M&A DISCOVERY SUITE EXECUTION", @{Level="HEADER"} + $logParams)
+    $logOutput.Invoke("FINALIZING M&A DISCOVERY SUITE EXECUTION", (@{Level="HEADER"} + $logParams)) 
     
     if ($Context.ErrorCollector.HasErrors()) {
         $errorReportPath = Join-Path $Context.Paths.LogOutput "ErrorReport_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
-        $logOutput.Invoke("Error report will be exported to: $errorReportPath", @{Level="WARN"} + $logParams)
+        $logOutput.Invoke("Error report will be exported to: $errorReportPath", (@{Level="WARN"} + $logParams))
         $Context.ErrorCollector.ExportToFile($errorReportPath)
     }
     
     $duration = (Get-Date) - $Context.StartTime
-    $logOutput.Invoke("Execution completed in: $($duration.ToString('hh\:mm\:ss'))", @{Level="INFO"} + $logParams)
-    $logOutput.Invoke("Error Summary: $($Context.ErrorCollector.GetSummary())", @{Level="INFO"} + $logParams)
-    $logOutput.Invoke("Output locations:", @{Level="INFO"} + $logParams)
-    $logOutput.Invoke("  - Logs: $($Context.Paths.LogOutput)", @{Level="INFO"} + $logParams)
-    # ... other paths ...
+    $logOutput.Invoke("Execution completed in: $($duration.ToString('hh\:mm\:ss'))", (@{Level="INFO"} + $logParams))
+    $logOutput.Invoke("Error Summary: $($Context.ErrorCollector.GetSummary())", (@{Level="INFO"} + $logParams))
+    $logOutput.Invoke("Output locations:", (@{Level="INFO"} + $logParams))
+    $logOutput.Invoke("  - Logs: $($Context.Paths.LogOutput)", (@{Level="INFO"} + $logParams))
 }
 
 #===============================================================================
@@ -1071,62 +1090,78 @@ try {
     # STEP 1: Ensure Global MandA Context is Initialized by Set-SuiteEnvironment.ps1
     if ($null -eq $global:MandA -or -not $global:MandA.Initialized) {
         Write-Host "Global environment (`$global:MandA`) not initialized. Attempting to source Set-SuiteEnvironment.ps1..." -ForegroundColor Yellow
-        $envScriptPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Scripts\Set-SuiteEnvironment.ps1" # Assumes QuickStart is in root.
-        if (-not (Test-Path $envScriptPath -PathType Leaf)) {
-            throw "CRITICAL: Set-SuiteEnvironment.ps1 not found at expected location '$envScriptPath'. Cannot proceed."
+        
+        $currentScriptDir = Split-Path $MyInvocation.MyCommand.Path -Parent
+        $envScriptPath = ""
+        $potentialSuiteRootForEnvSetup = ""
+
+        if ((Split-Path $currentScriptDir -Leaf) -eq "Scripts") { 
+            $potentialSuiteRootForEnvSetup = Split-Path $currentScriptDir -Parent
+            $envScriptPath = Join-Path $currentScriptDir "Set-SuiteEnvironment.ps1"
+        } else { 
+            $potentialSuiteRootForEnvSetup = $currentScriptDir
+            $envScriptPath = Join-Path $currentScriptDir "Scripts\Set-SuiteEnvironment.ps1"
         }
-        # CompanyName for Set-SuiteEnvironment.ps1
-        $companyForEnvSetup = $CompanyName # Use parameter if provided
+
+        if (-not (Test-Path $envScriptPath -PathType Leaf)) {
+            throw "CRITICAL: Set-SuiteEnvironment.ps1 not found at expected location '$envScriptPath'. Based on QuickStart running from '$currentScriptDir'."
+        }
+        
+        $companyForEnvSetup = $CompanyName 
         if ([string]::IsNullOrWhiteSpace($companyForEnvSetup)) {
-            # If not provided to QuickStart, Get-CompanySelection will be called later if needed.
-            # For Set-SuiteEnvironment, we need a CompanyName. If $global:MandA.CompanyName exists from a previous partial run, use it.
-            # Otherwise, this is a tricky spot if QuickStart is run without CompanyName and $global:MandA isn't set.
-            # Set-SuiteEnvironment.ps1 makes CompanyName mandatory.
              if ($null -ne $global:MandA -and $global:MandA.ContainsKey('CompanyName') -and -not [string]::IsNullOrWhiteSpace($global:MandA.CompanyName)) {
                 $companyForEnvSetup = $global:MandA.CompanyName
-                Write-Host "Using CompanyName '$companyForEnvSetup' from potentially existing (but uninitialized) global context for Set-SuiteEnvironment." -ForegroundColor Yellow
+                Write-Host "Using CompanyName '$companyForEnvSetup' from potentially existing global context for Set-SuiteEnvironment." -ForegroundColor Yellow
             } else {
-                # Prompt if truly no CompanyName is available yet.
-                $companyForEnvSetup = Get-CompanySelection # This ensures Set-SuiteEnvironment gets a CompanyName
+                $companyForEnvSetup = Get-CompanySelection 
                 Write-Host "CompanyName for Set-SuiteEnvironment obtained via prompt: '$companyForEnvSetup'" -ForegroundColor Yellow
             }
         }
-        . $envScriptPath -CompanyName $companyForEnvSetup -ProvidedSuiteRoot (Split-Path $PSScriptRoot -Parent)
+        Write-Host "Sourcing Set-SuiteEnvironment.ps1 from '$envScriptPath' with CompanyName '$companyForEnvSetup' and SuiteRoot '$potentialSuiteRootForEnvSetup'" -ForegroundColor Cyan
+        . $envScriptPath -CompanyName $companyForEnvSetup -ProvidedSuiteRoot $potentialSuiteRootForEnvSetup
+        
         if ($null -eq $global:MandA -or -not $global:MandA.Initialized) {
             throw "CRITICAL: Failed to initialize global M&A environment context via Set-SuiteEnvironment.ps1."
         }
-        Write-Host "Global M&A environment context initialized by QuickStart.ps1." -ForegroundColor Green
+        Write-Host "Global M&A environment context initialized successfully by QuickStart.ps1." -ForegroundColor Green
     }
     
     # STEP 2: Determine Effective Company Name
-    $effectiveCompanyName = $CompanyName # Parameter takes precedence
+    $effectiveCompanyName = $CompanyName 
     if ([string]::IsNullOrWhiteSpace($effectiveCompanyName)) {
         if ($null -ne $global:MandA -and $global:MandA.ContainsKey('CompanyName') -and -not [string]::IsNullOrWhiteSpace($global:MandA.CompanyName)) {
             $effectiveCompanyName = $global:MandA.CompanyName
-            Write-Host "Using company name from global context: $effectiveCompanyName" -ForegroundColor Green
+            Write-Host "Using company name from existing global context: $effectiveCompanyName" -ForegroundColor Green
         } else {
             $effectiveCompanyName = Get-CompanySelection
             Write-Host "Company name selected/entered: $effectiveCompanyName" -ForegroundColor Green
         }
     }
-    $effectiveCompanyName = $effectiveCompanyName -replace '[<>:"/\\|?*]', '_' # Sanitize
+    $effectiveCompanyName = $effectiveCompanyName -replace '[<>:"/\\|?*]', '_' 
 
     # STEP 3: Load Configuration
     $configuration = $null
     if (-not ([string]::IsNullOrWhiteSpace($ConfigurationFile))) {
-        $configPath = if ([System.IO.Path]::IsPathRooted($ConfigurationFile)) { $ConfigurationFile } else { Join-Path $global:MandA.Paths.Configuration $ConfigurationFile }
+        $configPath = if ([System.IO.Path]::IsPathRooted($ConfigurationFile)) { 
+            $ConfigurationFile 
+        } else { 
+            $configDir = if ($global:MandA.Paths.Configuration) {$global:MandA.Paths.Configuration} else {Join-Path $global:MandA.Paths.SuiteRoot "Configuration"}
+            Join-Path $configDir $ConfigurationFile
+        }
         if (-not (Test-Path $configPath -PathType Leaf)) { throw "Specified configuration file '$configPath' not found." }
         $configuration = ConvertTo-HashtableRecursive (Get-Content -Path $configPath -Raw | ConvertFrom-Json -ErrorAction Stop)
         Write-Host "Loaded configuration from specified file: $configPath" -ForegroundColor Cyan
     } elseif ($null -ne $global:MandA -and $global:MandA.ContainsKey('Config') -and ($null -ne $global:MandA.Config)) {
-        $configuration = $global:MandA.Config # This should be a hashtable from Set-SuiteEnvironment
+        $configuration = $global:MandA.Config 
         Write-Host "Using configuration from global context (`$global:MandA.Config)." -ForegroundColor Green
     } else {
-        throw "CRITICAL: Configuration not found. Ensure Set-SuiteEnvironment.ps1 ran or provide -ConfigurationFile."
+        $defaultConfigPath = Join-Path $global:MandA.Paths.Configuration "default-config.json"
+        if (-not (Test-Path $defaultConfigPath -PathType Leaf)) { throw "CRITICAL: Default configuration file '$defaultConfigPath' not found." }
+        $configuration = ConvertTo-HashtableRecursive (Get-Content -Path $defaultConfigPath -Raw | ConvertFrom-Json -ErrorAction Stop)
+        Write-Host "Loaded default configuration: $defaultConfigPath" -ForegroundColor Yellow
     }
     if ($null -eq $configuration) { throw "Failed to load configuration."}
     
-    # Ensure the working configuration reflects the effective company name.
     if (($configuration.metadata.companyName | Get-OrElse "") -ne $effectiveCompanyName) {
         Write-Host "Updating company name in working configuration to '$effectiveCompanyName'." -ForegroundColor Yellow
         $configuration.metadata.companyName = $effectiveCompanyName
@@ -1145,12 +1180,12 @@ try {
         $currentSources = $configuration.discovery.enabledSources
         $configuration.discovery.enabledSources = $currentSources | Where-Object { $_ -in $script:AzureOnlySources }
         Write-Host "Enabled sources for Azure-Only: $($configuration.discovery.enabledSources -join ', ')" -ForegroundColor Yellow
-        $effectiveMode = "Full" # Internally, it's a full run with filtered sources
+        $effectiveMode = "Full" 
     }
     
     # STEP 6: Create MandAContext for this run
     $script:Context = [MandAContext]::new($configuration, $effectiveCompanyName)
-    if (-not $script:Context.ValidateContext()){
+    if (-not $script:Context.ValidateContext()){ 
         throw "MandAContext validation failed. Cannot proceed."
     }
     
@@ -1173,15 +1208,14 @@ try {
         Write-MandALog "AUTHENTICATION & CONNECTION SETUP" -Level "HEADER" -Context $script:Context
         if (Get-Command "Initialize-MandAAuthentication" -ErrorAction SilentlyContinue) {
             try {
-                $authResult = Initialize-MandAAuthentication -Context $script:Context # Pass full context
+                $authResult = Initialize-MandAAuthentication -Context $script:Context 
                 if ($authResult -and $authResult.PSObject.Properties['Authenticated'].Value) {
                     Write-MandALog "Authentication successful" -Level "SUCCESS" -Context $script:Context
                     if (Get-Command "Initialize-AllConnections" -ErrorAction SilentlyContinue) {
-                        # Pass authentication context from $authResult to connection manager
                         $authContextForConnections = if ($authResult.PSObject.Properties['Context']) { $authResult.Context } else { $authResult }
                         $connectionStatus = Initialize-AllConnections -AuthContext $authContextForConnections -Context $script:Context
                         foreach ($service in $connectionStatus.Keys) {
-                            $status = $connectionStatus[$service]; $isConnected = if ($status -is [bool]) { $status } else { $status.Connected }
+                            $status = $connectionStatus[$service]; $isConnected = if ($status -is [bool]) { $status } elseif($status -is [hashtable] -and $status.ContainsKey("Connected")){$status.Connected}else{$false}
                             Write-MandALog ("Connected to $service : $isConnected") -Level (if($isConnected){"SUCCESS"}else{"WARN"}) -Context $script:Context
                         }
                     } else { Write-MandALog "Initialize-AllConnections function not found." -Level "WARN" -Context $script:Context}
@@ -1235,18 +1269,19 @@ catch {
     if ($script:Context -and $script:Context.ErrorCollector -and (Get-Command Write-MandALog -ErrorAction SilentlyContinue -and $global:MandA.LoggingInitialized)) {
         Write-MandALog -Message $errorMessage -Level CRITICAL -Context $script:Context
         Write-MandALog -Message ("Stack Trace: " + $_.ScriptStackTrace) -Level DEBUG -Context $script:Context
-        Complete-MandADiscovery -Context $script:Context # Attempt to log errors
+        Complete-MandADiscovery -Context $script:Context 
     } else {
         Write-Host $errorMessage -ForegroundColor Red
         Write-Host ("Stack Trace: " + $_.ScriptStackTrace) -ForegroundColor Yellow
     }
-    exit 3 # General critical failure
+    exit 3 
 }
 finally {
-    # Cleanup (e.g., disconnect services)
     if ($script:Context -and (Get-Command "Disconnect-AllServices" -ErrorAction SilentlyContinue)) {
         try {
-            Write-MandALog "Attempting to disconnect all services..." -Level INFO -Context $script:Context
+             if (Get-Command Write-MandALog -ErrorAction SilentlyContinue -and $global:MandA.LoggingInitialized) {
+                Write-MandALog "Attempting to disconnect all services..." -Level INFO -Context $script:Context
+             } else { Write-Host "Attempting to disconnect all services..." }
             Disconnect-AllServices -Context $script:Context
         } catch {
             $disconnectError = "Warning: Error during final service disconnection: $($_.Exception.Message)"
@@ -1254,7 +1289,6 @@ finally {
             else { Write-Warning $disconnectError }
         }
     }
-    # Restore original ErrorActionPreference
     $ErrorActionPreference = $OriginalErrorActionPreference
     Write-Host "[QuickStart.ps1] Execution finished. Restored ErrorActionPreference to '$ErrorActionPreference'." -ForegroundColor Gray
 }
