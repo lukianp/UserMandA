@@ -1,15 +1,15 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    M&A Discovery Suite - Main Orchestrator (Enhanced Version 5.5.9)
+    M&A Discovery Suite - Main Orchestrator (Enhanced Version 5.5.10)
 .DESCRIPTION
     Unified orchestrator for discovery, processing, and export with improved
     state management, error handling, and parallel processing support.
     This version expects Get-OrElse to be globally defined by Set-SuiteEnvironment.ps1
-    and includes an improved Import-ModuleWithManifest strategy.
+    and includes an improved Import-ModuleWithManifest strategy and string formatting fixes.
 .NOTES
     Author: Enhanced Version
-    Version: 5.5.9
+    Version: 5.5.10
     Created: 2025-01-03
     Last Modified: 2025-06-05
 #>
@@ -57,7 +57,7 @@ class MandAContext {
     
     MandAContext([hashtable]$initialConfig, [string]$currentCompanyName) {
         $this.Config = ConvertTo-HashtableRecursive -InputObject $initialConfig
-        $this.Version = "5.5.9" 
+        $this.Version = "5.5.10" 
         $this.StartTime = Get-Date
         $this.ModulesChecked = $false
         $this.ErrorCollector = [DiscoveryErrorCollector]::new()
@@ -178,10 +178,9 @@ function Import-ModuleWithManifest {
     }
     $moduleNameToLoad = [System.IO.Path]::GetFileNameWithoutExtension($ModulePathToImport)
     
-    # Check if module is already loaded
     if (Get-Module -Name $moduleNameToLoad -ErrorAction SilentlyContinue) {
         Write-MandALog "Module '$moduleNameToLoad' is already loaded." -Level "DEBUG" -Context $CurrentContext
-        return $true # Successfully "imported" as it's already available
+        return $true 
     }
 
     $moduleDirectory = Split-Path $ModulePathToImport -Parent
@@ -190,7 +189,6 @@ function Import-ModuleWithManifest {
     }
     $manifestFullPath = Join-Path $moduleDirectory "$moduleNameToLoad.psd1"
     
-    $originalErrorAction = $ErrorActionPreference 
     try {
         $loadingContextPaths = if ($CurrentContext -and $CurrentContext.Paths) { $CurrentContext.Paths } else { @{} }
         $loadingContextConfig = if ($CurrentContext -and $CurrentContext.Config) { $CurrentContext.Config } else { @{} }
@@ -210,9 +208,6 @@ function Import-ModuleWithManifest {
         
         $global:_MandALoadingContext = $loadingContextForModule
         
-        # $ErrorActionPreference = "Continue" # Removed, rely on outer "Stop" and catch here.
-        # For Import-Module, errors during parsing are often terminating if $ErrorActionPreference is Stop globally.
-
         if (Test-Path $manifestFullPath) {
             Write-Host "[DEBUG IMM] Importing manifest '$manifestFullPath' for module '$moduleNameToLoad'." -ForegroundColor DarkGray
             Import-Module $manifestFullPath -Force -Global -ErrorAction Stop 
@@ -224,7 +219,6 @@ function Import-ModuleWithManifest {
         }
         return $true
     } catch {
-        # This catch block will now handle errors from Import-Module if they occur
         $errorMessage = "Failed to load module '$moduleNameToLoad' from '$ModulePathToImport'. Error: $($_.Exception.Message)"
         Write-Host "[DEBUG IMM ERROR] Full Error Record for '$moduleNameToLoad': $($_.Exception | Format-List * -Force | Out-String)" -ForegroundColor Red
         if ($_.InvocationInfo) { $errorMessage += " At $($_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber)" }
@@ -233,7 +227,6 @@ function Import-ModuleWithManifest {
         Write-MandALog $errorMessage -Level "ERROR" -Context $CurrentContext
         return $false
     } finally {
-        # $ErrorActionPreference = $originalErrorAction # Not needed if we don't change it locally anymore
         Remove-Variable -Name "_MandALoadingContext" -Scope Global -ErrorAction SilentlyContinue
     }
 }
@@ -246,9 +239,7 @@ function Initialize-MandAEnvironment {
     try {
         $loggingModulePath = Join-Path $Context.Paths.Utilities "EnhancedLogging.psm1"
         if (Test-Path $loggingModulePath) {
-            # Try to import EnhancedLogging first. If it fails, subsequent Write-MandALog calls might not work as expected.
             try { Import-Module $loggingModulePath -Force -Global -EA Stop } catch { Write-Warning "Failed to import EnhancedLogging.psm1 initially: $($_.Exception.Message)"}
-            
             if (Get-Command Initialize-Logging -EA SilentlyContinue) { Initialize-Logging -Configuration $Context.Config }
             else { Write-Warning "Initialize-Logging function not found after importing EnhancedLogging.psm1" }
         } else { Write-Warning "EnhancedLogging.psm1 not found at $loggingModulePath." }
@@ -618,7 +609,10 @@ try {
                         $connectionStatus = Initialize-AllConnections -Configuration $script:Context.Config -AuthContext $authResult.Context -Context $script:Context # Pass Context
                         foreach ($serviceItem in $connectionStatus.Keys) { 
                             $statusValue = $connectionStatus[$serviceItem]; $isConnectedStatus = if ($statusValue -is [bool]) { $statusValue } else { $statusValue.Connected } 
-                            Write-MandALog ("Connected to $serviceItem $isConnectedStatus") -Level (if($isConnectedStatus){"SUCCESS"}else{"WARN"}) -Context $script:Context
+                            # Corrected Write-MandALog call
+                            $logMessageString = "Connected to {0}: {1}" -f $serviceItem, $isConnectedStatus
+                            $logLevelForConnection = if($isConnectedStatus){"SUCCESS"}else{"WARN"}
+                            Write-MandALog -Message $logMessageString -Level $logLevelForConnection -Context $script:Context
                         }
                     }
                 } else {

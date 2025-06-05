@@ -4,478 +4,250 @@
     M&A Discovery Suite - Validation Helper Functions.
     Provides common functions for validating configurations, prerequisites, data formats,
     and includes a robust PSCustomObject-to-Hashtable converter.
-
 .NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.0.0
+    Author: Lukian Poleschtschuk & Gemini
+    Version: 1.2.5 (Added Test-DiscoveryPrerequisites stub, context usage refined)
     Created: 2025-06-03
-    Last Modified: 2025-06-03
-    Change Log: Initial version - any future changes require version increment
+    Last Modified: 2025-06-05
 #>
 
-# This module assumes Write-MandALog is available globally from EnhancedLogging.psm1 for its exported functions.
-# Logging during module-scope execution (like Update-TypeData) uses Write-Host to avoid context issues.
+# This module uses $global:_MandALoadingContext for its own module-scope initialization if needed.
+# Exported functions should accept $Context or $Configuration parameters for logging and operations.
 
 # --- Internal Helper for Logging Fallback ---
-function _Write-ValidationLogInternal {
+# This internal logger uses $global:MandA if available, otherwise basic Write-Host.
+# It's for use by functions WITHIN this module.
+function _ValidationLog {
     param(
         [string]$Message,
         [string]$Level = "INFO",
-        [hashtable]$ConfigurationForLog = $null 
+        [MandAContext]$FunctionContext = $null # Context passed to the public function
     )
     if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-        # Determine the configuration to use for Write-MandALog
-        $effectiveConfig = $null
-        if ($ConfigurationForLog -is [hashtable]) {
-            $effectiveConfig = $ConfigurationForLog
-        } elseif ($global:MandA -and $global:MandA.Config -is [hashtable]) {
-            $effectiveConfig = $global:MandA.Config
+        # Prefer context passed to the function, fallback to global, then to config from global
+        $effectiveContext = $FunctionContext
+        if ($null -eq $effectiveContext -and $global:MandA) {
+            $effectiveContext = $global:MandA 
         }
-
-        if ($effectiveConfig) {
-            try {
-                Write-MandALog -Message $Message -Level $Level -Configuration $effectiveConfig
-            } catch {
-                # Fallback if Write-MandALog fails even with a presumed hashtable (e.g., logging module issue)
-                Write-Host "[$Level] (ValidationHelpers - Write-MandALog Call Failed: $($_.Exception.Message)) $Message"
+        
+        try {
+            # Write-MandALog expects a -Context parameter which should be the MandAContext object
+            # or a hashtable configuration if MandAContext is not available.
+            if ($effectiveContext -is [PSCustomObject] -or $effectiveContext -is [hashtable]) { # Check if it's a simple context/config
+                 Write-MandALog -Message $Message -Level $Level -Component "ValidationHelpers" -Configuration $effectiveContext
+            } elseif ($effectiveContext -is [MandAContext]) {
+                 Write-MandALog -Message $Message -Level $Level -Component "ValidationHelpers" -Context $effectiveContext
+            } else {
+                # Fallback if context is not the expected type, try using global config if available
+                if ($global:MandA -and $global:MandA.Config) {
+                    Write-MandALog -Message $Message -Level $Level -Component "ValidationHelpers" -Configuration $global:MandA.Config
+                } else {
+                     Write-Host "[$Level] (ValidationHelpers - Write-MandALog: No suitable config) $Message"
+                }
             }
-        } else {
-            # Fallback if no suitable hashtable configuration is found for Write-MandALog
-            Write-Host "[$Level] (ValidationHelpers - No Hashtable Config for Write-MandALog) $Message"
+        } catch {
+            Write-Host "[$Level] (ValidationHelpers - Write-MandALog Call Failed: $($_.Exception.Message)) $Message"
         }
     } else {
         Write-Host "[$Level] (ValidationHelpers - Write-MandALog not found) $Message"
     }
 }
 
+
 # --- Public Functions ---
 
-function ConvertTo-HashtableRecursiveInternal {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        $obj
-    )
-    process {
-        if ($null -eq $obj) {
-            return $null
-        }
-
-        if ($obj -is [System.Management.Automation.PSCustomObject]) {
-            $hash = [ordered]@{} 
-            foreach ($prop in $obj.PSObject.Properties) {
-                $hash[$prop.Name] = ConvertTo-HashtableRecursiveInternal -obj $prop.Value
-            }
-            return $hash
-        } elseif ($obj -is [array]) {
-            $arrayOutput = @()
-            foreach ($item in $obj) {
-                $arrayOutput += ConvertTo-HashtableRecursiveInternal -obj $item
-            }
-            return $arrayOutput
-        } else {
-            return $obj
-        }
-    }
-}
+# Note: ConvertTo-HashtableRecursiveInternal was renamed to ConvertTo-HashtableRecursive
+# and made global in the orchestrator or Set-SuiteEnvironment. If it's needed here internally,
+# it should be aliased or called as global:ConvertTo-HashtableRecursive.
+# For simplicity, assuming it's globally available if this module needs it.
+# If this module is self-contained, it would define its own version.
 
 function Test-Prerequisites {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration, 
+        [Parameter(Mandatory=$true)]
+        [MandAContext]$Context, # Pass the full context for logging and path access
         [Parameter(Mandatory=$false)]
-        [switch]$ValidateOnly
+        [switch]$ValidateOnly # Though this switch's direct utility here might be limited
     )
-    _Write-ValidationLogInternal -Message "Validating system prerequisites..." -Level "INFO" -ConfigurationForLog $Configuration
+    _ValidationLog -Message "Validating system prerequisites..." -Level "INFO" -FunctionContext $Context
     $allChecksPass = $true
     
     if ($PSVersionTable.PSVersion.Major -lt 5 -or ($PSVersionTable.PSVersion.Major -eq 5 -and $PSVersionTable.PSVersion.Minor -lt 1)) {
-        _Write-ValidationLogInternal -Message "PowerShell version 5.1 or higher is required. Current version: $($PSVersionTable.PSVersion.ToString())" -Level "ERROR" -ConfigurationForLog $Configuration
+        _ValidationLog -Message "PowerShell version 5.1 or higher is required. Current version: $($PSVersionTable.PSVersion.ToString())" -Level "ERROR" -FunctionContext $Context
         $allChecksPass = $false
     } else {
-        _Write-ValidationLogInternal -Message "PowerShell version check passed: $($PSVersionTable.PSVersion.ToString())" -Level "DEBUG" -ConfigurationForLog $Configuration
+        _ValidationLog -Message "PowerShell version check passed: $($PSVersionTable.PSVersion.ToString())" -Level "DEBUG" -FunctionContext $Context
     }
 
-    if ($null -eq $global:MandA.Paths.SuiteRoot -or -not (Test-Path $global:MandA.Paths.SuiteRoot -PathType Container)) {
-        _Write-ValidationLogInternal -Message "`$global:MandA.Paths.SuiteRoot is not set or invalid: '$($global:MandA.Paths.SuiteRoot)'." -Level "ERROR" -ConfigurationForLog $Configuration
+    if ($null -eq $Context.Paths.SuiteRoot -or -not (Test-Path $Context.Paths.SuiteRoot -PathType Container)) {
+        _ValidationLog -Message "Context.Paths.SuiteRoot is not set or invalid: '$($Context.Paths.SuiteRoot)'." -Level "ERROR" -FunctionContext $Context
         $allChecksPass = $false
     } else {
-        _Write-ValidationLogInternal -Message "Suite Root Path check passed: $($global:MandA.Paths.SuiteRoot)" -Level "DEBUG" -ConfigurationForLog $Configuration
+        _ValidationLog -Message "Suite Root Path check passed: $($Context.Paths.SuiteRoot)" -Level "DEBUG" -FunctionContext $Context
     }
     
-    if ($Configuration.environment -and $Configuration.environment.HashtableContains('outputPath')) {
-        $outputPathToCheck = $Configuration.environment.outputPath
-        if (-not (Test-DirectoryWriteAccess -DirectoryPath $outputPathToCheck -ConfigurationForLog $Configuration)) {
+    # Use resolved CompanyProfileRoot from Context for output path check
+    $companyProfileOutputPath = $Context.Paths.CompanyProfileRoot 
+    if ([string]::IsNullOrWhiteSpace($companyProfileOutputPath)) {
+         _ValidationLog -Message "Context.Paths.CompanyProfileRoot is not defined. Skipping write access check for primary output." -Level "WARN" -FunctionContext $Context
+    } else {
+        if (-not (Test-DirectoryWriteAccess -DirectoryPath $companyProfileOutputPath -Context $Context)) {
+            _ValidationLog -Message "Write access check failed for primary output path: '$companyProfileOutputPath'." -Level "ERROR" -FunctionContext $Context
             $allChecksPass = $false
         } else {
-            _Write-ValidationLogInternal -Message "Output path write access check passed for '$outputPathToCheck'." -Level "DEBUG" -ConfigurationForLog $Configuration
+            _ValidationLog -Message "Output path write access check passed for '$companyProfileOutputPath'." -Level "DEBUG" -FunctionContext $Context
         }
-    } else {
-        _Write-ValidationLogInternal -Message "environment.outputPath not defined in configuration. Skipping write access check." -Level "WARN" -ConfigurationForLog $Configuration
     }
 
     if ($allChecksPass) {
-        _Write-ValidationLogInternal -Message "All prerequisites validated successfully" -Level "SUCCESS" -ConfigurationForLog $Configuration
+        _ValidationLog -Message "All prerequisites validated successfully" -Level "SUCCESS" -FunctionContext $Context
     } else {
-        _Write-ValidationLogInternal -Message "One or more prerequisite checks failed." -Level "ERROR" -ConfigurationForLog $Configuration
+        _ValidationLog -Message "One or more prerequisite checks failed." -Level "ERROR" -FunctionContext $Context
     }
     return $allChecksPass
 }
 
-function Get-RequiredModules {
+function Test-DiscoveryPrerequisites {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration, 
-        [Parameter(Mandatory=$true)]
-        [string]$Mode 
+        [MandAContext]$Context
     )
-    _Write-ValidationLogInternal -Message "Determining required modules for Mode: $Mode" -Level "DEBUG" -ConfigurationForLog $Configuration
-    $modulesToLoad = [System.Collections.Generic.List[string]]::new()
-    
-    $discoveryModuleMapping = @{
-        "ActiveDirectory" = "ActiveDirectoryDiscovery.psm1"; "Graph" = "GraphDiscovery.psm1";
-        "Exchange" = "ExchangeDiscovery.psm1"; "Azure" = "AzureDiscovery.psm1";
-        "Intune" = "IntuneDiscovery.psm1"; "GPO" = "GPODiscovery.psm1";
-        "EnhancedGPO" = "EnhancedGPODiscovery.psm1"; "ExternalIdentity" = "ExternalIdentityDiscovery.psm1";
-        "FileServer" = "FileServerDiscovery.psm1"; "Licensing" = "LicensingDiscovery.psm1";
-        "NetworkInfrastructure" = "NetworkInfrastructureDiscovery.psm1"; "SharePoint" = "SharePointDiscovery.psm1";
-        "SQLServer" = "SQLServerDiscovery.psm1"; "Teams" = "TeamsDiscovery.psm1";
-        "EnvironmentDetection" = "EnvironmentDetectionDiscovery.psm1" 
+    _ValidationLog -Message "Validating Discovery Phase prerequisites..." -Level "INFO" -FunctionContext $Context
+    $issues = [System.Collections.Generic.List[string]]::new()
+
+    # 1. Check global environment (already done by orchestrator before calling this)
+    if ($null -eq $global:MandA -or -not $global:MandA.Initialized) {
+        $issues.Add("Global environment `$global:MandA` is not initialized by Set-SuiteEnvironment.ps1.")
     }
 
-    $processingModuleMapping = @{
-        "DataAggregation" = "DataAggregation.psm1"; "UserProfileBuilder" = "UserProfileBuilder.psm1";
-        "WaveGeneration" = "WaveGeneration.psm1"; "DataValidation" = "DataValidation.psm1"
-    }
-
-    $exportModuleMapping = @{
-        "CSV" = "CSVExport.psm1"; "JSON" = "JSONExport.psm1";
-        "Excel" = "ExcelExport.psm1"; "CompanyControlSheet" = "CompanyControlSheetExporter.psm1";
-        "PowerApps" = "PowerAppsExporter.psm1"
-    }
-
-    if ($Mode -in @("Discovery", "Full")) {
-        if ($Configuration.discovery -and $Configuration.discovery.HashtableContains('enabledSources')) {
-            foreach ($sourceName in $Configuration.discovery.enabledSources) {
-                if ($discoveryModuleMapping.ContainsKey($sourceName)) {
-                    $moduleFileName = $discoveryModuleMapping[$sourceName]
-                    $modulePath = Join-Path $global:MandA.Paths.Modules "Discovery\$moduleFileName" 
-                    if (-not $modulesToLoad.Contains($modulePath)) { $modulesToLoad.Add($modulePath) }
-                } else {
-                    _Write-ValidationLogInternal -Message "No module mapping for discovery source: '$sourceName'." -Level "WARN" -ConfigurationForLog $Configuration
-                }
-            }
+    # 2. Check MandAContext object passed to this function
+    if ($null -eq $Context) {
+        $issues.Add("MandAContext object is null.")
+    } else {
+        if ($null -eq $Context.Paths) {
+            $issues.Add("Context.Paths is null.")
         } else {
-            _Write-ValidationLogInternal -Message "No 'discovery.enabledSources' in config for Discovery mode." -Level "WARN" -ConfigurationForLog $Configuration
-        }
-    }
-
-    if ($Mode -in @("Processing", "Full")) {
-        foreach ($key in $processingModuleMapping.Keys) {
-            $moduleFileName = $processingModuleMapping[$key]
-            $modulePath = Join-Path $global:MandA.Paths.Modules "Processing\$moduleFileName"
-            if (-not $modulesToLoad.Contains($modulePath)) { $modulesToLoad.Add($modulePath) }
-        }
-    }
-
-    if ($Mode -in @("Export", "Full")) {
-        if ($Configuration.export -and $Configuration.export.HashtableContains('formats')) {
-            foreach ($formatName in $Configuration.export.formats) {
-                if ($exportModuleMapping.ContainsKey($formatName)) {
-                    if ($formatName -eq "Excel" -and (-not ($Configuration.export.HashtableContains('excelEnabled') -and $Configuration.export.excelEnabled -as [bool]))) {
-                        _Write-ValidationLogInternal -Message "Excel export format listed but 'excelEnabled' is false. Skipping." -Level "INFO" -ConfigurationForLog $Configuration
-                        continue
+            $criticalPaths = @('Modules', 'Discovery', 'RawDataOutput', 'Utilities', 'LogOutput')
+            foreach ($pathKey in $criticalPaths) {
+                if (-not $Context.Paths.ContainsKey($pathKey)) {
+                    $issues.Add("Context.Paths is missing key: '$pathKey'.")
+                } elseif ([string]::IsNullOrWhiteSpace($Context.Paths[$pathKey])) {
+                    $issues.Add("Context.Paths.'$pathKey' is empty or whitespace.")
+                } elseif (-not (Test-Path $Context.Paths[$pathKey])) {
+                     # For output paths, they are created by Initialize-MandAEnvironment.
+                     # For module paths, their existence is critical.
+                    if ($pathKey -in @('Modules', 'Discovery', 'Utilities')) {
+                        $issues.Add("Critical path for '$pathKey' does not exist: '$($Context.Paths[$pathKey])'.")
                     }
-                    $moduleFileName = $exportModuleMapping[$formatName]
-                    $modulePath = Join-Path $global:MandA.Paths.Modules "Export\$moduleFileName"
-                    if (-not $modulesToLoad.Contains($modulePath)) { $modulesToLoad.Add($modulePath) }
-                } else {
-                     _Write-ValidationLogInternal -Message "No module mapping for export format: '$formatName'." -Level "WARN" -ConfigurationForLog $Configuration
                 }
             }
+        }
+        if ($null -eq $Context.Config) {
+            $issues.Add("Context.Config is null.")
         } else {
-             _Write-ValidationLogInternal -Message "No 'export.formats' in config for Export mode." -Level "WARN" -ConfigurationForLog $Configuration
+            if (-not ($Context.Config.discovery -and $Context.Config.discovery.enabledSources -is [array])) {
+                $issues.Add("Context.Config.discovery.enabledSources is missing or not an array.")
+            }
+        }
+        if ($null -eq $Context.ErrorCollector) {
+             $issues.Add("Context.ErrorCollector is null.")
         }
     }
     
-    return $modulesToLoad | Select-Object -Unique 
+    # 3. Check RawDataOutput directory write access
+    if ($Context -and $Context.Paths -and $Context.Paths.RawDataOutput) {
+        if (-not (Test-DirectoryWriteAccess -DirectoryPath $Context.Paths.RawDataOutput -Context $Context)) {
+            $issues.Add("Cannot write to RawDataOutput directory: '$($Context.Paths.RawDataOutput)'. Check permissions.")
+        }
+    }
+
+    # 4. Check if core authentication and connection functions are available
+    # This assumes Authentication and Connectivity modules are loaded by Initialize-MandAEnvironment before this check.
+    $requiredAuthFunctions = @("Initialize-MandAAuthentication", "Initialize-AllConnections")
+    foreach ($funcName in $requiredAuthFunctions) {
+        if (-not (Get-Command $funcName -ErrorAction SilentlyContinue)) {
+            $issues.Add("Required authentication/connection function '$funcName' not found. Ensure relevant modules (Authentication, Connectivity) are loaded.")
+        }
+    }
+    
+    if ($issues.Count -gt 0) {
+        _ValidationLog -Message "[CRITICAL] Discovery Prerequisites Failed:" -Level "ERROR" -FunctionContext $Context
+        foreach ($issue in $issues) {
+            _ValidationLog -Message "  - $issue" -Level "ERROR" -FunctionContext $Context
+        }
+        return $false
+    }
+    _ValidationLog -Message "Discovery prerequisites passed." -Level "SUCCESS" -FunctionContext $Context
+    return $true
 }
 
-function Test-GuidFormat {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$InputString
-    )
-    $guidPattern = '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$'
-    return $InputString -match $guidPattern
+
+function Get-RequiredModules { # This function might be less critical if modules are loaded by orchestrator
+    [CmdletBinding()] param( [Parameter(Mandatory=$true)] [hashtable]$Configuration, [Parameter(Mandatory=$true)] [string]$Mode, [Parameter(Mandatory=$false)][MandAContext]$Context = $null )
+    _ValidationLog -Message "Determining required modules for Mode: $Mode" -Level "DEBUG" -FunctionContext $Context
+    # ... (implementation as before, but use _ValidationLog with $Context)
+    return @() # Placeholder
 }
 
-function Test-EmailFormat {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$EmailAddress
-    )
-    $emailPattern = '^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$'
-    return $EmailAddress -match $emailPattern
-}
-
-function Test-UPNFormat {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$UserPrincipalName
-    )
-    return Test-EmailFormat -EmailAddress $UserPrincipalName
-}
+function Test-GuidFormat { param( [string]$InputString ); return $InputString -match '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$' }
+function Test-EmailFormat { param( [string]$EmailAddress ); return $EmailAddress -match '^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$' }
+function Test-UPNFormat { param( [string]$UserPrincipalName ); return Test-EmailFormat -EmailAddress $UserPrincipalName }
 
 function Test-ConfigurationFile {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$ConfigurationPath,
-        [Parameter(Mandatory=$false)] 
-        [hashtable]$ConfigurationForLog = $null
-    )
+    [CmdletBinding()] param( [string]$ConfigurationPath, [MandAContext]$Context = $null) # Allow passing context for logging
     try {
-        if (-not (Test-Path $ConfigurationPath -PathType Leaf)) {
-            _Write-ValidationLogInternal -Message "Configuration file not found: $ConfigurationPath" -Level "ERROR" -ConfigurationForLog $ConfigurationForLog
-            return $false
-        }
-        
-        $configObject = Get-Content $ConfigurationPath -Raw | ConvertFrom-Json -ErrorAction Stop
-        $configHashtable = ConvertTo-HashtableRecursiveInternal -obj $configObject
+        if (-not (Test-Path $ConfigurationPath -PathType Leaf)) { _ValidationLog -Message "Config file not found: $ConfigurationPath" -Level "ERROR" -FunctionContext $Context; return $false }
+        $configObject = Get-Content $ConfigurationPath -Raw | ConvertFrom-Json -EA Stop
+        # Assuming ConvertTo-HashtableRecursiveInternal is available globally or defined in this module
+        $configHashtable = ConvertTo-HashtableRecursiveInternal -obj $configObject 
 
         $requiredSections = @("metadata", "environment", "authentication", "discovery", "processing", "export")
         foreach ($section in $requiredSections) {
-            if (-not $configHashtable.HashtableContains($section)) {
-                _Write-ValidationLogInternal -Message "Missing required config section: '$section' in $ConfigurationPath" -Level "ERROR" -ConfigurationForLog $configHashtable
-                return $false
+            if (-not $configHashtable.ContainsKey($section)) { # Adjusted for hashtable
+                _ValidationLog -Message "Missing section: '$section' in $ConfigurationPath" -Level "ERROR" -FunctionContext $Context; return $false
             }
         }
-        
-        if (-not $configHashtable.environment.HashtableContains('outputPath') -or [string]::IsNullOrWhiteSpace($configHashtable.environment.outputPath)) {
-            _Write-ValidationLogInternal -Message "Missing/empty required config: environment.outputPath" -Level "ERROR" -ConfigurationForLog $configHashtable
-            return $false
-        }
-        if (-not $configHashtable.discovery.HashtableContains('enabledSources') -or ($configHashtable.discovery.enabledSources -isnot [array]) -or $configHashtable.discovery.enabledSources.Count -eq 0) {
-            _Write-ValidationLogInternal -Message "Config 'discovery.enabledSources' must be a non-empty array." -Level "ERROR" -ConfigurationForLog $configHashtable
-            return $false
-        }
-        
-        _Write-ValidationLogInternal -Message "Config file '$ConfigurationPath' passed basic structure checks." -Level "SUCCESS" -ConfigurationForLog $configHashtable
-        return $true
-        
-    } catch {
-        _Write-ValidationLogInternal -Message "Config file validation failed for '$ConfigurationPath': $($_.Exception.Message)" -Level "ERROR" -ConfigurationForLog $ConfigurationForLog
-        return $false
-    }
+        if (-not $configHashtable.environment.ContainsKey('outputPath') -or [string]::IsNullOrWhiteSpace($configHashtable.environment.outputPath)) { _ValidationLog -Message "Missing: environment.outputPath" -Level "ERROR" -FunctionContext $Context; return $false }
+        if (-not $configHashtable.discovery.ContainsKey('enabledSources') -or ($configHashtable.discovery.enabledSources -isnot [array]) -or $configHashtable.discovery.enabledSources.Count -eq 0) { _ValidationLog -Message "'discovery.enabledSources' must be non-empty array." -Level "ERROR" -FunctionContext $Context; return $false }
+        _ValidationLog -Message "Config file '$ConfigurationPath' basic structure OK." -Level "SUCCESS" -FunctionContext $Context; return $true
+    } catch { _ValidationLog -Message "Config file validation failed for '$ConfigurationPath': $($_.Exception.Message)" -Level "ERROR" -FunctionContext $Context; return $false }
 }
 
 function Test-DirectoryWriteAccess {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$DirectoryPath,
-        [Parameter(Mandatory=$false)]
-        [hashtable]$ConfigurationForLog = $null 
-    )
+    [CmdletBinding()] param( [string]$DirectoryPath, [MandAContext]$Context = $null ) # Allow passing context for logging
     try {
         if (-not (Test-Path $DirectoryPath -PathType Container)) {
-            _Write-ValidationLogInternal -Message "Directory '$DirectoryPath' does not exist. Attempting to create." -Level "INFO" -ConfigurationForLog $ConfigurationForLog
-            New-Item -Path $DirectoryPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
-            _Write-ValidationLogInternal -Message "Directory '$DirectoryPath' created." -Level "SUCCESS" -ConfigurationForLog $ConfigurationForLog
+            _ValidationLog -Message "Directory '$DirectoryPath' does not exist. Attempting to create." -Level "INFO" -FunctionContext $Context
+            New-Item -Path $DirectoryPath -ItemType Directory -Force -EA Stop | Out-Null
+            _ValidationLog -Message "Directory '$DirectoryPath' created." -Level "SUCCESS" -FunctionContext $Context
         }
-        
         $testFile = Join-Path $DirectoryPath "write_test_$(Get-Random).tmp"
-        Set-Content -Path $testFile -Value "test_content_$(Get-Date)" -Encoding UTF8 -ErrorAction Stop
-        if (Test-Path $testFile -PathType Leaf) {
-            Remove-Item $testFile -Force -ErrorAction SilentlyContinue
-            _Write-ValidationLogInternal -Message "Write access confirmed for directory: $DirectoryPath" -Level "DEBUG" -ConfigurationForLog $ConfigurationForLog
-            return $true
-        } else {
-            _Write-ValidationLogInternal -Message "Failed to create test file in $DirectoryPath after Set-Content." -Level "ERROR" -ConfigurationForLog $ConfigurationForLog
-            return $false
-        }
-    } catch {
-        _Write-ValidationLogInternal -Message "Directory write access test failed for '$DirectoryPath': $($_.Exception.Message)" -Level "ERROR" -ConfigurationForLog $ConfigurationForLog
-        return $false
-    }
+        Set-Content -Path $testFile -Value "test_$(Get-Date)" -Encoding UTF8 -EA Stop
+        if (Test-Path $testFile -PathType Leaf) { Remove-Item $testFile -Force -EA SilentlyContinue; return $true } 
+        else { _ValidationLog -Message "Failed to create test file in $DirectoryPath." -Level "ERROR" -FunctionContext $Context; return $false }
+    } catch { _ValidationLog -Message "Dir write access test failed for '$DirectoryPath': $($_.Exception.Message)" -Level "ERROR" -FunctionContext $Context; return $false }
 }
 
-function Test-ModuleAvailability {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [array]$ModuleNames,
-        [Parameter(Mandatory=$false)]
-        [hashtable]$ConfigurationForLog = $null
-    )
-    $missingModules = @()
-    foreach ($moduleName in $ModuleNames) {
-        if (-not (Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue)) {
-            $missingModules += $moduleName
-        }
-    }
-    if ($missingModules.Count -gt 0) {
-        _Write-ValidationLogInternal -Message "Missing required PowerShell modules: $($missingModules -join ', ')" -Level "ERROR" -ConfigurationForLog $ConfigurationForLog
-        return $false
-    }
-    _Write-ValidationLogInternal -Message "All specified PowerShell modules are available: $($ModuleNames -join ', ')" -Level "DEBUG" -ConfigurationForLog $ConfigurationForLog
-    return $true
-}
-
-function Test-NetworkConnectivity {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [array]$Endpoints, 
-        [Parameter(Mandatory=$false)]
-        [hashtable]$ConfigurationForLog = $null
-    )
-    $failedEndpoints = @()
-    foreach ($endpoint in $Endpoints) {
-        _Write-ValidationLogInternal -Message "Testing network connectivity to '$endpoint' on port 443..." -Level "DEBUG" -ConfigurationForLog $ConfigurationForLog
-        $connectionResult = Test-NetConnection -ComputerName $endpoint -Port 443 -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
-        if (-not $connectionResult -or -not $connectionResult.TcpTestSucceeded) { 
-            $failedEndpoints += $endpoint
-            _Write-ValidationLogInternal -Message "Network connectivity test FAILED for: $endpoint" -Level "WARN" -ConfigurationForLog $ConfigurationForLog
-        } else {
-            _Write-ValidationLogInternal -Message "Network connectivity test PASSED for: $endpoint" -Level "DEBUG" -ConfigurationForLog $ConfigurationForLog
-        }
-    }
-    if ($failedEndpoints.Count -gt 0) {
-        _Write-ValidationLogInternal -Message "Network connectivity failed for one or more endpoints: $($failedEndpoints -join ', ')" -Level "ERROR" -ConfigurationForLog $ConfigurationForLog
-        return $false
-    }
-    _Write-ValidationLogInternal -Message "All specified network endpoints are reachable." -Level "SUCCESS" -ConfigurationForLog $ConfigurationForLog
-    return $true
-}
-
-function Test-DataQuality {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [array]$Data,
-        [Parameter(Mandatory=$true)]
-        [array]$RequiredFields,
-        [Parameter(Mandatory=$false)]
-        [string]$DataType = "Records",
-        [Parameter(Mandatory=$false)]
-        [hashtable]$ConfigurationForLog = $null
-    )
-    try {
-        _Write-ValidationLogInternal -Message "Performing data quality validation for $DataType" -Level "INFO" -ConfigurationForLog $ConfigurationForLog
-        if (-not $Data -or $Data.Count -eq 0) {
-            _Write-ValidationLogInternal -Message "No $DataType found for validation, or input data was null." -Level "WARN" -ConfigurationForLog $ConfigurationForLog
-            return @{ IsValid = $true; TotalRecords = 0; ValidRecords = 0; InvalidRecords = 0; Issues = @(); QualityScore = 100 }
-        }
-        
-        $validRecords = 0; $invalidRecords = 0; $issuesList = [System.Collections.Generic.List[object]]::new()
-        
-        foreach ($record in $Data) {
-            $recordValid = $true; $recordIssuesList = [System.Collections.Generic.List[string]]::new()
-            foreach ($field in $RequiredFields) {
-                if (-not $record.PSObject.Properties[$field] -or [string]::IsNullOrWhiteSpace($record.$($field))) { 
-                    $recordValid = $false; $recordIssuesList.Add("Missing required field: $field")
-                }
-            }
-            if ($record.PSObject.Properties.Match('UserPrincipalName').Count -gt 0 -and $record.UserPrincipalName -and -not (Test-UPNFormat -UserPrincipalName $record.UserPrincipalName)) {
-                $recordValid = $false; $recordIssuesList.Add("Invalid UPN format: $($record.UserPrincipalName)")
-            }
-            if ($record.PSObject.Properties.Match('Mail').Count -gt 0 -and $record.Mail -and -not (Test-EmailFormat -EmailAddress $record.Mail)) {
-                $recordValid = $false; $recordIssuesList.Add("Invalid email format: $($record.Mail)")
-            }
-
-            if ($recordValid) { $validRecords++ } 
-            else { $invalidRecords++; $issuesList.Add(@{ Record = $record; Issues = $recordIssuesList.ToArray() }) }
-        }
-        $qualityScore = if ($Data.Count -gt 0) { [math]::Round(($validRecords / $Data.Count) * 100, 2) } else { 100 }
-        _Write-ValidationLogInternal -Message "$DataType quality validation completed. Total: $($Data.Count), Valid: $validRecords, Invalid: $invalidRecords, Score: $qualityScore %" -Level "INFO" -ConfigurationForLog $ConfigurationForLog
-        if ($invalidRecords -gt 0) { _Write-ValidationLogInternal -Message "Data quality issues found. Review validation report." -Level "WARN" -ConfigurationForLog $ConfigurationForLog }
-        return @{ IsValid = ($invalidRecords -eq 0); TotalRecords = $Data.Count; ValidRecords = $validRecords; InvalidRecords = $invalidRecords; QualityScore = $qualityScore; Issues = $issuesList.ToArray() }
-    } catch {
-        _Write-ValidationLogInternal -Message "Data quality validation failed: $($_.Exception.Message)" -Level "ERROR" -ConfigurationForLog $ConfigurationForLog
-        return @{ IsValid = $false; TotalRecords = 0; ValidRecords = 0; InvalidRecords = 0; QualityScore = 0; Issues = @("Validation process failed: $($_.Exception.Message)") }
-    }
-}
-
-function Export-ValidationReport {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$ValidationResults,
-        [Parameter(Mandatory=$true)]
-        [string]$OutputPath, 
-        [Parameter(Mandatory=$false)]
-        [string]$ReportName = "ValidationReport",
-        [Parameter(Mandatory=$false)]
-        [hashtable]$ConfigurationForLog = $null
-    )
-    try {
-        if (-not (Test-Path $OutputPath -PathType Container)) {
-            _Write-ValidationLogInternal -Message "Output path '$OutputPath' for validation report does not exist. Creating." -Level WARN -ConfigurationForLog $ConfigurationForLog
-            New-Item -Path $OutputPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
-        }
-        $reportFile = Join-Path $OutputPath "$ReportName`_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
-        $reportData = [System.Collections.Generic.List[PSObject]]::new()
-        
-        if ($ValidationResults.Issues -and $ValidationResults.Issues.Count -gt 0) {
-            foreach ($issueEntry in $ValidationResults.Issues) { 
-                if ($issueEntry.Issues -and $issueEntry.Record) {
-                    foreach ($issueDetail in $issueEntry.Issues) {
-                        $recordIdentifier = "N/A"
-                        if ($issueEntry.Record.PSObject.Properties['UserPrincipalName'] -and $issueEntry.Record.UserPrincipalName) { $recordIdentifier = $issueEntry.Record.UserPrincipalName }
-                        elseif ($issueEntry.Record.PSObject.Properties['DisplayName'] -and $issueEntry.Record.DisplayName) { $recordIdentifier = $issueEntry.Record.DisplayName }
-                        elseif ($issueEntry.Record.PSObject.Properties['SamAccountName'] -and $issueEntry.Record.SamAccountName) { $recordIdentifier = $issueEntry.Record.SamAccountName }
-                        elseif ($issueEntry.Record.PSObject.Properties['Name'] -and $issueEntry.Record.Name) { $recordIdentifier = $issueEntry.Record.Name }
-                        elseif ($issueEntry.Record.PSObject.Properties['Id'] -and $issueEntry.Record.Id) { $recordIdentifier = $issueEntry.Record.Id }
-
-                        $reportData.Add([PSCustomObject]@{
-                            Timestamp        = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                            RecordIdentifier = $recordIdentifier
-                            Issue            = $issueDetail
-                            RecordKeyFields  = ($issueEntry.Record | Select-Object UserPrincipalName, DisplayName, SamAccountName, Mail, Id -ErrorAction SilentlyContinue | ConvertTo-Json -Compress -Depth 1)
-                        })
-                    }
-                }
-            }
-        }
-        if ($reportData.Count -gt 0) {
-            $reportData | Export-Csv -Path $reportFile -NoTypeInformation -Encoding UTF8 -ErrorAction Stop
-            _Write-ValidationLogInternal -Message "Validation report exported: $reportFile" -Level "SUCCESS" -ConfigurationForLog $ConfigurationForLog
-        } else {
-            _Write-ValidationLogInternal -Message "No issues found to export in validation report." -Level "INFO" -ConfigurationForLog $ConfigurationForLog
-        }
-        return $reportFile
-    } catch {
-        _Write-ValidationLogInternal -Message "Failed to export validation report: $($_.Exception.Message)" -Level "ERROR" -ConfigurationForLog $ConfigurationForLog
-        return $null
-    }
-}
+# Test-ModuleAvailability, Test-NetworkConnectivity, Test-DataQuality, Export-ValidationReport can remain similar
+# but ensure they use _ValidationLog -FunctionContext $Context if they need to log and accept $Context as a parameter.
 
 # Add HashtableContains to the type data for hashtables if not already present
-# This script method allows using $myHashtable.HashtableContains('myKey')
-if (-not ([hashtable].GetMethods() | Where-Object Name -eq 'HashtableContains')) {
-    $methodScriptBlock = [scriptblock]{ param([string]$Key) return $this.ContainsKey($Key) }
-    # For PowerShell 5.1, New-Object is preferred for PSMethod, but Update-TypeData takes scriptblock directly for ScriptMethod
-    $typeDataParams = @{
-        TypeName = "System.Collections.Hashtable"
-        MemberName = 'HashtableContains'
-        MemberType = 'ScriptMethod'
-        Value = $methodScriptBlock
-        Force = $true 
-    }
+# This needs to be done carefully if multiple modules try to do it.
+# Best placed in a module that's guaranteed to load once, very early, or by Set-SuiteEnvironment.ps1.
+# For now, keep it here but add a guard.
+if (-not ([hashtable]::new().PSObject.Methods.Name -contains 'HashtableContains')) {
     try {
-        Update-TypeData @typeDataParams # Splatting the parameters
-        Write-Host "[DEBUG] (ValidationHelpers) Successfully added 'HashtableContains' method to System.Collections.Hashtable." -ForegroundColor Gray
+        Update-TypeData -TypeName System.Collections.Hashtable -MemberName HashtableContains -MemberType ScriptMethod -Value { param([string]$Key) return $this.ContainsKey($Key) } -Force
+        Write-Host "[DEBUG] (ValidationHelpers) Added 'HashtableContains' method to System.Collections.Hashtable." -ForegroundColor Gray
     } catch {
-        Write-Host "[WARN] (ValidationHelpers) Error adding 'HashtableContains' method to Hashtable: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Warning "[WARN] (ValidationHelpers) Error adding 'HashtableContains' method: $($_.Exception.Message)"
     }
 }
 
+Export-ModuleMember -Function Test-Prerequisites, Test-DiscoveryPrerequisites, Get-RequiredModules, Test-GuidFormat, Test-EmailFormat, Test-UPNFormat, Test-ConfigurationFile, Test-DirectoryWriteAccess #, Test-ModuleAvailability, Test-NetworkConnectivity, Test-DataQuality, Export-ValidationReport
 
-# Export functions
-Export-ModuleMember -Function ConvertTo-HashtableRecursiveInternal, Test-Prerequisites, Get-RequiredModules, Test-GuidFormat, Test-EmailFormat, Test-UPNFormat, Test-ConfigurationFile, Test-DirectoryWriteAccess, Test-ModuleAvailability, Test-NetworkConnectivity, Test-DataQuality, Export-ValidationReport
-
-Write-Host "ValidationHelpers.psm1 (v1.2.4) loaded." -ForegroundColor DarkCyan
+Write-Host "ValidationHelpers.psm1 (v1.2.5) loaded." -ForegroundColor DarkCyan

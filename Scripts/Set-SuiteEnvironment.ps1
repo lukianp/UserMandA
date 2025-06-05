@@ -1,22 +1,22 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Sets up the environment for the M&A Discovery Suite v5.0.
-    Provides centralized path management and configuration loading.
+    Sets up the environment for the M&A Discovery Suite v5.1.
+    Provides centralized path management, configuration loading, and global utilities.
 .DESCRIPTION
     Establishes a single global context object ($global:MandA) containing
-    all required paths and the loaded, validated configuration.
-    Uses 'throw' for critical errors to halt calling scripts.
+    all required paths, the loaded configuration, and essential global functions.
+    This script is CRITICAL and MUST be sourced by QuickStart.ps1 before any other 
+    suite operation, including invoking MandA-Orchestrator.ps1.
 .PARAMETER ProvidedSuiteRoot
-    Optional. Override the automatic suite root detection.
+    Optional. Override the automatic suite root detection. Useful if running Set-SuiteEnvironment.ps1
+    directly from a location different from its standard 'Scripts' directory.
 .PARAMETER CompanyName
     Mandatory. The company name for profile-specific paths.
 .NOTES
-    Version: 5.0.0
-    CRITICAL: This must be sourced by ALL suite scripts before any operations
+    Version: 5.1.0 (Added global Get-OrElse, robust pathing and config loading)
+    CRITICAL: This must be sourced by ALL suite scripts before any operations.
 #>
-
-
-
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
@@ -26,305 +26,227 @@ param(
     [string]$CompanyName
 )
 
+# Script Initialization
+$ErrorActionPreference = "Stop"
+Write-Host "=== Initializing M&A Discovery Suite Environment v5.1.0 ===" -ForegroundColor Cyan
+Write-Host "Timestamp: $(Get-Date)" -ForegroundColor Gray
 
-# Place this at the TOP of Scripts\Set-SuiteEnvironment.ps1
+# --- Define Global Utility Functions ---
+# Get-OrElse must be defined globally and early.
 if (-not (Get-Command Get-OrElse -ErrorAction SilentlyContinue)) {
     function global:Get-OrElse {
         param($Value, $Default)
         if ($null -ne $Value) { return $Value } else { return $Default }
     }
-    Write-Host "[Set-SuiteEnvironment] global:Get-OrElse defined." -ForegroundColor Green
+    Write-Host "[Set-SuiteEnvironment] global:Get-OrElse defined." -ForegroundColor DarkGreen
 }
 
-# Ensure clean execution
-$ErrorActionPreference = "Stop"
-
-Write-Host "=== Initializing M&A Discovery Suite Environment v5.0 ===" -ForegroundColor Cyan
-
-# Function to validate suite structure
+# --- Internal Helper Functions ---
 function Test-MandASuiteStructureInternal {
     param([string]$PathToTest)
-    
     $requiredSubDirs = @("Core", "Modules", "Scripts", "Configuration")
-    if (-not (Test-Path $PathToTest -PathType Container)) { 
-        return $false 
-    }
-    
+    if (-not (Test-Path $PathToTest -PathType Container)) { return $false }
     foreach ($subDir in $requiredSubDirs) {
-        if (-not (Test-Path (Join-Path $PathToTest $subDir) -PathType Container)) { 
-            return $false 
-        }
+        if (-not (Test-Path (Join-Path $PathToTest $subDir) -PathType Container)) { return $false }
     }
     return $true
 }
 
-# Determine Suite Root
-$SuiteRoot = $null
-$determinedBy = ""
-
-try {
-    # Priority 1: Provided parameter
-    if (-not [string]::IsNullOrWhiteSpace($ProvidedSuiteRoot)) {
-        if (Test-MandASuiteStructureInternal -PathToTest $ProvidedSuiteRoot) {
-            $SuiteRoot = Resolve-Path $ProvidedSuiteRoot | Select-Object -ExpandProperty Path
-            $determinedBy = "parameter"
-        } else {
-            throw "Provided SuiteRoot '$ProvidedSuiteRoot' is invalid"
-        }
-    }
-    # Priority 2: Check if already set
-    elseif ($null -ne $global:MandA -and $null -ne $global:MandA.Paths.SuiteRoot) {
-        if (Test-MandASuiteStructureInternal -PathToTest $global:MandA.Paths.SuiteRoot) {
-            $SuiteRoot = $global:MandA.Paths.SuiteRoot
-            $determinedBy = "existing global"
-            Write-Host "Using existing SuiteRoot from global context" -ForegroundColor Green
-        }
-    }
-    # Priority 3: Default location
-    else {
-        $defaultPath = "C:\MandADiscovery"
-        if (Test-MandASuiteStructureInternal -PathToTest $defaultPath) {
-            $SuiteRoot = $defaultPath
-            $determinedBy = "default"
-        }
-        # Priority 4: Auto-detect from script location
-        else {
-            $scriptPath = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path $MyInvocation.MyCommand.Path -Parent }
-            $autoDetectedPath = Split-Path $scriptPath -Parent
-            
-            if (Test-MandASuiteStructureInternal -PathToTest $autoDetectedPath) {
-                $SuiteRoot = Resolve-Path $autoDetectedPath | Select-Object -ExpandProperty Path
-                $determinedBy = "auto-detection"
-            } else {
-                throw "Cannot determine valid SuiteRoot. No valid structure found."
-            }
-        }
-    }
-} catch {
-    Write-Host "ERROR: $($_.Exception.Message)" -ForegroundColor Red
-    throw
-}
-
-Write-Host "SuiteRoot established: $SuiteRoot (via $determinedBy)" -ForegroundColor Green
-
-# Load and validate configuration
-$configFilePath = Join-Path $SuiteRoot "Configuration\default-config.json"
-if (-not (Test-Path $configFilePath -PathType Leaf)) {
-    throw "Configuration file not found: $configFilePath"
-}
-
-try {
-    $configContent = Get-Content $configFilePath -Raw | ConvertFrom-Json -ErrorAction Stop
-    Write-Host "Configuration loaded successfully" -ForegroundColor Green
-} catch {
-    throw "Failed to parse configuration: $($_.Exception.Message)"
-}
-
-# Convert configuration to hashtable recursively
 function ConvertTo-HashtableRecursiveInternal {
-    param($obj)
-    
-    if ($obj -is [System.Management.Automation.PSCustomObject]) {
-        $hash = @{}
-        foreach ($prop in $obj.PSObject.Properties) {
-            $hash[$prop.Name] = ConvertTo-HashtableRecursiveInternal $prop.Value
-        }
+    param($InputObject)
+    if ($null -eq $InputObject) { return $null }
+    if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable]) {
+        return ,@($InputObject | ForEach-Object { ConvertTo-HashtableRecursiveInternal $_ })
+    }
+    if ($InputObject -is [PSCustomObject]) {
+        $hash = [ordered]@{} # Use ordered hashtable for better predictability
+        $InputObject.PSObject.Properties | ForEach-Object { $hash[$_.Name] = ConvertTo-HashtableRecursiveInternal $_.Value }
         return $hash
-    } elseif ($obj -is [array]) {
-        return @($obj | ForEach-Object { ConvertTo-HashtableRecursiveInternal $_ })
+    }
+    return $InputObject
+}
+
+# --- Main Logic ---
+
+# 1. Determine Suite Root
+$determinedSuiteRoot = $null
+$determinationMethod = ""
+
+if (-not [string]::IsNullOrWhiteSpace($ProvidedSuiteRoot)) {
+    if (Test-MandASuiteStructureInternal -PathToTest $ProvidedSuiteRoot) {
+        $determinedSuiteRoot = Resolve-Path $ProvidedSuiteRoot | Select-Object -ExpandProperty Path
+        $determinationMethod = "parameter '$ProvidedSuiteRoot'"
     } else {
-        return $obj
+        throw "Provided SuiteRoot '$ProvidedSuiteRoot' is invalid or does not have the required structure."
+    }
+} elseif ($PSScriptRoot) { # If script is sourced or run directly
+    $parentOfScriptsDir = Split-Path $PSScriptRoot -Parent
+    if (Test-MandASuiteStructureInternal -PathToTest $parentOfScriptsDir) {
+        $determinedSuiteRoot = Resolve-Path $parentOfScriptsDir | Select-Object -ExpandProperty Path
+        $determinationMethod = "auto-detection relative to PSScriptRoot '$PSScriptRoot'"
     }
 }
 
-$configHashtable = ConvertTo-HashtableRecursiveInternal $configContent
+# Fallback if PSScriptRoot isn't available (e.g., ISE non-script context) or structure check failed
+if (-not $determinedSuiteRoot) {
+    $potentialPathFromMyInvocation = Split-Path (Split-Path $MyInvocation.MyCommand.Path -Parent) -Parent
+    if (Test-MandASuiteStructureInternal -PathToTest $potentialPathFromMyInvocation) {
+        $determinedSuiteRoot = Resolve-Path $potentialPathFromMyInvocation | Select-Object -ExpandProperty Path
+        $determinationMethod = "auto-detection relative to MyInvocation '$($MyInvocation.MyCommand.Path)'"
+    } else {
+        $defaultPath = "C:\UserMigration" # Last resort default, matching previous examples
+        if (Test-MandASuiteStructureInternal -PathToTest $defaultPath) {
+            $determinedSuiteRoot = $defaultPath
+            $determinationMethod = "default path '$defaultPath'"
+        } else {
+            throw "CRITICAL: Cannot determine a valid SuiteRoot. Ensure the script is run from within the suite structure or a valid ProvidedSuiteRoot is given."
+        }
+    }
+}
+Write-Host "SuiteRoot established: $determinedSuiteRoot (via $determinationMethod)" -ForegroundColor Green
 
-# Validate company name
+# 2. Validate CompanyName
 if ([string]::IsNullOrWhiteSpace($CompanyName)) {
-    throw "CompanyName parameter is required"
+    throw "CRITICAL: CompanyName parameter is mandatory and cannot be empty."
+}
+$SanitizedCompanyName = $CompanyName -replace '[<>:"/\\|?*]', '_' # Sanitize for filesystem use
+
+# 3. Load Configuration
+$configFilePath = Join-Path $determinedSuiteRoot "Configuration\default-config.json"
+if (-not (Test-Path $configFilePath -PathType Leaf)) {
+    throw "CRITICAL: Configuration file 'default-config.json' not found at '$configFilePath'."
+}
+$loadedConfigContent = Get-Content $configFilePath -Raw | ConvertFrom-Json -ErrorAction Stop
+if ($null -eq $loadedConfigContent) {
+    throw "CRITICAL: Failed to parse configuration file '$configFilePath'."
+}
+$configurationHashtable = ConvertTo-HashtableRecursiveInternal -InputObject $loadedConfigContent
+Write-Host "Configuration loaded successfully from '$configFilePath'" -ForegroundColor Green
+
+# Ensure critical config sections exist
+if (-not $configurationHashtable.environment -or -not $configurationHashtable.authentication -or -not $configurationHashtable.discovery -or -not $configurationHashtable.processing -or -not $configurationHashtable.export -or -not $configurationHashtable.metadata) {
+    throw "CRITICAL: Configuration file is missing one or more root sections (metadata, environment, authentication, discovery, processing, export)."
 }
 
-# Sanitize company name for filesystem
-$CompanyName = $CompanyName -replace '[<>:"/\\|?*]', '_'
+# 4. Define Paths (Company-Specific and General)
+$profilesBasePath = $configurationHashtable.environment.profilesBasePath | Get-OrElse "C:\MandADiscovery\Profiles"
+if (-not ([System.IO.Path]::IsPathRooted($profilesBasePath))) {
+    $profilesBasePath = Join-Path $determinedSuiteRoot $profilesBasePath | Resolve-Path -ErrorAction SilentlyContinue
+    if (-not $profilesBasePath) { throw "Could not resolve relative profilesBasePath: $($configurationHashtable.environment.profilesBasePath)"}
+}
+$companyProfileRootPath = Join-Path $profilesBasePath $SanitizedCompanyName
 
-# Build paths - use fixed base path for consistency
-$profilesBasePath = "C:\MandADiscovery\Profiles"
-$companyProfileRoot = Join-Path $profilesBasePath $CompanyName
-
-# Initialize global context - SINGLE SOURCE OF TRUTH
-$global:MandA = @{
-    Version = "5.0.0"
-    DeterminedBy = $determinedBy
-    CompanyName = $CompanyName
-    Config = $configHashtable
-    Paths = @{
-        # Core paths
-        SuiteRoot = $SuiteRoot
-        ProfilesBasePath = $profilesBasePath
-        CompanyProfileRoot = $companyProfileRoot
-        
-        # Suite structure paths
-        Core = Join-Path $SuiteRoot "Core"
-        Modules = Join-Path $SuiteRoot "Modules"
-        Scripts = Join-Path $SuiteRoot "Scripts"
-        Configuration = Join-Path $SuiteRoot "Configuration"
-        Documentation = Join-Path $SuiteRoot "Documentation"
-        
-        # Module category paths
-        Utilities = Join-Path $SuiteRoot "Modules\Utilities"
-        Discovery = Join-Path $SuiteRoot "Modules\Discovery"
-        Processing = Join-Path $SuiteRoot "Modules\Processing"
-        Export = Join-Path $SuiteRoot "Modules\Export"
-        Authentication = Join-Path $SuiteRoot "Modules\Authentication"
-        Connectivity = Join-Path $SuiteRoot "Modules\Connectivity"
-        
-        # Company-specific paths
-        LogOutput = Join-Path $companyProfileRoot "Logs"
-        RawDataOutput = Join-Path $companyProfileRoot "Raw"
-        ProcessedDataOutput = Join-Path $companyProfileRoot "Processed"
-        ExportOutput = Join-Path $companyProfileRoot "Exports"
-        TempPath = Join-Path $companyProfileRoot "Temp"
-        CredentialFile = Join-Path $companyProfileRoot "credentials.config"
-        
-        # Key script paths
-        Orchestrator = Join-Path $SuiteRoot "Core\MandA-Orchestrator.ps1"
-        QuickStart = Join-Path $SuiteRoot "QuickStart.ps1"
-        EnvironmentScript = Join-Path $SuiteRoot "Scripts\Set-SuiteEnvironment.ps1"
-        ModuleCheckScript = Join-Path $SuiteRoot "Scripts\DiscoverySuiteModuleCheck.ps1"
-        ValidationScript = Join-Path $SuiteRoot "Scripts\Validate-Installation.ps1"
-        AppRegScript = Join-Path $SuiteRoot "Scripts\Setup-AppRegistration.ps1"
-        
-        # Config paths
-        ConfigFile = $configFilePath
-        ConfigSchema = Join-Path $SuiteRoot "Configuration\config.schema.json"
-    }
+$resolvedPaths = @{
+    SuiteRoot           = $determinedSuiteRoot
+    Core                = Join-Path $determinedSuiteRoot "Core"
+    Modules             = Join-Path $determinedSuiteRoot "Modules"
+    Scripts             = Join-Path $determinedSuiteRoot "Scripts"
+    ConfigurationDir    = Join-Path $determinedSuiteRoot "Configuration" # Renamed from Configuration to avoid clash
+    Documentation       = Join-Path $determinedSuiteRoot "Documentation"
     
-    # State tracking
-    ModulesChecked = $false
-    LoggingInitialized = $false
-    ConnectionStatus = @{
-        Credentials = $false
-        AzureAD = $false
-        Exchange = $false
-        SharePoint = $false
-        Teams = $false
-    }
+    Utilities           = Join-Path $determinedSuiteRoot "Modules\Utilities"
+    Discovery           = Join-Path $determinedSuiteRoot "Modules\Discovery"
+    Processing          = Join-Path $determinedSuiteRoot "Modules\Processing"
+    Export              = Join-Path $determinedSuiteRoot "Modules\Export"
+    Authentication      = Join-Path $determinedSuiteRoot "Modules\Authentication"
+    Connectivity        = Join-Path $determinedSuiteRoot "Modules\Connectivity"
+
+    ProfilesBasePath    = $profilesBasePath
+    CompanyProfileRoot  = $companyProfileRootPath
+    LogOutput           = Join-Path $companyProfileRootPath "Logs"
+    RawDataOutput       = Join-Path $companyProfileRootPath "Raw"
+    ProcessedDataOutput = Join-Path $companyProfileRootPath "Processed"
+    ExportOutput        = Join-Path $companyProfileRootPath "Exports"
+    TempPath            = Join-Path $companyProfileRootPath "Temp"
+    CredentialFile      = Join-Path $companyProfileRootPath ($configurationHashtable.authentication.credentialFileName | Get-OrElse "credentials.config")
+    
+    ConfigFile          = $configFilePath
+    ConfigSchema        = Join-Path $determinedSuiteRoot "Configuration\config.schema.json"
+    
+    QuickStartScript    = Join-Path $determinedSuiteRoot "QuickStart.ps1" # Path to QuickStart.ps1 itself
+    OrchestratorScript  = Join-Path $determinedSuiteRoot "Core\MandA-Orchestrator.ps1"
+    ModuleCheckScript   = Join-Path $determinedSuiteRoot "Scripts\DiscoverySuiteModuleCheck.ps1"
+    AppRegScript        = Join-Path $determinedSuiteRoot "Scripts\Setup-AppRegistration.ps1"
+    ValidationScript    = Join-Path $determinedSuiteRoot "Scripts\Validate-Installation.ps1"
 }
 
-# Create company-specific directories
-Write-Host "Creating company profile directories..." -ForegroundColor Yellow
+# 5. Initialize or Update $global:MandA
+if ($null -eq $global:MandA) { $global:MandA = @{} }
+
+$global:MandA.Version             = $configurationHashtable.metadata.version | Get-OrElse "5.1.0" # Use config version
+$global:MandA.SuiteRoot           = $determinedSuiteRoot # For modules that might look here directly (legacy or simplicity)
+$global:MandA.CompanyName         = $SanitizedCompanyName
+$global:MandA.Config              = $configurationHashtable # Store the fully processed hashtable config
+$global:MandA.Paths               = $resolvedPaths
+$global:MandA.Initialized         = $true # Flag to indicate Set-SuiteEnvironment has run successfully
+$global:MandA.ModulesChecked      = $false
+$global:MandA.LoggingInitialized  = $false
+$global:MandA.ConnectionStatus    = @{ Credentials = $false; AzureAD = $false; Exchange = $false; SharePoint = $false; Teams = $false }
+
+# Update specific config values with resolved paths
+$global:MandA.Config.environment.outputPath = $resolvedPaths.CompanyProfileRoot
+$global:MandA.Config.environment.tempPath = $resolvedPaths.TempPath
+# Ensure credentialStorePath in config is the fully resolved company-specific path
+$global:MandA.Config.authentication.credentialStorePath = $resolvedPaths.CredentialFile
+
+# 6. Create Company-Specific Directories
+Write-Host "Creating company profile directories for '$SanitizedCompanyName' if they don't exist..." -ForegroundColor Yellow
 $dirsToCreate = @(
-    $global:MandA.Paths.CompanyProfileRoot,
-    $global:MandA.Paths.LogOutput,
-    $global:MandA.Paths.RawDataOutput,
-    $global:MandA.Paths.ProcessedDataOutput,
-    $global:MandA.Paths.ExportOutput,
-    $global:MandA.Paths.TempPath
+    $resolvedPaths.CompanyProfileRoot, $resolvedPaths.LogOutput, $resolvedPaths.RawDataOutput,
+    $resolvedPaths.ProcessedDataOutput, $resolvedPaths.ExportOutput, $resolvedPaths.TempPath
 )
-
-foreach ($dir in $dirsToCreate) {
-    if (-not (Test-Path $dir -PathType Container)) {
+foreach ($dirToCreate in $dirsToCreate) {
+    if (-not (Test-Path $dirToCreate -PathType Container)) {
         try {
-            New-Item -Path $dir -ItemType Directory -Force | Out-Null
-            Write-Host "  Created: $dir" -ForegroundColor Green
+            New-Item -Path $dirToCreate -ItemType Directory -Force -ErrorAction Stop | Out-Null
+            Write-Host "  Created: $dirToCreate" -ForegroundColor Green
         } catch {
-            Write-Warning "Could not create directory: $dir - $_"
+            Write-Warning "Could not create directory: $dirToCreate - $($_.Exception.Message)"
+            # Decide if this is a critical failure
         }
     }
 }
 
-# Update configuration with resolved paths
-$global:MandA.Config.environment.outputPath = $global:MandA.Paths.CompanyProfileRoot
-$global:MandA.Config.environment.tempPath = $global:MandA.Paths.TempPath
+# 7. Early Load Critical Utilities (like Logging)
+# This helps if subsequent functions in this script need Write-MandALog
+$criticalUtilModules = @("EnhancedLogging.psm1", "ErrorHandling.psm1") 
+# Note: FileOperations might be needed by EnhancedLogging if it archives logs etc.
+# For now, keep it minimal for initial logging setup.
 
-# Load core utility modules if available
-$coreModules = @(
-    "EnhancedLogging.psm1",
-    "ErrorHandling.psm1"
-)
-
-Write-Host "DEBUG: Set-SuiteEnvironment.ps1 - Path to Utilities directory: $($global:MandA.Paths.Utilities)" -ForegroundColor Magenta
-
-foreach ($moduleFile in $coreModules) { # Renamed variable for clarity
-    $modulePath = Join-Path $global:MandA.Paths.Utilities $moduleFile
-    
-    Write-Host "DEBUG: Set-SuiteEnvironment.ps1 - Attempting to load '$moduleFile' from: $modulePath" -ForegroundColor Magenta
-    $moduleExists = Test-Path $modulePath -PathType Leaf
-    Write-Host "DEBUG: Set-SuiteEnvironment.ps1 - Module '$moduleFile' exists at path: $moduleExists" -ForegroundColor Magenta
-
-    if ($moduleExists) {
+Write-Host "Attempting to load critical utility modules for Set-SuiteEnvironment..." -ForegroundColor DarkCyan
+foreach ($utilModuleFile in $criticalUtilModules) {
+    $utilModulePath = Join-Path $resolvedPaths.Utilities $utilModuleFile
+    if (Test-Path $utilModulePath) {
         try {
-            Import-Module $modulePath -Force -Global -ErrorAction Stop
-            Write-Host "Successfully loaded core module: $moduleFile" -ForegroundColor Green
-            
-            # Specifically test if Write-MandALog is available after importing EnhancedLogging.psm1
-            if ($moduleFile -eq "EnhancedLogging.psm1") {
-                $isWriteMandALogAvailable = Get-Command Write-MandALog -ErrorAction SilentlyContinue
-                Write-Host "DEBUG: Set-SuiteEnvironment.ps1 - Write-MandALog available after import: $(!!$isWriteMandALogAvailable)" -ForegroundColor Magenta
-                if (-not $isWriteMandALogAvailable) {
-                    throw "CRITICAL: Write-MandALog function NOT available after importing $moduleFile."
-                }
-            }
+            Import-Module $utilModulePath -Force -Global -ErrorAction Stop
+            Write-Host "  Successfully loaded utility: $utilModuleFile" -ForegroundColor DarkGreen
         } catch {
-            if ($moduleFile -in @("EnhancedLogging.psm1", "ErrorHandling.psm1")) {
-                throw "CRITICAL: Failed to load essential utility module '$moduleFile' from '$modulePath'. Suite cannot continue. Error: $($_.Exception.Message)"
-            } else {
-                Write-Warning "Failed to load non-critical utility module '$moduleFile': $($_.Exception.Message)"
-            }
+            Write-Warning "  Failed to load critical utility '$utilModuleFile' from '$utilModulePath': $($_.Exception.Message). Some Set-SuiteEnvironment logging might be basic."
         }
-    } Else {
-         if ($moduleFile -in @("EnhancedLogging.psm1", "ErrorHandling.psm1")) {
-            throw "CRITICAL: Essential utility module file '$moduleFile' not found at '$modulePath'. Suite cannot continue."
-         } else {
-            Write-Warning "Non-critical utility module file '$moduleFile' not found at '$modulePath'."
-         }
+    } else {
+        Write-Warning "  Critical utility module '$utilModuleFile' not found at '$utilModulePath'. Basic logging will be used."
     }
 }
 
-# Initialize logging if module is available
-# Test for Initialize-Logging command availability
-$isInitializeLoggingAvailable = Get-Command Initialize-Logging -ErrorAction SilentlyContinue
-Write-Host "DEBUG: Set-SuiteEnvironment.ps1 - Initialize-Logging available: $(!!$isInitializeLoggingAvailable)" -ForegroundColor Magenta
-
-if ($isInitializeLoggingAvailable) {
+# 8. Initialize Logging System
+# Must happen after $global:MandA.Config and Paths are set.
+if (Get-Command Initialize-Logging -ErrorAction SilentlyContinue) {
     try {
-        # Ensure log configuration uses company profile path
-        $global:MandA.Config.environment.logPath = $global:MandA.Paths.LogOutput
+        $global:MandA.Config.environment.logPath = $resolvedPaths.LogOutput # Ensure logPath in config uses resolved path
         Initialize-Logging -Configuration $global:MandA.Config
         $global:MandA.LoggingInitialized = $true
-        Write-Host "Logging initialized to: $($global:MandA.Paths.LogOutput)" -ForegroundColor Green
+        Write-MandALog "Logging initialized by Set-SuiteEnvironment. Log file: $($global:MandA.Config.environment.logPath)" -Level INFO
     } catch {
-        Write-Warning "Failed to initialize logging: $_"
+        Write-Warning "Failed to initialize logging via Initialize-Logging: $($_.Exception.Message). Check EnhancedLogging.psm1 and config."
     }
+} else {
+    Write-Warning "Initialize-Logging command not found. Enhanced logging will not be available from Set-SuiteEnvironment."
 }
 
-# Display initialization summary
-Write-Host "`n=== M&A Discovery Suite Environment Ready ===" -ForegroundColor Cyan
-Write-Host "Company: $CompanyName" -ForegroundColor Yellow
-Write-Host "Profile Root: $($global:MandA.Paths.CompanyProfileRoot)" -ForegroundColor White
-Write-Host "Suite Root: $($global:MandA.Paths.SuiteRoot)" -ForegroundColor White
-Write-Host "Logging: $(if($global:MandA.LoggingInitialized){'Initialized'}else{'Not initialized'})" -ForegroundColor White
-Write-Host "Global context available as `$global:MandA" -ForegroundColor Green
+# Final Summary from Set-SuiteEnvironment
+Write-MandALog "M&A Discovery Suite Environment Initialized by Set-SuiteEnvironment.ps1" -Level "SUCCESS"
+Write-MandALog "  Company: $SanitizedCompanyName" -Level "INFO"
+Write-MandALog "  Suite Root: $determinedSuiteRoot" -Level "INFO"
+Write-MandALog "  Profile Root: $($resolvedPaths.CompanyProfileRoot)" -Level "INFO"
+Write-MandALog "  Global context `$global:MandA` is now available." -Level "INFO"
 Write-Host ""
-
-# Export helper functions
-function Get-MandAPath {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$PathName
-    )
-    
-    if ($global:MandA.Paths.ContainsKey($PathName)) {
-        return $global:MandA.Paths[$PathName]
-    } else {
-        Write-Warning "Unknown path name: $PathName"
-        return $null
-    }
-}
-
-function Test-MandAEnvironment {
-    return ($null -ne $global:MandA -and $null -ne $global:MandA.Paths)
-}
-
-# Make helper functions available (Commented out or removed Export-ModuleMember)
-# Export-ModuleMember -Function Get-MandAPath, Test-MandAEnvironment -ErrorAction SilentlyContinue
