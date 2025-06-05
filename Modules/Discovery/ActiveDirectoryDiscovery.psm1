@@ -12,7 +12,7 @@
 #>
 
 # Import shared utilities
-Import-Module "$PSScriptRoot\..\Utilities\DataExport.psm1" -Force
+
 
 # Private discovery functions
 function Get-ADUsersDataInternal {
