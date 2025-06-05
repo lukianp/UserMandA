@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 <#
 .SYNOPSIS
     SQL Server infrastructure discovery for M&A Discovery Suite

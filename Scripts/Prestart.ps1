@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 # Fix-Discovery.ps1 - Simple workaround
 param(
     [string]$CompanyName = "Zedra"

@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 <#
 .SYNOPSIS
@@ -97,16 +98,16 @@ function Get-LogEmojiInternal {
 
     # Using text-based equivalents for emojis to ensure compatibility
     switch ($Level.ToUpper()) {
-        "DEBUG"    { return "[DBG]" }  # Was "[DEBUG]"
-        "INFO"     { return "[INF]" }  # Was "[INFO]"
-        "SUCCESS"  { return "[OK!]" }  # Was "[SUCCESS]"
-        "WARN"     { return "[WRN]" }  # Was "[WARN]"
-        "ERROR"    { return "[ERR]" }  # Was "[ERROR]"
-        "CRITICAL" { return "[CRT]" }  # Was "[CRITICAL]"
-        "HEADER"   { return "[HDR]" }  # Was " M&A " (keeping as text was fine, standardized)
-        "PROGRESS" { return "[PRG]" }  # Was "[PROGRESS]"
-        "IMPORTANT"{ return "[IMP]" }  # Was "[IMPORTANT]"
-        default    { return "[>]"   }  # Was "->"
+        "DEBUG"    { return "[>>]" }
+        "INFO"     { return "[i]" }
+        "SUCCESS"  { return "[OK]" }
+        "WARN"     { return "[!]" }
+        "ERROR"    { return "[X]" }
+        "CRITICAL" { return "[!!]" }
+        "HEADER"   { return "[==]" }
+        "PROGRESS" { return "[..]" }
+        "IMPORTANT"{ return "[IMP]" }  # Keeping existing for IMPORTANT as not specified
+        default    { return "[--]" }
     }
 }
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 <#
 .SYNOPSIS
     Test script to verify Setup-AppRegistration.ps1 syntax and basic functionality

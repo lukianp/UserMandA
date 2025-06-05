@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 #Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Identity.SignIns, Microsoft.Graph.Identity.DirectoryManagement, Microsoft.Graph.Applications
 <#
 .SYNOPSIS

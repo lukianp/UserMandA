@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 <#
 .SYNOPSIS
     Secure credential storage and retrieval for M&A Discovery Suite

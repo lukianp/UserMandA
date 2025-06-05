@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 <#
 .SYNOPSIS
     Microsoft 365 Licensing discovery for M&A Discovery Suite

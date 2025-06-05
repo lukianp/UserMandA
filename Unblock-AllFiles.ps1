@@ -1,3 +1,4 @@
+# -*- coding: utf-8-bom -*-
 <#
 .SYNOPSIS
     Unblock all PowerShell files in the M&A Discovery Suite
