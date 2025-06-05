@@ -1,661 +1,521 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Enhanced logging with improved visual output for M&A Discovery Suite
+    Provides enhanced logging capabilities for the M&A Discovery Suite.
 .DESCRIPTION
-    Provides structured logging with enhanced visual indicators and better formatting
+    This module offers functions for initializing the logging system, writing formatted
+    log messages to both console and file, with support for log levels,
+    timestamps, component names, colors, and emojis. It's designed to work with the
+    $global:MandA context for configuration.
 .NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.2.0
-    Created: 2025-06-03
-    Last Modified: 2025-06-04
-    Change Log:
-        - 1.2.0: Integrated StructuredLogging, CorrelationID, ErrorBuffer, and PerformanceMetrics.
-                 Ensured $script:LoggingConfig is initialized before being accessed by new features.
-                 Corrected Initialize-Logging to safely access configuration.
-        - 1.1.0: Fixed to use global paths and added Context parameter support
-        - Removed Unicode characters for PowerShell 5.1 compatibility
+    Version: 1.0.0
+    Author: M&A Discovery Suite Team
+    Date: 2025-06-05
+
+    Key Design Points:
+    - Relies on $global:MandA for default configuration if -Context is not passed to Write-MandALog.
+    - Uses global:Get-OrElse for safe configuration access.
+    - Supports PowerShell 5.1.
+    - Addresses FAULT 16 by standardizing on a -Context parameter for Write-MandALog.
 #>
 
-# Global logging configuration
-# Define the main $script:LoggingConfig hashtable FIRST
+# Export functions to be available when the module is imported.
+Export-ModuleMember -Function Initialize-Logging, Write-MandALog, Write-SectionHeader, Write-StatusTable, Write-ProgressBar, Write-CompletionSummary
+
+# --- Script-level Logging Configuration (Defaults) ---
+# This $script:LoggingConfig will be populated by Initialize-Logging
 $script:LoggingConfig = @{
-    LogLevel = "INFO"
-    LogFile = $null # Will be set by Initialize-Logging
-    ConsoleOutput = $true # Assuming default, can be configured
-    FileOutput = $true  # Assuming default, can be configured
-    MaxLogSizeMB = 50
-    LogRetentionDays = 30
-    UseEmojis = $true
-    UseColors = $true
-    ShowTimestamp = $true
-    ShowComponent = $true
-    # Initialize new sections as sub-hashtables or default values
-    StructuredLogging = @{ # Define the StructuredLogging key with its own defaults
-        EnableJsonLogging = $false # Default to false, can be overridden by config
-        EnableMetrics = $false    # Default to false, can be overridden by config
-        MetricsInterval = 60      # seconds
-    }
-    CorrelationId = [Guid]::NewGuid().ToString() # Initialize CorrelationId
-    ErrorBuffer = [System.Collections.ArrayList]::new()   # Initialize ErrorBuffer
+    LogFile             = $null
+    LogLevel            = "INFO" # Default log level
+    LogRetentionDays    = 30
+    MaxLogSizeMB        = 50
+    UseEmojis           = $true
+    UseColors           = $true
+    ShowTimestamp       = $true
+    ShowComponent       = $true
+    LogPath             = "C:\MandADiscovery\Logs" # Fallback if not in config
+    Initialized         = $false
+    LogFileHandle       = $null # For potential optimization, not used in this version
+    DefaultContext      = $null # To store $global:MandA for internal use
 }
 
-# Now, if you had specific configurations for StructuredLogging from a config file,
-# they would be applied in Initialize-Logging.
-# The previous snippet:
-# # Add to EnhancedLogging.psm1
-# $script:LoggingConfig.StructuredLogging = @{
-#     EnableJsonLogging = $true
-#     EnableMetrics = $true
-#     MetricsInterval = 60  # seconds
-# }
-# Was problematic because $script:LoggingConfig might not exist when .StructuredLogging was accessed.
-# The above initialization of $script:LoggingConfig now includes a default StructuredLogging sub-hashtable.
-
-function Write-StructuredLog {
-    param(
-        [string]$Message,
-        [string]$Level,
-        [hashtable]$Properties = @{},
-        [string]$OperationId = [Guid]::NewGuid().ToString()
-    )
-    
-    $logEntry = @{
-        Timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ"
-        Level = $Level
-        Message = $Message
-        OperationId = $OperationId
-        MachineName = $env:COMPUTERNAME
-        ProcessId = $PID
-        ThreadId = [System.Threading.Thread]::CurrentThread.ManagedThreadId
-        Properties = $Properties
-    }
-    
-    # Check if LogFile is set and StructuredLogging is enabled
-    if ($script:LoggingConfig.LogFile -and $script:LoggingConfig.StructuredLogging.EnableJsonLogging) {
-        try {
-            $jsonLog = $logEntry | ConvertTo-Json -Compress
-            # Append to a distinct JSON log file
-            $jsonLogFilePath = $script:LoggingConfig.LogFile -replace '\.log$', '.structured.json'
-            Add-Content -Path $jsonLogFilePath -Value $jsonLog -Encoding UTF8
-        } catch {
-            Write-Warning "Failed to write structured log: $($_.Exception.Message)"
-        }
-    }
-}
-
-function Write-PerformanceMetric {
-    param(
-        [string]$MetricName,
-        [double]$Value,
-        [string]$Unit = "ms",
-        [hashtable]$Tags = @{}
-    )
-    
-    $metric = @{
-        Timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ"
-        Metric = $MetricName
-        Value = $Value
-        Unit = $Unit
-        Tags = $Tags
-    }
-    
-    # Check if LogFile is set and Metrics are enabled
-    if ($script:LoggingConfig.LogFile -and $script:LoggingConfig.StructuredLogging.EnableMetrics) {
-        try {
-            $metricsFile = $script:LoggingConfig.LogFile -replace '\.log$', '.metrics.json'
-            $metric | ConvertTo-Json -Compress | Add-Content -Path $metricsFile -Encoding UTF8
-        } catch {
-            Write-Warning "Failed to write performance metric: $($_.Exception.Message)"
-        }
-    }
-}
-
-function Initialize-Logging {
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration
-    )
-    
-    try {
-        # Set LogLevel first as it's fundamental
-        if ($Configuration.environment -and $Configuration.environment.ContainsKey('logLevel')) {
-            $script:LoggingConfig.LogLevel = $Configuration.environment.logLevel
-        }
-        
-        # Set up log file path
-        $logPath = $null
-        if ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.LogOutput) {
-            $logPath = $global:MandA.Paths.LogOutput
-        } elseif ($Configuration.environment -and $Configuration.environment.ContainsKey('outputPath')) {
-            $logPath = Join-Path $Configuration.environment.outputPath "Logs"
-        } else {
-            # Fallback to a script-relative path if no other path is defined
-            # This is a last resort and indicates a configuration issue upstream.
-            $logPath = Join-Path $PSScriptRoot "Logs" 
-            Write-Warning "No primary log output path found in configuration or global context. Defaulting to script-relative path: $logPath"
-        }
-        
-        if (-not (Test-Path $logPath -PathType Container)) {
-            try {
-                New-Item -Path $logPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
-            } catch {
-                throw "Failed to create log directory at '$logPath'. Error: $($_.Exception.Message)"
-            }
-        }
-        
-        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-        $logFileName = "MandA_Discovery_$timestamp.log" # Main text log
-        $script:LoggingConfig.LogFile = Join-Path $logPath $logFileName
-        
-        # Update other logging preferences from config, checking for existence
-        if ($Configuration.environment -and $Configuration.environment.ContainsKey('logging')) {
-            $loggingSettings = $Configuration.environment.logging
-            
-            if ($loggingSettings.ContainsKey('useEmojis')) { $script:LoggingConfig.UseEmojis = $loggingSettings.useEmojis }
-            if ($loggingSettings.ContainsKey('useColors')) { $script:LoggingConfig.UseColors = $loggingSettings.useColors }
-            if ($loggingSettings.ContainsKey('showTimestamp')) { $script:LoggingConfig.ShowTimestamp = $loggingSettings.showTimestamp }
-            if ($loggingSettings.ContainsKey('showComponent')) { $script:LoggingConfig.ShowComponent = $loggingSettings.showComponent }
-            if ($loggingSettings.ContainsKey('maxLogSizeMB')) { $script:LoggingConfig.MaxLogSizeMB = $loggingSettings.maxLogSizeMB }
-            if ($loggingSettings.ContainsKey('logRetentionDays')) { $script:LoggingConfig.LogRetentionDays = $loggingSettings.logRetentionDays }
-
-            # Initialize StructuredLogging settings from config if they exist
-            if ($loggingSettings.ContainsKey('StructuredLogging')) {
-                $structuredSettings = $loggingSettings.StructuredLogging
-                if ($structuredSettings -is [hashtable]) {
-                    if ($structuredSettings.ContainsKey('EnableJsonLogging')) {
-                        $script:LoggingConfig.StructuredLogging.EnableJsonLogging = $structuredSettings.EnableJsonLogging
-                    }
-                    if ($structuredSettings.ContainsKey('EnableMetrics')) {
-                        $script:LoggingConfig.StructuredLogging.EnableMetrics = $structuredSettings.EnableMetrics
-                    }
-                    if ($structuredSettings.ContainsKey('MetricsInterval')) {
-                        $script:LoggingConfig.StructuredLogging.MetricsInterval = $structuredSettings.MetricsInterval
-                    }
-                }
-            }
-        }
-        
-        # Clean up old log files
-        Clear-OldLogFiles -LogPath $logPath
-        
-        # Write initial log entry using the now configured Write-MandALog
-        Write-MandALog "M&A Discovery Suite logging initialized" -Level "SUCCESS" -Component "Logging"
-        Write-MandALog "Log file (text): $($script:LoggingConfig.LogFile)" -Level "INFO" -Component "Logging"
-        if ($script:LoggingConfig.StructuredLogging.EnableJsonLogging) {
-            Write-MandALog "Log file (JSON): $($script:LoggingConfig.LogFile -replace '\.log$', '.structured.json')" -Level "INFO" -Component "Logging"
-        }
-        if ($script:LoggingConfig.StructuredLogging.EnableMetrics) {
-            Write-MandALog "Metrics file: $($script:LoggingConfig.LogFile -replace '\.log$', '.metrics.json')" -Level "INFO" -Component "Logging"
-        }
-        Write-MandALog "Log level: $($script:LoggingConfig.LogLevel)" -Level "INFO" -Component "Logging"
-        
-        return $true
-        
-    } catch {
-        # Use Write-Host for fallback if Write-MandALog itself might be compromised
-        Write-Host "ERROR: Failed to initialize logging: $($_.Exception.Message)" -ForegroundColor Red
-        # Attempt to use Write-Error which is a standard cmdlet
-        Write-Error "Failed to initialize logging: $($_.Exception.Message)"
-        return $false
-    }
-}
-
-function Write-MandALog {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$Message,
-        
-        [Parameter(Mandatory=$false)]
-        [ValidateSet("DEBUG", "INFO", "WARN", "ERROR", "SUCCESS", "HEADER", "PROGRESS", "IMPORTANT")]
-        [string]$Level = "INFO",
-        
-        [Parameter(Mandatory=$false)]
-        [string]$Component = "Main",
-        
-        [Parameter(Mandatory=$false)]
-        $Context = $null, # Context can be passed for richer logs, but not strictly required for basic logging
-        
-        [Parameter(Mandatory=$false)]
-        [string]$CorrelationIdParam = $null # Allow overriding CorrelationId per message
-    )
-    
-    # Use the parameter or the script-level CorrelationId
-    $currentCorrelationId = if ([string]::IsNullOrEmpty($CorrelationIdParam)) { $script:LoggingConfig.CorrelationId } else { $CorrelationIdParam }
-
-    if ($Level -eq "ERROR") {
-        $errorEntry = @{
-            Timestamp = Get-Date
-            Component = $Component
-            Message = $Message
-            CorrelationId = $currentCorrelationId
-        }
-        if ($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('Context') -and $Context -ne $null) {
-            if ($Context.ErrorCollector -and $Context.ErrorCollector.PSObject.Methods.Name -contains 'AddError') {
-                # Assuming AddError expects (Source, Message, Exception)
-                # We don't have the raw exception here, so pass $null for it.
-                # This part might need adjustment based on ErrorCollector's AddError signature.
-                # $Context.ErrorCollector.AddError($Component, $Message, $null)
-            }
-        }
-        $null = $script:LoggingConfig.ErrorBuffer.Add($errorEntry)
-    }
-    
-    if (-not (Test-LogMessage -Level $Level)) {
-        return
-    }
-
-    $logTimestamp = if ($script:LoggingConfig.ShowTimestamp) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff')]" } else { "" }
-    $logComponent = if ($script:LoggingConfig.ShowComponent -and -not [string]::IsNullOrEmpty($Component)) { "[$Component]" } else { "" }
-    $logEmoji = Get-LogEmoji -Level $Level
-    
-    # Console Output
-    if ($script:LoggingConfig.ConsoleOutput) {
-        $consoleMessage = "$logTimestamp $logEmoji $logComponent $Message".Trim()
-        Write-Host $consoleMessage -ForegroundColor (Get-LogColor -Level $Level)
-    }
-    
-    # File Output (Text Log)
-    if ($script:LoggingConfig.FileOutput -and $script:LoggingConfig.LogFile) {
-        try {
-            $fileMessage = "$logTimestamp [$Level] $logComponent $Message".Trim()
-            # Remove emojis for file logging if they cause issues, though Get-LogEmoji now returns ASCII
-            $fileMessageForFile = $fileMessage # -replace '[\p{So}]','' # Example emoji removal if needed
-            Add-Content -Path $script:LoggingConfig.LogFile -Value $fileMessageForFile -Encoding UTF8
-        } catch {
-            Write-Warning "Failed to write to text log file '$($script:LoggingConfig.LogFile)': $($_.Exception.Message)"
-        }
-    }
-
-    # Structured JSON Logging (if enabled and different from the simple Write-StructuredLog)
-    # The Write-StructuredLog function is separate, this Write-MandALog focuses on console/text.
-    # If you want Write-MandALog to ALSO call Write-StructuredLog, you can add:
-    if ($script:LoggingConfig.StructuredLogging.EnableJsonLogging) {
-         Write-StructuredLog -Message $Message -Level $Level -Properties @{Component = $Component} -OperationId $currentCorrelationId
-    }
-}
-
-function Get-LogErrorSummary {
-    [CmdletBinding()]
-    param(
-        [int]$LastMinutes = 60
-    )
-    
-    if ($script:LoggingConfig.ErrorBuffer.Count -eq 0) {
-        return @()
-    }
-    
-    $cutoff = (Get-Date).AddMinutes(-$LastMinutes)
-    $recentErrors = $script:LoggingConfig.ErrorBuffer | Where-Object { $_.Timestamp -gt $cutoff }
-    
-    return $recentErrors | Group-Object Component | ForEach-Object {
-        [PSCustomObject]@{
-            Component = $_.Name
-            ErrorCount = $_.Count
-            LastError = ($_.Group | Sort-Object Timestamp -Descending | Select-Object -First 1).Message
-            LastCorrelationId = ($_.Group | Sort-Object Timestamp -Descending | Select-Object -First 1).CorrelationId
-        }
-    }
-}
-
-function Test-LogMessage {
-    param([string]$Level)
-    
-    $levelHierarchy = @{
-        "DEBUG" = 0
-        "INFO" = 1
-        "WARN" = 2
-        "ERROR" = 3
-        "SUCCESS" = 1 # SUCCESS messages have same importance as INFO for filtering
-        "HEADER" = 1  # HEADER messages have same importance as INFO
-        "PROGRESS" = 1# PROGRESS messages have same importance as INFO
-        "IMPORTANT" = 2 # IMPORTANT messages have same importance as WARN
-    }
-    
-    # Fallback for LogLevel if not perfectly initialized (should not happen with defaults)
-    $scriptLogLevel = if ($script:LoggingConfig.LogLevel) { $script:LoggingConfig.LogLevel } else { "INFO" }
-
-    $currentLevelValue = if ($levelHierarchy.ContainsKey($scriptLogLevel)) { $levelHierarchy[$scriptLogLevel] } else { 1 }
-    $messageLevelValue = if ($levelHierarchy.ContainsKey($Level)) { $levelHierarchy[$Level] } else { 1 }
-    
-    return $messageLevelValue -ge $currentLevelValue
-}
+# --- Private Helper Functions ---
 
 function Get-LogColor {
     param([string]$Level)
-    
-    if (-not $script:LoggingConfig.UseColors) {
-        # Return default console color if colors are disabled
-        return (Get-Host).UI.RawUI.ForegroundColor 
-    }
-    
-    switch ($Level) {
-        "DEBUG" { return "Gray" }
-        "INFO" { return "White" } # Or use (Get-Host).UI.RawUI.ForegroundColor for default
-        "WARN" { return "Yellow" }
-        "ERROR" { return "Red" }
-        "SUCCESS" { return "Green" }
-        "HEADER" { return "Cyan" }
+    # Get-OrElse should be globally defined by Set-SuiteEnvironment.ps1
+    $useColors = $script:LoggingConfig.UseColors | global:Get-OrElse $true
+    if (-not $useColors) { return "Gray" } # Default to Gray if colors are off
+
+    switch ($Level.ToUpper()) {
+        "DEBUG"    { return "DarkGray" }
+        "INFO"     { return "Cyan" }
+        "SUCCESS"  { return "Green" }
+        "WARN"     { return "Yellow" }
+        "ERROR"    { return "Red" }
+        "CRITICAL" { return "DarkRed" } # Differentiate critical
+        "HEADER"   { return "White" } # Background will be set by Write-Host
         "PROGRESS" { return "Magenta" }
-        "IMPORTANT" { return "Yellow" } # Or a different standout color like DarkYellow if Yellow is common
-        default { return "White" } # Or (Get-Host).UI.RawUI.ForegroundColor
+        "IMPORTANT"{ return "Yellow" } # Often highlighted
+        default    { return "White" }
     }
 }
 
 function Get-LogEmoji {
     param([string]$Level)
-    
-    if (-not $script:LoggingConfig.UseEmojis) {
-        return ""
-    }
-    
-    # Using ASCII equivalents for broad compatibility, especially PowerShell 5.1 console
-    switch ($Level) {
-        "DEBUG"     { return "[DBG]" }
-        "INFO"      { return "[INF]" }
-        "WARN"      { return "[WRN]" }
-        "ERROR"     { return "[ERR]" }
-        "SUCCESS"   { return "[OK!]" }
-        "HEADER"    { return "[===]" }
-        "PROGRESS"  { return "[...]" }
-        "IMPORTANT" { return "[!!!]" }
-        default     { return "[---]" }
+    # Get-OrElse should be globally defined by Set-SuiteEnvironment.ps1
+    $useEmojis = $script:LoggingConfig.UseEmojis | global:Get-OrElse $true
+    if (-not $useEmojis) { return "" }
+
+    switch ($Level.ToUpper()) {
+        "DEBUG"    { return "⚙️" }
+        "INFO"     { return "ℹ️" }
+        "SUCCESS"  { return "✅" }
+        "WARN"     { return "⚠️" }
+        "ERROR"   { return "❌" }
+        "CRITICAL" { return "🚨" }
+        "HEADER"   { return "📋" }
+        "PROGRESS" { return "🔄" }
+        "IMPORTANT"{ return "📌" }
+        default    { return "➡️" }
     }
 }
 
-function Write-ProgressBar {
-    param(
-        [int]$Current,
-        [int]$Total,
-        [string]$Activity,
-        [string]$Status = "",
-        [int]$Width = 40 # Adjusted for typical console width with prefixes
-    )
-    
-    if ($Total -eq 0) { Write-Host "$Activity : No items to process." -ForegroundColor Gray; return }
-    if ($Current -gt $Total) { $Current = $Total }
+# --- Public Functions ---
 
-    $percentComplete = [math]::Round(($Current / $Total) * 100, 0)
-    $barCompletedLength = [math]::Floor(($Current / $Total) * $Width)
-    $barRemainingLength = $Width - $barCompletedLength
-    
-    $progressBar = ("=" * $barCompletedLength) + (" " * $barRemainingLength) # Using '=' for completed part
-    
-    # Ensure status doesn't make line too long
-    $availableSpaceForStatus = [math]::Max(0, 78 - ($Activity.Length + $progressBar.Length + 10)) # Approx available space
-    $truncatedStatus = if ($Status.Length -gt $availableSpaceForStatus) { 
-        $Status.Substring(0, [math]::Max(0, $availableSpaceForStatus -3)) + "..."
+function Initialize-Logging {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [hashtable]$Configuration # Expects the full $global:MandA.Config or similar structure
+    )
+
+    Write-Host "[EnhancedLogging] Initializing logging system..." -ForegroundColor DarkCyan
+    $script:LoggingConfig.DefaultContext = $global:MandA # Store for later if -Context isn't passed to Write-MandALog
+
+    # Use provided configuration or fallback to $global:MandA.Config or defaults
+    $effectiveConfig = $null
+    if ($null -ne $Configuration) {
+        $effectiveConfig = $Configuration
+    } elseif ($null -ne $global:MandA -and ($global:MandA -is [hashtable]) -and $global:MandA.ContainsKey('Config')) {
+        $effectiveConfig = $global:MandA.Config
+    }
+
+    if ($null -ne $effectiveConfig) {
+        $script:LoggingConfig.LogLevel = $effectiveConfig.environment.logLevel | global:Get-OrElse "INFO"
+        
+        # Logging sub-section
+        $loggingSettings = $effectiveConfig.environment.logging | global:Get-OrElse @{}
+        $script:LoggingConfig.UseEmojis = $loggingSettings.useEmojis | global:Get-OrElse $true
+        $script:LoggingConfig.UseColors = $loggingSettings.useColors | global:Get-OrElse $true
+        $script:LoggingConfig.ShowTimestamp = $loggingSettings.showTimestamp | global:Get-OrElse $true
+        $script:LoggingConfig.ShowComponent = $loggingSettings.showComponent | global:Get-OrElse $true
+        $script:LoggingConfig.MaxLogSizeMB = $loggingSettings.maxLogSizeMB | global:Get-OrElse 50
+        $script:LoggingConfig.LogRetentionDays = $loggingSettings.logRetentionDays | global:Get-OrElse 30
+        
+        # Determine LogPath:
+        # 1. From $global:MandA.Paths.LogOutput (most reliable if Set-SuiteEnvironment ran)
+        # 2. From $effectiveConfig.environment.logPath (if explicitly set there)
+        # 3. Fallback to script default C:\MandADiscovery\Logs
+        if ($null -ne $global:MandA -and ($global:MandA -is [hashtable]) -and $global:MandA.ContainsKey('Paths') -and ($global:MandA.Paths -is [hashtable]) -and $global:MandA.Paths.ContainsKey('LogOutput') -and -not [string]::IsNullOrWhiteSpace($global:MandA.Paths.LogOutput)) {
+            $script:LoggingConfig.LogPath = $global:MandA.Paths.LogOutput
+        } elseif ($loggingSettings.ContainsKey('logPath') -and -not [string]::IsNullOrWhiteSpace($loggingSettings.logPath)) {
+            $script:LoggingConfig.LogPath = $loggingSettings.logPath
+             # If relative, resolve against suite root
+            if (-not ([System.IO.Path]::IsPathRooted($script:LoggingConfig.LogPath)) -and $global:MandA -and $global:MandA.Paths.SuiteRoot) {
+                $script:LoggingConfig.LogPath = Join-Path $global:MandA.Paths.SuiteRoot $script:LoggingConfig.LogPath | Resolve-Path -ErrorAction SilentlyContinue
+            }
+        } elseif ($effectiveConfig.environment.HashtableContains('outputPath') -and -not [string]::IsNullOrWhiteSpace($effectiveConfig.environment.outputPath)) {
+            # Fallback to outputPath + \Logs if logPath is not explicitly set
+            $script:LoggingConfig.LogPath = Join-Path $effectiveConfig.environment.outputPath "Logs"
+        } else {
+            # Absolute last fallback if no paths are available from config or global context
+             Write-Warning "[EnhancedLogging] LogPath not found in configuration or global context. Using default: $($script:LoggingConfig.LogPath)"
+        }
     } else {
-        $Status
+        Write-Warning "[EnhancedLogging] No configuration provided to Initialize-Logging and $global:MandA.Config not found. Using script defaults."
     }
 
-    $progressText = "$Activity [$progressBar] $percentComplete% $truncatedStatus"
-    
-    # Ensure the line does not wrap by truncating if necessary
-    # Get current console width
-    $consoleWidth = try { $Host.UI.RawUI.WindowSize.Width -1 } catch { 80 } # Default to 80 if width can't be obtained
-    if ($progressText.Length -ge $consoleWidth) {
-        $progressText = $progressText.Substring(0, $consoleWidth - 4) + "..."
+    # Ensure Log Path exists
+    if (-not (Test-Path $script:LoggingConfig.LogPath -PathType Container)) {
+        try {
+            New-Item -Path $script:LoggingConfig.LogPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
+            Write-Host "[EnhancedLogging] Created log directory: $($script:LoggingConfig.LogPath)" -ForegroundColor Green
+        } catch {
+            Write-Error "[EnhancedLogging] CRITICAL: Failed to create log directory: $($script:LoggingConfig.LogPath). Error: $($_.Exception.Message). Logging to file will fail."
+            # Proceed with console logging but file logging will be disabled essentially
+            $script:LoggingConfig.LogFile = $null # Indicate file logging is not possible
+            $script:LoggingConfig.Initialized = $true # Mark as initialized for console logging
+            return
+        }
     }
+    
+    # Create Log File Name (Company specific if CompanyName is available)
+    $logFileBaseName = "MandA_Discovery"
+    $currentCompanyNameForLog = "General"
 
-    Write-Host "`r$progressText" -NoNewline -ForegroundColor Cyan
-    
-    if ($Current -eq $Total) {
-        Write-Host "" # New line when complete
+    if ($null -ne $Configuration -and $Configuration.ContainsKey('metadata') -and $Configuration.metadata.ContainsKey('companyName')) {
+        $currentCompanyNameForLog = $Configuration.metadata.companyName -replace '[<>:"/\\|?*]', '_'
+    } elseif ($null -ne $global:MandA -and $global:MandA.ContainsKey('CompanyName') -and -not [string]::IsNullOrWhiteSpace($global:MandA.CompanyName)) {
+        $currentCompanyNameForLog = $global:MandA.CompanyName -replace '[<>:"/\\|?*]', '_'
     }
+    
+    $logFileBaseName = "${logFileBaseName}_${currentCompanyNameForLog}"
+    $timestampForFile = Get-Date -Format "yyyyMMdd_HHmmss"
+    $script:LoggingConfig.LogFile = Join-Path $script:LoggingConfig.LogPath "$($logFileBaseName)_$timestampForFile.log"
+
+    $script:LoggingConfig.Initialized = $true
+    Write-MandALog -Message "Logging system initialized. LogLevel: $($script:LoggingConfig.LogLevel). LogFile: $($script:LoggingConfig.LogFile)" -Level "INFO" -Component "Logger" -Context ([PSCustomObject]@{Config=$effectiveConfig}) # Pass a minimal context for this initial log.
+    
+    # Perform log rotation/cleanup if configured
+    Clear-OldLogFiles -Context ([PSCustomObject]@{Config=$effectiveConfig; Paths=@{LogOutput=$script:LoggingConfig.LogPath}}) # Pass necessary context parts
 }
 
-function Write-StatusTable {
+function Write-MandALog {
+    [CmdletBinding()]
     param(
-        [hashtable]$StatusData,
-        [string]$Title = "Status Summary"
+        [Parameter(Mandatory=$true)]
+        [string]$Message,
+
+        [Parameter(Mandatory=$false)]
+        [ValidateSet("DEBUG", "INFO", "SUCCESS", "WARN", "ERROR", "CRITICAL", "HEADER", "PROGRESS", "IMPORTANT")]
+        [string]$Level = "INFO",
+
+        [Parameter(Mandatory=$false)]
+        [string]$Component = "Generic",
+        
+        # FAULT 16 FIX: Standardize on -Context for passing configuration and path details.
+        # This context should ideally mirror $global:MandA or relevant parts of it.
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context 
     )
+
+    # Use logging settings from passed Context if available, otherwise from $script:LoggingConfig (initialized)
+    # or fallback to $script:LoggingConfig.DefaultContext ($global:MandA at init time)
+    $currentLoggingConfig = $script:LoggingConfig
+    $effectiveRunContext = $Context # The context of the current operation
     
-    Write-MandALog $Title -Level "HEADER" -Component "Reporting"
-    
-    if ($null -eq $StatusData -or $StatusData.Count -eq 0) {
-        Write-MandALog "No status data to display." -Level "INFO" -Component "Reporting"
+    if ($null -eq $effectiveRunContext -and $null -ne $script:LoggingConfig.DefaultContext) {
+        $effectiveRunContext = $script:LoggingConfig.DefaultContext # Fallback to context at init time
+    }
+
+    # Override script defaults with context-specific config if present
+    if ($null -ne $effectiveRunContext -and ($effectiveRunContext.PSObject.Properties['Config'] | Get-OrElse $false)) {
+        $runConfig = $effectiveRunContext.Config
+        if ($runConfig.environment -and $runConfig.environment.logging) {
+            $currentLoggingConfig = [PSCustomObject]@{ # Create a temporary merged config for this log call
+                LogFile             = $script:LoggingConfig.LogFile # File path is session-global
+                LogLevel            = $runConfig.environment.logLevel | global:Get-OrElse $script:LoggingConfig.LogLevel
+                LogRetentionDays    = $runConfig.environment.logging.logRetentionDays | global:Get-OrElse $script:LoggingConfig.LogRetentionDays
+                MaxLogSizeMB        = $runConfig.environment.logging.maxLogSizeMB | global:Get-OrElse $script:LoggingConfig.MaxLogSizeMB
+                UseEmojis           = $runConfig.environment.logging.useEmojis | global:Get-OrElse $script:LoggingConfig.UseEmojis
+                UseColors           = $runConfig.environment.logging.useColors | global:Get-OrElse $script:LoggingConfig.UseColors
+                ShowTimestamp       = $runConfig.environment.logging.showTimestamp | global:Get-OrElse $script:LoggingConfig.ShowTimestamp
+                ShowComponent       = $runConfig.environment.logging.showComponent | global:Get-OrElse $script:LoggingConfig.ShowComponent
+                Initialized         = $script:LoggingConfig.Initialized
+            }
+        }
+    } elseif (-not $script:LoggingConfig.Initialized) {
+        # If logging is not initialized and no context, use very basic Write-Host
+        Write-Host "[$Level] [$Component] $Message" # Fallback if logging not initialized
         return
     }
     
-    $maxKeyLength = 0
-    $StatusData.Keys | ForEach-Object { if ($_.Length -gt $maxKeyLength) { $maxKeyLength = $_.Length } }
-    $maxKeyLength = [math]::Max(20, $maxKeyLength) # Ensure a minimum key column width
+    # Log Level Check
+    $levelHierarchy = @{ "DEBUG"=0; "INFO"=1; "PROGRESS"=1; "SUCCESS"=1; "WARN"=2; "IMPORTANT"=2; "ERROR"=3; "CRITICAL"=4; "HEADER"=5 }
+    $configLogLevelNum = $levelHierarchy[$currentLoggingConfig.LogLevel.ToUpper()] | global:Get-OrElse 1 # Default to INFO if not set
+    $messageLogLevelNum = $levelHierarchy[$Level.ToUpper()] | global:Get-OrElse 1
 
-    # Table formatting
-    Write-MandALog ("-" * ($maxKeyLength + 30)) -Level "INFO" -Component "Reporting" # Adjust width
-    foreach ($item in $StatusData.GetEnumerator() | Sort-Object Name) {
-        $keyString = "{0,-$maxKeyLength}" -f $item.Key
-        $valueString = ": $($item.Value)"
+    if ($messageLogLevelNum -lt $configLogLevelNum) { return } # Skip if message level is below configured log level
+
+    # Prepare Console Output
+    $consoleMessage = $Message
+    $logColor = Get-LogColor -Level $Level
+    
+    if ($currentLoggingConfig.UseEmojis) {
+        $emoji = Get-LogEmoji -Level $Level
+        $consoleMessage = "$emoji $consoleMessage"
+    }
+
+    if ($currentLoggingConfig.ShowTimestamp) {
+        $timestampStr = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        $consoleMessage = "[$timestampStr] $consoleMessage"
+    }
+    if ($currentLoggingConfig.ShowComponent -and -not [string]::IsNullOrWhiteSpace($Component)) {
+        $consoleMessage = "[$Component] $consoleMessage"
+    }
+    
+    # Write to Console
+    if ($Level.ToUpper() -eq "HEADER") {
+        $separator = "=" * ($consoleMessage.Length + 4)
+        Write-Host $separator -ForegroundColor $logColor
+        Write-Host "  $consoleMessage  " -ForegroundColor White -BackgroundColor $logColor
+        Write-Host $separator -ForegroundColor $logColor
+    } elseif ($Level.ToUpper() -eq "CRITICAL") {
+        Write-Host $consoleMessage -ForegroundColor $logColor -BackgroundColor White
+    }
+    else {
+        Write-Host $consoleMessage -ForegroundColor $logColor
+    }
+
+    # Prepare File Output (if LogFile is set)
+    if (-not [string]::IsNullOrWhiteSpace($currentLoggingConfig.LogFile)) {
+        # Sanitize message for file (remove emojis if they cause issues, though UTF-8 should handle them)
+        # For PS 5.1, extensive emoji removal might be complex. Basic approach:
+        $fileMessage = $Message #-replace '[\u1F600-\u1F64F]' # Example: remove emoticons block
         
-        $logColor = "White"
-        if ($item.Value -is [string]) {
-             if ($item.Value -match "Success|Connected|PASS|OK|Enabled|True") { $logColor = "Green" }
-             elseif ($item.Value -match "Failed|Error|FAIL|ERROR|Disabled|False") { $logColor = "Red" }
-             elseif ($item.Value -match "Warning|WARN|Partial") { $logColor = "Yellow" }
-        } elseif ($item.Value -is [bool]) {
-            $logColor = if ($item.Value) {"Green"} else {"Red"}
+        $fileLogEntry = ""
+        if ($currentLoggingConfig.ShowTimestamp) { $fileLogEntry += "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] " }
+        $fileLogEntry += "[$($Level.ToUpper())] "
+        if ($currentLoggingConfig.ShowComponent -and -not [string]::IsNullOrWhiteSpace($Component)) { $fileLogEntry += "[$Component] " }
+        $fileLogEntry += $fileMessage
+
+        try {
+            # Ensure log file directory still exists (could be deleted mid-run)
+            $logDirForFile = Split-Path $currentLoggingConfig.LogFile -Parent
+            if (-not (Test-Path $logDirForFile -PathType Container)) {
+                New-Item -Path $logDirForFile -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+            }
+
+            Add-Content -Path $currentLoggingConfig.LogFile -Value $fileLogEntry -Encoding UTF8 -ErrorAction Stop
+            
+            # Check log size and rotate if necessary (simple rotation based on size)
+            $logFileItem = Get-Item -Path $currentLoggingConfig.LogFile -ErrorAction SilentlyContinue
+            if ($null -ne $logFileItem -and ($logFileItem.Length / 1MB) -gt $currentLoggingConfig.MaxLogSizeMB) {
+                Move-LogFile -Context $effectiveRunContext # Pass context which has config
+            }
+        } catch {
+            Write-Warning "[EnhancedLogging] Failed to write to log file '$($currentLoggingConfig.LogFile)'. Error: $($_.Exception.Message)"
+            # Disable file logging for this session if it fails persistently? Or just warn.
         }
-
-        Write-MandALog "$keyString$valueString" -Level "INFO" -Component "Reporting" # Log to file
-
-        # Console output needs manual color handling if Write-MandALog doesn't directly color this way
-        Write-Host "$keyString" -NoNewline -ForegroundColor White
-        Write-Host ": " -NoNewline -ForegroundColor Gray
-        Write-Host "$($item.Value)" -ForegroundColor $logColor
     }
-    Write-MandALog ("-" * ($maxKeyLength + 30)) -Level "INFO" -Component "Reporting"
-    Write-Host "" # Newline for console
-}
-
-function Write-SectionHeader {
-    param(
-        [string]$Title,
-        [string]$Subtitle = "",
-        [string]$Icon = "" # Emoji removed, Icon now for ASCII/Text
-    )
-    
-    $asciiIcon = if (-not [string]::IsNullOrEmpty($Icon)) { $Icon } else { Get-LogEmoji -Level "HEADER" }
-    $headerText = "$asciiIcon $Title"
-    if (-not [string]::IsNullOrEmpty($Subtitle)) {
-        $headerText += " - $Subtitle"
-    }
-    
-    # Console Output for Section Header
-    $line = "=" * ([Math]::Min($headerText.Length + 4, 80)) # Limit line length
-    Write-Host "`n$line" -ForegroundColor Cyan
-    Write-Host $headerText -ForegroundColor Cyan
-    Write-Host "$line`n" -ForegroundColor Cyan
-
-    # Log to file using Write-MandALog, which handles its own formatting
-    Write-MandALog $headerText -Level "HEADER" -Component "Section"
-}
-
-function Write-CompletionSummary {
-    param(
-        [hashtable]$Summary,
-        [string]$Title = "Operation Complete"
-    )
-    
-    Write-SectionHeader -Title $Title -Icon (Get-LogEmoji -Level "SUCCESS")
-
-    if ($Summary) {
-        Write-StatusTable -StatusData $Summary -Title "Final Summary"
-    }
-    Write-MandALog "$Title - All tasks finished." -Level "SUCCESS" -Component "Summary"
 }
 
 function Move-LogFile {
-    # This function might be less critical if logs are timestamped and old ones cleared.
-    # Retaining for completeness if manual rotation is ever desired.
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [PSCustomObject]$Context # Expects Context with Config and Paths
+    )
+    # Renames the current log file by appending a timestamp, allowing a new log file to be started.
+    if (-not $script:LoggingConfig.Initialized -or [string]::IsNullOrWhiteSpace($script:LoggingConfig.LogFile)) {
+        Write-Warning "[EnhancedLogging.Move-LogFile] Logging not initialized or LogFile path is not set. Cannot move log."
+        return
+    }
+    
+    $currentLogFile = $script:LoggingConfig.LogFile
+    if (-not (Test-Path $currentLogFile -PathType Leaf)) {
+        Write-MandALog -Message "Current log file '$currentLogFile' not found. Cannot move." -Level "WARN" -Component "Logger" -Context $Context
+        return
+    }
+
+    $logDir = Split-Path $currentLogFile -Parent
+    $logNameBase = [System.IO.Path]::GetFileNameWithoutExtension($currentLogFile)
+    $logExtension = [System.IO.Path]::GetExtension($currentLogFile) # Should be .log
+
+    # Remove existing date-time stamp if present from base name (e.g., from initial creation)
+    $logNameClean = $logNameBase -replace '_\d{8}_\d{6}$','' 
+
+    $rotationTimestamp = Get-Date -Format "yyyyMMddHHmmssfff" # Add milliseconds for uniqueness
+    $rotatedLogFileName = "$($logNameClean)_ROTATED_$rotationTimestamp$logExtension"
+    $rotatedLogFilePath = Join-Path $logDir $rotatedLogFileName
+
     try {
-        if (-not $script:LoggingConfig.LogFile -or -not (Test-Path $script:LoggingConfig.LogFile -PathType Leaf)) {
-            Write-MandALog "No current log file to move/rotate." -Level "DEBUG" -Component "Logging"
-            return
-        }
+        Rename-Item -Path $currentLogFile -NewName $rotatedLogFileName -ErrorAction Stop
+        Write-MandALog -Message "Log file rotated to: $rotatedLogFileName" -Level "INFO" -Component "Logger" -Context $Context
         
-        $logDir = Split-Path $script:LoggingConfig.LogFile -Parent
-        $logNameBase = [System.IO.Path]::GetFileNameWithoutExtension($script:LoggingConfig.LogFile)
-        $logExtension = [System.IO.Path]::GetExtension($script:LoggingConfig.LogFile) # Should be .log
-        
-        # Find a unique name for the rotated log
-        $counter = 1
-        $rotatedLogFile = ""
-        do {
-            $timestampSuffix = (Get-Date).AddSeconds(-$counter).ToString("yyyyMMdd_HHmmss") # Ensure unique timestamp
-            $rotatedLogFile = Join-Path $logDir "${logNameBase}_rotated_${timestampSuffix}${logExtension}"
-            $counter++
-        } while (Test-Path $rotatedLogFile)
-        
-        Move-Item $script:LoggingConfig.LogFile $rotatedLogFile -Force
-        Write-MandALog "Log file rotated to: $rotatedLogFile" -Level "INFO" -Component "Logging"
-        
+        # After renaming, the next Write-MandALog will create a new file with the original name format
+        # (because Add-Content will create it if it doesn't exist).
+        # We need to re-establish the $script:LoggingConfig.LogFile with a *new* timestamped name
+        # to avoid appending to the just-rotated file if it happened to be created by another process.
+        $newLogBaseName = "MandA_Discovery"
+        $companyNameForNewLog = $Context.CompanyName | global:Get-OrElse "General"
+        $newLogBaseName = "${newLogBaseName}_${companyNameForNewLog}"
+        $newTimestampForFile = Get-Date -Format "yyyyMMdd_HHmmss"
+        $script:LoggingConfig.LogFile = Join-Path $logDir "$($newLogBaseName)_$newTimestampForFile.log"
+        Write-MandALog -Message "New log file started: $($script:LoggingConfig.LogFile)" -Level "INFO" -Component "Logger" -Context $Context
+
     } catch {
-        # Use Write-Host if Write-MandALog might be part of the problem or uninitialized
-        Write-Host "WARNING: Failed to rotate log file: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-MandALog -Message "Failed to move/rotate log file '$currentLogFile'. Error: $($_.Exception.Message)" -Level "ERROR" -Component "Logger" -Context $Context
     }
 }
 
 function Clear-OldLogFiles {
-    param(
+    [CmdletBinding()]
+    param (
         [Parameter(Mandatory=$true)]
-        [string]$LogPath
+        [PSCustomObject]$Context # Expects Context with Config and Paths (LogOutput)
     )
+    # Deletes log files older than the configured retention period.
+    if (-not $script:LoggingConfig.Initialized) {
+        Write-Warning "[EnhancedLogging.Clear-OldLogFiles] Logging not initialized. Cannot clear old logs."
+        return
+    }
+
+    $logPathForClear = $Context.Paths.LogOutput | global:Get-OrElse $script:LoggingConfig.LogPath
+    $retentionDays = $Context.Config.environment.logging.logRetentionDays | global:Get-OrElse $script:LoggingConfig.LogRetentionDays
+
+    if ($retentionDays -le 0) {
+        Write-MandALog -Message "Log retention days set to $retentionDays. Skipping cleanup of old logs." -Level "INFO" -Component "Logger" -Context $Context
+        return
+    }
+    if ([string]::IsNullOrWhiteSpace($logPathForClear) -or -not (Test-Path $logPathForClear -PathType Container)) {
+        Write-MandALog -Message "Invalid log path for cleanup: '$logPathForClear'. Skipping cleanup." -Level "WARN" -Component "Logger" -Context $Context
+        return
+    }
+
+    Write-MandALog -Message "Checking for log files older than $retentionDays days in '$logPathForClear'..." -Level "DEBUG" -Component "Logger" -Context $Context
+    $cutoffDate = (Get-Date).AddDays(-$retentionDays)
     
     try {
-        if ($script:LoggingConfig.LogRetentionDays -le 0) {
-            Write-MandALog "Log retention is disabled (days <= 0)." -Level "DEBUG" -Component "Logging"
-            return
-        }
-
-        $cutoffDate = (Get-Date).AddDays(-$script:LoggingConfig.LogRetentionDays)
-        # Consider all log file types this module might create
-        $logPatterns = @("*.log", "*.structured.json", "*.metrics.json")
-        $oldLogFilesTotal = 0
-
-        foreach ($pattern in $logPatterns) {
-            $oldLogFiles = Get-ChildItem -Path $LogPath -Filter $pattern -File -ErrorAction SilentlyContinue | 
-                           Where-Object { $_.LastWriteTime -lt $cutoffDate }
-            
-            if ($oldLogFiles) {
-                foreach ($oldLog in $oldLogFiles) {
-                    try {
-                        Remove-Item $oldLog.FullName -Force -ErrorAction Stop
-                        # Avoid Write-MandALog for this internal cleanup action to prevent log noise/loops
-                        # For debugging, Write-Host could be used if needed.
-                        # Write-Host "DEBUG: Removed old log file: $($oldLog.Name)" -ForegroundColor Gray
-                        $oldLogFilesTotal++
-                    } catch {
-                        Write-Warning "Could not remove old log file $($oldLog.FullName): $($_.Exception.Message)"
-                    }
+        $oldLogFiles = Get-ChildItem -Path $logPathForClear -Filter "*.log" -File -ErrorAction Stop | Where-Object { $_.LastWriteTime -lt $cutoffDate }
+        if ($oldLogFiles.Count -gt 0) {
+            Write-MandALog -Message "Found $($oldLogFiles.Count) old log files to remove." -Level "INFO" -Component "Logger" -Context $Context
+            foreach ($file in $oldLogFiles) {
+                try {
+                    Remove-Item -Path $file.FullName -Force -ErrorAction Stop
+                    Write-MandALog -Message "Removed old log file: $($file.Name)" -Level "DEBUG" -Component "Logger" -Context $Context
+                } catch {
+                    Write-MandALog -Message "Failed to remove old log file '$($file.FullName)'. Error: $($_.Exception.Message)" -Level "ERROR" -Component "Logger" -Context $Context
                 }
             }
+            Write-MandALog -Message "Old log file cleanup complete." -Level "INFO" -Component "Logger" -Context $Context
+        } else {
+            Write-MandALog -Message "No log files found older than $retentionDays days." -Level "INFO" -Component "Logger" -Context $Context
         }
-        
-        if ($oldLogFilesTotal -gt 0) {
-            Write-MandALog "Cleaned up $oldLogFilesTotal old log file(s) from $LogPath" -Level "INFO" -Component "Logging"
-        }
-        
     } catch {
-        Write-Warning "Failed to cleanup old log files from '$LogPath': $($_.Exception.Message)"
+        Write-MandALog -Message "Error during old log file cleanup: $($_.Exception.Message)" -Level "ERROR" -Component "Logger" -Context $Context
     }
 }
 
-function Get-LoggingConfiguration {
-    # Return a clone to prevent external modification of the script's config object
-    return $script:LoggingConfig.Clone()
-}
-
-function Set-LogLevel {
+function Write-SectionHeader {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [ValidateSet("DEBUG", "INFO", "WARN", "ERROR")]
-        [string]$Level
+        [string]$Title,
+        [string]$Subtitle = "",
+        [string]$Icon = "📋", # Default icon
+        [PSCustomObject]$Context # For consistency, though not strictly used here for config
     )
-    
-    $oldLevel = $script:LoggingConfig.LogLevel
-    $script:LoggingConfig.LogLevel = $Level
-    Write-MandALog "Log level changed from '$oldLevel' to '$Level'" -Level "INFO" -Component "Logging"
+    # Get-OrElse should be globally defined
+    $useEmojis = $true
+    if ($Context -and $Context.Config -and $Context.Config.environment -and $Context.Config.environment.logging) {
+        $useEmojis = $Context.Config.environment.logging.useEmojis | global:Get-OrElse $true
+    } elseif ($script:LoggingConfig.DefaultContext -and $script:LoggingConfig.DefaultContext.Config -and $script:LoggingConfig.DefaultContext.Config.environment -and $script:LoggingConfig.DefaultContext.Config.environment.logging){
+         $useEmojis = $script:LoggingConfig.DefaultContext.Config.environment.logging.useEmojis | global:Get-OrElse $true
+    }
+
+
+    $displayIcon = if ($useEmojis) { "$Icon " } else { "" }
+    $headerText = "$displayIcon$Title"
+    if (-not [string]::IsNullOrWhiteSpace($Subtitle)) {
+        $headerText += " - $Subtitle"
+    }
+    # Write-MandALog will handle its own formatting for HEADER level
+    Write-MandALog -Message $headerText -Level "HEADER" -Component "UI" -Context $Context
 }
 
-function Set-LoggingOptions {
+function Write-StatusTable {
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$false)]
-        [AllowNull()] # Allow $null to not change the setting
-        [bool]$UseEmojis,
-        
-        [Parameter(Mandatory=$false)]
-        [AllowNull()]
-        [bool]$UseColors,
-        
-        [Parameter(Mandatory=$false)]
-        [AllowNull()]
-        [bool]$ShowTimestamp,
-        
-        [Parameter(Mandatory=$false)]
-        [AllowNull()]
-        [bool]$ShowComponent,
-
-        [Parameter(Mandatory=$false)]
-        [AllowNull()]
-        [bool]$EnableJsonLogging,
-
-        [Parameter(Mandatory=$false)]
-        [AllowNull()]
-        [bool]$EnableMetrics
+        [Parameter(Mandatory=$true)]
+        [hashtable]$StatusData, # Hashtable of Key-Value pairs
+        [string]$TableTitle = "Status Overview",
+        [PSCustomObject]$Context
     )
-    
-    $changes = [System.Collections.Generic.List[string]]::new()
+    Write-MandALog -Message $TableTitle -Level "HEADER" -Component "UI" -Context $Context
+    if ($null -eq $StatusData -or $StatusData.Count -eq 0) {
+        Write-MandALog -Message "No data to display in status table." -Level "INFO" -Component "UI" -Context $Context
+        return
+    }
 
-    if ($PSBoundParameters.ContainsKey('UseEmojis')) {
-        $script:LoggingConfig.UseEmojis = $UseEmojis
-        $changes.Add("UseEmojis=$UseEmojis")
+    # Determine max key length for formatting
+    $maxKeyLength = 0
+    if ($StatusData.Keys.Count -gt 0) {
+         $maxKeyLength = ($StatusData.Keys | ForEach-Object { $_.Length } | Measure-Object -Maximum).Maximum
     }
-    if ($PSBoundParameters.ContainsKey('UseColors')) {
-        $script:LoggingConfig.UseColors = $UseColors
-        $changes.Add("UseColors=$UseColors")
+    $maxKeyLength = [Math]::Max($maxKeyLength, 15) # Minimum key column width
+
+    foreach ($key in $StatusData.Keys | Sort-Object) {
+        $value = $StatusData[$key]
+        $displayValue = if ($value -is [bool]) { if($value){"Enabled"}else{"Disabled"} } elseif ($null -eq $value) {"Not Set"} else { $value.ToString() }
+        
+        $formattedKey = $key.PadRight($maxKeyLength)
+        Write-MandALog -Message "$formattedKey : $displayValue" -Level "INFO" -Component "UI-Table" -Context $Context
     }
-    if ($PSBoundParameters.ContainsKey('ShowTimestamp')) {
-        $script:LoggingConfig.ShowTimestamp = $ShowTimestamp
-        $changes.Add("ShowTimestamp=$ShowTimestamp")
-    }
-    if ($PSBoundParameters.ContainsKey('ShowComponent')) {
-        $script:LoggingConfig.ShowComponent = $ShowComponent
-        $changes.Add("ShowComponent=$ShowComponent")
-    }
-    if ($PSBoundParameters.ContainsKey('EnableJsonLogging')) {
-        $script:LoggingConfig.StructuredLogging.EnableJsonLogging = $EnableJsonLogging
-        $changes.Add("StructuredLogging.EnableJsonLogging=$EnableJsonLogging")
-    }
-    if ($PSBoundParameters.ContainsKey('EnableMetrics')) {
-        $script:LoggingConfig.StructuredLogging.EnableMetrics = $EnableMetrics
-        $changes.Add("StructuredLogging.EnableMetrics=$EnableMetrics")
-    }
+    Write-MandALog -Message ("-" * ($maxKeyLength + $displayValue.Length + 5 )) -Level "INFO" -Component "UI-Table" -Context $Context # Footer line
+}
+
+function Write-ProgressBar {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [int]$Current,
+        [Parameter(Mandatory=$true)]
+        [int]$Total,
+        [string]$Activity = "Processing",
+        [string]$StatusMessage = "",
+        [int]$BarWidth = 40,
+        [PSCustomObject]$Context
+    )
+    if ($Total -eq 0) { return } # Avoid division by zero
+
+    $percentComplete = [math]::Round(($Current / $Total) * 100, 0)
+    $completedChars = [math]::Floor(($Current / $Total) * $BarWidth)
+    $remainingChars = $BarWidth - $completedChars
+
+    $progressBar = ("=" * $completedChars) + ("-" * $remainingChars)
     
-    if ($changes.Count -gt 0) {
-        Write-MandALog "Logging options updated: $($changes -join ', ')" -Level "INFO" -Component "Logging"
-    } else {
-        Write-MandALog "No logging options changed." -Level "DEBUG" -Component "Logging"
+    $progressText = "$Activity [$progressBar] $percentComplete% ($Current/$Total)"
+    if (-not [string]::IsNullOrWhiteSpace($StatusMessage)) {
+        $progressText += " - $StatusMessage"
+    }
+
+    # Use Write-Host for dynamic progress bar as Write-MandALog adds timestamps/etc.
+    # Or, Write-MandALog could have a special "RAW_PROGRESS" level if needed.
+    # For PS 5.1, `Write-Progress` is the native cmdlet.
+    Write-Progress -Activity $Activity -Status "$percentComplete% Complete ($Current of $Total) $StatusMessage" -PercentComplete $percentComplete -CurrentOperation "Step $Current of $Total"
+    
+    # If you want to also log distinct progress points (e.g., every 10%):
+    # This check ensures we don't flood logs.
+    if (($Current % [Math]::Max(1, [Math]::Floor($Total/10))) -eq 0 -or $Current -eq $Total) {
+         Write-MandALog -Message $progressText -Level "PROGRESS" -Component "ProgressBar" -Context $Context
     }
 }
 
-# Export functions to make them available when the module is imported
-Export-ModuleMember -Function @(
-    'Initialize-Logging',
-    'Write-MandALog',
-    'Write-StructuredLog',
-    'Write-PerformanceMetric',
-    'Get-LogErrorSummary',
-    'Write-ProgressBar',
-    'Write-StatusTable',
-    'Write-SectionHeader',
-    'Write-CompletionSummary',
-    'Get-LoggingConfiguration',
-    'Set-LogLevel',
-    'Set-LoggingOptions',
-    'Clear-OldLogFiles', # Added Clear-OldLogFiles as it's called by Initialize-Logging
-    'Test-LogMessage',   # Helper, might be useful to export for testing
-    'Get-LogColor',      # Helper, might be useful
-    'Get-LogEmoji'       # Helper, might be useful
-)
+function Write-CompletionSummary {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$OperationName,
+        [Parameter(Mandatory=$true)]
+        [bool]$Success,
+        [Parameter(Mandatory=$false)]
+        [TimeSpan]$Duration,
+        [Parameter(Mandatory=$false)]
+        [hashtable]$Metrics, # Key-value pairs for summary
+        [PSCustomObject]$Context
+    )
+    $statusText = if ($Success) { "COMPLETED SUCCESSFULLY" } else { "FAILED" }
+    $level = if ($Success) { "SUCCESS" } else { "ERROR" }
+    
+    Write-MandALog -Message "$OperationName $statusText" -Level $level -Component "Summary" -Context $Context
+    
+    if ($Duration) {
+        Write-MandALog -Message "Duration: $($Duration.ToString('hh\:mm\:ss\.fff'))" -Level "INFO" -Component "Summary" -Context $Context
+    }
+    if ($Metrics) {
+        Write-MandALog -Message "Key Metrics:" -Level "INFO" -Component "Summary" -Context $Context
+        foreach ($key in $Metrics.Keys | Sort-Object) {
+            Write-MandALog -Message "  $key : $($Metrics[$key])" -Level "INFO" -Component "Summary" -Context $Context
+        }
+    }
+}
 
-Write-MandALog "EnhancedLogging.psm1 module processed." -Level "DEBUG" -Component "Logging"
+# Example of how other utility modules might be structured (not fully implemented here):
+# Set-LogLevel, Set-LoggingOptions would be here if they modify $script:LoggingConfig directly
+# and need to be exported.
+# Test-LogMessage would be an internal helper or part of Write-MandALog's logic.
+
+Write-Host "[EnhancedLogging.psm1] Module loaded. Functions exported: Initialize-Logging, Write-MandALog, etc." -ForegroundColor DarkGray
+

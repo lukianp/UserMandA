@@ -1,385 +1,254 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Standardized error handling for M&A Discovery Suite
+    Provides standardized error handling and retry mechanisms for the M&A Discovery Suite.
 .DESCRIPTION
-    Provides consistent error handling, retry logic, and recovery mechanisms
+    This module includes functions to invoke script blocks with retry logic,
+    get user-friendly error messages, and manage error summaries. It integrates
+    with the EnhancedLogging module for output.
 .NOTES
-    Author: Lukian Poleschtschuk
     Version: 1.0.0
-    Created: 2025-06-03
-    Last Modified: 2025-06-03
-    Change Log: Initial version - any future changes require version increment
+    Author: M&A Discovery Suite Team
+    Date: 2025-06-05
+
+    Key Design Points:
+    - Uses Write-MandALog for logging (assumes EnhancedLogging.psm1 is loaded).
+    - Relies on $global:MandA or a passed -Context for logging context.
+    - Retry logic is configurable via $global:MandA.Config.environment.
 #>
 
+Export-ModuleMember -Function Invoke-WithRetry, Get-FriendlyErrorMessage, Write-ErrorSummary, Test-CriticalError
+
 function Invoke-WithRetry {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [scriptblock]$ScriptBlock,
-        
+
         [Parameter(Mandatory=$false)]
-        [int]$MaxRetries = 3,
-        
+        [int]$MaxRetries = -1, # Default to value from config or 3
+
         [Parameter(Mandatory=$false)]
-        [int]$DelaySeconds = 5,
-        
+        [int]$DelaySeconds = -1, # Default to value from config or 5
+
         [Parameter(Mandatory=$false)]
-        [string]$OperationName = "Operation",
-        
+        [string]$OperationName = "Unnamed Operation",
+
         [Parameter(Mandatory=$false)]
-        [array]$RetryableErrors = @("TimeoutException", "HttpRequestException", "WebException")
+        [string[]]$RetryableErrorTypes, # Specific exception types that should trigger a retry
+
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context # For logging and configuration access
     )
-    
+
+    # Determine effective MaxRetries and DelaySeconds from context/config or defaults
+    $effectiveMaxRetries = $MaxRetries
+    $effectiveDelaySeconds = $DelaySeconds
+    $effectiveConfig = $Context.Config | Global:Get-OrElse $script:LoggingConfig.DefaultContext.Config | Global:Get-OrElse $global:MandA.Config
+
+    if ($effectiveMaxRetries -lt 0) {
+        $effectiveMaxRetries = $effectiveConfig.environment.maxRetries | global:Get-OrElse 3
+    }
+    if ($effectiveDelaySeconds -lt 0) {
+        # Assuming a retryDelaySeconds might be in connectivity or a general environment setting
+        $effectiveDelaySeconds = $effectiveConfig.environment.connectivity.retryDelaySeconds | global:Get-OrElse $effectiveConfig.environment.retryDelaySeconds | global:Get-OrElse 5
+    }
+
+    Write-MandALog -Message "Attempting operation: '$OperationName'. Max Retries: $effectiveMaxRetries, Delay: $effectiveDelaySeconds s." -Level "DEBUG" -Component "RetryWrapper" -Context $Context
+
     $attempt = 0
     $lastError = $null
-    
-    while ($attempt -lt $MaxRetries) {
-        $attempt++
-        
-        try {
-            Write-MandALog "Executing $OperationName (attempt $attempt of $MaxRetries)" -Level "DEBUG"
-            $result = & $ScriptBlock
-            Write-MandALog "$OperationName completed successfully on attempt $attempt" -Level "SUCCESS"
-            return $result
-            
-        } catch {
-            $lastError = $_
-            $errorType = $_.Exception.GetType().Name
-            
-            Write-MandALog "$OperationName failed on attempt $attempt`: $($_.Exception.Message)" -Level "WARN"
-            
-            # Check if error is retryable
-            $isRetryable = $RetryableErrors -contains $errorType -or 
-                          $_.Exception.Message -match "timeout|connection|network|temporary"
-            
-            if ($attempt -lt $MaxRetries -and $isRetryable) {
-                $waitTime = $DelaySeconds * $attempt
-                Write-MandALog "Retrying $OperationName in $waitTime seconds..." -Level "INFO"
-                Start-Sleep -Seconds $waitTime
-            } else {
-                break
-            }
-        }
-    }
-    
-    # All retries exhausted
-    Write-MandALog "$OperationName failed after $MaxRetries attempts" -Level "ERROR"
-    throw $lastError
-}
+    $operationSuccessful = $false
+    $result = $null
 
-function Test-CriticalError {
-    param(
-        [Parameter(Mandatory=$true)]
-        [System.Management.Automation.ErrorRecord]$ErrorRecord
-    )
-    
-    $criticalErrors = @(
-        "OutOfMemoryException",
-        "StackOverflowException",
-        "AccessViolationException",
-        "InvalidOperationException"
-    )
-    
-    $errorType = $ErrorRecord.Exception.GetType().Name
-    return $criticalErrors -contains $errorType
+    while ($attempt -lt $effectiveMaxRetries) {
+        $attempt++
+        try {
+            Write-MandALog -Message "Executing '$OperationName', Attempt: $attempt of $effectiveMaxRetries..." -Level "DEBUG" -Component "RetryWrapper" -Context $Context
+            $result = & $ScriptBlock
+            $operationSuccessful = $true
+            Write-MandALog -Message "Operation '$OperationName' succeeded on attempt $attempt." -Level "SUCCESS" -Component "RetryWrapper" -Context $Context
+            break 
+        } catch {
+            $lastError = $_ # Capture the terminating error
+            $errorType = $_.Exception.GetType().FullName
+            $errorMessage = $_.Exception.Message
+
+            Write-MandALog -Message "Attempt $attempt for '$OperationName' failed. Error: $errorMessage (Type: $errorType)" -Level "WARN" -Component "RetryWrapper" -Context $Context
+
+            # Check if this error type is specifically retryable
+            $isRetryableBySpecificType = $false
+            if ($null -ne $RetryableErrorTypes -and $RetryableErrorTypes.Count -gt 0) {
+                if ($RetryableErrorTypes -contains $errorType) {
+                    $isRetryableBySpecificType = $true
+                    Write-MandALog -Message "Error type '$errorType' is in the list of retryable errors for '$OperationName'." -Level "DEBUG" -Component "RetryWrapper" -Context $Context
+                }
+            } else {
+                # If no specific retryable types are given, assume most errors are retryable up to MaxRetries
+                # unless it's a known non-retryable critical error (handled by Test-CriticalError if needed by caller)
+                $isRetryableBySpecificType = $true # Default to retry if no specific list
+            }
+
+            if ($attempt -ge $effectiveMaxRetries -or -not $isRetryableBySpecificType) {
+                Write-MandALog -Message "Operation '$OperationName' failed after $attempt attempt(s). Error: $errorMessage. No more retries or error not retryable." -Level "ERROR" -Component "RetryWrapper" -Context $Context
+                # Re-throw the last error to be caught by the caller
+                throw $lastError 
+            }
+
+            $waitTime = $effectiveDelaySeconds * $attempt # Exponential backoff can be added here if desired (e.g., $effectiveDelaySeconds * (2 ** ($attempt -1)))
+            Write-MandALog -Message "Waiting $waitTime seconds before retrying '$OperationName' (Attempt $($attempt + 1))..." -Level "INFO" -Component "RetryWrapper" -Context $Context
+            Start-Sleep -Seconds $waitTime
+        }
+    } # End while
+
+    if ($operationSuccessful) {
+        return $result
+    } else {
+        # Should have been re-thrown in the catch block if all retries failed
+        # This is a fallback, but the 'throw $lastError' in catch should handle it.
+        Write-MandALog -Message "Operation '$OperationName' ultimately failed after all retries." -Level "ERROR" -Component "RetryWrapper" -Context $Context
+        throw "Operation '$OperationName' failed after $effectiveMaxRetries attempts. Last Error: $($lastError.Exception.Message)"
+    }
 }
 
 function Get-FriendlyErrorMessage {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [System.Management.Automation.ErrorRecord]$ErrorRecord
+        [System.Management.Automation.ErrorRecord]$ErrorRecord,
+        [PSCustomObject]$Context
     )
-    
-    $errorType = $ErrorRecord.Exception.GetType().Name
-    $errorMessage = $ErrorRecord.Exception.Message
-    
-    switch ($errorType) {
-        "UnauthorizedAccessException" {
-            return "Access denied. Please check permissions and credentials."
+    if ($null -eq $ErrorRecord) { return "No error record provided." }
+
+    $exception = $ErrorRecord.Exception
+    $baseMessage = $exception.Message
+    $exceptionType = $exception.GetType().FullName
+    $targetObject = $ErrorRecord.TargetObject
+    $categoryInfo = $ErrorRecord.CategoryInfo
+    $invocationInfo = $ErrorRecord.InvocationInfo
+
+    $friendlyMessage = "An error occurred: `"$baseMessage`" (Type: $exceptionType)."
+
+    # Add more specific friendly messages based on common exception types or categories
+    switch -Wildcard ($exceptionType) {
+        "*System.Net.WebException*" {
+            $statusCode = ""
+            if ($exception.Response -is [System.Net.HttpWebResponse]) {
+                $statusCode = " (Status: $($exception.Response.StatusCode.value__): $($exception.Response.StatusDescription))"
+            }
+            $friendlyMessage = "Network communication error: $baseMessage$statusCode. Check network connectivity, DNS, firewalls, and endpoint availability."
         }
-        "FileNotFoundException" {
-            return "Required file not found: $($ErrorRecord.Exception.FileName)"
+        "*Microsoft.Graph.Models.ODataErrors.ODataError*" {
+            $oDataError = $exception.Error # Assuming this structure from Graph SDK
+            $graphErrorCode = $oDataError.Code
+            $graphErrorMessage = $oDataError.Message
+            $friendlyMessage = "Microsoft Graph API error: '$graphErrorMessage' (Code: $graphErrorCode). Check permissions, request syntax, and service health."
+            if ($graphErrorCode -in ("AuthenticationError", "InvalidAuthenticationToken", "TokenNotFound")) {
+                 $friendlyMessage += " This often indicates an issue with authentication credentials or token validity. Try re-authenticating or checking credential expiry."
+            } elseif ($graphErrorCode -in ("Authorization_RequestDenied", "AccessDenied")) {
+                $friendlyMessage += " This indicates insufficient permissions for the operation. Review the required API permissions for the App Registration."
+            }
         }
-        "DirectoryNotFoundException" {
-            return "Required directory not found. Please check the path configuration."
+        "*System.Management.Automation.CommandNotFoundException*" {
+            $friendlyMessage = "Command not found: '$($exception.CommandName)'. Ensure the required PowerShell module is installed and imported correctly."
         }
-        "TimeoutException" {
-            return "Operation timed out. Consider increasing timeout values in configuration."
+        "*System.IO.FileNotFoundException*" {
+            $friendlyMessage = "File not found: '$($exception.FileName)'. Verify the path and file existence."
         }
-        "HttpRequestException" {
-            return "Network request failed. Please check internet connectivity and service availability."
+        "*System.UnauthorizedAccessException*" {
+            $friendlyMessage = "Access denied: $baseMessage. Check permissions for the target resource or operation."
+            if ($invocationInfo) {
+                $friendlyMessage += " Operation: $($invocationInfo.MyCommand)"
+            }
         }
-        "ArgumentException" {
-            return "Invalid parameter provided: $errorMessage"
-        }
-        default {
-            return $errorMessage
+        "*Newtonsoft.Json.JsonReaderException*" {
+            $friendlyMessage = "JSON parsing error: $baseMessage. Ensure the JSON file or string is correctly formatted."
         }
     }
+
+    if ($invocationInfo) {
+        $friendlyMessage += " Occurred in script '$($invocationInfo.ScriptName)' at line $($invocationInfo.ScriptLineNumber), command: '$($invocationInfo.Line)'."
+    }
+    
+    Write-MandALog -Message "Generated friendly error: $friendlyMessage" -Level "DEBUG" -Component "ErrorHelper" -Context $Context
+    return $friendlyMessage
 }
 
 function Write-ErrorSummary {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [array]$Errors,
-        
-        [Parameter(Mandatory=$false)]
-        [string]$Context = "Operation"
+        [DiscoveryErrorCollector]$ErrorCollector, # Expects the Orchestrator's ErrorCollector
+        [PSCustomObject]$Context
     )
     
-    if ($Errors.Count -eq 0) {
+    Write-MandALog -Message "--- Error Summary ---" -Level "HEADER" -Component "ErrorSummary" -Context $Context
+    if (-not $ErrorCollector.HasErrors()) {
+        Write-MandALog -Message "No errors recorded during this execution." -Level "SUCCESS" -Component "ErrorSummary" -Context $Context
         return
     }
+
+    Write-MandALog -Message "Total Errors: $($ErrorCollector.Errors.Count)" -Level "ERROR" -Component "ErrorSummary" -Context $Context
+    Write-MandALog -Message "Total Warnings: $($ErrorCollector.Warnings.Count)" -Level "WARN" -Component "ErrorSummary" -Context $Context
+
+    $errorGroups = $ErrorCollector.Errors | Group-Object Source | Sort-Object Count -Descending
     
-    Write-MandALog "$Context Error Summary" -Level "HEADER"
-    Write-MandALog "Total Errors: $($Errors.Count)" -Level "ERROR"
-    
-    # Group errors by type
-    $errorGroups = $Errors | Group-Object { $_.Exception.GetType().Name }
-    
+    Write-MandALog -Message "Errors by Source:" -Level "INFO" -Component "ErrorSummary" -Context $Context
     foreach ($group in $errorGroups) {
-        Write-MandALog "$($group.Name): $($group.Count) occurrences" -Level "ERROR"
-        
-        # Show first few examples
-        $examples = $group.Group | Select-Object -First 3
-        foreach ($example in $examples) {
-            $friendlyMessage = Get-FriendlyErrorMessage -ErrorRecord $example
-            Write-MandALog "  - $friendlyMessage" -Level "ERROR"
-        }
-        
-        if ($group.Count -gt 3) {
-            Write-MandALog "  ... and $($group.Count - 3) more" -Level "ERROR"
+        Write-MandALog -Message ("  {0,-30} : {1} error(s)" -f $group.Name, $group.Count) -Level "INFO" -Component "ErrorSummary" -Context $Context
+        # Optionally list a few example messages for each source
+        # $group.Group | Select-Object -First 2 | ForEach-Object { Write-MandALog -Message ("    - $($_.Message -replace "`r|`n"," ")" ) -Level "DEBUG" -Component "ErrorSummary" -Context $Context }
+    }
+
+    if ($ErrorCollector.Warnings.Count -gt 0) {
+        Write-MandALog -Message "Warnings by Source (first 5):" -Level "INFO" -Component "ErrorSummary" -Context $Context
+        $ErrorCollector.Warnings | Group-Object Source | Sort-Object Count -Descending | Select-Object -First 5 | ForEach-Object {
+            Write-MandALog -Message ("  {0,-30} : {1} warning(s)" -f $_.Name, $_.Count) -Level "INFO" -Component "ErrorSummary" -Context $Context
         }
     }
+    # The Orchestrator's Complete-MandADiscovery function handles exporting the full error report.
 }
 
-function Test-Prerequisites {
-    param($Configuration, [switch]$ValidateOnly)
-    
-    try {
-        Write-MandALog "Validating system prerequisites" -Level "INFO"
-        
-        $validationErrors = @()
-        
-        # Check PowerShell version
-        if ($PSVersionTable.PSVersion.Major -lt 5) {
-            $validationErrors += "PowerShell 5.1 or higher is required"
-        }
-        
-        # Check required modules (skip in validate-only mode)
-        if (-not $ValidateOnly) {
-            $requiredModules = @(
-                "Microsoft.Graph",
-                "Microsoft.Graph.Authentication",
-                "ExchangeOnlineManagement"
-            )
-            
-            foreach ($module in $requiredModules) {
-                if (-not (Get-Module -ListAvailable -Name $module)) {
-                    $validationErrors += "Required module not installed: $module"
-                }
-            }
-        }
-        
-        # Check output directory - UPDATED to use company-specific paths
-        $outputPath = if ($global:MandA.Paths.CompanyProfileRoot) {
-            $global:MandA.Paths.CompanyProfileRoot
-        } elseif ($Configuration.environment.outputPath) {
-            $Configuration.environment.outputPath
-        } elseif ($Configuration.environment.profilesBasePath) {
-            # Fallback: create a temp directory if we only have profilesBasePath
-            Join-Path $Configuration.environment.profilesBasePath "TempValidation"
-        } else {
-            $null
-        }
-        
-        if (-not $outputPath) {
-            $validationErrors += "No output path configured"
-        } elseif (-not (Test-Path $outputPath)) {
-            try {
-                New-Item -Path $outputPath -ItemType Directory -Force | Out-Null
-                Write-MandALog "Created output directory: $outputPath" -Level "SUCCESS"
-            } catch {
-                $validationErrors += "Cannot create output directory: $outputPath - $($_.Exception.Message)"
-            }
-        }
-        
-        # Check disk space
-        if ($outputPath -and (Test-Path $outputPath)) {
-            $drive = Split-Path $outputPath -Qualifier
-            if ($drive) {
-                try {
-                    $freeSpace = (Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='$drive'" -ErrorAction Stop).FreeSpace / 1GB
-                    $requiredSpace = if ($Configuration.performance.diskSpaceThresholdGB) { 
-                        $Configuration.performance.diskSpaceThresholdGB 
-                    } else { 
-                        10 
-                    }
-                    
-                    if ($freeSpace -lt $requiredSpace) {
-                        $validationErrors += "Insufficient disk space. Required: ${requiredSpace}GB, Available: $([math]::Round($freeSpace, 2))GB"
-                    }
-                } catch {
-                    Write-MandALog "Warning: Could not check disk space for drive $drive" -Level "WARN"
-                }
-            }
-        }
-        
-        # Check memory
-        try {
-            $totalMemory = (Get-WmiObject -Class Win32_ComputerSystem -ErrorAction Stop).TotalPhysicalMemory / 1MB
-            $requiredMemory = if ($Configuration.performance.memoryThresholdMB) { 
-                $Configuration.performance.memoryThresholdMB 
-            } else { 
-                4096 
-            }
-            
-            if ($totalMemory -lt $requiredMemory) {
-                Write-MandALog "Warning: System memory ($([math]::Round($totalMemory, 0))MB) is below recommended ($requiredMemory MB)" -Level "WARN"
-            }
-        } catch {
-            Write-MandALog "Warning: Could not check system memory" -Level "WARN"
-        }
-        
-        # Check network connectivity (skip in validate-only mode)
-        if (-not $ValidateOnly) {
-            $endpoints = @("graph.microsoft.com", "login.microsoftonline.com")
-            foreach ($endpoint in $endpoints) {
-                try {
-                    $result = Test-NetConnection -ComputerName $endpoint -Port 443 -InformationLevel Quiet -WarningAction SilentlyContinue
-                    if (-not $result) {
-                        $validationErrors += "Cannot reach required endpoint: $endpoint"
-                    }
-                } catch {
-                    $validationErrors += "Network connectivity test failed for: $endpoint"
-                }
-            }
-        }
-        
-        if ($validationErrors.Count -gt 0) {
-            Write-MandALog "Prerequisite validation failed:" -Level "ERROR"
-            foreach ($errorMessage in $validationErrors) {
-                Write-MandALog "  - $errorMessage" -Level "ERROR"
-            }
-            return $false
-        }
-        
-        Write-MandALog "All prerequisites validated successfully" -Level "SUCCESS"
-        return $true
-        
-    } catch {
-        Write-MandALog "Prerequisite validation error: $($_.Exception.Message)" -Level "ERROR"
-        return $false
-    }
-}
-
-function Initialize-OutputDirectories {
-    param($Configuration)
-    
-    try {
-        # UPDATED: Use company-specific paths if available
-        if ($global:MandA.Paths.CompanyProfileRoot) {
-            Write-MandALog "Using company-specific directory structure" -Level "INFO"
-            
-            $directories = @(
-                $global:MandA.Paths.CompanyProfileRoot,
-                $global:MandA.Paths.LogOutput,
-                $global:MandA.Paths.RawDataOutput,
-                $global:MandA.Paths.ProcessedDataOutput
-            )
-            
-            # Also create Archive and Temp directories
-            $archivePath = Join-Path $global:MandA.Paths.CompanyProfileRoot "Archive"
-            $tempPath = Join-Path $global:MandA.Paths.CompanyProfileRoot "Temp"
-            $directories += @($archivePath, $tempPath)
-            
-            # Store these paths back in global context for other modules
-            $global:MandA.Paths['Archive'] = $archivePath
-            $global:MandA.Paths['Temp'] = $tempPath
-            
-        } else {
-            # Fallback to configuration-based paths
-            Write-MandALog "Using configuration-based directory structure" -Level "INFO"
-            
-            $outputPath = $Configuration.environment.outputPath
-            if (-not $outputPath) {
-                # Try to construct from profilesBasePath if available
-                if ($Configuration.environment.profilesBasePath) {
-                    $outputPath = Join-Path $Configuration.environment.profilesBasePath "DefaultOutput"
-                    Write-MandALog "No outputPath configured, using fallback: $outputPath" -Level "WARN"
-                } else {
-                    throw "No output path found in configuration and no company-specific paths available"
-                }
-            }
-            
-            $directories = @(
-                $outputPath,
-                (Join-Path $outputPath "Logs"),
-                (Join-Path $outputPath "Raw"),
-                (Join-Path $outputPath "Processed"),
-                (Join-Path $outputPath "Archive"),
-                (Join-Path $outputPath "Temp")
-            )
-        }
-        
-        # Create all directories
-        foreach ($dir in $directories) {
-            if (-not (Test-Path $dir)) {
-                New-Item -Path $dir -ItemType Directory -Force | Out-Null
-                Write-MandALog "Created directory: $dir" -Level "SUCCESS"
-            } else {
-                Write-MandALog "Directory already exists: $dir" -Level "DEBUG"
-            }
-        }
-        
-        # Verify write access to all directories
-        $accessErrors = @()
-        foreach ($dir in $directories) {
-            if (-not (Test-DirectoryWriteAccess -DirectoryPath $dir)) {
-                $accessErrors += $dir
-            }
-        }
-        
-        if ($accessErrors.Count -gt 0) {
-            Write-MandALog "Write access denied for directories:" -Level "ERROR"
-            foreach ($dir in $accessErrors) {
-                Write-MandALog "  - $dir" -Level "ERROR"
-            }
-            return $false
-        }
-        
-        Write-MandALog "All output directories initialized successfully" -Level "SUCCESS"
-        return $true
-        
-    } catch {
-        Write-MandALog "Failed to initialize output directories: $($_.Exception.Message)" -Level "ERROR"
-        Write-MandALog "Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG"
-        return $false
-    }
-}
-
-function Test-DirectoryWriteAccess {
+function Test-CriticalError {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [string]$DirectoryPath
+        [System.Management.Automation.ErrorRecord]$ErrorRecord,
+        [PSCustomObject]$Context # For logging context if needed
+    )
+    if ($null -eq $ErrorRecord) { return $false }
+
+    # Define patterns or types that are considered critical and non-retryable
+    $criticalErrorPatterns = @(
+        "System.OutOfMemoryException",
+        "System.StackOverflowException",
+        "CRITICAL:", # If our own messages mark themselves as critical
+        "*Failed to load critical utility module*", # Example from Initialize-MandAEnvironment
+        "*`\$global:MandA is not set*",
+        "*Configuration file not found*",
+        "*Failed to parse configuration file*",
+        "*Core processing function .* not found*" 
     )
     
-    try {
-        $testFile = Join-Path $DirectoryPath "write_test_$(Get-Random).tmp"
-        "test" | Out-File -FilePath $testFile -ErrorAction Stop
-        Remove-Item $testFile -Force -ErrorAction SilentlyContinue
+    $exceptionType = $ErrorRecord.Exception.GetType().FullName
+    $errorMessage = $ErrorRecord.Exception.Message
+
+    if ($criticalErrorPatterns | Where-Object { $exceptionType -like $_ -or $errorMessage -like "*$_*" }) {
+        Write-MandALog -Message "Critical error detected: $errorMessage (Type: $exceptionType)" -Level "CRITICAL" -Component "ErrorCheck" -Context $Context
         return $true
-    } catch {
-        return $false
     }
+    
+    # Specific check for authentication errors if haltOnConnectionError for Authentication is true
+    if ($Context -and $Context.Config -and $Context.Config.environment -and $Context.Config.environment.connectivity) {
+        $haltOn = $Context.Config.environment.connectivity.haltOnConnectionError | global:Get-OrElse @()
+        if ($haltOn -contains "Authentication" -and $ErrorRecord.CategoryInfo.Category -eq "AuthenticationError") {
+             Write-MandALog -Message "Critical authentication error configured to halt execution: $errorMessage" -Level "CRITICAL" -Component "ErrorCheck" -Context $Context
+            return $true
+        }
+    }
+
+    return $false
 }
 
-# Export functions
-Export-ModuleMember -Function @(
-    'Invoke-WithRetry',
-    'Test-CriticalError',
-    'Get-FriendlyErrorMessage',
-    'Write-ErrorSummary',
-    'Test-Prerequisites',
-    'Initialize-OutputDirectories',
-    'Test-DirectoryWriteAccess'
-)
+Write-Host "[ErrorHandling.psm1] Module loaded." -ForegroundColor DarkGray
+

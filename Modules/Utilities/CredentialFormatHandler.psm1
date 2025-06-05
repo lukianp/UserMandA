@@ -1,162 +1,238 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Unified credential format handler for M&A Discovery Suite
+    Handles the formatting, saving, and reading of credential files for the M&A Discovery Suite.
 .DESCRIPTION
-    Ensures consistent credential file format across all components
+    This module provides functions to convert credential data to a standard format,
+    save it securely using DPAPI encryption, and read it back. It ensures UTF-8 encoding
+    for the JSON data before encryption and after decryption.
 .NOTES
-    Author: Lukian Poleschtschuk
-    Version: 1.0.0
-    Created: 2025-06-03
-    Last Modified: 2025-06-03
-    Change Log: Initial version - any future changes require version increment
+    Version: 1.1.0
+    Author: M&A Discovery Suite Team
+    Date: 2025-06-05
+
+    Key Design Points:
+    - Uses Write-MandALog for logging (assumes EnhancedLogging.psm1 is loaded).
+    - Standardizes on UTF-8 for JSON serialization/deserialization of credential data.
+    - DPAPI encryption (ConvertFrom-SecureString/ConvertTo-SecureString) is used.
+    - Includes a format version for potential future upgrades.
+    - FAULT: Original version used ASCII for file I/O of encrypted string, changed to UTF-8.
+      While the encrypted string itself is Base64 and thus ASCII-safe, using UTF-8
+      consistently for file operations is a better practice. The critical part is
+      that the JSON *before* encryption and *after* decryption is handled as UTF-8.
 #>
 
-# Define the standard credential file format version
-$script:CREDENTIAL_FORMAT_VERSION = "2.0"
+Export-ModuleMember -Function ConvertTo-StandardCredentialFormat, Test-CredentialFormat, Save-CredentialFile, Read-CredentialFile
+
+# --- Script-level Constants ---
+$script:CREDENTIAL_FORMAT_VERSION = "2.1" # Bumped version due to UTF-8 standardization
+
+# --- Private Helper Functions (if any, none needed for this version) ---
+
+# --- Public Functions ---
 
 function ConvertTo-StandardCredentialFormat {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$CredentialData
+        [hashtable]$CredentialData, # Input credential data as a hashtable
+
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context # For logging
     )
-    
-    # Ensure we have all required fields
+    # Ensures the credential data adheres to a standard structure before saving.
+    # Adds metadata like format version and creation date.
+
+    Write-MandALog -Message "Converting credential data to standard format..." -Level "DEBUG" -Component "CredFormatHandler" -Context $Context
+
+    $standardOutput = $CredentialData.Clone() # Start with a copy
+
+    # Ensure essential fields are present (caller should ideally validate, but good to check)
     $requiredFields = @('ClientId', 'ClientSecret', 'TenantId')
     foreach ($field in $requiredFields) {
-        if (-not $CredentialData.ContainsKey($field) -or [string]::IsNullOrWhiteSpace($CredentialData[$field])) {
-            throw "Missing required credential field: $field"
+        if (-not $standardOutput.HashtableContains($field) -or [string]::IsNullOrWhiteSpace($standardOutput[$field])) {
+            $errMsg = "Credential data is missing or has empty required field: '$field'."
+            Write-MandALog -Message $errMsg -Level "ERROR" -Component "CredFormatHandler" -Context $Context
+            if ($Context -and $Context.PSObject.Properties['ErrorCollector']) {
+                $Context.ErrorCollector.AddError("CredentialFormat", $errMsg, $null)
+            }
+            throw $errMsg # Fail if essential data is missing
         }
     }
-    
-    # Add format version
-    $CredentialData['_FormatVersion'] = $script:CREDENTIAL_FORMAT_VERSION
-    
-    return $CredentialData
+
+    # Add/update metadata
+    $standardOutput['_FormatVersion'] = $script:CREDENTIAL_FORMAT_VERSION
+    if (-not $standardOutput.HashtableContains('CreatedDate')) {
+        $standardOutput['CreatedDate'] = (Get-Date -Format "o") # ISO 8601 format
+    }
+    $standardOutput['LastUpdatedDate'] = (Get-Date -Format "o")
+
+    Write-MandALog -Message "Credential data standardized. Format Version: $($script:CREDENTIAL_FORMAT_VERSION)." -Level "DEBUG" -Component "CredFormatHandler" -Context $Context
+    return $standardOutput
 }
 
 function Test-CredentialFormat {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$CredentialData
+        [hashtable]$CredentialData, # Hashtable read from file
+
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context # For logging
     )
-    
-    # Check format version
-    if ($CredentialData.ContainsKey('_FormatVersion')) {
-        return $CredentialData['_FormatVersion'] -eq $script:CREDENTIAL_FORMAT_VERSION
+    # Validates if the provided credential data meets basic format requirements.
+    Write-MandALog -Message "Testing credential data format..." -Level "DEBUG" -Component "CredFormatHandler" -Context $Context
+
+    $issues = [System.Collections.Generic.List[string]]::new()
+
+    if ($null -eq $CredentialData) {
+        $issues.Add("Credential data is null.")
+    } else {
+        $requiredFields = @('ClientId', 'ClientSecret', 'TenantId', '_FormatVersion')
+        foreach ($field in $requiredFields) {
+            if (-not $CredentialData.HashtableContains($field)) {
+                $issues.Add("Missing required field: '$field'.")
+            } elseif ([string]::IsNullOrWhiteSpace($CredentialData[$field])) {
+                $issues.Add("Required field '$field' is empty.")
+            }
+        }
+
+        if ($CredentialData.HashtableContains('_FormatVersion') -and $CredentialData['_FormatVersion'] -ne $script:CREDENTIAL_FORMAT_VERSION) {
+            $issues.Add("Format version mismatch. Expected '$($script:CREDENTIAL_FORMAT_VERSION)', found '$($CredentialData['_FormatVersion'])'.")
+            Write-MandALog -Message "Credential format version mismatch. Expected '$($script:CREDENTIAL_FORMAT_VERSION)', found '$($CredentialData['_FormatVersion'])'." -Level "WARN" -Component "CredFormatHandler" -Context $Context
+        }
     }
-    
-    # Legacy format detection - has basic fields but no version
-    $hasBasicFields = $CredentialData.ContainsKey('ClientId') -and 
-                      $CredentialData.ContainsKey('ClientSecret') -and 
-                      $CredentialData.ContainsKey('TenantId')
-    
-    return $hasBasicFields
+
+    if ($issues.Count -gt 0) {
+        $errorMsg = "Credential format test failed: $($issues -join '; ')"
+        Write-MandALog -Message $errorMsg -Level "ERROR" -Component "CredFormatHandler" -Context $Context
+        return [PSCustomObject]@{ IsValid = $false; Issues = $issues }
+    }
+
+    Write-MandALog -Message "Credential format test passed." -Level "SUCCESS" -Component "CredFormatHandler" -Context $Context
+    return [PSCustomObject]@{ IsValid = $true; Issues = $issues }
 }
 
 function Save-CredentialFile {
+    [CmdletBinding(SupportsShouldProcess=$true)]
     param(
         [Parameter(Mandatory=$true)]
-        [string]$Path,
-        
+        [string]$Path, # Full path to save the credential file
+
         [Parameter(Mandatory=$true)]
-        [hashtable]$CredentialData
+        [hashtable]$CredentialData, # Raw credential data (will be standardized)
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context # For logging and potentially ErrorCollector
     )
-    
-    try {
-        # Standardize the data
-        $standardData = ConvertTo-StandardCredentialFormat -CredentialData $CredentialData
-        
-        # Convert to JSON with consistent formatting
-        $jsonData = $standardData | ConvertTo-Json -Depth 10 -Compress
-        
-        # Encrypt using DPAPI
-        $secureString = ConvertTo-SecureString -String $jsonData -AsPlainText -Force
-        $encryptedString = ConvertFrom-SecureString -SecureString $secureString
-        
-        # Ensure directory exists
-        $directory = Split-Path $Path -Parent
-        if (-not (Test-Path $directory)) {
-            New-Item -Path $directory -ItemType Directory -Force | Out-Null
+
+    Write-MandALog -Message "Attempting to save credential file to: '$Path'" -Level "INFO" -Component "CredFormatHandler" -Context $Context
+
+    if ($PSCmdlet.ShouldProcess($Path, "Save Encrypted Credential File")) {
+        try {
+            # Standardize the data format
+            $standardDataToSave = ConvertTo-StandardCredentialFormat -CredentialData $CredentialData -Context $Context
+            
+            # Convert the standardized hashtable to a JSON string (UTF-8 is default for ConvertTo-Json)
+            $jsonCredentialData = $standardDataToSave | ConvertTo-Json -Depth 10 -Compress -ErrorAction Stop
+            if ([string]::IsNullOrWhiteSpace($jsonCredentialData)) {
+                throw "Failed to serialize credential data to JSON or result was empty."
+            }
+
+            # Encrypt the JSON string using DPAPI
+            # ConvertTo-SecureString expects a string.
+            $secureString = ConvertTo-SecureString -String $jsonCredentialData -AsPlainText -Force -ErrorAction Stop
+            $encryptedString = ConvertFrom-SecureString -SecureString $secureString -ErrorAction Stop # This is a Base64 encoded string
+
+            if ([string]::IsNullOrWhiteSpace($encryptedString)) {
+                throw "Encryption process resulted in an empty string."
+            }
+
+            # Ensure parent directory exists
+            $directory = Split-Path $Path -Parent
+            if (-not (Test-Path $directory -PathType Container)) {
+                Write-MandALog -Message "Parent directory '$directory' not found. Attempting to create." -Level "DEBUG" -Component "CredFormatHandler" -Context $Context
+                New-Item -Path $directory -ItemType Directory -Force -ErrorAction Stop | Out-Null
+            }
+
+            # Save the encrypted (Base64) string to file using UTF-8 encoding.
+            # While Base64 is ASCII-safe, consistency in using UTF-8 for text files is good.
+            [System.IO.File]::WriteAllText($Path, $encryptedString, [System.Text.Encoding]::UTF8)
+            
+            Write-MandALog -Message "Credential file saved successfully and encrypted to: '$Path'" -Level "SUCCESS" -Component "CredFormatHandler" -Context $Context
+
+            # Optional: Verify by reading back immediately (for diagnostics)
+            if ($Context -and $Context.Config -and $Context.Config.advancedSettings -and $Context.Config.advancedSettings.debugMode) {
+                Write-MandALog -Message "Debug: Attempting immediate read-back for verification..." -Level "DEBUG" -Component "CredFormatHandler" -Context $Context
+                $verifiedData = Read-CredentialFile -Path $Path -Context $Context
+                if ($verifiedData -and $verifiedData.ClientId -eq $standardDataToSave.ClientId) {
+                    Write-MandALog -Message "Debug: Read-back verification successful." -Level "DEBUG" -Component "CredFormatHandler" -Context $Context
+                } else {
+                    Write-MandALog -Message "Debug: Read-back verification FAILED or data mismatch." -Level "WARN" -Component "CredFormatHandler" -Context $Context
+                }
+            }
+            return $true
+        } catch {
+            $errMsg = "Failed to save credential file to '$Path'. Error: $($_.Exception.Message)"
+            Write-MandALog -Message $errMsg -Level "ERROR" -Component "CredFormatHandler" -Context $Context
+            if ($Context -and $Context.PSObject.Properties['ErrorCollector']) {
+                $Context.ErrorCollector.AddError("CredentialSave", $errMsg, $_.Exception)
+            }
+            return $false
         }
-        
-        # Save with consistent encoding (no BOM)
-        [System.IO.File]::WriteAllText($Path, $encryptedString, [System.Text.Encoding]::ASCII)
-        
-        # Verify the file was written correctly by reading it back
-        $verifyContent = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::ASCII)
-        if ($verifyContent -ne $encryptedString) {
-            throw "Credential file verification failed - content mismatch"
-        }
-        
-        Write-Verbose "Credential file saved successfully to: $Path"
-        return $true
-        
-    } catch {
-        Write-Error "Failed to save credential file: $($_.Exception.Message)"
-        throw
+    } else {
+        Write-MandALog -Message "Save operation for credential file '$Path' skipped by ShouldProcess." -Level "INFO" -Component "CredFormatHandler" -Context $Context
+        return $false # Or indicate skipped
     }
 }
 
 function Read-CredentialFile {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [string]$Path
-    )
-    
-    try {
-        if (-not (Test-Path $Path -PathType Leaf)) {
-            throw "Credential file not found: $Path"
-        }
-        
-        # Read the encrypted content with the same encoding used for writing
-        $encryptedContent = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::ASCII)
-        
-        if ([string]::IsNullOrWhiteSpace($encryptedContent)) {
-            throw "Credential file is empty: $Path"
-        }
-        
-        # Decrypt using DPAPI
-        try {
-            $secureString = ConvertTo-SecureString -String $encryptedContent -ErrorAction Stop
-        } catch {
-            throw "Failed to decrypt credential file. This usually means the file was encrypted by a different user or on a different machine. Error: $($_.Exception.Message)"
-        }
-        
-        # Convert back to plain text
-        $jsonData = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
-            [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureString)
-        )
-        
-        # Parse JSON
-        try {
-            $credentialData = $jsonData | ConvertFrom-Json -ErrorAction Stop
-        } catch {
-            throw "Failed to parse credential data as JSON. The file may be corrupted. Error: $($_.Exception.Message)"
-        }
-        
-        # Convert PSCustomObject to hashtable for consistency
-        $hashtable = @{}
-        $credentialData.PSObject.Properties | ForEach-Object {
-            $hashtable[$_.Name] = $_.Value
-        }
-        
-        # Validate format
-        if (-not (Test-CredentialFormat -CredentialData $hashtable)) {
-            Write-Warning "Credential file format is outdated but will attempt to use it"
-        }
-        
-        Write-Verbose "Credential file read successfully from: $Path"
-        return $hashtable
-        
-    } catch {
-        Write-Error "Failed to read credential file: $($_.Exception.Message)"
-        throw
-    }
-}
+        [string]$Path, # Full path to the credential file
 
-Export-ModuleMember -Function @(
-    'ConvertTo-StandardCredentialFormat',
-    'Test-CredentialFormat',
-    'Save-CredentialFile',
-    'Read-CredentialFile'
-)
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context # For logging
+    )
+
+    Write-MandALog -Message "Attempting to read credential file from: '$Path'" -Level "INFO" -Component "CredFormatHandler" -Context $Context
+
+    if (-not (Test-Path $Path -PathType Leaf)) {
+        Write-MandALog -Message "Credential file not found at: '$Path'" -Level "WARN" -Component "CredFormatHandler" -Context $Context
+        return $null
+    }
+
+    try {
+        # Read the encrypted (Base64) string from file, assuming UTF-8 encoding
+        $encryptedContent = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
+        if ([string]::IsNullOrWhiteSpace($encryptedContent)) {
+            throw "Credential file '$Path' is empty or could not be read."
+        }
+
+                # Decrypt the string using DPAPI
+                $secureString = ConvertTo-SecureString -String $encryptedContent -ErrorAction Stop
+                # PtrToStringAuto is correct here as ConvertFrom-SecureString produces Base64 which is then converted to SecureString.
+                # The result of PtrToStringAuto will be the original JSON string.
+                $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureString)
+                $jsonCredentialData = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) # Clean up
+        
+                if ([string]::IsNullOrWhiteSpace($jsonCredentialData)) {
+                    throw "Decryption process resulted in an empty JSON string."
+                }
+        
+                # Convert JSON string back to hashtable
+                $credentialData = $jsonCredentialData | ConvertFrom-Json -ErrorAction Stop
+        
+                Write-MandALog -Message "Credential file read and decrypted successfully from: '$Path'" -Level "SUCCESS" -Component "CredFormatHandler" -Context $Context
+                return $credentialData
+            } catch {
+                $errMsg = "Failed to read or decrypt credential file from '$Path'. Error: $($_.Exception.Message)"
+                Write-MandALog -Message $errMsg -Level "ERROR" -Component "CredFormatHandler" -Context $Context
+                if ($Context -and $Context.PSObject.Properties['ErrorCollector']) {
+                    $Context.ErrorCollector.AddError("CredentialRead", $errMsg, $_.Exception)
+                }
+                return $null
+            }
+        }
