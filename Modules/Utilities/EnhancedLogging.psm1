@@ -97,16 +97,16 @@ function Get-LogEmojiInternal {
 
     # Using text-based equivalents for emojis to ensure compatibility
     switch ($Level.ToUpper()) {
-        "DEBUG"    { return "[DBG]" }  # Was "⚙️"
-        "INFO"     { return "[INF]" }  # Was "ℹ️"
-        "SUCCESS"  { return "[OK!]" }  # Was "✅"
-        "WARN"     { return "[WRN]" }  # Was "⚠️"
-        "ERROR"    { return "[ERR]" }  # Was "❌"
-        "CRITICAL" { return "[CRT]" }  # Was "🚨"
+        "DEBUG"    { return "[DBG]" }  # Was "[DEBUG]"
+        "INFO"     { return "[INF]" }  # Was "[INFO]"
+        "SUCCESS"  { return "[OK!]" }  # Was "[SUCCESS]"
+        "WARN"     { return "[WRN]" }  # Was "[WARN]"
+        "ERROR"    { return "[ERR]" }  # Was "[ERROR]"
+        "CRITICAL" { return "[CRT]" }  # Was "[CRITICAL]"
         "HEADER"   { return "[HDR]" }  # Was " M&A " (keeping as text was fine, standardized)
-        "PROGRESS" { return "[PRG]" }  # Was "🔄"
-        "IMPORTANT"{ return "[IMP]" }  # Was "📌"
-        default    { return "[>]"   }  # Was "➡️"
+        "PROGRESS" { return "[PRG]" }  # Was "[PROGRESS]"
+        "IMPORTANT"{ return "[IMP]" }  # Was "[IMPORTANT]"
+        default    { return "[>]"   }  # Was "->"
     }
 }
 

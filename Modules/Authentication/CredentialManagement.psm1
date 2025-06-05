@@ -111,9 +111,9 @@ function Get-InteractiveCredentials {
     
     try {
         Write-Host "`n" -NoNewline
-        Write-Host "═══════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "===================================================================" -ForegroundColor Cyan
         Write-Host "       M&A Discovery Suite - Credential Input Required             " -ForegroundColor Cyan
-        Write-Host "═══════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "===================================================================" -ForegroundColor Cyan
         Write-Host "`nPlease provide Azure AD service principal credentials:`n" -ForegroundColor White
         
         # Get Client ID
@@ -164,7 +164,7 @@ function Get-InteractiveCredentials {
             }
         }
         
-        Write-Host "═══════════════════════════════════════════════════════════════════`n" -ForegroundColor Cyan
+        Write-Host "===================================================================`n" -ForegroundColor Cyan
         
         return @{
             Success = $true

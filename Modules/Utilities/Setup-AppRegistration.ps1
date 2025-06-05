@@ -319,7 +319,7 @@ function Write-ProgressHeader {
     Write-Host "`n$separator" @($script:ColorScheme.Separator)
     Write-Host "  >> $Title" @($script:ColorScheme.Header)
     if ($Subtitle) {
-        Write-Host "  📝 $Subtitle" -ForegroundColor Cyan
+        Write-Host "  [NOTE] $Subtitle" -ForegroundColor Cyan
     }
     Write-Host "$separator`n" -ForegroundColor DarkCyan
 }
@@ -351,7 +351,7 @@ function Start-OperationTimer {
     param([string]$OperationName)
     
     $script:Metrics.Operations[$OperationName].StartTime = Get-Date
-    Write-EnhancedLog "🚀 Starting: $OperationName" -Level PROGRESS
+    Write-EnhancedLog "[START] Starting: $OperationName" -Level PROGRESS
 }
 
 function Stop-OperationTimer {
@@ -995,12 +995,12 @@ function New-EnhancedClientSecret {
         Write-EnhancedLog "  Expires: $($clientSecretObj.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss'))" -Level INFO
         
         Write-Host "`n" -NoNewline
-        Write-Host "════════════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "================================================================================" -ForegroundColor Cyan
         Write-Host "                              CLIENT SECRET VALUE                                " -ForegroundColor White -BackgroundColor DarkGreen
-        Write-Host "════════════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "================================================================================" -ForegroundColor Cyan
         Write-Host "`nCOPY THIS SECRET NOW - IT CANNOT BE RETRIEVED LATER:" -ForegroundColor Yellow
         Write-Host "`n$($clientSecretObj.SecretText)`n" -ForegroundColor White -BackgroundColor DarkBlue
-        Write-Host "════════════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "================================================================================" -ForegroundColor Cyan
         Write-Host "`nPress Enter after you have copied the secret..." -ForegroundColor Yellow
         Read-Host | Out-Null # Ensure Read-Host output doesn't affect return
         

@@ -56,9 +56,9 @@ $script:QuickStartTime = Get-Date
 $script:QuickStartVersion = "6.0.0 (Rewritten)"
 
 Write-Host "`n" -NoNewline
-Write-Host "════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host "        M&A Discovery Suite v$($script:QuickStartVersion) - Quick Start        " -ForegroundColor Cyan
-Write-Host "════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host "`n"
 
 try {

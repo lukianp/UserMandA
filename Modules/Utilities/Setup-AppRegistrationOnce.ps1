@@ -308,13 +308,13 @@ function Write-EnhancedLog {
         "SUCCESS" { "[OK]" }
         "ERROR" { "[X]" }
         "WARN" { "[!]" }
-        "CRITICAL" { "🚨" }
-        "IMPORTANT" { "📌" }
-        "PROGRESS" { "🔄" }
-        "DEBUG" { "🔍" }
-        "HEADER" { "📋" }
-        "EXCHANGE" { "📧" }
-        default { "ℹ️" }
+        "CRITICAL" { "[CRITICAL]" }
+        "IMPORTANT" { "[IMPORTANT]" }
+        "PROGRESS" { "[PROGRESS]" }
+        "DEBUG" { "[DEBUG]" }
+        "HEADER" { "[HEADER]" }
+        "EXCHANGE" { "[EXCHANGE]" }
+        default { "[INFO]" }
     }
     
     $displayMessage = "$icon $logMessage"
@@ -343,11 +343,11 @@ function Write-ProgressHeader {
         [string]$Subtitle = ""
     )
     
-    $separator = "═" * 90
+    $separator = "=" * 90
     Write-Host "`n$separator" -ForegroundColor DarkCyan
-    Write-Host "  🎯 $Title" -ForegroundColor White -BackgroundColor DarkBlue
+    Write-Host "  [TARGET] $Title" -ForegroundColor White -BackgroundColor DarkBlue
     if ($Subtitle) {
-        Write-Host "  📝 $Subtitle" -ForegroundColor Cyan
+        Write-Host "  [NOTE] $Subtitle" -ForegroundColor Cyan
     }
     Write-Host "$separator`n" -ForegroundColor DarkCyan
 }
@@ -388,7 +388,7 @@ function Start-OperationTimer {
     }
     
     $script:Metrics.Operations[$OperationName].StartTime = Get-Date
-    Write-EnhancedLog "🚀 Starting: $OperationName" -Level PROGRESS
+    Write-EnhancedLog "[START] Starting: $OperationName" -Level PROGRESS
 }
 
 function Stop-OperationTimer {
@@ -1748,12 +1748,12 @@ function New-EnhancedClientSecret {
         
         # Display secret on screen for manual capture
         Write-Host "`n" -NoNewline
-        Write-Host "════════════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "================================================================================" -ForegroundColor Cyan
         Write-Host "                              CLIENT SECRET VALUE                                " -ForegroundColor White -BackgroundColor DarkGreen
-        Write-Host "════════════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "================================================================================" -ForegroundColor Cyan
         Write-Host "`nCOPY THIS SECRET NOW - IT CANNOT BE RETRIEVED LATER:" -ForegroundColor Yellow
         Write-Host "`n$($clientSecret.SecretText)`n" -ForegroundColor White -BackgroundColor DarkBlue
-        Write-Host "════════════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "================================================================================" -ForegroundColor Cyan
         Write-Host "`nPress Enter after you have copied the secret..." -ForegroundColor Yellow
         Read-Host
         
@@ -2117,9 +2117,9 @@ PowerShell: $($PSVersionTable.PSVersion)
     
     # Display summary information
     Write-Host "`n" -NoNewline
-    Write-Host "════════════════════════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host "================================================================================" -ForegroundColor Green
     Write-Host "                         SETUP COMPLETED SUCCESSFULLY                            " -ForegroundColor White -BackgroundColor DarkGreen
-    Write-Host "════════════════════════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host "================================================================================" -ForegroundColor Green
     Write-Host "`nCredentials saved to: $EncryptedOutputPath" -ForegroundColor Cyan
     Write-Host "Log file: $LogPath" -ForegroundColor Cyan
     Write-Host "`nPress Enter to close this window..." -ForegroundColor Yellow

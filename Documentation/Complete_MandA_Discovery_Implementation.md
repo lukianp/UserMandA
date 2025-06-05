@@ -90,7 +90,7 @@ MandA-Orchestrator.ps1
 **Key Features**:
 - Location-independent path resolution using `$script:SuiteRoot`
 - Dynamic module loading based on configuration
-- Phase-based execution (Discovery → Processing → Export)
+- Phase-based execution (Discovery -> Processing -> Export)
 - Comprehensive error handling and recovery
 - Progress tracking and metrics collection
 
@@ -575,15 +575,15 @@ $script:ProgressState = @{
            └── Store Context
 
 3. Connect Services
-   └── Graph → Azure → Exchange
+   └── Graph -> Azure -> Exchange
        └── Test Connectivity
            └── Report Status
 
 4. Execute Discovery
    └── For Each Enabled Source:
-       ├── AD Discovery → ADUsers.csv, Groups.csv, etc.
-       ├── Graph Discovery → GraphUsers.csv, Devices.csv, etc.
-       ├── GPO Discovery → GPOData.csv, DriveMappings.csv, etc.
+       ├── AD Discovery -> ADUsers.csv, Groups.csv, etc.
+       ├── Graph Discovery -> GraphUsers.csv, Devices.csv, etc.
+       ├── GPO Discovery -> GPOData.csv, DriveMappings.csv, etc.
        └── [Other Sources]
 
 5. Store Raw Data

@@ -35,7 +35,7 @@ function Show-SectionHeader {
         [string]$Subtitle = "",
 
         [Parameter(Mandatory=$false)]
-        [string]$Icon = "🚧", # Default icon for general sections
+        [string]$Icon = "[PROGRESS]", # Default icon for general sections
 
         [Parameter(Mandatory=$false)]
         [PSCustomObject]$Context # For Write-MandALog, expected to contain .Config.environment.logging
@@ -89,7 +89,7 @@ function Show-StatusTable {
     # FAULT 7 principle: Check for Write-MandALog.
     if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
         # Use Show-SectionHeader for the title for consistency, or Write-MandALog directly
-        Show-SectionHeader -Title $TableTitle -Icon "📊" -Context $Context 
+        Show-SectionHeader -Title $TableTitle -Icon "[TABLE]" -Context $Context 
         
         if ($null -eq $StatusData -or $StatusData.Keys.Count -eq 0) {
             Write-MandALog -Message "  No status data to display for '$TableTitle'." -Level "INFO" -Component "Display" -Context $Context

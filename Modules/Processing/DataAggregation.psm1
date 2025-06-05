@@ -62,9 +62,9 @@ function Import-RawDataSources {
     $LogDebug = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "DEBUG" -Component "DataAggregation" -Context $Context }
     $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
 
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     & $LogInfo "Loading raw data sources from: $RawDataPath"
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     
     $dataSources = @{}
     $loadStats = @{
@@ -156,7 +156,7 @@ function Import-RawDataSources {
         Write-Progress -Activity "Importing Raw Data Sources" -Completed
     }
 
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     & $LogInfo "Data source loading completed:"
     & $LogInfo "  Files processed: $($csvFiles.Count)"
     & $LogSuccess "  Successfully loaded: $($loadStats.Successful)"
@@ -164,7 +164,7 @@ function Import-RawDataSources {
     & $LogInfo ("  Empty files: $($loadStats.Empty)") -LevelParam $(if ($loadStats.Empty -gt 0) { "WARN" } else { "INFO" })
     & $LogInfo "  Total records imported: $($loadStats.TotalRecords)"
     & $LogInfo "  Total unique sources (after mapping): $($dataSources.Keys.Count)"
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     
     Invoke-DataSourceAnalysis -DataSources $dataSources -Context $Context
     
@@ -271,7 +271,7 @@ function Invoke-DataSourceAnalysis {
     $LogError = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "ERROR" -Component "DataAggregation" -Context $Context }
 
     & $LogInfo "`nData Source Analysis:" 
-    & $LogInfo "────────────────────" 
+    & $LogInfo "--------------------" 
     
     $userSourceKeys = @('ActiveDirectory_Users', 'Graph_Users', 'Exchange_MailboxUsers', 'ADUsers', 'AADUsers', 'ExchangeUsers')
     $foundUserSourcesCount = 0
@@ -289,7 +289,7 @@ function Invoke-DataSourceAnalysis {
     }
     
     # ... (Similar logic for device, group, relationship, license data, ensuring to use @().Count for arrays) ...
-    & $LogInfo "────────────────────"
+    & $LogInfo "--------------------"
 }
 
 #===============================================================================
@@ -308,9 +308,9 @@ function Merge-UserProfiles {
     $LogWarn = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "WARN" -Component "DataAggregation" -Context $Context }
     $LogDebug = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "DEBUG" -Component "DataAggregation" -Context $Context }
 
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     & $LogInfo "Starting user profile aggregation and deduplication"
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     
     $canonicalUsers = @{}
     $mergeStats = @{ TotalProcessed = 0; Duplicates = 0; MergeConflicts = 0; SourceContributions = @{} }
@@ -357,7 +357,7 @@ function Merge-UserProfiles {
     & $LogInfo "Performing post-merge enrichment..."
     $enrichmentStats = Invoke-UserEnrichment -Users $canonicalUsers -DataSources $DataSources -Context $Context
     
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     & $LogInfo "User Profile Merge Summary:"
     & $LogSuccess "  Total unique users: $($canonicalUsers.Keys.Count)"
     & $LogInfo "  Total records processed: $($mergeStats.TotalProcessed)"
@@ -367,7 +367,7 @@ function Merge-UserProfiles {
     if ($enrichmentStats) {
         & $LogInfo "  Enrichment stats - Mailboxes: $($enrichmentStats.MailboxDataAdded), Guests: $($enrichmentStats.GuestUsersIdentified)"
     }
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     
     $script:AggregationStats.MergeOperations += $mergeStats.Duplicates
     
@@ -389,9 +389,9 @@ function Merge-DeviceProfiles {
     $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
     $LogWarn = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "WARN" -Component "DataAggregation" -Context $Context }
 
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     & $LogInfo "Starting device profile aggregation"
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     
     $canonicalDevices = @{}
     $mergeStats = @{ TotalProcessed = 0; Duplicates = 0; SourceContributions = @{} }
@@ -434,13 +434,13 @@ function Merge-DeviceProfiles {
     & $LogInfo "Performing device enrichment..."
     Invoke-DeviceEnrichment -Devices $canonicalDevices -Context $Context
     
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     & $LogInfo "Device Profile Merge Summary:"
     & $LogSuccess "  Total unique devices: $($canonicalDevices.Keys.Count)"
     & $LogInfo "  Total records processed: $($mergeStats.TotalProcessed)"
     & $LogInfo "  Duplicate records merged: $($mergeStats.Duplicates)"
     & $LogInfo "  Multi-source devices: $(($canonicalDevices.Values | Where-Object { $_.MergeCount -gt 1 }).Count)"
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     
     $script:AggregationStats.MergeOperations += $mergeStats.Duplicates
     
@@ -470,10 +470,10 @@ function New-RelationshipGraph {
     $LogInfo = { param($MessageParam, $LevelParam="INFO") Write-MandALog -Message $MessageParam -Level $LevelParam -Component "DataAggregation" -Context $Context }
     $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
 
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     & $LogInfo "Building comprehensive relationship graph"
     & $LogInfo "  Processing: $($Users.Count) users, $(if($Devices){$Devices.Count}else{0}) devices"
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     
     $relationshipStats = @{ UserDeviceLinks = 0; UserGroupLinks = 0; UserLicenseLinks = 0; UserManagerLinks = 0; UserTeamLinks = 0; TotalRelationships = 0 }
     $userLookup = @{}; $Users | ForEach-Object { if ($_.UserPrincipalName) { $userLookup[$_.UserPrincipalName.ToLower()] = $_ } }
@@ -533,7 +533,7 @@ function New-RelationshipGraph {
     # ... (Similar robust mapping for Licenses, Managers, Teams, ensuring properties are checked and UPNs lowercased) ...
 
     $relationshipStats.TotalRelationships = $relationshipStats.UserDeviceLinks + $relationshipStats.UserGroupLinks + $relationshipStats.UserLicenseLinks + $relationshipStats.UserManagerLinks + $relationshipStats.UserTeamLinks
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     # ... (rest of summary logging) ...
     $script:AggregationStats.RelationshipsCreated = $relationshipStats.TotalRelationships
     return $Users
@@ -746,9 +746,9 @@ function Export-ProcessedData {
     $LogInfo = { param($MessageParam, $LevelParam="INFO") Write-MandALog -Message $MessageParam -Level $LevelParam -Component "DataAggregation" -Context $Context }
     $LogSuccess = { param($MessageParam) Write-MandALog -Message $MessageParam -Level "SUCCESS" -Component "DataAggregation" -Context $Context }
 
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     & $LogInfo "Exporting processed data to: $ProcessedDataPath"
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     
     $exportStats = @{ FilesExported = 0; RecordsExported = 0 }
     
@@ -841,9 +841,9 @@ function Export-ProcessedData {
     $summaryData | ConvertTo-Json -Depth 5 | Set-Content -Path $summaryFile -Encoding UTF8 # Reduced depth for summary
     & $LogSuccess "  [OK] Exported AggregationSummary.json"
     
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     & $LogInfo "Processed data export completed: $($exportStats.FilesExported) files, $($exportStats.RecordsExported) total records to '$ProcessedDataPath'"
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
     
     return $exportStats
 }
@@ -975,15 +975,15 @@ function Start-DataAggregation {
     $LogSuccess = { param($MessageParam) & $LogInfo $MessageParam "SUCCESS" }
     $LogWarn = { param($MessageParam) & $LogInfo $MessageParam "WARN" }
 
-    & $LogHeader "═══════════════════════════════════════════════════════════════════════"
+    & $LogHeader "======================================================================="
     & $LogHeader "            STARTING DATA AGGREGATION PHASE"
-    & $LogHeader "═══════════════════════════════════════════════════════════════════════"
+    & $LogHeader "======================================================================="
     & $LogInfo "Configuration:"
     & $LogInfo "  Company: $($Configuration.metadata.companyName)"
     & $LogInfo "  Raw data path: $rawDataPath"
     & $LogInfo "  Output path: $processedDataPath"
     & $LogInfo "  Start time: $($script:AggregationStats.StartTime)"
-    & $LogInfo "═══════════════════════════════════════════════════════════════════════"
+    & $LogInfo "======================================================================="
 
     try {
         # Step 1: Load all raw data
@@ -1036,9 +1036,9 @@ function Start-DataAggregation {
 
         # Final summary
         & $LogInfo ""
-        & $LogHeader "═══════════════════════════════════════════════════════════════════════"
+        & $LogHeader "======================================================================="
         & $LogHeader "            DATA AGGREGATION COMPLETED SUCCESSFULLY"
-        & $LogHeader "═══════════════════════════════════════════════════════════════════════"
+        & $LogHeader "======================================================================="
         & $LogInfo "Summary:"
         & $LogInfo "  Duration: $($duration.ToString('mm\:ss'))"
         & $LogInfo "  Source files processed: $($script:AggregationStats.TotalSourceFiles)"
@@ -1048,7 +1048,7 @@ function Start-DataAggregation {
         & $LogInfo "  Data quality issues: $($script:AggregationStats.DataQualityIssues)" -LevelParam $(if ($script:AggregationStats.DataQualityIssues -gt 0) { "WARN" } else { "INFO" })
         & $LogInfo "  Warnings: $($script:AggregationStats.Warnings.Count)" -LevelParam $(if ($script:AggregationStats.Warnings.Count -gt 0) { "WARN" } else { "INFO" })
         & $LogInfo "  Errors: $($script:AggregationStats.Errors.Count)" -LevelParam $(if ($script:AggregationStats.Errors.Count -gt 0) { "ERROR" } else { "INFO" })
-        & $LogHeader "═══════════════════════════════════════════════════════════════════════"
+        & $LogHeader "======================================================================="
 
         # Store aggregated data in context if needed by other modules
         try {
@@ -1077,9 +1077,9 @@ function Start-DataAggregation {
         $script:AggregationStats.EndTime = Get-Date
         $script:AggregationStats.Errors.Add("Fatal error: $($_.Exception.Message)") | Out-Null
         
-        & $LogError "═══════════════════════════════════════════════════════════════════════"
+        & $LogError "======================================================================="
         & $LogError "            DATA AGGREGATION FAILED"
-        & $LogError "═══════════════════════════════════════════════════════════════════════"
+        & $LogError "======================================================================="
         & $LogError "ERROR: A critical error occurred during data aggregation: $($_.Exception.Message)"
         & $LogDebug "Stack Trace: $($_.ScriptStackTrace)"
         
