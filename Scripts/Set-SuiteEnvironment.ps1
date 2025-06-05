@@ -14,6 +14,9 @@
     Version: 5.0.0
     CRITICAL: This must be sourced by ALL suite scripts before any operations
 #>
+
+
+
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
@@ -22,6 +25,16 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$CompanyName
 )
+
+
+# Place this at the TOP of Scripts\Set-SuiteEnvironment.ps1
+if (-not (Get-Command Get-OrElse -ErrorAction SilentlyContinue)) {
+    function global:Get-OrElse {
+        param($Value, $Default)
+        if ($null -ne $Value) { return $Value } else { return $Default }
+    }
+    Write-Host "[Set-SuiteEnvironment] global:Get-OrElse defined." -ForegroundColor Green
+}
 
 # Ensure clean execution
 $ErrorActionPreference = "Stop"
