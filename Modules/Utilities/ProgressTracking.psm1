@@ -1,5 +1,5 @@
 ﻿# -*- coding: utf-8-bom -*-
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Provides functions for tracking the progress and performance metrics of operations

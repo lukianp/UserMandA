@@ -263,7 +263,13 @@ function Load-DiscoveryModules {
     Write-OrchestratorLog -Message "Loading discovery modules..." -Level "INFO"
     
     # FIX: Properly handle enabledSources configuration
-    $enabledSources = $global:MandA.Config.discovery.enabledSources
+    if ($enabledSources -is [System.Collections.Hashtable]) {
+    $enabledSources = @($enabledSources.Keys)
+} elseif ($enabledSources -is [PSCustomObject]) {
+    $enabledSources = @($enabledSources.PSObject.Properties.Name)
+} elseif ($enabledSources -isnot [array]) {
+    $enabledSources = @($enabledSources)
+}
     
     Write-OrchestratorLog -Message "Raw enabledSources type: $($enabledSources.GetType().FullName)" -Level "DEBUG" -DebugOnly
     Write-OrchestratorLog -Message "Raw enabledSources content: $($enabledSources | ConvertTo-Json -Compress)" -Level "DEBUG" -DebugOnly
