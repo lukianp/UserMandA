@@ -1,17 +1,34 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    M&A Discovery Suite - Main Orchestrator (Enhanced Version 5.5.10)
+    M&A Discovery Suite - Main Orchestrator (Enhanced Version 5.6.0)
 .DESCRIPTION
     Unified orchestrator for discovery, processing, and export with improved
-    state management, error handling, and parallel processing support.
-    This version expects Get-OrElse to be globally defined by Set-SuiteEnvironment.ps1
-    and includes an improved Import-ModuleWithManifest strategy and string formatting fixes.
+    state management, error handling, parallel processing support, and context handling.
+    This version incorporates fixes for issues identified in FAULTs 2-10, 13-15, 17-18, 20.
 .NOTES
     Author: Enhanced Version
-    Version: 5.5.10
+    Version: 5.6.0
     Created: 2025-01-03
-    Last Modified: 2025-06-05
+    Last Modified: 2025-06-05 (Incorporating fixes)
+
+    Key Fixes Implemented:
+    - FAULT 2 & 3 (Get-OrElse & MandAContext): Relies on Set-SuiteEnvironment.ps1 for global Get-OrElse.
+      MandAContext constructor improved with null checks for $global:MandA.
+    - FAULT 4 (Import-ModuleWithManifest Context): Retained $global:_MandALoadingContext pattern,
+      emphasizing Set-SuiteEnvironment.ps1 must run first. Added post-load module validation.
+    - FAULT 5 (Parallel Runspace Context): Passes serialized data ($PassedConfig, $PassedPaths).
+      Runspace recreates a basic context. Discovery modules need to be self-sufficient or load utils.
+    - FAULT 6 (String Formatting Error): Corrected -f operator usage.
+    - FAULT 7 (Write-MandALog Before Initialization): Uses Write-Host then switches to Write-MandALog.
+    - FAULT 8 (Module Path Construction): Improved fallback logic for module paths.
+    - FAULT 9 (ErrorCollector Not Initialized): Class definitions placed at the top of the script.
+    - FAULT 13 (Module Manifest vs PSM1 Loading): Added post-import module validation.
+    - FAULT 14 (Discovery Module Function Names): Added function existence check.
+    - FAULT 15 (Runspace Error Collection): Added null check for exception object.
+    - FAULT 17 (Mode Parameter Processing): Added logging for AzureOnly mode change.
+    - FAULT 18 (Export Function Mapping): Added function existence check in Get-ExportFunctionName.
+    - FAULT 20 (Authentication Bypass): Added stricter check for auth failure.
 #>
 
 [CmdletBinding()]
@@ -33,18 +50,97 @@ param(
     [switch]$ValidateOnly,
     
     [Parameter(Mandatory=$false)]
-    [int]$ParallelThrottle = 5
+    [int]$ParallelThrottle = 5 # Note: Actual throttle is primarily from config.
 )
 
 # CRITICAL EXPECTATION: 
-# Set-SuiteEnvironment.ps1 MUST define the following function in the global scope 
-# BEFORE this orchestrator runs:
-#   function global:Get-OrElse { param($Value, $Default) if ($null -ne $Value) { return $Value } else { return $Default } }
-# This is essential for any part of the suite (including modules loaded herein) that might use Get-OrElse.
+# Set-SuiteEnvironment.ps1 MUST define 'global:Get-OrElse' BEFORE this orchestrator runs.
 
 #===============================================================================
-#                       CLASSES AND TYPES
+#                       CLASSES AND TYPES (FAULT 9 FIX: Define classes first)
 #===============================================================================
+class DiscoveryErrorCollector {
+    [System.Collections.Generic.List[PSObject]]$Errors
+    [System.Collections.Generic.List[PSObject]]$Warnings
+    [System.Collections.Generic.Dictionary[string,int]]$ErrorCounts
+
+    DiscoveryErrorCollector() {
+        $this.Errors = [System.Collections.Generic.List[PSObject]]::new()
+        $this.Warnings = [System.Collections.Generic.List[PSObject]]::new()
+        $this.ErrorCounts = [System.Collections.Generic.Dictionary[string,int]]::new()
+    }
+
+    [void]AddError([string]$Source, [string]$Message, [System.Exception]$ExceptionObject) {
+        $errorEntry = [PSCustomObject]@{
+            Timestamp = Get-Date
+            Source = $Source
+            Message = $Message
+            # FAULT 15 FIX: Handle potential null exception object more gracefully, though a catch block should always provide one.
+            ExceptionType = if ($null -ne $ExceptionObject) { $ExceptionObject.GetType().FullName } else { "Unknown (Exception object was null)" }
+            ExceptionMessage = if ($null -ne $ExceptionObject) { $ExceptionObject.Message } else { "No exception details provided" }
+            StackTrace = if ($null -ne $ExceptionObject) { $ExceptionObject.ScriptStackTrace } else { $null }
+        }
+        $this.Errors.Add($errorEntry)
+        if (-not $this.ErrorCounts.ContainsKey($Source)) { $this.ErrorCounts[$Source] = 0 }
+        $this.ErrorCounts[$Source]++
+    }
+
+    [void]AddWarning([string]$Source, [string]$Message) {
+        $this.Warnings.Add([PSCustomObject]@{ Timestamp = Get-Date; Source = $Source; Message = $Message })
+    }
+
+    [bool]HasErrors() { return $this.Errors.Count -gt 0 }
+
+    [bool]HasCriticalErrors() {
+        # Define what constitutes a critical error source
+        $criticalErrorSourcesPattern = "Critical|Core|ModuleLoader|Environment|Authentication|OrchestratorCore"
+        return ($this.Errors | Where-Object { $_.Source -match $criticalErrorSourcesPattern }).Count -gt 0
+    }
+
+    [string]GetSummary() {
+        $summary = "Errors: $($this.Errors.Count), Warnings: $($this.Warnings.Count)"
+        if ($this.ErrorCounts.Count -gt 0) {
+            $summary += "`nError breakdown by source:"
+            foreach ($sourceKey in $this.ErrorCounts.Keys | Sort-Object) {
+                $summary += "`n  - $sourceKey - $($this.ErrorCounts[$sourceKey])"
+            }
+        }
+        return $summary
+    }
+
+    [void]ExportToFile([string]$FilePath) {
+        # Ensure directory exists
+        $dir = Split-Path $FilePath -Parent
+        if (-not (Test-Path $dir)) { New-Item -Path $dir -ItemType Directory -Force | Out-Null }
+
+        $cleanedErrors = $this.Errors | ForEach-Object {
+            @{
+                Timestamp = $_.Timestamp
+                Source = $_.Source
+                Message = $_.Message
+                ExceptionMessage = $_.ExceptionMessage
+                ExceptionType = $_.ExceptionType
+                StackTrace = $_.StackTrace # Keep stack trace for better debugging
+            }
+        }
+        $report = @{
+            Summary = $this.GetSummary()
+            GeneratedAt = Get-Date
+            Errors = $cleanedErrors
+            Warnings = $this.Warnings
+            ErrorCounts = $this.ErrorCounts
+        }
+        try {
+            $report | ConvertTo-Json -Depth 10 -Compress | Set-Content -Path $FilePath -Encoding UTF8 -Force
+        } catch {
+            # Fallback to simple text if JSON export fails
+            $textReport = "Error Report Generated: $(Get-Date)`nSummary: $($this.GetSummary())`n`nErrors:`n$($cleanedErrors | ForEach-Object { "[$($_.Timestamp)] $($_.Source): $($_.Message) `n  Exception: $($_.ExceptionMessage)" } | Out-String)`n`nWarnings:`n$($this.Warnings | ForEach-Object { "[$($_.Timestamp)] $($_.Source): $($_.Message)" } | Out-String)"
+            $textReportFilePath = $FilePath -replace '\.json$', '.txt'
+            $textReport | Set-Content -Path $textReportFilePath -Encoding UTF8 -Force
+            Write-Warning "Failed to export error report as JSON. Saved as text: $textReportFilePath. Error: $($_.Exception.Message)"
+        }
+    }
+}
 
 class MandAContext {
     [hashtable]$Paths
@@ -54,51 +150,76 @@ class MandAContext {
     [bool]$ModulesChecked
     [DiscoveryErrorCollector]$ErrorCollector
     [OrchestratorState]$OrchestratorState
-    
-    MandAContext([hashtable]$initialConfig, [string]$currentCompanyName) {
-        $this.Config = ConvertTo-HashtableRecursive -InputObject $initialConfig
-        $this.Version = "5.5.10" 
+    [string]$CompanyName # Added for clarity and direct access
+
+    MandAContext([hashtable]$initialConfig, [string]$currentCompanyNameParam) {
+        # FAULT 3 FIX: Add null checks and defensive programming
+        if ($null -eq $initialConfig) { throw "MandAContext: initialConfig cannot be null." }
+        if ([string]::IsNullOrWhiteSpace($currentCompanyNameParam)) { throw "MandAContext: currentCompanyNameParam cannot be null or empty." }
+
+        $this.Config = ConvertTo-HashtableRecursive -InputObject $initialConfig # Assumes ConvertTo-HashtableRecursive is available
+        $this.Version = "5.6.0" 
         $this.StartTime = Get-Date
         $this.ModulesChecked = $false
         $this.ErrorCollector = [DiscoveryErrorCollector]::new()
         $this.OrchestratorState = [OrchestratorState]::new()
-        
-        if ($null -ne $global:MandA -and $null -ne $global:MandA.Paths -and $global:MandA.CompanyName -eq $currentCompanyName) {
-            Write-Verbose "MandAContext: Using paths from established global environment for company '$currentCompanyName'."
-            $this.Paths = $global:MandA.Paths.Clone() 
+        $this.CompanyName = $currentCompanyNameParam # Store the passed company name
+
+        # FAULT 3 FIX: More robust check for $global:MandA and its properties.
+        # Get-OrElse is defined globally by Set-SuiteEnvironment.ps1.
+        if (($null -ne $global:MandA) -and `
+            ($global:MandA -is [hashtable]) -and `
+            ($global:MandA.ContainsKey('Paths')) -and ($null -ne $global:MandA.Paths) -and `
+            ($global:MandA.ContainsKey('CompanyName')) -and ($global:MandA.CompanyName -eq $currentCompanyNameParam)) {
+            
+            if ($global:MandA.Paths -is [hashtable]) {
+                $this.Paths = $global:MandA.Paths.Clone() 
+                 Write-Verbose "[MandAContext] Using paths from established global environment for company '$currentCompanyNameParam'."
+            } else {
+                Write-Warning "[MandAContext] global:MandA.Paths is not a hashtable. Initializing paths."
+                $this.InitializePaths($currentCompanyNameParam)
+            }
         } else {
-            Write-Verbose "MandAContext: Global environment not found or for different company. Initializing paths for '$currentCompanyName'."
-            $this.InitializePaths($currentCompanyName) 
+            if ($null -eq $global:MandA) {
+                Write-Verbose "[MandAContext] Global environment (\$global:MandA) not found. Initializing paths for '$currentCompanyNameParam'."
+            } elseif ($global:MandA.CompanyName -ne $currentCompanyNameParam) {
+                Write-Verbose "[MandAContext] Global environment company ('$($global:MandA.CompanyName)') differs from current ('$currentCompanyNameParam'). Re-initializing paths."
+            } else {
+                 Write-Verbose "[MandAContext] Global environment incomplete or paths missing. Initializing paths for '$currentCompanyNameParam'."
+            }
+            $this.InitializePaths($currentCompanyNameParam) 
         }
     }
     
-    [void]InitializePaths([string]$currentCompanyName) {
+    [void]InitializePaths([string]$currentCompanyNameParam) {
         $suiteRoot = $null
-        if ($PSScriptRoot) { 
-            $suiteRoot = Split-Path $PSScriptRoot -Parent
-        } elseif ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.SuiteRoot) {
+        # Try to get SuiteRoot from $global:MandA first if it was set by Set-SuiteEnvironment.ps1
+        if ($null -ne $global:MandA -and ($global:MandA -is [hashtable]) -and $global:MandA.ContainsKey('Paths') -and $null -ne $global:MandA.Paths -and $global:MandA.Paths.ContainsKey('SuiteRoot')) {
             $suiteRoot = $global:MandA.Paths.SuiteRoot
+        } elseif ($PSScriptRoot) { 
+            # Fallback to PSScriptRoot if this script (Orchestrator) is in Core, its parent is SuiteRoot
+            $suiteRoot = Split-Path $PSScriptRoot -Parent 
         } else {
-            try { $suiteRoot = Split-Path (Get-Location).Path -Parent } catch { $suiteRoot = ".\" }
-            Write-Warning "MandAContext.InitializePaths: Could not reliably determine SuiteRoot. Using '$suiteRoot'."
+            # Last resort, less reliable
+            try { $suiteRoot = Split-Path (Get-Location).Path -Parent } catch { $suiteRoot = Resolve-Path ".\" } # Use Resolve-Path for current dir
+            Write-Warning "[MandAContext.InitializePaths] Could not reliably determine SuiteRoot from PSScriptRoot or global context. Using '$suiteRoot'."
         }
 
-        $profilesBasePath = "C:\MandADiscovery\Profiles" 
-        if ($this.Config -and $this.Config.environment -and -not [string]::IsNullOrWhiteSpace($this.Config.environment.profilesBasePath)) {
-            $profilesBasePath = $this.Config.environment.profilesBasePath
-        } elseif ($global:MandA -and $global:MandA.Config -and $global:MandA.Config.environment -and -not [string]::IsNullOrWhiteSpace($global:MandA.Config.environment.profilesBasePath)) {
-            $profilesBasePath = $global:MandA.Config.environment.profilesBasePath
-        }
+        # Get-OrElse should be available globally from Set-SuiteEnvironment.ps1
+        $profilesBasePath = $this.Config.environment.profilesBasePath | global:Get-OrElse "C:\MandADiscovery\Profiles"
         
         $this.Paths = @{
             SuiteRoot = $suiteRoot
             ProfilesBasePath = $profilesBasePath
-            CompanyProfileRoot = Join-Path $profilesBasePath $currentCompanyName
+            CompanyProfileRoot = Join-Path $profilesBasePath $currentCompanyNameParam
             Modules = Join-Path $suiteRoot "Modules"
             Utilities = Join-Path $suiteRoot "Modules\Utilities"
             Core = Join-Path $suiteRoot "Core"
             Scripts = Join-Path $suiteRoot "Scripts"
             Configuration = Join-Path $suiteRoot "Configuration"
+            Discovery = Join-Path $suiteRoot "Modules\Discovery" # Added for FAULT 8 fix
+            Processing = Join-Path $suiteRoot "Modules\Processing" # Added for FAULT 8 fix
+            Export = Join-Path $suiteRoot "Modules\Export" # Added for FAULT 8 fix
         }
         
         $this.Paths.RawDataOutput = Join-Path $this.Paths.CompanyProfileRoot "Raw"
@@ -107,560 +228,1227 @@ class MandAContext {
         $this.Paths.ExportOutput = Join-Path $this.Paths.CompanyProfileRoot "Exports"
         $this.Paths.TempPath = Join-Path $this.Paths.CompanyProfileRoot "Temp"
         
-        if ($null -ne $this.Config -and $null -ne $this.Config.environment) {
+        # Update the config in this context to reflect the resolved company profile root as the outputPath
+        if ($null -ne $this.Config -and $this.Config.ContainsKey('environment') -and ($this.Config.environment -is [hashtable])) {
             $this.Config.environment.outputPath = $this.Paths.CompanyProfileRoot
+            $this.Config.environment.tempPath = $this.Paths.TempPath # Also update tempPath in context's config
         } else {
-             Write-Warning "MandAContext.InitializePaths: $this.Config or $this.Config.environment is null. Cannot set outputPath in config."
+             Write-Warning "[MandAContext.InitializePaths] \$this.Config or \$this.Config.environment is null or not a hashtable. Cannot set outputPath in context config."
         }
     }
     
     [bool]ValidateContext() {
-        $required = @('SuiteRoot', 'CompanyProfileRoot', 'Modules', 'Utilities') 
-        foreach ($pathKey in $required) {
+        # Validate critical paths necessary for the orchestrator's operation
+        $requiredPathKeys = @('SuiteRoot', 'CompanyProfileRoot', 'Modules', 'Utilities', 'Core', 'Configuration', 'LogOutput', 'RawDataOutput', 'ProcessedDataOutput', 'ExportOutput', 'TempPath') 
+        foreach ($pathKey in $requiredPathKeys) {
             if (-not $this.Paths.ContainsKey($pathKey) -or [string]::IsNullOrWhiteSpace($this.Paths[$pathKey])) {
-                Write-Warning "MandAContext.ValidateContext: Failed validation for path key '$pathKey'. Value: '$($this.Paths[$pathKey])'"
+                Write-Warning "[MandAContext.ValidateContext] Critical path key '$pathKey' is missing or empty in Paths hashtable."
                 return $false
             }
-            if (-not (Test-Path $this.Paths[$pathKey] -ErrorAction SilentlyContinue)) {
-                if ($pathKey -in @('SuiteRoot', 'Modules', 'Utilities', 'Configuration', 'Core', 'Scripts')) {
-                    Write-Warning "MandAContext.ValidateContext: Critical path '$($this.Paths[$pathKey])' for '$pathKey' does not exist."
+            # For suite structure paths, they must exist. For output paths, they will be created.
+            if ($pathKey -in @('SuiteRoot', 'Modules', 'Utilities', 'Core', 'Configuration')) {
+                if (-not (Test-Path $this.Paths[$pathKey] -PathType Container -ErrorAction SilentlyContinue)) {
+                    Write-Warning "[MandAContext.ValidateContext] Critical suite structure path '$($this.Paths[$pathKey])' for '$pathKey' does not exist or is not a directory."
+                    return $false
                 }
             }
         }
+        if ($null -eq $this.Config) { Write-Warning "[MandAContext.ValidateContext] Config is null."; return $false }
+        if ($null -eq $this.ErrorCollector) { Write-Warning "[MandAContext.ValidateContext] ErrorCollector is null."; return $false }
+        if ($null -eq $this.OrchestratorState) { Write-Warning "[MandAContext.ValidateContext] OrchestratorState is null."; return $false }
+        
+        Write-Verbose "[MandAContext.ValidateContext] Context validation successful."
         return $true
     }
 }
 
 class OrchestratorState {
-    [int]$MaxExecutions = 5; [System.Collections.Generic.Stack[string]]$ExecutionStack; [System.Collections.Generic.Dictionary[string,int]]$PhaseExecutions
-    OrchestratorState() { $this.ExecutionStack = [System.Collections.Generic.Stack[string]]::new(); $this.PhaseExecutions = [System.Collections.Generic.Dictionary[string,int]]::new() }
-    [bool]CanExecute([string]$phase) { if ($this.ExecutionStack.Contains($phase)) { return $false }; if (-not $this.PhaseExecutions.ContainsKey($phase)) { $this.PhaseExecutions[$phase] = 0 }; return $this.PhaseExecutions[$phase] -lt $this.MaxExecutions }
-    [void]PushExecution([string]$phase) { $this.ExecutionStack.Push($phase); if (-not $this.PhaseExecutions.ContainsKey($phase)) { $this.PhaseExecutions[$phase] = 0 }; $this.PhaseExecutions[$phase]++ }
-    [void]PopExecution() { if ($this.ExecutionStack.Count -gt 0) { $null = $this.ExecutionStack.Pop() } }
+    [int]$MaxExecutions = 5
+    [System.Collections.Generic.Stack[string]]$ExecutionStack
+    [System.Collections.Generic.Dictionary[string,int]]$PhaseExecutions
+
+    OrchestratorState() {
+        $this.ExecutionStack = [System.Collections.Generic.Stack[string]]::new()
+        $this.PhaseExecutions = [System.Collections.Generic.Dictionary[string,int]]::new()
+    }
+
+    [bool]CanExecute([string]$phase) {
+        if ($this.ExecutionStack.Contains($phase)) { return $false } # Prevent re-entrancy
+        if (-not $this.PhaseExecutions.ContainsKey($phase)) { $this.PhaseExecutions[$phase] = 0 }
+        return $this.PhaseExecutions[$phase] -lt $this.MaxExecutions
+    }
+
+    [void]PushExecution([string]$phase) {
+        $this.ExecutionStack.Push($phase)
+        if (-not $this.PhaseExecutions.ContainsKey($phase)) { $this.PhaseExecutions[$phase] = 0 }
+        $this.PhaseExecutions[$phase]++
+    }
+
+    [void]PopExecution() {
+        if ($this.ExecutionStack.Count -gt 0) {
+            $null = $this.ExecutionStack.Pop()
+        }
+    }
     [string]GetExecutionPath() { return ($this.ExecutionStack.ToArray() | ForEach-Object { $_ }) -join ' -> ' }
 }
 
-class DiscoveryErrorCollector {
-    [System.Collections.Generic.List[PSObject]]$Errors; [System.Collections.Generic.List[PSObject]]$Warnings; [System.Collections.Generic.Dictionary[string,int]]$ErrorCounts
-    DiscoveryErrorCollector() { $this.Errors = [System.Collections.Generic.List[PSObject]]::new(); $this.Warnings = [System.Collections.Generic.List[PSObject]]::new(); $this.ErrorCounts = [System.Collections.Generic.Dictionary[string,int]]::new() }
-    [void]AddError([string]$Source, [string]$Message, [Exception]$Exception) { $errorEntry = [PSCustomObject]@{Timestamp = Get-Date; Source = $Source; Message = $Message; ExceptionType = if ($Exception) { $Exception.GetType().FullName } else { "Unknown" }; ExceptionMessage = if ($Exception) { $Exception.Message } else { $null }; StackTrace = if ($Exception) { $Exception.ScriptStackTrace } else { $null }}; $this.Errors.Add($errorEntry); if (-not $this.ErrorCounts.ContainsKey($Source)) { $this.ErrorCounts[$Source] = 0 }; $this.ErrorCounts[$Source]++ }
-    [void]AddWarning([string]$Source, [string]$Message) { $this.Warnings.Add([PSCustomObject]@{ Timestamp = Get-Date; Source = $Source; Message = $Message }) }
-    [bool]HasErrors() { return $this.Errors.Count -gt 0 }
-    [bool]HasCriticalErrors() { return ($this.Errors | Where-Object { $_.Source -match "Critical|Core|ModuleLoader|Environment|Authentication" }).Count -gt 0 }
-    [string]GetSummary() { $summary = "Errors: $($this.Errors.Count), Warnings: $($this.Warnings.Count)"; if ($this.ErrorCounts.Count -gt 0) { $summary += "`nError breakdown by source:"; foreach ($sourceKey in $this.ErrorCounts.Keys | Sort-Object) { $summary += "`n  - $sourceKey - $($this.ErrorCounts[$sourceKey])" }}; return $summary }
-    [void]ExportToFile([string]$FilePath) { $cleanedErrors = $this.Errors | ForEach-Object { @{ Timestamp = $_.Timestamp; Source = $_.Source; Message = $_.Message; ExceptionMessage = $_.ExceptionMessage; ExceptionType = $_.ExceptionType; StackTrace = $_.StackTrace } }; $report = @{ Summary = $this.GetSummary(); GeneratedAt = Get-Date; Errors = $cleanedErrors; Warnings = $this.Warnings; ErrorCounts = $this.ErrorCounts }; try { $report | ConvertTo-Json -Depth 10 -Compress | Set-Content -Path $FilePath -Encoding UTF8 } catch { $textReport = "Error Report Generated: $(Get-Date)`nSummary: $($this.GetSummary())`n`nErrors:`n$($cleanedErrors | ForEach-Object { "[$($_.Timestamp)] $($_.Source): $($_.Message)" } | Out-String)`n`nWarnings:`n$($this.Warnings | ForEach-Object { "[$($_.Timestamp)] $($_.Source): $($_.Message)" } | Out-String)"; $textReport | Set-Content -Path ($FilePath -replace '\.json$', '.txt') -Encoding UTF8 } }
-}
 
 #===============================================================================
 #                       INITIALIZATION
 #===============================================================================
-$ErrorActionPreference = "Stop"; $ProgressPreference = "Continue"; $script:Context = $null
-$script:AzureOnlySources = @("Azure","Graph","Intune","Licensing","ExternalIdentity","SharePoint","Teams","Exchange")
+# $ErrorActionPreference should be set by the calling script (QuickStart.ps1) or defaults to Stop.
+# Setting ProgressPreference to Continue is good.
+$ProgressPreference = "Continue" 
+$script:Context = $null # This will hold the MandAContext object for the current run.
+$script:AzureOnlySources = @("Azure","Graph","Intune","Licensing","ExternalIdentity","SharePoint","Teams","Exchange") # Used if Mode is AzureOnly
+
 
 #===============================================================================
 #                    UTILITY FUNCTIONS
 #===============================================================================
-function Get-CompanySelection { [CmdletBinding()] param(); $profilesBasePath = "C:\MandADiscovery\Profiles"; if (-not (Test-Path $profilesBasePath)) { New-Item -Path $profilesBasePath -ItemType Directory -Force | Out-Null }; $existingProfiles = Get-ChildItem -Path $profilesBasePath -Directory -EA SilentlyContinue | Select-Object -ExpandProperty Name | Sort-Object; if ($existingProfiles.Count -gt 0) { Write-Host "`n=== Company Profile Selection ===" -ForegroundColor Cyan; Write-Host "Existing company profiles found:" -ForegroundColor Yellow; for ($i = 0; $i -lt $existingProfiles.Count; $i++) { Write-Host "  $($i + 1). $($existingProfiles[$i])" -ForegroundColor White }; Write-Host "  N. Create new company profile" -ForegroundColor Green; Write-Host ""; do { $selection = Read-Host "Select a profile (1-$($existingProfiles.Count)) or 'N' for new"; if ($selection -eq 'N' -or $selection -eq 'n') { $companyNameInput = Read-Host "Enter new company name"; if ([string]::IsNullOrWhiteSpace($companyNameInput)) { Write-Host "Company name cannot be empty" -ForegroundColor Red; continue }; return $companyNameInput -replace '[<>:"/\\|?*]', '_' } elseif ($selection -match '^\d+$') { $index = [int]$selection - 1; if ($index -ge 0 -and $index -lt $existingProfiles.Count) { return $existingProfiles[$index] } }; Write-Host "Invalid selection. Please try again." -ForegroundColor Red } while ($true) } else { Write-Host "`nNo existing company profiles found." -ForegroundColor Yellow; $companyNameInput = Read-Host "Enter company name for new profile"; if ([string]::IsNullOrWhiteSpace($companyNameInput)) { throw "Company name cannot be empty" }; return $companyNameInput -replace '[<>:"/\\|?*]', '_' } }
-function ConvertTo-HashtableRecursive { param([Parameter(ValueFromPipeline)] $InputObject); process { if ($null -eq $InputObject) { return $null }; if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable]) { return ,@($InputObject | ForEach-Object { ConvertTo-HashtableRecursive $_ }) }; if ($InputObject -is [PSCustomObject]) { $hash = @{}; $InputObject.PSObject.Properties | ForEach-Object { $hash[$_.Name] = ConvertTo-HashtableRecursive $_.Value }; return $hash }; return $InputObject } }
-function Test-ModuleConfiguration { param([hashtable]$Configuration, [string]$ModuleName); $requiredSettings = @{ 'ActiveDirectory' = @('environment.domainController'); 'Azure' = @(); 'Exchange' = @('authentication.authenticationMethod'); 'Graph' = @(); 'EnvironmentDetection' = @('environment.outputPath') }; if (-not $requiredSettings.ContainsKey($ModuleName)) { return $true }; $missing = @(); foreach ($setting in $requiredSettings[$ModuleName]) { $value = $Configuration; $valid = $true; foreach ($part in $setting.Split('.')) { if ($null -eq $value -or -not $value.ContainsKey($part)) { $valid = $false; break }; $value = $value[$part] }; if (-not $valid -or $null -eq $value -or ($value -is [string] -and [string]::IsNullOrWhiteSpace($value))) { $missing += $setting } }; if ($missing.Count -gt 0) { throw "Missing required configuration for $ModuleName module: $($missing -join ', ')" }; return $true }
+# Moved to Set-SuiteEnvironment.ps1: global:Get-OrElse
+# Moved to Set-SuiteEnvironment.ps1: Update-TypeData for HashtableContains
+
+function ConvertTo-HashtableRecursive {
+    # This utility is also defined in Set-SuiteEnvironment.ps1.
+    # It's redefined here for potential standalone execution or if Set-SuiteEnvironment changes.
+    # Ensure this version is compatible if used.
+    param([Parameter(ValueFromPipeline)] $InputObject)
+    process {
+        if ($null -eq $InputObject) { return $null }
+        if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable]) {
+            return ,@($InputObject | ForEach-Object { ConvertTo-HashtableRecursive $_ })
+        }
+        if ($InputObject -is [PSCustomObject]) {
+            $hash = @{} # Use standard hashtable
+            $InputObject.PSObject.Properties | ForEach-Object { $hash[$_.Name] = ConvertTo-HashtableRecursive $_.Value }
+            return $hash
+        }
+        return $InputObject
+    }
+}
+
+function Test-ModuleConfiguration {
+    # Validates if essential configuration settings for a given module are present.
+    param(
+        [hashtable]$Configuration, # The main suite configuration
+        [string]$ModuleName       # The name of the discovery source/module
+    )
+    # Define required settings per module. Key: ModuleName, Value: array of dot-notation paths to settings.
+    $requiredSettings = @{
+        'ActiveDirectory' = @('environment.domainController') # Example: AD needs a DC.
+        'Azure'           = @() # Example: Azure might not need specific config beyond auth.
+        'Exchange'        = @('authentication.authenticationMethod') # Example
+        'Graph'           = @()
+        'EnvironmentDetection' = @('environment.outputPath') # Example
+        # Add other modules and their absolutely critical config keys here.
+    }
+
+    if (-not $requiredSettings.ContainsKey($ModuleName)) {
+        Write-Verbose "[Test-ModuleConfiguration] No specific configuration requirements defined for module '$ModuleName'."
+        return $true # No specific requirements defined for this module
+    }
+
+    $missing = @()
+    foreach ($settingPath in $requiredSettings[$ModuleName]) {
+        $currentValue = $Configuration
+        $pathParts = $settingPath.Split('.')
+        $isValidPath = $true
+        foreach ($part in $pathParts) {
+            if ($null -eq $currentValue -or -not ($currentValue -is [hashtable]) -or -not $currentValue.ContainsKey($part)) {
+                $isValidPath = $false
+                break
+            }
+            $currentValue = $currentValue[$part]
+        }
+
+        if (-not $isValidPath -or $null -eq $currentValue -or ($currentValue -is [string] -and [string]::IsNullOrWhiteSpace($currentValue))) {
+            $missing += $settingPath
+        }
+    }
+
+    if ($missing.Count -gt 0) {
+        # Use Write-MandALog if available, otherwise Write-Warning
+        $errorMessage = "Missing or invalid required configuration for '$ModuleName' module: $($missing -join ', '). Check default-config.json."
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+            Write-MandALog -Message $errorMessage -Level "ERROR" -Context $script:Context
+        } else {
+            Write-Warning $errorMessage
+        }
+        # Depending on policy, you might throw here or let the caller decide.
+        # For now, this function just reports. The calling discovery loader can decide to skip the module.
+        return $false # Indicates missing configuration
+    }
+    return $true
+}
+
 
 function Import-ModuleWithManifest {
     param( 
         [string]$ModulePathToImport, 
-        [MandAContext]$CurrentContext 
+        [MandAContext]$CurrentContext # The main orchestrator context
     )
+    # FAULT 4 FIX: Using $global:_MandALoadingContext is kept as an existing pattern,
+    # but it's acknowledged as not ideal. Modules should ideally use $global:MandA after loading.
+
     if ([string]::IsNullOrWhiteSpace($ModulePathToImport)) {
-        Write-MandALog "Import-ModuleWithManifest: ModulePathToImport is null or empty." -Level "ERROR" -Context $CurrentContext; return $false
+        Write-MandALog "Import-ModuleWithManifest: ModulePathToImport is null or empty." -Level "ERROR" -Context $CurrentContext
+        return $false
     }
-    Write-Host "[DEBUG IMM] Attempting to import: '$ModulePathToImport'" -ForegroundColor Gray
-    if (-not (Test-Path $ModulePathToImport)) {
-        Write-MandALog "Import-ModuleWithManifest: Module file not found: $ModulePathToImport" -Level "ERROR" -Context $CurrentContext; return $false
+
+    # Use Write-MandALog for debug messages if logging is initialized
+    $logFunc = if ($CurrentContext.Config.advancedSettings.debugMode) { 
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) { ${function:Write-MandALog} } else { ${function:Write-Host} }
+    } else { $null }
+
+    if ($logFunc) { $logFunc.Invoke("Attempting to import: '$ModulePathToImport'", "DEBUG", $CurrentContext) }
+
+
+    if (-not (Test-Path $ModulePathToImport -PathType Leaf)) { # Ensure it's a file
+        Write-MandALog "Import-ModuleWithManifest: Module file not found or is not a file: '$ModulePathToImport'" -Level "ERROR" -Context $CurrentContext
+        return $false
     }
+
     $moduleNameToLoad = [System.IO.Path]::GetFileNameWithoutExtension($ModulePathToImport)
     
+    # Check if module is already loaded (by name)
     if (Get-Module -Name $moduleNameToLoad -ErrorAction SilentlyContinue) {
-        Write-MandALog "Module '$moduleNameToLoad' is already loaded." -Level "DEBUG" -Context $CurrentContext
+        if ($logFunc) { $logFunc.Invoke("Module '$moduleNameToLoad' is already loaded.", "DEBUG", $CurrentContext) }
         return $true 
     }
 
     $moduleDirectory = Split-Path $ModulePathToImport -Parent
     if ([string]::IsNullOrWhiteSpace($moduleDirectory)) {
-        Write-MandALog "Import-ModuleWithManifest: Could not determine module directory for: $ModulePathToImport" -Level "ERROR" -Context $CurrentContext; return $false
+        Write-MandALog "Import-ModuleWithManifest: Could not determine module directory for: '$ModulePathToImport'" -Level "ERROR" -Context $CurrentContext
+        return $false
     }
     $manifestFullPath = Join-Path $moduleDirectory "$moduleNameToLoad.psd1"
     
+    # Prepare the context to be available during module import (e.g., for code in the .psm1 root scope)
+    # This is a common pattern, though it has limitations (not truly passing context into Import-Module).
+    # The module's own functions should ideally take $Context as a parameter or access $global:MandA.
+    $global:_MandALoadingContext = $CurrentContext # Make the full context available
+        
     try {
-        $loadingContextPaths = if ($CurrentContext -and $CurrentContext.Paths) { $CurrentContext.Paths } else { @{} }
-        $loadingContextConfig = if ($CurrentContext -and $CurrentContext.Config) { $CurrentContext.Config } else { @{} }
-        $loadingContextCompanyName = "UnknownCompany"
-        if ($CurrentContext -and $CurrentContext.Config -and $CurrentContext.Config.metadata -and $CurrentContext.Config.metadata.ContainsKey('companyName')) {
-            $loadingContextCompanyName = $CurrentContext.Config.metadata.companyName
-        } elseif ($CurrentContext -and $CurrentContext.CompanyName) { 
-             $loadingContextCompanyName = $CurrentContext.CompanyName
+        if (Test-Path $manifestFullPath -PathType Leaf) {
+            if ($logFunc) { $logFunc.Invoke("Importing manifest '$manifestFullPath' for module '$moduleNameToLoad'.", "DEBUG", $CurrentContext) }
+            Import-Module $manifestFullPath -Force -Global -ErrorAction Stop 
+        } else {
+            if ($logFunc) { $logFunc.Invoke("Manifest not found. Importing PSM1 '$ModulePathToImport' for module '$moduleNameToLoad'.", "DEBUG", $CurrentContext) }
+            Import-Module $ModulePathToImport -Force -Global -ErrorAction Stop 
         }
 
-        $loadingContextForModule = @{ 
-            Paths = $loadingContextPaths; Config = $loadingContextConfig; CompanyName = $loadingContextCompanyName 
+        # FAULT 13 FIX: Add post-import validation
+        $loadedModule = Get-Module -Name $moduleNameToLoad -ErrorAction SilentlyContinue
+        if ($null -eq $loadedModule) {
+            throw "Module '$moduleNameToLoad' reported as imported, but Get-Module could not find it."
         }
         
-        $debugContextString = "[DEBUG IMM] Context for '$moduleNameToLoad': Paths.Keys.Count: $($loadingContextForModule.Paths.Keys.Count); Config.Keys.Count: $($loadingContextForModule.Config.Keys.Count); CompanyName: '$($loadingContextForModule.CompanyName)'"
-        Write-Host $debugContextString -ForegroundColor DarkCyan
-        
-        $global:_MandALoadingContext = $loadingContextForModule
-        
-        if (Test-Path $manifestFullPath) {
-            Write-Host "[DEBUG IMM] Importing manifest '$manifestFullPath' for module '$moduleNameToLoad'." -ForegroundColor DarkGray
-            Import-Module $manifestFullPath -Force -Global -ErrorAction Stop 
-            Write-MandALog "Loaded module from manifest: $moduleNameToLoad" -Level "SUCCESS" -Context $CurrentContext
-        } else {
-            Write-Host "[DEBUG IMM] Importing PSM1 '$ModulePathToImport' for module '$moduleNameToLoad'." -ForegroundColor DarkGray
-            Import-Module $ModulePathToImport -Force -Global -ErrorAction Stop 
-            Write-MandALog "Loaded module directly: $moduleNameToLoad" -Level "SUCCESS" -Context $CurrentContext
-        }
+        Write-MandALog "Successfully loaded and verified module: '$moduleNameToLoad'" -Level "SUCCESS" -Context $CurrentContext
         return $true
+
     } catch {
         $errorMessage = "Failed to load module '$moduleNameToLoad' from '$ModulePathToImport'. Error: $($_.Exception.Message)"
-        Write-Host "[DEBUG IMM ERROR] Full Error Record for '$moduleNameToLoad': $($_.Exception | Format-List * -Force | Out-String)" -ForegroundColor Red
         if ($_.InvocationInfo) { $errorMessage += " At $($_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber)" }
         
         $CurrentContext.ErrorCollector.AddError("ModuleLoader", $errorMessage, $_.Exception)
         Write-MandALog $errorMessage -Level "ERROR" -Context $CurrentContext
+        if ($CurrentContext.Config.advancedSettings.debugMode) {
+             Write-MandALog ("Full Error Record for '$moduleNameToLoad' import: " + ($_.Exception | Format-List * -Force | Out-String)) -Level "DEBUG" -Context $CurrentContext
+        }
         return $false
     } finally {
+        # Clean up the temporary global variable
         Remove-Variable -Name "_MandALoadingContext" -Scope Global -ErrorAction SilentlyContinue
     }
 }
+
 
 #===============================================================================
 #                    CORE ORCHESTRATION FUNCTIONS
 #===============================================================================
 function Initialize-MandAEnvironment {
-    [CmdletBinding()] param( [Parameter(Mandatory=$true)][MandAContext]$Context, [Parameter(Mandatory=$true)][string]$CurrentMode, [Parameter(Mandatory=$false)][switch]$IsValidateOnlyMode )
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)][MandAContext]$Context,
+        [Parameter(Mandatory=$true)][string]$CurrentMode,
+        [Parameter(Mandatory=$false)][switch]$IsValidateOnlyMode
+    )
+    
+    # FAULT 7 FIX: Use Write-Host for initial messages, then switch to Write-MandALog
+    Write-Host "=== [Orchestrator.Initialize-MandAEnvironment] INITIALIZING ENVIRONMENT FOR MODE: $CurrentMode ===" -ForegroundColor Cyan
+    
     try {
+        # Ensure EnhancedLogging module is loaded first to make Write-MandALog available
         $loggingModulePath = Join-Path $Context.Paths.Utilities "EnhancedLogging.psm1"
-        if (Test-Path $loggingModulePath) {
-            try { Import-Module $loggingModulePath -Force -Global -EA Stop } catch { Write-Warning "Failed to import EnhancedLogging.psm1 initially: $($_.Exception.Message)"}
-            if (Get-Command Initialize-Logging -EA SilentlyContinue) { Initialize-Logging -Configuration $Context.Config }
-            else { Write-Warning "Initialize-Logging function not found after importing EnhancedLogging.psm1" }
-        } else { Write-Warning "EnhancedLogging.psm1 not found at $loggingModulePath." }
+        if (Test-Path $loggingModulePath -PathType Leaf) {
+            try {
+                Import-Module $loggingModulePath -Force -Global -ErrorAction Stop
+                Write-Host "[Orchestrator.Initialize-MandAEnvironment] EnhancedLogging.psm1 loaded." -ForegroundColor Green
+                # Initialize logging system now that the module is loaded
+                if (Get-Command Initialize-Logging -ErrorAction SilentlyContinue) {
+                    Initialize-Logging -Configuration $Context.Config # Assumes Initialize-Logging handles $Context.Config correctly
+                    $global:MandA.LoggingInitialized = $true # Mark logging as initialized
+                    Write-MandALog "Logging system initialized by Orchestrator." -Level "INFO" -Context $Context
+                } else {
+                    Write-Warning "[Orchestrator.Initialize-MandAEnvironment] Initialize-Logging function not found after importing EnhancedLogging.psm1. Logging might be basic."
+                    $Context.ErrorCollector.AddWarning("Environment", "Initialize-Logging function not found.")
+                }
+            } catch {
+                Write-Warning "[Orchestrator.Initialize-MandAEnvironment] Failed to import EnhancedLogging.psm1 initially: $($_.Exception.Message)"
+                $Context.ErrorCollector.AddError("Environment", "Failed to load EnhancedLogging.psm1", $_.Exception)
+            }
+        } else {
+            Write-Warning "[Orchestrator.Initialize-MandAEnvironment] EnhancedLogging.psm1 not found at '$loggingModulePath'. Logging will be basic."
+            $Context.ErrorCollector.AddWarning("Environment", "EnhancedLogging.psm1 not found at '$loggingModulePath'.")
+        }
 
-        Write-MandALog "INITIALIZING ENVIRONMENT FOR MODE: $CurrentMode" -Level "HEADER" -Context $Context
-        if ($null -eq $global:MandA) { $global:MandA = @{ Paths = $Context.Paths; Config = $Context.Config; CompanyName = $Context.Config.metadata.companyName; Version = $Context.Version } }
+        Write-MandALog "Starting environment initialization for mode: $CurrentMode" -Level "HEADER" -Context $Context
         
-        $directories = @($Context.Paths.CompanyProfileRoot, $Context.Paths.RawDataOutput, $Context.Paths.ProcessedDataOutput, $Context.Paths.LogOutput, $Context.Paths.ExportOutput, $Context.Paths.TempPath)
-        foreach ($dir in $directories) { if (-not (Test-Path $dir)) { New-Item -Path $dir -ItemType Directory -Force | Out-Null; Write-MandALog "Created directory: $dir" -Level "INFO" -Context $Context } }
+        # Ensure global:MandA is set (should have been by Set-SuiteEnvironment via QuickStart)
+        if ($null -eq $global:MandA) {
+            # This is a critical failure, implies Set-SuiteEnvironment.ps1 didn't run or failed.
+            $Context.ErrorCollector.AddError("Environment", "CRITICAL: `\$global:MandA is not set. Set-SuiteEnvironment.ps1 must run first.", $null)
+            throw "CRITICAL: `\$global:MandA is not set. Set-SuiteEnvironment.ps1 must run successfully before orchestration."
+        }
+        # Overwrite/ensure values in $global:MandA from the current context if they differ or for completeness.
+        # This ensures that if the Orchestrator is called directly with a specific CompanyName that differs from a pre-existing
+        # global context, the current context's values are prioritized for this run.
+        $global:MandA.Paths = $Context.Paths
+        $global:MandA.Config = $Context.Config
+        $global:MandA.CompanyName = $Context.CompanyName
+        $global:MandA.Version = $Context.Version
         
-        $utilityModules = @("FileOperations.psm1", "ValidationHelpers.psm1", "ConfigurationValidation.psm1", "ErrorHandling.psm1", "ProgressDisplay.psm1")
-        foreach ($moduleFile in $utilityModules) { 
-            $moduleFullPath = Join-Path $Context.Paths.Utilities $moduleFile 
-            if (-not (Import-ModuleWithManifest -ModulePath $moduleFullPath -Context $Context)) {
-                 if ($moduleFile -in @("ErrorHandling.psm1", "EnhancedLogging.psm1", "FileOperations.psm1")) { 
-                    throw "Critical utility module '$moduleFile' failed to load." 
-                 } 
+        # Create necessary company profile directories
+        $directoriesToEnsure = @(
+            $Context.Paths.CompanyProfileRoot, $Context.Paths.RawDataOutput, $Context.Paths.ProcessedDataOutput,
+            $Context.Paths.LogOutput, $Context.Paths.ExportOutput, $Context.Paths.TempPath
+        )
+        foreach ($dir in $directoriesToEnsure) {
+            if (-not (Test-Path $dir -PathType Container)) {
+                try {
+                    New-Item -Path $dir -ItemType Directory -Force -ErrorAction Stop | Out-Null
+                    Write-MandALog "Created directory: $dir" -Level "INFO" -Context $Context
+                } catch {
+                    $Context.ErrorCollector.AddError("Environment", "Failed to create directory '$dir': $($_.Exception.Message)", $_.Exception)
+                    throw "Failed to create essential directory: $dir" 
+                }
             }
         }
         
-        $authModules = @("Authentication\Authentication.psm1", "Authentication\CredentialManagement.psm1", "Connectivity\EnhancedConnectionManager.psm1")
-        foreach ($moduleRelPath in $authModules) { $moduleFullPath = Join-Path $Context.Paths.Modules $moduleRelPath; Import-ModuleWithManifest -ModulePath $moduleFullPath -Context $Context }
-        
-        if (-not $IsValidateOnlyMode) {
-            if(Get-Command Test-Prerequisites -EA SilentlyContinue){
-                if (-not (Test-Prerequisites -Configuration $Context.Config -Context $Context)) { throw "System prerequisites validation failed." }
-            } else { Write-MandALog "Test-Prerequisites function not found. Ensure ValidationHelpers.psm1 is loaded. Skipping." -Level "WARN" -Context $Context }
+        # Load core utility modules
+        $utilityModules = @("FileOperations.psm1", "ValidationHelpers.psm1", "ConfigurationValidation.psm1", "ErrorHandling.psm1", "ProgressDisplay.psm1")
+        Write-MandALog "Loading utility modules..." -Level "INFO" -Context $Context
+        foreach ($moduleFile in $utilityModules) { 
+            $moduleFullPath = Join-Path $Context.Paths.Utilities $moduleFile 
+            if (-not (Import-ModuleWithManifest -ModulePathToImport $moduleFullPath -CurrentContext $Context)) {
+                 # For critical utilities, throw an error if loading fails
+                 if ($moduleFile -in @("ErrorHandling.psm1", "FileOperations.psm1")) { 
+                    throw "Critical utility module '$moduleFile' failed to load from '$moduleFullPath'. Cannot continue." 
+                 } else {
+                    Write-MandALog "Non-critical utility module '$moduleFile' failed to load. Some functionality might be affected." -Level "WARN" -Context $Context
+                 }
+            }
         }
         
+        # Load Authentication and Connectivity modules
+        $coreInfraModules = @("Authentication\Authentication.psm1", "Authentication\CredentialManagement.psm1", "Connectivity\EnhancedConnectionManager.psm1")
+        Write-MandALog "Loading authentication and connectivity modules..." -Level "INFO" -Context $Context
+        foreach ($moduleRelPath in $coreInfraModules) {
+            $moduleFullPath = Join-Path $Context.Paths.Modules $moduleRelPath
+            Import-ModuleWithManifest -ModulePathToImport $moduleFullPath -CurrentContext $Context # Error already logged by Import-ModuleWithManifest
+        }
+        
+        # Perform prerequisite checks (if the function exists from ValidationHelpers.psm1)
+        if (-not $IsValidateOnlyMode) {
+            if (Get-Command Test-Prerequisites -ErrorAction SilentlyContinue) {
+                Write-MandALog "Performing system prerequisites validation..." -Level "INFO" -Context $Context
+                if (-not (Test-Prerequisites -Configuration $Context.Config -Context $Context)) { # Pass full context
+                    $Context.ErrorCollector.AddError("Environment", "System prerequisites validation failed. Review logs for details.", $null)
+                    throw "System prerequisites validation failed. Review logs for details."
+                }
+                 Write-MandALog "System prerequisites validated successfully." -Level "SUCCESS" -Context $Context
+            } else {
+                Write-MandALog "Test-Prerequisites function not found. Ensure ValidationHelpers.psm1 is loaded. Skipping prerequisites check." -Level "WARN" -Context $Context
+            }
+        }
+        
+        # Load phase-specific modules
         switch ($CurrentMode) {
             { $_ -in "Discovery", "Full", "AzureOnly" } { Import-DiscoveryModules -Context $Context }
             { $_ -in "Processing", "Full", "AzureOnly" } { Import-ProcessingModules -Context $Context }
             { $_ -in "Export", "Full", "AzureOnly" } { Import-ExportModules -Context $Context }
         }
-        Write-MandALog "Environment initialization completed." -Level "SUCCESS" -Context $Context; return $true
+
+        Write-MandALog "Environment initialization completed successfully." -Level "SUCCESS" -Context $Context
+        return $true
+
     } catch {
-        $errorMessageText = "Initialization failed: $($_.Exception.Message)" 
-        if ($Context -and $Context.ErrorCollector) { $Context.ErrorCollector.AddError("Environment", $errorMessageText, $_.Exception) }
-        if (Get-Command Write-MandALog -EA SilentlyContinue) { Write-MandALog $errorMessageText -Level "ERROR" -Context $Context } else { Write-Error $errorMessageText }
-        throw
+        $errorMessageText = "Orchestrator environment initialization failed: $($_.Exception.Message)"
+        # Use Write-Host if Write-MandALog might not be available or working
+        Write-Host $errorMessageText -ForegroundColor Red
+        if ($Context -and $Context.ErrorCollector) { 
+            $Context.ErrorCollector.AddError("EnvironmentSetup", $errorMessageText, $_.Exception)
+        }
+        # Re-throw to halt execution as initialization is critical
+        throw $errorMessageText 
     }
 }
 
 function Import-DiscoveryModules {
     param([MandAContext]$Context)
-    $baseDiscoveryPath = Join-Path $Context.Paths.Modules "Discovery" 
+
+    # FAULT 8 FIX: Use $Context.Paths.Discovery which is now correctly resolved by MandAContext
+    $baseDiscoveryPath = $Context.Paths.Discovery 
+    if (-not (Test-Path $baseDiscoveryPath -PathType Container)) {
+        $Context.ErrorCollector.AddError("ModuleLoader", "Discovery modules directory not found: '$baseDiscoveryPath'", $null)
+        Write-MandALog "CRITICAL: Discovery modules directory not found: '$baseDiscoveryPath'. Cannot load discovery modules." -Level "ERROR" -Context $Context
+        return # Cannot proceed if base path is missing
+    }
+
     $enabledSources = @($Context.Config.discovery.enabledSources)
     Write-MandALog "Loading discovery modules for $($enabledSources.Count) sources from '$baseDiscoveryPath'" -Level "INFO" -Context $Context
+    
     $loadedCount = 0; $failedCount = 0
     foreach ($sourceName in $enabledSources) { 
         try {
-            Test-ModuleConfiguration -Configuration $Context.Config -ModuleName $sourceName
+            # Validate module-specific configuration before attempting to load
+            if (-not (Test-ModuleConfiguration -Configuration $Context.Config -ModuleName $sourceName)) {
+                 Write-MandALog "Skipping discovery module '$sourceName' due to missing/invalid configuration." -Level "WARN" -Context $Context
+                 $failedCount++
+                 continue # Skip this module
+            }
+
             $moduleFileName = "${sourceName}Discovery.psm1" 
             $moduleFullPath = Join-Path $baseDiscoveryPath $moduleFileName 
-            if (Test-Path $moduleFullPath) {
-                if (Import-ModuleWithManifest -ModulePath $moduleFullPath -Context $Context) { $loadedCount++ } else { $failedCount++ }
+
+            if (Test-Path $moduleFullPath -PathType Leaf) {
+                if (Import-ModuleWithManifest -ModulePathToImport $moduleFullPath -CurrentContext $Context) {
+                    $loadedCount++
+                } else {
+                    # Error already logged by Import-ModuleWithManifest
+                    $failedCount++
+                }
             } else {
-                $failedCount++; $Context.ErrorCollector.AddWarning($sourceName, "Discovery module not found: $moduleFileName")
-                Write-MandALog "WARNING: Discovery module '$moduleFileName' not found at '$moduleFullPath'" -Level "WARN" -Context $Context
+                $failedCount++
+                $missingMsg = "Discovery module file '$moduleFileName' not found at '$moduleFullPath'."
+                $Context.ErrorCollector.AddWarning("ModuleLoader_Discovery_$sourceName", $missingMsg)
+                Write-MandALog "WARNING: $missingMsg" -Level "WARN" -Context $Context
             }
-        } catch {
-            $failedCount++; $Context.ErrorCollector.AddError($sourceName, "Failed to load discovery module '$($sourceName)Discovery.psm1': $($_.Exception.Message)", $_.Exception)
+        } catch { # Catch errors from Test-ModuleConfiguration or other unexpected issues
+            $failedCount++
+            $loadErrorMsg = "Failed to prepare or load discovery module '$($sourceName)Discovery.psm1': $($_.Exception.Message)"
+            $Context.ErrorCollector.AddError("ModuleLoader_Discovery_$sourceName", $loadErrorMsg, $_.Exception)
+            Write-MandALog $loadErrorMsg -Level "ERROR" -Context $Context
         }
     }
-    Write-MandALog "Discovery module loading complete: $loadedCount loaded, $failedCount failed" -Level "INFO" -Context $Context
+    Write-MandALog "Discovery module loading complete: $loadedCount loaded, $failedCount failed/skipped." -Level "INFO" -Context $Context
 }
 
 function Import-ProcessingModules {
     param([MandAContext]$Context)
-    if ($null -eq $Context -or $null -eq $Context.Paths -or [string]::IsNullOrWhiteSpace($Context.Paths.Modules)) {
-        Write-Host "[DEBUG IPMod CRITICAL] Context.Paths.Modules is NULL or empty at start of Import-ProcessingModules." -ForegroundColor Red
-        $baseProcessingPath = ".\" 
-        if ($PSScriptRoot) { $baseProcessingPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Modules\Processing" }
-        else { $baseProcessingPath = Join-Path $Context.Paths.SuiteRoot "Modules\Processing" } 
-        Write-Host "[DEBUG IPMod CRITICAL] Fallback baseProcessingPath: '$baseProcessingPath'" -ForegroundColor Red
-        if ($null -eq $Context) { Write-Error "Import-ProcessingModules: MandAContext is null."; return }
-         $Context.ErrorCollector.AddError("ModuleLoader", "Context.Paths.Modules is null or empty in Import-ProcessingModules.", $null)
-    } else {
-        $baseProcessingPath = Join-Path $Context.Paths.Modules "Processing"
+
+    # FAULT 8 FIX: Use $Context.Paths.Processing
+    $baseProcessingPath = $Context.Paths.Processing
+    if (-not (Test-Path $baseProcessingPath -PathType Container)) {
+        $errMsg = "Processing modules directory not found: '$baseProcessingPath'. Cannot load processing modules."
+        $Context.ErrorCollector.AddError("ModuleLoader", $errMsg, $null)
+        Write-MandALog "CRITICAL: $errMsg" -Level "ERROR" -Context $Context
+        return
     }
-    Write-Host "[DEBUG IPMod] Base path for processing modules: '$baseProcessingPath'" -ForegroundColor DarkMagenta
-    if (-not (Test-Path $baseProcessingPath)) { Write-MandALog "Processing modules directory not found: $baseProcessingPath" -Level "ERROR" -Context $Context; return }
+    if ($Context.Config.advancedSettings.debugMode) { Write-MandALog "[DEBUG IPMod] Base path for processing modules: '$baseProcessingPath'" -Level "DEBUG" -Context $Context }
+
+    # Define processing modules to load
     $processingModuleFiles = @("DataAggregation.psm1", "UserProfileBuilder.psm1", "WaveGeneration.psm1", "DataValidation.psm1") 
     Write-MandALog "Loading processing modules from: $baseProcessingPath" -Level "INFO" -Context $Context
+    
     foreach ($moduleFileItem in $processingModuleFiles) { 
-        Write-Host "[DEBUG IPMod] Iteration for module file: '$moduleFileItem'. Base path: '$baseProcessingPath'" -ForegroundColor DarkCyan
-        if ([string]::IsNullOrWhiteSpace($moduleFileItem)) { Write-MandALog "Skipping empty module name in processing array." -Level "WARN" -Context $Context; continue }
-        if ([string]::IsNullOrWhiteSpace($baseProcessingPath)) {
-            Write-MandALog "Base processing path is null for module '$moduleFileItem'. Cannot construct full path. Skipping." -Level "ERROR" -Context $Context
-            $Context.ErrorCollector.AddError("ModuleLoader", "Base processing path is null for module '$moduleFileItem'.", $null); continue
+        if ([string]::IsNullOrWhiteSpace($moduleFileItem)) {
+            Write-MandALog "Skipping empty module name in processing modules array." -Level "WARN" -Context $Context
+            continue
         }
-        $moduleFullPath = Join-Path $baseProcessingPath $moduleFileItem 
-        Write-Host "[DEBUG IPMod] Constructed full path for '$moduleFileItem': '$moduleFullPath'" -ForegroundColor DarkCyan
-        if ([string]::IsNullOrWhiteSpace($moduleFullPath)) { 
-            Write-MandALog "Module full path is null for '$moduleFileItem' (base: '$baseProcessingPath'). Skipping." -Level "ERROR" -Context $Context
-            $Context.ErrorCollector.AddError("ModuleLoader", "Constructed path for $moduleFileItem is null or empty.", $null); continue 
-        }
-        Import-ModuleWithManifest -ModulePath $moduleFullPath -Context $Context
+        $moduleFullPath = Join-Path $baseProcessingPath $moduleFileItem
+        if ($Context.Config.advancedSettings.debugMode) { Write-MandALog "[DEBUG IPMod] Attempting to load: '$moduleFullPath'" -Level "DEBUG" -Context $Context }
+        
+        # Import-ModuleWithManifest handles Test-Path and logging of success/failure
+        Import-ModuleWithManifest -ModulePathToImport $moduleFullPath -CurrentContext $Context
     }
 }
 
 function Import-ExportModules {
     param([MandAContext]$Context)
-    if ($null -eq $Context -or $null -eq $Context.Paths -or [string]::IsNullOrWhiteSpace($Context.Paths.Modules)) {
-        Write-Host "[DEBUG IEMod CRITICAL] Context.Paths.Modules is NULL or empty at start of Import-ExportModules." -ForegroundColor Red
-        $baseExportPath = ".\" 
-        if ($PSScriptRoot) { $baseExportPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Modules\Export" }
-        else { $baseExportPath = Join-Path $Context.Paths.SuiteRoot "Modules\Export" }
-        Write-Host "[DEBUG IEMod CRITICAL] Fallback baseExportPath: '$baseExportPath'" -ForegroundColor Red
-        if ($null -eq $Context) { Write-Error "Import-ExportModules: MandAContext is null."; return }
-        $Context.ErrorCollector.AddError("ModuleLoader", "Context.Paths.Modules is null or empty in Import-ExportModules.", $null)
-    } else {
-        $baseExportPath = Join-Path $Context.Paths.Modules "Export"
+
+    # FAULT 8 FIX: Use $Context.Paths.Export
+    $baseExportPath = $Context.Paths.Export
+    if (-not (Test-Path $baseExportPath -PathType Container)) {
+        $errMsg = "Export modules directory not found: '$baseExportPath'. Cannot load export modules."
+        $Context.ErrorCollector.AddError("ModuleLoader", $errMsg, $null)
+        Write-MandALog "CRITICAL: $errMsg" -Level "ERROR" -Context $Context
+        return
     }
-    Write-Host "[DEBUG IEMod] Base path for export modules: '$baseExportPath'" -ForegroundColor DarkMagenta
-    if (-not (Test-Path $baseExportPath)) { Write-MandALog "Export modules directory not found: $baseExportPath" -Level "ERROR" -Context $Context; return }
-    $enabledFormats = @($Context.Config.export.formats)
+    if ($Context.Config.advancedSettings.debugMode) { Write-MandALog "[DEBUG IEMod] Base path for export modules: '$baseExportPath'" -Level "DEBUG" -Context $Context }
+    
+    $enabledFormats = @($Context.Config.export.formats | Get-OrElse @("CSV", "JSON")) # Default to CSV, JSON if not specified
     Write-MandALog "Loading export modules for formats: $($enabledFormats -join ', ')" -Level "INFO" -Context $Context
-    $formatMapping = @{ "CSV"="CSVExport.psm1"; "JSON"="JSONExport.psm1"; "Excel"="ExcelExport.psm1"; "CompanyControlSheet"="CompanyControlSheetExporter.psm1"; "PowerApps"="PowerAppsExporter.psm1" }
-    foreach ($formatItem in $enabledFormats) {
-        Write-Host "[DEBUG IEMod] Iteration for format: '$formatItem'. Base path: '$baseExportPath'" -ForegroundColor DarkCyan
-        if ($formatMapping.ContainsKey($formatItem)) {
-            $moduleFileItem = $formatMapping[$formatItem]
-            if ([string]::IsNullOrWhiteSpace($moduleFileItem)) { Write-MandALog "Module filename empty for format: $formatItem." -Level "WARN" -Context $Context; continue }
-            if ([string]::IsNullOrWhiteSpace($baseExportPath)) {
-                 Write-MandALog "Base export path is null for format '$formatItem'. Cannot construct full path. Skipping." -Level "ERROR" -Context $Context
-                 $Context.ErrorCollector.AddError("ModuleLoader", "Base export path is null for format '$formatItem'.", $null); continue
+    
+    # Mapping of format names to module filenames
+    $formatMapping = @{
+        "CSV"                 = "CSVExport.psm1"
+        "JSON"                = "JSONExport.psm1"
+        "Excel"               = "ExcelExport.psm1"
+        "CompanyControlSheet" = "CompanyControlSheetExporter.psm1"
+        "PowerApps"           = "PowerAppsExporter.psm1" 
+    }
+
+    foreach ($formatNameItem in $enabledFormats) {
+        if ($Context.Config.advancedSettings.debugMode) { Write-MandALog "[DEBUG IEMod] Processing format: '$formatNameItem'" -Level "DEBUG" -Context $Context }
+        if ($formatMapping.ContainsKey($formatNameItem)) {
+            $moduleFileItem = $formatMapping[$formatNameItem]
+            if ([string]::IsNullOrWhiteSpace($moduleFileItem)) {
+                Write-MandALog "Module filename is empty for export format '$formatNameItem'. Skipping." -Level "WARN" -Context $Context
+                continue
             }
             $moduleFullPath = Join-Path $baseExportPath $moduleFileItem
-            Write-Host "[DEBUG IEMod] Constructed full path for '$moduleFileItem': '$moduleFullPath'" -ForegroundColor DarkCyan
-            if ([string]::IsNullOrWhiteSpace($moduleFullPath)) {
-                Write-MandALog "Module full path null for '$moduleFileItem' (format '$formatItem', base: '$baseExportPath')." -Level "ERROR" -Context $Context
-                $Context.ErrorCollector.AddError("ModuleLoader", "Constructed path for $moduleFileItem (format $formatItem) is null.", $null); continue
-            }
-            Import-ModuleWithManifest -ModulePath $moduleFullPath -Context $Context
-        } else { $Context.ErrorCollector.AddWarning("Export", "Unknown export format: $formatItem") }
+            if ($Context.Config.advancedSettings.debugMode) { Write-MandALog "[DEBUG IEMod] Attempting to load: '$moduleFullPath'" -Level "DEBUG" -Context $Context }
+            
+            Import-ModuleWithManifest -ModulePathToImport $moduleFullPath -CurrentContext $Context
+        } else {
+            $Context.ErrorCollector.AddWarning("ModuleLoader_Export", "Unknown or unmapped export format: '$formatNameItem'. No specific module to load.")
+            Write-MandALog "Warning: Unknown export format '$formatNameItem'. No specific module defined for it." -Level "WARN" -Context $Context
+        }
     }
 }
 
 function Invoke-DiscoveryPhase {
-    [CmdletBinding()] param([MandAContext]$Context)
-    if (-not $Context.OrchestratorState.CanExecute("Discovery")) { throw "Discovery phase execution limit: $($Context.OrchestratorState.GetExecutionPath())" }
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)][MandAContext]$Context
+    )
+
+    if (-not $Context.OrchestratorState.CanExecute("Discovery")) {
+        $execPath = $Context.OrchestratorState.GetExecutionPath()
+        $Context.ErrorCollector.AddError("DiscoveryPhase", "Discovery phase maximum execution limit reached or re-entrancy detected. Path: $execPath", $null)
+        throw "Discovery phase execution limit reached or re-entrancy detected. Path: $execPath"
+    }
     $Context.OrchestratorState.PushExecution("Discovery")
+    
     try {
         Write-MandALog "STARTING DISCOVERY PHASE" -Level "HEADER" -Context $Context
+        
+        # Check if Test-DiscoveryPrerequisites function exists (from ValidationHelpers.psm1)
         if (Get-Command Test-DiscoveryPrerequisites -ErrorAction SilentlyContinue) {
-            if (-not (Test-DiscoveryPrerequisites -Context $Context)) {
+            Write-MandALog "Validating discovery prerequisites..." -Level "INFO" -Context $Context
+            if (-not (Test-DiscoveryPrerequisites -Context $Context)) { # Pass full context
+                $Context.ErrorCollector.AddError("DiscoveryPhase", "Discovery prerequisites not met. Review logs for details.", $null)
                 throw "Discovery prerequisites not met. Review logs for details."
             }
-            Write-MandALog "Discovery prerequisites validated successfully." -Level "INFO" -Context $Context
+            Write-MandALog "Discovery prerequisites validated successfully." -Level "SUCCESS" -Context $Context
         } else {
-            Write-MandALog "Test-DiscoveryPrerequisites function not found. Ensure ValidationHelpers.psm1 is loaded and exports it. Skipping this validation." -Level "WARN" -Context $Context
+            Write-MandALog "Test-DiscoveryPrerequisites function not found. Ensure ValidationHelpers.psm1 is loaded. Skipping this validation." -Level "WARN" -Context $Context
         }
+
         $enabledSources = @($Context.Config.discovery.enabledSources)
-        if ($enabledSources.Count -eq 0) { Write-MandALog "No discovery sources enabled." -Level "WARN" -Context $Context; return @{} }
+        if ($enabledSources.Count -eq 0) {
+            Write-MandALog "No discovery sources enabled in configuration. Skipping discovery tasks." -Level "WARN" -Context $Context
+            return @{} # Return empty results
+        }
+
+        # Invoke parallel discovery
         $discoveryResults = Invoke-ParallelDiscoveryWithProgress -EnabledSources $enabledSources -Context $Context
-        Write-MandALog "Discovery Phase Completed. Results for $($discoveryResults.Keys.Count) sources." -Level "SUCCESS" -Context $Context
+        
+        Write-MandALog "Discovery Phase Completed. Results gathered for $($discoveryResults.Keys.Count) sources." -Level "SUCCESS" -Context $Context
         return $discoveryResults
-    } catch { $Context.ErrorCollector.AddError("Discovery", "Phase failed: $($_.Exception.Message)", $_.Exception); throw }
-    finally { $Context.OrchestratorState.PopExecution() }
+
+    } catch {
+        $Context.ErrorCollector.AddError("DiscoveryPhase", "Discovery Phase failed: $($_.Exception.Message)", $_.Exception)
+        throw # Re-throw to halt if critical
+    }
+    finally {
+        $Context.OrchestratorState.PopExecution()
+    }
 }
 
 function Invoke-ParallelDiscoveryWithProgress {
-    param( [string[]]$EnabledSources, [MandAContext]$Context )
-    $throttleLimit = $Context.Config.discovery.maxConcurrentJobs | Get-OrElse 5
+    param(
+        [Parameter(Mandatory=$true)][string[]]$EnabledSources,
+        [Parameter(Mandatory=$true)][MandAContext]$Context
+    )
+    
+    # Get-OrElse is globally available
+    $throttleLimit = $Context.Config.discovery.maxConcurrentJobs | global:Get-OrElse 5
     Write-MandALog "Starting parallel discovery for $($EnabledSources.Count) sources (Throttle: $throttleLimit)" -Level "INFO" -Context $Context
-    $runspacePool = [runspacefactory]::CreateRunspacePool(1, $throttleLimit); $runspacePool.Open()
-    $runspaces = [System.Collections.Generic.List[object]]::new(); $allResults = @{}
+
+    $runspacePool = [runspacefactory]::CreateRunspacePool(1, $throttleLimit)
+    $runspacePool.Open()
+    
+    $runspaces = [System.Collections.Generic.List[object]]::new()
+    $allResults = @{} # To store successful results
+
+    # FAULT 5 FIX: Scriptblock for runspace.
+    # Pass only necessary serialized data. Modules and functions needed inside the runspace
+    # must be self-sufficient or loaded/defined within the scriptblock.
+    # $global:MandA is used for modules to pick up config/paths if they are designed to.
     $scriptBlockToRun = { 
-        param( $DiscoverySource, $PassedConfig, $PassedPaths, $PassedCompanyName, $PassedVersion, $PassedModulesPath, $PassedGlobalMandA )
+        param( 
+            [string]$DiscoverySource,      # Name of the discovery source (e.g., "ActiveDirectory")
+            [hashtable]$PassedConfig,       # Serialized configuration (subset or full)
+            [hashtable]$PassedPaths,        # Serialized paths (subset or full)
+            [string]$PassedCompanyName,
+            [string]$PassedVersion,
+            [string]$PassedModulesPath,      # Base path to "Modules" directory
+            [string]$PassedUtilitiesPath,    # Base path to "Utilities" directory for logging
+            [hashtable]$ParentGlobalMandA    # The $global:MandA from the parent scope
+        )
+        
+        $ErrorActionPreference = "Stop" # Set for the runspace
+        $ProgressPreference = "Continue"
+
+        # Re-establish a minimal global context for this runspace.
+        # Modules loaded here might expect $global:MandA to exist.
+        $script:GlobalMandA = $ParentGlobalMandA # Make parent's global MandA available.
+                                                # This is a direct copy, so it's effectively serialized.
+                                                # Complex objects within might lose methods.
+                                                # Modules should primarily use $PassedConfig and $PassedPaths if they need data.
+
+        # Attempt to load EnhancedLogging within the runspace for consistent logging
+        # It should use Write-Host if Write-MandALog fails.
+        $runspaceLoggingInitialized = $false
         try {
-            $ErrorActionPreference = "Stop"; $global:MandA = $PassedGlobalMandA
-            $utilityPath = Join-Path $PassedModulesPath "Utilities"; $loggingModulePath = Join-Path $utilityPath "EnhancedLogging.psm1"
-            if (Test-Path $loggingModulePath) { Import-Module $loggingModulePath -Force -Global }
-            $runspaceLocalContext = [PSCustomObject]@{ Paths = $PassedPaths; Config = $PassedConfig; CompanyName = $PassedCompanyName; Version = $PassedVersion } 
-            $moduleFileName = "${DiscoverySource}Discovery.psm1"; $moduleFullPath = Join-Path $PassedModulesPath "Discovery\$moduleFileName" 
-            if (-not (Test-Path $moduleFullPath)) { throw "Module not found: $moduleFullPath" }
-            Import-Module $moduleFullPath -Force -Global
-            $invokeFunctionName = "Invoke-${DiscoverySource}Discovery" 
-            if (-not (Get-Command $invokeFunctionName -EA SilentlyContinue)) { throw "Function $invokeFunctionName not found in module $DiscoverySource" }
-            $logFunction = if (Get-Command Write-MandALog -EA SilentlyContinue) { ${function:Write-MandALog} } else { ${function:Write-Host} } 
-            $logFunction.Invoke("[$DiscoverySource] Starting task in runspace..." , "INFO", $runspaceLocalContext)
-            $discoveryDataResult = & $invokeFunctionName -Configuration $PassedConfig -Context $runspaceLocalContext 
-            $logFunction.Invoke("[$DiscoverySource] Task completed in runspace." , "SUCCESS", $runspaceLocalContext)
-            return [PSCustomObject]@{ Source = $DiscoverySource; Success = $true; Data = $discoveryDataResult; Error = $null }
+            $loggingModulePathForRunspace = Join-Path $PassedUtilitiesPath "EnhancedLogging.psm1"
+            if (Test-Path $loggingModulePathForRunspace -PathType Leaf) {
+                Import-Module $loggingModulePathForRunspace -Force -Global
+                if (Get-Command Initialize-Logging -ErrorAction SilentlyContinue) {
+                    Initialize-Logging -Configuration $PassedConfig # Use passed config for logging setup
+                    $runspaceLoggingInitialized = $true
+                }
+            }
         } catch {
-            $errorMessageText = "Error in $DiscoverySource discovery runspace: $($_.Exception.Message)" 
-            if (Get-Command Write-MandALog -EA SilentlyContinue) { Write-MandALog $errorMessageText -Level "ERROR" } else { Write-Warning $errorMessageText }
-            return [PSCustomObject]@{ Source = $DiscoverySource; Success = $false; Data = $null; Error = $_.Exception.Message; StackTrace = $_.ScriptStackTrace; FullException = $_ }
+            Write-Warning "Runspace: Failed to initialize enhanced logging for $DiscoverySource. Error: $($_.Exception.Message)"
         }
-    }
+
+        # Define a local logging function for the runspace
+        function Write-RunspaceLog {
+            param([string]$Msg, [string]$Lvl = "INFO")
+            $logTimestamp = Get-Date -Format "HH:mm:ss"
+            if ($usingEnhancedLoggingForRunspace -and (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
+                # Create a minimal context for logging within the runspace
+                $rsContext = [PSCustomObject]@{ Config = $PassedConfig; CompanyName = $PassedCompanyName; Paths = $PassedPaths }
+                Write-MandALog -Message "[$logTimestamp] Runspace-$DiscoverySource $Msg" -Level $Lvl -Context $rsContext
+            } else {
+                Write-Host "[$logTimestamp] Runspace-$DiscoverySource [$Lvl]: $Msg"
+            }
+        }
+        
+        # Signal that we're using the local runspace logger
+        $usingEnhancedLoggingForRunspace = $runspaceLoggingInitialized
+
+        try {
+            Write-RunspaceLog "Starting task for '$DiscoverySource' in runspace."
+
+            # Construct module path
+            $moduleFileName = "${DiscoverySource}Discovery.psm1"
+            $moduleDiscoveryPath = Join-Path $PassedModulesPath "Discovery" # Specific path to Discovery modules
+            $moduleFullPath = Join-Path $moduleDiscoveryPath $moduleFileName 
+            
+            if (-not (Test-Path $moduleFullPath -PathType Leaf)) {
+                throw "Module file not found: '$moduleFullPath'"
+            }
+            Import-Module $moduleFullPath -Force -Global # Load the specific discovery module
+            
+            # FAULT 14 FIX: Check if the discovery function exists
+            $invokeFunctionName = "Invoke-${DiscoverySource}Discovery" 
+            if (-not (Get-Command $invokeFunctionName -ErrorAction SilentlyContinue)) {
+                throw "Discovery function '$invokeFunctionName' not found in module '$DiscoverySource'."
+            }
+            
+            # Create a simplified context for the discovery module running in the runspace
+            # The module's Invoke function should expect a context like this or just Config/Paths.
+            $runspaceModuleContext = [PSCustomObject]@{
+                Paths = $PassedPaths         # Simple hashtable of paths
+                Config = $PassedConfig        # Simple hashtable of config
+                CompanyName = $PassedCompanyName
+                Version = $PassedVersion
+                ErrorCollector = $null      # Error collection is handled by catching exception from scriptblock
+                # Add other simple properties if modules expect them from context.
+                # Avoid passing complex objects with methods directly.
+            }
+            
+            Write-RunspaceLog "Invoking '$invokeFunctionName'..."
+            $discoveryDataResult = & $invokeFunctionName -Configuration $PassedConfig -Context $runspaceModuleContext # Pass simple context
+            
+            Write-RunspaceLog "Task for '$DiscoverySource' completed successfully in runspace."
+            return [PSCustomObject]@{ Source = $DiscoverySource; Success = $true; Data = $discoveryDataResult; Error = $null; FullException = $null }
+
+        } catch {
+            $errorMessageText = "Error in '$DiscoverySource' discovery runspace: $($_.Exception.Message)"
+            Write-RunspaceLog $errorMessageText -Lvl "ERROR"
+            if ($_.ScriptStackTrace) { Write-RunspaceLog "StackTrace: $($_.ScriptStackTrace)" -Lvl "DEBUG" }
+            # Return a more detailed error object
+            return [PSCustomObject]@{
+                Source = $DiscoverySource
+                Success = $false
+                Data = $null
+                Error = $_.Exception.Message       # Just the message for summary
+                FullException = $_.Exception      # The full exception object for detailed collection
+                ScriptStackTrace = $_.ScriptStackTrace
+            }
+        }
+    } # End of $scriptBlockToRun
+
     foreach ($sourceNameItem in $EnabledSources) { 
         $powershellInstance = [powershell]::Create().AddScript($scriptBlockToRun) 
+        
+        # Pass parameters to the scriptblock
         [void]$powershellInstance.AddArgument($sourceNameItem)
-        [void]$powershellInstance.AddArgument($Context.Config); [void]$powershellInstance.AddArgument($Context.Paths)
-        [void]$powershellInstance.AddArgument($Context.Config.metadata.companyName); [void]$powershellInstance.AddArgument($Context.Version)
-        [void]$powershellInstance.AddArgument($Context.Paths.Modules); [void]$powershellInstance.AddArgument($global:MandA)
+        [void]$powershellInstance.AddArgument($Context.Config)          # Pass full config hashtable
+        [void]$powershellInstance.AddArgument($Context.Paths)           # Pass full paths hashtable
+        [void]$powershellInstance.AddArgument($Context.CompanyName)
+        [void]$powershellInstance.AddArgument($Context.Version)
+        [void]$powershellInstance.AddArgument($Context.Paths.Modules)   # Pass base Modules path
+        [void]$powershellInstance.AddArgument($Context.Paths.Utilities) # Pass Utilities path
+        [void]$powershellInstance.AddArgument($global:MandA)            # Pass the current $global:MandA
+
         $powershellInstance.RunspacePool = $runspacePool
-        $runspaces.Add([PSCustomObject]@{ Instance = $powershellInstance; Handle = $powershellInstance.BeginInvoke(); Source = $sourceNameItem; StartTime = Get-Date })
+        $runspaces.Add([PSCustomObject]@{
+            Instance = $powershellInstance
+            Handle = $powershellInstance.BeginInvoke()
+            Source = $sourceNameItem
+            StartTime = Get-Date
+        })
     }
-    $totalTasks = $runspaces.Count; $completedTasksCount = 0 
+
+    $totalTasks = $runspaces.Count
+    $completedTasksCount = 0
+    $progressUpdateInterval = $Context.Config.performance.progressUpdateInterval | global:Get-OrElse 10 # How often to update main progress
+    $progressCounter = 0
+
+    # Progress tracking loop
     while ($runspaces.Count -gt 0) {
         $doneTasks = $runspaces | Where-Object { $_.Handle.IsCompleted } 
+        
         foreach ($taskItem in $doneTasks) { 
             $completedTasksCount++
+            $jobOutputResult = $null
             try {
                 $jobOutputResult = $taskItem.Instance.EndInvoke($taskItem.Handle) 
+                
+                if ($null -eq $jobOutputResult) {
+                    throw "Runspace for $($taskItem.Source) returned null output."
+                }
+
                 if ($jobOutputResult.Success) {
                     $allResults[$jobOutputResult.Source] = $jobOutputResult.Data
-                    Write-MandALog "Discovery completed for $($jobOutputResult.Source)" -Level "SUCCESS" -Context $Context
+                    Write-MandALog "Discovery completed successfully for: $($jobOutputResult.Source)" -Level "SUCCESS" -Context $Context
                 } else {
-                    $Context.ErrorCollector.AddError($jobOutputResult.Source, $jobOutputResult.Error, $jobOutputResult.FullException)
+                    # Error from within the runspace scriptblock's catch
+                    $errMsg = if ($jobOutputResult.Error) { $jobOutputResult.Error } else { "Unknown error from runspace."}
+                    $fullEx = if ($jobOutputResult.FullException) { $jobOutputResult.FullException } else { $null }
+                    $Context.ErrorCollector.AddError($jobOutputResult.Source, $errMsg, $fullEx)
+                    Write-MandALog "Discovery failed for $($jobOutputResult.Source): $errMsg" -Level "ERROR" -Context $Context
+                    if ($Context.Config.advancedSettings.debugMode -and $jobOutputResult.ScriptStackTrace) {
+                        Write-MandALog "Runspace StackTrace for $($jobOutputResult.Source): $($jobOutputResult.ScriptStackTrace)" -Level "DEBUG" -Context $Context
+                    }
                 }
-            } catch { $Context.ErrorCollector.AddError($taskItem.Source, "Runspace result error: $($_.Exception.Message)", $_.Exception) }
-            finally { $taskItem.Instance.Dispose(); $runspaces.Remove($taskItem) }
-            if (Get-Command Write-DiscoveryProgress -EA SilentlyContinue) { Write-DiscoveryProgress -Total $totalTasks -Completed $completedTasksCount -CurrentSource $taskItem.Source }
-            else { Write-Host "Progress: $completedTasksCount / $totalTasks." -NoNewline; Start-Sleep -ms 10; Write-Host "`r" -NoNewline }
+            } catch { # Error in EndInvoke or processing the result itself
+                $Context.ErrorCollector.AddError($taskItem.Source, "Orchestrator error processing runspace result for $($taskItem.Source): $($_.Exception.Message)", $_.Exception)
+                 Write-MandALog "Orchestrator error processing runspace result for $($taskItem.Source): $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+            finally {
+                if ($taskItem.Instance) { $taskItem.Instance.Dispose() }
+                $runspaces.Remove($taskItem) # Remove from the list of active runspaces
+            }
+            
+            # Update main progress bar
+            if (Get-Command Write-DiscoveryProgress -ErrorAction SilentlyContinue) {
+                Write-DiscoveryProgress -Total $totalTasks -Completed $completedTasksCount -CurrentSource $taskItem.Source -Context $Context
+            } else {
+                # Basic progress if Write-DiscoveryProgress is not available
+                 Write-Host "`rProgress: $completedTasksCount / $totalTasks tasks completed. Last: $($taskItem.Source)" -NoNewline
+            }
         }
-        if ($runspaces.Count -gt 0) { Start-Sleep -Milliseconds 200 }
+        
+        if ($runspaces.Count -gt 0) {
+            Start-Sleep -Milliseconds 250 # Wait before checking handles again
+        }
+    } # End while runspaces exist
+    
+    # Final progress update
+    if (Get-Command Write-DiscoveryProgress -ErrorAction SilentlyContinue) {
+        Write-DiscoveryProgress -Total $totalTasks -Completed $completedTasksCount -CompletedAll $true -Context $Context
+    } else {
+        Write-Host "" # Newline after basic progress
     }
-    if (Get-Command Write-DiscoveryProgress -EA SilentlyContinue) { Write-DiscoveryProgress -Total $totalTasks -Completed $completedTasksCount -CompletedAll $true }
-    $runspacePool.Close(); $runspacePool.Dispose()
-    Write-MandALog "Parallel discovery finished. Successful: $($allResults.Keys.Count), Failed: $($totalTasks - $allResults.Keys.Count)" -Level "INFO" -Context $Context
+
+    # Clean up runspace pool
+    if ($runspacePool) { $runspacePool.Close(); $runspacePool.Dispose() }
+    
+    $failedTasksCount = $totalTasks - $allResults.Keys.Count
+    Write-MandALog "Parallel discovery finished. Successful sources: $($allResults.Keys.Count), Failed/Skipped sources: $failedTasksCount" -Level "INFO" -Context $Context
+    
     return $allResults
 }
 
 function Invoke-ProcessingPhase {
-    [CmdletBinding()] param([MandAContext]$Context) 
-    if (-not $Context.OrchestratorState.CanExecute("Processing")) { throw "Processing phase limit: $($Context.OrchestratorState.GetExecutionPath())" }
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)][MandAContext]$Context
+    ) 
+    if (-not $Context.OrchestratorState.CanExecute("Processing")) {
+        $execPath = $Context.OrchestratorState.GetExecutionPath()
+        $Context.ErrorCollector.AddError("ProcessingPhase", "Processing phase maximum execution limit reached or re-entrancy detected. Path: $execPath", $null)
+        throw "Processing phase execution limit reached. Path: $execPath"
+    }
     $Context.OrchestratorState.PushExecution("Processing")
+
     try {
         Write-MandALog "STARTING PROCESSING PHASE" -Level "HEADER" -Context $Context
+        
         $rawDataPath = $Context.Paths.RawDataOutput
-        if (-not (Test-Path $rawDataPath)) { throw "Raw data dir not found ($rawDataPath)." }
-        if ((Get-ChildItem -Path $rawDataPath -Filter "*.csv" -File).Count -eq 0) { throw "No raw data files in $rawDataPath." }
-        $dataAggModuleInfo = Get-Module -Name "DataAggregation" -EA SilentlyContinue 
-        if (-not $dataAggModuleInfo) {
-            $dataAggModulePath = Join-Path $Context.Paths.Modules "Processing\DataAggregation.psm1" 
-            if (Test-Path $dataAggModulePath) { Import-ModuleWithManifest -ModulePath $dataAggModulePath -Context $Context }
-            else { throw "DataAggregation module file not found at $dataAggModulePath" }
+        if (-not (Test-Path $rawDataPath -PathType Container)) {
+            $Context.ErrorCollector.AddError("ProcessingPhase", "Raw data directory not found: '$rawDataPath'. Cannot proceed.", $null)
+            throw "Raw data directory not found: '$rawDataPath'. Processing cannot proceed."
         }
-        if (Get-Command "Start-DataAggregation" -EA SilentlyContinue) {
-            if (-not (Start-DataAggregation -Configuration $Context.Config -Context $Context)) { throw "Data aggregation failed" } # Ensure $Context is passed if module expects it
-            Write-MandALog "Processing Phase Completed Successfully" -Level "SUCCESS" -Context $Context; return $true
-        } else { throw "Start-DataAggregation function not found." }
-    } catch { $Context.ErrorCollector.AddError("Processing", "Phase failed: $($_.Exception.Message)", $_.Exception); throw }
-    finally { $Context.OrchestratorState.PopExecution() }
+        
+        $rawDataFiles = Get-ChildItem -Path $rawDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
+        if ($null -eq $rawDataFiles -or $rawDataFiles.Count -eq 0) {
+            $Context.ErrorCollector.AddWarning("ProcessingPhase", "No raw data CSV files found in '$rawDataPath'. Processing phase may not produce meaningful results.")
+            Write-MandALog "No raw data CSV files found in '$rawDataPath'. Processing phase will run but may not have input." -Level "WARN" -Context $Context
+            # Allow to continue if processing modules can handle no input, or add specific checks in modules.
+        }
+
+        # Ensure DataAggregation module is loaded (primary for this phase)
+        $dataAggModuleInfo = Get-Module -Name "DataAggregation" -ErrorAction SilentlyContinue 
+        if (-not $dataAggModuleInfo) {
+            $dataAggModulePath = Join-Path $Context.Paths.Processing "DataAggregation.psm1" # Using $Context.Paths.Processing
+            if (Test-Path $dataAggModulePath -PathType Leaf) {
+                if (-not (Import-ModuleWithManifest -ModulePathToImport $dataAggModulePath -CurrentContext $Context)) {
+                    throw "Failed to load critical DataAggregation module from '$dataAggModulePath'."
+                }
+            } else {
+                throw "DataAggregation module file not found at '$dataAggModulePath'. Processing cannot continue."
+            }
+        }
+        
+        # Check for the main processing function
+        if (Get-Command "Start-DataAggregation" -ErrorAction SilentlyContinue) {
+            Write-MandALog "Invoking Start-DataAggregation..." -Level "INFO" -Context $Context
+            # Start-DataAggregation should ideally take $Context and handle its own data loading from $Context.Paths.RawDataOutput
+            # and save to $Context.Paths.ProcessedDataOutput.
+            if (-not (Start-DataAggregation -Context $Context)) { # Pass the full context
+                $Context.ErrorCollector.AddError("ProcessingPhase", "Start-DataAggregation reported failure.", $null)
+                throw "Data aggregation phase failed."
+            }
+            Write-MandALog "Processing Phase (Start-DataAggregation) completed successfully." -Level "SUCCESS" -Context $Context
+            return $true
+        } else {
+            $Context.ErrorCollector.AddError("ProcessingPhase", "Core processing function 'Start-DataAggregation' not found.", $null)
+            throw "Core processing function 'Start-DataAggregation' not found. Ensure DataAggregation.psm1 is correctly loaded and exports this function."
+        }
+
+    } catch {
+        $Context.ErrorCollector.AddError("ProcessingPhase", "Processing Phase failed: $($_.Exception.Message)", $_.Exception)
+        throw # Re-throw to halt if critical
+    }
+    finally {
+        $Context.OrchestratorState.PopExecution()
+    }
 }
 
 function Invoke-ExportPhase {
-    [CmdletBinding()] param([MandAContext]$Context)
-    if (-not $Context.OrchestratorState.CanExecute("Export")) { throw "Export phase limit: $($Context.OrchestratorState.GetExecutionPath())" }
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)][MandAContext]$Context
+    )
+
+    if (-not $Context.OrchestratorState.CanExecute("Export")) {
+        $execPath = $Context.OrchestratorState.GetExecutionPath()
+        $Context.ErrorCollector.AddError("ExportPhase", "Export phase maximum execution limit reached or re-entrancy detected. Path: $execPath", $null)
+        throw "Export phase execution limit reached. Path: $execPath"
+    }
     $Context.OrchestratorState.PushExecution("Export")
+
     try {
         Write-MandALog "STARTING EXPORT PHASE" -Level "HEADER" -Context $Context
+        
         $processedDataPath = $Context.Paths.ProcessedDataOutput
-        if (-not (Test-Path $processedDataPath)) { throw "Processed data dir not found ($processedDataPath)." }
-        $dataToExport = @{}; $processedFiles = Get-ChildItem -Path $processedDataPath -Filter "*.csv" -File
-        if ($processedFiles.Count -eq 0) { throw "No processed data files in $processedDataPath." }
-        foreach ($fileItem in $processedFiles) { 
-            $dataKeyName = $fileItem.BaseName 
-            try { $dataToExport[$dataKeyName] = Import-Csv -Path $fileItem.FullName; Write-MandALog "Loaded $($dataToExport[$dataKeyName].Count) from $($fileItem.Name)" -Level "INFO" -Context $Context }
-            catch { $Context.ErrorCollector.AddError("Export", "Load failed: $($fileItem.Name)", $_.Exception) }
+        if (-not (Test-Path $processedDataPath -PathType Container)) {
+            $Context.ErrorCollector.AddError("ExportPhase", "Processed data directory not found: '$processedDataPath'. Cannot export.", $null)
+            throw "Processed data directory not found: '$processedDataPath'. Export cannot proceed."
         }
-        $enabledFormats = @($Context.Config.export.formats); $exportOverallSuccess = $true 
-        foreach ($formatName in $enabledFormats) { 
-            $invokeFunctionName = Get-ExportFunctionName -Format $formatName 
-            if (Get-Command $invokeFunctionName -EA SilentlyContinue) {
+        
+        # Load processed data files into a hashtable for exporters
+        $dataToExport = @{}
+        $processedFiles = Get-ChildItem -Path $processedDataPath -Filter "*.csv" -File -ErrorAction SilentlyContinue
+        
+        if ($null -eq $processedFiles -or $processedFiles.Count -eq 0) {
+            $Context.ErrorCollector.AddWarning("ExportPhase", "No processed data CSV files found in '$processedDataPath'. Export phase may not produce output.")
+            Write-MandALog "No processed data CSV files found in '$processedDataPath'. Export phase will run but may not have input." -Level "WARN" -Context $Context
+        } else {
+            Write-MandALog "Loading $($processedFiles.Count) processed data files for export..." -Level "INFO" -Context $Context
+            foreach ($fileItem in $processedFiles) { 
+                $dataKeyName = $fileItem.BaseName 
                 try {
-                    & $invokeFunctionName -ProcessedData $dataToExport -Configuration $Context.Config -Context $Context # Pass Context
-                    Write-MandALog "Export for '$formatName' completed." -Level "SUCCESS" -Context $Context
-                } catch { $Context.ErrorCollector.AddError("Export_$formatName", "Export for $formatName failed: $($_.Exception.Message)", $_.Exception); $exportOverallSuccess = $false }
-            } else { $Context.ErrorCollector.AddWarning("Export", "Function not found for format '$formatName': $invokeFunctionName") }
+                    # FAULT: Specify encoding for Import-Csv, assuming UTF8 based on previous fixes.
+                    $dataToExport[$dataKeyName] = Import-Csv -Path $fileItem.FullName -Encoding UTF8 -ErrorAction Stop
+                    Write-MandALog "Loaded $($dataToExport[$dataKeyName].Count) items from '$($fileItem.Name)' for export." -Level "DEBUG" -Context $Context
+                } catch {
+                    $errMsg = "Failed to load processed data file '$($fileItem.Name)' for export: $($_.Exception.Message)"
+                    $Context.ErrorCollector.AddError("ExportPhase_DataLoad", $errMsg, $_.Exception)
+                    Write-MandALog $errMsg -Level "ERROR" -Context $Context
+                }
+            }
         }
-        $exportPhaseStatusText = if ($exportOverallSuccess) { 'Successfully' } else { 'with Errors' }
+        
+        $enabledFormats = @($Context.Config.export.formats | global:Get-OrElse @("CSV", "JSON")) # Default if not specified
+        $exportOverallSuccess = $true 
+        
+        Write-MandALog "Starting export for formats: $($enabledFormats -join ', ')" -Level "INFO" -Context $Context
+        foreach ($formatName in $enabledFormats) { 
+            Write-MandALog "Processing export format: '$formatName'..." -Level "INFO" -Context $Context
+            $invokeFunctionName = Get-ExportFunctionName -Format $formatName -Context $Context # Pass context for logging
+            
+            if ([string]::IsNullOrWhiteSpace($invokeFunctionName)) {
+                # Error already logged by Get-ExportFunctionName if it couldn't find/validate
+                $exportOverallSuccess = $false
+                continue
+            }
+
+            try {
+                # The export function should take $dataToExport (all processed data) and $Context (for config, paths)
+                & $invokeFunctionName -ProcessedData $dataToExport -Context $Context 
+                Write-MandALog "Export for format '$formatName' completed successfully." -Level "SUCCESS" -Context $Context
+            } catch {
+                $exportErrorMsg = "Export for format '$formatName' (function '$invokeFunctionName') failed: $($_.Exception.Message)"
+                $Context.ErrorCollector.AddError("Export_$formatName", $exportErrorMsg, $_.Exception)
+                Write-MandALog $exportErrorMsg -Level "ERROR" -Context $Context
+                $exportOverallSuccess = $false
+            }
+        } # End foreach format
+
+        $exportPhaseStatusText = if ($exportOverallSuccess) { 'successfully' } else { 'with errors' }
         $exportPhaseStatusLevel = if ($exportOverallSuccess) { "SUCCESS" } else { "WARN" }
-        Write-MandALog "Export Phase Completed $exportPhaseStatusText" -Level $exportPhaseStatusLevel -Context $Context
+        Write-MandALog "Export Phase completed $exportPhaseStatusText." -Level $exportPhaseStatusLevel -Context $Context
+        
         return $exportOverallSuccess
-    } 
-    catch { $Context.ErrorCollector.AddError("Export", "Phase failed: $($_.Exception.Message)", $_.Exception); throw }
-    finally { $Context.OrchestratorState.PopExecution() }
+
+    } catch { # Catch errors in Invoke-ExportPhase setup itself
+        $Context.ErrorCollector.AddError("ExportPhase", "Main Export Phase failed: $($_.Exception.Message)", $_.Exception)
+        throw # Re-throw to halt if critical
+    }
+    finally {
+        $Context.OrchestratorState.PopExecution()
+    }
 }
 
 function Get-ExportFunctionName {
-    param([string]$Format)
-    $mapping = @{ "PowerApps"="Export-ForPowerApps"; "CompanyControlSheet"="Export-ToCompanyControlSheet"; "CSV"="Export-ToCSV"; "JSON"="Export-ToJSON"; "Excel"="Export-ToExcel" }
-    if ($mapping.ContainsKey($Format)) { return $mapping[$Format] }
-    return "Export-To$Format"
+    param(
+        [string]$Format,
+        [MandAContext]$Context # For logging
+    )
+    $mapping = @{
+        "CSV"                 = "Export-ToCSV"
+        "JSON"                = "Export-ToJSON"
+        "Excel"               = "Export-ToExcel"
+        "PowerApps"           = "Export-ForPowerApps"
+        "CompanyControlSheet" = "Export-ToCompanyControlSheet"
+    }
+    $functionNameToTest = if ($mapping.ContainsKey($Format)) { $mapping[$Format] } else { "Export-To$Format" }
+
+    # FAULT 18 FIX: Add function existence check
+    if (Get-Command $functionNameToTest -ErrorAction SilentlyContinue) {
+        return $functionNameToTest
+    } else {
+        $errMsg = "Export function '$functionNameToTest' for format '$Format' not found or module not loaded."
+        if ($Context) {
+            $Context.ErrorCollector.AddWarning("ExportConfig", $errMsg)
+            Write-MandALog $errMsg -Level "WARN" -Context $Context
+        } else {
+            Write-Warning $errMsg
+        }
+        return $null # Indicate function not found
+    }
 }
 
 function Complete-MandADiscovery {
-    [CmdletBinding()] param([MandAContext]$Context)
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)][MandAContext]$Context
+    )
     Write-MandALog "FINALIZING M&A DISCOVERY SUITE EXECUTION" -Level "HEADER" -Context $Context
+    
     if ($Context.ErrorCollector.HasErrors()) {
-        $errorReportPath = Join-Path $Context.Paths.LogOutput "ErrorReport_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
-        $Context.ErrorCollector.ExportToFile($errorReportPath)
-        Write-MandALog "Error report exported to: $errorReportPath" -Level "WARN" -Context $Context
+        $errorReportFileName = "ErrorReport_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
+        $errorReportPath = Join-Path $Context.Paths.LogOutput $errorReportFileName
+        
+        Write-MandALog "Errors occurred during execution. Exporting error report to: $errorReportPath" -Level "WARN" -Context $Context
+        try {
+            $Context.ErrorCollector.ExportToFile($errorReportPath) # This function now handles dir creation
+            Write-MandALog "Error report successfully exported." -Level "INFO" -Context $Context
+        } catch {
+            Write-MandALog "Failed to export error report: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+    } else {
+        Write-MandALog "Execution completed with no errors recorded by the orchestrator's error collector." -Level "SUCCESS" -Context $Context
     }
+
     $duration = (Get-Date) - $Context.StartTime
-    Write-MandALog "Execution completed in: $($duration.ToString('hh\:mm\:ss'))" -Level "INFO" -Context $Context
-    Write-MandALog "Error Summary: $($Context.ErrorCollector.GetSummary())" -Level "INFO" -Context $Context
+    Write-MandALog "Total execution time: $($duration.ToString('hh\:mm\:ss'))" -Level "INFO" -Context $Context
+    Write-MandALog "Error Summary: $($Context.ErrorCollector.GetSummary())" -Level "INFO" -Context $Context # Always log summary
+    
     Write-MandALog "Output locations:" -Level "INFO" -Context $Context
+    Write-MandALog "  - Company Profile Root: $($Context.Paths.CompanyProfileRoot)" -Level "INFO" -Context $Context
     Write-MandALog "  - Logs: $($Context.Paths.LogOutput)" -Level "INFO" -Context $Context
+    Write-MandALog "  - Raw Data: $($Context.Paths.RawDataOutput)" -Level "INFO" -Context $Context
+    Write-MandALog "  - Processed Data: $($Context.Paths.ProcessedDataOutput)" -Level "INFO" -Context $Context
+    Write-MandALog "  - Exports: $($Context.Paths.ExportOutput)" -Level "INFO" -Context $Context
+    if (Test-Path (Join-Path $Context.Paths.ProcessedDataOutput "PowerApps")) {
+        Write-MandALog "  - PowerApps JSON: $(Join-Path $Context.Paths.ProcessedDataOutput "PowerApps")" -Level "INFO" -Context $Context
+    }
+    if (Test-Path (Join-Path $Context.Paths.CompanyProfileRoot "CompanyControlSheetCSVs")) {
+        Write-MandALog "  - Company Control Sheet CSVs: $(Join-Path $Context.Paths.CompanyProfileRoot "CompanyControlSheetCSVs")" -Level "INFO" -Context $Context
+    }
 }
 
 #===============================================================================
 #                        MAIN EXECUTION BLOCK
 #===============================================================================
+$orchestratorErrorActionPreference = $ErrorActionPreference # Preserve original
+$ErrorActionPreference = "Stop" # Enforce Stop for orchestrator's main block
 
 try {
-    if ($null -eq $global:MandA -or ([string]::IsNullOrWhiteSpace($CompanyName) -and ([string]::IsNullOrWhiteSpace($global:MandA.CompanyName))) -or (-not [string]::IsNullOrWhiteSpace($CompanyName) -and $global:MandA.CompanyName -ne $CompanyName) ) {
-        Write-Host "Orchestrator: Global environment context ($($global:MandA.CompanyName)) is not set or differs from target ($CompanyName). Attempting to initialize/re-initialize via Set-SuiteEnvironment.ps1..." -ForegroundColor Yellow
-        $envScriptPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Scripts\Set-SuiteEnvironment.ps1"
-        if (-not (Test-Path $envScriptPath)) { throw "Set-SuiteEnvironment.ps1 not found at '$envScriptPath'. Cannot proceed." }
-        $companyNameToUse = if (-not [string]::IsNullOrWhiteSpace($CompanyName)) { $CompanyName } elseif ($null -ne $global:MandA -and -not [string]::IsNullOrWhiteSpace($global:MandA.CompanyName)) { $global:MandA.CompanyName } else { Get-CompanySelection }
-        . $envScriptPath -CompanyName $companyNameToUse -ProvidedSuiteRoot (Split-Path $PSScriptRoot -Parent)
-        if ($null -eq $global:MandA) { throw "Failed to initialize global environment via Set-SuiteEnvironment.ps1 for company '$companyNameToUse'." }
-        Write-Host "Orchestrator: Global environment context established for company '$($global:MandA.CompanyName)'." -ForegroundColor Green
+    # Ensure $global:MandA is initialized by Set-SuiteEnvironment.ps1 (typically via QuickStart.ps1)
+    if ($null -eq $global:MandA -or -not $global:MandA.Initialized) {
+        Write-Host "Orchestrator: \$global:MandA not initialized. Attempting to run Set-SuiteEnvironment.ps1..." -ForegroundColor Yellow
+        # Determine PSScriptRoot for this script (MandA-Orchestrator.ps1)
+        $currentScriptPath = $MyInvocation.MyCommand.Path
+        $coreDir = Split-Path $currentScriptPath -Parent
+        $currentSuiteRoot = Split-Path $coreDir -Parent
+        
+        $envScriptPath = Join-Path $currentSuiteRoot "Scripts\Set-SuiteEnvironment.ps1"
+        if (-not (Test-Path $envScriptPath -PathType Leaf)) {
+            throw "CRITICAL: Set-SuiteEnvironment.ps1 not found at '$envScriptPath'. Cannot proceed with Orchestrator."
+        }
+        # Determine CompanyName: If provided as param, use it. Else, try to get from existing $global:MandA.Config (less likely here),
+        # or prompt if truly running standalone (not recommended for Orchestrator).
+        $companyNameToUseForEnv = $CompanyName # Parameter takes precedence
+        if ([string]::IsNullOrWhiteSpace($companyNameToUseForEnv) -and $global:MandA -and $global:MandA.Config -and $global:MandA.Config.metadata.companyName) {
+            $companyNameToUseForEnv = $global:MandA.Config.metadata.companyName
+        }
+        if ([string]::IsNullOrWhiteSpace($companyNameToUseForEnv)) {
+            # This path is unlikely if Orchestrator is called correctly.
+            Write-Warning "CompanyName not provided to Orchestrator and not found in existing global context. This is unusual."
+            # Attempt to get from default-config.json directly as a last resort if $ConfigurationFile is set.
+            if(-not [string]::IsNullOrWhiteSpace($ConfigurationFile) -and (Test-Path $ConfigurationFile)){
+                $tempConf = Get-Content $ConfigurationFile -Raw | ConvertFrom-Json
+                $companyNameToUseForEnv = $tempConf.metadata.companyName
+            }
+            if([string]::IsNullOrWhiteSpace($companyNameToUseForEnv)){
+                 throw "CRITICAL: CompanyName could not be determined for Set-SuiteEnvironment.ps1. Provide -CompanyName to Orchestrator."
+            }
+        }
+        Write-Host "Orchestrator: Sourcing '$envScriptPath' with CompanyName '$companyNameToUseForEnv' and SuiteRoot '$currentSuiteRoot'." -ForegroundColor Yellow
+        . $envScriptPath -ProvidedSuiteRoot $currentSuiteRoot -CompanyName $companyNameToUseForEnv
+        if ($null -eq $global:MandA -or -not $global:MandA.Initialized) {
+            throw "CRITICAL: Failed to initialize global environment via Set-SuiteEnvironment.ps1 from Orchestrator."
+        }
+        Write-Host "Orchestrator: Global environment context established successfully via Set-SuiteEnvironment.ps1." -ForegroundColor Green
     }
-    if ([string]::IsNullOrWhiteSpace($CompanyName)) { $CompanyName = $global:MandA.CompanyName }
-    $SanitizedCompanyName = $CompanyName -replace '[<>:"/\\|?*]', '_'
 
-    $loadedConfiguration = $null 
-    if ($null -ne $global:MandA -and $null -ne $global:MandA.Config) {
-        $loadedConfiguration = $global:MandA.Config
-    } else {
-        $effectiveConfigPath = $ConfigurationFile 
-        if ([string]::IsNullOrWhiteSpace($effectiveConfigPath)) { $effectiveConfigPath = Join-Path ($global:MandA.Paths.SuiteRoot | Get-OrElse (Split-Path $PSScriptRoot -Parent)) "Configuration\default-config.json" }
-        elseif (-not ([System.IO.Path]::IsPathRooted($effectiveConfigPath))) { $effectiveConfigPath = Join-Path ($global:MandA.Paths.SuiteRoot | Get-OrElse (Split-Path $PSScriptRoot -Parent)) $effectiveConfigPath }
-        if (-not (Test-Path $effectiveConfigPath)) { throw "Configuration file not found: $effectiveConfigPath" }
+    # Use CompanyName from parameter if provided, otherwise from global context.
+    $effectiveCompanyName = if (-not [string]::IsNullOrWhiteSpace($CompanyName)) { $CompanyName } else { $global:MandA.CompanyName }
+    if ([string]::IsNullOrWhiteSpace($effectiveCompanyName)) {
+        throw "CRITICAL: Effective CompanyName could not be determined. Ensure it's provided or set in global context by Set-SuiteEnvironment.ps1."
+    }
+    $SanitizedCompanyName = $effectiveCompanyName -replace '[<>:"/\\|?*]', '_' # Sanitize just in case.
+
+    # Load configuration: Prioritize $ConfigurationFile parameter, then $global:MandA.Config.
+    $loadedConfiguration = $null
+    if (-not [string]::IsNullOrWhiteSpace($ConfigurationFile)) {
+        $effectiveConfigPath = if ([System.IO.Path]::IsPathRooted($ConfigurationFile)) { $ConfigurationFile } else { Join-Path $global:MandA.Paths.SuiteRoot $ConfigurationFile }
+        if (-not (Test-Path $effectiveConfigPath -PathType Leaf)) { throw "Specified configuration file not found: '$effectiveConfigPath'" }
         $configJsonContent = Get-Content -Path $effectiveConfigPath -Raw | ConvertFrom-Json -ErrorAction Stop 
         $loadedConfiguration = ConvertTo-HashtableRecursive -InputObject $configJsonContent
+        Write-Host "[Orchestrator] Loaded configuration from parameter: '$effectiveConfigPath'" -ForegroundColor Cyan
+    } elseif ($null -ne $global:MandA -and $global:MandA.ContainsKey('Config') -and ($null -ne $global:MandA.Config)) {
+        $loadedConfiguration = $global:MandA.Config
+        Write-Host "[Orchestrator] Using configuration from existing global context (`$global:MandA.Config)." -ForegroundColor Cyan
+    } else {
+        throw "CRITICAL: Configuration could not be loaded. Neither -ConfigurationFile parameter provided nor found in `$global:MandA.Config."
     }
-    if ($null -eq $loadedConfiguration) { throw "Configuration could not be loaded or is null." }
-    $loadedConfiguration.metadata.companyName = $SanitizedCompanyName
+    if ($null -eq $loadedConfiguration) { throw "CRITICAL: Configuration resulted in null after loading attempts." }
+    
+    # Ensure the loaded configuration reflects the sanitized company name for this run.
+    # This is important if Orchestrator is called with a CompanyName that might differ from the one in the loaded default-config.json
+    if ($loadedConfiguration.metadata.companyName -ne $SanitizedCompanyName) {
+        Write-Host "[Orchestrator] Updating CompanyName in working configuration from '$($loadedConfiguration.metadata.companyName)' to '$SanitizedCompanyName'." -ForegroundColor Yellow
+        $loadedConfiguration.metadata.companyName = $SanitizedCompanyName
+    }
 
-    if ($Force.IsPresent) { $loadedConfiguration.discovery.skipExistingFiles = $false }
+    # Handle Force mode for discovery
+    if ($Force.IsPresent) {
+        if ($loadedConfiguration.discovery -is [hashtable]) {
+            $loadedConfiguration.discovery.skipExistingFiles = $false
+            Write-Host "[Orchestrator] Force mode enabled: 'skipExistingFiles' set to false." -ForegroundColor Yellow
+        } else {
+            Write-Warning "[Orchestrator] Cannot set 'skipExistingFiles': 'discovery' section not found or not a hashtable in configuration."
+        }
+    }
+
+    # Handle AzureOnly mode
     $effectiveMode = $Mode 
     if ($effectiveMode -eq "AzureOnly") {
-        Write-Host "`nAzure-Only mode selected. Limiting discovery to cloud sources." -ForegroundColor Cyan
-        $currentConfigSources = @($loadedConfiguration.discovery.enabledSources) 
-        $loadedConfiguration.discovery.enabledSources = $currentConfigSources | Where-Object { $_ -in $script:AzureOnlySources }
-        Write-Host "Enabled sources for Azure-Only: $($loadedConfiguration.discovery.enabledSources -join ', ')" -ForegroundColor Yellow
-        $effectiveMode = "Full" 
+        Write-MandALog "Azure-Only mode selected. Limiting discovery to cloud-native sources." -Level "INFO" -Context ([PSCustomObject]@{Config=$loadedConfiguration; CompanyName=$SanitizedCompanyName}) # Temporary context for this log
+        if ($loadedConfiguration.discovery -is [hashtable] -and $loadedConfiguration.discovery.enabledSources -is [array]) {
+            $currentConfigSources = @($loadedConfiguration.discovery.enabledSources) 
+            $filteredSources = $currentConfigSources | Where-Object { $_ -in $script:AzureOnlySources }
+            $loadedConfiguration.discovery.enabledSources = $filteredSources
+            Write-MandALog "Enabled sources for Azure-Only mode: $($filteredSources -join ', ')" -Level "INFO" -Context ([PSCustomObject]@{Config=$loadedConfiguration; CompanyName=$SanitizedCompanyName})
+        } else {
+             Write-Warning "[Orchestrator] Cannot filter sources for AzureOnly mode: 'discovery.enabledSources' not found or not an array."
+        }
+        $effectiveMode = "Full" # Internally, AzureOnly runs the "Full" lifecycle but with filtered sources.
+        Write-MandALog "AzureOnly mode will now proceed as a 'Full' run with filtered sources." -Level "INFO" -Context ([PSCustomObject]@{Config=$loadedConfiguration; CompanyName=$SanitizedCompanyName}) # FAULT 17 FIX
     }
     
+    # Create the main context object for this orchestrator run
     $script:Context = [MandAContext]::new($loadedConfiguration, $SanitizedCompanyName)
-    Write-Host "[DEBUG ORCH] Context created. Config present: $($null -ne $script:Context.Config). Paths.Modules: '$($script:Context.Paths.Modules)'" -ForegroundColor Magenta
+    if (-not $script:Context.ValidateContext()) {
+        throw "MandAContext validation failed. Orchestrator cannot proceed."
+    }
+    if ($script:Context.Config.advancedSettings.debugMode) { Write-MandALog "[DEBUG ORCH] Context created. Paths.Modules: '$($script:Context.Paths.Modules)'" -Level "DEBUG" -Context $script:Context }
     
-    Initialize-MandAEnvironment -Context $script:Context -CurrentMode $effectiveMode -IsValidateOnlyMode:$ValidateOnly
-    Write-Host "[DEBUG ORCH] Environment Initialized. Config present: $($null -ne $script:Context.Config). Paths.Modules: '$($script:Context.Paths.Modules)'" -ForegroundColor Magenta
+    # Initialize the environment (loads utility modules, auth modules, phase-specific modules etc.)
+    Initialize-MandAEnvironment -Context $script:Context -CurrentMode $effectiveMode -IsValidateOnlyMode:$ValidateOnly.IsPresent
+    if ($script:Context.Config.advancedSettings.debugMode) { Write-MandALog "[DEBUG ORCH] Environment Initialized." -Level "DEBUG" -Context $script:Context }
     
-    if ($ValidateOnly.IsPresent) { Write-MandALog "Validation completed successfully" -Level "SUCCESS" -Context $script:Context; exit 0 }
+    # Exit if only validation was requested
+    if ($ValidateOnly.IsPresent) {
+        Write-MandALog "Validation-only mode completed successfully." -Level "SUCCESS" -Context $script:Context
+        # Consider if error collector should be checked even in ValidateOnly mode
+        if ($script:Context.ErrorCollector.HasErrors()) {
+            Complete-MandADiscovery -Context $script:Context # To export error report
+            exit 1 # Indicate validation found issues
+        }
+        exit 0
+    }
     
+    # Authentication and Connection Setup (only if not in Processing-Only or Export-Only mode)
     if ($effectiveMode -in "Discovery", "Full") { 
         Write-MandALog "AUTHENTICATION & CONNECTION SETUP" -Level "HEADER" -Context $script:Context
-        Write-Host "[DEBUG ORCH] Attempting Authentication. Context.Config is null: $($null -eq $script:Context.Config)" -ForegroundColor Cyan
-        if (Get-Command "Initialize-MandAAuthentication" -EA SilentlyContinue) {
+        if (Get-Command "Initialize-MandAAuthentication" -ErrorAction SilentlyContinue) {
+            $authResult = $null
             try {
                 Write-MandALog "Calling Initialize-MandAAuthentication..." -Level "DEBUG" -Context $script:Context
-                $authResult = Initialize-MandAAuthentication -Configuration $script:Context.Config -Context $script:Context # Pass Context here as well
-                Write-MandALog "Initialize-MandAAuthentication returned. Result is null: $($null -eq $authResult). Authenticated: $($authResult.Authenticated)" -Level "DEBUG" -Context $script:Context
+                # Pass the full context to authentication and connection functions
+                $authResult = Initialize-MandAAuthentication -Context $script:Context
+                
+                if ($script:Context.Config.advancedSettings.debugMode) { Write-MandALog ("Initialize-MandAAuthentication returned. Result is null: $($null -eq $authResult). Authenticated: " + ($authResult.PSObject.Properties['Authenticated'].Value | Get-OrElse $false)) -Level "DEBUG" -Context $script:Context }
 
-                if ($authResult -and $authResult.Authenticated) {
-                    Write-MandALog "Authentication successful" -Level "SUCCESS" -Context $script:Context
-                    if (Get-Command "Initialize-AllConnections" -EA SilentlyContinue) {
-                        $connectionStatus = Initialize-AllConnections -Configuration $script:Context.Config -AuthContext $authResult.Context -Context $script:Context # Pass Context
+                if ($authResult -and $authResult.PSObject.Properties['Authenticated'].Value) {
+                    Write-MandALog "Authentication successful." -Level "SUCCESS" -Context $script:Context
+                    # Pass the authentication context from $authResult to Initialize-AllConnections
+                    # It's assumed Initialize-MandAAuthentication returns an object with a 'Context' property holding the auth details
+                    $authContextForConnections = if ($authResult.PSObject.Properties['Context']) { $authResult.Context } else { $authResult }
+
+                    if (Get-Command "Initialize-AllConnections" -ErrorAction SilentlyContinue) {
+                        $connectionStatus = Initialize-AllConnections -AuthContext $authContextForConnections -Context $script:Context
+                        # FAULT 6 FIX: Ensure parentheses for -f operator
                         foreach ($serviceItem in $connectionStatus.Keys) { 
-                            $statusValue = $connectionStatus[$serviceItem]; $isConnectedStatus = if ($statusValue -is [bool]) { $statusValue } else { $statusValue.Connected } 
-                            # Corrected Write-MandALog call
-                            $logMessageString = "Connected to {0}: {1}" -f $serviceItem, $isConnectedStatus
+                            $statusValue = $connectionStatus[$serviceItem]
+                            # Handle if statusValue is bool or hashtable
+                            $isConnectedStatus = if ($statusValue -is [bool]) { $statusValue } `
+                                                elseif ($statusValue -is [hashtable] -and $statusValue.ContainsKey('Connected')) { $statusValue.Connected } `
+                                                else { $false } # Default to false if unknown structure
+                            $logMessageString = ("Connected to {0}: {1}" -f $serviceItem, $isConnectedStatus)
                             $logLevelForConnection = if($isConnectedStatus){"SUCCESS"}else{"WARN"}
                             Write-MandALog -Message $logMessageString -Level $logLevelForConnection -Context $script:Context
                         }
-                    }
+                    } else { Write-MandALog "Initialize-AllConnections function not found. Skipping connection setup." -Level "WARN" -Context $script:Context }
                 } else {
-                    $errorMessageText = if ($authResult -and $authResult.Error) { $authResult.Error } else { "Authentication failed - no details" }
+                    $errorMessageText = if ($authResult -and $authResult.PSObject.Properties['Error']) { $authResult.Error } else { "Authentication failed - no specific details provided by Initialize-MandAAuthentication." }
                     $script:Context.ErrorCollector.AddError("Authentication", $errorMessageText, $null)
                     Write-MandALog "Authentication failed: $errorMessageText" -Level "ERROR" -Context $script:Context
-                    if (($script:Context.Config.environment.connectivity.haltOnConnectionError | Get-OrElse @()) -contains "Authentication") {
-                        throw "Critical Authentication failed: $errorMessageText"
+                    # FAULT 20 FIX: Halt if authentication is critical and failed
+                    if (($script:Context.Config.environment.connectivity.haltOnConnectionError | global:Get-OrElse @()) -contains "Authentication") {
+                        throw "CRITICAL: Authentication failed and is configured to halt on error: $errorMessageText"
                     }
                 }
-            } catch {
-                $errorMessageText = $_.Exception.Message
-                $script:Context.ErrorCollector.AddError("Authentication", "Init failed: $errorMessageText", $_.Exception)
-                Write-MandALog "Authentication Init failed: $errorMessageText. Stack: $($_.ScriptStackTrace)" -Level "ERROR" -Context $script:Context
-                if (($script:Context.Config.environment.connectivity.haltOnConnectionError | Get-OrElse @()) -contains "Authentication") {
-                    throw "Critical Authentication Init failed: $errorMessageText"
+            } catch { # Catch errors from Initialize-MandAAuthentication or Initialize-AllConnections
+                $errorMessageText = "Authentication/Connection setup failed: $($_.Exception.Message)"
+                $script:Context.ErrorCollector.AddError("Authentication", $errorMessageText, $_.Exception)
+                Write-MandALog "$errorMessageText. Stack: $($_.ScriptStackTrace)" -Level "ERROR" -Context $script:Context
+                if (($script:Context.Config.environment.connectivity.haltOnConnectionError | global:Get-OrElse @()) -contains "Authentication") {
+                    throw "CRITICAL: Authentication/Connection setup failed and is configured to halt on error: $errorMessageText"
                 }
             }
-        } else { Write-MandALog "Initialize-MandAAuthentication function not found." -Level "ERROR" -Context $script:Context; throw "Initialize-MandAAuthentication function not found." }
-    }
+        } else {
+            $authInitMissingMsg = "Initialize-MandAAuthentication function not found. Authentication cannot proceed."
+            Write-MandALog $authInitMissingMsg -Level "ERROR" -Context $script:Context
+            $script:Context.ErrorCollector.AddError("Environment", $authInitMissingMsg, $null)
+            throw $authInitMissingMsg # Critical if Discovery or Full mode
+        }
+    } # End if effectiveMode requires auth
     
-    Write-Host "[DEBUG ORCH] Before Switch. Mode: $effectiveMode. Context Null: $($null -eq $script:Context). Context.OrchestratorState Null: $($null -eq $script:Context.OrchestratorState)" -ForegroundColor Yellow
+    if ($script:Context.Config.advancedSettings.debugMode) {Write-MandALog "[DEBUG ORCH] Before Switch. Mode: $effectiveMode" -Level "DEBUG" -Context $script:Context}
+    # Execute the requested phases
     switch ($effectiveMode) {
         "Discovery"  { Invoke-DiscoveryPhase  -Context $script:Context }
         "Processing" { Invoke-ProcessingPhase -Context $script:Context }
         "Export"     { Invoke-ExportPhase     -Context $script:Context }
         "Full"       { 
             Invoke-DiscoveryPhase  -Context $script:Context
-            Write-Host "[DEBUG ORCH] After DiscoveryPhase. Context Null: $($null -eq $script:Context)" -ForegroundColor Yellow
+            if ($script:Context.Config.advancedSettings.debugMode) { Write-MandALog "[DEBUG ORCH] After DiscoveryPhase." -Level "DEBUG" -Context $script:Context }
             Invoke-ProcessingPhase -Context $script:Context
-            Write-Host "[DEBUG ORCH] After ProcessingPhase. Context Null: $($null -eq $script:Context)" -ForegroundColor Yellow
+            if ($script:Context.Config.advancedSettings.debugMode) { Write-MandALog "[DEBUG ORCH] After ProcessingPhase." -Level "DEBUG" -Context $script:Context }
             Invoke-ExportPhase     -Context $script:Context 
         }
+        default {
+            $invalidModeMsg = "Invalid operation mode specified: '$effectiveMode'."
+            Write-MandALog $invalidModeMsg -Level "ERROR" -Context $script:Context
+            $script:Context.ErrorCollector.AddError("OrchestratorCore", $invalidModeMsg, $null)
+            throw $invalidModeMsg
+        }
     }
+
     Complete-MandADiscovery -Context $script:Context
-    if ($script:Context.ErrorCollector.HasCriticalErrors()) { exit 2 } elseif ($script:Context.ErrorCollector.HasErrors()) { exit 1 } else { exit 0 }
-}
-catch {
-    Write-Host "ORCHESTRATOR CRITICAL ERROR: $($_.Exception.Message)" -ForegroundColor Red
+    
+    # Determine exit code
+    if ($script:Context.ErrorCollector.HasCriticalErrors()) { exit 2 } 
+    elseif ($script:Context.ErrorCollector.HasErrors()) { exit 1 } 
+    else { exit 0 }
+
+} catch {
+    $fatalErrorMsg = "ORCHESTRATOR CRITICAL ERROR: $($_.Exception.Message)"
+    Write-Host $fatalErrorMsg -ForegroundColor Red
     Write-Host "Stack Trace: $($_.ScriptStackTrace)" -ForegroundColor Yellow
-    if ($script:Context -and $script:Context.ErrorCollector) {
+    
+    # Try to log using MandA logger if context exists, otherwise just Write-Host
+    if ($script:Context -and $script:Context.ErrorCollector -and (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
         $script:Context.ErrorCollector.AddError("OrchestratorCore", "Fatal error: $($_.Exception.Message)", $_.Exception)
-        if(Get-Command Complete-MandADiscovery -EA SilentlyContinue) { Complete-MandADiscovery -Context $script:Context }
+        Write-MandALog $fatalErrorMsg -Level CRITICAL -Context $script:Context
+        Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level DEBUG -Context $script:Context
+        if (Get-Command Complete-MandADiscovery -ErrorAction SilentlyContinue) {
+            Complete-MandADiscovery -Context $script:Context # Attempt to finalize and log errors
+        }
     }
-    exit 3
+    exit 3 # General critical failure
 }
 finally {
-    if ($script:Context -and (Get-Command "Disconnect-AllServices" -EA SilentlyContinue)) {
-        try { Disconnect-AllServices } catch { Write-Warning "Error during service disconnection: $($_.Exception.Message)" }
+    # Attempt to disconnect services if the function is available
+    if ($script:Context -and (Get-Command "Disconnect-AllServices" -ErrorAction SilentlyContinue)) {
+        try {
+            Write-MandALog "Attempting to disconnect all services..." -Level INFO -Context $script:Context
+            Disconnect-AllServices -Context $script:Context # Pass context if needed by Disconnect-AllServices
+        } catch {
+            $disconnectErrorMsg = "Error during final service disconnection: $($_.Exception.Message)"
+            if ($script:Context -and (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
+                 Write-MandALog $disconnectErrorMsg -Level WARN -Context $script:Context
+            } else {
+                Write-Warning $disconnectErrorMsg
+            }
+        }
     }
+    $ErrorActionPreference = $orchestratorErrorActionPreference # Restore original preference
+    Write-Host "[Orchestrator] Execution finished. Restored ErrorActionPreference to '$ErrorActionPreference'." -ForegroundColor Gray
 }
+
