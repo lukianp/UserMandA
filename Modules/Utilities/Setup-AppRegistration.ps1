@@ -686,7 +686,7 @@ function Connect-EnhancedAzure {
             }
             
             $activeSubscriptions | Select-Object -First 3 | ForEach-Object {
-                Write-EnhancedLog "    • $($_.Name) ($($_.State))" -Level INFO
+                Write-EnhancedLog "    * $($_.Name) ($($_.State))" -Level INFO
             }
             if ($activeSubscriptions.Count -gt 3) {
                 Write-EnhancedLog "    ... and $($activeSubscriptions.Count - 3) more active subscriptions" -Level INFO
@@ -1006,10 +1006,10 @@ function New-EnhancedClientSecret {
         
         $daysUntilExpiry = ($clientSecretObj.EndDateTime - (Get-Date)).Days
         Write-EnhancedLog "SECRET SECURITY NOTICE:" -Level CRITICAL
-        Write-EnhancedLog "  • Secret value has been displayed and will be encrypted" -Level IMPORTANT
-        Write-EnhancedLog "  • Secret cannot be retrieved after this session" -Level IMPORTANT
-        Write-EnhancedLog "  • Secret expires in $daysUntilExpiry days" -Level IMPORTANT
-        Write-EnhancedLog "  • Set calendar reminder for renewal before expiry" -Level IMPORTANT
+        Write-EnhancedLog "  * Secret value has been displayed and will be encrypted" -Level IMPORTANT
+        Write-EnhancedLog "  * Secret cannot be retrieved after this session" -Level IMPORTANT
+        Write-EnhancedLog "  * Secret expires in $daysUntilExpiry days" -Level IMPORTANT
+        Write-EnhancedLog "  * Set calendar reminder for renewal before expiry" -Level IMPORTANT
         
         Stop-OperationTimer "SecretCreation" $true
         return $clientSecretObj # Explicitly return the secret object
@@ -1533,11 +1533,11 @@ PowerShell: $($PSVersionTable.PSVersion)
     Write-EnhancedLog "  4. Run discovery: .\Core\MandA-Orchestrator.ps1 -Mode Full (Run from Suite Root)" -Level IMPORTANT
     
     Write-EnhancedLog "IMPORTANT SECURITY REMINDERS:" -Level CRITICAL -NoTimestamp
-    Write-EnhancedLog "  • Client secret expires: $($clientSecretObj.EndDateTime.ToString('yyyy-MM-dd'))" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  • Set calendar reminder for credential renewal" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  • Credentials are user-encrypted (current user only)" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  • Backup credentials file is stored securely" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  • Review and audit permissions regularly" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  * Client secret expires: $($clientSecretObj.EndDateTime.ToString('yyyy-MM-dd'))" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  * Set calendar reminder for credential renewal" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  * Credentials are user-encrypted (current user only)" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  * Backup credentials file is stored securely" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  * Review and audit permissions regularly" -Level IMPORTANT -NoTimestamp
     
     Write-EnhancedLog "Azure AD App Registration completed successfully!" -Level SUCCESS
     Write-EnhancedLog "Ready to proceed with M&A Discovery Suite operations" -Level SUCCESS

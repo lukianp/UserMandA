@@ -168,7 +168,7 @@ function Update-TaskProgress {
 
     # Use PowerShell's native progress bar
     Write-Progress -Activity $Activity -Id $ActivityId `
-                   -Status "$StatusDescription ($CurrentOperation of $TotalOperations)" `
+                   -Status "$StatusDescription ($CurrentOperation of $TotalOperations)"
                    -PercentComplete $percent `
                    -CurrentOperation "Item $CurrentOperation of $TotalOperations" # More descriptive CurrentOperation
     

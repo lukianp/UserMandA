@@ -277,12 +277,12 @@ function Invoke-DataSourceAnalysis {
     $foundUserSourcesCount = 0
     foreach ($key in $userSourceKeys) {
         if ($DataSources.ContainsKey($key) -and @($DataSources[$key]).Count -gt 0) {
-            & $LogSuccess "  ✓ User source: $key (Records: $(@($DataSources[$key]).Count))"
+            & $LogSuccess "   User source: $key (Records: $(@($DataSources[$key]).Count))"
             $foundUserSourcesCount++
         }
     }
     if ($foundUserSourcesCount -eq 0) {
-        & $LogError "  ✗ WARNING: No primary user data sources (AD, Graph, Exchange) found! Processing quality will be low."
+        & $LogError "   WARNING: No primary user data sources (AD, Graph, Exchange) found! Processing quality will be low."
         if ($script:AggregationStats.PSObject.Properties.Name -contains 'Errors') { # Check if Errors property exists
             $null = $script:AggregationStats.Errors.Add("No primary user data sources found")
         }
@@ -774,7 +774,7 @@ function Export-ProcessedData {
             $exportUser
         }
         $exportUsers | Export-Csv -Path $userFile -NoTypeInformation -Encoding UTF8 -Force
-        & $LogSuccess "  ✓ Exported Users.csv ($($Users.Count) records)"
+        & $LogSuccess "  [OK] Exported Users.csv ($($Users.Count) records)"
         $exportStats.FilesExported++; $exportStats.RecordsExported += $Users.Count
 
         # Also create UserProfiles.csv for downstream compatibility if its structure is different or a subset
@@ -790,7 +790,7 @@ function Export-ProcessedData {
                                 @{N='MigrationCategory';E={if($_.PSObject.Properties['MigrationCategory']){$_.MigrationCategory}else{'Not Assessed'}}},
                                 @{N='ReadinessStatus';E={if($_.PSObject.Properties['ReadinessStatus']){$_.ReadinessStatus}else{'Not Assessed'}}} |
             Export-Csv -Path $profileFile -NoTypeInformation -Encoding UTF8 -Force
-        & $LogSuccess "  ✓ Exported UserProfiles.csv"
+        & $LogSuccess "  [OK] Exported UserProfiles.csv"
         # $exportStats.FilesExported++ # Not double counting if it's derived from Users.csv
     }
     
@@ -804,7 +804,7 @@ function Export-ProcessedData {
             $exportDevice
         }
         $exportDevices | Export-Csv -Path $deviceFile -NoTypeInformation -Encoding UTF8 -Force
-        & $LogSuccess "  ✓ Exported Devices.csv ($($Devices.Count) records)"
+        & $LogSuccess "  [OK] Exported Devices.csv ($($Devices.Count) records)"
         $exportStats.FilesExported++; $exportStats.RecordsExported += $Devices.Count
     }
     
@@ -823,7 +823,7 @@ function Export-ProcessedData {
             $sourceData = @($DataSources[$sourceKey])
             & $LogInfo "Exporting $sourceKey data ($($sourceData.Count) records)..."
             $sourceData | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8 -Force
-            & $LogSuccess "  ✓ Exported $fileName"
+            & $LogSuccess "  [OK] Exported $fileName"
             $exportStats.FilesExported++; $exportStats.RecordsExported += $sourceData.Count
         }
     }
@@ -839,7 +839,7 @@ function Export-ProcessedData {
         TotalRecordsInProcessedDir = $exportStats.RecordsExported
     }
     $summaryData | ConvertTo-Json -Depth 5 | Set-Content -Path $summaryFile -Encoding UTF8 # Reduced depth for summary
-    & $LogSuccess "  ✓ Exported AggregationSummary.json"
+    & $LogSuccess "  [OK] Exported AggregationSummary.json"
     
     & $LogInfo "═══════════════════════════════════════════════════════════════════════"
     & $LogInfo "Processed data export completed: $($exportStats.FilesExported) files, $($exportStats.RecordsExported) total records to '$ProcessedDataPath'"

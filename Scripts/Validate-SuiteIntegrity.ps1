@@ -38,7 +38,7 @@ function Test-Component {
         if ($testResult -eq $true) {
             $result.Status = "Passed"
             $script:ValidationResults.Passed++
-            Write-Host "✓ $Name" -ForegroundColor Green
+            Write-Host "[OK] $Name" -ForegroundColor Green
         } elseif ($testResult -is [string]) {
             $result.Status = "Warning"
             $result.Message = $testResult
@@ -48,13 +48,13 @@ function Test-Component {
             $result.Status = "Failed"
             $result.Message = "Test returned false"
             $script:ValidationResults.Failed++
-            Write-Host "✗ $Name" -ForegroundColor Red
+            Write-Host "[X] $Name" -ForegroundColor Red
         }
     } catch {
         $result.Status = "Failed"
         $result.Message = $_.Exception.Message
         $script:ValidationResults.Failed++
-        Write-Host "✗ $Name - $_" -ForegroundColor Red
+        Write-Host "[X] $Name - $_" -ForegroundColor Red
     }
     
     $script:ValidationResults.Details += $result
