@@ -11,11 +11,299 @@
     Last Modified: 2024-01-20
 #>
 
+
+
+
+
 # Import base module
-$outputPath = $Context.Paths.RawDataOutput
-$baseModule = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath "Utilities\DiscoveryModuleBase.psm1"
-if (Test-Path -Path $baseModule) {
-    Import-Module -Name $baseModule -Force
+
+$authModulePathFromGlobal = Join-Path $global:MandA.Paths.Authentication "DiscoveryModuleBase.psm1"
+Import-Module $authModulePathFromGlobal -Force
+
+
+# Add progress module import after other imports
+$progressModulePath = if ($global:MandA -and $global:MandA.Paths) {
+    Join-Path $global:MandA.Paths.Utilities "ProgressDisplay.psm1"
+} else {
+    Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) "Utilities\ProgressDisplay.psm1"
+}
+if (Test-Path $progressModulePath) {
+    Import-Module $progressModulePath -Force -Global
+}
+
+# Enhanced Get-B2BGuestUsersEnhanced
+function Get-B2BGuestUsersEnhanced {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory = $true)]
+        [MandAContext]$Context
+    )
+    
+    $guestDataList = [System.Collections.Generic.List[PSObject]]::new()
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    
+    try {
+        Write-ProgressStep "Retrieving B2B guest users with batch size $($Configuration.BatchSize)..." -Status Progress
+        
+        $propertiesToSelect = @(
+            "id", "userPrincipalName", "displayName", "mail", "userType", "externalUserState",
+            "externalUserStateChangeDateTime", "createdDateTime", "creationType", "accountEnabled",
+            "companyName", "department", "jobTitle", "usageLocation", "preferredLanguage",
+            "refreshTokensValidFromDateTime", "onPremisesSyncEnabled", "proxyAddresses"
+        )
+        
+        Write-ProgressStep "Fetching guest users from Microsoft Graph..." -Status Progress
+        
+        $guests = Get-GraphDataInBatches -Entity "users" `
+                                        -Filter "userType eq 'Guest'" `
+                                        -Select $propertiesToSelect `
+                                        -ExpandProperty "signInActivity" `
+                                        -BatchSize $Configuration.BatchSize `
+                                        -Context $Context
+        
+        if ($null -eq $guests -or $guests.Count -eq 0) {
+            Write-ProgressStep "No guest users found in the tenant." -Status Info
+            return $guestDataList
+        }
+        
+        Write-ProgressStep "Found $($guests.Count) guest users to process" -Status Info
+        
+        $guestBatches = Split-ArrayIntoBatches -Array $guests -BatchSize 50
+        $batchCount = 0
+        
+        foreach ($batch in $guestBatches) {
+            $batchCount++
+            
+            Show-ProgressBar -Current $batchCount -Total $guestBatches.Count `
+                -Activity "Processing guest user batch $batchCount of $($guestBatches.Count)"
+            
+            $batchResults = $batch | ForEach-Object -Parallel {
+                $guest = $_
+                $config = $using:Configuration
+                $context = $using:Context
+                
+                $guestDomain = Get-GuestDomain -Guest $guest
+                
+                $appRoleAssignmentsCount = 0
+                $appRoleDetails = @()
+                
+                if ($config.GetGuestAppRoleAssignments) {
+                    try {
+                        $appRoles = Invoke-MgGraphRequest -Method GET `
+                                                         -Uri "v1.0/users/$($guest.Id)/appRoleAssignments" `
+                                                         -ErrorAction SilentlyContinue
+                        
+                        if ($appRoles.value) {
+                            $appRoleAssignmentsCount = $appRoles.value.Count
+                            $appRoleDetails = $appRoles.value | Select-Object -First 5 | ForEach-Object {
+                                $_.resourceDisplayName
+                            }
+                        }
+                    }
+                    catch {
+                        # Log at debug level to avoid noise
+                    }
+                }
+                
+                # Return guest object (existing code)
+                [PSCustomObject]@{
+                    GuestId                         = $guest.Id
+                    UserPrincipalName               = $guest.UserPrincipalName
+                    DisplayName                     = $guest.DisplayName
+                    Mail                            = $guest.Mail
+                    GuestDomain                     = $guestDomain
+                    CreationType                    = $guest.CreationType
+                    UserType                        = $guest.UserType
+                    AccountEnabled                  = $guest.AccountEnabled
+                    ExternalUserState               = if ($null -ne $guest.ExternalUserState) { $guest.ExternalUserState } else { "Unknown" }
+                    ExternalUserStateChangeDateTime = $guest.ExternalUserStateChangeDateTime
+                    CreatedDateTime                 = $guest.CreatedDateTime
+                    CompanyName                     = $guest.CompanyName
+                    Department                      = $guest.Department
+                    JobTitle                        = $guest.JobTitle
+                    UsageLocation                   = $guest.UsageLocation
+                    PreferredLanguage               = $guest.PreferredLanguage
+                    AppRoleAssignmentCount          = $appRoleAssignmentsCount
+                    TopAppAssignments               = ($appRoleDetails -join '; ')
+                    LastSignInDateTime              = if ($null -ne $guest.SignInActivity) { $guest.SignInActivity.LastSignInDateTime } else { $null }
+                    LastNonInteractiveSignInDateTime= if ($null -ne $guest.SignInActivity) { $guest.SignInActivity.LastNonInteractiveSignInDateTime } else { $null }
+                    RefreshTokensValidFromDateTime  = $guest.RefreshTokensValidFromDateTime
+                    OnPremisesSyncEnabled           = $guest.OnPremisesSyncEnabled
+                    ProxyAddresses                  = ($guest.ProxyAddresses -join '; ')
+                    DaysSinceLastSignIn             = if ($null -ne $guest.SignInActivity -and $null -ne $guest.SignInActivity.LastSignInDateTime) {
+                        [Math]::Round(((Get-Date) - [DateTime]$guest.SignInActivity.LastSignInDateTime).TotalDays, 0)
+                    } else { $null }
+                    IsActive90Days                  = if ($null -ne $guest.SignInActivity -and $null -ne $guest.SignInActivity.LastSignInDateTime) {
+                        [DateTime]$guest.SignInActivity.LastSignInDateTime -gt (Get-Date).AddDays(-90)
+                    } else { $false }
+                    _DataType                       = 'B2BGuestUsers'
+                }
+            } -ThrottleLimit $Configuration.MaxDegreeOfParallelism
+            
+            $guestDataList.AddRange($batchResults)
+        }
+        
+        Write-Host "" # New line after progress
+        
+        $stopwatch.Stop()
+        Write-ProgressStep "Processed $($guestDataList.Count) guest users in $([Math]::Round($stopwatch.Elapsed.TotalSeconds, 2)) seconds" -Status Success
+        
+        if ($guestDataList.Count -gt 0) {
+            $avgProcessingTime = $stopwatch.Elapsed.TotalMilliseconds / $guestDataList.Count
+            Write-ProgressStep "Average processing time per guest: $([Math]::Round($avgProcessingTime, 2))ms" -Status Info
+        }
+        
+        return $guestDataList
+    }
+    catch {
+        Write-ProgressStep "Error retrieving B2B guest users: $($_.Exception.Message)" -Status Error
+        Write-MandALog -Message "Error retrieving B2B guest users: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        throw
+    }
+}
+
+# Enhanced main function
+function Invoke-ExternalIdentityDiscovery {
+    [CmdletBinding()]
+    [OutputType([hashtable])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory = $true)]
+        [MandAContext]$Context
+    )
+    
+    $discoveryScript = {
+        $script:PerformanceTracker = [DiscoveryPerformanceTracker]::new()
+        
+        Write-ProgressStep "Starting External Identity Discovery" -Status Progress
+        
+        # Check Graph connection
+        Write-ProgressStep "Verifying Microsoft Graph connection..." -Status Progress
+        $graphContext = Get-MgContext -ErrorAction SilentlyContinue
+        if ($null -eq $graphContext) {
+            Write-ProgressStep "Microsoft Graph not connected" -Status Error
+            throw "Microsoft Graph not connected. Please authenticate first."
+        }
+        
+        Write-ProgressStep "Graph context active. Tenant: $($graphContext.TenantId)" -Status Info
+        
+        $config = Get-ExternalIdentityConfig -Configuration $Configuration
+        
+        $results = @{}
+        
+        # Define discovery tasks
+        $discoveryTasks = @(
+            @{Name="B2B Guest Users"; Key="B2BGuests"; Function="Get-B2BGuestUsersEnhanced"},
+            @{Name="External Collaboration Settings"; Key="CollaborationSettings"; Function="Get-ExternalCollaborationSettingsEnhanced"},
+            @{Name="Guest User Activity"; Key="GuestActivity"; Function="Get-GuestUserActivityEnhanced"; RequiresGuests=$true},
+            @{Name="Partner Organizations"; Key="PartnerOrganizations"; Function="Get-PartnerOrganizationsEnhanced"; RequiresGuests=$true},
+            @{Name="External Identity Providers"; Key="IdentityProviders"; Function="Get-ExternalIdentityProvidersEnhanced"},
+            @{Name="Guest Invitations"; Key="GuestInvitations"; Function="Get-GuestInvitationsEnhanced"; RequiresGuests=$true},
+            @{Name="Cross-Tenant Access Policy"; Key="CrossTenantAccess"; Function="Get-CrossTenantAccessEnhanced"}
+        )
+        
+        $taskCount = 0
+        foreach ($task in $discoveryTasks) {
+            $taskCount++
+            
+            Show-DiscoveryProgress -Module "ExternalIdentity" -Status "Running" `
+                -CurrentItem $task.Name -ItemsProcessed $taskCount -TotalItems $discoveryTasks.Count
+            
+            Write-ProgressStep "Discovering $($task.Name)..." -Status Progress
+            
+            $script:PerformanceTracker.StartOperation($task.Key)
+            
+            if ($task.RequiresGuests -and $results.B2BGuests.Count -eq 0) {
+                Write-ProgressStep "Skipping $($task.Name) - no guest users found" -Status Info
+                continue
+            }
+            
+            if ($task.RequiresGuests) {
+                $results[$task.Key] = & $task.Function -GuestUsers $results.B2BGuests -Configuration $config -Context $Context
+            } else {
+                $results[$task.Key] = & $task.Function -Configuration $config -Context $Context
+            }
+            
+            $itemCount = if ($results[$task.Key] -is [array]) { $results[$task.Key].Count } else { 1 }
+            $script:PerformanceTracker.EndOperation($task.Key, $itemCount)
+            
+            Write-ProgressStep "Completed $($task.Name): $itemCount items" -Status Success
+        }
+        
+        Write-ProgressStep "External Identity Discovery completed" -Status Success
+        
+        return Convert-ToFlattenedData -Results $results
+    }
+    
+    return Invoke-BaseDiscovery -ModuleName "ExternalIdentity" `
+                               -DiscoveryScript $discoveryScript `
+                               -Configuration $Configuration `
+                               -Context $Context `
+                               -RequiredPermissions @('User.Read.All', 'Policy.Read.All', 'IdentityProvider.Read.All') `
+                               -CircuitBreaker $script:GraphCircuitBreaker
+}
+
+# Enhanced Get-GraphDataInBatches with progress
+function Get-GraphDataInBatches {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Entity,
+        [string]$Filter,
+        [string[]]$Select,
+        [string]$ExpandProperty,
+        [int]$BatchSize = 999,
+        [Parameter(Mandatory = $true)]
+        [MandAContext]$Context
+    )
+    
+    $allData = [System.Collections.Generic.List[PSObject]]::new()
+    $uri = "v1.0/$Entity"
+    $queryParams = @{
+        '$top'   = $BatchSize
+        '$count' = 'true'
+    }
+    
+    if ($Filter) { $queryParams['$filter'] = $Filter }
+    if ($Select) { $queryParams['$select'] = $Select -join ',' }
+    if ($ExpandProperty) { $queryParams['$expand'] = $ExpandProperty }
+    
+    $headers = @{
+        'ConsistencyLevel' = 'eventual'
+    }
+    
+    $pageCount = 0
+    do {
+        try {
+            $pageCount++
+            Write-ProgressStep "Fetching $Entity page $pageCount..." -Status Progress
+            
+            $response = Invoke-DiscoveryWithRetry -ScriptBlock {
+                Invoke-MgGraphRequest -Method GET -Uri $uri -Headers $headers -Body $queryParams -ErrorAction Stop
+            } -OperationName "GraphBatch_$Entity" -Context $Context -CircuitBreaker $script:GraphCircuitBreaker
+            
+            if ($response.value) {
+                $allData.AddRange($response.value)
+                Show-ProgressBar -Current $allData.Count -Total ($allData.Count + 1) `
+                    -Activity "Retrieved $($allData.Count) $Entity"
+            }
+            
+            $uri = $response.'@odata.nextLink'
+            $queryParams = @{}
+        }
+        catch {
+            Write-MandALog -Message "Error in batch retrieval: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            throw
+        }
+    } while ($uri)
+    
+    Write-Host "" # New line after progress
+    Write-ProgressStep "Retrieved total of $($allData.Count) $Entity" -Status Info
+    
+    return $allData
 }
 
 # Module-specific circuit breakers

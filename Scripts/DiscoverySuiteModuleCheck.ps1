@@ -1,32 +1,29 @@
-#Requires -Version 5.1
+#Requires -Version 5.1 
 <#
 .SYNOPSIS
-    Checks the availability, version, and basic integrity of PowerShell modules required 
+    Checks the availability, version, and basic integrity of PowerShell modules required
     or recommended for the M&A Discovery Suite.
-
 .DESCRIPTION
     This script iterates through a predefined list of PowerShell modules,
     checks if they are installed, compares their version against a minimum expected version,
     attempts to import them, and reports their status.
     It can attempt to install or update modules from the PowerShell Gallery.
     It can also attempt to install missing RSAT tools (requires Administrator privileges).
-
 .PARAMETER ModuleName
     Optional. An array of specific module names to check. If not provided, all predefined modules are checked.
-
 .PARAMETER AutoFix
     Optional. Switch to attempt automatic installation or update of modules from PSGallery
     that are missing or below the required version. Also attempts to install missing RSAT tools
     if run with Administrator privileges. Uses -Force with Install-Module.
-
 .PARAMETER Silent
     Optional. Switch to suppress individual confirmation prompts when -AutoFix is also used.
     Effectively makes -AutoFix non-interactive for PSGallery module and RSAT tool installations.
-
 .NOTES
-    Version: 2.0.8
-    Author: Gemini & User
-    Date: 2025-06-01
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 
     Instructions:
     1. Run this script on the machine where you intend to run the M&A Discovery Suite.
@@ -35,22 +32,16 @@
        will prevent parts of the M&A Discovery Suite from functioning correctly.
     4. The module 'Microsoft.Graph.Policies' was removed from checks as it's not a standalone installable module.
        The script 'ExternalIdentityDiscovery.psm1' must be updated to require the correct Graph SDK module(s) it uses.
-
 .EXAMPLE
     # Check modules, attempt to auto-fix Gallery modules and RSAT tools (prompts for each)
-    .\DiscoverySuiteModuleCheck.ps1 -AutoFix 
+    .\DiscoverySuiteModuleCheck.ps1 -AutoFix
 
 .EXAMPLE
     # Check modules, silently auto-fix Gallery modules and RSAT tools (requires Admin for RSAT)
     .\DiscoverySuiteModuleCheck.ps1 -AutoFix -Silent
-#>
-
-
-$outputPath = $Context.Paths.RawDataOutput
-
-
-[CmdletBinding(SupportsShouldProcess = $true)] 
-param(
+#> 
+[CmdletBinding(SupportsShouldProcess = $true)]
+param( 
     [Parameter(Mandatory = $false)]
     [string[]]$ModuleName,
 
@@ -58,8 +49,10 @@ param(
     [switch]$AutoFix,
 
     [Parameter(Mandatory = $false)]
-    [switch]$Silent 
+    [switch]$Silent
 )
+
+
 
 #===============================================================================
 #                           HELPER FUNCTION - ADMIN CHECK

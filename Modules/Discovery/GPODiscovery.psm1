@@ -10,7 +10,7 @@
 #>
 
 #Requires -Modules ActiveDirectory, GroupPolicy
-$outputPath = $Context.Paths.RawDataOutput
+
 # --- Helper Functions ---
 function Export-DataToCSV {
     [CmdletBinding()]
@@ -42,7 +42,7 @@ function Get-GPOData {
     )
     
     try {
-        Write-MandALog "Starting comprehensive GPO analysis..." -Level "HEADER"
+        Write-ProgressStep "Starting comprehensive GPO analysis..." -Status Progress
         
         # Initialize collections
         $allGPOs = [System.Collections.Generic.List[PSCustomObject]]::new()
@@ -57,10 +57,12 @@ function Get-GPOData {
         $gpoReportsPath = Join-Path $OutputPath "GPOReports"
         if (!(Test-Path $gpoReportsPath)) {
             New-Item -Path $gpoReportsPath -ItemType Directory -Force | Out-Null
-            Write-MandALog "Created GPO reports directory: $gpoReportsPath" -Level "INFO"
+            Write-ProgressStep "Created GPO reports directory" -Status Info
         }
         
-        # Get all GPOs in domain with enhanced error handling
+        # Get all GPOs in domain
+        Write-ProgressStep "Retrieving GPOs from domain..." -Status Progress
+        
         try {
             $gpoParams = @{
                 All = $true
@@ -71,20 +73,22 @@ function Get-GPOData {
             }
             
             $gpos = Get-GPO @gpoParams
-            Write-MandALog "Found $($gpos.Count) GPOs to analyze" -Level "INFO"
+            Write-ProgressStep "Found $($gpos.Count) GPOs to analyze" -Status Success
         } catch {
-            Write-MandALog "Failed to retrieve GPOs: $($_.Exception.Message)" -Level "ERROR"
+            Write-ProgressStep "Failed to retrieve GPOs: $($_.Exception.Message)" -Status Error
             throw "Unable to retrieve GPOs from domain"
         }
         
+        $totalGPOs = $gpos.Count
         $processedCount = 0
         $successfullyProcessed = 0
         $failedProcessing = 0
         
         foreach ($gpo in $gpos) {
             $processedCount++
-            Write-Progress -Activity "Analyzing GPOs" -Status "GPO $processedCount of $($gpos.Count): $($gpo.DisplayName)" `
-                -PercentComplete (($processedCount / $gpos.Count) * 100)
+            
+            Show-ProgressBar -Current $processedCount -Total $totalGPOs `
+                -Activity "GPO: $($gpo.DisplayName)"
             
             try {
                 # Add GPO to main list
@@ -104,6 +108,9 @@ function Get-GPOData {
                 
                 $allGPOs.Add($gpoObject)
                 
+                # Update sub-status
+                Write-Host "`r  Getting links and permissions..." -NoNewline -ForegroundColor Gray
+                
                 # Get GPO Links
                 try {
                     $gpoLinks = Get-GPOLinks -GPO $gpo -DomainController $DomainController
@@ -111,7 +118,7 @@ function Get-GPOData {
                         $allGPOLinks.AddRange($gpoLinks)
                     }
                 } catch {
-                    Write-MandALog "Failed to get links for GPO '$($gpo.DisplayName)': $($_.Exception.Message)" -Level "WARN"
+                    # Log but don't fail the entire GPO
                 }
                 
                 # Get GPO Permissions
@@ -121,13 +128,17 @@ function Get-GPOData {
                         $allGPOPermissions.AddRange($gpoPermissions)
                     }
                 } catch {
-                    Write-MandALog "Failed to get permissions for GPO '$($gpo.DisplayName)': $($_.Exception.Message)" -Level "WARN"
+                    # Log but don't fail the entire GPO
                 }
+                
+                Write-Host "`r  Generating GPO report..." -NoNewline -ForegroundColor Gray
                 
                 # Generate GPO report
                 try {
                     $reportPath = Join-Path $gpoReportsPath "$($gpo.Id)_$($gpo.DisplayName -replace '[\\/:*?"<>|]', '_').xml"
                     Get-GPOReport -Guid $gpo.Id -ReportType Xml -Path $reportPath -ErrorAction Stop
+                    
+                    Write-Host "`r  Parsing GPO settings..." -NoNewline -ForegroundColor Gray
                     
                     # Parse GPO report for specific settings
                     $gpoSettings = Parse-GPOReport -ReportPath $reportPath -GPO $gpo
@@ -138,29 +149,35 @@ function Get-GPOData {
                         if ($gpoSettings.LogonScripts) { $allLogonScripts.AddRange($gpoSettings.LogonScripts) }
                     }
                 } catch {
-                    Write-MandALog "Failed to generate report for GPO '$($gpo.DisplayName)': $($_.Exception.Message)" -Level "WARN"
+                    # Log but don't fail the entire GPO
                 }
                 
+                Write-Host "`r" + (" " * 80) + "`r" -NoNewline # Clear sub-status line
                 $successfullyProcessed++
                 
             } catch {
-                Write-MandALog "Error processing GPO '$($gpo.DisplayName)': $($_.Exception.Message)" -Level "ERROR"
+                Write-Host "`r" + (" " * 80) + "`r" -NoNewline # Clear sub-status line
+                Write-ProgressStep "Error processing GPO '$($gpo.DisplayName)'" -Status Error
                 $failedProcessing++
             }
         }
         
-        Write-Progress -Activity "Analyzing GPOs" -Completed
+        Write-Host "" # Clear progress bar line
         
-        # Enhanced summary
-        Write-MandALog "GPO Analysis Summary:" -Level "SUCCESS"
-        Write-MandALog "  Total GPOs processed: $($allGPOs.Count)" -Level "INFO"
-        Write-MandALog "  Successfully analyzed: $successfullyProcessed" -Level "SUCCESS"
-        Write-MandALog "  Failed to analyze: $failedProcessing" -Level "WARN"
-        Write-MandALog "  GPO Links found: $($allGPOLinks.Count)" -Level "INFO"
-        Write-MandALog "  Drive Mappings found: $($allDriveMappings.Count)" -Level "INFO"
-        Write-MandALog "  Printer Mappings found: $($allPrinterMappings.Count)" -Level "INFO"
-        Write-MandALog "  Folder Redirections found: $($allFolderRedirections.Count)" -Level "INFO"
-        Write-MandALog "  Logon Scripts found: $($allLogonScripts.Count)" -Level "INFO"
+        # Display summary
+        Write-ProgressStep "GPO Analysis Complete" -Status Success
+        Write-ProgressStep "  Total GPOs processed: $($allGPOs.Count)" -Status Info
+        Write-ProgressStep "  Successfully analyzed: $successfullyProcessed" -Status Success
+        
+        if ($failedProcessing -gt 0) {
+            Write-ProgressStep "  Failed to analyze: $failedProcessing" -Status Warning
+        }
+        
+        Write-ProgressStep "  GPO Links found: $($allGPOLinks.Count)" -Status Info
+        Write-ProgressStep "  Drive Mappings found: $($allDriveMappings.Count)" -Status Info
+        Write-ProgressStep "  Printer Mappings found: $($allPrinterMappings.Count)" -Status Info
+        Write-ProgressStep "  Folder Redirections found: $($allFolderRedirections.Count)" -Status Info
+        Write-ProgressStep "  Logon Scripts found: $($allLogonScripts.Count)" -Status Info
         
         return @{
             GPOs = $allGPOs
@@ -178,7 +195,7 @@ function Get-GPOData {
         }
         
     } catch {
-        Write-MandALog "GPO analysis failed: $($_.Exception.Message)" -Level "ERROR"
+        Write-ProgressStep "GPO analysis failed: $($_.Exception.Message)" -Status Error
         throw
     }
 }
@@ -454,7 +471,9 @@ function Invoke-GPODiscovery {
         Import-Module ActiveDirectory -ErrorAction Stop
         
         # Set up paths and parameters
-       $outputPath = $Context.Paths.RawDataOutput
+       
+
+
         $domainController = $Configuration.environment.domainController
         
         if (-not $domainController) {

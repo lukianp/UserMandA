@@ -3,6 +3,9 @@
     Network Infrastructure discovery for M&A Discovery Suite
 .DESCRIPTION
     Discovers DHCP, DNS, and network configuration information
+
+#cant use outputpath globalupdate here because its used heavily inside. 
+
 #>
 
 function Invoke-NetworkInfrastructureDiscovery {
@@ -11,7 +14,9 @@ function Invoke-NetworkInfrastructureDiscovery {
     try {
         Write-MandALog "Starting Network Infrastructure discovery" -Level "HEADER"
         
-        $outputPath = $Context.Paths.RawDataOutput
+    
+
+
         $discoveryResults = @{}
         
         # DHCP Discovery

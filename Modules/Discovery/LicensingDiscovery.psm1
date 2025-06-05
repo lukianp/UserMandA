@@ -6,6 +6,7 @@
 #>
 
 # Modules/Discovery/LicensingDiscovery.psm1
+#Cant use the global thingy fix here because outputpath is used in the  functions
 
 function Invoke-LicensingDiscovery {
     param([hashtable]$Configuration)
@@ -13,7 +14,7 @@ function Invoke-LicensingDiscovery {
     try {
         Write-MandALog "Starting Microsoft 365 Licensing discovery" -Level "HEADER"
         
-        $outputPath = $Context.Paths.RawDataOutput
+        $outputPath = $Configuration.environment.outputPath
         $rawPath = Join-Path $outputPath "Raw"
         
         $discoveryResults = @{}
@@ -134,31 +135,32 @@ function Get-UserLicenseAssignmentsData {
     )
     
     $outputFile = Join-Path $OutputPath "UserLicenseAssignments.csv"
-    $licenseData = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $licenseData = [System.Collections.Generic.List[PSObject]]::new()
     
     if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "User license assignments CSV already exists. Skipping." -Level "INFO"
+        Write-ProgressStep "User license assignments CSV already exists. Skipping." -Status Info
         return Import-DataFromCSV -FilePath $outputFile
     }
     
     try {
-        Write-MandALog "Retrieving user license assignments..." -Level "INFO"
+        Write-ProgressStep "Retrieving user license assignments..." -Status Progress
         
-        # FIXED: Remove the filter and get all users, then filter locally
+        # Get all users first
+        Write-ProgressStep "Fetching all users from Graph..." -Status Progress
         $allUsers = Get-MgUser -All -Property Id,UserPrincipalName,DisplayName,Department,UsageLocation,AccountEnabled,AssignedLicenses,CreatedDateTime -ErrorAction Stop
         
         # Filter users with licenses locally
         $licensedUsers = $allUsers | Where-Object { $_.AssignedLicenses -and $_.AssignedLicenses.Count -gt 0 }
         $licensedUserCount = ($licensedUsers | Measure-Object).Count
         
-        Write-MandALog "Processing license assignments for $licensedUserCount users..." -Level "INFO"
+        Write-ProgressStep "Processing license assignments for $licensedUserCount users..." -Status Info
         
         $processedCount = 0
         foreach ($user in $licensedUsers) {
             $processedCount++
-            if ($processedCount % 100 -eq 0) {
-                Write-Progress -Activity "Processing User Licenses" -Status "User $processedCount of $licensedUserCount" -PercentComplete (($processedCount / $licensedUserCount) * 100)
-            }
+            
+            Show-ProgressBar -Current $processedCount -Total $licensedUserCount `
+                -Activity "Processing licenses for: $($user.UserPrincipalName)"
             
             foreach ($license in $user.AssignedLicenses) {
                 # Get SKU details
@@ -192,21 +194,143 @@ function Get-UserLicenseAssignmentsData {
             }
         }
         
-        Write-Progress -Activity "Processing User Licenses" -Completed
-        Write-MandALog "Processed $($licenseData.Count) license assignments" -Level "SUCCESS"
+        Write-Host "" # Clear progress bar line
+        Write-ProgressStep "Processed $($licenseData.Count) license assignments" -Status Success
         
-        # Only export if we have data
         if ($licenseData.Count -gt 0) {
+            Write-ProgressStep "Exporting license assignment data to CSV..." -Status Progress
             Export-DataToCSV -Data $licenseData -FilePath $outputFile
+            Write-ProgressStep "License assignment export completed" -Status Success
         } else {
-            Write-MandALog "No license assignment data to export" -Level "WARN"
+            Write-ProgressStep "No license assignment data to export" -Status Warning
         }
         
         return $licenseData
         
     } catch {
-        Write-MandALog "Error retrieving user license assignments: $($_.Exception.Message)" -Level "ERROR"
-        return @()
+        Write-ProgressStep "Error retrieving user license assignments: $($_.Exception.Message)" -Status Error
+        throw
+    }
+}
+
+function Get-ServicePlanUsageData {
+    param(
+        [string]$OutputPath,
+        [hashtable]$Configuration
+    )
+    
+    $outputFile = Join-Path $OutputPath "ServicePlanUsage.csv"
+    $servicePlanData = [System.Collections.Generic.List[PSObject]]::new()
+    
+    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
+        Write-ProgressStep "Service plan usage CSV already exists. Skipping." -Status Info
+        return Import-DataFromCSV -FilePath $outputFile
+    }
+    
+    try {
+        Write-ProgressStep "Analyzing service plan usage..." -Status Progress
+        Write-ProgressStep "Checking service plan assignments for users..." -Status Info
+        
+        # Get all SKUs and their service plans
+        $allSkus = Get-MgSubscribedSku -All
+        
+        # Dictionary to track service plan usage
+        $servicePlanUsage = @{}
+        
+        Write-ProgressStep "Processing $($allSkus.Count) SKUs..." -Status Progress
+        
+        $skuCount = 0
+        foreach ($sku in $allSkus) {
+            $skuCount++
+            
+            Show-ProgressBar -Current $skuCount -Total $allSkus.Count `
+                -Activity "Processing SKU: $($sku.SkuPartNumber)"
+            
+            foreach ($servicePlan in $sku.ServicePlans) {
+                $planKey = $servicePlan.ServicePlanId
+                
+                if (-not $servicePlanUsage.ContainsKey($planKey)) {
+                    $servicePlanUsage[$planKey] = @{
+                        ServicePlanId = $servicePlan.ServicePlanId
+                        ServicePlanName = $servicePlan.ServicePlanName
+                        FriendlyName = Get-FriendlyServicePlanName -ServicePlanName $servicePlan.ServicePlanName
+                        TotalAvailable = 0
+                        TotalAssigned = 0
+                        TotalDisabled = 0
+                        AppliesTo = $servicePlan.AppliesTo
+                        ProvisioningStatus = $servicePlan.ProvisioningStatus
+                        IncludedInSKUs = @()
+                    }
+                }
+                
+                $servicePlanUsage[$planKey].TotalAvailable += $sku.ConsumedUnits
+                $servicePlanUsage[$planKey].IncludedInSKUs += $sku.SkuPartNumber
+            }
+        }
+        
+        Write-Host "" # Clear progress bar line
+        
+        # Sample users for actual usage statistics
+        Write-ProgressStep "Sampling user assignments for usage statistics..." -Status Progress
+        $sampleUsers = Get-MgUser -Top 100 -Property Id,AssignedLicenses -ErrorAction Stop
+        $sampleLicensedUsers = $sampleUsers | Where-Object { $_.AssignedLicenses -and $_.AssignedLicenses.Count -gt 0 }
+        
+        foreach ($user in $sampleLicensedUsers) {
+            foreach ($license in $user.AssignedLicenses) {
+                $sku = $allSkus | Where-Object { $_.SkuId -eq $license.SkuId }
+                
+                if ($sku) {
+                    foreach ($servicePlan in $sku.ServicePlans) {
+                        if ($servicePlanUsage.ContainsKey($servicePlan.ServicePlanId)) {
+                            if ($servicePlan.ServicePlanId -in $license.DisabledPlans) {
+                                $servicePlanUsage[$servicePlan.ServicePlanId].TotalDisabled++
+                            } else {
+                                $servicePlanUsage[$servicePlan.ServicePlanId].TotalAssigned++
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        # Convert to output format
+        Write-ProgressStep "Formatting service plan data..." -Status Progress
+        
+        foreach ($planUsage in $servicePlanUsage.Values) {
+            $utilizationRate = if ($planUsage.TotalAvailable -gt 0) {
+                [math]::Round(($planUsage.TotalAssigned / $planUsage.TotalAvailable) * 100, 2)
+            } else { 0 }
+            
+            $servicePlanData.Add([PSCustomObject]@{
+                ServicePlanId = $planUsage.ServicePlanId
+                ServicePlanName = $planUsage.ServicePlanName
+                FriendlyName = $planUsage.FriendlyName
+                AppliesTo = $planUsage.AppliesTo
+                ProvisioningStatus = $planUsage.ProvisioningStatus
+                TotalAvailable = $planUsage.TotalAvailable
+                EstimatedAssigned = $planUsage.TotalAssigned
+                EstimatedDisabled = $planUsage.TotalDisabled
+                EstimatedUtilizationRate = $utilizationRate
+                IncludedInSKUs = ($planUsage.IncludedInSKUs | Select-Object -Unique) -join ";"
+                Notes = "Based on sample of 100 users"
+            })
+        }
+        
+        Write-ProgressStep "Analyzed $($servicePlanData.Count) service plans" -Status Success
+        
+        if ($servicePlanData.Count -gt 0) {
+            Write-ProgressStep "Exporting service plan data to CSV..." -Status Progress
+            Export-DataToCSV -Data $servicePlanData -FilePath $outputFile
+            Write-ProgressStep "Service plan export completed" -Status Success
+        } else {
+            Write-ProgressStep "No service plan data to export" -Status Warning
+        }
+        
+        return $servicePlanData
+        
+    } catch {
+        Write-ProgressStep "Error analyzing service plan usage: $($_.Exception.Message)" -Status Error
+        throw
     }
 }
 

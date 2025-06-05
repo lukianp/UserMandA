@@ -1,171 +1,281 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Provides functions to validate the M&A Discovery Suite configuration object
-    against a JSON schema. Uses Write-Host for internal logging.
-    Correctly handles property existence checks for PSCustomObjects and $null comparisons.
+    Provides configuration validation against a JSON schema for the M&A Discovery Suite.
 .DESCRIPTION
-    This module is crucial for ensuring the integrity and correctness of the 
-    `default-config.json` file at runtime, preventing errors due to misconfiguration.
+    This module includes functions to test a loaded configuration object (hashtable)
+    against a defined JSON schema file (config.schema.json). It reports validation
+    errors and warnings.
 .NOTES
-    Version: 1.0.4
-    Author: Gemini & User
-    Date: 2025-06-01
+    Version: 1.0.0
+    Author: M&A Discovery Suite Team
+    Date: 2025-06-05
+
+    Key Design Points:
+    - Uses Write-MandALog for logging.
+    - Relies on $global:MandA or a passed -Context for logging context.
+    - Recursively validates configuration nodes against schema definitions.
+    - Handles basic JSON schema types (string, integer, boolean, array, object) and properties like 'required', 'enum', 'pattern', 'minimum', 'maximum'.
+    - PowerShell 5.1 compatible.
 #>
-$outputPath = $Context.Paths.RawDataOutput
+
+Export-ModuleMember -Function Test-SuiteConfigurationAgainstSchema
+
+# --- Private Recursive Validation Function ---
+
+function Test-ConfigurationNodeInternal {
+    param(
+        [Parameter(Mandatory=$true)]
+        [object]$NodeData, # The actual data node from the configuration
+
+        [Parameter(Mandatory=$true)]
+        [PSCustomObject]$NodeSchema, # The schema definition for this node
+
+        [Parameter(Mandatory=$true)]
+        [string]$CurrentPath, # Dot-notation path for error reporting (e.g., "environment.logging")
+
+        [Parameter(Mandatory=$true)]
+        [ref]$ValidationErrors, # Pass by reference to collect errors
+
+        [Parameter(Mandatory=$true)]
+        [ref]$ValidationWarnings, # Pass by reference to collect warnings
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$RootSchema, # The entire root schema object, for resolving $ref if implemented
+
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context # For logging
+    )
+
+    # Get-OrElse should be globally defined
+    $debugMode = $false
+    if ($Context -and $Context.Config -and $Context.Config.advancedSettings) {
+        $debugMode = $Context.Config.advancedSettings.debugMode | global:Get-OrElse $false
+    }
+
+    if ($debugMode) {
+        Write-MandALog -Message "Validating path: '$CurrentPath'. Schema type: '$($NodeSchema.type)'. Data type: '$($NodeData.GetType().Name)'" -Level "DEBUG" -Component "SchemaValidation" -Context $Context
+    }
+
+    # 1. Type Validation
+    $expectedSchemaTypes = @($NodeSchema.type) # Schema 'type' can be a string or an array of strings
+    $actualDataType = ""
+    if ($null -eq $NodeData) {
+        $actualDataType = "null"
+    } elseif ($NodeData -is [string]) {
+        $actualDataType = "string"
+    } elseif ($NodeData -is [int] -or $NodeData -is [long] -or $NodeData -is [double]) { # Consider float/double as number for JSON schema
+        $actualDataType = "integer" # JSON schema 'integer' and 'number'
+        if ($NodeData -isnot [int] -and $NodeData -isnot [long]) { $actualDataType = "number"}
+    } elseif ($NodeData -is [bool]) {
+        $actualDataType = "boolean"
+    } elseif ($NodeData -is [array]) {
+        $actualDataType = "array"
+    } elseif ($NodeData -is [hashtable] -or $NodeData -is [PSCustomObject]) { # PSCustomObject from ConvertFrom-Json becomes Hashtable via ConvertTo-HashtableRecursiveSSE
+        $actualDataType = "object"
+    } else {
+        $actualDataType = $NodeData.GetType().Name.ToLower() # Fallback, might not match JSON schema types
+    }
+
+    $typeMatch = $false
+    foreach($expectedType in $expectedSchemaTypes){
+        if($expectedType -eq "number" -and ($actualDataType -eq "integer" -or $actualDataType -eq "number")){
+            $typeMatch = $true; break
+        }
+        if ($actualDataType -eq $expectedType.ToLower()) {
+            $typeMatch = $true; break
+        }
+    }
+    
+    if (-not $typeMatch) {
+        $ValidationErrors.Value.Add("Path '$CurrentPath': Type mismatch. Expected type(s) '$($expectedSchemaTypes -join "' or '")' but found '$actualDataType'.")
+        return # Stop further validation for this node if type is wrong
+    }
+
+    # 2. Enum Validation (if applicable)
+    if ($NodeSchema.PSObject.Properties['enum']) {
+        if (-not ($NodeSchema.enum -contains $NodeData)) {
+            $ValidationErrors.Value.Add("Path '$CurrentPath': Value '$NodeData' is not in the allowed enum list: $($NodeSchema.enum -join ', ').")
+        }
+    }
+
+    # 3. Pattern Validation (for strings)
+    if ($actualDataType -eq "string" -and $NodeSchema.PSObject.Properties['pattern']) {
+        if ($NodeData -notmatch $NodeSchema.pattern) {
+            $ValidationErrors.Value.Add("Path '$CurrentPath': Value '$NodeData' does not match pattern '$($NodeSchema.pattern)'.")
+        }
+    }
+    
+    # 4. Minimum/Maximum Validation (for numbers/integers)
+    if (($actualDataType -eq "integer" -or $actualDataType -eq "number")) {
+        if ($NodeSchema.PSObject.Properties['minimum'] -and $NodeData -lt $NodeSchema.minimum) {
+            $ValidationErrors.Value.Add("Path '$CurrentPath': Value $NodeData is less than minimum of $($NodeSchema.minimum).")
+        }
+        if ($NodeSchema.PSObject.Properties['maximum'] -and $NodeData -gt $NodeSchema.maximum) {
+            $ValidationErrors.Value.Add("Path '$CurrentPath': Value $NodeData is greater than maximum of $($NodeSchema.maximum).")
+        }
+         if ($NodeSchema.PSObject.Properties['exclusiveMinimum'] -and $NodeData -le $NodeSchema.exclusiveMinimum) {
+            $ValidationErrors.Value.Add("Path '$CurrentPath': Value $NodeData must be greater than $($NodeSchema.exclusiveMinimum).")
+        }
+        if ($NodeSchema.PSObject.Properties['exclusiveMaximum'] -and $NodeData -ge $NodeSchema.exclusiveMaximum) {
+            $ValidationErrors.Value.Add("Path '$CurrentPath': Value $NodeData must be less than $($NodeSchema.exclusiveMaximum).")
+        }
+    }
+    
+    # 5. MinLength/MaxLength Validation (for strings)
+    if ($actualDataType -eq "string") {
+        if ($NodeSchema.PSObject.Properties['minLength'] -and $NodeData.Length -lt $NodeSchema.minLength) {
+            $ValidationErrors.Value.Add("Path '$CurrentPath': String length $($NodeData.Length) is less than minLength of $($NodeSchema.minLength).")
+        }
+        if ($NodeSchema.PSObject.Properties['maxLength'] -and $NodeData.Length -gt $NodeSchema.maxLength) {
+            $ValidationErrors.Value.Add("Path '$CurrentPath': String length $($NodeData.Length) is greater than maxLength of $($NodeSchema.maxLength).")
+        }
+    }
+
+    # 6. MinItems/MaxItems Validation (for arrays)
+    if ($actualDataType -eq "array") {
+        if ($NodeSchema.PSObject.Properties['minItems'] -and $NodeData.Count -lt $NodeSchema.minItems) {
+            $ValidationErrors.Value.Add("Path '$CurrentPath': Array contains $($NodeData.Count) items, less than minItems of $($NodeSchema.minItems).")
+        }
+        if ($NodeSchema.PSObject.Properties['maxItems'] -and $NodeData.Count -gt $NodeSchema.maxItems) {
+            $ValidationErrors.Value.Add("Path '$CurrentPath': Array contains $($NodeData.Count) items, more than maxItems of $($NodeSchema.maxItems).")
+        }
+    }
+
+
+    # 7. Object-specific validations (properties, required, additionalProperties)
+    if ($actualDataType -eq "object") {
+        # 7a. Required Properties
+        if ($NodeSchema.PSObject.Properties['required'] -is [array]) {
+            foreach ($requiredProp in $NodeSchema.required) {
+                if (-not $NodeData.HashtableContains($requiredProp)) { # Use HashtableContains for reliability with PS 5.1
+                    $ValidationErrors.Value.Add("Path '$CurrentPath': Missing required property '$requiredProp'.")
+                }
+            }
+        }
+
+        # 7b. Validate defined properties
+        if ($NodeSchema.PSObject.Properties['properties'] -is [hashtable] -or $NodeSchema.PSObject.Properties['properties'] -is [PSCustomObject]) {
+            # Iterate over properties defined in the schema for this object
+            foreach ($propKey in $NodeSchema.properties.PSObject.Properties.Name) {
+                $propSchema = $NodeSchema.properties.$propKey
+                if ($NodeData.HashtableContains($propKey)) {
+                    # Property exists in data, validate it recursively
+                    Test-ConfigurationNodeInternal -NodeData $NodeData.$propKey -NodeSchema $propSchema -CurrentPath "$CurrentPath.$propKey" -ValidationErrors $ValidationErrors -ValidationWarnings $ValidationWarnings -RootSchema $RootSchema -Context $Context
+                }
+                # If not required and not present, it's fine. Required check already done.
+            }
+        }
+        
+        # 7c. Additional Properties
+        # Get-OrElse should be available globally
+        $allowAdditionalProperties = $NodeSchema.additionalProperties | global:Get-OrElse $true # Default to true if not specified
+        
+        if ($allowAdditionalProperties -is [bool] -and -not $allowAdditionalProperties) {
+            # additionalProperties is false, so no extra properties are allowed
+            $schemaDefinedProps = @()
+            if ($NodeSchema.PSObject.Properties['properties']) {$schemaDefinedProps = $NodeSchema.properties.PSObject.Properties.Name}
+            
+            foreach ($dataPropKey in $NodeData.Keys) {
+                if (-not ($schemaDefinedProps -contains $dataPropKey)) {
+                    $ValidationWarnings.Value.Add("Path '$CurrentPath': Property '$dataPropKey' is not defined in schema and additionalProperties is false.")
+                }
+            }
+        } elseif ($allowAdditionalProperties -is [hashtable] -or $allowAdditionalProperties -is [PSCustomObject]) {
+            # additionalProperties is a schema, validate extra properties against it
+            $schemaDefinedProps = @()
+            if ($NodeSchema.PSObject.Properties['properties']) {$schemaDefinedProps = $NodeSchema.properties.PSObject.Properties.Name}
+            
+            foreach ($dataPropKey in $NodeData.Keys) {
+                if (-not ($schemaDefinedProps -contains $dataPropKey)) {
+                    Test-ConfigurationNodeInternal -NodeData $NodeData.$dataPropKey -NodeSchema $allowAdditionalProperties -CurrentPath "$CurrentPath.$dataPropKey (additional)" -ValidationErrors $ValidationErrors -ValidationWarnings $ValidationWarnings -RootSchema $RootSchema -Context $Context
+                }
+            }
+        }
+        # If $allowAdditionalProperties is true (boolean) or not present, any additional properties are allowed and not validated further by this rule.
+    }
+
+    # 8. Array-specific validations (items)
+    if ($actualDataType -eq "array" -and ($NodeSchema.PSObject.Properties['items'] -is [hashtable] -or $NodeSchema.PSObject.Properties['items'] -is [PSCustomObject])) {
+        $itemSchema = $NodeSchema.items
+        for ($i = 0; $i -lt $NodeData.Count; $i++) {
+            Test-ConfigurationNodeInternal -NodeData $NodeData[$i] -NodeSchema $itemSchema -CurrentPath "$CurrentPath[$i]" -ValidationErrors $ValidationErrors -ValidationWarnings $ValidationWarnings -RootSchema $RootSchema -Context $Context
+        }
+    }
+    # Note: Does not currently support tuple validation (where 'items' is an array of schemas)
+    # or complex 'allOf', 'anyOf', 'oneOf', 'not' keywords from JSON Schema.
+}
+
+
+# --- Public Function ---
+
 function Test-SuiteConfigurationAgainstSchema {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$ConfigurationObject, # The loaded config from default-config.json (already converted to hashtable)
+        [hashtable]$ConfigurationObject, # The configuration loaded as a PowerShell hashtable
+
         [Parameter(Mandatory=$true)]
-        [string]$SchemaPath # Path to config.schema.json
+        [string]$SchemaPath, # Path to the config.schema.json file
+
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context # For logging, assumes $Context.Config and $Context.Paths might exist
     )
 
-    Write-Host "INFO: Validating configuration against schema: $SchemaPath" -ForegroundColor Gray
-    $validationErrors = [System.Collections.Generic.List[string]]::new()
-    $validationWarnings = [System.Collections.Generic.List[string]]::new()
+    $validationErrorsList = [System.Collections.Generic.List[string]]::new()
+    $validationWarningsList = [System.Collections.Generic.List[string]]::new()
+    $validationErrorsRef = [ref]$validationErrorsList
+    $validationWarningsRef = [ref]$validationWarningsList
+
+    Write-MandALog -Message "Starting configuration validation against schema: '$SchemaPath'" -Level "INFO" -Component "ConfigSchemaValidation" -Context $Context
 
     if (-not (Test-Path $SchemaPath -PathType Leaf)) {
-        $validationErrors.Add("Configuration schema file not found at '$SchemaPath'. Cannot perform schema validation.")
-        return @{ IsValid = $false; Errors = $validationErrors; Warnings = $validationWarnings }
+        $ValidationErrors.Value.Add("JSON Schema file not found at path: '$SchemaPath'. Cannot perform validation.")
+        Write-MandALog -Message "JSON Schema file not found at: '$SchemaPath'." -Level "ERROR" -Component "ConfigSchemaValidation" -Context $Context
+        return [PSCustomObject]@{ IsValid = $false; Errors = $validationErrorsList; Warnings = $validationWarningsList }
     }
 
-    $schemaJson = $null # This will be a PSCustomObject after ConvertFrom-Json
+    $schemaJsonContent = $null
     try {
-        $schemaJson = Get-Content $SchemaPath -Raw | ConvertFrom-Json -ErrorAction Stop
+        $schemaJsonContent = Get-Content $SchemaPath -Raw | ConvertFrom-Json -ErrorAction Stop
     } catch {
-        $validationErrors.Add("Failed to parse configuration schema file at '$SchemaPath': $($_.Exception.Message). Schema validation skipped.")
-        return @{ IsValid = $false; Errors = $validationErrors; Warnings = $validationWarnings }
-    }
-     if ($null -eq $schemaJson) { 
-        $validationErrors.Add("Failed to parse configuration schema file at '$SchemaPath' (result was null). Schema validation skipped.")
-        return @{ IsValid = $false; Errors = $validationErrors; Warnings = $validationWarnings }
-    }
-
-    # Recursive validation helper function
-    # $NodeData is a hashtable (from the config)
-    # $NodeSchema is a PSCustomObject (from the schema JSON)
-    function Test-ConfigurationNodeInternal {
-        param(
-            [object]$NodeData, 
-            [psobject]$NodeSchema, # Explicitly psobject from schema
-            [string]$CurrentPath = "$" 
-        )
-
-        if ($null -eq $NodeSchema) {
-            $validationWarnings.Add("Path '$CurrentPath': No schema definition found. Config might have extra properties.")
-            return
-        }
-
-        # Check required properties (for objects)
-        # $NodeSchema.required will be an array if it exists
-        if ($null -ne $NodeSchema.required -and $NodeSchema.required -is [array]) {
-            foreach ($requiredProp in $NodeSchema.required) {
-                if ($NodeData -isnot [hashtable] -or (-not $NodeData.ContainsKey($requiredProp))) { 
-                    $validationErrors.Add("Path '$CurrentPath': Missing required property '$requiredProp'.")
-                }
-            }
-        }
-
-        # Type checking and recursive validation for object properties
-        if ($null -ne $NodeSchema.type -and $NodeSchema.type -eq "object" -and $NodeData -is [hashtable]) {
-            if ($null -ne $NodeSchema.properties) { # $NodeSchema.properties is a PSCustomObject
-                foreach ($propKey in $NodeData.Keys) {
-                    $propPath = "$CurrentPath.$propKey"
-                    # Check if the property from data exists as a defined property in the schema
-                    if ($null -ne $NodeSchema.properties.PSObject.Properties[$propKey]) { # Corrected null check
-                        Test-ConfigurationNodeInternal -NodeData $NodeData.$propKey -NodeSchema $NodeSchema.properties.$propKey -CurrentPath $propPath
-                    } else {
-                        # Property in config data but not explicitly in schema's 'properties'
-                        $allowAdditional = $false 
-                        # Check 'additionalProperties' in the schema for the current node
-                        if ($null -ne $NodeSchema.PSObject.Properties['additionalProperties']) { # Corrected null check
-                           if ($NodeSchema.additionalProperties -is [boolean] -and $NodeSchema.additionalProperties -eq $true) {
-                               $allowAdditional = $true
-                           } elseif ($NodeSchema.additionalProperties -is [psobject]) { # If additionalProperties is a schema itself
-                               $allowAdditional = $true # For simplicity, assume if it's a schema, it's allowed (or validate against it)
-                           }
-                        } elseif ($null -ne $NodeSchema.PSObject.Properties['$ref']) { # Corrected null check
-                            # If there's a $ref, additional properties might be defined in the referenced schema.
-                            # A full $ref resolver is complex; for now, assume it might be allowed or warn.
-                            $validationWarnings.Add("Path '$propPath': Property exists in configuration. Schema uses `$`ref, full validation of additionalProperties depends on resolved schema.")
-                            $allowAdditional = $true # Tentatively allow, or implement $ref resolution
-                        }
-
-                        if (-not $allowAdditional) {
-                             $validationWarnings.Add("Path '$propPath': Property exists in configuration but not defined in schema properties, and 'additionalProperties' is not true or is absent for '$CurrentPath'.")
-                        }
-                    }
-                }
-            }
-        } elseif ($null -ne $NodeSchema.type -and $NodeSchema.type -eq "array" -and $NodeData -is [array]) {
-            if ($null -ne $NodeSchema.items) { # $NodeSchema.items is a PSCustomObject representing the schema for array items
-                for ($i = 0; $i -lt $NodeData.Count; $i++) {
-                    Test-ConfigurationNodeInternal -NodeData $NodeData[$i] -NodeSchema $NodeSchema.items -CurrentPath "$CurrentPath[$i]"
-                }
-            }
-             if (($null -ne $NodeSchema.minItems) -and ($NodeData.Count -lt $NodeSchema.minItems)) {
-                $validationErrors.Add("Path '$CurrentPath': Array has $($NodeData.Count) items, but schema minimum is $($NodeSchema.minItems).")
-            }
-        } elseif ($null -ne $NodeData) { # Leaf node validation (string, integer, boolean, number)
-            $expectedSchemaType = $NodeSchema.type # This can be a string or an array of strings (e.g. ["string", "null"])
-            $actualDataType = $NodeData.GetType().Name.ToLower()
-            
-            $typeMatch = $false
-            if ($expectedSchemaType -is [array]) { 
-                if (($expectedSchemaType -contains $actualDataType) -or ($expectedSchemaType -contains "null" -and $null -eq $NodeData)) {
-                    $typeMatch = $true
-                }
-            } elseif ($actualDataType -eq $expectedSchemaType -or ($expectedSchemaType -eq "null" -and $null -eq $NodeData)) {
-                $typeMatch = $true
-            } elseif ($expectedSchemaType -eq "integer" -and ($actualDataType -eq "int32" -or $actualDataType -eq "int64")) { 
-                $typeMatch = $true
-            } elseif ($expectedSchemaType -eq "number" -and ($actualDataType -in @("double", "decimal", "int32", "int64", "single"))) {
-                 $typeMatch = $true
-            }
-
-            if (-not $typeMatch) {
-                $validationErrors.Add("Path '$CurrentPath': Type mismatch. Schema expected '$($expectedSchemaType -join "' or '")', but data is '$actualDataType'. Value: '$NodeData'")
-            }
-
-            if ($null -ne $NodeSchema.enum -and $NodeData -notin $NodeSchema.enum) {
-                $validationErrors.Add("Path '$CurrentPath': Value '$NodeData' is not in the allowed list (enum): $($NodeSchema.enum -join ', ').")
-            }
-            # Corrected: Check $NodeSchema.type before assuming it's "string" or array containing "string"
-            if (($null -ne $NodeSchema.type -and (($NodeSchema.type -is [string] -and $NodeSchema.type -eq "string") -or ($NodeSchema.type -is [array] -and $NodeSchema.type -contains "string"))) -and `
-                ($null -ne $NodeSchema.pattern) -and ($NodeData -is [string]) -and ($NodeData -notmatch $NodeSchema.pattern)) {
-                $validationErrors.Add("Path '$CurrentPath': Value '$NodeData' does not match schema pattern '$($NodeSchema.pattern)'.")
-            }
-            if (($null -ne $NodeSchema.minLength) -and ($NodeData.ToString().Length -lt $NodeSchema.minLength)) { # Corrected null check
-                 $validationErrors.Add("Path '$CurrentPath': Length $($NodeData.ToString().Length) is less than schema minLength $($NodeSchema.minLength).")
-            }
-             if (($null -ne $NodeSchema.minimum) -and ($NodeData -lt $NodeSchema.minimum)) { # Corrected null check
-                 $validationErrors.Add("Path '$CurrentPath': Value $NodeData is less than schema minimum $($NodeSchema.minimum).")
-            }
-             if (($null -ne $NodeSchema.maximum) -and ($NodeData -gt $NodeSchema.maximum)) { # Corrected null check
-                 $validationErrors.Add("Path '$CurrentPath': Value $NodeData is greater than schema maximum $($NodeSchema.maximum).")
-            }
-        }
-    }
-
-    # Start validation from the root: $ConfigurationObject is a Hashtable, $schemaJson is a PSCustomObject
-    Test-ConfigurationNodeInternal -NodeData $ConfigurationObject -NodeSchema $schemaJson
-
-    $isValid = $validationErrors.Count -eq 0
-    if (-not $isValid) {
-        Write-Host "ERROR: Configuration validation failed with $($validationErrors.Count) errors." -ForegroundColor Red
-        $validationErrors | ForEach-Object { Write-Host "  VALIDATION ERROR: $_" -ForegroundColor Red }
-    }
-    if ($validationWarnings.Count -gt 0) {
-         Write-Host "WARNING: Configuration validation has $($validationWarnings.Count) warnings." -ForegroundColor Yellow
-        $validationWarnings | ForEach-Object { Write-Host "  VALIDATION WARNING: $_" -ForegroundColor Yellow }
-    }
-
-    if ($isValid) {
-        Write-Host "INFO: Configuration successfully validated against schema." -ForegroundColor Green
+        $ValidationErrors.Value.Add("Failed to parse JSON Schema file '$SchemaPath'. Error: $($_.Exception.Message)")
+        Write-MandALog -Message "Failed to parse JSON Schema file '$SchemaPath'. Error: $($_.Exception.Message)" -Level "ERROR" -Component "ConfigSchemaValidation" -Context $Context
+        return [PSCustomObject]@{ IsValid = $false; Errors = $validationErrorsList; Warnings = $validationWarningsList }
     }
     
-    return @{ IsValid = $isValid; Errors = $validationErrors; Warnings = $validationWarnings }
+    if ($null -eq $schemaJsonContent) {
+         $ValidationErrors.Value.Add("Parsed JSON Schema content is null from '$SchemaPath'.")
+        Write-MandALog -Message "Parsed JSON Schema content is null from '$SchemaPath'." -Level "ERROR" -Component "ConfigSchemaValidation" -Context $Context
+        return [PSCustomObject]@{ IsValid = $false; Errors = $validationErrorsList; Warnings = $validationWarningsList }
+    }
+
+    # Start recursive validation from the root
+    Test-ConfigurationNodeInternal -NodeData $ConfigurationObject -NodeSchema $schemaJsonContent -CurrentPath "root" -ValidationErrors $validationErrorsRef -ValidationWarnings $validationWarningsRef -RootSchema $schemaJsonContent -Context $Context
+    
+    $isValid = ($validationErrorsList.Count -eq 0)
+
+    if ($isValid) {
+        Write-MandALog -Message "Configuration successfully validated against schema '$SchemaPath'." -Level "SUCCESS" -Component "ConfigSchemaValidation" -Context $Context
+        if ($validationWarningsList.Count -gt 0) {
+            Write-MandALog -Message "Validation completed with $($validationWarningsList.Count) warning(s):" -Level "WARN" -Component "ConfigSchemaValidation" -Context $Context
+            $validationWarningsList | ForEach-Object { Write-MandALog -Message "  - $_" -Level "WARN" -Component "ConfigSchemaValidation" -Context $Context }
+        }
+    } else {
+        Write-MandALog -Message "Configuration FAILED validation against schema '$SchemaPath'. $($validationErrorsList.Count) error(s) found." -Level "ERROR" -Component "ConfigSchemaValidation" -Context $Context
+        $validationErrorsList | ForEach-Object { Write-MandALog -Message "  - $_" -Level "ERROR" -Component "ConfigSchemaValidation" -Context $Context }
+        if ($validationWarningsList.Count -gt 0) {
+            Write-MandALog -Message "Additionally, there are $($validationWarningsList.Count) warning(s):" -Level "WARN" -Component "ConfigSchemaValidation" -Context $Context
+            $validationWarningsList | ForEach-Object { Write-MandALog -Message "  - $_" -Level "WARN" -Component "ConfigSchemaValidation" -Context $Context }
+        }
+    }
+
+    return [PSCustomObject]@{
+        IsValid  = $isValid
+        Errors   = $validationErrorsList
+        Warnings = $validationWarningsList
+    }
 }
 
-Export-ModuleMember -Function Test-SuiteConfigurationAgainstSchema
+Write-Host "[ConfigurationValidation.psm1] Module loaded." -ForegroundColor DarkGray
+

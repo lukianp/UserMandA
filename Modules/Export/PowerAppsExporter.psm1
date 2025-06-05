@@ -9,17 +9,32 @@
     including companies, users, waves, departments, applications, groups, devices, relationships, and summaries.
     Combines strengths of the original user script and the PowerApp design document requirements.
 .NOTES
-    Version: 2.1.1 - Syntax Corrected
-    Author: Gemini (incorporating User Logic)
-    Date: 2025-06-02
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
 #>
-$outputPath = $Context.Paths.RawDataOutput
+
 #region INTERNAL HELPER FUNCTIONS
 
 #===============================================================================
 # Get-ProcessedDataFileFromInput
 # Helper function to load a specific CSV file from the $ProcessedData hashtable.
 #===============================================================================
+
+
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
+
 function Get-ProcessedDataFileFromInput {
     [CmdletBinding()]
     param(

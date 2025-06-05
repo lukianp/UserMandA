@@ -5,13 +5,15 @@
     Discovers Exchange Online mailboxes, distribution groups, permissions, and configurations
 #>
 
+
+#Cannot use $outputpath for logging as its used internallyin the module
 function Invoke-ExchangeDiscovery {
     param([hashtable]$Configuration)
     
     try {
         Write-MandALog "Starting Exchange Online discovery" -Level "HEADER"
         
-        $outputPath = $Context.Paths.RawDataOutput
+        $outputPath = $Configuration.environment.outputPath
         $rawPath = Join-Path $outputPath "Raw"
         
         $discoveryResults = @{}

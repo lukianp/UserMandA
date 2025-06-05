@@ -1,3 +1,21 @@
+<#
+.SYNOPSIS
+    Diagnostic script for analyzing credential file format and content
+.DESCRIPTION
+    Analyzes credential files using different encoding methods and attempts to decrypt them
+    to help troubleshoot credential file issues in the M&A Discovery Suite.
+.NOTES
+    Author: Lukian Poleschtschuk
+    Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
+.PARAMETER CredentialFile
+    Path to the credential file to analyze
+.EXAMPLE
+    .\Diagnose-CredentialFile.ps1 -CredentialFile "C:\MandADiscovery\Output\credentials.config"
+#>
+
 param(
     [string]$CredentialFile = "C:\MandADiscovery\Output\credentials.config"
 )

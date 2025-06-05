@@ -9,9 +9,20 @@
     Version: 1.1.0 (Refactored for orchestrator data contracts)
     Author: Gemini
 #>
-$outputPath = $Context.Paths.RawDataOutput
-[CmdletBinding()]
-param()
+
+#[CmdletBinding()]
+#param()
+
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
 
 # Main function to export data to CSV files
 function Export-ToCSV {

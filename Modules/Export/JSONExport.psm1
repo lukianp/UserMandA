@@ -9,9 +9,21 @@
     Version: 1.1.1 (Corrected JSON depth handling)
     Author: Lukian Poleschtschuk
 #>
-$outputPath = $Context.Paths.RawDataOutput
-[CmdletBinding()]
-param()
+
+#[CmdletBinding()]
+#param()
+
+
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
 
 # Helper to load data if not passed directly (for "Export Only" mode)
 function Get-ProcessedDataForJSONExport {

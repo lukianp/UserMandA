@@ -6,6 +6,8 @@
 #>
 
 # Modules/Discovery/TeamsDiscovery.psm1
+#Cannot use $outputpath as its used internally here
+
 
 function Invoke-TeamsDiscovery {
     param([hashtable]$Configuration)
@@ -13,7 +15,9 @@ function Invoke-TeamsDiscovery {
     try {
         Write-MandALog "Starting Microsoft Teams discovery" -Level "HEADER"
         
-        $outputPath = $Context.Paths.RawDataOutput
+   
+
+        
         $rawPath = Join-Path $outputPath "Raw"
         
         $discoveryResults = @{}

@@ -22,8 +22,11 @@
 
     # This function is typically called by the MandA-Orchestrator.ps1 during the Export phase.
 .NOTES
-    Author: Gemini
+    Author: Lukian Poleschtschuk
     Version: 1.0.0
+    Created: 2025-06-03
+    Last Modified: 2025-06-03
+    Change Log: Initial version - any future changes require version increment
     Date: 2025-05-29
 
     Dependencies:
@@ -36,7 +39,19 @@
     corresponding data was not discovered or aggregated. Column headers are suggestive and aim for
     comprehensiveness; actual data presence will vary.
 #>
-$outputPath = $Context.Paths.RawDataOutput
+
+
+
+
+#Updated global logging thingy
+        if ($null -eq $global:MandA) {
+    throw "Global environment not initialized"
+}
+        $outputPath = $Context.Paths.RawDataOutput
+
+        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
+    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+}
 
 function Export-ToCompanyControlSheet {
     [CmdletBinding()]

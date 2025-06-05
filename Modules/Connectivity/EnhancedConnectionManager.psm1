@@ -5,9 +5,12 @@
 
 # Global connection status tracking
 
-$outputPath = $Context.Paths.RawDataOutput
+
+# Fix-ConnectionManager.ps1
+$modulePath = ".\Modules\Connectivity\EnhancedConnectionManager.psm1"
 
 
+# Module initialization - no global dependency at load time
 $script:ConnectionStatus = @{
     Graph = @{ Connected = $false; LastError = $null; ConnectedTime = $null; Context = $null; Method = $null }
     Azure = @{ Connected = $false; LastError = $null; ConnectedTime = $null; Context = $null; Method = $null }
@@ -16,142 +19,82 @@ $script:ConnectionStatus = @{
 }
 
 function Initialize-AllConnections {
+    [CmdletBinding()]
     param(
+        [Parameter(Mandatory=$true)]
         [hashtable]$Configuration,
-        [hashtable]$AuthContext  # NOW ACCEPTING THE AUTH CONTEXT PARAMETER
+        
+        [Parameter(Mandatory=$true)]
+        $AuthContext,
+        
+        [Parameter(Mandatory=$false)]
+        $Context
     )
     
-    try {
-        Write-MandALog "===============================================" -Level "HEADER"
-        Write-MandALog "STARTING CONNECTION INITIALIZATION" -Level "HEADER"
-        Write-MandALog "===============================================" -Level "HEADER"
+    Write-ProgressHeader -Title "SERVICE CONNECTION INITIALIZATION"
+    
+    $services = @(
+        @{Name = 'Microsoft Graph'; Function = 'Connect-ToMicrosoftGraph'},
+        @{Name = 'Exchange Online'; Function = 'Connect-ToExchangeOnline'},
+        @{Name = 'SharePoint Online'; Function = 'Connect-ToSharePointOnline'},
+        @{Name = 'Teams'; Function = 'Connect-ToTeams'},
+        @{Name = 'Azure'; Function = 'Connect-ToAzure'}
+    )
+    
+    $connectionResults = @{}
+    $totalServices = $services.Count
+    $currentService = 0
+    
+    foreach ($service in $services) {
+        $currentService++
+        $serviceName = $service.Name
         
-        # Debug: Log what we received
-        Write-MandALog "DEBUG: Received parameters:" -Level "DEBUG"
-        Write-MandALog "  - Configuration: $(if($Configuration){'Present'}else{'NULL'})" -Level "DEBUG"
-        Write-MandALog "  - AuthContext: $(if($AuthContext){'Present'}else{'NULL'})" -Level "DEBUG"
+        # Show progress
+        Write-ProgressStep "Connecting to $serviceName [$currentService/$totalServices]" -Status Progress
         
-        # Validate and extract auth context
-        $workingAuthContext = $null
-        
-        if ($AuthContext) {
-            Write-MandALog "DEBUG: AuthContext parameter provided" -Level "DEBUG"
-            Write-MandALog "  - Type: $($AuthContext.GetType().Name)" -Level "DEBUG"
-            Write-MandALog "  - Keys: $($AuthContext.Keys -join ', ')" -Level "DEBUG"
+        try {
+            # Animated waiting indicator
+            $connectStart = Get-Date
             
-            # Check if auth context is nested (has .Context property)
-            if ($AuthContext.Context) {
-                Write-MandALog "DEBUG: AuthContext has nested .Context property" -Level "DEBUG"
-                $workingAuthContext = $AuthContext.Context
-                Write-MandALog "  - Nested Context Type: $($workingAuthContext.GetType().Name)" -Level "DEBUG"
-                Write-MandALog "  - Nested Context Keys: $($workingAuthContext.Keys -join ', ')" -Level "DEBUG"
+            # Attempt connection
+            if (Get-Command $service.Function -ErrorAction SilentlyContinue) {
+                Show-ConnectionStatus -Service $serviceName -Status "Connecting" -Details "Authenticating..."
+                
+                $result = & $service.Function -Configuration $Configuration -AuthContext $AuthContext
+                
+                $connectDuration = ((Get-Date) - $connectStart).TotalSeconds
+                
+                if ($result) {
+                    Show-ConnectionStatus -Service $serviceName -Status "Connected" `
+                        -Details "Completed in $([Math]::Round($connectDuration, 1))s"
+                    $connectionResults[$serviceName] = @{Connected = $true; Duration = $connectDuration}
+                } else {
+                    Show-ConnectionStatus -Service $serviceName -Status "Failed" -Details "Connection refused"
+                    $connectionResults[$serviceName] = @{Connected = $false; Error = "Connection refused"}
+                }
             } else {
-                $workingAuthContext = $AuthContext
+                Show-ConnectionStatus -Service $serviceName -Status "Skipped" -Details "Module not available"
+                $connectionResults[$serviceName] = @{Connected = $false; Error = "Module not available"}
             }
-        } else {
-            Write-MandALog "WARN: No AuthContext parameter provided, attempting to retrieve from module scope" -Level "WARN"
-            $workingAuthContext = Get-AuthenticationContext
             
-            if ($workingAuthContext) {
-                Write-MandALog "DEBUG: Retrieved auth context from module scope" -Level "DEBUG"
-                Write-MandALog "  - Type: $($workingAuthContext.GetType().Name)" -Level "DEBUG"
-                Write-MandALog "  - Keys: $($workingAuthContext.Keys -join ', ')" -Level "DEBUG"
-            } else {
-                Write-MandALog "ERROR: No authentication context available from any source" -Level "ERROR"
-                throw "Authentication context not available"
-            }
+        } catch {
+            Show-ConnectionStatus -Service $serviceName -Status "Failed" -Details $_.Exception.Message
+            $connectionResults[$serviceName] = @{Connected = $false; Error = $_.Exception.Message}
         }
         
-        # Validate auth context has required properties
-        Write-MandALog "DEBUG: Validating authentication context..." -Level "DEBUG"
-        $requiredProps = @('ClientId', 'TenantId', 'ClientSecret')
-        $missingProps = @()
-        
-        foreach ($prop in $requiredProps) {
-            if (-not $workingAuthContext.$prop) {
-                $missingProps += $prop
-                Write-MandALog "  - Missing: $prop" -Level "DEBUG"
-            } else {
-                Write-MandALog "  - Present: $prop = $(if($prop -eq 'ClientSecret'){'[REDACTED]'}else{$workingAuthContext.$prop})" -Level "DEBUG"
-            }
-        }
-        
-        if ($missingProps.Count -gt 0) {
-            throw "Authentication context missing required properties: $($missingProps -join ', ')"
-        }
-        
-        Write-MandALog "DEBUG: Authentication context validation successful" -Level "SUCCESS"
-        
-        # Initialize connection results
-        $connectionResults = @{}
-        $enabledSources = $Configuration.discovery.enabledSources
-        
-        Write-MandALog "DEBUG: Enabled discovery sources: $($enabledSources -join ', ')" -Level "DEBUG"
-        
-        # Microsoft Graph connection
-        if ($enabledSources -contains "Graph" -or $enabledSources -contains "Intune" -or 
-            $enabledSources -contains "Licensing" -or $enabledSources -contains "Teams") {
-            Write-MandALog "===============================================" -Level "INFO"
-            Write-MandALog "Connecting to Microsoft Graph..." -Level "PROGRESS"
-            $connectionResults.Graph = Connect-MandAGraphEnhanced -AuthContext $workingAuthContext -Configuration $Configuration
-        }
-        
-        # Azure connection
-        if ($enabledSources -contains "Azure") {
-            Write-MandALog "===============================================" -Level "INFO"
-            Write-MandALog "Connecting to Azure..." -Level "PROGRESS"
-            $connectionResults.Azure = Connect-MandAAzureEnhanced -AuthContext $workingAuthContext -Configuration $Configuration
-        }
-        
-        # Exchange Online connection
-        if ($enabledSources -contains "Exchange" -or $enabledSources -contains "ExchangeOnline") {
-            Write-MandALog "===============================================" -Level "INFO"
-            Write-MandALog "Connecting to Exchange Online..." -Level "PROGRESS"
-            $connectionResults.ExchangeOnline = Connect-MandAExchangeEnhanced -AuthContext $workingAuthContext -Configuration $Configuration
-        }
-        
-        # Active Directory connection (if domain controller specified)
-        if (($enabledSources -contains "ActiveDirectory" -or $enabledSources -contains "GPO") -and 
-            $Configuration.environment.domainController) {
-            Write-MandALog "===============================================" -Level "INFO"
-            Write-MandALog "Connecting to Active Directory..." -Level "PROGRESS"
-            $connectionResults.ActiveDirectory = Connect-MandAActiveDirectory -Configuration $Configuration
-        }
-        
-        # Summary
-        Write-MandALog "===============================================" -Level "HEADER"
-        Write-MandALog "CONNECTION SUMMARY" -Level "HEADER"
-        Write-MandALog "===============================================" -Level "HEADER"
-        
-        $connectedServices = ($connectionResults.Values | Where-Object { $_ -eq $true }).Count
-        $totalServices = $connectionResults.Count
-        
-        # Display individual connection status
-        foreach ($service in $connectionResults.GetEnumerator()) {
-            $status = $script:ConnectionStatus[$service.Key]
-            if ($service.Value) {
-                $connectTime = if ($status.ConnectedTime) { $status.ConnectedTime.ToString("HH:mm:ss") } else { "Unknown" }
-                $method = if ($status.Method) { " via $($status.Method)" } else { "" }
-                Write-MandALog "✅ $($service.Key): Connected at $connectTime$method" -Level "SUCCESS"
-            } else {
-                $lastError = if ($status.LastError) { " - $($status.LastError)" } else { "" }
-                Write-MandALog "❌ $($service.Key): Failed$lastError" -Level "ERROR"
-            }
-        }
-        
-        Write-MandALog "Connection Summary: $connectedServices of $totalServices services connected" -Level $(if ($connectedServices -eq $totalServices) { "SUCCESS" } elseif ($connectedServices -gt 0) { "WARN" } else { "ERROR" })
-        
-        # IMPORTANT: Return the connection results hashtable, not a boolean
-        Write-MandALog "DEBUG: Returning connection results hashtable with $($connectionResults.Count) entries" -Level "DEBUG"
-        return $connectionResults
-        
-    } catch {
-        Write-MandALog "CRITICAL ERROR in Initialize-AllConnections: $($_.Exception.Message)" -Level "ERROR"
-        Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG"
-        
-        # Return empty hashtable on failure instead of $false
-        return @{}
+        # Small delay for visual effect
+        Start-Sleep -Milliseconds 100
     }
+    
+    # Summary
+    Write-Host ""
+    $connected = ($connectionResults.Values | Where-Object { $_.Connected }).Count
+    $failed = $totalServices - $connected
+    
+    Write-ProgressStep "Connection Summary: $connected connected, $failed failed" `
+        -Status $(if ($failed -eq 0) { 'Success' } else { 'Warning' })
+    
+    return $connectionResults
 }
 
 function Connect-MandAGraphEnhanced {

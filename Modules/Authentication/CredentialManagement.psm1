@@ -5,24 +5,67 @@
     Handles encrypted credential storage using DPAPI with standardized format
 .NOTES
     Author: M&A Discovery Team
-    Version: 2.0.0
+    Version: 2.1.0
     Created: 2025-05-31
     Last Modified: 2025-01-10
+    Fixed: 2025-01-15 - Removed global dependency at module load time
 #>
 
-# Import the credential format handler
-$outputPath = $Context.Paths.RawDataOutput
-$formatHandlerPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\CredentialFormatHandler.psm1"
-if (Test-Path $formatHandlerPath) {
-    Import-Module $formatHandlerPath -Force
-} else {
-    throw "Cannot find CredentialFormatHandler.psm1 at: $formatHandlerPath"
+# Module-scoped variables
+$script:CredentialFormatHandlerLoaded = $false
+
+function Ensure-CredentialFormatHandler {
+    if ($script:CredentialFormatHandlerLoaded) {
+        return $true
+    }
+    
+    $formatHandlerPath = $null
+    
+    # Try multiple approaches to find the module
+    if ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.Utilities) {
+        $formatHandlerPath = Join-Path $global:MandA.Paths.Utilities "CredentialFormatHandler.psm1"
+    } elseif ($PSScriptRoot) {
+        $formatHandlerPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\CredentialFormatHandler.psm1"
+    } else {
+        # Fallback: try relative to current location
+        $testPaths = @(
+            "..\..\Modules\Utilities\CredentialFormatHandler.psm1",
+            "..\Utilities\CredentialFormatHandler.psm1",
+            "C:\MandADiscovery\Modules\Utilities\CredentialFormatHandler.psm1"
+        )
+        
+        foreach ($testPath in $testPaths) {
+            if (Test-Path $testPath) {
+                $formatHandlerPath = $testPath
+                break
+            }
+        }
+    }
+    
+    if ($formatHandlerPath -and (Test-Path $formatHandlerPath)) {
+        Import-Module $formatHandlerPath -Force
+        $script:CredentialFormatHandlerLoaded = $true
+        return $true
+    } else {
+        # Try to find it using Get-Module
+        $utilModule = Get-Module -ListAvailable -Name "CredentialFormatHandler" | Select-Object -First 1
+        if ($utilModule) {
+            Import-Module $utilModule.Path -Force
+            $script:CredentialFormatHandlerLoaded = $true
+            return $true
+        } else {
+            throw "Cannot find CredentialFormatHandler.psm1. Searched at: $formatHandlerPath"
+        }
+    }
 }
 
 function Get-SecureCredentials {
     param([hashtable]$Configuration)
     
     try {
+        # Ensure the format handler is loaded
+        Ensure-CredentialFormatHandler
+        
         $credentialPath = $Configuration.authentication.credentialStorePath
         
         Write-MandALog "Attempting to load credentials from: $credentialPath" -Level "INFO"
@@ -146,6 +189,9 @@ function Set-SecureCredentials {
     )
     
     try {
+        # Ensure the format handler is loaded
+        Ensure-CredentialFormatHandler
+        
         $credentialData = @{
             ClientId = $ClientId
             ClientSecret = $ClientSecret
@@ -253,6 +299,27 @@ function Remove-StoredCredentials {
     } catch {
         Write-MandALog "Failed to remove stored credentials: $($_.Exception.Message)" -Level "ERROR"
         return $false
+    }
+}
+
+# Helper function for logging when Write-MandALog might not be available
+function Write-MandALog {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO"
+    )
+    
+    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue -CommandType Function) {
+        & Write-MandALog $Message -Level $Level
+    } else {
+        $color = switch ($Level) {
+            "ERROR" { "Red" }
+            "WARN" { "Yellow" }
+            "SUCCESS" { "Green" }
+            "INFO" { "White" }
+            default { "Gray" }
+        }
+        Write-Host "[CredentialManagement] $Message" -ForegroundColor $color
     }
 }
 

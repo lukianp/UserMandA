@@ -13,8 +13,10 @@ function Invoke-SharePointDiscovery {
     try {
         Write-MandALog "Starting SharePoint Online discovery" -Level "HEADER"
         
-        $outputPath = $Context.Paths.RawDataOutput
-        $rawPath = Join-Path $outputPath "Raw"
+        
+
+
+      
         
         $discoveryResults = @{}
         

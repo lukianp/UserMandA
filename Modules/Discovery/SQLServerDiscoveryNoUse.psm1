@@ -11,7 +11,7 @@ function Invoke-SQLServerDiscovery {
     try {
         Write-MandALog "Starting SQL Server infrastructure discovery" -Level "HEADER"
         
-        $outputPath = $Context.Paths.RawDataOutput
+        $outputPath = $Configuration.environment.outputPath
         $discoveryResults = @{}
         
         # SQL Instances
