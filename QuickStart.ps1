@@ -192,12 +192,14 @@ try {
     $Duration = (Get-Date) - $script:QuickStartTime
     Write-Host "`n" + ("═" * 75) -ForegroundColor DarkGray
 
+    #FIX: Replaced emojis with ASCII equivalents
     switch ($ExitCode) {
-        0 { Write-Host "[QuickStart] ✓ M&A Discovery Suite completed successfully!" -ForegroundColor Green }
-        1 { Write-Host "[QuickStart] ⚠ M&A Discovery Suite completed with warnings. Check logs for details." -ForegroundColor Yellow }
-        2 { Write-Host "[QuickStart] ✗ M&A Discovery Suite encountered critical errors. Review error report in logs directory." -ForegroundColor Red }
-        default { Write-Host "[QuickStart] ✗ M&A Discovery Suite failed with exit code: $ExitCode." -ForegroundColor Red }
+        0 { Write-Host "[QuickStart] [OK] M&A Discovery Suite completed successfully!" -ForegroundColor Green }
+        1 { Write-Host "[QuickStart] [WARNING] M&A Discovery Suite completed with warnings. Check logs for details." -ForegroundColor Yellow }
+        2 { Write-Host "[QuickStart] [ERROR] M&A Discovery Suite encountered critical errors. Review error report in logs directory." -ForegroundColor Red }
+        default { Write-Host "[QuickStart] [FAILURE] M&A Discovery Suite failed with exit code: $ExitCode." -ForegroundColor Red }
     }
+    #FIX: Ensured $Duration.ToString format string is valid and $Duration is correctly initialized. No change needed if $Duration is TimeSpan.
     Write-Host "[QuickStart]   Total execution time (QuickStart): $($Duration.ToString('hh\:mm\:ss'))" -ForegroundColor DarkGray
 
     if ($global:MandA -and $global:MandA.Paths) {
@@ -211,8 +213,8 @@ try {
 
     exit $ExitCode
 
-} catch {
-    Write-Host "`n✗ FATAL ERROR in QuickStart.ps1" -ForegroundColor Red
+catch { 
+    Write-Host "`n[ERROR] FATAL ERROR in QuickStart.ps1" -ForegroundColor Red 
     Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
     if ($_.ScriptStackTrace) {
         Write-Host "`nStack Trace:" -ForegroundColor DarkRed
@@ -224,6 +226,8 @@ try {
     Write-Host "  3. Check permissions for the suite directory and output paths." -ForegroundColor Gray
     Write-Host "  4. If this is the first run, ensure the CompanyName '$CompanyName' is valid and profile directories can be created." -ForegroundColor Gray
     exit 99
-} finally {
+} 
+
+finally { # This is line 230 in the previous version
     Write-Host "[QuickStart] QuickStart.ps1 execution finished." -ForegroundColor DarkGray
 }
