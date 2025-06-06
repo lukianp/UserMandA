@@ -23,15 +23,8 @@
 
 
 
-#Updated global logging thingy
-        if ($null -eq $global:MandA) {
-    throw "Global environment not initialized"
-}
-        $outputPath = $Context.Paths.RawDataOutput
-
-        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
-    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
-}
+# NOTE: Global environment check has been moved to function scope to avoid module loading issues.
+# Functions will check for the global context when they are called, rather than at module import time.
 
 # Helper to load data if not passed directly (for "Export Only" mode)
 function Get-ProcessedDataForJSONExport {

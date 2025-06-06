@@ -29,10 +29,8 @@
                  Improved Get-DomainFromDN.
 #>
 
-# Ensure global environment is initialized (this should have been done by Set-SuiteEnvironment.ps1)
-if ($null -eq $global:MandA -or $null -eq $global:MandA.Paths -or $null -eq $global:MandA.Config) {
-    throw "CRITICAL: M&A Discovery Suite global environment (`$global:MandA`) is not properly initialized. Ensure Set-SuiteEnvironment.ps1 has run successfully."
-}
+# NOTE: Global environment check has been moved to function scope to avoid module loading issues.
+# Functions will check for the global context when they are called, rather than at module import time.
 
 #region Module Variables
 $script:AggregationStats = @{

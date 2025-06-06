@@ -532,6 +532,7 @@ try {
     Write-Host "Testing comprehensive error reporting functionality`n" -ForegroundColor Gray
     
     # Initialize test environment
+    # Initialize test environment
     if (-not $SkipSetup) {
         Initialize-TestEnvironment
     }
@@ -554,10 +555,10 @@ try {
     $overallSuccess = ($testResults.Values | Where-Object { $_ -eq $false }).Count -eq 0
     
     if ($overallSuccess) {
-        Write-Host "`nâœ… All error reporting tests passed successfully!" -ForegroundColor Green
+        Write-Host "`n[SUCCESS] All error reporting tests passed successfully!" -ForegroundColor Green
         exit 0
     } else {
-        Write-Host "`nâŒ Some error reporting tests failed. Check the logs for details." -ForegroundColor Red
+        Write-Host "`nâ[FAILED] Some error reporting tests failed. Check the logs for details." -ForegroundColor Red
         exit 1
     }
     

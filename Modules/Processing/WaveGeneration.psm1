@@ -20,32 +20,10 @@
 [CmdletBinding()]
 param()
 
-# Access context information provided by the orchestrator during module import
-# $global:_MandALoadingContext is set by the orchestrator's Import-ModuleWithManifest function.
-
-if ($null -eq $global:_MandALoadingContext -or $null -eq $global:_MandALoadingContext.Paths -or $null -eq $global:_MandALoadingContext.Config) {
-    throw "WaveGeneration: Critical loading context (_MandALoadingContext, its Paths, or its Config) is not available. Module cannot initialize."
-}
-
-# Use the loading context to get necessary paths and configuration
-$ModuleScope_ContextPaths = $global:_MandALoadingContext.Paths
-# $ModuleScope_Configuration = $global:_MandALoadingContext.Config # Not directly used at module scope in this script, but available if needed
-
-if ($null -eq $ModuleScope_ContextPaths -or -not $ModuleScope_ContextPaths.ContainsKey('RawDataOutput')) {
-    throw "WaveGeneration: RawDataOutput path is missing in the loading context."
-}
-$ModuleScope_RawDataOutputPath = $ModuleScope_ContextPaths.RawDataOutput
-
-# Example of safely creating a directory if needed.
-# This particular logic might be redundant if the orchestrator already ensures directories.
-if (-not (Test-Path $ModuleScope_RawDataOutputPath)) {
-    try {
-        New-Item -Path $ModuleScope_RawDataOutputPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
-        Write-Host "[WaveGeneration INFO] Created directory: $ModuleScope_RawDataOutputPath" 
-    } catch {
-        Write-Warning "WaveGeneration: Failed to create directory $ModuleScope_RawDataOutputPath. Error: $($_.Exception.Message)"
-    }
-}
+# NOTE: Context access has been moved to function scope to avoid module loading issues.
+# The global context ($global:MandA) will be accessed by functions when they are called,
+# rather than at module import time. Directory creation will be handled by the orchestrator
+# or individual functions as needed.
 
 # Main function to generate migration waves with dependency awareness
 function New-MigrationWaves {

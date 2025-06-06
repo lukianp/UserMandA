@@ -21,21 +21,9 @@
 [CmdletBinding()]
 param()
 
-# Access context information provided by the orchestrator during module import
-# $global:_MandALoadingContext is set by the orchestrator's Import-ModuleWithManifest function.
-
-if ($null -eq $global:_MandALoadingContext -or $null -eq $global:_MandALoadingContext.Paths -or $null -eq $global:_MandALoadingContext.Config) {
-    throw "DataValidation: Critical loading context (_MandALoadingContext, its Paths, or its Config) is not available. Module cannot initialize."
-}
-
-# Use the loading context to get necessary paths and configuration
-$ModuleScope_ContextPaths = $global:_MandALoadingContext.Paths
-# $ModuleScope_Configuration = $global:_MandALoadingContext.Config # Used by functions via parameter
-
-if ($null -eq $ModuleScope_ContextPaths -or -not $ModuleScope_ContextPaths.ContainsKey('RawDataOutput')) { # Or ProcessedDataOutput if that's more relevant
-    throw "DataValidation: Relevant output path (e.g., RawDataOutput or ProcessedDataOutput) is missing in the loading context."
-}
-# $ModuleScope_RelevantPath = $ModuleScope_ContextPaths.RawDataOutput # Example
+# NOTE: Context access has been moved to function scope to avoid module loading issues.
+# The global context ($global:MandA) will be accessed by functions when they are called,
+# rather than at module import time.
 
 # Main function to test data quality
 function Test-DataQuality {

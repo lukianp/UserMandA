@@ -318,11 +318,11 @@ try {
     $overallSuccess = ($testResults.Values | Where-Object { $_ -eq $false }).Count -eq 0
     
     if ($overallSuccess) {
-        Write-Host "`n✅ All error reporting tests passed successfully!" -ForegroundColor Green
-        Write-Host "📁 Check the output directory for generated reports: $OutputPath" -ForegroundColor Cyan
+        Write-Host "`n[SUCCESS] All error reporting tests passed successfully!" -ForegroundColor Green
+        Write-Host "[INFO] Check the output directory for generated reports: $OutputPath" -ForegroundColor Cyan
         exit 0
     } else {
-        Write-Host "`n❌ Some error reporting tests failed. Check the logs for details." -ForegroundColor Red
+        Write-Host "`n[FAILED] Some error reporting tests failed. Check the logs for details." -ForegroundColor Red
         exit 1
     }
     

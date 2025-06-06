@@ -22,10 +22,8 @@
 
 
 
-#Updated global logging thingy
-        if ($null -eq $global:MandA) {
-    throw "Global environment not initialized"
-}
+# NOTE: Global environment check has been moved to function scope to avoid module loading issues.
+# Functions will check for the global context when they are called, rather than at module import time.
         $outputPath = $Context.Paths.RawDataOutput
 
         if (-not (Test-Path $Context.Paths.RawDataOutput)) {

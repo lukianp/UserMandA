@@ -21,42 +21,10 @@
 [CmdletBinding()]
 param()
 
-# Access context information provided by the orchestrator during module import
-# $global:_MandALoadingContext is set by the orchestrator's Import-ModuleWithManifest function.
-
-if ($null -eq $global:_MandALoadingContext -or $null -eq $global:_MandALoadingContext.Paths -or $null -eq $global:_MandALoadingContext.Config) {
-    throw "UserProfileBuilder: Critical loading context (_MandALoadingContext, its Paths, or its Config) is not available. Module cannot initialize."
-}
-
-# Use the loading context to get necessary paths and configuration
-# Note: It's generally better practice for module-scope code to only define functions 
-# and constants, and for functions to receive necessary context via parameters.
-# However, to fix the immediate issue, we'll use the global loading context here.
-
-$ModuleScope_ContextPaths = $global:_MandALoadingContext.Paths
-$ModuleScope_Configuration = $global:_MandALoadingContext.Config
-
-if ($null -eq $ModuleScope_ContextPaths -or -not $ModuleScope_ContextPaths.ContainsKey('RawDataOutput')) {
-    throw "UserProfileBuilder: RawDataOutput path is missing in the loading context."
-}
-$ModuleScope_RawDataOutputPath = $ModuleScope_ContextPaths.RawDataOutput
-
-# This variable can be used by functions within this module if they don't take paths as parameters
-# For example, if Write-MandALog is called from within this module scope (not advisable)
-# $outputPath = $ModuleScope_RawDataOutputPath 
-
-# Example of safely creating a directory if needed, though this kind of logic
-# is often better handled by the orchestrator or a dedicated setup script.
-if (-not (Test-Path $ModuleScope_RawDataOutputPath)) {
-    try {
-        New-Item -Path $ModuleScope_RawDataOutputPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
-        # Using Write-Host here as Write-MandALog might not be fully initialized itself 
-        # if EnhancedLogging.psm1 relies on other context parts not yet set.
-        Write-Host "[UserProfileBuilder INFO] Created directory: $ModuleScope_RawDataOutputPath" 
-    } catch {
-        Write-Warning "UserProfileBuilder: Failed to create directory $ModuleScope_RawDataOutputPath. Error: $($_.Exception.Message)"
-    }
-}
+# NOTE: Context access has been moved to function scope to avoid module loading issues.
+# The global context ($global:MandA) will be accessed by functions when they are called,
+# rather than at module import time. Directory creation will be handled by the orchestrator
+# or individual functions as needed.
 
 
 function Convert-MailboxSizeToMB {

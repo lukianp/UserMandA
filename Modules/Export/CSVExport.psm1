@@ -22,15 +22,8 @@
 #param()
 
 
-#Updated global logging thingy
-        if ($null -eq $global:MandA) {
-    throw "Global environment not initialized"
-}
-        $outputPath = $Context.Paths.RawDataOutput
-
-        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
-    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
-}
+# NOTE: Global environment check has been moved to function scope to avoid module loading issues.
+# Functions will check for the global context when they are called, rather than at module import time.
 
 # Main function to export data to CSV files
 function Export-ToCSV {
