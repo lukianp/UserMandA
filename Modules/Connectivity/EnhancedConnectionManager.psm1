@@ -22,20 +22,34 @@
 
 
 # Fix-ConnectionManager.ps1
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
+
+
+# Module-scope context variable
+
+$script:ModuleContext = $null
+
+
+
+# Lazy initialization function
+
+function Get-ModuleContext {
+
+    if ($null -eq $script:ModuleContext) {
+
+        if ($null -ne $global:MandA) {
+
+            $script:ModuleContext = $global:MandA
+
+        } else {
+
+            throw "Module context not available"
+
+        }
+
+    }
+
+    return $script:ModuleContext
+
 }
 $modulePath = ".\Modules\Connectivity\EnhancedConnectionManager.psm1"
 
@@ -572,6 +586,401 @@ function Connect-MandAActiveDirectory {
     }
 }
 
+function Test-GraphConnection {
+    [CmdletBinding()]
+    param()
+    
+    try {
+        Write-MandALog "Testing Microsoft Graph connection..." -Level "DEBUG"
+        
+        # Check if we have a connection status
+        if (-not $script:ConnectionStatus.Graph.Connected) {
+            return @{
+                Connected = $false
+                Error = "No active Graph connection"
+                Service = "Microsoft Graph"
+                LastTested = Get-Date
+            }
+        }
+        
+        # Test the connection by making a simple API call
+        try {
+            $context = Get-MgContext -ErrorAction Stop
+            if (-not $context) {
+                throw "No Graph context available"
+            }
+            
+            # Test with a simple organization query
+            $org = Get-MgOrganization -Top 1 -ErrorAction Stop
+            
+            return @{
+                Connected = $true
+                Service = "Microsoft Graph"
+                Details = @{
+                    TenantId = $context.TenantId
+                    ClientId = $context.ClientId
+                    Organization = $org.DisplayName
+                    Scopes = $context.Scopes -join ', '
+                }
+                LastTested = Get-Date
+                ResponseTime = (Measure-Command { Get-MgOrganization -Top 1 -ErrorAction Stop }).TotalMilliseconds
+            }
+            
+        } catch {
+            # Update connection status
+            $script:ConnectionStatus.Graph.Connected = $false
+            $script:ConnectionStatus.Graph.LastError = $_.Exception.Message
+            
+            return @{
+                Connected = $false
+                Error = $_.Exception.Message
+                Service = "Microsoft Graph"
+                LastTested = Get-Date
+            }
+        }
+        
+    } catch {
+        return @{
+            Connected = $false
+            Error = $_.Exception.Message
+            Service = "Microsoft Graph"
+            LastTested = Get-Date
+        }
+    }
+}
+
+function Test-AzureConnection {
+    [CmdletBinding()]
+    param()
+    
+    try {
+        Write-MandALog "Testing Azure connection..." -Level "DEBUG"
+        
+        # Check if we have a connection status
+        if (-not $script:ConnectionStatus.Azure.Connected) {
+            return @{
+                Connected = $false
+                Error = "No active Azure connection"
+                Service = "Azure"
+                LastTested = Get-Date
+            }
+        }
+        
+        # Test the connection
+        try {
+            $context = Get-AzContext -ErrorAction Stop
+            if (-not $context) {
+                throw "No Azure context available"
+            }
+            
+            # Test with a simple subscription query
+            $subscriptions = Get-AzSubscription -ErrorAction Stop | Select-Object -First 1
+            
+            return @{
+                Connected = $true
+                Service = "Azure"
+                Details = @{
+                    TenantId = $context.Tenant.Id
+                    AccountId = $context.Account.Id
+                    SubscriptionCount = (Get-AzSubscription).Count
+                    Environment = $context.Environment.Name
+                }
+                LastTested = Get-Date
+                ResponseTime = (Measure-Command { Get-AzSubscription -ErrorAction Stop | Select-Object -First 1 }).TotalMilliseconds
+            }
+            
+        } catch {
+            # Update connection status
+            $script:ConnectionStatus.Azure.Connected = $false
+            $script:ConnectionStatus.Azure.LastError = $_.Exception.Message
+            
+            return @{
+                Connected = $false
+                Error = $_.Exception.Message
+                Service = "Azure"
+                LastTested = Get-Date
+            }
+        }
+        
+    } catch {
+        return @{
+            Connected = $false
+            Error = $_.Exception.Message
+            Service = "Azure"
+            LastTested = Get-Date
+        }
+    }
+}
+
+function Test-ExchangeConnection {
+    [CmdletBinding()]
+    param()
+    
+    try {
+        Write-MandALog "Testing Exchange Online connection..." -Level "DEBUG"
+        
+        # Check if we have a connection status
+        if (-not $script:ConnectionStatus.ExchangeOnline.Connected) {
+            return @{
+                Connected = $false
+                Error = "No active Exchange Online connection"
+                Service = "Exchange Online"
+                LastTested = Get-Date
+            }
+        }
+        
+        # Test the connection
+        try {
+            # Test with a simple mailbox query
+            $mailbox = Get-Mailbox -ResultSize 1 -ErrorAction Stop
+            
+            # Get connection info
+            $connectionInfo = Get-ConnectionInformation -ErrorAction SilentlyContinue
+            
+            return @{
+                Connected = $true
+                Service = "Exchange Online"
+                Details = @{
+                    Organization = if ($connectionInfo) { $connectionInfo.Organization } else { "Unknown" }
+                    UserPrincipalName = if ($connectionInfo) { $connectionInfo.UserPrincipalName } else { "Service Principal" }
+                    ConnectionMethod = $script:ConnectionStatus.ExchangeOnline.Method
+                }
+                LastTested = Get-Date
+                ResponseTime = (Measure-Command { Get-Mailbox -ResultSize 1 -ErrorAction Stop }).TotalMilliseconds
+            }
+            
+        } catch {
+            # Update connection status
+            $script:ConnectionStatus.ExchangeOnline.Connected = $false
+            $script:ConnectionStatus.ExchangeOnline.LastError = $_.Exception.Message
+            
+            return @{
+                Connected = $false
+                Error = $_.Exception.Message
+                Service = "Exchange Online"
+                LastTested = Get-Date
+            }
+        }
+        
+    } catch {
+        return @{
+            Connected = $false
+            Error = $_.Exception.Message
+            Service = "Exchange Online"
+            LastTested = Get-Date
+        }
+    }
+}
+
+function Test-ActiveDirectoryConnection {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [hashtable]$Configuration
+    )
+    
+    try {
+        Write-MandALog "Testing Active Directory connection..." -Level "DEBUG"
+        
+        # Check if we have a connection status
+        if (-not $script:ConnectionStatus.ActiveDirectory.Connected) {
+            return @{
+                Connected = $false
+                Error = "No active Active Directory connection"
+                Service = "Active Directory"
+                LastTested = Get-Date
+            }
+        }
+        
+        # Test the connection
+        try {
+            # Get domain controller from configuration or use default
+            $domainController = if ($Configuration -and $Configuration.environment.domainController) {
+                $Configuration.environment.domainController
+            } else {
+                $null
+            }
+            
+            # Test with a simple domain query
+            $domain = if ($domainController) {
+                Get-ADDomain -Server $domainController -ErrorAction Stop
+            } else {
+                Get-ADDomain -ErrorAction Stop
+            }
+            
+            return @{
+                Connected = $true
+                Service = "Active Directory"
+                Details = @{
+                    DomainName = $domain.Name
+                    Forest = $domain.Forest
+                    DomainController = $domainController
+                    NetBIOSName = $domain.NetBIOSName
+                }
+                LastTested = Get-Date
+                ResponseTime = (Measure-Command {
+                    if ($domainController) {
+                        Get-ADDomain -Server $domainController -ErrorAction Stop
+                    } else {
+                        Get-ADDomain -ErrorAction Stop
+                    }
+                }).TotalMilliseconds
+            }
+            
+        } catch {
+            # Update connection status
+            $script:ConnectionStatus.ActiveDirectory.Connected = $false
+            $script:ConnectionStatus.ActiveDirectory.LastError = $_.Exception.Message
+            
+            return @{
+                Connected = $false
+                Error = $_.Exception.Message
+                Service = "Active Directory"
+                LastTested = Get-Date
+            }
+        }
+        
+    } catch {
+        return @{
+            Connected = $false
+            Error = $_.Exception.Message
+            Service = "Active Directory"
+            LastTested = Get-Date
+        }
+    }
+}
+
+function Test-AllConnections {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [hashtable]$Configuration
+    )
+    
+    try {
+        Write-MandALog "Starting comprehensive connection validation..." -Level "PROGRESS"
+        
+        # Define connection test functions
+        $connections = @{
+            'Graph' = { Test-GraphConnection }
+            'Azure' = { Test-AzureConnection }
+            'Exchange' = { Test-ExchangeConnection }
+            'ActiveDirectory' = { Test-ActiveDirectoryConnection -Configuration $Configuration }
+        }
+        
+        $results = @{}
+        $totalConnections = $connections.Keys.Count
+        $currentConnection = 0
+        
+        foreach ($service in $connections.Keys) {
+            $currentConnection++
+            
+            try {
+                Write-MandALog "Testing $service connection [$currentConnection/$totalConnections]..." -Level "INFO"
+                
+                # Execute the test function
+                $testStart = Get-Date
+                $testResult = & $connections[$service]
+                $testDuration = ((Get-Date) - $testStart).TotalMilliseconds
+                
+                # Add test duration to result
+                $testResult.TestDuration = $testDuration
+                
+                # Store result
+                $results[$service] = $testResult
+                
+                # Log result
+                if ($testResult.Connected) {
+                    Write-MandALog "[OK] $service connection validated" -Level "SUCCESS"
+                    if ($testResult.Details) {
+                        foreach ($key in $testResult.Details.Keys) {
+                            Write-MandALog "  - $key : $($testResult.Details[$key])" -Level "DEBUG"
+                        }
+                    }
+                    if ($testResult.ResponseTime) {
+                        Write-MandALog "  - Response Time: $([Math]::Round($testResult.ResponseTime, 1))ms" -Level "DEBUG"
+                    }
+                } else {
+                    Write-MandALog "[FAIL] $service connection failed: $($testResult.Error)" -Level "ERROR"
+                }
+                
+            } catch {
+                Write-MandALog "ERROR: Exception during $service connection test: $($_.Exception.Message)" -Level "ERROR"
+                $results[$service] = @{
+                    Connected = $false
+                    Error = $_.Exception.Message
+                    Service = $service
+                    LastTested = Get-Date
+                    TestDuration = ((Get-Date) - $testStart).TotalMilliseconds
+                }
+            }
+        }
+        
+        # Generate summary
+        $connectedServices = ($results.Values | Where-Object { $_.Connected }).Count
+        $failedServices = $totalConnections - $connectedServices
+        
+        Write-MandALog "" -Level "INFO"
+        Write-MandALog "===============================================" -Level "INFO"
+        Write-MandALog "CONNECTION VALIDATION SUMMARY" -Level "INFO"
+        Write-MandALog "===============================================" -Level "INFO"
+        Write-MandALog "Total Services Tested: $totalConnections" -Level "INFO"
+        Write-MandALog "Connected Services: $connectedServices" -Level "SUCCESS"
+        Write-MandALog "Failed Services: $failedServices" -Level $(if ($failedServices -eq 0) { "SUCCESS" } else { "ERROR" })
+        
+        # List connected services
+        if ($connectedServices -gt 0) {
+            Write-MandALog "" -Level "INFO"
+            Write-MandALog "Connected Services:" -Level "SUCCESS"
+            foreach ($service in $results.Keys) {
+                if ($results[$service].Connected) {
+                    $responseTime = if ($results[$service].ResponseTime) { " ($([Math]::Round($results[$service].ResponseTime, 1))ms)" } else { "" }
+                    Write-MandALog "  ✓ $service$responseTime" -Level "SUCCESS"
+                }
+            }
+        }
+        
+        # List failed services
+        if ($failedServices -gt 0) {
+            Write-MandALog "" -Level "INFO"
+            Write-MandALog "Failed Services:" -Level "ERROR"
+            foreach ($service in $results.Keys) {
+                if (-not $results[$service].Connected) {
+                    Write-MandALog "  ✗ $service : $($results[$service].Error)" -Level "ERROR"
+                }
+            }
+        }
+        
+        Write-MandALog "===============================================" -Level "INFO"
+        
+        # Add overall summary to results
+        $results.Summary = @{
+            TotalTested = $totalConnections
+            Connected = $connectedServices
+            Failed = $failedServices
+            SuccessRate = [Math]::Round(($connectedServices / $totalConnections) * 100, 1)
+            TestCompleted = Get-Date
+        }
+        
+        return $results
+        
+    } catch {
+        Write-MandALog "CRITICAL ERROR in Test-AllConnections: $($_.Exception.Message)" -Level "ERROR"
+        Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG"
+        
+        return @{
+            Error = $_.Exception.Message
+            TestCompleted = Get-Date
+            Summary = @{
+                TotalTested = 0
+                Connected = 0
+                Failed = 0
+                SuccessRate = 0
+            }
+        }
+    }
+}
+
 function Get-ConnectionStatus {
     Write-MandALog "DEBUG: Returning connection status for $($script:ConnectionStatus.Keys.Count) services" -Level "DEBUG"
     foreach ($service in $script:ConnectionStatus.Keys) {
@@ -640,11 +1049,16 @@ function Disconnect-AllServices {
 Export-ModuleMember -Function @(
     'Initialize-AllConnections',
     'Connect-MandAGraphEnhanced',
-    'Connect-MandAAzureEnhanced', 
+    'Connect-MandAAzureEnhanced',
     'Connect-MandAExchangeEnhanced',
     'Connect-MandAActiveDirectory',
     'Get-ConnectionStatus',
-    'Disconnect-AllServices'
+    'Disconnect-AllServices',
+    'Test-AllConnections',
+    'Test-GraphConnection',
+    'Test-AzureConnection',
+    'Test-ExchangeConnection',
+    'Test-ActiveDirectoryConnection'
 )
 
 Write-MandALog "EnhancedConnectionManager module loaded successfully" -Level "DEBUG"

@@ -243,7 +243,10 @@ function Write-MandALog {
         [string]$Component = "Generic",
         
         [Parameter(Mandatory=$false)]
-        [PSCustomObject]$Context 
+        [PSCustomObject]$Context,
+        
+        [Parameter(Mandatory=$false)]
+        [hashtable]$Data = @{}
     )
 
     if (-not $script:LoggingConfig.Initialized) {
@@ -301,12 +304,22 @@ function Write-MandALog {
     }
 
     if (-not [string]::IsNullOrWhiteSpace($script:LoggingConfig.LogFile)) {
-        $fileMessage = $Message 
+        $fileMessage = $Message
         $fileLogEntry = ""
         if ($showTimestampSetting) { $fileLogEntry += "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] " }
         $fileLogEntry += "[$($Level.ToUpper())] "
         if ($showComponentSetting -and -not [string]::IsNullOrWhiteSpace($Component)) { $fileLogEntry += "[$Component] " }
         $fileLogEntry += $fileMessage
+        
+        # Add structured data if provided
+        if ($Data -and $Data.Count -gt 0) {
+            try {
+                $dataJson = $Data | ConvertTo-Json -Compress -Depth 3
+                $fileLogEntry += " | Data: $dataJson"
+            } catch {
+                $fileLogEntry += " | Data: [Failed to serialize data]"
+            }
+        }
 
         try {
             $logDirForFileCheck = Split-Path $script:LoggingConfig.LogFile -Parent

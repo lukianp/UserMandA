@@ -243,6 +243,7 @@ function Initialize-OrchestratorModules {
     $utilityModules = @(
         "EnhancedLogging",
         "ErrorHandling",
+        "PerformanceMetrics",
         "FileOperations",
         "ValidationHelpers",
         "ProgressDisplay"
@@ -431,6 +432,46 @@ function Load-ExportModules {
     Write-OrchestratorLog -Message "Export module loading complete: $loadedCount/$($enabledFormats.Count) loaded" -Level "INFO"
 }
 
+function Test-ModuleLoadStatus {
+    <#
+    .SYNOPSIS
+        Validates that all required modules have been successfully loaded
+    .DESCRIPTION
+        Checks for the presence of critical modules and throws an error if any are missing
+    #>
+    
+    Write-OrchestratorLog -Message "Validating module load status..." -Level "INFO"
+    
+    $requiredModules = @(
+        'ActiveDirectoryDiscovery',
+        'GraphDiscovery',
+        'DataAggregation',
+        'CSVExport'
+    )
+    
+    $failedModules = @()
+    
+    foreach ($module in $requiredModules) {
+        $loadedModule = Get-Module -Name $module -ErrorAction SilentlyContinue
+        if (-not $loadedModule) {
+            $failedModules += $module
+            Write-OrchestratorLog -Message "Critical module '$module' not loaded" -Level "ERROR"
+        } else {
+            Write-OrchestratorLog -Message "Module '$module' loaded successfully (Version: $($loadedModule.Version))" -Level "DEBUG" -DebugOnly
+        }
+    }
+    
+    if ($failedModules.Count -gt 0) {
+        $errorMessage = "Critical module(s) failed to load: $($failedModules -join ', ')"
+        Add-OrchestratorError -Source "ModuleValidation" `
+            -Message $errorMessage `
+            -Severity "Critical"
+        throw $errorMessage
+    }
+    
+    Write-OrchestratorLog -Message "All required modules loaded successfully" -Level "SUCCESS"
+}
+
 #===============================================================================
 #                       PHASE EXECUTION FUNCTIONS
 #===============================================================================
@@ -599,41 +640,89 @@ function Invoke-DiscoveryModule {
         throw "Discovery function '$moduleFunction' not found. Ensure module is loaded."
     }
     
-    # Set up isolated error handling
-    $errorCapture = [System.Collections.ArrayList]::new()
-    $originalErrorVariable = $Error.Clone()
-    
-    try {
-        # Clear error variable to capture only this module's errors
-        $Error.Clear()
-        
-        # Invoke with timeout protection
-        $result = Invoke-WithTimeout -ScriptBlock {
-            & $moduleFunction -Configuration $Configuration
-        } -TimeoutSeconds 300 -TimeoutMessage "Discovery module $ModuleName timed out after 5 minutes"
-        
-        # Capture any non-terminating errors
-        foreach ($err in $Error) {
-            if ($err -notin $originalErrorVariable) {
-                $null = $errorCapture.Add($err)
+    # Use performance measurement wrapper if available
+    if (Get-Command Measure-Operation -ErrorAction SilentlyContinue) {
+        return Measure-Operation -Operation {
+            # Set up isolated error handling
+            $errorCapture = [System.Collections.ArrayList]::new()
+            $originalErrorVariable = $Error.Clone()
+            
+            try {
+                # Clear error variable to capture only this module's errors
+                $Error.Clear()
+                
+                # Invoke with timeout protection
+                $result = Invoke-WithTimeout -ScriptBlock {
+                    & $moduleFunction -Configuration $Configuration
+                } -TimeoutSeconds 300 -TimeoutMessage "Discovery module $ModuleName timed out after 5 minutes"
+                
+                # Capture any non-terminating errors
+                foreach ($err in $Error) {
+                    if ($err -notin $originalErrorVariable) {
+                        $null = $errorCapture.Add($err)
+                    }
+                }
+                
+                # Add captured errors to result if it doesn't have them
+                if ($errorCapture.Count -gt 0 -and $result.Errors.Count -eq 0) {
+                    foreach ($err in $errorCapture) {
+                        $result.AddError($err.Exception.Message, $err.Exception)
+                    }
+                }
+                
+                return $result
             }
-        }
-        
-        # Add captured errors to result if it doesn't have them
-        if ($errorCapture.Count -gt 0 -and $result.Errors.Count -eq 0) {
-            foreach ($err in $errorCapture) {
-                $result.AddError($err.Exception.Message, $err.Exception)
+            catch {
+                # Create a failed result if module didn't return one
+                $failedResult = [DiscoveryResult]::new($ModuleName)
+                $failedResult.AddError("Module execution failed", $_.Exception)
+                $failedResult.Complete()
+                return $failedResult
             }
+        } -OperationName "${ModuleName}Discovery" -Category "Discovery" -Context $global:MandA -Data @{
+            ModuleName = $ModuleName
+            TimeoutSeconds = 300
         }
+    } else {
+        # Fallback to original implementation if Measure-Operation not available
+        Write-OrchestratorLog -Message "Performance metrics not available, using standard execution for $ModuleName" -Level "DEBUG"
         
-        return $result
-    }
-    catch {
-        # Create a failed result if module didn't return one
-        $failedResult = [DiscoveryResult]::new($ModuleName)
-        $failedResult.AddError("Module execution failed", $_.Exception)
-        $failedResult.Complete()
-        return $failedResult
+        # Set up isolated error handling
+        $errorCapture = [System.Collections.ArrayList]::new()
+        $originalErrorVariable = $Error.Clone()
+        
+        try {
+            # Clear error variable to capture only this module's errors
+            $Error.Clear()
+            
+            # Invoke with timeout protection
+            $result = Invoke-WithTimeout -ScriptBlock {
+                & $moduleFunction -Configuration $Configuration
+            } -TimeoutSeconds 300 -TimeoutMessage "Discovery module $ModuleName timed out after 5 minutes"
+            
+            # Capture any non-terminating errors
+            foreach ($err in $Error) {
+                if ($err -notin $originalErrorVariable) {
+                    $null = $errorCapture.Add($err)
+                }
+            }
+            
+            # Add captured errors to result if it doesn't have them
+            if ($errorCapture.Count -gt 0 -and $result.Errors.Count -eq 0) {
+                foreach ($err in $errorCapture) {
+                    $result.AddError($err.Exception.Message, $err.Exception)
+                }
+            }
+            
+            return $result
+        }
+        catch {
+            # Create a failed result if module didn't return one
+            $failedResult = [DiscoveryResult]::new($ModuleName)
+            $failedResult.AddError("Module execution failed", $_.Exception)
+            $failedResult.Complete()
+            return $failedResult
+        }
     }
 }
 
@@ -1032,6 +1121,48 @@ function Invoke-ExportPhase {
         
         Write-OrchestratorLog -Message "Export phase completed: $($phaseResult.ExportedFormats -join ', ')" -Level "SUCCESS"
         
+        # Validate export completeness
+        try {
+            Write-OrchestratorLog -Message "Validating export completeness..." -Level "INFO"
+            $validationResult = Test-ExportCompleteness -ProcessedData $dataToExport `
+                -ExportPath $global:MandA.Paths.ExportOutput `
+                -Configuration $global:MandA.Config
+            
+            $phaseResult.ValidationResult = $validationResult
+            
+            if ($validationResult.Success) {
+                Write-OrchestratorLog -Message "Export validation passed: All required files present and valid" -Level "SUCCESS"
+            } else {
+                Write-OrchestratorLog -Message "Export validation failed: Some required files are missing" -Level "ERROR"
+                $phaseResult.Success = $false
+            }
+            
+            # Add validation summary to phase result
+            $phaseResult.ValidationSummary = @{
+                ValidatedFiles = $validationResult.ValidatedFiles.Count
+                MissingFiles = $validationResult.MissingFiles.Count
+                EmptyFiles = $validationResult.EmptyFiles.Count
+                Warnings = $validationResult.Warnings.Count
+            }
+            
+        } catch {
+            Write-OrchestratorLog -Message "Export validation encountered an error: $_" -Level "WARN"
+            Add-OrchestratorError -Source "ExportValidation" `
+                -Message "Export validation failed: $_" `
+                -Exception $_.Exception `
+                -Severity "Warning"
+            
+            # Don't fail the entire export phase if validation fails, but log it
+            $phaseResult.ValidationResult = @{
+                Success = $false
+                Error = $_.Exception.Message
+                MissingFiles = @()
+                EmptyFiles = @()
+                ValidatedFiles = @()
+                Warnings = @("Validation process failed: $($_.Exception.Message)")
+            }
+        }
+        
     } catch {
         $phaseResult.Success = $false
         Add-OrchestratorError -Source "ExportPhase" `
@@ -1041,6 +1172,202 @@ function Invoke-ExportPhase {
     }
     
     return $phaseResult
+}
+
+function Test-ExportCompleteness {
+    <#
+    .SYNOPSIS
+        Validates that all required export files have been successfully created
+    .DESCRIPTION
+        Checks for the presence of critical export files and validates their content
+    .PARAMETER ProcessedData
+        The processed data hashtable used for export
+    .PARAMETER ExportPath
+        The base export path where files should be located
+    .PARAMETER Configuration
+        The configuration hashtable containing export settings
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$ProcessedData,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$ExportPath,
+        
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration
+    )
+    
+    Write-OrchestratorLog -Message "Starting export completeness validation..." -Level "INFO"
+    
+    $validationResult = @{
+        Success = $true
+        MissingFiles = @()
+        EmptyFiles = @()
+        ValidatedFiles = @()
+        Warnings = @()
+    }
+    
+    # Define required exports based on enabled formats
+    $enabledFormats = $Configuration.export.formats
+    if ($enabledFormats -isnot [array]) {
+        $enabledFormats = @($enabledFormats)
+    }
+    
+    $requiredExports = @{}
+    
+    # CSV exports (always check if CSV format is enabled)
+    if ("CSV" -in $enabledFormats) {
+        $csvPath = Join-Path $ExportPath "Processed"
+        $requiredExports['UserProfiles.csv'] = { Test-Path (Join-Path $csvPath 'UserProfiles.csv') }
+        $requiredExports['MigrationWaves.csv'] = { Test-Path (Join-Path $csvPath 'MigrationWaves.csv') }
+        $requiredExports['ComplexityAnalysis.csv'] = { Test-Path (Join-Path $csvPath 'ComplexityAnalysis.csv') }
+        $requiredExports['DataQualityIssues.csv'] = { Test-Path (Join-Path $csvPath 'DataQualityIssues.csv') }
+    }
+    
+    # JSON exports
+    if ("JSON" -in $enabledFormats) {
+        $jsonPath = Join-Path $ExportPath "Exports\JSON"
+        $requiredExports['UserProfiles.json'] = { Test-Path (Join-Path $jsonPath 'UserProfiles.json') }
+        $requiredExports['MigrationWaves.json'] = { Test-Path (Join-Path $jsonPath 'MigrationWaves.json') }
+        $requiredExports['ComplexityAnalysis.json'] = { Test-Path (Join-Path $jsonPath 'ComplexityAnalysis.json') }
+    }
+    
+    # PowerApps exports
+    if ("PowerApps" -in $enabledFormats) {
+        $powerAppsPath = Join-Path $ExportPath "Processed\PowerApps"
+        $requiredExports['powerapps_users.json'] = { Test-Path (Join-Path $powerAppsPath 'powerapps_users.json') }
+        $requiredExports['powerapps_companies.json'] = { Test-Path (Join-Path $powerAppsPath 'powerapps_companies.json') }
+        $requiredExports['powerapps_waves.json'] = { Test-Path (Join-Path $powerAppsPath 'powerapps_waves.json') }
+        $requiredExports['powerapps_departments.json'] = { Test-Path (Join-Path $powerAppsPath 'powerapps_departments.json') }
+        $requiredExports['powerapps_index.json'] = { Test-Path (Join-Path $powerAppsPath 'powerapps_index.json') }
+    }
+    
+    # Excel exports
+    if ("Excel" -in $enabledFormats) {
+        $excelPath = Join-Path $ExportPath "Exports\Excel"
+        # Excel files have timestamps, so we check for any .xlsx file
+        $excelFiles = if (Test-Path $excelPath) { Get-ChildItem -Path $excelPath -Filter "*.xlsx" } else { @() }
+        if ($excelFiles.Count -eq 0) {
+            $requiredExports['MigrationReport.xlsx'] = { $false }
+        } else {
+            $requiredExports['MigrationReport.xlsx'] = { $true }
+        }
+    }
+    
+    # Check for missing files
+    $missing = @()
+    foreach ($export in $requiredExports.Keys) {
+        if (-not (& $requiredExports[$export])) {
+            $missing += $export
+            $validationResult.MissingFiles += $export
+        } else {
+            $validationResult.ValidatedFiles += $export
+            Write-OrchestratorLog -Message "Export file validated: $export" -Level "DEBUG" -DebugOnly
+        }
+    }
+    
+    # Check for empty files (files that exist but have no meaningful content)
+    foreach ($validatedFile in $validationResult.ValidatedFiles) {
+        try {
+            $filePath = $null
+            
+            # Determine the full path based on file type
+            if ($validatedFile.EndsWith('.csv')) {
+                $filePath = Join-Path (Join-Path $ExportPath "Processed") $validatedFile
+            } elseif ($validatedFile.StartsWith('powerapps_')) {
+                $filePath = Join-Path (Join-Path $ExportPath "Processed\PowerApps") $validatedFile
+            } elseif ($validatedFile.EndsWith('.json')) {
+                $filePath = Join-Path (Join-Path $ExportPath "Exports\JSON") $validatedFile
+            } elseif ($validatedFile.EndsWith('.xlsx')) {
+                $excelPath = Join-Path $ExportPath "Exports\Excel"
+                $excelFiles = Get-ChildItem -Path $excelPath -Filter "*.xlsx" | Select-Object -First 1
+                if ($excelFiles) {
+                    $filePath = $excelFiles.FullName
+                }
+            }
+            
+            if ($filePath -and (Test-Path $filePath)) {
+                $fileInfo = Get-Item $filePath
+                
+                # Check if file is too small (likely empty or corrupted)
+                if ($fileInfo.Length -lt 10) {
+                    $validationResult.EmptyFiles += $validatedFile
+                    $validationResult.Warnings += "File appears to be empty or corrupted: $validatedFile ($($fileInfo.Length) bytes)"
+                    Write-OrchestratorLog -Message "Warning: Export file appears empty: $validatedFile" -Level "WARN"
+                }
+                
+                # For JSON files, try to validate JSON structure
+                if ($validatedFile.EndsWith('.json')) {
+                    try {
+                        $content = Get-Content $filePath -Raw
+                        $null = $content | ConvertFrom-Json
+                        Write-OrchestratorLog -Message "JSON structure validated: $validatedFile" -Level "DEBUG" -DebugOnly
+                    } catch {
+                        $validationResult.EmptyFiles += $validatedFile
+                        $validationResult.Warnings += "Invalid JSON structure in file: $validatedFile"
+                        Write-OrchestratorLog -Message "Warning: Invalid JSON in export file: $validatedFile" -Level "WARN"
+                    }
+                }
+                
+                # For CSV files, check if they have headers and at least one data row
+                if ($validatedFile.EndsWith('.csv')) {
+                    try {
+                        $csvContent = Import-Csv $filePath -ErrorAction Stop
+                        if ($csvContent.Count -eq 0) {
+                            $validationResult.Warnings += "CSV file has no data rows: $validatedFile"
+                            Write-OrchestratorLog -Message "Warning: CSV file has no data: $validatedFile" -Level "WARN"
+                        }
+                    } catch {
+                        $validationResult.EmptyFiles += $validatedFile
+                        $validationResult.Warnings += "Invalid CSV structure in file: $validatedFile"
+                        Write-OrchestratorLog -Message "Warning: Invalid CSV in export file: $validatedFile" -Level "WARN"
+                    }
+                }
+            }
+        } catch {
+            $validationResult.Warnings += "Error validating file $validatedFile`: $($_.Exception.Message)"
+            Write-OrchestratorLog -Message "Error validating export file $validatedFile`: $_" -Level "WARN"
+        }
+    }
+    
+    # Determine overall success
+    if ($missing.Count -gt 0) {
+        $validationResult.Success = $false
+        $errorMessage = "Missing required exports: $($missing -join ', ')"
+        Write-OrchestratorLog -Message $errorMessage -Level "ERROR"
+        
+        Add-OrchestratorError -Source "ExportValidation" `
+            -Message $errorMessage `
+            -Severity "Critical" `
+            -Context @{
+                MissingFiles = $missing
+                EnabledFormats = $enabledFormats
+                ExportPath = $ExportPath
+            }
+        
+        throw $errorMessage
+    }
+    
+    # Log summary
+    $successCount = $validationResult.ValidatedFiles.Count
+    $warningCount = $validationResult.Warnings.Count
+    $emptyCount = $validationResult.EmptyFiles.Count
+    
+    Write-OrchestratorLog -Message "Export validation completed: $successCount files validated, $warningCount warnings, $emptyCount empty/invalid files" -Level "INFO"
+    
+    if ($warningCount -gt 0) {
+        Write-OrchestratorLog -Message "Export validation warnings:" -Level "WARN"
+        foreach ($warning in $validationResult.Warnings) {
+            Write-OrchestratorLog -Message "  - $warning" -Level "WARN"
+        }
+    }
+    
+    if ($emptyCount -eq 0 -and $warningCount -eq 0) {
+        Write-OrchestratorLog -Message "All export files validated successfully" -Level "SUCCESS"
+    }
+    
+    return $validationResult
 }
 
 #===============================================================================
@@ -1116,6 +1443,9 @@ try {
     # Initialize modules
     Initialize-OrchestratorModules -Phase $Mode
     
+    # Validate module loading
+    Test-ModuleLoadStatus
+    
     # Execute validation if requested
     if ($ValidateOnly) {
         Write-OrchestratorLog -Message "VALIDATION-ONLY MODE" -Level "INFO"
@@ -1144,30 +1474,63 @@ try {
         exit $exitCode
     }
     
-    # Execute phases
+    # Execute phases with performance tracking
     $phaseResults = @{}
     
-    switch ($Mode) {
-        "Discovery" {
-            $phaseResults.Discovery = Invoke-DiscoveryPhase
-        }
-        "Processing" {
-            $phaseResults.Processing = Invoke-ProcessingPhase
-        }
-        "Export" {
-            $phaseResults.Export = Invoke-ExportPhase
-        }
-        "Full" {
-            $phaseResults.Discovery = Invoke-DiscoveryPhase
-            if ($phaseResults.Discovery.Success) {
-                $phaseResults.Processing = Invoke-ProcessingPhase
-            } else {
-                Write-OrchestratorLog -Message "Skipping Processing phase due to Discovery failure" -Level "WARN"
+    # Start performance session if available
+    $sessionId = $null
+    if (Get-Command Start-PerformanceSession -ErrorAction SilentlyContinue) {
+        $sessionId = Start-PerformanceSession -SessionName "MandADiscovery_$Mode" -Context $global:MandA
+        Write-OrchestratorLog -Message "Started performance session: $sessionId" -Level "DEBUG"
+    }
+    
+    try {
+        switch ($Mode) {
+            "Discovery" {
+                $phaseResults.Discovery = Invoke-DiscoveryPhase
             }
-            if ($phaseResults.Processing -and $phaseResults.Processing.Success) {
+            "Processing" {
+                $phaseResults.Processing = Invoke-ProcessingPhase
+            }
+            "Export" {
                 $phaseResults.Export = Invoke-ExportPhase
-            } else {
-                Write-OrchestratorLog -Message "Skipping Export phase due to Processing failure" -Level "WARN"
+            }
+            "Full" {
+                $phaseResults.Discovery = Invoke-DiscoveryPhase
+                if ($phaseResults.Discovery.Success) {
+                    $phaseResults.Processing = Invoke-ProcessingPhase
+                } else {
+                    Write-OrchestratorLog -Message "Skipping Processing phase due to Discovery failure" -Level "WARN"
+                }
+                if ($phaseResults.Processing -and $phaseResults.Processing.Success) {
+                    $phaseResults.Export = Invoke-ExportPhase
+                } else {
+                    Write-OrchestratorLog -Message "Skipping Export phase due to Processing failure" -Level "WARN"
+                }
+            }
+        }
+    } finally {
+        # Stop performance session and export report if available
+        if ($sessionId -and (Get-Command Stop-PerformanceSession -ErrorAction SilentlyContinue)) {
+            $sessionSummary = Stop-PerformanceSession -SessionName "MandADiscovery_$Mode" -Context $global:MandA
+            if ($sessionSummary) {
+                Write-OrchestratorLog -Message "Performance session completed" -Level "INFO" -Data @{
+                    SessionId = $sessionId
+                    TotalDuration = $sessionSummary.TotalDuration
+                    OperationCount = $sessionSummary.OperationCount
+                    SuccessfulOperations = $sessionSummary.SuccessfulOperations
+                    FailedOperations = $sessionSummary.FailedOperations
+                }
+                
+                # Export performance report
+                if (Get-Command Export-PerformanceReport -ErrorAction SilentlyContinue) {
+                    try {
+                        $reportPath = Export-PerformanceReport -ReportType "Summary" -Context $global:MandA
+                        Write-OrchestratorLog -Message "Performance report exported: $reportPath" -Level "SUCCESS"
+                    } catch {
+                        Write-OrchestratorLog -Message "Failed to export performance report: $_" -Level "WARN"
+                    }
+                }
             }
         }
     }
@@ -1186,6 +1549,19 @@ try {
         $result = $phaseResults[$phase]
         $status = if ($result.Success) { "SUCCESS" } else { "FAILED" }
         Write-OrchestratorLog -Message "$phase Phase: $status" -Level $(if ($result.Success) { "SUCCESS" } else { "ERROR" })
+        
+        # Add export validation summary if available
+        if ($phase -eq "Export" -and $result.ValidationSummary) {
+            $validationSummary = $result.ValidationSummary
+            Write-OrchestratorLog -Message "  Export Validation: $($validationSummary.ValidatedFiles) files validated, $($validationSummary.MissingFiles) missing, $($validationSummary.EmptyFiles) empty/invalid, $($validationSummary.Warnings) warnings" -Level "INFO"
+            
+            if ($validationSummary.MissingFiles -gt 0) {
+                Write-OrchestratorLog -Message "  WARNING: Some required export files are missing!" -Level "WARN"
+            }
+            if ($validationSummary.EmptyFiles -gt 0) {
+                Write-OrchestratorLog -Message "  WARNING: Some export files appear to be empty or invalid!" -Level "WARN"
+            }
+        }
     }
     
     # Error summary
