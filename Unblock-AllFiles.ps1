@@ -1,4 +1,11 @@
-# -*- coding: utf-8-bom -*-
+﻿# -*- coding: utf-8-bom -*-
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-05-27
+# Last Modified: 2025-06-06
+# Change Log: Updated version control header
+
 <#
 .SYNOPSIS
     Unblock all PowerShell files in the M&A Discovery Suite

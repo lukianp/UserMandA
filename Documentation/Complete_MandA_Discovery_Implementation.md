@@ -1,3 +1,17 @@
+﻿<!--
+Author: Lukian Poleschtschuk
+Version: 1.0.0
+Created: 2025-05-26
+Last Modified: 2025-06-06
+Change Log: Updated version control header
+-->
+<!--
+Author: Lukian Poleschtschuk
+Version: 1.0.0
+Created: 2025-05-26
+Last Modified: 2025-06-06
+Change Log: Initial version - any future changes require version increment
+-->
 # Complete M&A Discovery Suite v4.0 Implementation Documentation
 
 ## Table of Contents
@@ -30,55 +44,55 @@ The M&A Discovery Suite v4.0 represents a complete architectural transformation 
 ### System Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     M&A Discovery Suite v4.0                     │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────┐    ┌──────────────────┐    ┌──────────────┐ │
-│  │   Scripts   │───▶│  Core/Orchestrator │───▶│   Modules    │ │
-│  │ QuickStart  │    │ MandA-Orchestrator │    │ 27+ Modules  │ │
-│  │ Validation  │    │   Configuration    │    │              │ │
-│  └─────────────┘    └──────────────────┘    └──────────────┘ │
-│         │                    │                        │        │
-│         ▼                    ▼                        ▼        │
-│  ┌─────────────────────────────────────────────────────────┐  │
-│  │                    Module Categories                     │  │
-│  ├─────────────┬──────────────┬─────────────┬────────────┤  │
-│  │Authentication│ Connectivity │  Discovery  │ Processing │  │
-│  ├─────────────┼──────────────┼─────────────┼────────────┤  │
-│  │   Export    │  Utilities   │   Config    │   Logs     │  │
-│  └─────────────┴──────────────┴─────────────┴────────────┘  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                     M&A Discovery Suite v4.0                     â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                                 â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”‚
+â”‚  â”‚   Scripts   â”‚â”€â”€â”€â–¶â”‚  Core/Orchestrator â”‚â”€â”€â”€â–¶â”‚   Modules    â”‚ â”‚
+â”‚  â”‚ QuickStart  â”‚    â”‚ MandA-Orchestrator â”‚    â”‚ 27+ Modules  â”‚ â”‚
+â”‚  â”‚ Validation  â”‚    â”‚   Configuration    â”‚    â”‚              â”‚ â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”‚
+â”‚         â”‚                    â”‚                        â”‚        â”‚
+â”‚         â–¼                    â–¼                        â–¼        â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚
+â”‚  â”‚                    Module Categories                     â”‚  â”‚
+â”‚  â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤  â”‚
+â”‚  â”‚Authenticationâ”‚ Connectivity â”‚  Discovery  â”‚ Processing â”‚  â”‚
+â”‚  â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤  â”‚
+â”‚  â”‚   Export    â”‚  Utilities   â”‚   Config    â”‚   Logs     â”‚  â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â”‚
+â”‚                                                                 â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ### Module Dependency Graph
 
 ```
 MandA-Orchestrator.ps1
-    ├── Utilities/Logging.psm1
-    ├── Utilities/ErrorHandling.psm1
-    ├── Utilities/ValidationHelpers.psm1
-    ├── Authentication/Authentication.psm1
-    │   └── Authentication/CredentialManagement.psm1
-    ├── Connectivity/ConnectionManager.psm1
-    │   ├── Connectivity/GraphConnection.psm1
-    │   ├── Connectivity/AzureConnection.psm1
-    │   └── Connectivity/ExchangeConnection.psm1
-    ├── Discovery/*
-    │   ├── ActiveDirectoryDiscovery.psm1
-    │   ├── GraphDiscovery.psm1
-    │   ├── GPODiscovery.psm1
-    │   └── [Other Discovery Modules]
-    ├── Processing/*
-    │   ├── DataAggregation.psm1
-    │   ├── UserProfileBuilder.psm1
-    │   ├── WaveGeneration.psm1
-    │   └── DataValidation.psm1
-    └── Export/*
-        ├── CSVExport.psm1
-        ├── JSONExport.psm1
-        └── ExcelExport.psm1
+    â”œâ”€â”€ Utilities/Logging.psm1
+    â”œâ”€â”€ Utilities/ErrorHandling.psm1
+    â”œâ”€â”€ Utilities/ValidationHelpers.psm1
+    â”œâ”€â”€ Authentication/Authentication.psm1
+    â”‚   â””â”€â”€ Authentication/CredentialManagement.psm1
+    â”œâ”€â”€ Connectivity/ConnectionManager.psm1
+    â”‚   â”œâ”€â”€ Connectivity/GraphConnection.psm1
+    â”‚   â”œâ”€â”€ Connectivity/AzureConnection.psm1
+    â”‚   â””â”€â”€ Connectivity/ExchangeConnection.psm1
+    â”œâ”€â”€ Discovery/*
+    â”‚   â”œâ”€â”€ ActiveDirectoryDiscovery.psm1
+    â”‚   â”œâ”€â”€ GraphDiscovery.psm1
+    â”‚   â”œâ”€â”€ GPODiscovery.psm1
+    â”‚   â””â”€â”€ [Other Discovery Modules]
+    â”œâ”€â”€ Processing/*
+    â”‚   â”œâ”€â”€ DataAggregation.psm1
+    â”‚   â”œâ”€â”€ UserProfileBuilder.psm1
+    â”‚   â”œâ”€â”€ WaveGeneration.psm1
+    â”‚   â””â”€â”€ DataValidation.psm1
+    â””â”€â”€ Export/*
+        â”œâ”€â”€ CSVExport.psm1
+        â”œâ”€â”€ JSONExport.psm1
+        â””â”€â”€ ExcelExport.psm1
 ```
 
 ## Core Components
@@ -565,86 +579,86 @@ $script:ProgressState = @{
 ### Discovery Phase Flow
 ```
 1. Initialize Environment
-   └── Load Configuration
-       └── Setup Logging
-           └── Create Directories
+   â””â”€â”€ Load Configuration
+       â””â”€â”€ Setup Logging
+           â””â”€â”€ Create Directories
 
 2. Authenticate
-   └── Load/Prompt Credentials
-       └── Validate
-           └── Store Context
+   â””â”€â”€ Load/Prompt Credentials
+       â””â”€â”€ Validate
+           â””â”€â”€ Store Context
 
 3. Connect Services
-   └── Graph -> Azure -> Exchange
-       └── Test Connectivity
-           └── Report Status
+   â””â”€â”€ Graph -> Azure -> Exchange
+       â””â”€â”€ Test Connectivity
+           â””â”€â”€ Report Status
 
 4. Execute Discovery
-   └── For Each Enabled Source:
-       ├── AD Discovery -> ADUsers.csv, Groups.csv, etc.
-       ├── Graph Discovery -> GraphUsers.csv, Devices.csv, etc.
-       ├── GPO Discovery -> GPOData.csv, DriveMappings.csv, etc.
-       └── [Other Sources]
+   â””â”€â”€ For Each Enabled Source:
+       â”œâ”€â”€ AD Discovery -> ADUsers.csv, Groups.csv, etc.
+       â”œâ”€â”€ Graph Discovery -> GraphUsers.csv, Devices.csv, etc.
+       â”œâ”€â”€ GPO Discovery -> GPOData.csv, DriveMappings.csv, etc.
+       â””â”€â”€ [Other Sources]
 
 5. Store Raw Data
-   └── Output/Raw/{ServiceName}_{DataType}.csv
+   â””â”€â”€ Output/Raw/{ServiceName}_{DataType}.csv
 ```
 
 ### Processing Phase Flow
 ```
 1. Load Raw Data
-   └── Detect Available Sources
-       └── Import CSV Files
+   â””â”€â”€ Detect Available Sources
+       â””â”€â”€ Import CSV Files
 
 2. Data Aggregation
-   └── Merge User Data (AD + Graph + Exchange)
-       └── Merge Group Data
-           └── Merge Device Data
-               └── Create Correlations
+   â””â”€â”€ Merge User Data (AD + Graph + Exchange)
+       â””â”€â”€ Merge Group Data
+           â””â”€â”€ Merge Device Data
+               â””â”€â”€ Create Correlations
 
 3. Profile Building
-   └── For Each User:
-       ├── Build Base Profile
-       ├── Calculate Complexity
-       ├── Assess Readiness
-       └── Estimate Time
+   â””â”€â”€ For Each User:
+       â”œâ”€â”€ Build Base Profile
+       â”œâ”€â”€ Calculate Complexity
+       â”œâ”€â”€ Assess Readiness
+       â””â”€â”€ Estimate Time
 
 4. Wave Generation
-   └── Choose Strategy (Dept/Complexity)
-       └── Group Users
-           └── Optimize Distribution
-               └── Validate Waves
+   â””â”€â”€ Choose Strategy (Dept/Complexity)
+       â””â”€â”€ Group Users
+           â””â”€â”€ Optimize Distribution
+               â””â”€â”€ Validate Waves
 
 5. Quality Validation
-   └── Check Data Completeness
-       └── Identify Issues
-           └── Generate Report
+   â””â”€â”€ Check Data Completeness
+       â””â”€â”€ Identify Issues
+           â””â”€â”€ Generate Report
 ```
 
 ### Export Phase Flow
 ```
 1. Prepare Data
-   └── Load Processed Data
-       └── Apply Formatting
+   â””â”€â”€ Load Processed Data
+       â””â”€â”€ Apply Formatting
 
 2. Generate Exports
-   ├── CSV Export
-   │   ├── UserProfiles.csv
-   │   ├── MigrationWaves.csv
-   │   └── Statistics.csv
-   ├── JSON Export
-   │   ├── Standard JSON
-   │   └── PowerApps JSON
-   └── Excel Export (if enabled)
+   â”œâ”€â”€ CSV Export
+   â”‚   â”œâ”€â”€ UserProfiles.csv
+   â”‚   â”œâ”€â”€ MigrationWaves.csv
+   â”‚   â””â”€â”€ Statistics.csv
+   â”œâ”€â”€ JSON Export
+   â”‚   â”œâ”€â”€ Standard JSON
+   â”‚   â””â”€â”€ PowerApps JSON
+   â””â”€â”€ Excel Export (if enabled)
 
 3. Create Summary
-   └── Generate Metrics
-       └── Create Recommendations
-           └── Export Report
+   â””â”€â”€ Generate Metrics
+       â””â”€â”€ Create Recommendations
+           â””â”€â”€ Export Report
 
 4. Archive Results
-   └── Compress if Enabled
-       └── Clean Temp Files
+   â””â”€â”€ Compress if Enabled
+       â””â”€â”€ Clean Temp Files
 ```
 
 ## Security Architecture

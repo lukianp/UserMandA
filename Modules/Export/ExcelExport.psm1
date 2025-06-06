@@ -1,6 +1,13 @@
-# -*- coding: utf-8-bom -*-
+﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 #Requires -Module ImportExcel # Add this if you use the ImportExcel module
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-04
+# Last Modified: 2025-06-06
+# Change Log: Updated version control header
+
 <#
 .SYNOPSIS
     M&A Discovery Suite - Excel Export Module

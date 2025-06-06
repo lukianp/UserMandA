@@ -1,5 +1,12 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 # -*- coding: utf-8-bom -*-
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-05
+# Last Modified: 2025-06-06
+# Change Log: Updated version control header
+
 <#
 .SYNOPSIS
     Sets up the environment for the M&A Discovery Suite v5.2.2.

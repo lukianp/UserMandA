@@ -1,5 +1,12 @@
-# -*- coding: utf-8-bom -*-
+﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-06
+# Last Modified: 2025-06-06
+# Change Log: Updated version control header
+
 <#
 .SYNOPSIS
     Test script to demonstrate enhanced error context preservation functionality.
@@ -25,9 +32,9 @@ param(
 try {
     Import-Module "$PSScriptRoot\..\Modules\Utilities\ErrorHandling.psm1" -Force
     Import-Module "$PSScriptRoot\..\Modules\Utilities\EnhancedLogging.psm1" -Force -ErrorAction SilentlyContinue
-    Write-Host "✓ Modules imported successfully" -ForegroundColor Green
+    Write-Host "âœ“ Modules imported successfully" -ForegroundColor Green
 } catch {
-    Write-Host "✗ Failed to import modules: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "âœ— Failed to import modules: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 
@@ -53,7 +60,7 @@ try {
     $nonExistentPath = "C:\NonExistent\Path\File.txt"
     Get-Content $nonExistentPath -ErrorAction Stop
 } catch {
-    Write-Host "✓ Captured error for context enhancement" -ForegroundColor Green
+    Write-Host "âœ“ Captured error for context enhancement" -ForegroundColor Green
     
     # Enhance the error with context
     $enhancedError = Add-ErrorContext -ErrorRecord $_ -Context @{
@@ -71,7 +78,7 @@ try {
     # Export the error context if requested
     if ($ExportErrors) {
         $exportPath = Export-ErrorContext -EnhancedError $enhancedError -OutputPath $OutputPath -LoggingContext $testContext
-        Write-Host "✓ Error context exported to: $exportPath" -ForegroundColor Green
+        Write-Host "âœ“ Error context exported to: $exportPath" -ForegroundColor Green
     }
 }
 
@@ -83,7 +90,7 @@ try {
     # Simulate a Graph API error
     throw [System.UnauthorizedAccessException]::new("Access denied to Microsoft Graph API endpoint")
 } catch {
-    Write-Host "✓ Simulated Graph API error" -ForegroundColor Green
+    Write-Host "âœ“ Simulated Graph API error" -ForegroundColor Green
     
     # Add error with enhanced context to DiscoveryResult
     $discoveryResult.AddErrorWithContext(
@@ -97,7 +104,7 @@ try {
         }
     )
     
-    Write-Host "✓ Enhanced error added to DiscoveryResult" -ForegroundColor Green
+    Write-Host "âœ“ Enhanced error added to DiscoveryResult" -ForegroundColor Green
     Write-Host "Error Count: $($discoveryResult.Errors.Count)" -ForegroundColor Gray
     
     if ($discoveryResult.Errors.Count -gt 0 -and $discoveryResult.Errors[0].EnhancedContext) {
@@ -115,7 +122,7 @@ try {
         throw [System.Net.WebException]::new("The remote server returned an error: (503) Service Unavailable")
     } -MaxRetries 2 -DelaySeconds 1 -OperationName "GraphAPIQuery" -Context $testContext
 } catch {
-    Write-Host "✓ Retry mechanism completed with enhanced error context" -ForegroundColor Green
+    Write-Host "âœ“ Retry mechanism completed with enhanced error context" -ForegroundColor Green
     Write-Host "Final error: $($_.Exception.Message)" -ForegroundColor Gray
 }
 
@@ -129,7 +136,7 @@ try {
         FailedUser = "problematic.user@domain.com"
     } -LoggingContext $testContext
     
-    Write-Host "✓ Enhanced ErrorRecord created" -ForegroundColor Green
+    Write-Host "âœ“ Enhanced ErrorRecord created" -ForegroundColor Green
     Write-Host "Error ID: $($enhancedErrorRecord.FullyQualifiedErrorId)" -ForegroundColor Cyan
     Write-Host "Error Details: $($enhancedErrorRecord.ErrorDetails.Message)" -ForegroundColor Gray
     Write-Host "Recommended Action: $($enhancedErrorRecord.ErrorDetails.RecommendedAction)" -ForegroundColor Gray
@@ -137,11 +144,11 @@ try {
     # The enhanced context is stored in the global store
     if ($global:MandAErrorContextStore -and $global:MandAErrorContextStore.ContainsKey($enhancedErrorRecord.GetHashCode())) {
         $storedContext = $global:MandAErrorContextStore[$enhancedErrorRecord.GetHashCode()]
-        Write-Host "✓ Enhanced context stored globally with ID: $($storedContext.ExecutionId)" -ForegroundColor Green
+        Write-Host "âœ“ Enhanced context stored globally with ID: $($storedContext.ExecutionId)" -ForegroundColor Green
     }
     
 } catch {
-    Write-Host "✗ Failed to create enhanced ErrorRecord: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "âœ— Failed to create enhanced ErrorRecord: $($_.Exception.Message)" -ForegroundColor Red
 }
 
 # Test 5: Timeout operations with enhanced context
@@ -153,31 +160,31 @@ try {
         return "This should not complete"
     } -TimeoutSeconds 2 -OperationName "LongRunningDiscovery" -Context $testContext
 } catch [System.TimeoutException] {
-    Write-Host "✓ Timeout operation completed as expected" -ForegroundColor Green
+    Write-Host "âœ“ Timeout operation completed as expected" -ForegroundColor Green
     Write-Host "Timeout error: $($_.Exception.Message)" -ForegroundColor Gray
 } catch {
-    Write-Host "✗ Unexpected error in timeout test: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "âœ— Unexpected error in timeout test: $($_.Exception.Message)" -ForegroundColor Red
 }
 
 # Summary
 Write-Host "`n=== Test Summary ===" -ForegroundColor Cyan
-Write-Host "✓ Basic error context capture - PASSED" -ForegroundColor Green
-Write-Host "✓ DiscoveryResult enhanced error handling - PASSED" -ForegroundColor Green
-Write-Host "✓ Retry mechanism with enhanced context - PASSED" -ForegroundColor Green
-Write-Host "✓ Enhanced ErrorRecord creation - PASSED" -ForegroundColor Green
-Write-Host "✓ Timeout operations with enhanced context - PASSED" -ForegroundColor Green
+Write-Host "âœ“ Basic error context capture - PASSED" -ForegroundColor Green
+Write-Host "âœ“ DiscoveryResult enhanced error handling - PASSED" -ForegroundColor Green
+Write-Host "âœ“ Retry mechanism with enhanced context - PASSED" -ForegroundColor Green
+Write-Host "âœ“ Enhanced ErrorRecord creation - PASSED" -ForegroundColor Green
+Write-Host "âœ“ Timeout operations with enhanced context - PASSED" -ForegroundColor Green
 
 if ($ExportErrors -and (Test-Path $OutputPath)) {
     $exportedFiles = Get-ChildItem $OutputPath -Filter "ErrorContext_*.json" | Measure-Object
-    Write-Host "`n✓ $($exportedFiles.Count) error context file(s) exported to: $OutputPath" -ForegroundColor Green
+    Write-Host "`nâœ“ $($exportedFiles.Count) error context file(s) exported to: $OutputPath" -ForegroundColor Green
 }
 
-Write-Host "`n🎉 All enhanced error context preservation tests completed successfully!" -ForegroundColor Green
+Write-Host "`nðŸŽ‰ All enhanced error context preservation tests completed successfully!" -ForegroundColor Green
 Write-Host "`nThe ErrorHandling module now provides comprehensive error context capture including:" -ForegroundColor White
-Write-Host "  • Detailed error information with stack traces" -ForegroundColor Gray
-Write-Host "  • Environment context (computer, user, PowerShell version, etc.)" -ForegroundColor Gray
-Write-Host "  • Script execution context (file, line, command)" -ForegroundColor Gray
-Write-Host "  • PowerShell call stack for deep debugging" -ForegroundColor Gray
-Write-Host "  • Loaded modules information" -ForegroundColor Gray
-Write-Host "  • Custom context data for operation-specific details" -ForegroundColor Gray
-Write-Host "  • JSON export capability for detailed analysis" -ForegroundColor Gray
+Write-Host "  â€¢ Detailed error information with stack traces" -ForegroundColor Gray
+Write-Host "  â€¢ Environment context (computer, user, PowerShell version, etc.)" -ForegroundColor Gray
+Write-Host "  â€¢ Script execution context (file, line, command)" -ForegroundColor Gray
+Write-Host "  â€¢ PowerShell call stack for deep debugging" -ForegroundColor Gray
+Write-Host "  â€¢ Loaded modules information" -ForegroundColor Gray
+Write-Host "  â€¢ Custom context data for operation-specific details" -ForegroundColor Gray
+Write-Host "  â€¢ JSON export capability for detailed analysis" -ForegroundColor Gray

@@ -1,5 +1,12 @@
-# -*- coding: utf-8-bom -*-
+﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-03
+# Last Modified: 2025-06-06
+# Change Log: Updated version control header
+
 <#
 .SYNOPSIS
     Provides common file and directory operation utilities for the M&A Discovery Suite.

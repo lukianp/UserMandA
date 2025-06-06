@@ -1,10 +1,24 @@
-📁 Path: Modules/Utilities/ConfigurationValidation.psm1
-🔧 Purpose: Provides configuration validation against a JSON schema for the M&A Discovery Suite | This module includes functions to test a loaded configuration object (hashtable) against a defined JSON schema file (config.schema.json). It reports validation errors and warnings.
-📌 Declared Functions:
+﻿<!--
+Author: Lukian Poleschtschuk
+Version: 1.0.0
+Created: 2025-06-05
+Last Modified: 2025-06-06
+Change Log: Updated version control header
+-->
+<!--
+Author: Lukian Poleschtschuk
+Version: 1.0.0
+Created: 2025-06-05
+Last Modified: 2025-06-06
+Change Log: Initial version - any future changes require version increment
+-->
+ðŸ“ Path: Modules/Utilities/ConfigurationValidation.psm1
+ðŸ”§ Purpose: Provides configuration validation against a JSON schema for the M&A Discovery Suite | This module includes functions to test a loaded configuration object (hashtable) against a defined JSON schema file (config.schema.json). It reports validation errors and warnings.
+ðŸ“Œ Declared Functions:
 
 function Test-SuiteConfigurationAgainstSchema {
 function Test-ConfigurationNodeInternal {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $script:CREDENTIAL_FORMAT_VERSION = "2.1"
 $validationErrorsList = [System.Collections.Generic.List[string]]::new()
 $validationWarningsList = [System.Collections.Generic.List[string]]::new()
@@ -25,15 +39,15 @@ isValid=(isValid = (
 isValid=(validationErrorsList.Count -eq 0)
 
 
-📁 Path: Modules/Utilities/CredentialFormatHandler.psm1
-🔧 Purpose: Handles the formatting, saving, and reading of credential files for the M&A Discovery Suite | This module provides functions to convert credential data to a standard format, save it securely using DPAPI encryption, and read it back. It ensures UTF-8 encoding for the JSON data before encryption and after decryption.
-📌 Declared Functions:
+ðŸ“ Path: Modules/Utilities/CredentialFormatHandler.psm1
+ðŸ”§ Purpose: Handles the formatting, saving, and reading of credential files for the M&A Discovery Suite | This module provides functions to convert credential data to a standard format, save it securely using DPAPI encryption, and read it back. It ensures UTF-8 encoding for the JSON data before encryption and after decryption.
+ðŸ“Œ Declared Functions:
 
 function ConvertTo-StandardCredentialFormat {
 function Test-CredentialFormat {
 function Save-CredentialFile {
 function Read-CredentialFile {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $script:CREDENTIAL_FORMAT_VERSION = "2.1"
 $standardOutput = $CredentialData.Clone()
 $requiredFields = @('ClientId', 'ClientSecret', 'TenantId')
@@ -50,9 +64,9 @@ bstr=[System.Runtime.InteropServices.Marshal]::SecureStringToBSTR(secureString)
 
 $credentialData = $jsonCredentialData | ConvertFrom-Json -ErrorAction Stop
 
-📁 Path: Modules/Utilities/EnhancedLogging.psm1
-🔧 Purpose: Provides enhanced logging capabilities for the M&A Discovery Suite | This module offers functions for initializing the logging system, writing formatted log messages to both console and file, with support for log levels, timestamps, component names, colors, and emojis. It's designed to work with the $global:MandA context for configuration or a passed context object.
-📌 Declared Functions:
+ðŸ“ Path: Modules/Utilities/EnhancedLogging.psm1
+ðŸ”§ Purpose: Provides enhanced logging capabilities for the M&A Discovery Suite | This module offers functions for initializing the logging system, writing formatted log messages to both console and file, with support for log levels, timestamps, component names, colors, and emojis. It's designed to work with the $global:MandA context for configuration or a passed context object.
+ðŸ“Œ Declared Functions:
 
 function Initialize-Logging {
 function Write-MandALog {
@@ -61,7 +75,7 @@ function Clear-OldLogFiles {
 function Get-EffectiveLoggingSetting {
 function Get-LogColorInternal {
 function Get-LogEmojiInternal {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $script:LoggingConfig = @{
 $effectiveConfig = $null
 $effectivePaths = $null
@@ -117,20 +131,20 @@ newLogFileBase = "MandADiscoverySuite_
 $newTimestampForFile = Get-Date -Format "yyyyMMdd_HHmmss"
 $logPathForClear = $Context.Paths.LogOutput | global:Get-OrElse $script:LoggingConfig.LogPath
 $retentionDays = Get-EffectiveLoggingSetting -SettingName 'LogRetentionDays' -Context $Context -DefaultValue 30
-cutoffDate=(Get−Date).AddDays(−cutoffDate = (Get-Date).AddDays(-
-cutoffDate=(Get−Date).AddDays(−retentionDays)
+cutoffDate=(Getâˆ’Date).AddDays(âˆ’cutoffDate = (Get-Date).AddDays(-
+cutoffDate=(Getâˆ’Date).AddDays(âˆ’retentionDays)
 
 $oldLogFiles = Get-ChildItem -Path $logPathForClear -Filter "*.log" -File -ErrorAction Stop | Where-Object { $_.LastWriteTime -lt $cutoffDate }
 
-📁 Path: Modules/Utilities/ErrorHandling.psm1
-🔧 Purpose: Provides standardized error handling and retry mechanisms for the M&A Discovery Suite | This module includes functions to invoke script blocks with retry logic, get user-friendly error messages, and manage error summaries. It integrates with the EnhancedLogging module for output.
-📌 Declared Functions:
+ðŸ“ Path: Modules/Utilities/ErrorHandling.psm1
+ðŸ”§ Purpose: Provides standardized error handling and retry mechanisms for the M&A Discovery Suite | This module includes functions to invoke script blocks with retry logic, get user-friendly error messages, and manage error summaries. It integrates with the EnhancedLogging module for output.
+ðŸ“Œ Declared Functions:
 
 function Invoke-WithRetry {
 function Get-FriendlyErrorMessage {
 function Write-ErrorSummary {
 function Test-CriticalError {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $effectiveMaxRetries = $MaxRetries
 $effectiveDelaySeconds = $DelaySeconds
 $effectiveConfig = $Context.Config | Global:Get-OrElse $script:LoggingConfig.DefaultContext.Config | Global:Get-OrElse $global:MandA.Config
@@ -156,9 +170,9 @@ $graphErrorMessage = $oDataError.Message
 $errorGroups = $ErrorCollector.Errors | Group-Object Source | Sort-Object Count -Descending
 $criticalErrorPatterns = @(
 
-📁 Path: Modules/Utilities/FileOperations.psm1
-🔧 Purpose: Provides common file and directory operation utilities for the M&A Discovery Suite | This module includes functions for importing/exporting CSV data, testing file write access, backing up files, and other file system tasks. It standardizes on UTF-8 encoding and integrates with EnhancedLogging.
-📌 Declared Functions:
+ðŸ“ Path: Modules/Utilities/FileOperations.psm1
+ðŸ”§ Purpose: Provides common file and directory operation utilities for the M&A Discovery Suite | This module includes functions for importing/exporting CSV data, testing file write access, backing up files, and other file system tasks. It standardizes on UTF-8 encoding and integrates with EnhancedLogging.
+ðŸ“Œ Declared Functions:
 
 function Ensure-DirectoryExists {
 function Import-DataFromCSV {
@@ -168,7 +182,7 @@ function Backup-File {
 function Clear-OldFiles {
 function Get-DirectorySizeFormatted {
 function Get-RandomInt {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $data = Import-Csv -Path $FilePath -Delimiter $Delimiter -Encoding Default -ErrorAction Stop
 $directory = Split-Path $FilePath -Parent
 $exportParams = @{
@@ -185,40 +199,40 @@ fileInfo.BaseName)BackupSuffix((
 (fileInfo.Extension)"
 
 $backupPath = Join-Path $fileInfo.DirectoryName $backupFileName
-cutoffDate=(Get−Date).AddDays(−cutoffDate = (Get-Date).AddDays(-
-cutoffDate=(Get−Date).AddDays(−RetentionDays)
+cutoffDate=(Getâˆ’Date).AddDays(âˆ’cutoffDate = (Get-Date).AddDays(-
+cutoffDate=(Getâˆ’Date).AddDays(âˆ’RetentionDays)
 
 $getChildItemParams = @{
 $filesToRemove = Get-ChildItem @getChildItemParams | Where-Object { $_.LastWriteTime -lt $cutoffDate }
 $totalSize = (Get-ChildItem $DirectoryPath -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum -ErrorAction SilentlyContinue).Sum
 
-📁 Path: Modules/Utilities/ModuleHelpers.psm1
-🔧 Purpose: Helper functions for M&A Discovery Suite modules | Provides standardized initialization and path resolution
-📌 Declared Functions:
+ðŸ“ Path: Modules/Utilities/ModuleHelpers.psm1
+ðŸ”§ Purpose: Helper functions for M&A Discovery Suite modules | Provides standardized initialization and path resolution
+ðŸ“Œ Declared Functions:
 
 function Initialize-MandAModuleContext {
 function Get-MandAModulePath {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $suiteRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 
-📁 Path: Modules/Utilities/ModulesHelper.psm1
-🔧 Purpose: Helper functions for M&A Discovery Suite modules | Provides standardized initialization and path resolution
-📌 Declared Functions:
+ðŸ“ Path: Modules/Utilities/ModulesHelper.psm1
+ðŸ”§ Purpose: Helper functions for M&A Discovery Suite modules | Provides standardized initialization and path resolution
+ðŸ“Œ Declared Functions:
 
 function Initialize-MandAModuleContext {
 function Get-MandAModulePath {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $suiteRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 
-📁 Path: Modules/Utilities/ProgressDisplay.psm1
-🔧 Purpose: Provides utility functions for displaying progress and status information in the M&A Discovery Suite | This module contains functions to render visual progress indicators, status tables, and section headers to the console, enhancing the user experience during suite execution. It integrates with EnhancedLogging for consistent output styling where appropriate.
-📌 Declared Functions:
+ðŸ“ Path: Modules/Utilities/ProgressDisplay.psm1
+ðŸ”§ Purpose: Provides utility functions for displaying progress and status information in the M&A Discovery Suite | This module contains functions to render visual progress indicators, status tables, and section headers to the console, enhancing the user experience during suite execution. It integrates with EnhancedLogging for consistent output styling where appropriate.
+ðŸ“Œ Declared Functions:
 
 function Show-SectionHeader {
 function Show-StatusTable {
 function Update-TaskProgress {
 function Complete-TaskProgress {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $useEmojis = $true
 displayIcon=if(displayIcon = if (
 displayIcon=if(useEmojis) { "$Icon " } else { "" }
@@ -226,8 +240,8 @@ displayIcon=if(useEmojis) { "$Icon " } else { "" }
 headerMessage="headerMessage = "
 headerMessage="displayIcon$Title"
 
-separator="="∗(separator = "=" * (
-separator="="∗(headerMessage.Length + 4 | Out-String | Select-Object -First 1).Trim().Length
+separator="="âˆ—(separator = "=" * (
+separator="="âˆ—(headerMessage.Length + 4 | Out-String | Select-Object -First 1).Trim().Length
 
 icon=if(icon = if (
 icon=if(Success) { "[OK]" } else { "[X]" }
@@ -250,9 +264,9 @@ progressPoint=[Math]::Max(1,[Math]::Floor(TotalOperations / (100 / $logInterval)
 
 $debugMode = $false
 
-📁 Path: Modules/Utilities/ProgressTracking.psm1
-🔧 Purpose: Provides functions for tracking the progress and performance metrics of operations within the M&A Discovery Suite | This module allows for initializing progress trackers, starting and stopping operation timers, updating step-based progress, and retrieving/exporting collected metrics. It's designed to be used by various components of the suite to monitor execution duration and status of different phases and operations.
-📌 Declared Functions:
+ðŸ“ Path: Modules/Utilities/ProgressTracking.psm1
+ðŸ”§ Purpose: Provides functions for tracking the progress and performance metrics of operations within the M&A Discovery Suite | This module allows for initializing progress trackers, starting and stopping operation timers, updating step-based progress, and retrieving/exporting collected metrics. It's designed to be used by various components of the suite to monitor execution duration and status of different phases and operations.
+ðŸ“Œ Declared Functions:
 
 function Initialize-ProgressTracker {
 function Start-OperationTimer {
@@ -263,7 +277,7 @@ function Get-ProgressMetrics {
 function Export-ProgressMetricsReport {
 function Show-ProgressSummaryReport {
 function Reset-ProgressTrackerInternal {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $script:ProgressState = $null
 $script:ProgressState = @{
 $script:ProgressState.MetricsLog.Add(@{Timestamp = Get-Date; Event = "TrackerInitialized"; Phase = $OverallPhaseName })
@@ -277,8 +291,8 @@ script
 $script:ProgressState.EndTime = Get-Date
 $script:ProgressState.IsActive = $false
 $totalDuration = $script:ProgressState.EndTime - $script:ProgressState.StartTime
-completionMsg="ProgressTrackingfor′completionMsg = "Progress Tracking for '
-completionMsg="ProgressTrackingfor′($script
+completionMsg="ProgressTrackingforâ€²completionMsg = "Progress Tracking for '
+completionMsg="ProgressTrackingforâ€²($script
 :ProgressState.OverallPhase)' COMPLETED."
 finalLogMsg="finalLogMsg = "
 finalLogMsg="FinalStatusMessage Total Duration: ((
@@ -299,9 +313,9 @@ $disabledSubscriptions = $subscriptions | Where-Object { $_.State -ne "Enabled" 
 $opTableData = [System.Collections.Generic.List[PSCustomObject]]::new()
 $tableOutput = $opTableData | Format-Table -AutoSize | Out-String
 
-📁 Path: Modules/Utilities/Setup-AppRegistrationOnce.ps1
-🔧 Purpose: Creates Azure AD app registration with comprehensive read-only permissions for M&A environment discovery | This foundational script creates a service principal with read-only Microsoft Graph, Azure, and Exchange Online permissions, grants admin consent, assigns Cloud Application Administrator, Reader, and Exchange View-Only Administrator roles, creates a client secret, and encrypts credentials for secure use by discovery and aggregation scripts.
-📌 Declared Functions:
+ðŸ“ Path: Modules/Utilities/Setup-AppRegistrationOnce.ps1
+ðŸ”§ Purpose: Creates Azure AD app registration with comprehensive read-only permissions for M&A environment discovery | This foundational script creates a service principal with read-only Microsoft Graph, Azure, and Exchange Online permissions, grants admin consent, assigns Cloud Application Administrator, Reader, and Exchange View-Only Administrator roles, creates a client secret, and encrypts credentials for secure use by discovery and aggregation scripts.
+ðŸ“Œ Declared Functions:
 
 function Write-EnhancedLog {
 function Write-ProgressHeader {
@@ -319,7 +333,7 @@ function Set-EnhancedRoleAssignments {
 function Set-ExchangeRoleAssignment {
 function New-EnhancedClientSecret {
 function Save-EnhancedCredentials {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $script:ScriptInfo = @{
 $script:AppConfig = @{
 $script:ColorScheme = @{
@@ -341,7 +355,7 @@ icon=switch(Level) {
 displayMessage="displayMessage = "
 displayMessage="icon $logMessage"
 
-$separator = "═" * 90
+$separator = "â•" * 90
 icon=if(icon = if (
 icon=if(Success) { "[OK]" } else { "[X]" }
 
@@ -361,8 +375,8 @@ requiredVersion=[version]requiredVersion = [version]
 requiredVersion=[version]script
 :ScriptInfo.RequiredPSVersion
 $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-principal=New−ObjectSecurity.Principal.WindowsPrincipal(principal = New-Object Security.Principal.WindowsPrincipal(
-principal=New−ObjectSecurity.Principal.WindowsPrincipal(currentUser)
+principal=Newâˆ’ObjectSecurity.Principal.WindowsPrincipal(principal = New-Object Security.Principal.WindowsPrincipal(
+principal=Newâˆ’ObjectSecurity.Principal.WindowsPrincipal(currentUser)
 
 $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 $connectivityTests = @(
@@ -410,8 +424,8 @@ $existingSession = Get-PSSession | Where-Object {
 $connectionParams = @{
 $orgConfig = Get-OrganizationConfig -ErrorAction Stop
 $appName = $script:AppConfig.DisplayName
-existingApp=Get−MgApplication−Filter"displayNameeq′existingApp = Get-MgApplication -Filter "displayName eq '
-existingApp=Get−MgApplication−Filter"displayNameeq′appName'" -ErrorAction SilentlyContinue
+existingApp=Getâˆ’MgApplicationâˆ’Filter"displayNameeqâ€²existingApp = Get-MgApplication -Filter "displayName eq '
+existingApp=Getâˆ’MgApplicationâˆ’Filter"displayNameeqâ€²appName'" -ErrorAction SilentlyContinue
 
 $graphSp = Get-MgServicePrincipal -Filter "AppId eq '00000003-0000-0000-c000-000000000000'" -ErrorAction Stop
 $resourceAccess = @()
@@ -426,8 +440,8 @@ $appParams = @{
 $appRegistration = New-MgApplication @appParams -ErrorAction Stop
 $servicePrincipal = New-MgServicePrincipal -AppId $AppRegistration.AppId -ErrorAction Stop
 $graphSp = Get-MgServicePrincipal -Filter "AppId eq '00000003-0000-0000-c000-000000000000'" -ErrorAction Stop
-appSp=Get−MgServicePrincipal−Filter"AppIdeq′appSp = Get-MgServicePrincipal -Filter "AppId eq '
-appSp=Get−MgServicePrincipal−Filter"AppIdeq′($AppRegistration.AppId)'" -ErrorAction Stop
+appSp=Getâˆ’MgServicePrincipalâˆ’Filter"AppIdeqâ€²appSp = Get-MgServicePrincipal -Filter "AppId eq '
+appSp=Getâˆ’MgServicePrincipalâˆ’Filter"AppIdeqâ€²($AppRegistration.AppId)'" -ErrorAction Stop
 
 $grantedCount = 0
 $skippedCount = 0
@@ -442,11 +456,11 @@ $azureRoleAssignmentSuccess = $false
 $azureRoleDetails = @{
 $adRoleResults = @{
 $roleName = $script:AppConfig.AzureADRoles
-roleDefinition=Get−MgDirectoryRole−Filter"DisplayNameeq′roleDefinition = Get-MgDirectoryRole -Filter "DisplayName eq '
-roleDefinition=Get−MgDirectoryRole−Filter"DisplayNameeq′roleName'" -ErrorAction SilentlyContinue
+roleDefinition=Getâˆ’MgDirectoryRoleâˆ’Filter"DisplayNameeqâ€²roleDefinition = Get-MgDirectoryRole -Filter "DisplayName eq '
+roleDefinition=Getâˆ’MgDirectoryRoleâˆ’Filter"DisplayNameeqâ€²roleName'" -ErrorAction SilentlyContinue
 
-roleTemplate=Get−MgDirectoryRoleTemplate−Filter"DisplayNameeq′roleTemplate = Get-MgDirectoryRoleTemplate -Filter "DisplayName eq '
-roleTemplate=Get−MgDirectoryRoleTemplate−Filter"DisplayNameeq′roleName'" -ErrorAction Stop
+roleTemplate=Getâˆ’MgDirectoryRoleTemplateâˆ’Filter"DisplayNameeqâ€²roleTemplate = Get-MgDirectoryRoleTemplate -Filter "DisplayName eq '
+roleTemplate=Getâˆ’MgDirectoryRoleTemplateâˆ’Filter"DisplayNameeqâ€²roleName'" -ErrorAction Stop
 
 $existingAssignment = Get-MgDirectoryRoleMember -DirectoryRoleId $roleDefinition.Id -ErrorAction SilentlyContinue |
 $memberRef = "https://graph.microsoft.com/v1.0/directoryObjects/((
@@ -483,8 +497,8 @@ $isAssigned = $currentMembers | Where-Object { $.Identity -eq $AppId -or $.Ident
 $verifyMembers = Get-RoleGroupMember -Identity $roleName -ErrorAction SilentlyContinue
 $verified = $verifyMembers | Where-Object { $.Identity -eq $AppId -or $.Identity -eq $ServicePrincipalId }
 $secretDescription = "M&A Discovery Secret - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-secretEndDate=(Get−Date).AddYears(secretEndDate = (Get-Date).AddYears(
-secretEndDate=(Get−Date).AddYears(SecretValidityYears)
+secretEndDate=(Getâˆ’Date).AddYears(secretEndDate = (Get-Date).AddYears(
+secretEndDate=(Getâˆ’Date).AddYears(SecretValidityYears)
 
 $secretParams = @{
 $clientSecret = Add-MgApplicationPassword @secretParams -ErrorAction Stop
@@ -534,9 +548,9 @@ metricsPath = $LogPath -replace '\.txt
 ', '_metrics.json'
 
 
-📁 Path: Modules/Utilities/ValidationHelpers.psm1
-🔧 Purpose: Provides common validation helper functions for the M&A Discovery Suite | This module includes functions for validating prerequisites, data formats (GUID, email, UPN), configuration files, directory write access, module availability, network connectivity, and data quality. It integrates with EnhancedLogging.
-📌 Declared Functions:
+ðŸ“ Path: Modules/Utilities/ValidationHelpers.psm1
+ðŸ”§ Purpose: Provides common validation helper functions for the M&A Discovery Suite | This module includes functions for validating prerequisites, data formats (GUID, email, UPN), configuration files, directory write access, module availability, network connectivity, and data quality. It integrates with EnhancedLogging.
+ðŸ“Œ Declared Functions:
 
 function Test-Prerequisites {
 function Test-GuidFormat {
@@ -548,7 +562,7 @@ function Test-ModuleAvailabilityByName {
 function Test-BasicNetworkConnectivity {
 function Test-DataQualitySimple {
 function Export-ValidationReportSimple {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $allChecksPass = $true
 $validationIssues = [System.Collections.Generic.List[string]]::new()
 $criticalPaths = @("SuiteRoot", "CompanyProfileRoot", "LogOutput", "RawDataOutput", "ProcessedDataOutput", "Modules", "Utilities")
@@ -586,9 +600,9 @@ reportFilePath = Join-Path $reportPathBase "
 
 $reportContent = [System.Collections.Generic.List[string]]::new()
 
-📁 Path: Modules/Utilities/logging.psm1
-🔧 Purpose: Enhanced logging with improved visual output for M&A Discovery Suite | Provides structured logging with enhanced visual indicators, emojis, and better formatting
-📌 Declared Functions:
+ðŸ“ Path: Modules/Utilities/logging.psm1
+ðŸ”§ Purpose: Enhanced logging with improved visual output for M&A Discovery Suite | Provides structured logging with enhanced visual indicators, emojis, and better formatting
+ðŸ“Œ Declared Functions:
 
 function Initialize-Logging {
 function Write-MandALog {
@@ -604,7 +618,7 @@ function Clear-OldLogFiles {
 function Get-LoggingConfiguration {
 function Set-LogLevel {
 function Set-LoggingOptions {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $script:LoggingConfig = @{
 $logPath = Join-Path $Configuration.environment.outputPath "Logs"
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -673,17 +687,17 @@ $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 rotatedLogFile = Join-Path $logDir "
 logName`_$timestamp.log"
 
-cutoffDate=(Get−Date).AddDays(−cutoffDate = (Get-Date).AddDays(-
-cutoffDate=(Get−Date).AddDays(−script
+cutoffDate=(Getâˆ’Date).AddDays(âˆ’cutoffDate = (Get-Date).AddDays(-
+cutoffDate=(Getâˆ’Date).AddDays(âˆ’script
 :LoggingConfig.LogRetentionDays)
 $oldLogFiles = Get-ChildItem -Path $LogPath -Filter "*.log" | Where-Object { $_.LastWriteTime -lt $cutoffDate }
 
-📁 Path: QuickStart.ps1
-🔧 Purpose: M&A Discovery Suite - Quick Start Entry Point (Rewritten v6.0.0) | User-friendly entry point to initialize the M&A Discovery Suite environment for a specific company and then launch the main orchestrator. This script ensures the environment is correctly set up before any operations begin.
-📌 Declared Functions:
+ðŸ“ Path: QuickStart.ps1
+ðŸ”§ Purpose: M&A Discovery Suite - Quick Start Entry Point (Rewritten v6.0.0) | User-friendly entry point to initialize the M&A Discovery Suite environment for a specific company and then launch the main orchestrator. This script ensures the environment is correctly set up before any operations begin.
+ðŸ“Œ Declared Functions:
 
 (No functions declared - this is a script)
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "Continue"
 $script:QuickStartTime = Get-Date

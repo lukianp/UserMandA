@@ -1,6 +1,13 @@
-# -*- coding: utf-8-bom -*-
+﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 #Requires -Modules EnhancedLogging, FileOperations # Assuming these are globally available via Orchestrator
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-04
+# Last Modified: 2025-06-06
+# Change Log: Updated version control header
+
 
 <#
 .SYNOPSIS

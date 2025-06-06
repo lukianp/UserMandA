@@ -1,3 +1,17 @@
+﻿<!--
+Author: Lukian Poleschtschuk
+Version: 1.0.0
+Created: 2025-05-26
+Last Modified: 2025-06-06
+Change Log: Updated version control header
+-->
+<!--
+Author: Lukian Poleschtschuk
+Version: 1.0.0
+Created: 2025-05-26
+Last Modified: 2025-06-06
+Change Log: Initial version - any future changes require version increment
+-->
 # M&A Discovery Suite - Complete Architectural Redesign Plan
 
 ## Executive Summary
@@ -20,74 +34,74 @@ This document outlines the complete architectural redesign of the M&A Discovery 
 
 ## Proposed Architecture
 
-### 🏗️ New Modular Structure
+### ðŸ—ï¸ New Modular Structure
 
 ```
 MandADiscoverySuite/
-├── 📁 Core/
-│   ├── MandA-Orchestrator.ps1                    (~300 lines)
-│   ├── MandA-Configuration.ps1                   (~200 lines)
-│   └── MandA-Bootstrap.ps1                       (~150 lines)
-├── 📁 Modules/
-│   ├── 📁 Authentication/
-│   │   ├── Authentication.psm1                   (~400 lines)
-│   │   ├── CredentialManagement.psm1             (~300 lines)
-│   │   └── AppRegistration.psm1                  (~350 lines)
-│   ├── 📁 Connectivity/
-│   │   ├── GraphConnection.psm1                  (~250 lines)
-│   │   ├── AzureConnection.psm1                  (~200 lines)
-│   │   ├── ExchangeConnection.psm1               (~300 lines)
-│   │   └── ConnectionManager.psm1                (~200 lines)
-│   ├── 📁 Discovery/
-│   │   ├── ActiveDirectoryDiscovery.psm1         (~600 lines)
-│   │   ├── ExchangeDiscovery.psm1                (~800 lines)
-│   │   ├── GraphDiscovery.psm1                   (~700 lines)
-│   │   ├── AzureDiscovery.psm1                   (~400 lines)
-│   │   ├── GPODiscovery.psm1                     (~500 lines)
-│   │   └── IntuneDiscovery.psm1                  (~300 lines)
-│   ├── 📁 Processing/
-│   │   ├── DataAggregation.psm1                  (~600 lines)
-│   │   ├── ProfileBuilder.psm1                   (~500 lines)
-│   │   ├── ComplexityCalculator.psm1             (~300 lines)
-│   │   ├── WaveGenerator.psm1                    (~400 lines)
-│   │   └── DataValidation.psm1                   (~250 lines)
-│   ├── 📁 Export/
-│   │   ├── CSVExporter.psm1                      (~200 lines)
-│   │   ├── ExcelExporter.psm1                    (~300 lines)
-│   │   ├── JSONExporter.psm1                     (~150 lines)
-│   │   └── PowerAppsExporter.psm1                (~250 lines)
-│   └── 📁 Utilities/
-│       ├── Logging.psm1                          (~300 lines)
-│       ├── ErrorHandling.psm1                    (~200 lines)
-│       ├── ProgressTracking.psm1                 (~150 lines)
-│       ├── FileOperations.psm1                   (~200 lines)
-│       └── ValidationHelpers.psm1                (~150 lines)
-├── 📁 Configuration/
-│   ├── default-config.json                       (~50 lines)
-│   ├── environment-templates/
-│   │   ├── development.json
-│   │   ├── staging.json
-│   │   └── production.json
-│   └── schema/
-│       └── config-schema.json
-├── 📁 Templates/
-│   ├── csv-headers/
-│   ├── excel-templates/
-│   └── report-templates/
-├── 📁 Tests/
-│   ├── Unit/
-│   ├── Integration/
-│   └── End-to-End/
-└── 📁 Documentation/
-    ├── API-Reference.md
-    ├── Configuration-Guide.md
-    ├── Deployment-Guide.md
-    └── Troubleshooting-Guide.md
+â”œâ”€â”€ ðŸ“ Core/
+â”‚   â”œâ”€â”€ MandA-Orchestrator.ps1                    (~300 lines)
+â”‚   â”œâ”€â”€ MandA-Configuration.ps1                   (~200 lines)
+â”‚   â””â”€â”€ MandA-Bootstrap.ps1                       (~150 lines)
+â”œâ”€â”€ ðŸ“ Modules/
+â”‚   â”œâ”€â”€ ðŸ“ Authentication/
+â”‚   â”‚   â”œâ”€â”€ Authentication.psm1                   (~400 lines)
+â”‚   â”‚   â”œâ”€â”€ CredentialManagement.psm1             (~300 lines)
+â”‚   â”‚   â””â”€â”€ AppRegistration.psm1                  (~350 lines)
+â”‚   â”œâ”€â”€ ðŸ“ Connectivity/
+â”‚   â”‚   â”œâ”€â”€ GraphConnection.psm1                  (~250 lines)
+â”‚   â”‚   â”œâ”€â”€ AzureConnection.psm1                  (~200 lines)
+â”‚   â”‚   â”œâ”€â”€ ExchangeConnection.psm1               (~300 lines)
+â”‚   â”‚   â””â”€â”€ ConnectionManager.psm1                (~200 lines)
+â”‚   â”œâ”€â”€ ðŸ“ Discovery/
+â”‚   â”‚   â”œâ”€â”€ ActiveDirectoryDiscovery.psm1         (~600 lines)
+â”‚   â”‚   â”œâ”€â”€ ExchangeDiscovery.psm1                (~800 lines)
+â”‚   â”‚   â”œâ”€â”€ GraphDiscovery.psm1                   (~700 lines)
+â”‚   â”‚   â”œâ”€â”€ AzureDiscovery.psm1                   (~400 lines)
+â”‚   â”‚   â”œâ”€â”€ GPODiscovery.psm1                     (~500 lines)
+â”‚   â”‚   â””â”€â”€ IntuneDiscovery.psm1                  (~300 lines)
+â”‚   â”œâ”€â”€ ðŸ“ Processing/
+â”‚   â”‚   â”œâ”€â”€ DataAggregation.psm1                  (~600 lines)
+â”‚   â”‚   â”œâ”€â”€ ProfileBuilder.psm1                   (~500 lines)
+â”‚   â”‚   â”œâ”€â”€ ComplexityCalculator.psm1             (~300 lines)
+â”‚   â”‚   â”œâ”€â”€ WaveGenerator.psm1                    (~400 lines)
+â”‚   â”‚   â””â”€â”€ DataValidation.psm1                   (~250 lines)
+â”‚   â”œâ”€â”€ ðŸ“ Export/
+â”‚   â”‚   â”œâ”€â”€ CSVExporter.psm1                      (~200 lines)
+â”‚   â”‚   â”œâ”€â”€ ExcelExporter.psm1                    (~300 lines)
+â”‚   â”‚   â”œâ”€â”€ JSONExporter.psm1                     (~150 lines)
+â”‚   â”‚   â””â”€â”€ PowerAppsExporter.psm1                (~250 lines)
+â”‚   â””â”€â”€ ðŸ“ Utilities/
+â”‚       â”œâ”€â”€ Logging.psm1                          (~300 lines)
+â”‚       â”œâ”€â”€ ErrorHandling.psm1                    (~200 lines)
+â”‚       â”œâ”€â”€ ProgressTracking.psm1                 (~150 lines)
+â”‚       â”œâ”€â”€ FileOperations.psm1                   (~200 lines)
+â”‚       â””â”€â”€ ValidationHelpers.psm1                (~150 lines)
+â”œâ”€â”€ ðŸ“ Configuration/
+â”‚   â”œâ”€â”€ default-config.json                       (~50 lines)
+â”‚   â”œâ”€â”€ environment-templates/
+â”‚   â”‚   â”œâ”€â”€ development.json
+â”‚   â”‚   â”œâ”€â”€ staging.json
+â”‚   â”‚   â””â”€â”€ production.json
+â”‚   â””â”€â”€ schema/
+â”‚       â””â”€â”€ config-schema.json
+â”œâ”€â”€ ðŸ“ Templates/
+â”‚   â”œâ”€â”€ csv-headers/
+â”‚   â”œâ”€â”€ excel-templates/
+â”‚   â””â”€â”€ report-templates/
+â”œâ”€â”€ ðŸ“ Tests/
+â”‚   â”œâ”€â”€ Unit/
+â”‚   â”œâ”€â”€ Integration/
+â”‚   â””â”€â”€ End-to-End/
+â””â”€â”€ ðŸ“ Documentation/
+    â”œâ”€â”€ API-Reference.md
+    â”œâ”€â”€ Configuration-Guide.md
+    â”œâ”€â”€ Deployment-Guide.md
+    â””â”€â”€ Troubleshooting-Guide.md
 ```
 
 ## Detailed Module Breakdown
 
-### 🔐 Authentication Modules
+### ðŸ” Authentication Modules
 
 #### `Authentication.psm1` (~400 lines)
 **Purpose**: Core authentication orchestration
@@ -113,7 +127,7 @@ MandADiscoverySuite/
 - `Test-AppRegistrationHealth`
 - `Remove-MandAAppRegistration`
 
-### 🔗 Connectivity Modules
+### ðŸ”— Connectivity Modules
 
 #### `ConnectionManager.psm1` (~200 lines)
 **Purpose**: Centralized connection orchestration
@@ -147,7 +161,7 @@ MandADiscoverySuite/
 - `Resolve-ExchangeConnectivity`
 - `Disconnect-MandAExchange`
 
-### 🔍 Discovery Modules
+### ðŸ” Discovery Modules
 
 #### `ActiveDirectoryDiscovery.psm1` (~600 lines)
 **Purpose**: On-premises AD data collection
@@ -201,7 +215,7 @@ MandADiscoverySuite/
 - `Get-IntuneCompliancePolicies`
 - `Get-IntuneApplications`
 
-### 🔄 Processing Modules
+### ðŸ”„ Processing Modules
 
 #### `DataAggregation.psm1` (~600 lines)
 **Purpose**: Core data aggregation logic
@@ -244,7 +258,7 @@ MandADiscoverySuite/
 - `Check-DataCompleteness`
 - `Generate-QualityReport`
 
-### 📤 Export Modules
+### ðŸ“¤ Export Modules
 
 #### `CSVExporter.psm1` (~200 lines)
 **Purpose**: CSV file generation
@@ -278,7 +292,7 @@ MandADiscoverySuite/
 - `Optimize-PowerAppsData`
 - `Generate-PowerAppsMetadata`
 
-### 🛠️ Utility Modules
+### ðŸ› ï¸ Utility Modules
 
 #### `Logging.psm1` (~300 lines)
 **Purpose**: Centralized logging system
@@ -510,31 +524,31 @@ function Start-MandADiscovery {
 
 ## Benefits of New Architecture
 
-### 🎯 Maintainability
+### ðŸŽ¯ Maintainability
 - **Modular Design**: Each module has a single responsibility
 - **Smaller Files**: Average 300 lines per module vs 2,000+ per script
 - **Clear Dependencies**: Explicit module imports and dependencies
 - **Version Control**: Easier to track changes in specific functionality
 
-### 🔧 Testability
+### ðŸ”§ Testability
 - **Unit Testing**: Each function can be tested independently
 - **Mock Support**: Easy to mock dependencies for testing
 - **Integration Testing**: Test module interactions
 - **Automated Testing**: CI/CD pipeline integration
 
-### 🚀 Performance
+### ðŸš€ Performance
 - **Lazy Loading**: Load only required modules
 - **Parallel Processing**: Better resource utilization
 - **Memory Management**: Improved garbage collection
 - **Caching**: Reuse connections and data where appropriate
 
-### 📈 Scalability
+### ðŸ“ˆ Scalability
 - **Plugin Architecture**: Easy to add new discovery sources
 - **Configuration-Driven**: Behavior controlled by configuration
 - **Multi-Environment**: Support for dev/staging/production
 - **Cloud-Ready**: Prepared for Azure Functions/Logic Apps
 
-### 🛡️ Reliability
+### ðŸ›¡ï¸ Reliability
 - **Error Isolation**: Failures in one module don't affect others
 - **Retry Logic**: Standardized retry mechanisms
 - **Graceful Degradation**: Continue with partial data

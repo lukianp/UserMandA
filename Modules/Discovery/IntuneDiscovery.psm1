@@ -1,4 +1,11 @@
-# -*- coding: utf-8-bom -*-
+﻿# -*- coding: utf-8-bom -*-
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-04
+# Last Modified: 2025-06-06
+# Change Log: Updated version control header
+
 <#
 .SYNOPSIS
     Enhanced Intune Discovery Module for M&A Discovery Suite

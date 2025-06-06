@@ -1,4 +1,18 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-06
+# Last Modified: 2025-06-06
+# Change Log: Updated version control header
+
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-06
+# Last Modified: 2025-06-06
+# Change Log: Initial version - any future changes require version increment
+
 <#
 .SYNOPSIS
     Test script to demonstrate and validate timeout handling functionality.
@@ -33,7 +47,7 @@ param(
 try {
     Import-Module "$PSScriptRoot\..\Modules\Utilities\ErrorHandling.psm1" -Force
     Import-Module "$PSScriptRoot\..\Modules\Utilities\EnhancedLogging.psm1" -Force -ErrorAction SilentlyContinue
-    Write-Host "✓ Modules imported successfully" -ForegroundColor Green
+    Write-Host "[SUCCESS] Modules imported successfully" -ForegroundColor Green
 } catch {
     Write-Error "Failed to import required modules: $($_.Exception.Message)"
     exit 1
@@ -62,9 +76,9 @@ function Test-BasicTimeout {
             return "Quick operation completed"
         } -TimeoutSeconds $TimeoutSeconds -OperationName "Quick Test" -Context $testContext
         
-        Write-Host "✓ Quick operation succeeded: $result" -ForegroundColor Green
+        Write-Host "[SUCCESS] Quick operation succeeded: $result" -ForegroundColor Green
     } catch {
-        Write-Host "✗ Quick operation failed unexpectedly: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[FAILED] Quick operation failed unexpectedly: $($_.Exception.Message)" -ForegroundColor Red
     }
     
     # Test 2: Operation that times out (should fail with timeout)
@@ -75,11 +89,11 @@ function Test-BasicTimeout {
             return "This should not complete"
         } -TimeoutSeconds $TimeoutSeconds -OperationName "Slow Test" -Context $testContext
         
-        Write-Host "✗ Slow operation completed unexpectedly: $result" -ForegroundColor Red
+        Write-Host "[FAILED] Slow operation completed unexpectedly: $result" -ForegroundColor Red
     } catch [System.TimeoutException] {
-        Write-Host "✓ Slow operation timed out as expected: $($_.Exception.Message)" -ForegroundColor Green
+        Write-Host "[SUCCESS] Slow operation timed out as expected: $($_.Exception.Message)" -ForegroundColor Green
     } catch {
-        Write-Host "✗ Slow operation failed with unexpected error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[FAILED] Slow operation failed with unexpected error: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
@@ -102,9 +116,9 @@ function Test-TimeoutWithRetry {
             }
         } -TimeoutSeconds $TimeoutSeconds -MaxRetries 3 -DelaySeconds 1 -OperationName "Retry Test" -Context $testContext
         
-        Write-Host "✓ Retry operation succeeded: $result" -ForegroundColor Green
+        Write-Host "[SUCCESS] Retry operation succeeded: $result" -ForegroundColor Green
     } catch {
-        Write-Host "✗ Retry operation failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[FAILED] Retry operation failed: $($_.Exception.Message)" -ForegroundColor Red
     }
     
     # Test 2: Operation that times out on all attempts
@@ -115,11 +129,11 @@ function Test-TimeoutWithRetry {
             return "This should never complete"
         } -TimeoutSeconds $TimeoutSeconds -MaxRetries 2 -DelaySeconds 1 -OperationName "Always Timeout Test" -Context $testContext
         
-        Write-Host "✗ Always timeout operation completed unexpectedly: $result" -ForegroundColor Red
+        Write-Host "[FAILED] Always timeout operation completed unexpectedly: $result" -ForegroundColor Red
     } catch [System.TimeoutException] {
-        Write-Host "✓ Always timeout operation failed as expected: $($_.Exception.Message)" -ForegroundColor Green
+        Write-Host "[SUCCESS] Always timeout operation failed as expected: $($_.Exception.Message)" -ForegroundColor Green
     } catch {
-        Write-Host "✗ Always timeout operation failed with unexpected error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[FAILED] Always timeout operation failed with unexpected error: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
@@ -136,12 +150,12 @@ function Test-TimeoutTesting {
         } -ExpectedTimeoutSeconds $TimeoutSeconds -TestName "Timeout Validation Test" -Context $testContext
         
         if ($testResult.TimedOut) {
-            Write-Host "✓ Timeout test correctly identified timeout behavior (Elapsed: $($testResult.ElapsedSeconds)s)" -ForegroundColor Green
+            Write-Host "[SUCCESS] Timeout test correctly identified timeout behavior (Elapsed: $($testResult.ElapsedSeconds)s)" -ForegroundColor Green
         } else {
-            Write-Host "✗ Timeout test failed to identify timeout behavior" -ForegroundColor Red
+            Write-Host "[FAILED] Timeout test failed to identify timeout behavior" -ForegroundColor Red
         }
     } catch {
-        Write-Host "✗ Timeout testing failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[FAILED] Timeout testing failed: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 

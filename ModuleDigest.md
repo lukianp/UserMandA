@@ -1,14 +1,28 @@
+﻿<!--
+Author: Lukian Poleschtschuk
+Version: 1.0.0
+Created: 2025-06-05
+Last Modified: 2025-06-06
+Change Log: Updated version control header
+-->
+<!--
+Author: Lukian Poleschtschuk
+Version: 1.0.0
+Created: 2025-06-05
+Last Modified: 2025-06-06
+Change Log: Initial version - any future changes require version increment
+-->
 ### MODULE: Authentication.psm1  
-📁 Path: `Modules/Authentication/Authentication.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION | .SYNOPSIS  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Authentication/Authentication.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION | .SYNOPSIS  
+ðŸ“Œ Declared Functions:
 - function Initialize-MandAAuthentication {
 - function Test-AuthenticationStatus {
 - function Update-AuthenticationTokens {
 - function Get-AuthenticationContext {
 - function Clear-AuthenticationContext {
 - function Get-AuthenticationStatus {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $script:AuthContext = $null
 - $script:LastAuthAttempt = $null
 - $script:AuthContext = $null
@@ -43,15 +57,15 @@
 
 
 ### MODULE: CredentialManagement.psm1  
-📁 Path: `Modules/Authentication/CredentialManagement.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Authentication/CredentialManagement.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Get-SecureCredentials {
 - function Get-InteractiveCredentials {
 - function Set-SecureCredentials {
 - function Test-CredentialValidity {
 - function Remove-StoredCredentials {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $formatHandlerPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\CredentialFormatHandler.psm1"
 - $credentialPath = $Configuration.authentication.credentialStorePath
 - $credentialData = Read-CredentialFile -Path $credentialPath
@@ -76,9 +90,9 @@
 
 
 ### MODULE: EnhancedConnectionManager.psm1  
-📁 Path: `Modules/Connectivity/EnhancedConnectionManager.psm1`  
-🔧 Purpose: No synopsis found.  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Connectivity/EnhancedConnectionManager.psm1`  
+ðŸ”§ Purpose: No synopsis found.  
+ðŸ“Œ Declared Functions:
 - function Initialize-AllConnections {
 - function Connect-MandAGraphEnhanced {
 - function Connect-MandAAzureEnhanced {
@@ -86,7 +100,7 @@
 - function Connect-MandAActiveDirectory {
 - function Get-ConnectionStatus {
 - function Disconnect-AllServices {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $script:ConnectionStatus = @{
 - $workingAuthContext = $null
 - $workingAuthContext = $AuthContext.Context
@@ -195,9 +209,9 @@
 
 
 ### MODULE: ActiveDirectoryDiscovery.psm1  
-📁 Path: `Modules/Discovery/ActiveDirectoryDiscovery.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/ActiveDirectoryDiscovery.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Export-MandAData {
 - function Get-ADUsersDataInternal {
 - function Get-ADGroupsDataInternal {
@@ -206,7 +220,7 @@
 - function Get-ADSitesAndServicesDataInternal {
 - function Get-ADDNSZoneDataInternal {
 - function Invoke-ActiveDirectoryDiscovery {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $baseOutputPath = $Configuration.environment.outputPath
 - $outputPath = Join-Path $baseOutputPath $SubFolder
 - $fullPath = Join-Path $outputPath "$($FileName).csv"
@@ -283,16 +297,16 @@
 
 
 ### MODULE: AzureDiscovery.psm1  
-📁 Path: `Modules/Discovery/AzureDiscovery.psm1`  
-🔧 Purpose: No synopsis found.  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/AzureDiscovery.psm1`  
+ðŸ”§ Purpose: No synopsis found.  
+ðŸ“Œ Declared Functions:
 - function Get-AzureSubscriptionsInternal {
 - function Get-AzureResourceGroupsInternal {
 - function Get-AzureVMsDataInternal {
 - function Get-AzureADApplicationsInternal {
 - function Get-AzureServicePrincipalsInternal {
 - function Invoke-AzureDiscovery {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $allSubscriptions = [System.Collections.Generic.List[PSObject]]::new()
 - $subscriptions = Get-AzSubscription -ErrorAction SilentlyContinue
 - $allRGs = [System.Collections.Generic.List[PSObject]]::new()
@@ -329,13 +343,13 @@
 
 
 ### MODULE: EnvironmentDetectionDiscovery.psm1  
-📁 Path: `Modules/Discovery/EnvironmentDetectionDiscovery.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/EnvironmentDetectionDiscovery.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Export-DataToCSV {
 - function Get-EnvironmentType {
 - function Invoke-EnvironmentDetectionDiscovery {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $environmentInfo = @{
 - $adDomain = Get-ADDomain -ErrorAction Stop
 - $adForest = Get-ADForest -ErrorAction Stop
@@ -389,9 +403,9 @@
 
 
 ### MODULE: ExchangeDiscovery.psm1  
-📁 Path: `Modules/Discovery/ExchangeDiscovery.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/ExchangeDiscovery.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Invoke-ExchangeDiscovery {
 - function Get-ExchangeMailboxes {
 - function Get-ExchangeMailboxStatistics {
@@ -402,7 +416,7 @@
 - function Get-ExchangeSendOnBehalfPermissions {
 - function Get-ExchangeMailFlowRules {
 - function Get-ExchangeRetentionPolicies {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $outputPath = $Configuration.environment.outputPath
 - $rawPath = Join-Path $outputPath "Raw"
 - $discoveryResults = @{}
@@ -463,9 +477,9 @@
 
 
 ### MODULE: ExternalIdentityDiscovery.psm1  
-📁 Path: `Modules/Discovery/ExternalIdentityDiscovery.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/ExternalIdentityDiscovery.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Export-DataToCSV {
 - function Import-DataFromCSV {
 - function Get-B2BGuestUsersDataInternal {
@@ -476,7 +490,7 @@
 - function Get-GuestInvitationsDataInternal {
 - function Get-CrossTenantAccessDataInternal {
 - function Invoke-ExternalIdentityDiscovery {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $fullPath = Join-Path $OutputPath $FileName
 - $data = Import-Csv -Path $FilePath -Encoding UTF8 -ErrorAction Stop
 - $outputFile = Join-Path $OutputPath "B2BGuestUsers.csv"
@@ -571,9 +585,9 @@
 
 
 ### MODULE: FileServerDiscovery.psm1  
-📁 Path: `Modules/Discovery/FileServerDiscovery.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/FileServerDiscovery.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Invoke-FileServerDiscovery {
 - function Get-FileServersDataInternal {
 - function Get-FileSharesDataInternal {
@@ -582,7 +596,7 @@
 - function Get-StorageAnalysisDataInternal {
 - function Get-ShadowCopyDataInternal {
 - function Get-FileServerClustersDataInternal {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $Configuration.discovery.fileServer = @{
 - $rawOutputPath = Join-Path $Configuration.environment.outputPath "Raw"
 - $discoveryResults = @{
@@ -679,9 +693,9 @@
 
 
 ### MODULE: GPODiscovery.psm1  
-📁 Path: `Modules/Discovery/GPODiscovery.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/GPODiscovery.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Export-DataToCSV {
 - function Get-GPOData {
 - function Get-GPOLinks {
@@ -689,7 +703,7 @@
 - function Parse-GPOReport {
 - function Export-GPODataToCSV {
 - function Invoke-GPODiscovery {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $allGPOs = [System.Collections.Generic.List[PSCustomObject]]::new()
 - $allDriveMappings = [System.Collections.Generic.List[PSCustomObject]]::new()
 - $allPrinterMappings = [System.Collections.Generic.List[PSCustomObject]]::new()
@@ -738,13 +752,13 @@
 
 
 ### MODULE: GraphDiscovery.psm1  
-📁 Path: `Modules/Discovery/GraphDiscovery.psm1`  
-🔧 Purpose: No synopsis found.  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/GraphDiscovery.psm1`  
+ðŸ”§ Purpose: No synopsis found.  
+ðŸ“Œ Declared Functions:
 - function Get-GraphUsersDataInternal {
 - function Get-GraphGroupsDataInternal {
 - function Invoke-GraphDiscovery {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
 - $allGraphUsers = [System.Collections.Generic.List[PSObject]]::new()
 - $selectFields = $Configuration.graphAPI.selectFields.users
@@ -771,16 +785,16 @@
 
 
 ### MODULE: IntuneDiscovery.psm1  
-📁 Path: `Modules/Discovery/IntuneDiscovery.psm1`  
-🔧 Purpose: No synopsis found.  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/IntuneDiscovery.psm1`  
+ðŸ”§ Purpose: No synopsis found.  
+ðŸ“Œ Declared Functions:
 - function Get-IntuneManagedDevicesInternal {
 - function Get-IntuneDeviceSoftwareInternal {
 - function Get-IntuneDeviceConfigurationsInternal {
 - function Get-IntuneDeviceCompliancePoliciesInternal {
 - function Get-IntuneManagedAppsInternal {
 - function Invoke-IntuneDiscovery {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $outputPath = Join-Path $Configuration.environment.outputPath "Raw"
 - $allManagedDevices = [System.Collections.Generic.List[PSObject]]::new()
 - $selectFields = $Configuration.discovery.intune.selectFields.managedDevices
@@ -806,9 +820,9 @@
 
 
 ### MODULE: LicensingDiscovery.psm1  
-📁 Path: `Modules/Discovery/LicensingDiscovery.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/LicensingDiscovery.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Invoke-LicensingDiscovery {
 - function Get-LicenseSKUsData {
 - function Get-UserLicenseAssignmentsData {
@@ -823,7 +837,7 @@
 - function Get-EstimatedLicenseCost {
 - function Export-DataToCSV {
 - function Import-DataFromCSV {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $outputPath = $Configuration.environment.outputPath
 - $rawPath = Join-Path $outputPath "Raw"
 - $discoveryResults = @{}
@@ -929,9 +943,9 @@
 
 
 ### MODULE: NetworkInfrastructureDiscovery.psm1  
-📁 Path: `Modules/Discovery/NetworkInfrastructureDiscovery.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/NetworkInfrastructureDiscovery.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Invoke-NetworkInfrastructureDiscovery {
 - function Get-DHCPServersData {
 - function Get-DHCPScopesData {
@@ -942,7 +956,7 @@
 - function Get-DNSRecordsData {
 - function Get-ADSubnetsData {
 - function Get-ADSitesData {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $outputPath = $Configuration.environment.outputPath
 - $discoveryResults = @{}
 - $discoveryResults.DHCPServers = Get-DHCPServersData -OutputPath $outputPath -Configuration $Configuration
@@ -1024,9 +1038,9 @@
 
 
 ### MODULE: SQLServerDiscoveryNoUse.psm1  
-📁 Path: `Modules/Discovery/SQLServerDiscoveryNoUse.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/SQLServerDiscoveryNoUse.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Invoke-SQLServerDiscovery {
 - function Get-SQLServerInstances {
 - function Get-SQLInstancesFromSPN {
@@ -1050,7 +1064,7 @@
 - function Get-SQLServerConfigurations {
 - function Export-DataToCSV {
 - function Import-DataFromCSV {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $outputPath = $Configuration.environment.outputPath
 - $discoveryResults = @{}
 - $discoveryResults.Instances = Get-SQLServerInstances -OutputPath $outputPath -Configuration $Configuration
@@ -1224,9 +1238,9 @@
 
 
 ### MODULE: SharePointDiscovery.psm1  
-📁 Path: `Modules/Discovery/SharePointDiscovery.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/SharePointDiscovery.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Invoke-SharePointDiscovery {
 - function Get-SharePointSitesData {
 - function Get-SharePointHubSitesData {
@@ -1236,7 +1250,7 @@
 - function Get-SharePointStorageMetricsData {
 - function Get-SharePointContentTypesData {
 - function Get-SPOAdminUrl {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $outputPath = $Configuration.environment.outputPath
 - $rawPath = Join-Path $outputPath "Raw"
 - $discoveryResults = @{}
@@ -1291,9 +1305,9 @@
 
 
 ### MODULE: TeamsDiscovery.psm1  
-📁 Path: `Modules/Discovery/TeamsDiscovery.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Discovery/TeamsDiscovery.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Invoke-TeamsDiscovery {
 - function Get-TeamsData {
 - function Get-TeamChannelsData {
@@ -1304,7 +1318,7 @@
 - function Get-TeamsPhoneData {
 - function Export-DataToCSV {
 - function Import-DataFromCSV {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $outputPath = $Configuration.environment.outputPath
 - $rawPath = Join-Path $outputPath "Raw"
 - $discoveryResults = @{}
@@ -1376,12 +1390,12 @@
 
 
 ### MODULE: CSVExport.psm1  
-📁 Path: `Modules/Export/CSVExport.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Export/CSVExport.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Export-ToCSV {
 - function Get-DataForExport {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $processedOutputPath = Join-Path $Configuration.environment.outputPath "Processed" # Standard location for processed outputs
 - $exportItems = @(
 - $dataToExport = $null
@@ -1393,12 +1407,12 @@
 
 
 ### MODULE: CompanyControlSheetExporter.psm1  
-📁 Path: `Modules/Export/CompanyControlSheetExporter.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Export/CompanyControlSheetExporter.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Export-ToCompanyControlSheet {
 - function Ensure-DirectoryExistsInternal {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $baseSuiteOutputPath = $Configuration.environment.outputPath
 - $baseSuiteOutputPath = Join-Path $global:MandASuiteRoot $baseSuiteOutputPath
 - $baseSuiteOutputPath = Resolve-Path -Path $baseSuiteOutputPath -ErrorAction SilentlyContinue
@@ -1434,12 +1448,12 @@
 
 
 ### MODULE: ExcelExport.psm1  
-📁 Path: `Modules/Export/ExcelExport.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Export/ExcelExport.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Get-ProcessedDataForExcelExport {
 - function Export-ToExcel {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $expectedFilePath = Join-Path $ProcessedOutputPath $DefaultSourceCsvFileName
 - $exportOutputPath = Join-Path $Configuration.environment.outputPath "Exports\Excel"
 - $excelFilePath = Join-Path $exportOutputPath "MandA_Discovery_Report_$(Get-Date -Format 'yyyyMMddHHmmss').xlsx"
@@ -1451,12 +1465,12 @@
 
 
 ### MODULE: JSONExport.psm1  
-📁 Path: `Modules/Export/JSONExport.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Export/JSONExport.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Get-ProcessedDataForJSONExport {
 - function Export-ToJSON {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $expectedFilePath = Join-Path $ProcessedOutputPath $DefaultFileName
 - $exportOutputPath = Join-Path $Configuration.environment.outputPath "Exports\JSON" # Specific subfolder for JSON exports
 - $exportItems = @(
@@ -1476,13 +1490,13 @@
 
 
 ### MODULE: PowerAppsExporter.psm1  
-📁 Path: `Modules/Export/PowerAppsExporter.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Export/PowerAppsExporter.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Get-ProcessedDataFileFromInput {
 - function Export-DataObjectToJson {
 - function Export-ForPowerApps {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $data = $ProcessedData[$KeyName]
 - $baseOutputPath = $Configuration.environment.outputPath
 - $baseOutputPath = $global:MandA.Paths.CompanyProfileRoot
@@ -1554,15 +1568,15 @@
 
 
 ### MODULE: DataAggregation.psm1  
-📁 Path: `Modules/Processing/DataAggregation.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Processing/DataAggregation.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Import-RawDataSources {
 - function Merge-UserProfiles {
 - function Merge-DeviceProfiles {
 - function New-RelationshipGraph {
 - function Start-DataAggregation {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $dataSources = @{}
 - $csvFiles = Get-ChildItem -Path $RawDataPath -Filter "*.csv" -File
 - $sourceName = $file.BaseName
@@ -1594,12 +1608,12 @@
 
 
 ### MODULE: DataValidation.psm1  
-📁 Path: `Modules/Processing/DataValidation.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Processing/DataValidation.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Test-DataQuality {
 - function New-QualityReport {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $issuesFound = [System.Collections.Generic.List[object]]::new()
 - $validRecords = 0
 - $invalidRecords = 0 # Tracks profiles with at least one issue
@@ -1620,14 +1634,14 @@
 
 
 ### MODULE: UserProfileBuilder.psm1  
-📁 Path: `Modules/Processing/UserProfileBuilder.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Processing/UserProfileBuilder.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Convert-MailboxSizeToMB {
 - function Get-Percentile {
 - function New-UserProfiles {
 - function Measure-MigrationComplexity {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $size = [double]$matches[1]
 - $unit = $matches[2].ToUpper()
 - $bytesString = $matches[1] -replace ',', ''
@@ -1696,14 +1710,14 @@
 
 
 ### MODULE: WaveGeneration.psm1  
-📁 Path: `Modules/Processing/WaveGeneration.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Processing/WaveGeneration.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function New-MigrationWaves {
 - function New-WaveObject {
 - function Test-WaveDependencies {
 - function Optimize-SharedMailboxWaves {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $migrationWaves = [System.Collections.Generic.List[object]]::new()
 - $generateByDepartment = $false
 - $generateByDepartment = $Configuration.processing.generateWavesByDepartment
@@ -1791,12 +1805,12 @@
 
 
 ### MODULE: ConfigurationValidation.psm1  
-📁 Path: `Modules/Utilities/ConfigurationValidation.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Utilities/ConfigurationValidation.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Test-SuiteConfigurationAgainstSchema {
 - function Test-ConfigurationNodeInternal {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $validationErrors = [System.Collections.Generic.List[string]]::new()
 - $validationWarnings = [System.Collections.Generic.List[string]]::new()
 - $schemaJson = $null # This will be a PSCustomObject after ConvertFrom-Json
@@ -1817,14 +1831,14 @@
 
 
 ### MODULE: CredentialFormatHandler.psm1  
-📁 Path: `Modules/Utilities/CredentialFormatHandler.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Utilities/CredentialFormatHandler.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function ConvertTo-StandardCredentialFormat {
 - function Test-CredentialFormat {
 - function Save-CredentialFile {
 - function Read-CredentialFile {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $script:CREDENTIAL_FORMAT_VERSION = "2.0"
 - $requiredFields = @('ClientId', 'ClientSecret', 'TenantId')
 - $CredentialData['_FormatVersion'] = $script:CREDENTIAL_FORMAT_VERSION
@@ -1844,9 +1858,9 @@
 
 
 ### MODULE: EnhancedLogging.psm1  
-📁 Path: `Modules/Utilities/EnhancedLogging.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Utilities/EnhancedLogging.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Initialize-Logging {
 - function Write-MandALog {
 - function Test-LogMessage {
@@ -1861,7 +1875,7 @@
 - function Get-LoggingConfiguration {
 - function Set-LogLevel {
 - function Set-LoggingOptions {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $script:LoggingConfig = @{
 - $script:LoggingConfig.LogLevel = $Configuration.environment.logLevel
 - $logPath = if ($global:MandA.Paths.LogOutput) {
@@ -1908,9 +1922,9 @@
 
 
 ### MODULE: ErrorHandling.psm1  
-📁 Path: `Modules/Utilities/ErrorHandling.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Utilities/ErrorHandling.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Invoke-WithRetry {
 - function Test-CriticalError {
 - function Get-FriendlyErrorMessage {
@@ -1918,7 +1932,7 @@
 - function Test-Prerequisites {
 - function Initialize-OutputDirectories {
 - function Test-DirectoryWriteAccess {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $attempt = 0
 - $lastError = $null
 - $result = & $ScriptBlock
@@ -1965,14 +1979,14 @@
 
 
 ### MODULE: FileOperations.psm1  
-📁 Path: `Modules/Utilities/FileOperations.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Utilities/FileOperations.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Import-DataFromCSV {
 - function Export-DataToCSV {
 - function Test-FileWriteAccess {
 - function Backup-File {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $data = Import-Csv -Path $FilePath -Delimiter $Delimiter -ErrorAction Stop
 - $directory = Split-Path $FilePath -Parent
 - $params = @{
@@ -1982,9 +1996,9 @@
 
 
 ### MODULE: ProgressTracking.psm1  
-📁 Path: `Modules/Utilities/ProgressTracking.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Utilities/ProgressTracking.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Initialize-ProgressTracker {
 - function Update-Progress {
 - function Complete-Progress {
@@ -1995,7 +2009,7 @@
 - function Show-ProgressSummary {
 - function Reset-ProgressTracker {
 - function Clear-TempFiles {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $script:ProgressState = @{
 - $script:ProgressState.CurrentPhase = $Phase
 - $script:ProgressState.TotalSteps = $TotalSteps
@@ -2034,9 +2048,9 @@
 
 
 ### MODULE: ValidationHelpers.psm1  
-📁 Path: `Modules/Utilities/ValidationHelpers.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Utilities/ValidationHelpers.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Test-Prerequisites {
 - function Get-RequiredModules {
 - function Test-GuidFormat {
@@ -2048,7 +2062,7 @@
 - function Test-NetworkConnectivity {
 - function Test-DataQuality {
 - function Export-ValidationReport {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $allChecksPass = $true
 - $allChecksPass = $false
 - $allChecksPass = $false
@@ -2087,9 +2101,9 @@
 
 
 ### MODULE: logging.psm1  
-📁 Path: `Modules/Utilities/logging.psm1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Modules/Utilities/logging.psm1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Initialize-Logging {
 - function Write-MandALog {
 - function Test-LogMessage {
@@ -2104,7 +2118,7 @@
 - function Get-LoggingConfiguration {
 - function Set-LogLevel {
 - function Set-LoggingOptions {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $script:LoggingConfig = @{
 - $script:LoggingConfig.LogLevel = $Configuration.environment.logLevel
 - $logPath = Join-Path $Configuration.environment.outputPath "Logs"
@@ -2151,15 +2165,15 @@
 
 
 ### SCRIPT: MandA-Orchestrator.ps1  
-📁 Path: `Core/MandA-Orchestrator.ps1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Core/MandA-Orchestrator.ps1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Initialize-MandAEnvironmentInternal {
 - function Invoke-DiscoveryPhaseInternal {
 - function Invoke-ProcessingPhaseInternal {
 - function Invoke-ExportPhaseInternal {
 - function Complete-MandADiscoveryInternal {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $OriginalErrorActionPreferenceOrchestrator = $ErrorActionPreference
 - $ErrorActionPreference = "Stop"
 - $ErrorActionPreference = $OriginalErrorActionPreferenceOrchestrator
@@ -2216,11 +2230,11 @@
 
 
 ### SCRIPT: Diagnose-CredentialFile.ps1  
-📁 Path: `Scripts/Diagnose-CredentialFile.ps1`  
-🔧 Purpose: No synopsis found.  
-📌 Declared Functions:
+ðŸ“ Path: `Scripts/Diagnose-CredentialFile.ps1`  
+ðŸ”§ Purpose: No synopsis found.  
+ðŸ“Œ Declared Functions:
 
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $fileInfo = Get-Item $CredentialFile
 - $rawContent = Get-Content $CredentialFile -Raw
 - $utf8Content = Get-Content $CredentialFile -Raw -Encoding UTF8
@@ -2235,9 +2249,9 @@
 
 
 ### SCRIPT: DiscoverySuiteModuleCheck.ps1  
-📁 Path: `Scripts/DiscoverySuiteModuleCheck.ps1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Scripts/DiscoverySuiteModuleCheck.ps1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Test-IsAdministrator {
 - Function Get-ModuleDefinition {
 - function Write-SectionHeader {
@@ -2247,7 +2261,7 @@
 - function Install-RSATModuleTool {
 - function Test-SingleModule {
 - function Write-ModuleTable {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $currentUser = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 - $script:IsAdmin = Test-IsAdministrator
 - $script:GlobalMandAConfig = $null
@@ -2347,12 +2361,12 @@
 
 
 ### SCRIPT: Set-SuiteEnvironment.ps1  
-📁 Path: `Scripts/Set-SuiteEnvironment.ps1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Scripts/Set-SuiteEnvironment.ps1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Test-MandASuiteStructureInternal {
 - function ConvertTo-HashtableRecursiveInternal {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $OriginalErrorActionPreference = $ErrorActionPreference
 - $ErrorActionPreference = "Stop"
 - $requiredSubDirs = @("Core", "Modules", "Scripts", "Configuration")
@@ -2394,9 +2408,9 @@
 
 
 ### SCRIPT: Setup-AppRegistration.ps1  
-📁 Path: `Scripts/Setup-AppRegistration.ps1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Scripts/Setup-AppRegistration.ps1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Write-EnhancedLog {
 - function Write-ProgressHeader {
 - function Write-OperationResult {
@@ -2415,7 +2429,7 @@
 - function Save-EnhancedCredentials {
 - function Set-EnhancedRoleAssignments {
 - function Set-ExchangeRoleAssignment {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $envSetupScriptPath = Join-Path $PSScriptRoot "Set-SuiteEnvironment.ps1"
 - $envSetupScriptPath = Join-Path $PSScriptRoot "Set-SuiteEnvironment.ps1"
 - $LogPath = Join-Path $global:MandA.Paths.LogOutput "Setup-AppRegistration_$(Get-Date -Format 'yyyyMMddHHmmss').log"
@@ -2625,9 +2639,9 @@
 
 
 ### SCRIPT: Setup-AppRegistrationOnce.ps1  
-📁 Path: `Scripts/Setup-AppRegistrationOnce.ps1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION | .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Scripts/Setup-AppRegistrationOnce.ps1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION | .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Write-EnhancedLog {
 - function Write-ProgressHeader {
 - function Write-OperationResult {
@@ -2644,7 +2658,7 @@
 - function Set-ExchangeRoleAssignment {
 - function New-EnhancedClientSecret {
 - function Save-EnhancedCredentials {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $ErrorActionPreference = "Stop"
 - $VerbosePreference = "SilentlyContinue"
 - $ProgressPreference = "Continue"
@@ -2659,7 +2673,7 @@
 - $colorParams = switch ($Level) {
 - $icon = switch ($Level) {
 - $displayMessage = "$icon $logMessage"
-- $separator = "═" * 90
+- $separator = "â•" * 90
 - $icon = if ($Success) { "[OK]" } else { "[X]" }
 - $level = if ($Success) { "SUCCESS" } else { "ERROR" }
 - $durationText = if ($Duration) { " ([TIME] $('{0:F2}' -f $Duration.TotalSeconds)s)" } else { "" }
@@ -2895,11 +2909,11 @@
 
 
 ### SCRIPT: Test-AppRegistrationSyntax.ps1  
-📁 Path: `Scripts/Test-AppRegistrationSyntax.ps1`  
-🔧 Purpose: No synopsis found.  
-📌 Declared Functions:
+ðŸ“ Path: `Scripts/Test-AppRegistrationSyntax.ps1`  
+ðŸ”§ Purpose: No synopsis found.  
+ðŸ“Œ Declared Functions:
 
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $errors = $null
 - $tokens = $null
 - $ast = [System.Management.Automation.Language.Parser]::ParseFile("$PSScriptRoot\Setup-AppRegistration.ps1", [ref]$tokens, [ref]$errors)
@@ -2908,11 +2922,11 @@
 
 
 ### SCRIPT: Test-Credentials.ps1  
-📁 Path: `Scripts/Test-Credentials.ps1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Scripts/Test-Credentials.ps1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $scriptRoot = Split-Path $PSScriptRoot -Parent
 - $testData = @{
 - $data = Read-CredentialFile -Path $CredentialFile
@@ -2926,9 +2940,9 @@
 
 
 ### SCRIPT: Validate-Installation.ps1  
-📁 Path: `Scripts/Validate-Installation.ps1`  
-🔧 Purpose: .SYNOPSIS | .DESCRIPTION  
-📌 Declared Functions:
+ðŸ“ Path: `Scripts/Validate-Installation.ps1`  
+ðŸ”§ Purpose: .SYNOPSIS | .DESCRIPTION  
+ðŸ“Œ Declared Functions:
 - function Write-ValidationMessage {
 - function Write-ValidationResult {
 - function Test-SuiteFileStructure {
@@ -2936,7 +2950,7 @@
 - function Test-RequiredModulesCheck { # Renamed
 - function Test-ConfigurationValues {
 - function Test-NetworkConnectivityEndpoints {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 - $envSetupScript = Join-Path $PSScriptRoot "Set-SuiteEnvironment.ps1"
 - $status = if ($Passed) { "PASS" } else { "FAIL" }
 - $color = if ($Passed) { "Green" } else { "Red" }
@@ -2985,9 +2999,9 @@
 
 
 MODULE: DiscoveryModuleBase.psm1
-📁 Path: Modules/Discovery/DiscoveryModuleBase.psm1
-🔧 Purpose: Base module providing common functionality for all discovery modules | Provides standardized interfaces, error handling, retry logic, and performance tracking
-📌 Declared Functions:
+ðŸ“ Path: Modules/Discovery/DiscoveryModuleBase.psm1
+ðŸ”§ Purpose: Base module providing common functionality for all discovery modules | Provides standardized interfaces, error handling, retry logic, and performance tracking
+ðŸ“Œ Declared Functions:
 
 function Invoke-DiscoveryWithRetry {
 function Test-RetryableError {
@@ -3000,7 +3014,7 @@ function Get-ExistingDiscoveryData {
 function Test-DiscoveryDataQuality {
 function Get-DataValidationRules {
 function Export-DiscoveryData {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 result=[DiscoveryResult]::new(result = [DiscoveryResult]::new(
 result=[DiscoveryResult]::new(ModuleName)
 
@@ -3053,14 +3067,14 @@ $retryableMessages = @('timeout', 'temporary', 'transient', 'throttl', 'rate lim
 $message = $Exception.Message.ToLower()
 $retryAfter = $Exception.Response.Headers.RetryAfter
 $exponentialDelay = $InitialDelay * [math]::Pow(2, $Attempt - 1)
-jitter=Get−Random−Minimum0−Maximum(jitter = Get-Random -Minimum 0 -Maximum (
-jitter=Get−Random−Minimum0−Maximum(exponentialDelay * 0.1)
+jitter=Getâˆ’Randomâˆ’Minimum0âˆ’Maximum(jitter = Get-Random -Minimum 0 -Maximum (
+jitter=Getâˆ’Randomâˆ’Minimum0âˆ’Maximum(exponentialDelay * 0.1)
 
 
 MODULE: ExchangeDiscovery.psm1
-📁 Path: Modules/Discovery/ExchangeDiscovery.psm1
-🔧 Purpose: Exchange Online discovery for M&A Discovery Suite | Discovers Exchange Online mailboxes, distribution groups, permissions, and configurations
-📌 Declared Functions:
+ðŸ“ Path: Modules/Discovery/ExchangeDiscovery.psm1
+ðŸ”§ Purpose: Exchange Online discovery for M&A Discovery Suite | Discovers Exchange Online mailboxes, distribution groups, permissions, and configurations
+ðŸ“Œ Declared Functions:
 
 function Invoke-ExchangeDiscovery {
 function Get-ExchangeMailboxes {
@@ -3072,7 +3086,7 @@ function Get-ExchangeSendAsPermissions {
 function Get-ExchangeSendOnBehalfPermissions {
 function Get-ExchangeMailFlowRules {
 function Get-ExchangeRetentionPolicies {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $outputPath = $Configuration.environment.outputPath
 $rawPath = Join-Path $outputPath "Raw"
 $discoveryResults = @{}
@@ -3131,9 +3145,9 @@ $policies = Get-RetentionPolicy
 $tags = Get-RetentionPolicyTag -Policy $policy.Identity
 
 MODULE: GPODiscovery.psm1
-📁 Path: Modules/Discovery/GPODiscovery.psm1
-🔧 Purpose: Enhanced GPO discovery module with robust XML parsing and namespace handling | Handles Group Policy Object discovery with improved XML parsing, namespace resolution, and error handling
-📌 Declared Functions:
+ðŸ“ Path: Modules/Discovery/GPODiscovery.psm1
+ðŸ”§ Purpose: Enhanced GPO discovery module with robust XML parsing and namespace handling | Handles Group Policy Object discovery with improved XML parsing, namespace resolution, and error handling
+ðŸ“Œ Declared Functions:
 
 function Export-DataToCSV {
 function Get-GPOData {
@@ -3142,7 +3156,7 @@ function Get-GPOPermissions {
 function Parse-GPOReport {
 function Export-GPODataToCSV {
 function Invoke-GPODiscovery {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $allGPOs = [System.Collections.Generic.List[PSCustomObject]]::new()
 $allDriveMappings = [System.Collections.Generic.List[PSCustomObject]]::new()
 $allPrinterMappings = [System.Collections.Generic.List[PSCustomObject]]::new()
@@ -3155,8 +3169,8 @@ $configNC = ([ADSI]"LDAP://RootDSE").configurationNamingContext
 subnetContainer=[ADSI]"LDAP://CN=Subnets,CN=Sites,subnetContainer = [ADSI]"LDAP://CN=Subnets,CN=Sites,
 subnetContainer=[ADSI]"LDAP://CN=Subnets,CN=Sites,configNC"
 
-searcher=New−ObjectSystem.DirectoryServices.DirectorySearcher(searcher = New-Object System.DirectoryServices.DirectorySearcher(
-searcher=New−ObjectSystem.DirectoryServices.DirectorySearcher(subnetContainer)
+searcher=Newâˆ’ObjectSystem.DirectoryServices.DirectorySearcher(searcher = New-Object System.DirectoryServices.DirectorySearcher(
+searcher=Newâˆ’ObjectSystem.DirectoryServices.DirectorySearcher(subnetContainer)
 
 $searcher.Filter = "(objectClass=subnet)"
 $gpoParams = @{
@@ -3206,9 +3220,9 @@ $domainController = (Get-ADDomainController -Discover -NextClosestSite).HostName
 $gpoData = Get-GPOData -OutputPath $outputPath -DomainController $domainController
 
 MODULE: NetworkInfrastructureDiscovery.psm1
-📁 Path: Modules/Discovery/NetworkInfrastructureDiscovery.psm1
-🔧 Purpose: Network Infrastructure discovery for M&A Discovery Suite | Discovers DHCP, DNS, and network configuration information
-📌 Declared Functions:
+ðŸ“ Path: Modules/Discovery/NetworkInfrastructureDiscovery.psm1
+ðŸ”§ Purpose: Network Infrastructure discovery for M&A Discovery Suite | Discovers DHCP, DNS, and network configuration information
+ðŸ“Œ Declared Functions:
 
 function Invoke-NetworkInfrastructureDiscovery {
 function Get-DHCPServersData {
@@ -3220,7 +3234,7 @@ function Get-DNSZonesData {
 function Get-DNSRecordsData {
 function Get-ADSubnetsData {
 function Get-ADSitesData {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $discoveryResults = @{}
 $discoveryResults.DHCPServers = Get-DHCPServersData -OutputPath $outputPath -Configuration $Configuration
 $discoveryResults.DHCPScopes = Get-DHCPScopesData -OutputPath $outputPath -Configuration $Configuration
@@ -3269,8 +3283,8 @@ $configNC = ([ADSI]"LDAP://RootDSE").configurationNamingContext
 subnetContainer=[ADSI]"LDAP://CN=Subnets,CN=Sites,subnetContainer = [ADSI]"LDAP://CN=Subnets,CN=Sites,
 subnetContainer=[ADSI]"LDAP://CN=Subnets,CN=Sites,configNC"
 
-searcher=New−ObjectSystem.DirectoryServices.DirectorySearcher(searcher = New-Object System.DirectoryServices.DirectorySearcher(
-searcher=New−ObjectSystem.DirectoryServices.DirectorySearcher(subnetContainer)
+searcher=Newâˆ’ObjectSystem.DirectoryServices.DirectorySearcher(searcher = New-Object System.DirectoryServices.DirectorySearcher(
+searcher=Newâˆ’ObjectSystem.DirectoryServices.DirectorySearcher(subnetContainer)
 
 $subnet = $result.Properties
 $siteDN = $subnet["siteobject"][0]
@@ -3279,18 +3293,18 @@ siteName=if(siteDN) {
 
 $sites = [System.Collections.Generic.List[PSCustomObject]]::new()
 $adSites = Get-ADReplicationSite -Filter * -Properties * -ErrorAction Stop
-subnetCount=(Get−ADReplicationSubnet−Filter"Site−eq′subnetCount = (Get-ADReplicationSubnet -Filter "Site -eq '
-subnetCount=(Get−ADReplicationSubnet−Filter"Site−eq′($site.DistinguishedName)'" -ErrorAction SilentlyContinue | Measure-Object).Count
+subnetCount=(Getâˆ’ADReplicationSubnetâˆ’Filter"Siteâˆ’eqâ€²subnetCount = (Get-ADReplicationSubnet -Filter "Site -eq '
+subnetCount=(Getâˆ’ADReplicationSubnetâˆ’Filter"Siteâˆ’eqâ€²($site.DistinguishedName)'" -ErrorAction SilentlyContinue | Measure-Object).Count
 
 $siteLinks = Get-ADReplicationSiteLink -Filter * -ErrorAction SilentlyContinue
-siteDCs=Get−ADDomainController−Filter"Site−eq′siteDCs = Get-ADDomainController -Filter "Site -eq '
-siteDCs=Get−ADDomainController−Filter"Site−eq′($site.Name)'" -ErrorAction SilentlyContinue
+siteDCs=Getâˆ’ADDomainControllerâˆ’Filter"Siteâˆ’eqâ€²siteDCs = Get-ADDomainController -Filter "Site -eq '
+siteDCs=Getâˆ’ADDomainControllerâˆ’Filter"Siteâˆ’eqâ€²($site.Name)'" -ErrorAction SilentlyContinue
 
 
 MODULE: SQLServerDiscoveryNoUse.psm1
-📁 Path: Modules/Discovery/SQLServerDiscoveryNoUse.psm1
-🔧 Purpose: SQL Server infrastructure discovery for M&A Discovery Suite | Discovers SQL Server instances, databases, configurations, and dependencies
-📌 Declared Functions:
+ðŸ“ Path: Modules/Discovery/SQLServerDiscoveryNoUse.psm1
+ðŸ”§ Purpose: SQL Server infrastructure discovery for M&A Discovery Suite | Discovers SQL Server instances, databases, configurations, and dependencies
+ðŸ“Œ Declared Functions:
 
 function Invoke-SQLServerDiscovery {
 function Get-SQLServerInstances {
@@ -3315,7 +3329,7 @@ function Get-MaintenanceSubPlans {
 function Get-SQLServerConfigurations {
 function Export-DataToCSV {
 function Import-DataFromCSV {
-📦 Variables Used:
+ðŸ“¦ Variables Used:
 $outputPath = $Configuration.environment.outputPath
 $discoveryResults = @{}
 $discoveryResults.Instances = Get-SQLServerInstances -OutputPath $outputPath -Configuration $Configuration
@@ -3355,12 +3369,12 @@ $details = @{
 connectionString=if(connectionString = if (
 connectionString=if(Instance.InstanceName -eq "MSSQLSERVER") {
 
-connection=New−ObjectSystem.Data.SqlClient.SqlConnection(connection = New-Object System.Data.SqlClient.SqlConnection(
-connection=New−ObjectSystem.Data.SqlClient.SqlConnection(connectionString)
+connection=Newâˆ’ObjectSystem.Data.SqlClient.SqlConnection(connection = New-Object System.Data.SqlClient.SqlConnection(
+connection=Newâˆ’ObjectSystem.Data.SqlClient.SqlConnection(connectionString)
 
 $versionQuery = "SELECT
-command=New−ObjectSystem.Data.SqlClient.SqlCommand(command = New-Object System.Data.SqlClient.SqlCommand(
-command=New−ObjectSystem.Data.SqlClient.SqlCommand(versionQuery, $connection)
+command=Newâˆ’ObjectSystem.Data.SqlClient.SqlCommand(command = New-Object System.Data.SqlClient.SqlCommand(
+command=Newâˆ’ObjectSystem.Data.SqlClient.SqlCommand(versionQuery, $connection)
 
 $reader = $command.ExecuteReader()
 $details.Version = $reader["Version"]
@@ -3390,8 +3404,8 @@ instanceName=if(instanceName = if (
 instanceName=if(instance.InstanceName -eq "MSSQLSERVER") {
 
 $query = "SELECT
-adapter=New−ObjectSystem.Data.SqlClient.SqlDataAdapter(adapter = New-Object System.Data.SqlClient.SqlDataAdapter(
-adapter=New−ObjectSystem.Data.SqlClient.SqlDataAdapter(command)
+adapter=Newâˆ’ObjectSystem.Data.SqlClient.SqlDataAdapter(adapter = New-Object System.Data.SqlClient.SqlDataAdapter(
+adapter=Newâˆ’ObjectSystem.Data.SqlClient.SqlDataAdapter(command)
 
 $dataset = New-Object System.Data.DataSet
 $jobsData = [System.Collections.Generic.List[PSCustomObject]]::new()

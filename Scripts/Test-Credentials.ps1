@@ -1,4 +1,11 @@
-# -*- coding: utf-8-bom -*-
+﻿# -*- coding: utf-8-bom -*-
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-05
+# Last Modified: 2025-06-06
+# Change Log: Updated version control header
+
 <#
 .SYNOPSIS
     Tests the credential file functionality

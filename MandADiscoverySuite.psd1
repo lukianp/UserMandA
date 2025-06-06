@@ -1,3 +1,17 @@
+﻿# Author: Lukian Poleschtschuk
+}
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-05
+# Last Modified: 2025-06-06
+# Change Log: Updated version control header
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-05
+# Last Modified: 2025-06-06
+# Change Log: Initial version - any future changes require version increment
+
 @{
     # Script module or binary module file associated with this manifest
     RootModule = 'QuickStart.ps1'

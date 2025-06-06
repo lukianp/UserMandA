@@ -1,5 +1,12 @@
-# -*- coding: utf-8-bom -*-
+﻿# -*- coding: utf-8-bom -*-
 #Requires -Modules Az.Accounts, Az.Resources, Az.Compute, Az.Network, Az.PolicyInsights, Az.RecoveryServices
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-04
+# Last Modified: 2025-06-06
+# Change Log: Updated version control header
+
 <#
 .SYNOPSIS
     Enhanced Azure Discovery Module with API Throttling Support

@@ -1,5 +1,12 @@
-# -*- coding: utf-8-bom -*-
+﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-06-06
+# Last Modified: 2025-06-06
+# Change Log: Updated version control header
+
 <#
 .SYNOPSIS
     Tests the comprehensive error reporting functionality of the M&A Discovery Suite.
@@ -547,10 +554,10 @@ try {
     $overallSuccess = ($testResults.Values | Where-Object { $_ -eq $false }).Count -eq 0
     
     if ($overallSuccess) {
-        Write-Host "`n✅ All error reporting tests passed successfully!" -ForegroundColor Green
+        Write-Host "`nâœ… All error reporting tests passed successfully!" -ForegroundColor Green
         exit 0
     } else {
-        Write-Host "`n❌ Some error reporting tests failed. Check the logs for details." -ForegroundColor Red
+        Write-Host "`nâŒ Some error reporting tests failed. Check the logs for details." -ForegroundColor Red
         exit 1
     }
     
