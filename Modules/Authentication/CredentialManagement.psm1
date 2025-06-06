@@ -8,6 +8,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     Secure credential storage and retrieval for M&A Discovery Suite
 .DESCRIPTION
     Handles encrypted credential storage using DPAPI with standardized format

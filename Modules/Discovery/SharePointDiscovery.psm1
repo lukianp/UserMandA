@@ -15,6 +15,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     SharePoint Online discovery for M&A Discovery Suite
 .DESCRIPTION
     Discovers SharePoint sites, permissions, storage, external sharing, and content
@@ -296,7 +311,7 @@ function Invoke-SharePointDiscovery {
         # Discover Hub Sites with specific error handling
         try {
             Write-MandALog "Discovering SharePoint hub sites..." -Level "INFO" -Context $Context
-            $sharePointData.HubSites = Get-SharePointHubSitesData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $sharePointData.HubSites = Get-SharePointHubSitesData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['HubSiteCount'] = $sharePointData.HubSites.Count
             Write-MandALog "Successfully discovered $($sharePointData.HubSites.Count) SharePoint hub sites" -Level "SUCCESS" -Context $Context
         }
@@ -314,7 +329,7 @@ function Invoke-SharePointDiscovery {
         # Discover External Users with specific error handling
         try {
             Write-MandALog "Discovering SharePoint external users..." -Level "INFO" -Context $Context
-            $sharePointData.ExternalUsers = Get-SharePointExternalUsersData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $sharePointData.ExternalUsers = Get-SharePointExternalUsersData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['ExternalUserCount'] = $sharePointData.ExternalUsers.Count
             Write-MandALog "Successfully discovered $($sharePointData.ExternalUsers.Count) SharePoint external users" -Level "SUCCESS" -Context $Context
         }
@@ -332,7 +347,7 @@ function Invoke-SharePointDiscovery {
         # Discover Sharing Links with specific error handling
         try {
             Write-MandALog "Discovering SharePoint sharing links..." -Level "INFO" -Context $Context
-            $sharePointData.SharingLinks = Get-SharePointSharingLinksData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Sites $sharePointData.SiteCollections
+            $sharePointData.SharingLinks = Get-SharePointSharingLinksData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -Sites $sharePointData.SiteCollections
             $result.Metadata['SharingLinkCount'] = $sharePointData.SharingLinks.Count
             Write-MandALog "Successfully discovered $($sharePointData.SharingLinks.Count) SharePoint sharing links" -Level "SUCCESS" -Context $Context
         }
@@ -351,7 +366,7 @@ function Invoke-SharePointDiscovery {
         # Discover Site Permissions with specific error handling
         try {
             Write-MandALog "Discovering SharePoint site permissions..." -Level "INFO" -Context $Context
-            $sharePointData.SitePermissions = Get-SharePointSitePermissionsData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Sites $sharePointData.SiteCollections
+            $sharePointData.SitePermissions = Get-SharePointSitePermissionsData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -Sites $sharePointData.SiteCollections
             $result.Metadata['SitePermissionCount'] = $sharePointData.SitePermissions.Count
             Write-MandALog "Successfully discovered $($sharePointData.SitePermissions.Count) SharePoint site permissions" -Level "SUCCESS" -Context $Context
         }
@@ -370,7 +385,7 @@ function Invoke-SharePointDiscovery {
         # Discover Storage Metrics with specific error handling
         try {
             Write-MandALog "Analyzing SharePoint storage usage..." -Level "INFO" -Context $Context
-            $sharePointData.StorageMetrics = Get-SharePointStorageMetricsData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $sharePointData.StorageMetrics = Get-SharePointStorageMetricsData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['StorageMetricCount'] = $sharePointData.StorageMetrics.Count
             Write-MandALog "Successfully analyzed SharePoint storage usage" -Level "SUCCESS" -Context $Context
         }
@@ -388,7 +403,7 @@ function Invoke-SharePointDiscovery {
         # Discover Content Types with specific error handling
         try {
             Write-MandALog "Discovering SharePoint content types..." -Level "INFO" -Context $Context
-            $sharePointData.ContentTypes = Get-SharePointContentTypesData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Sites $sharePointData.SiteCollections
+            $sharePointData.ContentTypes = Get-SharePointContentTypesData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -Sites $sharePointData.SiteCollections
             $result.Metadata['ContentTypeCount'] = $sharePointData.ContentTypes.Count
             Write-MandALog "Successfully discovered SharePoint content types" -Level "SUCCESS" -Context $Context
         }
@@ -919,3 +934,4 @@ Export-ModuleMember -Function @(
     'Get-SharePointStorageMetricsData',
     'Get-SharePointContentTypesData'
 )
+

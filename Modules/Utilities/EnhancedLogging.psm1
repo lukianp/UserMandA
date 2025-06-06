@@ -36,6 +36,21 @@
 # Export functions to be available when the module is imported.
 Export-ModuleMember -Function Initialize-Logging, Write-MandALog, Move-LogFile, Clear-OldLogFiles
 
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
+
 # --- Script-level Logging Configuration (Defaults) ---
 $script:LoggingConfig = @{
     LogFile             = $null
@@ -144,12 +159,13 @@ function Initialize-Logging {
         $script:LoggingConfig.DefaultContext = $Context 
     } elseif ($null -ne $global:MandA -and ($global:MandA -is [hashtable])) {
         Write-Host "[EnhancedLogging.Initialize-Logging] No -Context provided, attempting to use `\$global:MandA." -ForegroundColor DarkYellow
-        if ($global:MandA.ContainsKey('Config')) { $effectiveConfig = $global:MandA.Config }
-        if ($global:MandA.ContainsKey('Paths')) { $effectivePaths = $global:MandA.Paths }
+        $moduleContext = Get-ModuleContext
+        if ($moduleContext.ContainsKey('Config')) { $effectiveConfig = $moduleContext.Config }
+        if ($moduleContext.ContainsKey('Paths')) { $effectivePaths = $moduleContext.Paths }
         if ($global:MandA.ContainsKey('CompanyName') -and -not [string]::IsNullOrWhiteSpace($global:MandA.CompanyName)) {
-            $currentCompanyNameForLog = $global:MandA.CompanyName -replace '[<>:"/\\|?*]', '_'
+            $currentCompanyNameForLog = $moduleContext.CompanyName -replace '[<>:"/\\|?*]', '_'
         }
-        $script:LoggingConfig.DefaultContext = $global:MandA
+        $script:LoggingConfig.DefaultContext = $moduleContext
     }
 
     if ($null -ne $effectiveConfig -and ($effectiveConfig -is [hashtable])) {
@@ -198,7 +214,7 @@ function Initialize-Logging {
     $script:LoggingConfig.LogFile = Join-Path $script:LoggingConfig.LogPath "$($logFileBaseName)_$timestampForFile.log"
     $script:LoggingConfig.Initialized = $true 
     
-    $initialLogContext = if ($null -ne $Context) {$Context} elseif ($null -ne $global:MandA) {$global:MandA} else {[PSCustomObject]@{Config = $effectiveConfig}}
+    $initialLogContext = if ($null -ne $Context) {$Context} elseif ($null -ne $global:MandA) {Get-ModuleContext} else {[PSCustomObject]@{Config = $effectiveConfig}}
     Write-MandALog -Message "Logging system initialized. LogLevel: $($script:LoggingConfig.LogLevel). LogFile: $($script:LoggingConfig.LogFile)" -Level "INFO" -Component "LoggerInit" -Context $initialLogContext
     
     $cleanupContext = $initialLogContext
@@ -370,7 +386,7 @@ function Clear-OldLogFiles {
         return
     }
 
-    $logPathForClear = $Context.Paths.LogOutput | global:Get-OrElse $script:LoggingConfig.LogPath
+    $logPathForClear = (Get-ModuleContext).Paths.LogOutput | global:Get-OrElse $script:LoggingConfig.LogPath
     $retentionDays = Get-EffectiveLoggingSetting -SettingName 'LogRetentionDays' -Context $Context -DefaultValue 30
 
     if ($retentionDays -le 0) {

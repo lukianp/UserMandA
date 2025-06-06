@@ -9,6 +9,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     Enhanced Environment Detection Discovery Module
 .DESCRIPTION
     Detects the type of environment (Cloud-only, Hybrid, On-prem only) with
@@ -338,14 +353,14 @@ function Invoke-EnvironmentDetectionDiscovery {
         # Export data with error handling
         try {
             Write-ProgressStep "Exporting environment detection results..." -Status Progress
-            $outputFile = Join-Path $Context.Paths.RawDataOutput "EnvironmentDetection.csv"
+            $outputFile = Join-Path (Get-ModuleContext).Paths.RawDataOutput "EnvironmentDetection.csv"
             $envData = ConvertTo-EnvironmentDataObject -EnvironmentInfo $environmentInfo
             Export-DataToCSV -Data @($envData) -FilePath $outputFile -Context $Context
             
             # Export AD Connect servers if found
             if ($environmentInfo.ADConnectServers -and $environmentInfo.ADConnectServers.Count -gt 0) {
                 Write-ProgressStep "Exporting AD Connect server information..." -Status Progress
-                $adcOutputFile = Join-Path $Context.Paths.RawDataOutput "ADConnectServers.csv"
+                $adcOutputFile = Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADConnectServers.csv"
                 Export-DataToCSV -Data $environmentInfo.ADConnectServers -FilePath $adcOutputFile -Context $Context
             }
             
@@ -873,3 +888,4 @@ Export-ModuleMember -Function @(
     'Get-EnvironmentType',
     'Invoke-EnvironmentDetectionDiscovery'
 )
+

@@ -21,7 +21,7 @@
     
     Key improvements:
     - Enhanced debug logging throughout
-    - Fixed enabledSources Hashtable/Array handling
+    - Cleaned up redundant enabledSources defensive code
     - Fixed authentication context type issues
     - Removed all non-ASCII characters
     - Added comprehensive error context
@@ -56,6 +56,21 @@ param(
 #===============================================================================
 #                       INITIALIZATION
 #===============================================================================
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
 
 # Verify global context exists
 Write-Host "[ORCHESTRATOR DEBUG] Starting initialization..." -ForegroundColor Cyan
@@ -235,7 +250,7 @@ function Initialize-OrchestratorModules {
     
     Write-OrchestratorLog -Message "Loading utility modules..." -Level "DEBUG" -DebugOnly
     foreach ($module in $utilityModules) {
-        $modulePath = Join-Path $global:MandA.Paths.Utilities "$module.psm1"
+        $modulePath = Join-Path (Get-ModuleContext).Paths.Utilities "$module.psm1"
         Write-OrchestratorLog -Message "Checking utility module: $modulePath" -Level "DEBUG" -DebugOnly
         
         if (Test-Path $modulePath) {
@@ -269,19 +284,11 @@ function Initialize-OrchestratorModules {
 function Load-DiscoveryModules {
     Write-OrchestratorLog -Message "Loading discovery modules..." -Level "INFO"
     
-    # FIX: Properly handle enabledSources configuration
-    if ($enabledSources -is [System.Collections.Hashtable]) {
-    $enabledSources = @($enabledSources.Keys)
-} elseif ($enabledSources -is [PSCustomObject]) {
-    $enabledSources = @($enabledSources.PSObject.Properties.Name)
-} elseif ($enabledSources -isnot [array]) {
-    $enabledSources = @($enabledSources)
-}
-    
-    Write-OrchestratorLog -Message "Raw enabledSources type: $($enabledSources.GetType().FullName)" -Level "DEBUG" -DebugOnly
-    Write-OrchestratorLog -Message "Raw enabledSources content: $($enabledSources | ConvertTo-Json -Compress)" -Level "DEBUG" -DebugOnly
+    Write-OrchestratorLog -Message "Raw enabledSources type: $($global:MandA.Config.discovery.enabledSources.GetType().FullName)" -Level "DEBUG" -DebugOnly
+    Write-OrchestratorLog -Message "Raw enabledSources content: $($global:MandA.Config.discovery.enabledSources | ConvertTo-Json -Compress)" -Level "DEBUG" -DebugOnly
     
     # Validate and convert enabledSources to array
+    $enabledSources = (Get-ModuleContext).Config.discovery.enabledSources
     if ($null -eq $enabledSources) {
         Write-OrchestratorLog -Message "enabledSources is null, using empty array" -Level "WARN"
         $enabledSources = @()
@@ -309,7 +316,7 @@ function Load-DiscoveryModules {
             continue
         }
         
-        $modulePath = Join-Path $global:MandA.Paths.Discovery "${source}Discovery.psm1"
+        $modulePath = Join-Path (Get-ModuleContext).Paths.Discovery "${source}Discovery.psm1"
         Write-OrchestratorLog -Message "Attempting to load: $modulePath" -Level "DEBUG" -DebugOnly
         
         if (Test-Path $modulePath) {
@@ -356,7 +363,7 @@ function Load-ProcessingModules {
     
     $loadedCount = 0
     foreach ($module in $processingModules) {
-        $modulePath = Join-Path $global:MandA.Paths.Processing "$module.psm1"
+        $modulePath = Join-Path (Get-ModuleContext).Paths.Processing "$module.psm1"
         Write-OrchestratorLog -Message "Checking processing module: $modulePath" -Level "DEBUG" -DebugOnly
         
         if (Test-Path $modulePath) {
@@ -380,7 +387,7 @@ function Load-ProcessingModules {
 function Load-ExportModules {
     Write-OrchestratorLog -Message "Loading export modules..." -Level "INFO"
     
-    $enabledFormats = $global:MandA.Config.export.formats
+    $enabledFormats = (Get-ModuleContext).Config.export.formats
     if ($enabledFormats -isnot [array]) {
         $enabledFormats = @($enabledFormats)
     }
@@ -399,7 +406,7 @@ function Load-ExportModules {
     foreach ($format in $enabledFormats) {
         if ($formatMapping.ContainsKey($format)) {
             $moduleName = $formatMapping[$format]
-            $modulePath = Join-Path $global:MandA.Paths.Export "$moduleName.psm1"
+            $modulePath = Join-Path (Get-ModuleContext).Paths.Export "$moduleName.psm1"
             
             Write-OrchestratorLog -Message "Loading export module for $format`: $modulePath" -Level "DEBUG" -DebugOnly
             
@@ -490,19 +497,13 @@ function Invoke-DiscoveryPhase {
             Write-OrchestratorLog -Message "Authentication module not found, skipping authentication" -Level "WARN"
         }
         
-        $enabledSources = $global:MandA.Config.discovery.enabledSources
+        $enabledSources = (Get-ModuleContext).Config.discovery.enabledSources
         $criticalSources = @('ActiveDirectory', 'Graph')  # Sources that must succeed
         
-        # FIX: Validate enabledSources (same fix as in Load-DiscoveryModules)
+        # Validate enabledSources is not null
         if ($null -eq $enabledSources) {
+            Write-OrchestratorLog -Message "enabledSources is null, using empty array" -Level "WARN"
             $enabledSources = @()
-        } elseif ($enabledSources -is [System.Collections.Hashtable]) {
-            Write-OrchestratorLog -Message "Converting enabledSources from Hashtable to array" -Level "WARN"
-            $enabledSources = @($enabledSources.Keys)
-        } elseif ($enabledSources -is [PSCustomObject]) {
-            $enabledSources = @($enabledSources.PSObject.Properties.Name)
-        } elseif ($enabledSources -isnot [array]) {
-            $enabledSources = @($enabledSources)
         }
         
         # Filter to string sources only
@@ -987,7 +988,7 @@ function Invoke-ExportPhase {
         }
         
         # Execute exports
-        $enabledFormats = $global:MandA.Config.export.formats
+        $enabledFormats = (Get-ModuleContext).Config.export.formats
         if ($enabledFormats -isnot [array]) {
             $enabledFormats = @($enabledFormats)
         }

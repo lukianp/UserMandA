@@ -10,6 +10,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     M&A Discovery Suite - Excel Export Module
 .DESCRIPTION
     This module is responsible for exporting processed data to Excel files.
@@ -24,10 +39,10 @@
 
 # NOTE: Global environment check has been moved to function scope to avoid module loading issues.
 # Functions will check for the global context when they are called, rather than at module import time.
-        $outputPath = $Context.Paths.RawDataOutput
+        $outputPath = (Get-ModuleContext).Paths.RawDataOutput
 
-        if (-not (Test-Path $Context.Paths.RawDataOutput)) {
-    New-Item -Path $Context.Paths.RawDataOutput -ItemType Directory -Force
+        if (-not (Test-Path (Get-ModuleContext).Paths.RawDataOutput)) {
+    New-Item -Path (Get-ModuleContext).Paths.RawDataOutput -ItemType Directory -Force
 }
 
 
@@ -129,3 +144,4 @@ function Export-ToExcel {
 }
 
 Export-ModuleMember -Function Export-ToExcel
+

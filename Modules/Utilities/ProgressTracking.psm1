@@ -9,6 +9,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     Provides functions for tracking the progress and performance metrics of operations
     within the M&A Discovery Suite.
 .DESCRIPTION

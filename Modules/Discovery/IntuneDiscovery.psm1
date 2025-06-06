@@ -8,6 +8,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     Enhanced Intune Discovery Module for M&A Discovery Suite
 .DESCRIPTION
     Discovers Intune managed devices, configurations, policies, apps, and user associations
@@ -27,8 +42,8 @@ function Initialize-IntuneDiscovery {
     param($Context)
     
     # Set output path
-    if ($Context -and $Context.Paths -and $Context.Paths.RawDataOutput) {
-        $script:outputPath = $Context.Paths.RawDataOutput
+    if ($Context -and $Context.Paths -and (Get-ModuleContext).Paths.RawDataOutput) {
+        $script:outputPath = (Get-ModuleContext).Paths.RawDataOutput
     } elseif ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.RawDataOutput) {
         $script:outputPath = $global:MandA.Paths.RawDataOutput
     } else {
@@ -579,7 +594,7 @@ function Invoke-IntuneDiscovery {
             
             # Export devices data
             if ($intuneData.ManagedDevices.Count -gt 0) {
-                Export-DataToCSV -Data $intuneData.ManagedDevices -FilePath (Join-Path $Context.Paths.RawDataOutput "IntuneManagedDevices.csv") -Context $Context
+                Export-DataToCSV -Data $intuneData.ManagedDevices -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "IntuneManagedDevices.csv") -Context $Context
             }
         }
         catch {
@@ -759,3 +774,4 @@ Export-ModuleMember -Function @(
     'Invoke-IntuneDiscovery',
     'Initialize-IntuneDiscovery'
 )
+

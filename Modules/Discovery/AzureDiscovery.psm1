@@ -9,6 +9,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     Enhanced Azure Discovery Module with API Throttling Support
 .DESCRIPTION
     Provides comprehensive Azure resource discovery with improved error handling,
@@ -1202,7 +1217,7 @@ function Process-ServicePrincipalOwners {
 function Export-AzureDiscoveryData {
     param($DiscoveredData, $Context)
     
-    $outputPath = $Context.Paths.RawDataOutput
+    $outputPath = (Get-ModuleContext).Paths.RawDataOutput
     
     foreach ($key in $DiscoveredData.Keys) {
         $dataList = $DiscoveredData[$key]
@@ -1219,3 +1234,4 @@ function Export-AzureDiscoveryData {
 
 # Export module members
 Export-ModuleMember -Function @('Invoke-AzureDiscovery')
+

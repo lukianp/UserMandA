@@ -10,6 +10,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     Enhanced Data Aggregation Module for M&A Discovery Suite
 .DESCRIPTION
     This module is the core of the processing phase. It reads all raw CSV files,
@@ -921,7 +936,7 @@ function Start-DataAggregation {
         $missingPaths = @()
         
         foreach ($pathName in $requiredPaths) {
-            if (-not ($Context.Paths.PSObject.Properties.Name -contains $pathName)) {
+            if (-not ((Get-ModuleContext).Paths.PSObject.Properties.Name -contains $pathName)) {
                 $missingPaths += $pathName
             } elseif ([string]::IsNullOrWhiteSpace($Context.Paths.$pathName)) {
                 $missingPaths += "$pathName (empty)"
@@ -933,8 +948,8 @@ function Start-DataAggregation {
         }
         
         # Validate paths exist
-        $rawDataPath = $Context.Paths.RawDataOutput
-        $processedDataPath = $Context.Paths.ProcessedDataOutput
+        $rawDataPath = (Get-ModuleContext).Paths.RawDataOutput
+        $processedDataPath = (Get-ModuleContext).Paths.ProcessedDataOutput
         
         if (-not (Test-Path $rawDataPath -PathType Container)) {
             throw "Raw data path does not exist: $rawDataPath"
@@ -1121,3 +1136,4 @@ if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
     # This fallback should ideally not be needed if EnhancedLogging loads first and reliably.
     Write-Host "DEBUG: DataAggregation module v2.1.0 loaded and parsed (Write-MandALog not found, check EnhancedLogging.psm1 load order/status)." -ForegroundColor Gray
 }
+

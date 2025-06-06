@@ -15,6 +15,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     Microsoft Teams discovery for M&A Discovery Suite
 .DESCRIPTION
     Discovers Teams, channels, members, apps, policies, and phone configurations
@@ -287,7 +302,7 @@ function Invoke-TeamsDiscovery {
         if ($teamsData.Teams.Count -gt 0) {
             try {
                 Write-MandALog "Discovering Team channels..." -Level "INFO" -Context $Context
-                $teamsData.TeamChannels = Get-TeamChannelsData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Teams $teamsData.Teams
+                $teamsData.TeamChannels = Get-TeamChannelsData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -Teams $teamsData.Teams
                 $result.Metadata['TeamChannelCount'] = $teamsData.TeamChannels.Count
                 Write-MandALog "Successfully discovered $($teamsData.TeamChannels.Count) Team channels" -Level "SUCCESS" -Context $Context
             }
@@ -306,7 +321,7 @@ function Invoke-TeamsDiscovery {
             # Discover Team Members with specific error handling
             try {
                 Write-MandALog "Discovering Team members..." -Level "INFO" -Context $Context
-                $teamsData.TeamMembers = Get-TeamMembersData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Teams $teamsData.Teams
+                $teamsData.TeamMembers = Get-TeamMembersData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -Teams $teamsData.Teams
                 $result.Metadata['TeamMemberCount'] = $teamsData.TeamMembers.Count
                 Write-MandALog "Successfully discovered $($teamsData.TeamMembers.Count) Team members" -Level "SUCCESS" -Context $Context
             }
@@ -325,7 +340,7 @@ function Invoke-TeamsDiscovery {
             # Discover Team Apps with specific error handling
             try {
                 Write-MandALog "Discovering Team apps..." -Level "INFO" -Context $Context
-                $teamsData.TeamApps = Get-TeamAppsData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Teams $teamsData.Teams
+                $teamsData.TeamApps = Get-TeamAppsData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -Teams $teamsData.Teams
                 $result.Metadata['TeamAppCount'] = $teamsData.TeamApps.Count
                 Write-MandALog "Successfully discovered $($teamsData.TeamApps.Count) Team apps" -Level "SUCCESS" -Context $Context
             }
@@ -345,7 +360,7 @@ function Invoke-TeamsDiscovery {
         # Discover Guest Users with specific error handling
         try {
             Write-MandALog "Discovering guest users in Teams..." -Level "INFO" -Context $Context
-            $teamsData.GuestUsers = Get-TeamsGuestUsersData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $teamsData.GuestUsers = Get-TeamsGuestUsersData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['GuestUserCount'] = $teamsData.GuestUsers.Count
             Write-MandALog "Successfully discovered $($teamsData.GuestUsers.Count) guest users" -Level "SUCCESS" -Context $Context
         }
@@ -364,7 +379,7 @@ function Invoke-TeamsDiscovery {
         # Discover Teams Policies with specific error handling
         try {
             Write-MandALog "Discovering Teams policies..." -Level "INFO" -Context $Context
-            $teamsData.TeamsPolicies = Get-TeamsPoliciesData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $teamsData.TeamsPolicies = Get-TeamsPoliciesData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['TeamsPolicyCount'] = $teamsData.TeamsPolicies.Count
             Write-MandALog "Successfully discovered $($teamsData.TeamsPolicies.Count) Teams policies" -Level "SUCCESS" -Context $Context
         }
@@ -382,7 +397,7 @@ function Invoke-TeamsDiscovery {
         # Discover Teams Phone with specific error handling
         try {
             Write-MandALog "Discovering Teams phone configurations..." -Level "INFO" -Context $Context
-            $teamsData.TeamsPhone = Get-TeamsPhoneData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $teamsData.TeamsPhone = Get-TeamsPhoneData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['TeamsPhoneCount'] = $teamsData.TeamsPhone.Count
             Write-MandALog "Successfully discovered Teams phone configurations" -Level "SUCCESS" -Context $Context
         }
@@ -1115,3 +1130,4 @@ Export-ModuleMember -Function @(
     'Get-TeamsPoliciesData',
     'Get-TeamsPhoneData'
 )
+

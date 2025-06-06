@@ -9,6 +9,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     Provides comprehensive error reporting and export capabilities for the M&A Discovery Suite.
 .DESCRIPTION
     This module includes functions to generate detailed error reports, export them in multiple formats,
@@ -96,8 +111,8 @@ function Export-ErrorReport {
     try {
         # Determine output path
         if ([string]::IsNullOrWhiteSpace($OutputPath)) {
-            if ($Context -and $Context.PSObject.Properties['Paths'] -and $Context.Paths.PSObject.Properties['LogOutput']) {
-                $OutputPath = $Context.Paths.LogOutput
+            if ($Context -and $Context.PSObject.Properties['Paths'] -and (Get-ModuleContext).Paths.PSObject.Properties['LogOutput']) {
+                $OutputPath = (Get-ModuleContext).Paths.LogOutput
             } elseif ($global:MandA -and $global:MandA.ContainsKey('Paths') -and $global:MandA.Paths.ContainsKey('LogOutput')) {
                 $OutputPath = $global:MandA.Paths.LogOutput
             } else {
@@ -1123,8 +1138,8 @@ function Export-ErrorAnalysis {
     
     # Determine output path
     if ([string]::IsNullOrWhiteSpace($OutputPath)) {
-        if ($Context -and $Context.PSObject.Properties['Paths'] -and $Context.Paths.PSObject.Properties['LogOutput']) {
-            $OutputPath = $Context.Paths.LogOutput
+        if ($Context -and $Context.PSObject.Properties['Paths'] -and (Get-ModuleContext).Paths.PSObject.Properties['LogOutput']) {
+            $OutputPath = (Get-ModuleContext).Paths.LogOutput
         } else {
             $OutputPath = ".\ErrorAnalysis"
         }
@@ -1201,3 +1216,4 @@ function Get-ErrorStatistics {
 }
 
 Write-Host "[ErrorReporting.psm1] Module loaded." -ForegroundColor DarkGray
+

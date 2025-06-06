@@ -9,6 +9,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     Provides common validation helper functions for the M&A Discovery Suite.
 .DESCRIPTION
     This module includes functions for validating prerequisites, data formats (GUID, email, UPN),
@@ -65,7 +80,7 @@ function Test-Prerequisites {
         $allChecksPass = $false
     } else {
         foreach ($pathKey in $criticalPaths) {
-            if (-not $Context.Paths.HashtableContains($pathKey) -or [string]::IsNullOrWhiteSpace($Context.Paths[$pathKey])) {
+            if (-not (Get-ModuleContext).Paths.HashtableContains($pathKey) -or [string]::IsNullOrWhiteSpace($Context.Paths[$pathKey])) {
                 $validationIssues.Add("Critical path '$pathKey' is not defined in context.")
                 $allChecksPass = $false
             } elseif ($pathKey -in @("SuiteRoot", "Modules", "Utilities") -and (-not (Test-Path $Context.Paths[$pathKey] -PathType Container))) {
@@ -366,7 +381,7 @@ function Export-ValidationReportSimple {
         [PSCustomObject]$Context # For LogOutput path
     )
     
-    $reportPathBase = $Context.Paths.LogOutput | global:Get-OrElse ".\"
+    $reportPathBase = (Get-ModuleContext).Paths.LogOutput | global:Get-OrElse ".\"
     $timestamp = Get-Date -Format "yyyyMMddHHmmss"
     $reportFilePath = Join-Path $reportPathBase "${ReportName}_ValidationReport_$timestamp.txt"
 
@@ -394,3 +409,4 @@ function Export-ValidationReportSimple {
 }
 
 Write-Host "[ValidationHelpers.psm1] Module loaded." -ForegroundColor DarkGray
+

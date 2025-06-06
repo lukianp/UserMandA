@@ -15,6 +15,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     Microsoft 365 Licensing discovery for M&A Discovery Suite
 .DESCRIPTION
     Discovers license inventory, assignments, costs, and compliance
@@ -277,7 +292,7 @@ function Invoke-LicensingDiscovery {
         # Discover User License Assignments with specific error handling
         try {
             Write-MandALog "Discovering user license assignments..." -Level "INFO" -Context $Context
-            $licensingData.UserLicenses = Get-UserLicenseAssignmentsData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $licensingData.UserLicenses = Get-UserLicenseAssignmentsData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['UserLicenseCount'] = $licensingData.UserLicenses.Count
             Write-MandALog "Successfully discovered $($licensingData.UserLicenses.Count) user license assignments" -Level "SUCCESS" -Context $Context
         }
@@ -297,7 +312,7 @@ function Invoke-LicensingDiscovery {
         if ($licensingData.LicenseSKUs.Count -gt 0) {
             try {
                 Write-MandALog "Analyzing license usage..." -Level "INFO" -Context $Context
-                $licensingData.LicenseUsage = Get-LicenseUsageAnalysisData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -SKUs $licensingData.LicenseSKUs
+                $licensingData.LicenseUsage = Get-LicenseUsageAnalysisData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -SKUs $licensingData.LicenseSKUs
                 $result.Metadata['LicenseUsageAnalysisCount'] = $licensingData.LicenseUsage.Count
                 Write-MandALog "Successfully analyzed license usage" -Level "SUCCESS" -Context $Context
             }
@@ -317,7 +332,7 @@ function Invoke-LicensingDiscovery {
         # Analyze Service Plan Usage with specific error handling
         try {
             Write-MandALog "Analyzing service plan usage..." -Level "INFO" -Context $Context
-            $licensingData.ServicePlanUsage = Get-ServicePlanUsageData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $licensingData.ServicePlanUsage = Get-ServicePlanUsageData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['ServicePlanUsageCount'] = $licensingData.ServicePlanUsage.Count
             Write-MandALog "Successfully analyzed service plan usage" -Level "SUCCESS" -Context $Context
         }
@@ -336,7 +351,7 @@ function Invoke-LicensingDiscovery {
         if ($licensingData.LicenseSKUs.Count -gt 0) {
             try {
                 Write-MandALog "Calculating license costs..." -Level "INFO" -Context $Context
-                $licensingData.LicenseCosts = Get-LicenseCostAnalysisData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -SKUs $licensingData.LicenseSKUs
+                $licensingData.LicenseCosts = Get-LicenseCostAnalysisData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -SKUs $licensingData.LicenseSKUs
                 $result.Metadata['LicenseCostAnalysisCount'] = $licensingData.LicenseCosts.Count
                 Write-MandALog "Successfully calculated license costs" -Level "SUCCESS" -Context $Context
             }
@@ -356,7 +371,7 @@ function Invoke-LicensingDiscovery {
         # Check License Compliance with specific error handling
         try {
             Write-MandALog "Checking license compliance..." -Level "INFO" -Context $Context
-            $licensingData.LicenseCompliance = Get-LicenseComplianceData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $licensingData.LicenseCompliance = Get-LicenseComplianceData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['LicenseComplianceCount'] = $licensingData.LicenseCompliance.Count
             Write-MandALog "Successfully checked license compliance" -Level "SUCCESS" -Context $Context
         }
@@ -374,7 +389,7 @@ function Invoke-LicensingDiscovery {
         # Discover Group-Based Licensing with specific error handling
         try {
             Write-MandALog "Discovering group-based licensing..." -Level "INFO" -Context $Context
-            $licensingData.GroupLicensing = Get-GroupBasedLicensingData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $licensingData.GroupLicensing = Get-GroupBasedLicensingData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['GroupLicensingCount'] = $licensingData.GroupLicensing.Count
             Write-MandALog "Successfully discovered group-based licensing" -Level "SUCCESS" -Context $Context
         }
@@ -1351,3 +1366,4 @@ Export-ModuleMember -Function @(
     'Get-LicenseComplianceData',
     'Get-GroupBasedLicensingData'
 )
+

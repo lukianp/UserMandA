@@ -15,6 +15,21 @@
 
 <#
 .SYNOPSIS
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
     Exchange Online discovery for M&A Discovery Suite
 .DESCRIPTION
     Discovers Exchange Online mailboxes, distribution groups, permissions, and configurations
@@ -275,7 +290,7 @@ function Invoke-ExchangeDiscovery {
         # Discover Mailbox Statistics with specific error handling
         try {
             Write-MandALog "Gathering mailbox statistics..." -Level "INFO" -Context $Context
-            $exchangeData.MailboxStats = Get-ExchangeMailboxStatistics -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Mailboxes $exchangeData.Mailboxes
+            $exchangeData.MailboxStats = Get-ExchangeMailboxStatistics -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -Mailboxes $exchangeData.Mailboxes
             $result.Metadata['MailboxStatsCount'] = $exchangeData.MailboxStats.Count
             Write-MandALog "Successfully gathered statistics for $($exchangeData.MailboxStats.Count) mailboxes" -Level "SUCCESS" -Context $Context
         }
@@ -294,7 +309,7 @@ function Invoke-ExchangeDiscovery {
         # Discover Distribution Groups with specific error handling
         try {
             Write-MandALog "Discovering distribution groups..." -Level "INFO" -Context $Context
-            $exchangeData.DistributionGroups = Get-ExchangeDistributionGroups -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $exchangeData.DistributionGroups = Get-ExchangeDistributionGroups -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['DistributionGroupCount'] = $exchangeData.DistributionGroups.Count
             Write-MandALog "Successfully discovered $($exchangeData.DistributionGroups.Count) distribution groups" -Level "SUCCESS" -Context $Context
         }
@@ -312,7 +327,7 @@ function Invoke-ExchangeDiscovery {
         # Discover Mail-Enabled Security Groups with specific error handling
         try {
             Write-MandALog "Discovering mail-enabled security groups..." -Level "INFO" -Context $Context
-            $exchangeData.MailSecurityGroups = Get-ExchangeMailSecurityGroups -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $exchangeData.MailSecurityGroups = Get-ExchangeMailSecurityGroups -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['MailSecurityGroupCount'] = $exchangeData.MailSecurityGroups.Count
             Write-MandALog "Successfully discovered $($exchangeData.MailSecurityGroups.Count) mail-enabled security groups" -Level "SUCCESS" -Context $Context
         }
@@ -331,7 +346,7 @@ function Invoke-ExchangeDiscovery {
         # Discover Mailbox Permissions with specific error handling
         try {
             Write-MandALog "Discovering mailbox permissions..." -Level "INFO" -Context $Context
-            $exchangeData.MailboxPermissions = Get-ExchangeMailboxPermissions -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Mailboxes $exchangeData.Mailboxes
+            $exchangeData.MailboxPermissions = Get-ExchangeMailboxPermissions -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -Mailboxes $exchangeData.Mailboxes
             $result.Metadata['MailboxPermissionCount'] = $exchangeData.MailboxPermissions.Count
             Write-MandALog "Successfully discovered $($exchangeData.MailboxPermissions.Count) mailbox permissions" -Level "SUCCESS" -Context $Context
         }
@@ -350,7 +365,7 @@ function Invoke-ExchangeDiscovery {
         # Discover Send As Permissions with specific error handling
         try {
             Write-MandALog "Discovering Send As permissions..." -Level "INFO" -Context $Context
-            $exchangeData.SendAsPermissions = Get-ExchangeSendAsPermissions -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $exchangeData.SendAsPermissions = Get-ExchangeSendAsPermissions -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['SendAsPermissionCount'] = $exchangeData.SendAsPermissions.Count
             Write-MandALog "Successfully discovered $($exchangeData.SendAsPermissions.Count) Send As permissions" -Level "SUCCESS" -Context $Context
         }
@@ -368,7 +383,7 @@ function Invoke-ExchangeDiscovery {
         # Discover Send On Behalf Permissions with specific error handling
         try {
             Write-MandALog "Discovering Send On Behalf permissions..." -Level "INFO" -Context $Context
-            $exchangeData.SendOnBehalfPermissions = Get-ExchangeSendOnBehalfPermissions -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Mailboxes $exchangeData.Mailboxes
+            $exchangeData.SendOnBehalfPermissions = Get-ExchangeSendOnBehalfPermissions -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -Mailboxes $exchangeData.Mailboxes
             $result.Metadata['SendOnBehalfPermissionCount'] = $exchangeData.SendOnBehalfPermissions.Count
             Write-MandALog "Successfully discovered $($exchangeData.SendOnBehalfPermissions.Count) Send On Behalf permissions" -Level "SUCCESS" -Context $Context
         }
@@ -387,7 +402,7 @@ function Invoke-ExchangeDiscovery {
         # Discover Mail Flow Rules with specific error handling
         try {
             Write-MandALog "Discovering mail flow rules..." -Level "INFO" -Context $Context
-            $exchangeData.MailFlowRules = Get-ExchangeMailFlowRules -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $exchangeData.MailFlowRules = Get-ExchangeMailFlowRules -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['MailFlowRuleCount'] = $exchangeData.MailFlowRules.Count
             Write-MandALog "Successfully discovered $($exchangeData.MailFlowRules.Count) mail flow rules" -Level "SUCCESS" -Context $Context
         }
@@ -405,7 +420,7 @@ function Invoke-ExchangeDiscovery {
         # Discover Retention Policies with specific error handling
         try {
             Write-MandALog "Discovering retention policies..." -Level "INFO" -Context $Context
-            $exchangeData.RetentionPolicies = Get-ExchangeRetentionPolicies -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $exchangeData.RetentionPolicies = Get-ExchangeRetentionPolicies -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
             $result.Metadata['RetentionPolicyCount'] = $exchangeData.RetentionPolicies.Count
             Write-MandALog "Successfully discovered $($exchangeData.RetentionPolicies.Count) retention policies" -Level "SUCCESS" -Context $Context
         }
@@ -1041,3 +1056,4 @@ Export-ModuleMember -Function @(
     'Get-ExchangeMailFlowRules',
     'Get-ExchangeRetentionPolicies'
 )
+

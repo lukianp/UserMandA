@@ -27,6 +27,21 @@
 # Export-DataToCSV
 # Write-MandALog
 
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
+
 # --- Private Functions ---
 
 function Get-GraphUsersDataInternal {
@@ -570,7 +585,7 @@ function Invoke-GraphDiscovery {
             
             # Export users data
             if ($graphData.Users.Count -gt 0) {
-                Export-DataToCSV -Data $graphData.Users -FilePath (Join-Path $Context.Paths.RawDataOutput "GraphUsers.csv") -Context $Context
+                Export-DataToCSV -Data $graphData.Users -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "GraphUsers.csv") -Context $Context
             }
         }
         catch {
@@ -598,10 +613,10 @@ function Invoke-GraphDiscovery {
             
             # Export groups data
             if ($graphData.Groups.Count -gt 0) {
-                Export-DataToCSV -Data $graphData.Groups -FilePath (Join-Path $Context.Paths.RawDataOutput "GraphGroups.csv") -Context $Context
+                Export-DataToCSV -Data $graphData.Groups -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "GraphGroups.csv") -Context $Context
             }
             if ($graphData.GroupMembers.Count -gt 0) {
-                Export-DataToCSV -Data $graphData.GroupMembers -FilePath (Join-Path $Context.Paths.RawDataOutput "GraphGroupMembers.csv") -Context $Context
+                Export-DataToCSV -Data $graphData.GroupMembers -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "GraphGroupMembers.csv") -Context $Context
             }
         }
         catch {

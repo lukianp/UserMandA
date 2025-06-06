@@ -20,6 +20,20 @@
 
 # Import shared utilities
 
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
 
 # Enhanced error handling functions with retry logic and batch processing
 function Test-ADDiscoveryPrerequisites {
@@ -168,7 +182,7 @@ function Get-ADUsersWithErrorHandling {
             
             # Export data
             if ($users.Count -gt 0) {
-                Export-DataToCSV -Data $users -FilePath (Join-Path $Context.Paths.RawDataOutput "ADUsers.csv") -Context $Context
+                Export-DataToCSV -Data $users -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADUsers.csv") -Context $Context
             }
             
             # Success - exit retry loop
@@ -253,10 +267,10 @@ function Get-ADGroupsWithErrorHandling {
             
             # Export data
             if ($groups.Count -gt 0) {
-                Export-DataToCSV -Data $groups -FilePath (Join-Path $Context.Paths.RawDataOutput "ADGroups.csv") -Context $Context
+                Export-DataToCSV -Data $groups -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADGroups.csv") -Context $Context
             }
             if ($groupMembers.Count -gt 0) {
-                Export-DataToCSV -Data $groupMembers -FilePath (Join-Path $Context.Paths.RawDataOutput "ADGroupMembers.csv") -Context $Context
+                Export-DataToCSV -Data $groupMembers -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADGroupMembers.csv") -Context $Context
             }
             
             # Success - exit retry loop
@@ -359,7 +373,7 @@ function Get-ADComputersWithErrorHandling {
             
             # Export data
             if ($computers.Count -gt 0) {
-                Export-DataToCSV -Data $computers -FilePath (Join-Path $Context.Paths.RawDataOutput "ADComputers.csv") -Context $Context
+                Export-DataToCSV -Data $computers -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADComputers.csv") -Context $Context
             }
             
             # Success - exit retry loop
@@ -424,7 +438,7 @@ function Get-ADOUsWithErrorHandling {
             
             # Export data
             if ($ous.Count -gt 0) {
-                Export-DataToCSV -Data $ous -FilePath (Join-Path $Context.Paths.RawDataOutput "ADOrganizationalUnits.csv") -Context $Context
+                Export-DataToCSV -Data $ous -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADOrganizationalUnits.csv") -Context $Context
             }
             
             # Success - exit retry loop
@@ -489,7 +503,7 @@ function Get-ADUsersDataInternal {
             }
             
             # Export data
-            Export-DataToCSV -Data $allUsers -FilePath (Join-Path $Context.Paths.RawDataOutput "ADUsers.csv") -Context $Context
+            Export-DataToCSV -Data $allUsers -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADUsers.csv") -Context $Context
             
             Write-MandALog "Discovered $($allUsers.Count) AD users" -Level "SUCCESS" -Context $Context
         } else {
@@ -635,8 +649,8 @@ function Get-ADGroupsDataInternal {
             }
             
             # Export data
-            Export-DataToCSV -Data $allGroups -FilePath (Join-Path $Context.Paths.RawDataOutput "ADGroups.csv") -Context $Context
-            Export-DataToCSV -Data $allGroupMembers -FilePath (Join-Path $Context.Paths.RawDataOutput "ADGroupMembers.csv") -Context $Context
+            Export-DataToCSV -Data $allGroups -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADGroups.csv") -Context $Context
+            Export-DataToCSV -Data $allGroupMembers -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADGroupMembers.csv") -Context $Context
             
             Write-MandALog "Discovered $($allGroups.Count) AD groups with $($allGroupMembers.Count) total memberships" -Level "SUCCESS" -Context $Context
         }
@@ -711,7 +725,7 @@ function Get-ADComputersDataInternal {
                 $allComputers.Add($computerObj)
             }
             
-            Export-DataToCSV -Data $allComputers -FilePath (Join-Path $Context.Paths.RawDataOutput "ADComputers.csv") -Context $Context
+            Export-DataToCSV -Data $allComputers -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADComputers.csv") -Context $Context
             
             Write-MandALog "Discovered $($allComputers.Count) AD computers" -Level "SUCCESS" -Context $Context
         }
@@ -806,9 +820,9 @@ function Get-ADSitesAndServicesDataInternal {
         }
         
         # Export data
-        Export-DataToCSV -Data $result.Sites -FilePath (Join-Path $Context.Paths.RawDataOutput "ADSites.csv") -Context $Context
-        Export-DataToCSV -Data $result.SiteLinks -FilePath (Join-Path $Context.Paths.RawDataOutput "ADSiteLinks.csv") -Context $Context
-        Export-DataToCSV -Data $result.Subnets -FilePath (Join-Path $Context.Paths.RawDataOutput "ADSubnets.csv") -Context $Context
+        Export-DataToCSV -Data $result.Sites -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADSites.csv") -Context $Context
+        Export-DataToCSV -Data $result.SiteLinks -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADSiteLinks.csv") -Context $Context
+        Export-DataToCSV -Data $result.Subnets -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADSubnets.csv") -Context $Context
         
         Write-MandALog "Discovered $($result.Sites.Count) sites, $($result.SiteLinks.Count) site links, $($result.Subnets.Count) subnets" -Level "SUCCESS" -Context $Context
     }
@@ -901,10 +915,10 @@ function Get-ADDNSZoneDataInternal {
         }
         
         # Export data
-        Export-DataToCSV -Data $result.Zones -FilePath (Join-Path $Context.Paths.RawDataOutput "ADDNSZones.csv") -Context $Context
+        Export-DataToCSV -Data $result.Zones -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADDNSZones.csv") -Context $Context
         
         if ($result.Records.Count -gt 0) {
-            Export-DataToCSV -Data $result.Records -FilePath (Join-Path $Context.Paths.RawDataOutput "ADDNSRecords_Detailed.csv") -Context $Context
+            Export-DataToCSV -Data $result.Records -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADDNSRecords_Detailed.csv") -Context $Context
         }
         
         Write-MandALog "Discovered $($result.Zones.Count) DNS zones with $($result.Records.Count) detailed records" -Level "SUCCESS" -Context $Context
