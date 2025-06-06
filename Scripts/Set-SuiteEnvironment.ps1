@@ -77,22 +77,16 @@ function Test-MandASuiteStructureInternal {
     return $true
 }
 
-function ConvertTo-HashtableRecursiveSSE { 
+function ConvertTo-HashtableRecursiveSSE {
     param($InputObject)
     
-    if ($null -eq $InputObject) { 
-        return $null 
-    }
-    
-    # Debug output for complex conversions
-    if ($VerbosePreference -eq 'Continue') {
-        $typeName = if ($InputObject) { $InputObject.GetType().Name } else { 'null' }
-        Write-Verbose "[ConvertTo-HashtableRecursiveSSE] Processing object of type: $typeName"
+    if ($null -eq $InputObject) {
+        return $null
     }
     
     # Handle arrays and collections (but not strings or hashtables)
-    if ($InputObject -is [System.Collections.IEnumerable] -and 
-        $InputObject -isnot [string] -and 
+    if ($InputObject -is [System.Collections.IEnumerable] -and
+        $InputObject -isnot [string] -and
         $InputObject -isnot [hashtable] -and
         $InputObject -isnot [System.Collections.IDictionary]) {
         
@@ -107,10 +101,6 @@ function ConvertTo-HashtableRecursiveSSE {
             }
         }
         
-        if ($VerbosePreference -eq 'Continue') {
-            Write-Verbose "[ConvertTo-HashtableRecursiveSSE] Returning array with $($array.Count) elements"
-        }
-        
         # Return as array (the comma operator ensures it stays an array)
         return ,$array
     }
@@ -121,11 +111,6 @@ function ConvertTo-HashtableRecursiveSSE {
         foreach ($property in $InputObject.PSObject.Properties) {
             $hash[$property.Name] = ConvertTo-HashtableRecursiveSSE $property.Value
         }
-        
-        if ($VerbosePreference -eq 'Continue') {
-            Write-Verbose "[ConvertTo-HashtableRecursiveSSE] Converted PSCustomObject to hashtable with $($hash.Count) keys"
-        }
-        
         return $hash
     }
     
