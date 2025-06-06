@@ -532,7 +532,6 @@ try {
     Write-Host "Testing comprehensive error reporting functionality`n" -ForegroundColor Gray
     
     # Initialize test environment
-    # Initialize test environment
     if (-not $SkipSetup) {
         Initialize-TestEnvironment
     }
@@ -558,7 +557,7 @@ try {
         Write-Host "`n[SUCCESS] All error reporting tests passed successfully!" -ForegroundColor Green
         exit 0
     } else {
-        Write-Host "`nâ[FAILED] Some error reporting tests failed. Check the logs for details." -ForegroundColor Red
+        Write-Host "`n[FAILED] Some error reporting tests failed. Check the logs for details." -ForegroundColor Red
         exit 1
     }
     
