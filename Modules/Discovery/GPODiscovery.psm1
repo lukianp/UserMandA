@@ -12,6 +12,201 @@
 
 #Requires -Modules ActiveDirectory, GroupPolicy
 
+$authModulePathFromGlobal = Join-Path $global:MandA.Paths.Authentication "DiscoveryModuleBase.psm1"
+Import-Module $authModulePathFromGlobal -Force
+
+# Prerequisites validation function
+function Test-GPODiscoveryPrerequisites {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$false)]
+        $Context,
+        [Parameter(Mandatory=$false)]
+        [PSCredential]$Credential
+    )
+    
+    $prerequisites = @{
+        IsValid = $true
+        MissingRequirements = @()
+        Warnings = @()
+    }
+    
+    try {
+        Write-ProgressStep "Validating GPO Discovery prerequisites..." -Status Progress
+        
+        # Check for required modules
+        $requiredModules = @('ActiveDirectory', 'GroupPolicy')
+        
+        foreach ($module in $requiredModules) {
+            if (-not (Get-Module -ListAvailable -Name $module)) {
+                $prerequisites.IsValid = $false
+                $prerequisites.MissingRequirements += "Required module '$module' not available"
+            }
+        }
+        
+        # Check Active Directory connectivity
+        try {
+            $null = Get-ADDomain -ErrorAction Stop
+        } catch {
+            $prerequisites.IsValid = $false
+            $prerequisites.MissingRequirements += "Cannot connect to Active Directory: $($_.Exception.Message)"
+        }
+        
+        # Check domain controller connectivity if specified
+        if ($Configuration.environment.domainController) {
+            try {
+                if (-not (Test-Connection -ComputerName $Configuration.environment.domainController -Count 1 -Quiet)) {
+                    $prerequisites.Warnings += "Specified domain controller '$($Configuration.environment.domainController)' is not reachable"
+                }
+            } catch {
+                $prerequisites.Warnings += "Cannot test connectivity to domain controller: $($_.Exception.Message)"
+            }
+        }
+        
+        # Check GroupPolicy module functionality
+        try {
+            $testGPO = Get-GPO -All -ErrorAction Stop | Select-Object -First 1
+            if (-not $testGPO) {
+                $prerequisites.Warnings += "No GPOs found in domain - discovery may return empty results"
+            }
+        } catch {
+            $prerequisites.IsValid = $false
+            $prerequisites.MissingRequirements += "Cannot access Group Policy objects: $($_.Exception.Message)"
+        }
+        
+        Write-ProgressStep "Prerequisites validation completed" -Status Success
+        
+    } catch {
+        $prerequisites.IsValid = $false
+        $prerequisites.MissingRequirements += "Prerequisites validation failed: $($_.Exception.Message)"
+        Write-ProgressStep "Prerequisites validation failed: $($_.Exception.Message)" -Status Error
+    }
+    
+    return $prerequisites
+}
+
+# Enhanced wrapper function with retry logic
+function Get-GPODataWithErrorHandling {
+    param($Configuration, $Context, $Credential)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-GPODataEnhanced -Configuration $Configuration -Context $Context -Credential $Credential
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "GPO discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-GPODataEnhanced {
+    param(
+        [hashtable]$Configuration,
+        [MandAContext]$Context,
+        [PSCredential]$Credential
+    )
+    
+    try {
+        Write-ProgressStep "Starting comprehensive GPO analysis..." -Status Progress
+        
+        # Get domain controller
+        $domainController = $Configuration.environment.domainController
+        if (-not $domainController) {
+            try {
+                $domainController = (Get-ADDomainController -Discover -NextClosestSite).HostName
+                Write-ProgressStep "Using discovered domain controller: $domainController" -Status Info
+            } catch {
+                throw "Failed to discover domain controller: $($_.Exception.Message)"
+            }
+        }
+        
+        # Test domain controller connectivity
+        if (-not (Test-Connection -ComputerName $domainController -Count 1 -Quiet)) {
+            throw "Domain controller $domainController is not reachable"
+        }
+        
+        # Call the original Get-GPOData function but with enhanced error handling
+        return Get-GPOData -OutputPath $null -DomainController $domainController
+        
+    } catch {
+        Write-ProgressStep "Enhanced GPO data collection failed: $($_.Exception.Message)" -Status Error
+        throw
+    }
+}
+
+function Convert-ToFlattenedGPOData {
+    param([hashtable]$Results)
+    
+    $flatData = [System.Collections.Generic.List[PSObject]]::new()
+    
+    if ($Results.GPOData) {
+        $gpoData = $Results.GPOData
+        
+        # Add _DataType to each collection
+        if ($gpoData.GPOs) {
+            foreach ($gpo in $gpoData.GPOs) {
+                $gpo | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'GPOs' -Force
+                $flatData.Add($gpo)
+            }
+        }
+        
+        if ($gpoData.GPOLinks) {
+            foreach ($link in $gpoData.GPOLinks) {
+                $link | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'GPOLinks' -Force
+                $flatData.Add($link)
+            }
+        }
+        
+        if ($gpoData.GPOPermissions) {
+            foreach ($perm in $gpoData.GPOPermissions) {
+                $perm | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'GPOPermissions' -Force
+                $flatData.Add($perm)
+            }
+        }
+        
+        if ($gpoData.DriveMappings) {
+            foreach ($drive in $gpoData.DriveMappings) {
+                $drive | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'DriveMappings' -Force
+                $flatData.Add($drive)
+            }
+        }
+        
+        if ($gpoData.PrinterMappings) {
+            foreach ($printer in $gpoData.PrinterMappings) {
+                $printer | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'PrinterMappings' -Force
+                $flatData.Add($printer)
+            }
+        }
+        
+        if ($gpoData.FolderRedirections) {
+            foreach ($folder in $gpoData.FolderRedirections) {
+                $folder | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'FolderRedirections' -Force
+                $flatData.Add($folder)
+            }
+        }
+        
+        if ($gpoData.LogonScripts) {
+            foreach ($script in $gpoData.LogonScripts) {
+                $script | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'LogonScripts' -Force
+                $flatData.Add($script)
+            }
+        }
+    }
+    
+    return $flatData
+}
+
 # --- Helper Functions ---
 function Export-DataToCSV {
     [CmdletBinding()]
@@ -445,70 +640,97 @@ function Export-GPODataToCSV {
     }
 }
 
-# --- Main Invoke Function ---
+# Enhanced main function with comprehensive error handling
 function Invoke-GPODiscovery {
     [CmdletBinding()]
+    [OutputType([hashtable])]
     param(
         [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration
+        [hashtable]$Configuration,
+        
+        [Parameter(Mandatory=$true)]
+        [MandAContext]$Context,
+        
+        [Parameter(Mandatory=$false)]
+        [PSCredential]$Credential
     )
     
+    # Initialize result object
+    $result = [DiscoveryResult]::new("GPO")
+    
     try {
-        Write-MandALog "--- Starting GPO Discovery Phase ---" -Level "HEADER"
+        Write-ProgressStep "Starting GPO Discovery" -Status Progress
         
-        # Verify prerequisites
-        if (-not (Get-Module -ListAvailable -Name GroupPolicy)) {
-            Write-MandALog "GroupPolicy module not available. Skipping GPO discovery." -Level "WARN"
-            return @{}
+        # Validate prerequisites
+        $prerequisites = Test-GPODiscoveryPrerequisites -Configuration $Configuration -Context $Context -Credential $Credential
+        if (-not $prerequisites.IsValid) {
+            throw "Prerequisites validation failed: $($prerequisites.MissingRequirements -join '; ')"
         }
         
-        if (-not (Get-Module -ListAvailable -Name ActiveDirectory)) {
-            Write-MandALog "ActiveDirectory module not available. Skipping GPO discovery." -Level "WARN"
-            return @{}
+        # Log warnings
+        foreach ($warning in $prerequisites.Warnings) {
+            Write-ProgressStep $warning -Status Warning
+            $Context.ErrorCollector.AddWarning("GPO", $warning)
         }
         
         # Import required modules
         Import-Module GroupPolicy -ErrorAction Stop
         Import-Module ActiveDirectory -ErrorAction Stop
         
-        # Set up paths and parameters
-       
-
-
-        $domainController = $Configuration.environment.domainController
+        $results = @{}
         
-        if (-not $domainController) {
-            Write-MandALog "No domain controller specified in configuration. Attempting to discover..." -Level "WARN"
-            try {
-                $domainController = (Get-ADDomainController -Discover -NextClosestSite).HostName
-                Write-MandALog "Using discovered domain controller: $domainController" -Level "INFO"
-            } catch {
-                Write-MandALog "Failed to discover domain controller: $($_.Exception.Message)" -Level "ERROR"
-                return @{}
+        # 1. Discover GPOs with error handling
+        try {
+            Write-ProgressStep "Discovering Group Policy Objects..." -Status Progress
+            $results.GPOData = Get-GPODataWithErrorHandling -Configuration $Configuration -Context $Context -Credential $Credential
+            $result.Metadata.SectionsProcessed++
+            
+            if ($results.GPOData.GPOs.Count -eq 0) {
+                Write-ProgressStep "No GPOs found in domain" -Status Warning
+                $Context.ErrorCollector.AddWarning("GPO", "No GPOs found in domain")
+            }
+            
+        } catch {
+            $errorMsg = "Failed to discover GPOs: $($_.Exception.Message)"
+            Write-ProgressStep $errorMsg -Status Error
+            $Context.ErrorCollector.AddError("GPO", $errorMsg, $_.Exception)
+            $result.Metadata.SectionErrors++
+            $results.GPOData = @{
+                GPOs = @()
+                GPOLinks = @()
+                GPOPermissions = @()
+                DriveMappings = @()
+                PrinterMappings = @()
+                FolderRedirections = @()
+                LogonScripts = @()
+                ProcessingStats = @{ Total = 0; Successful = 0; Failed = 0 }
             }
         }
         
-        # Test domain controller connectivity
-        if (-not (Test-Connection -ComputerName $domainController -Count 1 -Quiet)) {
-            Write-MandALog "Domain controller $domainController is not reachable. Skipping GPO discovery." -Level "ERROR"
-            return @{}
-        }
+        # Update result
+        $result.Data = Convert-ToFlattenedGPOData -Results $results
+        $result.Success = $true
+        $result.Metadata.TotalSections = 1
+        $result.Metadata.EndTime = Get-Date
+        $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
         
-        # Run GPO discovery
-        $gpoData = Get-GPOData -OutputPath $outputPath -DomainController $domainController
-        
-        # Export data to CSV files
-        if ($gpoData) {
-            Export-GPODataToCSV @gpoData -OutputPath $outputPath
-        }
-        
-        Write-MandALog "--- GPO Discovery Phase Completed ---" -Level "SUCCESS"
-        return $gpoData
+        Write-ProgressStep "GPO Discovery completed" -Status Success
+        return $result
         
     } catch {
-        Write-MandALog "GPO discovery failed: $($_.Exception.Message)" -Level "ERROR"
-        Write-MandALog "Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG"
-        return @{}
+        $result.Success = $false
+        $result.ErrorMessage = $_.Exception.Message
+        $result.Metadata.EndTime = Get-Date
+        $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
+        
+        Write-ProgressStep "GPO Discovery failed: $($_.Exception.Message)" -Status Error
+        $Context.ErrorCollector.AddError("GPO", "Discovery failed", $_.Exception)
+        
+        return $result
+        
+    } finally {
+        # Cleanup resources
+        Write-ProgressStep "GPO Discovery cleanup completed" -Status Info
     }
 }
 

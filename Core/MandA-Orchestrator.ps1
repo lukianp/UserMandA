@@ -423,15 +423,13 @@ function Load-ExportModules {
 
 function Invoke-DiscoveryPhase {
     Write-OrchestratorLog -Message "STARTING DISCOVERY PHASE" -Level "HEADER"
-    Write-OrchestratorLog -Message "Discovery configuration:" -Level "DEBUG" -DebugOnly
-    Write-OrchestratorLog -Message "  Parallel Processing: $($global:MandA.Config.discovery.parallelProcessing)" -Level "DEBUG" -DebugOnly
-    Write-OrchestratorLog -Message "  Batch Size: $($global:MandA.Config.discovery.batchSize)" -Level "DEBUG" -DebugOnly
-    Write-OrchestratorLog -Message "  Skip Existing: $($global:MandA.Config.discovery.skipExistingFiles)" -Level "DEBUG" -DebugOnly
     
     $phaseResult = @{
         Success = $true
-        Data = @{}
-        Errors = @()
+        ModuleResults = @{}
+        CriticalErrors = [System.Collections.ArrayList]::new()
+        RecoverableErrors = [System.Collections.ArrayList]::new()
+        Warnings = [System.Collections.ArrayList]::new()
     }
     
     try {
@@ -474,7 +472,7 @@ function Invoke-DiscoveryPhase {
                 
                 foreach ($service in $connections.Keys) {
                     $status = $connections[$service]
-                    $connected = if ($status -is [bool]) { $status } 
+                    $connected = if ($status -is [bool]) { $status }
                                 else { $status.Connected }
                     
                     Write-OrchestratorLog -Message "Connection to $service`: $connected" `
@@ -485,8 +483,8 @@ function Invoke-DiscoveryPhase {
             Write-OrchestratorLog -Message "Authentication module not found, skipping authentication" -Level "WARN"
         }
         
-        # Execute discovery
         $enabledSources = $global:MandA.Config.discovery.enabledSources
+        $criticalSources = @('ActiveDirectory', 'Graph')  # Sources that must succeed
         
         # FIX: Validate enabledSources (same fix as in Load-DiscoveryModules)
         if ($null -eq $enabledSources) {
@@ -504,36 +502,70 @@ function Invoke-DiscoveryPhase {
         $validSources = @($enabledSources | Where-Object { $_ -is [string] })
         Write-OrchestratorLog -Message "Valid discovery sources: $($validSources.Count) of $($enabledSources.Count)" -Level "INFO"
         
-        $parallelEnabled = $global:MandA.Config.discovery.parallelProcessing -and $validSources.Count -gt 1
-        
-        if ($parallelEnabled) {
-            Write-OrchestratorLog -Message "Using parallel discovery" -Level "INFO"
-            $phaseResult.Data = Invoke-ParallelDiscovery -Sources $validSources
-        } else {
-            Write-OrchestratorLog -Message "Using sequential discovery" -Level "INFO"
-            $phaseResult.Data = Invoke-SequentialDiscovery -Sources $validSources
+        foreach ($source in $validSources) {
+            Write-OrchestratorLog -Message "Executing $source discovery..." -Level "INFO"
+            
+            try {
+                $moduleResult = Invoke-DiscoveryModule -ModuleName $source -Configuration $global:MandA.Config
+                $phaseResult.ModuleResults[$source] = $moduleResult
+                
+                # Categorize errors
+                if (-not $moduleResult.Success) {
+                    if ($source -in $criticalSources) {
+                        $null = $phaseResult.CriticalErrors.Add(@{
+                            Source = $source
+                            Errors = $moduleResult.Errors
+                            Impact = "Critical - Suite cannot continue without $source data"
+                        })
+                        $phaseResult.Success = $false
+                    }
+                    else {
+                        $null = $phaseResult.RecoverableErrors.Add(@{
+                            Source = $source
+                            Errors = $moduleResult.Errors
+                            Impact = "Non-critical - Suite can continue but data will be incomplete"
+                        })
+                    }
+                }
+                
+                # Collect warnings
+                if ($moduleResult.Warnings.Count -gt 0) {
+                    $null = $phaseResult.Warnings.Add(@{
+                        Source = $source
+                        Warnings = $moduleResult.Warnings
+                    })
+                }
+            }
+            catch {
+                # Handle complete module failure
+                Write-OrchestratorLog -Message "Catastrophic failure in $source module: $_" -Level "CRITICAL"
+                
+                $null = $phaseResult.CriticalErrors.Add(@{
+                    Source = $source
+                    Errors = @(@{
+                        Message = "Module execution failed completely"
+                        Exception = $_.Exception.ToString()
+                        StackTrace = $_.ScriptStackTrace
+                    })
+                    Impact = "Module could not be executed"
+                })
+                
+                if ($source -in $criticalSources) {
+                    $phaseResult.Success = $false
+                }
+            }
         }
         
+        # Generate error report
+        Export-ErrorReport -PhaseResult $phaseResult
+        
         # Summary
-        $successCount = ($phaseResult.Data.Values | Where-Object { $_.Success }).Count
+        $successCount = ($phaseResult.ModuleResults.Values | Where-Object { $_.Success }).Count
         $failCount = $validSources.Count - $successCount
         
         Write-OrchestratorLog -Message "Discovery completed: $successCount successful, $failCount failed" `
             -Level $(if ($failCount -eq 0) { "SUCCESS" } else { "WARN" })
-        
-        # Debug output for discovery results
-        if ($script:DebugMode) {
-            foreach ($source in $phaseResult.Data.Keys) {
-                $result = $phaseResult.Data[$source]
-                Write-OrchestratorLog -Message "Discovery result for $source`:" -Level "DEBUG"
-                Write-OrchestratorLog -Message "  Success: $($result.Success)" -Level "DEBUG"
-                Write-OrchestratorLog -Message "  Record Count: $($result.RecordCount)" -Level "DEBUG"
-                Write-OrchestratorLog -Message "  Duration: $($result.Duration)" -Level "DEBUG"
-                if (-not $result.Success) {
-                    Write-OrchestratorLog -Message "  Error: $($result.Error)" -Level "DEBUG"
-                }
-            }
-        }
+        Write-OrchestratorLog -Message "Critical errors: $($phaseResult.CriticalErrors.Count), Recoverable errors: $($phaseResult.RecoverableErrors.Count), Warnings: $($phaseResult.Warnings.Count)" -Level "INFO"
         
     } catch {
         $phaseResult.Success = $false
@@ -544,6 +576,112 @@ function Invoke-DiscoveryPhase {
     }
     
     return $phaseResult
+}
+
+function Invoke-DiscoveryModule {
+    param(
+        [string]$ModuleName,
+        [hashtable]$Configuration
+    )
+    
+    $moduleFunction = "Invoke-${ModuleName}Discovery"
+    
+    # Validate module is loaded
+    if (-not (Get-Command $moduleFunction -ErrorAction SilentlyContinue)) {
+        throw "Discovery function '$moduleFunction' not found. Ensure module is loaded."
+    }
+    
+    # Set up isolated error handling
+    $errorCapture = [System.Collections.ArrayList]::new()
+    $originalErrorVariable = $Error.Clone()
+    
+    try {
+        # Clear error variable to capture only this module's errors
+        $Error.Clear()
+        
+        # Invoke with timeout protection
+        $result = Invoke-WithTimeout -ScriptBlock {
+            & $moduleFunction -Configuration $Configuration
+        } -TimeoutSeconds 300 -TimeoutMessage "Discovery module $ModuleName timed out after 5 minutes"
+        
+        # Capture any non-terminating errors
+        foreach ($err in $Error) {
+            if ($err -notin $originalErrorVariable) {
+                $null = $errorCapture.Add($err)
+            }
+        }
+        
+        # Add captured errors to result if it doesn't have them
+        if ($errorCapture.Count -gt 0 -and $result.Errors.Count -eq 0) {
+            foreach ($err in $errorCapture) {
+                $result.AddError($err.Exception.Message, $err.Exception)
+            }
+        }
+        
+        return $result
+    }
+    catch {
+        # Create a failed result if module didn't return one
+        $failedResult = [DiscoveryResult]::new($ModuleName)
+        $failedResult.AddError("Module execution failed", $_.Exception)
+        $failedResult.Complete()
+        return $failedResult
+    }
+}
+
+function Export-ErrorReport {
+    param(
+        [hashtable]$PhaseResult
+    )
+    
+    if ($PhaseResult.CriticalErrors.Count -eq 0 -and $PhaseResult.RecoverableErrors.Count -eq 0 -and $PhaseResult.Warnings.Count -eq 0) {
+        Write-OrchestratorLog -Message "No errors or warnings to report" -Level "SUCCESS"
+        return
+    }
+    
+    $errorReport = @{
+        Timestamp = Get-Date
+        ExecutionId = [guid]::NewGuid().ToString()
+        Summary = @{
+            CriticalErrors = $PhaseResult.CriticalErrors.Count
+            RecoverableErrors = $PhaseResult.RecoverableErrors.Count
+            Warnings = $PhaseResult.Warnings.Count
+            TotalModules = $PhaseResult.ModuleResults.Count
+            SuccessfulModules = ($PhaseResult.ModuleResults.Values | Where-Object { $_.Success }).Count
+        }
+        CriticalErrors = $PhaseResult.CriticalErrors
+        RecoverableErrors = $PhaseResult.RecoverableErrors
+        Warnings = $PhaseResult.Warnings
+        ModuleResults = @{}
+    }
+    
+    # Add detailed module results
+    foreach ($moduleName in $PhaseResult.ModuleResults.Keys) {
+        $moduleResult = $PhaseResult.ModuleResults[$moduleName]
+        $errorReport.ModuleResults[$moduleName] = @{
+            Success = $moduleResult.Success
+            ModuleName = $moduleResult.ModuleName
+            StartTime = $moduleResult.StartTime
+            EndTime = $moduleResult.EndTime
+            Duration = $moduleResult.Metadata.Duration
+            ErrorCount = $moduleResult.Errors.Count
+            WarningCount = $moduleResult.Warnings.Count
+            ExecutionId = $moduleResult.ExecutionId
+        }
+    }
+    
+    # Export to file
+    $errorReportPath = Join-Path $global:MandA.Paths.LogOutput "DiscoveryErrorReport_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
+    $errorReport | ConvertTo-Json -Depth 10 | Set-Content -Path $errorReportPath -Encoding UTF8
+    
+    Write-OrchestratorLog -Message "Error report exported: $errorReportPath" -Level "INFO"
+    
+    # Log summary to console
+    Write-OrchestratorLog -Message "--- ERROR SUMMARY ---" -Level "HEADER"
+    Write-OrchestratorLog -Message "Critical Errors: $($errorReport.Summary.CriticalErrors)" -Level $(if ($errorReport.Summary.CriticalErrors -gt 0) { "ERROR" } else { "SUCCESS" })
+    Write-OrchestratorLog -Message "Recoverable Errors: $($errorReport.Summary.RecoverableErrors)" -Level $(if ($errorReport.Summary.RecoverableErrors -gt 0) { "WARN" } else { "SUCCESS" })
+    Write-OrchestratorLog -Message "Warnings: $($errorReport.Summary.Warnings)" -Level $(if ($errorReport.Summary.Warnings -gt 0) { "WARN" } else { "SUCCESS" })
+    Write-OrchestratorLog -Message "Successful Modules: $($errorReport.Summary.SuccessfulModules)/$($errorReport.Summary.TotalModules)" -Level "INFO"
 }
 
 function Invoke-SequentialDiscovery {

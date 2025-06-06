@@ -7,70 +7,451 @@
 #>
 
 
-#Cannot use $outputpath for logging as its used internallyin the module
-function Invoke-ExchangeDiscovery {
-    param([hashtable]$Configuration)
+# Exchange Discovery Prerequisites Function
+function Test-ExchangeDiscoveryPrerequisites {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        [DiscoveryResult]$Result,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    Write-MandALog "Validating Exchange Discovery prerequisites..." -Level "INFO" -Context $Context
     
     try {
-        Write-MandALog "Starting Exchange Online discovery" -Level "HEADER"
-        
-        $outputPath = $Configuration.environment.outputPath
-        $rawPath = Join-Path $outputPath "Raw"
-        
-        $discoveryResults = @{}
-        
-        # Verify Exchange connection
+        # Check if Exchange Online PowerShell is available
         try {
             $testCmd = Get-Command Get-Mailbox -ErrorAction Stop
-            Write-MandALog "Exchange Online connection verified" -Level "SUCCESS"
-        } catch {
-            Write-MandALog "Exchange Online not connected. Skipping Exchange discovery." -Level "WARN"
-            return @{}
+            Write-MandALog "Exchange Online PowerShell commands available" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $Result.AddError("Exchange Online PowerShell not available", $_.Exception, @{
+                Prerequisite = 'Exchange Online PowerShell'
+                Resolution = 'Connect to Exchange Online using Connect-ExchangeOnline'
+            })
+            return
         }
         
-        # Mailboxes
-        Write-MandALog "Discovering Exchange mailboxes..." -Level "INFO"
-        $discoveryResults.Mailboxes = Get-ExchangeMailboxes -OutputPath $rawPath -Configuration $Configuration
+        # Test Exchange Online connectivity
+        try {
+            $testMailbox = Get-Mailbox -ResultSize 1 -ErrorAction Stop
+            Write-MandALog "Successfully connected to Exchange Online" -Level "SUCCESS" -Context $Context
+            $Result.Metadata['ExchangeOnlineConnected'] = $true
+        }
+        catch {
+            $Result.AddError("Failed to connect to Exchange Online", $_.Exception, @{
+                Prerequisite = 'Exchange Online Connectivity'
+                Resolution = 'Verify Exchange Online connection and permissions'
+            })
+            return
+        }
         
-        # Mailbox Statistics
-        Write-MandALog "Gathering mailbox statistics..." -Level "INFO"
-        $discoveryResults.MailboxStats = Get-ExchangeMailboxStatistics -OutputPath $rawPath -Configuration $Configuration -Mailboxes $discoveryResults.Mailboxes
+        Write-MandALog "All Exchange Discovery prerequisites validated successfully" -Level "SUCCESS" -Context $Context
         
-        # Distribution Groups
-        Write-MandALog "Discovering distribution groups..." -Level "INFO"
-        $discoveryResults.DistributionGroups = Get-ExchangeDistributionGroups -OutputPath $rawPath -Configuration $Configuration
-        
-        # Mail-Enabled Security Groups
-        Write-MandALog "Discovering mail-enabled security groups..." -Level "INFO"
-        $discoveryResults.MailSecurityGroups = Get-ExchangeMailSecurityGroups -OutputPath $rawPath -Configuration $Configuration
-        
-        # Mailbox Permissions
-        Write-MandALog "Discovering mailbox permissions..." -Level "INFO"
-        $discoveryResults.MailboxPermissions = Get-ExchangeMailboxPermissions -OutputPath $rawPath -Configuration $Configuration -Mailboxes $discoveryResults.Mailboxes
-        
-        # Send As Permissions
-        Write-MandALog "Discovering Send As permissions..." -Level "INFO"
-        $discoveryResults.SendAsPermissions = Get-ExchangeSendAsPermissions -OutputPath $rawPath -Configuration $Configuration
-        
-        # Send On Behalf Permissions
-        Write-MandALog "Discovering Send On Behalf permissions..." -Level "INFO"
-        $discoveryResults.SendOnBehalfPermissions = Get-ExchangeSendOnBehalfPermissions -OutputPath $rawPath -Configuration $Configuration -Mailboxes $discoveryResults.Mailboxes
-        
-        # Mail Flow Rules
-        Write-MandALog "Discovering mail flow rules..." -Level "INFO"
-        $discoveryResults.MailFlowRules = Get-ExchangeMailFlowRules -OutputPath $rawPath -Configuration $Configuration
-        
-        # Retention Policies
-        Write-MandALog "Discovering retention policies..." -Level "INFO"
-        $discoveryResults.RetentionPolicies = Get-ExchangeRetentionPolicies -OutputPath $rawPath -Configuration $Configuration
-        
-        Write-MandALog "Exchange Online discovery completed successfully" -Level "SUCCESS"
-        return $discoveryResults
-        
-    } catch {
-        Write-MandALog "Exchange Online discovery failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
     }
+    catch {
+        $Result.AddError("Unexpected error during prerequisites validation", $_.Exception, @{
+            Prerequisite = 'General Validation'
+        })
+    }
+}
+
+function Get-ExchangeMailboxesWithErrorHandling {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    $mailboxes = [System.Collections.ArrayList]::new()
+    $retryCount = 0
+    $maxRetries = 3
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            Write-MandALog "Retrieving Exchange Online mailboxes..." -Level "INFO" -Context $Context
+            
+            # Get mailboxes with pagination
+            $resultSize = 1000
+            $resultPage = 1
+            $allMailboxes = @()
+            
+            do {
+                Write-MandALog "Retrieving mailboxes page $resultPage..." -Level "DEBUG" -Context $Context
+                $results = Get-Mailbox -ResultSize $resultSize -IncludeInactiveMailbox:$($Configuration.exchangeOnline.includeSoftDeletedMailboxes) |
+                    Select-Object -First $resultSize -Skip (($resultPage - 1) * $resultSize)
+                
+                if ($results) {
+                    $allMailboxes += $results
+                    $resultPage++
+                }
+            } while ($results.Count -eq $resultSize)
+            
+            Write-MandALog "Retrieved $($allMailboxes.Count) mailboxes" -Level "SUCCESS" -Context $Context
+            
+            # Process mailboxes with individual error handling
+            $processedCount = 0
+            foreach ($mailbox in $allMailboxes) {
+                try {
+                    $processedCount++
+                    if ($processedCount % 100 -eq 0) {
+                        Write-MandALog "Processed $processedCount/$($allMailboxes.Count) mailboxes" -Level "PROGRESS" -Context $Context
+                    }
+                    
+                    # Filter based on configuration
+                    if (-not $Configuration.exchangeOnline.includeResourceMailboxes -and $mailbox.RecipientTypeDetails -match "Room|Equipment") {
+                        continue
+                    }
+                    
+                    if (-not $Configuration.exchangeOnline.includeSharedMailboxes -and $mailbox.RecipientTypeDetails -eq "SharedMailbox") {
+                        continue
+                    }
+                    
+                    $mailboxObj = ConvertTo-ExchangeMailboxObject -Mailbox $mailbox -Context $Context
+                    $null = $mailboxes.Add($mailboxObj)
+                }
+                catch {
+                    Write-MandALog "Error processing mailbox at index $processedCount`: $_" -Level "WARN" -Context $Context
+                    # Continue processing other mailboxes
+                }
+            }
+            
+            # Success - exit retry loop
+            break
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -ge $maxRetries) {
+                throw "Failed to retrieve Exchange mailboxes after $maxRetries attempts: $_"
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount) * 2  # Exponential backoff
+            Write-MandALog "Exchange mailbox query failed (attempt $retryCount/$maxRetries). Waiting $waitTime seconds..." -Level "WARN" -Context $Context
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+    
+    return $mailboxes.ToArray()
+}
+
+function ConvertTo-ExchangeMailboxObject {
+    param($Mailbox, $Context)
+    
+    try {
+        return [PSCustomObject]@{
+            Identity = $Mailbox.Identity
+            UserPrincipalName = $Mailbox.UserPrincipalName
+            PrimarySmtpAddress = $Mailbox.PrimarySmtpAddress
+            DisplayName = $Mailbox.DisplayName
+            Alias = $Mailbox.Alias
+            RecipientType = $Mailbox.RecipientType
+            RecipientTypeDetails = $Mailbox.RecipientTypeDetails
+            EmailAddresses = ($Mailbox.EmailAddresses | Where-Object { $_ -like "smtp:*" } | ForEach-Object { $_.Substring(5) }) -join ";"
+            ArchiveStatus = $Mailbox.ArchiveStatus
+            ArchiveGuid = if ($Mailbox.ArchiveGuid) { $Mailbox.ArchiveGuid.ToString() } else { "" }
+            DatabaseName = $Mailbox.Database
+            RetentionPolicy = $Mailbox.RetentionPolicy
+            LitigationHoldEnabled = $Mailbox.LitigationHoldEnabled
+            SingleItemRecoveryEnabled = $Mailbox.SingleItemRecoveryEnabled
+            WhenCreated = $Mailbox.WhenCreated
+            WhenChanged = $Mailbox.WhenChanged
+            IsInactive = $Mailbox.IsInactiveMailbox
+            HiddenFromAddressListsEnabled = $Mailbox.HiddenFromAddressListsEnabled
+            ForwardingAddress = $Mailbox.ForwardingAddress
+            ForwardingSmtpAddress = $Mailbox.ForwardingSmtpAddress
+            DeliverToMailboxAndForward = $Mailbox.DeliverToMailboxAndForward
+            GrantSendOnBehalfTo = ($Mailbox.GrantSendOnBehalfTo -join ";")
+            IssueWarningQuota = $Mailbox.IssueWarningQuota
+            ProhibitSendQuota = $Mailbox.ProhibitSendQuota
+            ProhibitSendReceiveQuota = $Mailbox.ProhibitSendReceiveQuota
+            UseDatabaseQuotaDefaults = $Mailbox.UseDatabaseQuotaDefaults
+            CustomAttribute1 = $Mailbox.CustomAttribute1
+            CustomAttribute2 = $Mailbox.CustomAttribute2
+            Department = $Mailbox.Department
+            Office = $Mailbox.Office
+            MailboxPlan = $Mailbox.MailboxPlan
+            ExternalDirectoryObjectId = $Mailbox.ExternalDirectoryObjectId
+        }
+    }
+    catch {
+        Write-MandALog "Error converting mailbox object: $_" -Level "WARN" -Context $Context
+        return $null
+    }
+}
+
+#Cannot use $outputpath for logging as its used internallyin the module
+function Invoke-ExchangeDiscovery {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$false)]
+        $Context
+    )
+    
+    # Initialize result object
+    $result = [DiscoveryResult]::new('Exchange')
+    
+    # Set up error handling preferences
+    $originalErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
+    
+    try {
+        # Create minimal context if not provided
+        if (-not $Context) {
+            $Context = @{
+                ErrorCollector = [PSCustomObject]@{
+                    AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
+                    AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
+                }
+                Paths = @{
+                    RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
+                }
+            }
+        }
+        
+        Write-MandALog "--- Starting Exchange Discovery Phase (v2.0.0) ---" -Level "HEADER" -Context $Context
+        
+        # Validate prerequisites
+        Test-ExchangeDiscoveryPrerequisites -Configuration $Configuration -Result $result -Context $Context
+        
+        if (-not $result.Success) {
+            Write-MandALog "Prerequisites check failed, aborting Exchange discovery" -Level "ERROR" -Context $Context
+            return $result
+        }
+        
+        # Main discovery logic with nested error handling
+        $exchangeData = @{
+            Mailboxes = @()
+            MailboxStats = @()
+            DistributionGroups = @()
+            MailSecurityGroups = @()
+            MailboxPermissions = @()
+            SendAsPermissions = @()
+            SendOnBehalfPermissions = @()
+            MailFlowRules = @()
+            RetentionPolicies = @()
+        }
+        
+        # Discover Mailboxes with specific error handling
+        try {
+            Write-MandALog "Discovering Exchange mailboxes..." -Level "INFO" -Context $Context
+            $exchangeData.Mailboxes = Get-ExchangeMailboxesWithErrorHandling -Configuration $Configuration -Context $Context
+            $result.Metadata['MailboxCount'] = $exchangeData.Mailboxes.Count
+            Write-MandALog "Successfully discovered $($exchangeData.Mailboxes.Count) Exchange mailboxes" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover Exchange mailboxes",
+                $_.Exception,
+                @{
+                    Operation = 'Get-Mailbox'
+                    ExchangeOnline = $true
+                }
+            )
+            Write-MandALog "Error discovering Exchange mailboxes: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            # Continue with other discoveries even if mailboxes fail
+        }
+        
+        # Discover Mailbox Statistics with specific error handling
+        try {
+            Write-MandALog "Gathering mailbox statistics..." -Level "INFO" -Context $Context
+            $exchangeData.MailboxStats = Get-ExchangeMailboxStatistics -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Mailboxes $exchangeData.Mailboxes
+            $result.Metadata['MailboxStatsCount'] = $exchangeData.MailboxStats.Count
+            Write-MandALog "Successfully gathered statistics for $($exchangeData.MailboxStats.Count) mailboxes" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to gather mailbox statistics",
+                $_.Exception,
+                @{
+                    Operation = 'Get-MailboxStatistics'
+                    MailboxCount = $exchangeData.Mailboxes.Count
+                }
+            )
+            Write-MandALog "Error gathering mailbox statistics: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover Distribution Groups with specific error handling
+        try {
+            Write-MandALog "Discovering distribution groups..." -Level "INFO" -Context $Context
+            $exchangeData.DistributionGroups = Get-ExchangeDistributionGroups -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $result.Metadata['DistributionGroupCount'] = $exchangeData.DistributionGroups.Count
+            Write-MandALog "Successfully discovered $($exchangeData.DistributionGroups.Count) distribution groups" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover distribution groups",
+                $_.Exception,
+                @{
+                    Operation = 'Get-DistributionGroup'
+                }
+            )
+            Write-MandALog "Error discovering distribution groups: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover Mail-Enabled Security Groups with specific error handling
+        try {
+            Write-MandALog "Discovering mail-enabled security groups..." -Level "INFO" -Context $Context
+            $exchangeData.MailSecurityGroups = Get-ExchangeMailSecurityGroups -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $result.Metadata['MailSecurityGroupCount'] = $exchangeData.MailSecurityGroups.Count
+            Write-MandALog "Successfully discovered $($exchangeData.MailSecurityGroups.Count) mail-enabled security groups" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover mail-enabled security groups",
+                $_.Exception,
+                @{
+                    Operation = 'Get-DistributionGroup'
+                    RecipientTypeDetails = 'MailUniversalSecurityGroup'
+                }
+            )
+            Write-MandALog "Error discovering mail-enabled security groups: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover Mailbox Permissions with specific error handling
+        try {
+            Write-MandALog "Discovering mailbox permissions..." -Level "INFO" -Context $Context
+            $exchangeData.MailboxPermissions = Get-ExchangeMailboxPermissions -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Mailboxes $exchangeData.Mailboxes
+            $result.Metadata['MailboxPermissionCount'] = $exchangeData.MailboxPermissions.Count
+            Write-MandALog "Successfully discovered $($exchangeData.MailboxPermissions.Count) mailbox permissions" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover mailbox permissions",
+                $_.Exception,
+                @{
+                    Operation = 'Get-MailboxPermission'
+                    MailboxCount = $exchangeData.Mailboxes.Count
+                }
+            )
+            Write-MandALog "Error discovering mailbox permissions: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover Send As Permissions with specific error handling
+        try {
+            Write-MandALog "Discovering Send As permissions..." -Level "INFO" -Context $Context
+            $exchangeData.SendAsPermissions = Get-ExchangeSendAsPermissions -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $result.Metadata['SendAsPermissionCount'] = $exchangeData.SendAsPermissions.Count
+            Write-MandALog "Successfully discovered $($exchangeData.SendAsPermissions.Count) Send As permissions" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover Send As permissions",
+                $_.Exception,
+                @{
+                    Operation = 'Get-RecipientPermission'
+                }
+            )
+            Write-MandALog "Error discovering Send As permissions: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover Send On Behalf Permissions with specific error handling
+        try {
+            Write-MandALog "Discovering Send On Behalf permissions..." -Level "INFO" -Context $Context
+            $exchangeData.SendOnBehalfPermissions = Get-ExchangeSendOnBehalfPermissions -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Mailboxes $exchangeData.Mailboxes
+            $result.Metadata['SendOnBehalfPermissionCount'] = $exchangeData.SendOnBehalfPermissions.Count
+            Write-MandALog "Successfully discovered $($exchangeData.SendOnBehalfPermissions.Count) Send On Behalf permissions" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover Send On Behalf permissions",
+                $_.Exception,
+                @{
+                    Operation = 'Process-SendOnBehalfPermissions'
+                    MailboxCount = $exchangeData.Mailboxes.Count
+                }
+            )
+            Write-MandALog "Error discovering Send On Behalf permissions: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover Mail Flow Rules with specific error handling
+        try {
+            Write-MandALog "Discovering mail flow rules..." -Level "INFO" -Context $Context
+            $exchangeData.MailFlowRules = Get-ExchangeMailFlowRules -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $result.Metadata['MailFlowRuleCount'] = $exchangeData.MailFlowRules.Count
+            Write-MandALog "Successfully discovered $($exchangeData.MailFlowRules.Count) mail flow rules" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover mail flow rules",
+                $_.Exception,
+                @{
+                    Operation = 'Get-TransportRule'
+                }
+            )
+            Write-MandALog "Error discovering mail flow rules: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover Retention Policies with specific error handling
+        try {
+            Write-MandALog "Discovering retention policies..." -Level "INFO" -Context $Context
+            $exchangeData.RetentionPolicies = Get-ExchangeRetentionPolicies -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $result.Metadata['RetentionPolicyCount'] = $exchangeData.RetentionPolicies.Count
+            Write-MandALog "Successfully discovered $($exchangeData.RetentionPolicies.Count) retention policies" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover retention policies",
+                $_.Exception,
+                @{
+                    Operation = 'Get-RetentionPolicy'
+                }
+            )
+            Write-MandALog "Error discovering retention policies: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Set the data even if partially successful
+        $result.Data = $exchangeData
+        
+        # Determine overall success based on critical data
+        if ($exchangeData.Mailboxes.Count -eq 0) {
+            $result.Success = $false
+            $result.AddError("No Exchange mailboxes retrieved")
+            Write-MandALog "Exchange Discovery failed - no mailboxes retrieved" -Level "ERROR" -Context $Context
+        } else {
+            Write-MandALog "--- Exchange Discovery Phase Completed Successfully ---" -Level "SUCCESS" -Context $Context
+        }
+        
+    }
+    catch {
+        # Catch-all for unexpected errors
+        $result.AddError(
+            "Unexpected error in Exchange discovery",
+            $_.Exception,
+            @{
+                ErrorPoint = 'Main Discovery Block'
+                LastOperation = $MyInvocation.MyCommand.Name
+            }
+        )
+        Write-MandALog "Unexpected error in Exchange Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+    }
+    finally {
+        # Always execute cleanup
+        $ErrorActionPreference = $originalErrorActionPreference
+        $result.Complete()
+        
+        # Log summary
+        Write-MandALog "Exchange Discovery completed. Success: $($result.Success), Errors: $($result.Errors.Count), Warnings: $($result.Warnings.Count)" -Level "INFO" -Context $Context
+        
+        # Clean up connections if needed
+        try {
+            # Clear any cached Exchange sessions if needed
+            if (Get-Variable -Name 'ExchangeSession' -ErrorAction SilentlyContinue) {
+                Remove-Variable -Name 'ExchangeSession' -Force
+            }
+        }
+        catch {
+            Write-MandALog "Cleanup warning: $_" -Level "WARN" -Context $Context
+        }
+    }
+    
+    return $result
 }
 
 function Get-ExchangeMailboxes {

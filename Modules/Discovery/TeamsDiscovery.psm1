@@ -7,124 +7,429 @@
 #>
 
 # Modules/Discovery/TeamsDiscovery.psm1
-#Cannot use $outputpath as its used internally here
 
-
-function Invoke-TeamsDiscovery {
-    param([hashtable]$Configuration)
+# Teams Discovery Prerequisites Function
+function Test-TeamsDiscoveryPrerequisites {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        [DiscoveryResult]$Result,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    Write-MandALog "Validating Teams Discovery prerequisites..." -Level "INFO" -Context $Context
     
     try {
-        Write-MandALog "Starting Microsoft Teams discovery" -Level "HEADER"
+        # Check if Microsoft Teams PowerShell is available
+        if (-not (Get-Module -Name MicrosoftTeams -ListAvailable)) {
+            $Result.AddError("MicrosoftTeams PowerShell module is not available", $null, @{
+                Prerequisite = 'MicrosoftTeams Module'
+                Resolution = 'Install MicrosoftTeams PowerShell module using Install-Module MicrosoftTeams'
+            })
+            return
+        }
         
-   
-
+        # Import the module if not already loaded
+        if (-not (Get-Module -Name MicrosoftTeams)) {
+            Import-Module MicrosoftTeams -ErrorAction Stop
+            Write-MandALog "MicrosoftTeams module imported successfully" -Level "DEBUG" -Context $Context
+        }
         
-        $rawPath = Join-Path $outputPath "Raw"
-        
-        $discoveryResults = @{}
-        
-        # Verify Teams connection by actually testing a Teams cmdlet
-        $isConnected = $false
+        # Test Teams connectivity
         try {
-            # Try to get teams to verify connection
             $testTeams = Get-Team -ErrorAction Stop | Select-Object -First 1
-            $isConnected = $true
-            Write-MandALog "Microsoft Teams connection verified" -Level "SUCCESS"
-        } catch {
+            Write-MandALog "Successfully connected to Microsoft Teams" -Level "SUCCESS" -Context $Context
+            $Result.Metadata['TeamsConnected'] = $true
+        }
+        catch {
             if ($_.Exception.Message -like "*You must call the Connect-MicrosoftTeams*") {
-                Write-MandALog "Microsoft Teams not connected. Attempting connection..." -Level "WARN"
-                
-                # Try to connect using existing credentials
-                try {
-                    # First check if we have a stored credential or service principal
-                    if ($Configuration.authentication.useServicePrincipal) {
-                        # Get credentials from credential store
-                        $credPath = $Configuration.authentication.credentialStorePath
-                        if (Test-Path $credPath) {
-                            $credData = Get-Content $credPath | ConvertFrom-Json
-                            if ($credData.AppId -and $credData.TenantId) {
-                                # Convert secure string back to plain text for connection
-                                $securePassword = ConvertTo-SecureString $credData.ClientSecret -AsPlainText -Force
-                                $credential = New-Object System.Management.Automation.PSCredential($credData.AppId, $securePassword)
-                                
-                                # Connect using service principal
-                                Connect-MicrosoftTeams -Credential $credential -TenantId $credData.TenantId -ErrorAction Stop
-                                $isConnected = $true
-                                Write-MandALog "Successfully connected to Microsoft Teams using service principal" -Level "SUCCESS"
-                            }
-                        }
-                    }
-                    
-                    if (-not $isConnected) {
-                        # Try interactive connection as fallback
-                        Connect-MicrosoftTeams -ErrorAction Stop
-                        $isConnected = $true
-                        Write-MandALog "Successfully connected to Microsoft Teams interactively" -Level "SUCCESS"
-                    }
-                    
-                    # Verify connection worked
-                    $testTeams = Get-Team -ErrorAction Stop | Select-Object -First 1
-                    
-                } catch {
-                    Write-MandALog "Failed to connect to Microsoft Teams: $($_.Exception.Message)" -Level "ERROR"
-                    Write-MandALog "Teams discovery will be skipped." -Level "WARN"
-                    return @{}
-                }
+                $Result.AddError("Not connected to Microsoft Teams", $_.Exception, @{
+                    Prerequisite = 'Teams Authentication'
+                    Resolution = 'Connect to Microsoft Teams using Connect-MicrosoftTeams'
+                })
+                return
             } else {
-                # Some other error occurred
-                Write-MandALog "Error verifying Teams connection: $($_.Exception.Message)" -Level "ERROR"
-                return @{}
+                $Result.AddError("Failed to access Microsoft Teams", $_.Exception, @{
+                    Prerequisite = 'Teams Access'
+                    Resolution = 'Verify Microsoft Teams connection and permissions'
+                })
+                return
             }
         }
         
-        if (-not $isConnected) {
-            Write-MandALog "Unable to establish Teams connection. Skipping Teams discovery." -Level "WARN"
-            return @{}
-        }
+        Write-MandALog "All Teams Discovery prerequisites validated successfully" -Level "SUCCESS" -Context $Context
         
-        # Teams
-        Write-MandALog "Discovering Teams..." -Level "INFO"
-        $discoveryResults.Teams = Get-TeamsData -OutputPath $rawPath -Configuration $Configuration
-        
-        # If no teams were found, skip remaining discovery
-        if ($null -eq $discoveryResults.Teams -or $discoveryResults.Teams.Count -eq 0) {
-            Write-MandALog "No teams found or error retrieving teams. Skipping detailed Teams discovery." -Level "WARN"
-            return $discoveryResults
-        }
-        
-        # Team Channels
-        Write-MandALog "Discovering Team channels..." -Level "INFO"
-        $discoveryResults.TeamChannels = Get-TeamChannelsData -OutputPath $rawPath -Configuration $Configuration -Teams $discoveryResults.Teams
-        
-        # Team Members
-        Write-MandALog "Discovering Team members..." -Level "INFO"
-        $discoveryResults.TeamMembers = Get-TeamMembersData -OutputPath $rawPath -Configuration $Configuration -Teams $discoveryResults.Teams
-        
-        # Team Apps
-        Write-MandALog "Discovering Team apps..." -Level "INFO"
-        $discoveryResults.TeamApps = Get-TeamAppsData -OutputPath $rawPath -Configuration $Configuration -Teams $discoveryResults.Teams
-        
-        # Guest Users
-        Write-MandALog "Discovering guest users in Teams..." -Level "INFO"
-        $discoveryResults.GuestUsers = Get-TeamsGuestUsersData -OutputPath $rawPath -Configuration $Configuration
-        
-        # Teams Policies
-        Write-MandALog "Discovering Teams policies..." -Level "INFO"
-        $discoveryResults.TeamsPolicies = Get-TeamsPoliciesData -OutputPath $rawPath -Configuration $Configuration
-        
-        # Teams Phone
-        Write-MandALog "Discovering Teams phone configurations..." -Level "INFO"
-        $discoveryResults.TeamsPhone = Get-TeamsPhoneData -OutputPath $rawPath -Configuration $Configuration
-        
-        Write-MandALog "Microsoft Teams discovery completed successfully" -Level "SUCCESS"
-        return $discoveryResults
-        
-    } catch {
-        Write-MandALog "Microsoft Teams discovery failed: $($_.Exception.Message)" -Level "ERROR"
-        return @{}
+    }
+    catch {
+        $Result.AddError("Unexpected error during prerequisites validation", $_.Exception, @{
+            Prerequisite = 'General Validation'
+        })
     }
 }
 
+function Get-TeamsWithErrorHandling {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    $teams = [System.Collections.ArrayList]::new()
+    $retryCount = 0
+    $maxRetries = 3
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            Write-MandALog "Retrieving all Teams..." -Level "INFO" -Context $Context
+            
+            $allTeams = Get-Team -ErrorAction Stop
+            
+            if ($null -eq $allTeams -or $allTeams.Count -eq 0) {
+                Write-MandALog "No teams found in the tenant" -Level "WARN" -Context $Context
+                return @()
+            }
+            
+            Write-MandALog "Found $($allTeams.Count) teams" -Level "SUCCESS" -Context $Context
+            
+            # Process teams with individual error handling
+            $processedCount = 0
+            foreach ($team in $allTeams) {
+                try {
+                    $processedCount++
+                    if ($processedCount % 10 -eq 0) {
+                        Write-MandALog "Processed $processedCount/$($allTeams.Count) teams" -Level "PROGRESS" -Context $Context
+                    }
+                    
+                    $teamObj = ConvertTo-TeamsObject -Team $team -Context $Context
+                    if ($teamObj) {
+                        $null = $teams.Add($teamObj)
+                    }
+                }
+                catch {
+                    Write-MandALog "Error processing team $($team.DisplayName): $_" -Level "WARN" -Context $Context
+                    # Continue processing other teams
+                }
+            }
+            
+            # Success - exit retry loop
+            break
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -ge $maxRetries) {
+                throw "Failed to retrieve Teams after $maxRetries attempts: $_"
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount) * 2  # Exponential backoff
+            Write-MandALog "Teams query failed (attempt $retryCount/$maxRetries). Waiting $waitTime seconds..." -Level "WARN" -Context $Context
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+    
+    return $teams.ToArray()
+}
+
+function ConvertTo-TeamsObject {
+    param($Team, $Context)
+    
+    try {
+        # Get team details
+        $teamDetails = Get-Team -GroupId $Team.GroupId -ErrorAction Stop
+        
+        # Get owner and member counts
+        $owners = @()
+        $members = @()
+        $guests = @()
+        
+        try {
+            $owners = @(Get-TeamUser -GroupId $Team.GroupId -Role Owner -ErrorAction SilentlyContinue)
+        } catch {
+            Write-MandALog "Could not get owners for team $($Team.DisplayName)" -Level "DEBUG" -Context $Context
+        }
+        
+        try {
+            $members = @(Get-TeamUser -GroupId $Team.GroupId -Role Member -ErrorAction SilentlyContinue)
+        } catch {
+            Write-MandALog "Could not get members for team $($Team.DisplayName)" -Level "DEBUG" -Context $Context
+        }
+        
+        try {
+            $guests = @(Get-TeamUser -GroupId $Team.GroupId -Role Guest -ErrorAction SilentlyContinue)
+        } catch {
+            Write-MandALog "Could not get guests for team $($Team.DisplayName)" -Level "DEBUG" -Context $Context
+        }
+        
+        return [PSCustomObject]@{
+            GroupId = $Team.GroupId
+            DisplayName = $Team.DisplayName
+            Description = $Team.Description
+            Visibility = $Team.Visibility
+            Archived = $Team.Archived
+            MailNickName = $Team.MailNickName
+            Classification = $Team.Classification
+            CreatedDateTime = if ($teamDetails.CreatedDateTime) { $teamDetails.CreatedDateTime } else { $null }
+            OwnerCount = $owners.Count
+            MemberCount = $members.Count
+            GuestCount = $guests.Count
+            TotalMemberCount = $owners.Count + $members.Count + $guests.Count
+            AllowCreateUpdateChannels = $teamDetails.AllowCreateUpdateChannels
+            AllowDeleteChannels = $teamDetails.AllowDeleteChannels
+            AllowAddRemoveApps = $teamDetails.AllowAddRemoveApps
+            AllowCreateUpdateRemoveTabs = $teamDetails.AllowCreateUpdateRemoveTabs
+            AllowCreateUpdateRemoveConnectors = $teamDetails.AllowCreateUpdateRemoveConnectors
+            AllowUserEditMessages = $teamDetails.AllowUserEditMessages
+            AllowUserDeleteMessages = $teamDetails.AllowUserDeleteMessages
+            AllowOwnerDeleteMessages = $teamDetails.AllowOwnerDeleteMessages
+            AllowTeamMentions = $teamDetails.AllowTeamMentions
+            AllowChannelMentions = $teamDetails.AllowChannelMentions
+            AllowGuestCreateUpdateChannels = $teamDetails.AllowGuestCreateUpdateChannels
+            AllowGuestDeleteChannels = $teamDetails.AllowGuestDeleteChannels
+            HasGuests = $guests.Count -gt 0
+        }
+    }
+    catch {
+        Write-MandALog "Error converting Teams object: $_" -Level "WARN" -Context $Context
+        return $null
+    }
+}
+
+function Invoke-TeamsDiscovery {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$false)]
+        $Context
+    )
+    
+    # Initialize result object
+    $result = [DiscoveryResult]::new('Teams')
+    
+    # Set up error handling preferences
+    $originalErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
+    
+    try {
+        # Create minimal context if not provided
+        if (-not $Context) {
+            $Context = @{
+                ErrorCollector = [PSCustomObject]@{
+                    AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
+                    AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
+                }
+                Paths = @{
+                    RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
+                }
+            }
+        }
+        
+        Write-MandALog "--- Starting Teams Discovery Phase (v2.0.0) ---" -Level "HEADER" -Context $Context
+        
+        # Validate prerequisites
+        Test-TeamsDiscoveryPrerequisites -Configuration $Configuration -Result $result -Context $Context
+        
+        if (-not $result.Success) {
+            Write-MandALog "Prerequisites check failed, aborting Teams discovery" -Level "ERROR" -Context $Context
+            return $result
+        }
+        
+        # Main discovery logic with nested error handling
+        $teamsData = @{
+            Teams = @()
+            TeamChannels = @()
+            TeamMembers = @()
+            TeamApps = @()
+            GuestUsers = @()
+            TeamsPolicies = @()
+            TeamsPhone = @()
+        }
+        
+        # Discover Teams with specific error handling
+        try {
+            Write-MandALog "Discovering Microsoft Teams..." -Level "INFO" -Context $Context
+            $teamsData.Teams = Get-TeamsWithErrorHandling -Configuration $Configuration -Context $Context
+            $result.Metadata['TeamCount'] = $teamsData.Teams.Count
+            Write-MandALog "Successfully discovered $($teamsData.Teams.Count) Microsoft Teams" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover Microsoft Teams",
+                $_.Exception,
+                @{
+                    Operation = 'Get-Team'
+                    TeamsModule = 'MicrosoftTeams'
+                }
+            )
+            Write-MandALog "Error discovering Microsoft Teams: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            # Continue with other discoveries even if teams fail
+        }
+        
+        # Discover Team Channels with specific error handling
+        if ($teamsData.Teams.Count -gt 0) {
+            try {
+                Write-MandALog "Discovering Team channels..." -Level "INFO" -Context $Context
+                $teamsData.TeamChannels = Get-TeamChannelsData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Teams $teamsData.Teams
+                $result.Metadata['TeamChannelCount'] = $teamsData.TeamChannels.Count
+                Write-MandALog "Successfully discovered $($teamsData.TeamChannels.Count) Team channels" -Level "SUCCESS" -Context $Context
+            }
+            catch {
+                $result.AddError(
+                    "Failed to discover Team channels",
+                    $_.Exception,
+                    @{
+                        Operation = 'Get-TeamChannel'
+                        TeamCount = $teamsData.Teams.Count
+                    }
+                )
+                Write-MandALog "Error discovering Team channels: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+            
+            # Discover Team Members with specific error handling
+            try {
+                Write-MandALog "Discovering Team members..." -Level "INFO" -Context $Context
+                $teamsData.TeamMembers = Get-TeamMembersData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Teams $teamsData.Teams
+                $result.Metadata['TeamMemberCount'] = $teamsData.TeamMembers.Count
+                Write-MandALog "Successfully discovered $($teamsData.TeamMembers.Count) Team members" -Level "SUCCESS" -Context $Context
+            }
+            catch {
+                $result.AddError(
+                    "Failed to discover Team members",
+                    $_.Exception,
+                    @{
+                        Operation = 'Get-TeamUser'
+                        TeamCount = $teamsData.Teams.Count
+                    }
+                )
+                Write-MandALog "Error discovering Team members: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+            
+            # Discover Team Apps with specific error handling
+            try {
+                Write-MandALog "Discovering Team apps..." -Level "INFO" -Context $Context
+                $teamsData.TeamApps = Get-TeamAppsData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -Teams $teamsData.Teams
+                $result.Metadata['TeamAppCount'] = $teamsData.TeamApps.Count
+                Write-MandALog "Successfully discovered $($teamsData.TeamApps.Count) Team apps" -Level "SUCCESS" -Context $Context
+            }
+            catch {
+                $result.AddError(
+                    "Failed to discover Team apps",
+                    $_.Exception,
+                    @{
+                        Operation = 'Get-TeamsApp'
+                        TeamCount = $teamsData.Teams.Count
+                    }
+                )
+                Write-MandALog "Error discovering Team apps: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+        }
+        
+        # Discover Guest Users with specific error handling
+        try {
+            Write-MandALog "Discovering guest users in Teams..." -Level "INFO" -Context $Context
+            $teamsData.GuestUsers = Get-TeamsGuestUsersData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $result.Metadata['GuestUserCount'] = $teamsData.GuestUsers.Count
+            Write-MandALog "Successfully discovered $($teamsData.GuestUsers.Count) guest users" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover Teams guest users",
+                $_.Exception,
+                @{
+                    Operation = 'Get-MgUser'
+                    Filter = "userType eq 'Guest'"
+                }
+            )
+            Write-MandALog "Error discovering Teams guest users: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover Teams Policies with specific error handling
+        try {
+            Write-MandALog "Discovering Teams policies..." -Level "INFO" -Context $Context
+            $teamsData.TeamsPolicies = Get-TeamsPoliciesData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $result.Metadata['TeamsPolicyCount'] = $teamsData.TeamsPolicies.Count
+            Write-MandALog "Successfully discovered $($teamsData.TeamsPolicies.Count) Teams policies" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover Teams policies",
+                $_.Exception,
+                @{
+                    Operation = 'Get-CsTeamsPolicy'
+                }
+            )
+            Write-MandALog "Error discovering Teams policies: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover Teams Phone with specific error handling
+        try {
+            Write-MandALog "Discovering Teams phone configurations..." -Level "INFO" -Context $Context
+            $teamsData.TeamsPhone = Get-TeamsPhoneData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $result.Metadata['TeamsPhoneCount'] = $teamsData.TeamsPhone.Count
+            Write-MandALog "Successfully discovered Teams phone configurations" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover Teams phone configurations",
+                $_.Exception,
+                @{
+                    Operation = 'Get-CsPhoneNumberAssignment'
+                }
+            )
+            Write-MandALog "Error discovering Teams phone configurations: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Set the data even if partially successful
+        $result.Data = $teamsData
+        
+        # Determine overall success based on critical data
+        if ($teamsData.Teams.Count -eq 0) {
+            $result.Success = $false
+            $result.AddError("No Microsoft Teams retrieved")
+            Write-MandALog "Teams Discovery failed - no teams retrieved" -Level "ERROR" -Context $Context
+        } else {
+            Write-MandALog "--- Teams Discovery Phase Completed Successfully ---" -Level "SUCCESS" -Context $Context
+        }
+        
+    }
+    catch {
+        # Catch-all for unexpected errors
+        $result.AddError(
+            "Unexpected error in Teams discovery",
+            $_.Exception,
+            @{
+                ErrorPoint = 'Main Discovery Block'
+                LastOperation = $MyInvocation.MyCommand.Name
+            }
+        )
+        Write-MandALog "Unexpected error in Teams Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+    }
+    finally {
+        # Always execute cleanup
+        $ErrorActionPreference = $originalErrorActionPreference
+        $result.Complete()
+        
+        # Log summary
+        Write-MandALog "Teams Discovery completed. Success: $($result.Success), Errors: $($result.Errors.Count), Warnings: $($result.Warnings.Count)" -Level "INFO" -Context $Context
+        
+        # Clean up connections if needed
+        try {
+            # Disconnect from Teams if needed
+            if (Get-Command Disconnect-MicrosoftTeams -ErrorAction SilentlyContinue) {
+                Disconnect-MicrosoftTeams -ErrorAction SilentlyContinue
+            }
+        }
+        catch {
+            Write-MandALog "Cleanup warning: $_" -Level "WARN" -Context $Context
+        }
+    }
+    
+    return $result
+}
 function Get-TeamsData {
     param(
         [string]$OutputPath,

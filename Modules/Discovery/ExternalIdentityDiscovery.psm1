@@ -165,7 +165,72 @@ function Get-B2BGuestUsersEnhanced {
     }
 }
 
-# Enhanced main function
+# Prerequisites validation function
+function Test-ExternalIdentityDiscoveryPrerequisites {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$false)]
+        $Context
+    )
+    
+    $prerequisites = @{
+        IsValid = $true
+        MissingRequirements = @()
+        Warnings = @()
+    }
+    
+    try {
+        Write-ProgressStep "Validating External Identity Discovery prerequisites..." -Status Progress
+        
+        # Check for Microsoft Graph connection
+        $graphContext = Get-MgContext -ErrorAction SilentlyContinue
+        if ($null -eq $graphContext) {
+            $prerequisites.IsValid = $false
+            $prerequisites.MissingRequirements += "Microsoft Graph not connected. Please authenticate first."
+        } else {
+            Write-ProgressStep "Graph context active. Tenant: $($graphContext.TenantId)" -Status Info
+        }
+        
+        # Check for required Graph modules
+        $requiredModules = @(
+            'Microsoft.Graph.Authentication',
+            'Microsoft.Graph.Identity.SignIns',
+            'Microsoft.Graph.Identity.DirectoryManagement',
+            'Microsoft.Graph.Applications'
+        )
+        
+        foreach ($module in $requiredModules) {
+            if (-not (Get-Module -ListAvailable -Name $module)) {
+                $prerequisites.IsValid = $false
+                $prerequisites.MissingRequirements += "Required module '$module' not available"
+            }
+        }
+        
+        # Check required permissions
+        $requiredPermissions = @('User.Read.All', 'Policy.Read.All', 'IdentityProvider.Read.All')
+        if ($graphContext) {
+            $currentScopes = $graphContext.Scopes
+            foreach ($permission in $requiredPermissions) {
+                if ($permission -notin $currentScopes) {
+                    $prerequisites.Warnings += "Permission '$permission' may not be available - some features may be limited"
+                }
+            }
+        }
+        
+        Write-ProgressStep "Prerequisites validation completed" -Status Success
+        
+    } catch {
+        $prerequisites.IsValid = $false
+        $prerequisites.MissingRequirements += "Prerequisites validation failed: $($_.Exception.Message)"
+        Write-ProgressStep "Prerequisites validation failed: $($_.Exception.Message)" -Status Error
+    }
+    
+    return $prerequisites
+}
+
+# Enhanced main function with comprehensive error handling
 function Invoke-ExternalIdentityDiscovery {
     [CmdletBinding()]
     [OutputType([hashtable])]
@@ -176,75 +241,257 @@ function Invoke-ExternalIdentityDiscovery {
         [MandAContext]$Context
     )
     
-    $discoveryScript = {
-        $script:PerformanceTracker = [DiscoveryPerformanceTracker]::new()
-        
+    # Initialize result object
+    $result = [DiscoveryResult]::new("ExternalIdentity")
+    
+    try {
         Write-ProgressStep "Starting External Identity Discovery" -Status Progress
         
-        # Check Graph connection
-        Write-ProgressStep "Verifying Microsoft Graph connection..." -Status Progress
-        $graphContext = Get-MgContext -ErrorAction SilentlyContinue
-        if ($null -eq $graphContext) {
-            Write-ProgressStep "Microsoft Graph not connected" -Status Error
-            throw "Microsoft Graph not connected. Please authenticate first."
+        # Validate prerequisites
+        $prerequisites = Test-ExternalIdentityDiscoveryPrerequisites -Configuration $Configuration -Context $Context
+        if (-not $prerequisites.IsValid) {
+            throw "Prerequisites validation failed: $($prerequisites.MissingRequirements -join '; ')"
         }
         
-        Write-ProgressStep "Graph context active. Tenant: $($graphContext.TenantId)" -Status Info
+        # Log warnings
+        foreach ($warning in $prerequisites.Warnings) {
+            Write-ProgressStep $warning -Status Warning
+            $Context.ErrorCollector.AddWarning("ExternalIdentity", $warning)
+        }
         
+        $script:PerformanceTracker = [DiscoveryPerformanceTracker]::new()
         $config = Get-ExternalIdentityConfig -Configuration $Configuration
-        
         $results = @{}
         
-        # Define discovery tasks
+        # Define discovery tasks with error handling
         $discoveryTasks = @(
-            @{Name="B2B Guest Users"; Key="B2BGuests"; Function="Get-B2BGuestUsersEnhanced"},
-            @{Name="External Collaboration Settings"; Key="CollaborationSettings"; Function="Get-ExternalCollaborationSettingsEnhanced"},
-            @{Name="Guest User Activity"; Key="GuestActivity"; Function="Get-GuestUserActivityEnhanced"; RequiresGuests=$true},
-            @{Name="Partner Organizations"; Key="PartnerOrganizations"; Function="Get-PartnerOrganizationsEnhanced"; RequiresGuests=$true},
-            @{Name="External Identity Providers"; Key="IdentityProviders"; Function="Get-ExternalIdentityProvidersEnhanced"},
-            @{Name="Guest Invitations"; Key="GuestInvitations"; Function="Get-GuestInvitationsEnhanced"; RequiresGuests=$true},
-            @{Name="Cross-Tenant Access Policy"; Key="CrossTenantAccess"; Function="Get-CrossTenantAccessEnhanced"}
+            @{Name="B2B Guest Users"; Key="B2BGuests"; Function="Get-B2BGuestUsersWithErrorHandling"},
+            @{Name="External Collaboration Settings"; Key="CollaborationSettings"; Function="Get-ExternalCollaborationSettingsWithErrorHandling"},
+            @{Name="Guest User Activity"; Key="GuestActivity"; Function="Get-GuestUserActivityWithErrorHandling"; RequiresGuests=$true},
+            @{Name="Partner Organizations"; Key="PartnerOrganizations"; Function="Get-PartnerOrganizationsWithErrorHandling"; RequiresGuests=$true},
+            @{Name="External Identity Providers"; Key="IdentityProviders"; Function="Get-ExternalIdentityProvidersWithErrorHandling"},
+            @{Name="Guest Invitations"; Key="GuestInvitations"; Function="Get-GuestInvitationsWithErrorHandling"; RequiresGuests=$true},
+            @{Name="Cross-Tenant Access Policy"; Key="CrossTenantAccess"; Function="Get-CrossTenantAccessWithErrorHandling"}
         )
         
         $taskCount = 0
         foreach ($task in $discoveryTasks) {
             $taskCount++
             
-            Show-DiscoveryProgress -Module "ExternalIdentity" -Status "Running" `
-                -CurrentItem $task.Name -ItemsProcessed $taskCount -TotalItems $discoveryTasks.Count
-            
-            Write-ProgressStep "Discovering $($task.Name)..." -Status Progress
-            
-            $script:PerformanceTracker.StartOperation($task.Key)
-            
-            if ($task.RequiresGuests -and $results.B2BGuests.Count -eq 0) {
-                Write-ProgressStep "Skipping $($task.Name) - no guest users found" -Status Info
-                continue
+            try {
+                Show-DiscoveryProgress -Module "ExternalIdentity" -Status "Running" `
+                    -CurrentItem $task.Name -ItemsProcessed $taskCount -TotalItems $discoveryTasks.Count
+                
+                Write-ProgressStep "Discovering $($task.Name)..." -Status Progress
+                $script:PerformanceTracker.StartOperation($task.Key)
+                
+                if ($task.RequiresGuests -and (-not $results.B2BGuests -or $results.B2BGuests.Count -eq 0)) {
+                    Write-ProgressStep "Skipping $($task.Name) - no guest users found" -Status Info
+                    $script:PerformanceTracker.EndOperation($task.Key, 0)
+                    continue
+                }
+                
+                if ($task.RequiresGuests) {
+                    $results[$task.Key] = & $task.Function -GuestUsers $results.B2BGuests -Configuration $config -Context $Context
+                } else {
+                    $results[$task.Key] = & $task.Function -Configuration $config -Context $Context
+                }
+                
+                $itemCount = if ($results[$task.Key] -is [array]) { $results[$task.Key].Count } else { 1 }
+                $script:PerformanceTracker.EndOperation($task.Key, $itemCount)
+                $result.Metadata.SectionsProcessed++
+                
+                Write-ProgressStep "Completed $($task.Name): $itemCount items" -Status Success
+                
+            } catch {
+                $errorMsg = "Failed to discover $($task.Name): $($_.Exception.Message)"
+                Write-ProgressStep $errorMsg -Status Error
+                $Context.ErrorCollector.AddError("ExternalIdentity", $errorMsg, $_.Exception)
+                $result.Metadata.SectionErrors++
+                $script:PerformanceTracker.EndOperation($task.Key, 0)
             }
-            
-            if ($task.RequiresGuests) {
-                $results[$task.Key] = & $task.Function -GuestUsers $results.B2BGuests -Configuration $config -Context $Context
-            } else {
-                $results[$task.Key] = & $task.Function -Configuration $config -Context $Context
-            }
-            
-            $itemCount = if ($results[$task.Key] -is [array]) { $results[$task.Key].Count } else { 1 }
-            $script:PerformanceTracker.EndOperation($task.Key, $itemCount)
-            
-            Write-ProgressStep "Completed $($task.Name): $itemCount items" -Status Success
         }
         
-        Write-ProgressStep "External Identity Discovery completed" -Status Success
+        # Update result
+        $result.Data = Convert-ToFlattenedData -Results $results
+        $result.Success = $true
+        $result.Metadata.TotalSections = $discoveryTasks.Count
+        $result.Metadata.EndTime = Get-Date
+        $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
         
-        return Convert-ToFlattenedData -Results $results
+        Write-ProgressStep "External Identity Discovery completed" -Status Success
+        return $result
+        
+    } catch {
+        $result.Success = $false
+        $result.ErrorMessage = $_.Exception.Message
+        $result.Metadata.EndTime = Get-Date
+        $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
+        
+        Write-ProgressStep "External Identity Discovery failed: $($_.Exception.Message)" -Status Error
+        $Context.ErrorCollector.AddError("ExternalIdentity", "Discovery failed", $_.Exception)
+        
+        return $result
+        
+    } finally {
+        # Cleanup any resources if needed
+        Write-ProgressStep "External Identity Discovery cleanup completed" -Status Info
     }
+}
+
+# Enhanced wrapper functions with retry logic
+function Get-B2BGuestUsersWithErrorHandling {
+    param($Configuration, $Context)
     
-    return Invoke-BaseDiscovery -ModuleName "ExternalIdentity" `
-                               -DiscoveryScript $discoveryScript `
-                               -Configuration $Configuration `
-                               -Context $Context `
-                               -RequiredPermissions @('User.Read.All', 'Policy.Read.All', 'IdentityProvider.Read.All') `
-                               -CircuitBreaker $script:GraphCircuitBreaker
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-B2BGuestUsersEnhanced -Configuration $Configuration -Context $Context
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "B2B Guest Users discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-ExternalCollaborationSettingsWithErrorHandling {
+    param($Configuration, $Context)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-ExternalCollaborationSettingsEnhanced -Configuration $Configuration -Context $Context
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "External Collaboration Settings discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-GuestUserActivityWithErrorHandling {
+    param($GuestUsers, $Configuration, $Context)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-GuestUserActivityEnhanced -GuestUsers $GuestUsers -Configuration $Configuration -Context $Context
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "Guest User Activity discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-PartnerOrganizationsWithErrorHandling {
+    param($GuestUsers, $Configuration, $Context)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-PartnerOrganizationsEnhanced -GuestUsers $GuestUsers -Configuration $Configuration -Context $Context
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "Partner Organizations discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-ExternalIdentityProvidersWithErrorHandling {
+    param($Configuration, $Context)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-ExternalIdentityProvidersEnhanced -Configuration $Configuration -Context $Context
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "External Identity Providers discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-GuestInvitationsWithErrorHandling {
+    param($Configuration, $Context, $GuestUsers)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-GuestInvitationsEnhanced -Configuration $Configuration -Context $Context -GuestUsers $GuestUsers
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "Guest Invitations discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-CrossTenantAccessWithErrorHandling {
+    param($Configuration, $Context)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-CrossTenantAccessEnhanced -Configuration $Configuration -Context $Context
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "Cross-Tenant Access discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
 }
 
 # Enhanced Get-GraphDataInBatches with progress
@@ -414,72 +661,6 @@ function Invoke-DiscoveryWithRetry {
     }
 }
 
-function Invoke-ExternalIdentityDiscovery {
-    [CmdletBinding()]
-    [OutputType([hashtable])]
-    param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$Configuration,
-        [Parameter(Mandatory = $true)]
-        [MandAContext]$Context
-    )
-    
-    $discoveryScript = {
-        $script:PerformanceTracker = [DiscoveryPerformanceTracker]::new()
-        
-        $graphContext = Get-MgContext -ErrorAction SilentlyContinue
-        if ($null -eq $graphContext) {
-            throw "Microsoft Graph not connected. Please authenticate first."
-        }
-        
-        Write-MandALog -Message "Graph context active. Tenant: $($graphContext.TenantId)" -Level "INFO" -Context $Context
-        
-        $config = Get-ExternalIdentityConfig -Configuration $Configuration
-        
-        $results = @{}
-        
-        $script:PerformanceTracker.StartOperation("B2BGuestUsers")
-        $results.B2BGuests = Get-B2BGuestUsersEnhanced -Configuration $config -Context $Context
-        $script:PerformanceTracker.EndOperation("B2BGuestUsers", $results.B2BGuests.Count)
-        
-        $script:PerformanceTracker.StartOperation("CollaborationSettings")
-        $results.CollaborationSettings = Get-ExternalCollaborationSettingsEnhanced -Configuration $config -Context $Context
-        $script:PerformanceTracker.EndOperation("CollaborationSettings", $results.CollaborationSettings.Count)
-        
-        if ($results.B2BGuests.Count -gt 0) {
-            $script:PerformanceTracker.StartOperation("GuestActivity")
-            $results.GuestActivity = Get-GuestUserActivityEnhanced -GuestUsers $results.B2BGuests -Configuration $config -Context $Context
-            $script:PerformanceTracker.EndOperation("GuestActivity", $results.GuestActivity.Count)
-        }
-        
-        if ($results.B2BGuests.Count -gt 0) {
-            $script:PerformanceTracker.StartOperation("PartnerOrganizations")
-            $results.PartnerOrganizations = Get-PartnerOrganizationsEnhanced -GuestUsers $results.B2BGuests -Configuration $config -Context $Context
-            $script:PerformanceTracker.EndOperation("PartnerOrganizations", $results.PartnerOrganizations.Count)
-        }
-        
-        $script:PerformanceTracker.StartOperation("IdentityProviders")
-        $results.IdentityProviders = Get-ExternalIdentityProvidersEnhanced -Configuration $config -Context $Context
-        $script:PerformanceTracker.EndOperation("IdentityProviders", $results.IdentityProviders.Count)
-        
-        $script:PerformanceTracker.StartOperation("GuestInvitations")
-        $results.GuestInvitations = Get-GuestInvitationsEnhanced -Configuration $config -Context $Context -GuestUsers $results.B2BGuests
-        $script:PerformanceTracker.EndOperation("GuestInvitations", $results.GuestInvitations.Count)
-        
-        $script:PerformanceTracker.StartOperation("CrossTenantAccess")
-        $results.CrossTenantAccess = Get-CrossTenantAccessEnhanced -Configuration $config -Context $Context
-        $script:PerformanceTracker.EndOperation("CrossTenantAccess")
-        
-        return Convert-ToFlattenedData -Results $results
-    }
-    
-    return Invoke-BaseDiscovery -ModuleName "ExternalIdentity" `
-                               -DiscoveryScript $discoveryScript `
-                               -Configuration $Configuration `
-                               -Context $Context `
-                               -RequiredPermissions @('User.Read.All', 'Policy.Read.All', 'IdentityProvider.Read.All') `
-                               -CircuitBreaker $script:GraphCircuitBreaker
-}
 
 function Get-ExternalIdentityConfig {
     [CmdletBinding()]

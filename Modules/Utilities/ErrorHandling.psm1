@@ -18,7 +18,358 @@
     - Retry logic is configurable via $global:MandA.Config.environment.
 #>
 
-Export-ModuleMember -Function Invoke-WithRetry, Get-FriendlyErrorMessage, Write-ErrorSummary, Test-CriticalError
+Export-ModuleMember -Function Invoke-WithRetry, Get-FriendlyErrorMessage, Write-ErrorSummary, Test-CriticalError, Invoke-WithTimeout, Invoke-WithTimeoutAndRetry, Test-OperationTimeout, Add-ErrorContext, New-EnhancedErrorRecord, Export-ErrorContext
+
+# DiscoveryResult Class - Consistent error result structure for ALL modules
+class DiscoveryResult {
+    [bool]$Success
+    [string]$ModuleName
+    [object]$Data
+    [System.Collections.ArrayList]$Errors
+    [System.Collections.ArrayList]$Warnings
+    [hashtable]$Metadata
+    [datetime]$StartTime
+    [datetime]$EndTime
+    [string]$ExecutionId
+    
+    DiscoveryResult([string]$moduleName) {
+        $this.ModuleName = $moduleName
+        $this.StartTime = Get-Date
+        $this.ExecutionId = [guid]::NewGuid().ToString()
+        $this.Errors = [System.Collections.ArrayList]::new()
+        $this.Warnings = [System.Collections.ArrayList]::new()
+        $this.Metadata = @{}
+        $this.Success = $true  # Assume success until error occurs
+    }
+    
+    [void]AddError([string]$message, [Exception]$exception = $null, [hashtable]$context = @{}) {
+        $this.Success = $false
+        $errorEntry = @{
+            Timestamp = Get-Date
+            Message = $message
+            Exception = if ($exception) { $exception.ToString() } else { $null }
+            ExceptionType = if ($exception) { $exception.GetType().FullName } else { $null }
+            StackTrace = if ($exception) { $exception.StackTrace } else { $null }
+            Context = $context
+        }
+        $null = $this.Errors.Add($errorEntry)
+    }
+    
+    [void]AddErrorWithContext([string]$message, [System.Management.Automation.ErrorRecord]$errorRecord = $null, [hashtable]$additionalContext = @{}) {
+        $this.Success = $false
+        
+        if ($errorRecord) {
+            # Use the enhanced error context capture
+            $enhancedContext = Add-ErrorContext -ErrorRecord $errorRecord -Context $additionalContext
+            $errorEntry = @{
+                Timestamp = Get-Date
+                Message = $message
+                EnhancedContext = $enhancedContext
+                ErrorId = $enhancedContext.ExecutionId
+            }
+        } else {
+            # Fallback for cases without ErrorRecord
+            $errorEntry = @{
+                Timestamp = Get-Date
+                Message = $message
+                Context = $additionalContext
+                ErrorId = [guid]::NewGuid().ToString()
+            }
+        }
+        
+        $null = $this.Errors.Add($errorEntry)
+    }
+    
+    [void]AddWarning([string]$message, [hashtable]$context = @{}) {
+        $warningEntry = @{
+            Timestamp = Get-Date
+            Message = $message
+            Context = $context
+        }
+        $null = $this.Warnings.Add($warningEntry)
+    }
+    
+    [void]Complete() {
+        $this.EndTime = Get-Date
+        $this.Metadata['Duration'] = ($this.EndTime - $this.StartTime).TotalSeconds
+        $this.Metadata['ErrorCount'] = $this.Errors.Count
+        $this.Metadata['WarningCount'] = $this.Warnings.Count
+    }
+    
+    [hashtable]ToHashtable() {
+        return @{
+            Success = $this.Success
+            ModuleName = $this.ModuleName
+            Data = $this.Data
+            Errors = $this.Errors
+            Warnings = $this.Warnings
+            Metadata = $this.Metadata
+            StartTime = $this.StartTime
+            EndTime = $this.EndTime
+            ExecutionId = $this.ExecutionId
+        }
+    }
+}
+
+# Enhanced error context capture function
+function Add-ErrorContext {
+    <#
+    .SYNOPSIS
+        Captures comprehensive error context for debugging purposes.
+    .DESCRIPTION
+        Creates a rich error object with detailed context information including
+        timestamp, error details, environment information, and script context.
+    .PARAMETER ErrorRecord
+        The PowerShell ErrorRecord to enhance with context.
+    .PARAMETER Context
+        Additional context information to include with the error.
+    .PARAMETER IncludeEnvironment
+        Whether to include environment information (default: true).
+    .PARAMETER IncludeScriptInfo
+        Whether to include script information (default: true).
+    .EXAMPLE
+        try {
+            # Some operation that might fail
+        } catch {
+            $enhancedError = Add-ErrorContext -ErrorRecord $_ -Context @{
+                Operation = "UserDiscovery"
+                TenantId = $tenantId
+                UserId = $userId
+            }
+            Write-MandALog -Message "Enhanced error captured" -Level "ERROR" -Context $enhancedError
+        }
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.Management.Automation.ErrorRecord]$ErrorRecord,
+        
+        [Parameter(Mandatory=$false)]
+        [hashtable]$Context = @{},
+        
+        [Parameter(Mandatory=$false)]
+        [bool]$IncludeEnvironment = $true,
+        
+        [Parameter(Mandatory=$false)]
+        [bool]$IncludeScriptInfo = $true,
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$LoggingContext # For logging context
+    )
+    
+    Write-MandALog -Message "Capturing enhanced error context for: $($ErrorRecord.Exception.Message)" -Level "DEBUG" -Component "ErrorContextCapture" -Context $LoggingContext
+    
+    # Create rich error object
+    $enhancedError = @{
+        Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
+        ExecutionId = [guid]::NewGuid().ToString()
+        Error = @{
+            Message = $ErrorRecord.Exception.Message
+            Type = $ErrorRecord.Exception.GetType().FullName
+            StackTrace = $ErrorRecord.ScriptStackTrace
+            TargetObject = if ($ErrorRecord.TargetObject) { $ErrorRecord.TargetObject.ToString() } else { $null }
+            CategoryInfo = $ErrorRecord.CategoryInfo.ToString()
+            FullyQualifiedErrorId = $ErrorRecord.FullyQualifiedErrorId
+            InnerException = if ($ErrorRecord.Exception.InnerException) {
+                @{
+                    Message = $ErrorRecord.Exception.InnerException.Message
+                    Type = $ErrorRecord.Exception.InnerException.GetType().FullName
+                    StackTrace = $ErrorRecord.Exception.InnerException.StackTrace
+                }
+            } else { $null }
+        }
+        Context = $Context
+    }
+    
+    # Add environment information if requested
+    if ($IncludeEnvironment) {
+        $enhancedError.Environment = @{
+            Computer = $env:COMPUTERNAME
+            User = $env:USERNAME
+            Domain = $env:USERDOMAIN
+            PowerShellVersion = $PSVersionTable.PSVersion.ToString()
+            PSEdition = $PSVersionTable.PSEdition
+            OSVersion = [System.Environment]::OSVersion.VersionString
+            ProcessId = $PID
+            SessionId = if ($Host.InstanceId) { $Host.InstanceId.ToString() } else { "Unknown" }
+            WorkingDirectory = Get-Location | Select-Object -ExpandProperty Path
+            ExecutionPolicy = Get-ExecutionPolicy
+            Culture = [System.Globalization.CultureInfo]::CurrentCulture.Name
+            UICulture = [System.Globalization.CultureInfo]::CurrentUICulture.Name
+        }
+    }
+    
+    # Add script information if requested
+    if ($IncludeScriptInfo -and $ErrorRecord.InvocationInfo) {
+        $enhancedError.ScriptInfo = @{
+            ScriptName = $ErrorRecord.InvocationInfo.ScriptName
+            LineNumber = $ErrorRecord.InvocationInfo.ScriptLineNumber
+            OffsetInLine = $ErrorRecord.InvocationInfo.OffsetInLine
+            Command = $ErrorRecord.InvocationInfo.Line
+            CommandName = $ErrorRecord.InvocationInfo.MyCommand.Name
+            CommandType = if ($ErrorRecord.InvocationInfo.MyCommand) { $ErrorRecord.InvocationInfo.MyCommand.CommandType.ToString() } else { $null }
+            ModuleName = if ($ErrorRecord.InvocationInfo.MyCommand.Module) { $ErrorRecord.InvocationInfo.MyCommand.Module.Name } else { $null }
+            PositionMessage = $ErrorRecord.InvocationInfo.PositionMessage
+        }
+    }
+    
+    # Add PowerShell call stack for deeper context
+    $enhancedError.CallStack = Get-PSCallStack | ForEach-Object {
+        @{
+            Command = $_.Command
+            Location = $_.Location
+            FunctionName = $_.FunctionName
+            ScriptName = $_.ScriptName
+            ScriptLineNumber = $_.ScriptLineNumber
+            Arguments = if ($_.Arguments) { $_.Arguments.ToString() } else { $null }
+        }
+    }
+    
+    # Add loaded modules information
+    $enhancedError.LoadedModules = Get-Module | Select-Object Name, Version, ModuleType, Path | ForEach-Object {
+        @{
+            Name = $_.Name
+            Version = $_.Version.ToString()
+            ModuleType = $_.ModuleType.ToString()
+            Path = $_.Path
+        }
+    }
+    
+    Write-MandALog -Message "Enhanced error context captured successfully (ID: $($enhancedError.ExecutionId))" -Level "DEBUG" -Component "ErrorContextCapture" -Context $LoggingContext
+    
+    return $enhancedError
+}
+
+function New-EnhancedErrorRecord {
+    <#
+    .SYNOPSIS
+        Creates a new ErrorRecord with enhanced context information.
+    .DESCRIPTION
+        Wraps an existing ErrorRecord or creates a new one with comprehensive
+        context information for better debugging and error tracking.
+    .PARAMETER Exception
+        The exception to wrap in an ErrorRecord.
+    .PARAMETER ErrorId
+        A unique identifier for this error.
+    .PARAMETER ErrorCategory
+        The PowerShell error category.
+    .PARAMETER TargetObject
+        The object that was being processed when the error occurred.
+    .PARAMETER Context
+        Additional context information.
+    .EXAMPLE
+        $enhancedError = New-EnhancedErrorRecord -Exception $_.Exception -ErrorId "GraphAPI_UserQuery" -ErrorCategory "InvalidOperation" -Context @{ UserId = $userId }
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.Exception]$Exception,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$ErrorId,
+        
+        [Parameter(Mandatory=$false)]
+        [System.Management.Automation.ErrorCategory]$ErrorCategory = [System.Management.Automation.ErrorCategory]::NotSpecified,
+        
+        [Parameter(Mandatory=$false)]
+        [object]$TargetObject = $null,
+        
+        [Parameter(Mandatory=$false)]
+        [hashtable]$Context = @{},
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$LoggingContext
+    )
+    
+    # Create the base ErrorRecord
+    $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+        $Exception,
+        $ErrorId,
+        $ErrorCategory,
+        $TargetObject
+    )
+    
+    # Add enhanced context
+    $enhancedContext = Add-ErrorContext -ErrorRecord $errorRecord -Context $Context -LoggingContext $LoggingContext
+    
+    # Store the enhanced context in the ErrorRecord's ErrorDetails
+    $errorRecord.ErrorDetails = [System.Management.Automation.ErrorDetails]::new("Enhanced Error Context Available")
+    $errorRecord.ErrorDetails.RecommendedAction = "Use Get-ErrorContext to retrieve full context information"
+    
+    # Store the enhanced context in a way that can be retrieved later
+    if (-not $global:MandAErrorContextStore) {
+        $global:MandAErrorContextStore = @{}
+    }
+    $global:MandAErrorContextStore[$errorRecord.GetHashCode()] = $enhancedContext
+    
+    Write-MandALog -Message "Enhanced ErrorRecord created with ID: $ErrorId" -Level "DEBUG" -Component "ErrorRecordCreation" -Context $LoggingContext
+    
+    return $errorRecord
+}
+
+function Export-ErrorContext {
+    <#
+    .SYNOPSIS
+        Exports error context information to a file for analysis.
+    .DESCRIPTION
+        Saves enhanced error context to JSON format for detailed analysis
+        and debugging purposes.
+    .PARAMETER EnhancedError
+        The enhanced error object from Add-ErrorContext.
+    .PARAMETER OutputPath
+        The path where to save the error context file.
+    .PARAMETER IncludeTimestamp
+        Whether to include timestamp in the filename (default: true).
+    .EXAMPLE
+        $enhancedError = Add-ErrorContext -ErrorRecord $_ -Context @{ Operation = "Discovery" }
+        Export-ErrorContext -EnhancedError $enhancedError -OutputPath "C:\Logs\Errors"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$EnhancedError,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$OutputPath = ".\ErrorLogs",
+        
+        [Parameter(Mandatory=$false)]
+        [bool]$IncludeTimestamp = $true,
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$LoggingContext
+    )
+    
+    try {
+        # Ensure output directory exists
+        if (-not (Test-Path $OutputPath)) {
+            New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
+            Write-MandALog -Message "Created error log directory: $OutputPath" -Level "INFO" -Component "ErrorExport" -Context $LoggingContext
+        }
+        
+        # Generate filename
+        $timestamp = if ($IncludeTimestamp) { Get-Date -Format "yyyyMMdd_HHmmss" } else { "" }
+        $executionId = $EnhancedError.ExecutionId.Substring(0, 8)
+        $filename = if ($timestamp) {
+            "ErrorContext_${timestamp}_${executionId}.json"
+        } else {
+            "ErrorContext_${executionId}.json"
+        }
+        
+        $fullPath = Join-Path $OutputPath $filename
+        
+        # Convert to JSON and save
+        $jsonContent = $EnhancedError | ConvertTo-Json -Depth 10 -Compress:$false
+        $jsonContent | Out-File -FilePath $fullPath -Encoding UTF8 -Force
+        
+        Write-MandALog -Message "Error context exported to: $fullPath" -Level "INFO" -Component "ErrorExport" -Context $LoggingContext
+        
+        return $fullPath
+        
+    } catch {
+        Write-MandALog -Message "Failed to export error context: $($_.Exception.Message)" -Level "ERROR" -Component "ErrorExport" -Context $LoggingContext
+        throw
+    }
+}
 
 function Invoke-WithRetry {
     [CmdletBinding()]
@@ -75,7 +426,16 @@ function Invoke-WithRetry {
             $errorType = $_.Exception.GetType().FullName
             $errorMessage = $_.Exception.Message
 
-            Write-MandALog -Message "Attempt $attempt for '$OperationName' failed. Error: $errorMessage (Type: $errorType)" -Level "WARN" -Component "RetryWrapper" -Context $Context
+            # Capture enhanced error context for debugging
+            $enhancedErrorContext = Add-ErrorContext -ErrorRecord $lastError -Context @{
+                OperationName = $OperationName
+                AttemptNumber = $attempt
+                MaxRetries = $effectiveMaxRetries
+                DelaySeconds = $effectiveDelaySeconds
+                RetryableErrorTypes = $RetryableErrorTypes
+            } -LoggingContext $Context
+
+            Write-MandALog -Message "Attempt $attempt for '$OperationName' failed. Error: $errorMessage (Type: $errorType). Enhanced context ID: $($enhancedErrorContext.ExecutionId)" -Level "WARN" -Component "RetryWrapper" -Context $Context
 
             # Check if this error type is specifically retryable
             $isRetryableBySpecificType = $false
@@ -175,6 +535,207 @@ function Get-FriendlyErrorMessage {
     return $friendlyMessage
 }
 
+function Invoke-WithTimeout {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ScriptBlock]$ScriptBlock,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$TimeoutSeconds = 60,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$TimeoutMessage = "Operation timed out",
+        
+        [Parameter(Mandatory=$false)]
+        [string]$OperationName = "Unnamed Operation",
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context, # For logging context
+        
+        [Parameter(Mandatory=$false)]
+        [hashtable]$ArgumentList = @{} # Arguments to pass to the script block
+    )
+    
+    Write-MandALog -Message "Starting timeout-protected operation: '$OperationName' (Timeout: $TimeoutSeconds seconds)" -Level "DEBUG" -Component "TimeoutWrapper" -Context $Context
+    
+    $job = $null
+    $result = $null
+    
+    try {
+        # Start the job with any provided arguments
+        if ($ArgumentList.Count -gt 0) {
+            $job = Start-Job -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList.Values
+        } else {
+            $job = Start-Job -ScriptBlock $ScriptBlock
+        }
+        
+        Write-MandALog -Message "Job started for operation '$OperationName' (Job ID: $($job.Id))" -Level "DEBUG" -Component "TimeoutWrapper" -Context $Context
+        
+        # Wait for job completion with timeout
+        $completed = Wait-Job -Job $job -Timeout $TimeoutSeconds
+        
+        if (-not $completed) {
+            # Timeout occurred
+            Write-MandALog -Message "Operation '$OperationName' timed out after $TimeoutSeconds seconds" -Level "ERROR" -Component "TimeoutWrapper" -Context $Context
+            
+            # Force stop and clean up the job
+            Stop-Job -Job $job -Force
+            Remove-Job -Job $job -Force
+            
+            # Create a detailed timeout exception
+            $timeoutException = [System.TimeoutException]::new("$TimeoutMessage. Operation '$OperationName' exceeded the timeout of $TimeoutSeconds seconds.")
+            throw $timeoutException
+        }
+        
+        # Job completed within timeout - get the result
+        Write-MandALog -Message "Operation '$OperationName' completed within timeout" -Level "DEBUG" -Component "TimeoutWrapper" -Context $Context
+        
+        # Check if the job had errors
+        if ($job.State -eq "Failed") {
+            $jobErrors = Receive-Job -Job $job -ErrorAction SilentlyContinue -ErrorVariable jobErrorVar
+            Remove-Job -Job $job -Force
+            
+            if ($jobErrorVar) {
+                Write-MandALog -Message "Operation '$OperationName' failed with errors: $($jobErrorVar[0].Exception.Message)" -Level "ERROR" -Component "TimeoutWrapper" -Context $Context
+                throw $jobErrorVar[0]
+            } else {
+                throw "Operation '$OperationName' failed for unknown reasons"
+            }
+        }
+        
+        # Get the successful result
+        $result = Receive-Job -Job $job
+        Remove-Job -Job $job -Force
+        
+        Write-MandALog -Message "Operation '$OperationName' completed successfully" -Level "SUCCESS" -Component "TimeoutWrapper" -Context $Context
+        return $result
+        
+    } catch [System.TimeoutException] {
+        # Re-throw timeout exceptions as-is
+        throw
+    } catch {
+        # Handle other exceptions
+        Write-MandALog -Message "Unexpected error in timeout wrapper for operation '$OperationName': $($_.Exception.Message)" -Level "ERROR" -Component "TimeoutWrapper" -Context $Context
+        
+        # Clean up job if it still exists
+        if ($job -and $job.State -in @("Running", "NotStarted")) {
+            try {
+                Stop-Job -Job $job -Force -ErrorAction SilentlyContinue
+                Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+            } catch {
+                Write-MandALog -Message "Failed to clean up job for operation '$OperationName': $($_.Exception.Message)" -Level "WARN" -Component "TimeoutWrapper" -Context $Context
+            }
+        }
+        
+        throw
+    }
+}
+
+function Invoke-WithTimeoutAndRetry {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ScriptBlock]$ScriptBlock,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$TimeoutSeconds = 60,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$MaxRetries = 3,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$DelaySeconds = 5,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$OperationName = "Unnamed Operation",
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context,
+        
+        [Parameter(Mandatory=$false)]
+        [hashtable]$ArgumentList = @{}
+    )
+    
+    Write-MandALog -Message "Starting timeout-protected operation with retry: '$OperationName' (Timeout: $TimeoutSeconds s, Max Retries: $MaxRetries)" -Level "DEBUG" -Component "TimeoutRetryWrapper" -Context $Context
+    
+    $attempt = 0
+    $lastError = $null
+    
+    while ($attempt -lt $MaxRetries) {
+        $attempt++
+        try {
+            Write-MandALog -Message "Attempting '$OperationName' with timeout protection, attempt $attempt of $MaxRetries" -Level "DEBUG" -Component "TimeoutRetryWrapper" -Context $Context
+            
+            $result = Invoke-WithTimeout -ScriptBlock $ScriptBlock -TimeoutSeconds $TimeoutSeconds -OperationName "$OperationName (Attempt $attempt)" -Context $Context -ArgumentList $ArgumentList
+            
+            Write-MandALog -Message "Operation '$OperationName' succeeded on attempt $attempt" -Level "SUCCESS" -Component "TimeoutRetryWrapper" -Context $Context
+            return $result
+            
+        } catch [System.TimeoutException] {
+            $lastError = $_
+            Write-MandALog -Message "Attempt $attempt for '$OperationName' timed out after $TimeoutSeconds seconds" -Level "WARN" -Component "TimeoutRetryWrapper" -Context $Context
+            
+            if ($attempt -ge $MaxRetries) {
+                Write-MandALog -Message "Operation '$OperationName' failed after $attempt timeout attempts" -Level "ERROR" -Component "TimeoutRetryWrapper" -Context $Context
+                throw $lastError
+            }
+            
+            Write-MandALog -Message "Waiting $DelaySeconds seconds before retry attempt $($attempt + 1) for '$OperationName'" -Level "INFO" -Component "TimeoutRetryWrapper" -Context $Context
+            Start-Sleep -Seconds $DelaySeconds
+            
+        } catch {
+            $lastError = $_
+            Write-MandALog -Message "Attempt $attempt for '$OperationName' failed with non-timeout error: $($_.Exception.Message)" -Level "ERROR" -Component "TimeoutRetryWrapper" -Context $Context
+            throw $lastError
+        }
+    }
+    
+    # Should not reach here, but just in case
+    throw $lastError
+}
+
+function Test-OperationTimeout {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ScriptBlock]$TestScriptBlock,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$ExpectedTimeoutSeconds = 30,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$TestName = "Timeout Test",
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context
+    )
+    
+    Write-MandALog -Message "Testing timeout behavior for '$TestName' (Expected timeout: $ExpectedTimeoutSeconds s)" -Level "DEBUG" -Component "TimeoutTester" -Context $Context
+    
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $timedOut = $false
+    
+    try {
+        Invoke-WithTimeout -ScriptBlock $TestScriptBlock -TimeoutSeconds $ExpectedTimeoutSeconds -OperationName $TestName -Context $Context
+        Write-MandALog -Message "Test '$TestName' completed without timeout in $($stopwatch.ElapsedMilliseconds) ms" -Level "INFO" -Component "TimeoutTester" -Context $Context
+    } catch [System.TimeoutException] {
+        $timedOut = $true
+        Write-MandALog -Message "Test '$TestName' timed out as expected after $($stopwatch.ElapsedMilliseconds) ms" -Level "SUCCESS" -Component "TimeoutTester" -Context $Context
+    } catch {
+        Write-MandALog -Message "Test '$TestName' failed with unexpected error: $($_.Exception.Message)" -Level "ERROR" -Component "TimeoutTester" -Context $Context
+        throw
+    } finally {
+        $stopwatch.Stop()
+    }
+    
+    return @{
+        TimedOut = $timedOut
+        ElapsedMilliseconds = $stopwatch.ElapsedMilliseconds
+        ElapsedSeconds = [math]::Round($stopwatch.ElapsedMilliseconds / 1000, 2)
+    }
+}
+
 function Write-ErrorSummary {
     [CmdletBinding()]
     param(
@@ -249,6 +810,17 @@ function Test-CriticalError {
     }
 
     return $false
+}
+
+# Export the DiscoveryResult class
+if ($PSVersionTable.PSVersion.Major -ge 5) {
+    try {
+        # Make DiscoveryResult available in the global scope
+        $global:DiscoveryResult = [DiscoveryResult]
+        Write-Host "[ErrorHandling.psm1] DiscoveryResult class exported to global scope." -ForegroundColor DarkGray
+    } catch {
+        Write-Warning "[ErrorHandling.psm1] Failed to export DiscoveryResult class: $($_.Exception.Message)"
+    }
 }
 
 Write-Host "[ErrorHandling.psm1] Module loaded." -ForegroundColor DarkGray

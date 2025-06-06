@@ -9,42 +9,432 @@
 
 #>
 
-function Invoke-NetworkInfrastructureDiscovery {
-    param([hashtable]$Configuration)
+$authModulePathFromGlobal = Join-Path $global:MandA.Paths.Authentication "DiscoveryModuleBase.psm1"
+Import-Module $authModulePathFromGlobal -Force
+
+# Prerequisites validation function
+function Test-NetworkInfrastructureDiscoveryPrerequisites {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$false)]
+        $Context,
+        [Parameter(Mandatory=$false)]
+        [PSCredential]$Credential
+    )
+    
+    $prerequisites = @{
+        IsValid = $true
+        MissingRequirements = @()
+        Warnings = @()
+    }
     
     try {
-        Write-MandALog "Starting Network Infrastructure discovery" -Level "HEADER"
+        Write-ProgressStep "Validating Network Infrastructure Discovery prerequisites..." -Status Progress
         
-    
-
-
-        $discoveryResults = @{}
+        # Check for required modules
+        $requiredModules = @('ActiveDirectory')
+        $optionalModules = @('DhcpServer', 'DnsServer')
         
-        # DHCP Discovery
-        Write-MandALog "Discovering DHCP Infrastructure..." -Level "INFO"
-        $discoveryResults.DHCPServers = Get-DHCPServersData -OutputPath $outputPath -Configuration $Configuration
-        $discoveryResults.DHCPScopes = Get-DHCPScopesData -OutputPath $outputPath -Configuration $Configuration
-        $discoveryResults.DHCPReservations = Get-DHCPReservationsData -OutputPath $outputPath -Configuration $Configuration
-        $discoveryResults.DHCPOptions = Get-DHCPOptionsData -OutputPath $outputPath -Configuration $Configuration
+        foreach ($module in $requiredModules) {
+            if (-not (Get-Module -ListAvailable -Name $module)) {
+                $prerequisites.IsValid = $false
+                $prerequisites.MissingRequirements += "Required module '$module' not available"
+            }
+        }
         
-        # DNS Discovery
-        Write-MandALog "Discovering DNS Infrastructure..." -Level "INFO"
-        $discoveryResults.DNSServers = Get-DNSServersData -OutputPath $outputPath -Configuration $Configuration
-        $discoveryResults.DNSZones = Get-DNSZonesData -OutputPath $outputPath -Configuration $Configuration
-        $discoveryResults.DNSRecords = Get-DNSRecordsData -OutputPath $outputPath -Configuration $Configuration
+        foreach ($module in $optionalModules) {
+            if (-not (Get-Module -ListAvailable -Name $module)) {
+                $prerequisites.Warnings += "Optional module '$module' not available - some features will be limited"
+            }
+        }
         
-        # Network Configuration
-        Write-MandALog "Discovering Network Configuration..." -Level "INFO"
-        $discoveryResults.Subnets = Get-ADSubnetsData -OutputPath $outputPath -Configuration $Configuration
-        $discoveryResults.Sites = Get-ADSitesData -OutputPath $outputPath -Configuration $Configuration
+        # Check Active Directory connectivity
+        try {
+            $null = Get-ADDomain -ErrorAction Stop
+        } catch {
+            $prerequisites.IsValid = $false
+            $prerequisites.MissingRequirements += "Cannot connect to Active Directory: $($_.Exception.Message)"
+        }
         
-        Write-MandALog "Network Infrastructure discovery completed successfully" -Level "SUCCESS"
-        return $discoveryResults
+        # Check DHCP server availability
+        try {
+            $dhcpServers = Get-DhcpServerInDC -ErrorAction SilentlyContinue
+            if (-not $dhcpServers) {
+                $prerequisites.Warnings += "No DHCP servers found in Active Directory"
+            }
+        } catch {
+            $prerequisites.Warnings += "Cannot query DHCP servers: $($_.Exception.Message)"
+        }
+        
+        # Check DNS server availability
+        try {
+            $dnsServers = Get-ADDomainController -Filter * -ErrorAction SilentlyContinue
+            if (-not $dnsServers) {
+                $prerequisites.Warnings += "No domain controllers found for DNS discovery"
+            }
+        } catch {
+            $prerequisites.Warnings += "Cannot query domain controllers: $($_.Exception.Message)"
+        }
+        
+        Write-ProgressStep "Prerequisites validation completed" -Status Success
         
     } catch {
-        Write-MandALog "Network Infrastructure discovery failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
+        $prerequisites.IsValid = $false
+        $prerequisites.MissingRequirements += "Prerequisites validation failed: $($_.Exception.Message)"
+        Write-ProgressStep "Prerequisites validation failed: $($_.Exception.Message)" -Status Error
     }
+    
+    return $prerequisites
+}
+
+# Enhanced main function with comprehensive error handling
+function Invoke-NetworkInfrastructureDiscovery {
+    [CmdletBinding()]
+    [OutputType([hashtable])]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        
+        [Parameter(Mandatory=$true)]
+        [MandAContext]$Context,
+        
+        [Parameter(Mandatory=$false)]
+        [PSCredential]$Credential
+    )
+    
+    # Initialize result object
+    $result = [DiscoveryResult]::new("NetworkInfrastructure")
+    
+    try {
+        Write-ProgressStep "Starting Network Infrastructure Discovery" -Status Progress
+        
+        # Validate prerequisites
+        $prerequisites = Test-NetworkInfrastructureDiscoveryPrerequisites -Configuration $Configuration -Context $Context -Credential $Credential
+        if (-not $prerequisites.IsValid) {
+            throw "Prerequisites validation failed: $($prerequisites.MissingRequirements -join '; ')"
+        }
+        
+        # Log warnings
+        foreach ($warning in $prerequisites.Warnings) {
+            Write-ProgressStep $warning -Status Warning
+            $Context.ErrorCollector.AddWarning("NetworkInfrastructure", $warning)
+        }
+        
+        $results = @{}
+        
+        # 1. DHCP Discovery with error handling
+        try {
+            Write-ProgressStep "Discovering DHCP Infrastructure..." -Status Progress
+            $results.DHCPServers = Get-DHCPServersDataWithErrorHandling -Configuration $Configuration -Context $Context -Credential $Credential
+            $results.DHCPScopes = Get-DHCPScopesDataWithErrorHandling -Configuration $Configuration -Context $Context -Credential $Credential
+            $results.DHCPReservations = Get-DHCPReservationsDataWithErrorHandling -Configuration $Configuration -Context $Context -Credential $Credential
+            $results.DHCPOptions = Get-DHCPOptionsDataWithErrorHandling -Configuration $Configuration -Context $Context -Credential $Credential
+            $result.Metadata.SectionsProcessed++
+            
+        } catch {
+            $errorMsg = "Failed to discover DHCP infrastructure: $($_.Exception.Message)"
+            Write-ProgressStep $errorMsg -Status Error
+            $Context.ErrorCollector.AddError("NetworkInfrastructure", $errorMsg, $_.Exception)
+            $result.Metadata.SectionErrors++
+            $results.DHCPServers = @()
+            $results.DHCPScopes = @()
+            $results.DHCPReservations = @()
+            $results.DHCPOptions = @()
+        }
+        
+        # 2. DNS Discovery with error handling
+        try {
+            Write-ProgressStep "Discovering DNS Infrastructure..." -Status Progress
+            $results.DNSServers = Get-DNSServersDataWithErrorHandling -Configuration $Configuration -Context $Context -Credential $Credential
+            $results.DNSZones = Get-DNSZonesDataWithErrorHandling -Configuration $Configuration -Context $Context -Credential $Credential
+            $results.DNSRecords = Get-DNSRecordsDataWithErrorHandling -Configuration $Configuration -Context $Context -Credential $Credential
+            $result.Metadata.SectionsProcessed++
+            
+        } catch {
+            $errorMsg = "Failed to discover DNS infrastructure: $($_.Exception.Message)"
+            Write-ProgressStep $errorMsg -Status Error
+            $Context.ErrorCollector.AddError("NetworkInfrastructure", $errorMsg, $_.Exception)
+            $result.Metadata.SectionErrors++
+            $results.DNSServers = @()
+            $results.DNSZones = @()
+            $results.DNSRecords = @()
+        }
+        
+        # 3. Network Configuration Discovery with error handling
+        try {
+            Write-ProgressStep "Discovering Network Configuration..." -Status Progress
+            $results.Subnets = Get-ADSubnetsDataWithErrorHandling -Configuration $Configuration -Context $Context -Credential $Credential
+            $results.Sites = Get-ADSitesDataWithErrorHandling -Configuration $Configuration -Context $Context -Credential $Credential
+            $result.Metadata.SectionsProcessed++
+            
+        } catch {
+            $errorMsg = "Failed to discover network configuration: $($_.Exception.Message)"
+            Write-ProgressStep $errorMsg -Status Error
+            $Context.ErrorCollector.AddError("NetworkInfrastructure", $errorMsg, $_.Exception)
+            $result.Metadata.SectionErrors++
+            $results.Subnets = @()
+            $results.Sites = @()
+        }
+        
+        # Update result
+        $result.Data = Convert-ToFlattenedNetworkData -Results $results
+        $result.Success = $true
+        $result.Metadata.TotalSections = 3
+        $result.Metadata.EndTime = Get-Date
+        $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
+        
+        Write-ProgressStep "Network Infrastructure Discovery completed" -Status Success
+        return $result
+        
+    } catch {
+        $result.Success = $false
+        $result.ErrorMessage = $_.Exception.Message
+        $result.Metadata.EndTime = Get-Date
+        $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
+        
+        Write-ProgressStep "Network Infrastructure Discovery failed: $($_.Exception.Message)" -Status Error
+        $Context.ErrorCollector.AddError("NetworkInfrastructure", "Discovery failed", $_.Exception)
+        
+        return $result
+        
+    } finally {
+        # Cleanup resources
+        Write-ProgressStep "Network Infrastructure Discovery cleanup completed" -Status Info
+    }
+}
+
+# Enhanced wrapper functions with retry logic
+function Get-DHCPServersDataWithErrorHandling {
+    param($Configuration, $Context, $Credential)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-DHCPServersData -OutputPath $null -Configuration $Configuration
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "DHCP servers discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-DHCPScopesDataWithErrorHandling {
+    param($Configuration, $Context, $Credential)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-DHCPScopesData -OutputPath $null -Configuration $Configuration
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "DHCP scopes discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-DHCPReservationsDataWithErrorHandling {
+    param($Configuration, $Context, $Credential)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-DHCPReservationsData -OutputPath $null -Configuration $Configuration
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "DHCP reservations discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-DHCPOptionsDataWithErrorHandling {
+    param($Configuration, $Context, $Credential)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-DHCPOptionsData -OutputPath $null -Configuration $Configuration
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "DHCP options discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-DNSServersDataWithErrorHandling {
+    param($Configuration, $Context, $Credential)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-DNSServersData -OutputPath $null -Configuration $Configuration
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "DNS servers discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-DNSZonesDataWithErrorHandling {
+    param($Configuration, $Context, $Credential)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-DNSZonesData -OutputPath $null -Configuration $Configuration
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "DNS zones discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-DNSRecordsDataWithErrorHandling {
+    param($Configuration, $Context, $Credential)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-DNSRecordsData -OutputPath $null -Configuration $Configuration
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "DNS records discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-ADSubnetsDataWithErrorHandling {
+    param($Configuration, $Context, $Credential)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-ADSubnetsData -OutputPath $null -Configuration $Configuration
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "AD subnets discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-ADSitesDataWithErrorHandling {
+    param($Configuration, $Context, $Credential)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Get-ADSitesData -OutputPath $null -Configuration $Configuration
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "AD sites discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Convert-ToFlattenedNetworkData {
+    param([hashtable]$Results)
+    
+    $flatData = [System.Collections.Generic.List[PSObject]]::new()
+    
+    # Map of result keys to data types
+    $dataTypeMap = @{
+        'DHCPServers' = 'DHCPServers'
+        'DHCPScopes' = 'DHCPScopes'
+        'DHCPReservations' = 'DHCPReservations'
+        'DHCPOptions' = 'DHCPOptions'
+        'DNSServers' = 'DNSServers'
+        'DNSZones' = 'DNSZones'
+        'DNSRecords' = 'DNSRecords'
+        'Subnets' = 'ADSubnets'
+        'Sites' = 'ADSites'
+    }
+    
+    foreach ($key in $Results.Keys) {
+        if ($Results[$key] -is [array] -or $Results[$key] -is [System.Collections.Generic.List[PSObject]]) {
+            if ($Results[$key].Count -gt 0) {
+                $dataType = $dataTypeMap[$key]
+                foreach ($item in $Results[$key]) {
+                    $item | Add-Member -NotePropertyName '_DataType' -NotePropertyValue $dataType -Force
+                    $flatData.Add($item)
+                }
+            }
+        }
+    }
+    
+    return $flatData
 }
 
 function Get-DHCPServersData {

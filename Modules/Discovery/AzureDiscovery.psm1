@@ -114,6 +114,204 @@ function Get-AzureVMsDataInternal {
     return $allVMs
 }
 
+# Azure Discovery Prerequisites Function
+function Test-AzureDiscoveryPrerequisites {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        [DiscoveryResult]$Result,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    Write-MandALog "Validating Azure Discovery prerequisites..." -Level "INFO" -Context $Context
+    
+    try {
+        # Validate Azure PowerShell modules
+        $requiredModules = @('Az.Accounts', 'Az.Resources', 'Az.Compute', 'Az.Network')
+        foreach ($module in $requiredModules) {
+            if (-not (Get-Module -Name $module -ListAvailable)) {
+                $Result.AddError("$module PowerShell module is not available", $null, @{
+                    Prerequisite = "$module Module"
+                    Resolution = "Install $module PowerShell module using 'Install-Module $module'"
+                })
+                return
+            }
+        }
+        
+        # Check Azure connection
+        $currentAzContext = Get-AzContext -ErrorAction SilentlyContinue
+        if (-not $currentAzContext) {
+            $Result.AddError("Not connected to Azure", $null, @{
+                Prerequisite = 'Azure Authentication'
+                Resolution = 'Connect to Azure using Connect-AzAccount'
+            })
+            return
+        }
+        
+        Write-MandALog "Successfully authenticated to Azure. Context: $($currentAzContext.Name) | Tenant: $($currentAzContext.Tenant.Id)" -Level "SUCCESS" -Context $Context
+        $Result.Metadata['TenantId'] = $currentAzContext.Tenant.Id
+        $Result.Metadata['AccountId'] = $currentAzContext.Account.Id
+        
+        Write-MandALog "All Azure Discovery prerequisites validated successfully" -Level "SUCCESS" -Context $Context
+        
+    }
+    catch {
+        $Result.AddError("Unexpected error during prerequisites validation", $_.Exception, @{
+            Prerequisite = 'General Validation'
+        })
+    }
+}
+
+function Get-AzureSubscriptionsWithErrorHandling {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    $subscriptions = [System.Collections.ArrayList]::new()
+    $retryCount = 0
+    $maxRetries = 3
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            $azSubscriptions = Invoke-AzureOperationWithThrottling -Operation {
+                Get-AzSubscription -ErrorAction Stop
+            } -OperationName "GetSubscriptions" -Context $Context
+            
+            if ($azSubscriptions) {
+                foreach ($sub in $azSubscriptions) {
+                    $null = $subscriptions.Add([PSCustomObject]@{
+                        SubscriptionId = $sub.Id
+                        SubscriptionName = $sub.Name
+                        TenantId = $sub.TenantId
+                        State = $sub.State.ToString()
+                    })
+                }
+                
+                Write-MandALog "Retrieved $($subscriptions.Count) Azure Subscriptions" -Level "INFO" -Context $Context
+            }
+            
+            # Success - exit retry loop
+            break
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -ge $maxRetries) {
+                throw "Failed to retrieve Azure subscriptions after $maxRetries attempts: $_"
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount) * 2  # Exponential backoff
+            Write-MandALog "Azure subscription query failed (attempt $retryCount/$maxRetries). Waiting $waitTime seconds..." -Level "WARN" -Context $Context
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+    
+    return $subscriptions.ToArray()
+}
+
+function Process-TenantLevelResourcesWithErrorHandling {
+    param($TenantId, $SubscriptionContext, $Configuration, $Context)
+    
+    $tenantData = @{
+        ADApplications = @()
+        ADApplicationOwners = @()
+        ServicePrincipals = @()
+        ServicePrincipalOwners = @()
+    }
+    
+    try {
+        # Set context to the subscription
+        Invoke-AzureOperationWithThrottling -Operation {
+            Set-AzContext -SubscriptionId $SubscriptionContext.SubscriptionId -TenantId $TenantId -ErrorAction Stop | Out-Null
+        } -OperationName "SetContext_Tenant_$TenantId" -Context $Context
+        
+        # Get AD Applications with error handling
+        try {
+            $adAppsData = Get-AzureADApplicationsInternal -Configuration $Configuration -TenantId $TenantId -Context $Context
+            if ($adAppsData.Applications) { $tenantData.ADApplications = $adAppsData.Applications }
+            if ($adAppsData.Owners) { $tenantData.ADApplicationOwners = $adAppsData.Owners }
+        }
+        catch {
+            Write-MandALog "Error retrieving AD Applications for tenant $TenantId`: $($_.Exception.Message)" -Level "WARN" -Context $Context
+        }
+        
+        # Get Service Principals with error handling
+        try {
+            $spData = Get-AzureServicePrincipalsInternal -Configuration $Configuration -TenantId $TenantId -Context $Context
+            if ($spData.ServicePrincipals) { $tenantData.ServicePrincipals = $spData.ServicePrincipals }
+            if ($spData.Owners) { $tenantData.ServicePrincipalOwners = $spData.Owners }
+        }
+        catch {
+            Write-MandALog "Error retrieving Service Principals for tenant $TenantId`: $($_.Exception.Message)" -Level "WARN" -Context $Context
+        }
+    }
+    catch {
+        Write-MandALog "Error processing tenant-level resources for $TenantId`: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        throw
+    }
+    
+    return $tenantData
+}
+
+function Process-SubscriptionLevelResourcesWithErrorHandling {
+    param($Subscription, $Configuration, $Context)
+    
+    $subscriptionData = @{
+        ResourceGroups = @()
+        VirtualMachines = @()
+        StorageAccounts = @()
+        SQLDatabases = @()
+        WebApps = @()
+        KeyVaults = @()
+        NetworkSecurityGroups = @()
+    }
+    
+    try {
+        # Set subscription context
+        Invoke-AzureOperationWithThrottling -Operation {
+            Set-AzContext -SubscriptionId $Subscription.SubscriptionId -TenantId $Subscription.TenantId -ErrorAction Stop | Out-Null
+        } -OperationName "SetContext_Sub_$($Subscription.SubscriptionName)" -Context $Context
+        
+        # Get each resource type with individual error handling
+        $resourceTypes = @(
+            @{Name="Resource Groups"; Function="Get-AzureResourceGroupsInternal"; Property="ResourceGroups"},
+            @{Name="Virtual Machines"; Function="Get-AzureVMsDataInternal"; Property="VirtualMachines"},
+            @{Name="Storage Accounts"; Function="Get-AzureStorageAccountsInternal"; Property="StorageAccounts"},
+            @{Name="SQL Databases"; Function="Get-AzureSQLDatabasesInternal"; Property="SQLDatabases"},
+            @{Name="Web Apps"; Function="Get-AzureWebAppsInternal"; Property="WebApps"},
+            @{Name="Key Vaults"; Function="Get-AzureKeyVaultsInternal"; Property="KeyVaults"},
+            @{Name="Network Security Groups"; Function="Get-AzureNSGsInternal"; Property="NetworkSecurityGroups"}
+        )
+        
+        foreach ($resType in $resourceTypes) {
+            try {
+                Write-MandALog "Discovering $($resType.Name) in subscription $($Subscription.SubscriptionName)..." -Level "INFO" -Context $Context
+                $resources = & $resType.Function -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
+                if ($resources) {
+                    $subscriptionData[$resType.Property] = $resources
+                    Write-MandALog "Successfully discovered $($resources.Count) $($resType.Name)" -Level "SUCCESS" -Context $Context
+                }
+            }
+            catch {
+                Write-MandALog "Error discovering $($resType.Name) in subscription $($Subscription.SubscriptionName): $($_.Exception.Message)" -Level "WARN" -Context $Context
+                # Continue with other resource types
+            }
+        }
+    }
+    catch {
+        Write-MandALog "Error processing subscription-level resources for $($Subscription.SubscriptionName): $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        throw
+    }
+    
+    return $subscriptionData
+}
+
 # Enhanced main Invoke-AzureDiscovery function
 function Invoke-AzureDiscovery {
     [CmdletBinding()]
@@ -124,90 +322,193 @@ function Invoke-AzureDiscovery {
         $Context
     )
     
-    # Create minimal context if not provided
-    if (-not $Context) {
-        $Context = @{
-            ErrorCollector = [PSCustomObject]@{
-                AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
-                AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
-            }
-            Paths = @{
-                RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
-            }
-        }
-    }
+    # Initialize result object
+    $result = [DiscoveryResult]::new('Azure')
     
-    Write-ProgressStep "Starting Azure Discovery Phase (v2.0.0)" -Status Progress
-    
-    # Validate Azure connection
-    Write-ProgressStep "Validating Azure connection..." -Status Progress
-    
-    if (-not (Get-Module -Name Az.Accounts -ListAvailable)) {
-        Write-ProgressStep "Az.Accounts module not available" -Status Error
-        $Context.ErrorCollector.AddError("Azure", "Az.Accounts module not available", $null)
-        return $null
-    }
-    
-    $currentAzContext = Get-AzContext -ErrorAction SilentlyContinue
-    if (-not $currentAzContext) {
-        Write-ProgressStep "Not connected to Azure" -Status Error
-        $Context.ErrorCollector.AddError("Azure", "Not connected to Azure", $null)
-        return $null
-    }
-    
-    Write-ProgressStep "Azure context: $($currentAzContext.Name) | Tenant: $($currentAzContext.Tenant.Id)" -Status Info
-    
-    # Initialize result structure
-    $allDiscoveredData = Initialize-AzureDiscoveryResults
+    # Set up error handling preferences
+    $originalErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
     
     try {
-        # Get subscriptions
-        $subscriptions = Get-AzureSubscriptionsInternal -Configuration $Configuration -Context $Context
+        # Create minimal context if not provided
+        if (-not $Context) {
+            $Context = @{
+                ErrorCollector = [PSCustomObject]@{
+                    AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
+                    AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
+                }
+                Paths = @{
+                    RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
+                }
+            }
+        }
         
-        if ($subscriptions -and $subscriptions.Count -gt 0) {
-            $allDiscoveredData.Subscriptions.AddRange($subscriptions)
-            
-            # Show overall progress
-            Write-ProgressStep "Processing $($subscriptions.Count) subscriptions..." -Status Progress
-            
-            # Process tenant-level resources once per tenant
+        Write-MandALog "--- Starting Azure Discovery Phase (v2.0.0) ---" -Level "HEADER" -Context $Context
+        
+        # Validate prerequisites
+        Test-AzureDiscoveryPrerequisites -Configuration $Configuration -Result $result -Context $Context
+        
+        if (-not $result.Success) {
+            Write-MandALog "Prerequisites check failed, aborting Azure discovery" -Level "ERROR" -Context $Context
+            return $result
+        }
+        
+        # Main discovery logic with nested error handling
+        $azureData = @{
+            Subscriptions = @()
+            ResourceGroups = @()
+            VirtualMachines = @()
+            ADApplications = @()
+            ADApplicationOwners = @()
+            ServicePrincipals = @()
+            ServicePrincipalOwners = @()
+            StorageAccounts = @()
+            SQLDatabases = @()
+            WebApps = @()
+            KeyVaults = @()
+            NetworkSecurityGroups = @()
+        }
+        
+        # Discover Subscriptions with specific error handling
+        try {
+            Write-MandALog "Discovering Azure Subscriptions..." -Level "INFO" -Context $Context
+            $azureData.Subscriptions = Get-AzureSubscriptionsWithErrorHandling -Configuration $Configuration -Context $Context
+            $result.Metadata['SubscriptionCount'] = $azureData.Subscriptions.Count
+            Write-MandALog "Successfully discovered $($azureData.Subscriptions.Count) Azure subscriptions" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover Azure subscriptions",
+                $_.Exception,
+                @{
+                    Operation = 'Get-AzSubscription'
+                    TenantId = if ($azContext = Get-AzContext) { $azContext.Tenant.Id } else { $null }
+                }
+            )
+            Write-MandALog "Error discovering Azure subscriptions: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            # Continue with other discoveries even if subscriptions fail
+        }
+        
+        # Process each subscription
+        if ($azureData.Subscriptions -and $azureData.Subscriptions.Count -gt 0) {
             $processedTenants = @{}
             $subProcessedCount = 0
             
-            foreach ($sub in $subscriptions) {
+            foreach ($sub in $azureData.Subscriptions) {
                 $subProcessedCount++
+                Write-MandALog "Processing subscription $subProcessedCount/$($azureData.Subscriptions.Count): $($sub.SubscriptionName)" -Level "INFO" -Context $Context
                 
-                # Update main progress
-                Show-DiscoveryProgress -Module "Azure" -Status "Running" `
-                    -CurrentItem "Subscription $subProcessedCount/$($subscriptions.Count): $($sub.SubscriptionName)" `
-                    -ItemsProcessed $subProcessedCount -TotalItems $subscriptions.Count
-                
-                # Process tenant-level resources
+                # Process tenant-level resources once per tenant
                 if (-not $processedTenants.ContainsKey($sub.TenantId)) {
-                    Write-ProgressStep "Processing tenant-level resources for: $($sub.TenantId)" -Status Progress
-                    Process-TenantLevelResources -TenantId $sub.TenantId -SubscriptionContext $sub -DiscoveredData $allDiscoveredData -Configuration $Configuration -Context $Context
-                    $processedTenants[$sub.TenantId] = $true
+                    try {
+                        Write-MandALog "Processing tenant-level resources for: $($sub.TenantId)" -Level "INFO" -Context $Context
+                        $tenantData = Process-TenantLevelResourcesWithErrorHandling -TenantId $sub.TenantId -SubscriptionContext $sub -Configuration $Configuration -Context $Context
+                        
+                        if ($tenantData.ADApplications) { $azureData.ADApplications += $tenantData.ADApplications }
+                        if ($tenantData.ADApplicationOwners) { $azureData.ADApplicationOwners += $tenantData.ADApplicationOwners }
+                        if ($tenantData.ServicePrincipals) { $azureData.ServicePrincipals += $tenantData.ServicePrincipals }
+                        if ($tenantData.ServicePrincipalOwners) { $azureData.ServicePrincipalOwners += $tenantData.ServicePrincipalOwners }
+                        
+                        $processedTenants[$sub.TenantId] = $true
+                    }
+                    catch {
+                        $result.AddError(
+                            "Failed to process tenant-level resources",
+                            $_.Exception,
+                            @{
+                                Operation = 'Process-TenantLevelResources'
+                                TenantId = $sub.TenantId
+                            }
+                        )
+                        Write-MandALog "Error processing tenant resources for $($sub.TenantId): $($_.Exception.Message)" -Level "ERROR" -Context $Context
+                    }
                 }
                 
                 # Process subscription-level resources
-                Write-ProgressStep "Processing subscription: $($sub.SubscriptionName)" -Status Progress
-                Process-SubscriptionLevelResources -Subscription $sub -DiscoveredData $allDiscoveredData -Configuration $Configuration -Context $Context
+                try {
+                    Write-MandALog "Processing subscription-level resources for: $($sub.SubscriptionName)" -Level "INFO" -Context $Context
+                    $subscriptionData = Process-SubscriptionLevelResourcesWithErrorHandling -Subscription $sub -Configuration $Configuration -Context $Context
+                    
+                    if ($subscriptionData.ResourceGroups) { $azureData.ResourceGroups += $subscriptionData.ResourceGroups }
+                    if ($subscriptionData.VirtualMachines) { $azureData.VirtualMachines += $subscriptionData.VirtualMachines }
+                    if ($subscriptionData.StorageAccounts) { $azureData.StorageAccounts += $subscriptionData.StorageAccounts }
+                    if ($subscriptionData.SQLDatabases) { $azureData.SQLDatabases += $subscriptionData.SQLDatabases }
+                    if ($subscriptionData.WebApps) { $azureData.WebApps += $subscriptionData.WebApps }
+                    if ($subscriptionData.KeyVaults) { $azureData.KeyVaults += $subscriptionData.KeyVaults }
+                    if ($subscriptionData.NetworkSecurityGroups) { $azureData.NetworkSecurityGroups += $subscriptionData.NetworkSecurityGroups }
+                }
+                catch {
+                    $result.AddError(
+                        "Failed to process subscription-level resources",
+                        $_.Exception,
+                        @{
+                            Operation = 'Process-SubscriptionLevelResources'
+                            SubscriptionId = $sub.SubscriptionId
+                            SubscriptionName = $sub.SubscriptionName
+                        }
+                    )
+                    Write-MandALog "Error processing subscription resources for $($sub.SubscriptionName): $($_.Exception.Message)" -Level "ERROR" -Context $Context
+                }
             }
         }
         
-        # Export all collected data
-        Write-ProgressStep "Exporting discovery data..." -Status Progress
-        Export-AzureDiscoveryData -DiscoveredData $allDiscoveredData -Context $Context
+        # Set the data even if partially successful
+        $result.Data = $azureData
         
-        Write-ProgressStep "Azure Discovery Phase Completed Successfully" -Status Success
+        # Update metadata with counts
+        $result.Metadata['ResourceGroupCount'] = $azureData.ResourceGroups.Count
+        $result.Metadata['VirtualMachineCount'] = $azureData.VirtualMachines.Count
+        $result.Metadata['StorageAccountCount'] = $azureData.StorageAccounts.Count
+        $result.Metadata['SQLDatabaseCount'] = $azureData.SQLDatabases.Count
+        $result.Metadata['WebAppCount'] = $azureData.WebApps.Count
+        $result.Metadata['KeyVaultCount'] = $azureData.KeyVaults.Count
+        $result.Metadata['NetworkSecurityGroupCount'] = $azureData.NetworkSecurityGroups.Count
+        $result.Metadata['ADApplicationCount'] = $azureData.ADApplications.Count
+        $result.Metadata['ServicePrincipalCount'] = $azureData.ServicePrincipals.Count
+        
+        # Determine overall success based on critical data
+        if ($azureData.Subscriptions.Count -eq 0) {
+            $result.Success = $false
+            $result.AddError("No Azure subscriptions retrieved")
+            Write-MandALog "Azure Discovery failed - no subscriptions retrieved" -Level "ERROR" -Context $Context
+        } else {
+            Write-MandALog "--- Azure Discovery Phase Completed Successfully ---" -Level "SUCCESS" -Context $Context
+        }
+        
     }
     catch {
-        Write-ProgressStep "Critical error in Azure Discovery: $($_.Exception.Message)" -Status Error
-        $Context.ErrorCollector.AddError("Azure", "Critical error during discovery", $_.Exception)
-        throw
+        # Catch-all for unexpected errors
+        $result.AddError(
+            "Unexpected error in Azure discovery",
+            $_.Exception,
+            @{
+                ErrorPoint = 'Main Discovery Block'
+                LastOperation = $MyInvocation.MyCommand.Name
+            }
+        )
+        Write-MandALog "Unexpected error in Azure Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+    }
+    finally {
+        # Always execute cleanup
+        $ErrorActionPreference = $originalErrorActionPreference
+        $result.Complete()
+        
+        # Log summary
+        Write-MandALog "Azure Discovery completed. Success: $($result.Success), Errors: $($result.Errors.Count), Warnings: $($result.Warnings.Count)" -Level "INFO" -Context $Context
+        
+        # Clean up connections if needed
+        try {
+            # Clear any cached Azure contexts if needed
+            if (Get-Variable -Name 'AzureSession' -ErrorAction SilentlyContinue) {
+                Remove-Variable -Name 'AzureSession' -Force
+            }
+        }
+        catch {
+            Write-MandALog "Cleanup warning: $_" -Level "WARN" -Context $Context
+        }
     }
     
-    return $allDiscoveredData
+    return $result
 }
 
 # Enhanced Process-SubscriptionLevelResources
@@ -891,176 +1192,10 @@ function Process-ServicePrincipalOwners {
     }
 }
 
-# Main discovery function
-function Invoke-AzureDiscovery {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration,
-        [Parameter(Mandatory=$false)]
-        $Context
-    )
-    
-    # Create minimal context if not provided
-    if (-not $Context) {
-        $Context = @{
-            ErrorCollector = [PSCustomObject]@{
-                AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
-                AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
-            }
-            Paths = @{
-                RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
-            }
-        }
-    }
-    
-    Write-MandALog "--- Starting Azure Discovery Phase (v2.0.0) ---" -Level "HEADER" -Context $Context
-    
-    # Validate Azure connection
-    if (-not (Get-Module -Name Az.Accounts -ListAvailable)) {
-        $Context.ErrorCollector.AddError("Azure", "Az.Accounts module not available", $null)
-        return $null
-    }
-    
-    $currentAzContext = Get-AzContext -ErrorAction SilentlyContinue
-    if (-not $currentAzContext) {
-        $Context.ErrorCollector.AddError("Azure", "Not connected to Azure", $null)
-        return $null
-    }
-    
-    Write-MandALog "Azure context: $($currentAzContext.Name) | Tenant: $($currentAzContext.Tenant.Id)" -Level "INFO" -Context $Context
-    
-    # Initialize result structure
-    $allDiscoveredData = Initialize-AzureDiscoveryResults
-    
-    try {
-        # Get subscriptions
-        $subscriptions = Get-AzureSubscriptionsInternal -Configuration $Configuration -Context $Context
-        
-        if ($subscriptions -and $subscriptions.Count -gt 0) {
-            $allDiscoveredData.Subscriptions.AddRange($subscriptions)
-            
-            # Process tenant-level resources once per tenant
-            $processedTenants = @{}
-            
-            foreach ($sub in $subscriptions) {
-                # Process tenant-level resources
-                if (-not $processedTenants.ContainsKey($sub.TenantId)) {
-                    Process-TenantLevelResources -TenantId $sub.TenantId -SubscriptionContext $sub -DiscoveredData $allDiscoveredData -Configuration $Configuration -Context $Context
-                    $processedTenants[$sub.TenantId] = $true
-                }
-                
-                # Process subscription-level resources
-                Process-SubscriptionLevelResources -Subscription $sub -DiscoveredData $allDiscoveredData -Configuration $Configuration -Context $Context
-            }
-        }
-        
-        # Export all collected data
-        Export-AzureDiscoveryData -DiscoveredData $allDiscoveredData -Context $Context
-        
-        Write-MandALog "--- Azure Discovery Phase Completed Successfully ---" -Level "SUCCESS" -Context $Context
-    }
-    catch {
-        $Context.ErrorCollector.AddError("Azure", "Critical error during discovery", $_.Exception)
-        Write-MandALog "Critical error in Azure Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-    }
-    
-    return $allDiscoveredData
-}
-
-function Initialize-AzureDiscoveryResults {
-    return @{
-        Subscriptions = [System.Collections.Generic.List[PSObject]]::new()
-        ResourceGroups = [System.Collections.Generic.List[PSObject]]::new()
-        VirtualMachines = [System.Collections.Generic.List[PSObject]]::new()
-        ADApplications = [System.Collections.Generic.List[PSObject]]::new()
-        ADApplicationOwners = [System.Collections.Generic.List[PSObject]]::new()
-        ServicePrincipals = [System.Collections.Generic.List[PSObject]]::new()
-        ServicePrincipalOwners = [System.Collections.Generic.List[PSObject]]::new()
-        StorageAccounts = [System.Collections.Generic.List[PSObject]]::new()
-        SQLDatabases = [System.Collections.Generic.List[PSObject]]::new()
-        WebApps = [System.Collections.Generic.List[PSObject]]::new()
-        KeyVaults = [System.Collections.Generic.List[PSObject]]::new()
-        NetworkSecurityGroups = [System.Collections.Generic.List[PSObject]]::new()
-    }
-}
-
-function Process-TenantLevelResources {
-    param($TenantId, $SubscriptionContext, $DiscoveredData, $Configuration, $Context)
-    
-    Write-MandALog "Processing tenant-level resources for: $TenantId" -Level "INFO" -Context $Context
-    
-    # Set context to the subscription
-    try {
-        Invoke-AzureOperationWithThrottling -Operation {
-            Set-AzContext -SubscriptionId $SubscriptionContext.SubscriptionId -TenantId $TenantId -ErrorAction Stop | Out-Null
-        } -OperationName "SetContext_Tenant_$TenantId" -Context $Context
-        
-        # Get AD Applications
-        $adAppsData = Get-AzureADApplicationsInternal -Configuration $Configuration -TenantId $TenantId -Context $Context
-        if ($adAppsData.Applications) { $DiscoveredData.ADApplications.AddRange($adAppsData.Applications) }
-        if ($adAppsData.Owners) { $DiscoveredData.ADApplicationOwners.AddRange($adAppsData.Owners) }
-        
-        # Get Service Principals
-        $spData = Get-AzureServicePrincipalsInternal -Configuration $Configuration -TenantId $TenantId -Context $Context
-        if ($spData.ServicePrincipals) { $DiscoveredData.ServicePrincipals.AddRange($spData.ServicePrincipals) }
-        if ($spData.Owners) { $DiscoveredData.ServicePrincipalOwners.AddRange($spData.Owners) }
-    }
-    catch {
-        $Context.ErrorCollector.AddError("Azure_Tenant", "Failed to process tenant resources for: $TenantId", $_.Exception)
-    }
-}
-
-function Process-SubscriptionLevelResources {
-    param($Subscription, $DiscoveredData, $Configuration, $Context)
-    
-    Write-MandALog "Processing subscription: $($Subscription.SubscriptionName)" -Level "INFO" -Context $Context
-    
-    try {
-        # Set subscription context
-        Invoke-AzureOperationWithThrottling -Operation {
-            Set-AzContext -SubscriptionId $Subscription.SubscriptionId -TenantId $Subscription.TenantId -ErrorAction Stop | Out-Null
-        } -OperationName "SetContext_Sub_$($Subscription.SubscriptionName)" -Context $Context
-        
-        # Get Resource Groups
-        $rgs = Get-AzureResourceGroupsInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
-        if ($rgs) { $DiscoveredData.ResourceGroups.AddRange($rgs) }
-        
-        # Get Virtual Machines
-        $vms = Get-AzureVMsDataInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
-        if ($vms) { $DiscoveredData.VirtualMachines.AddRange($vms) }
-        
-       # Get Storage Accounts
-$storage = Get-AzureStorageAccountsInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
-if ($storage) { $DiscoveredData.StorageAccounts.AddRange($storage) }
-
-# Get SQL Databases
-$sqlDbs = Get-AzureSQLDatabasesInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
-if ($sqlDbs) { $DiscoveredData.SQLDatabases.AddRange($sqlDbs) }
-
-# Get Web Apps
-$webApps = Get-AzureWebAppsInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
-if ($webApps) { $DiscoveredData.WebApps.AddRange($webApps) }
-
-# Get Key Vaults
-$keyVaults = Get-AzureKeyVaultsInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
-if ($keyVaults) { $DiscoveredData.KeyVaults.AddRange($keyVaults) }
-
-# Get NSGs
-$nsgs = Get-AzureNSGsInternal -Configuration $Configuration -SubscriptionContext $Subscription -Context $Context
-if ($nsgs) { $DiscoveredData.NetworkSecurityGroups.AddRange($nsgs) }
-        
-    }
-    catch {
-        $Context.ErrorCollector.AddError("Azure_Subscription", "Failed to process subscription: $($Subscription.SubscriptionName)", $_.Exception)
-    }
-}
-
 function Export-AzureDiscoveryData {
     param($DiscoveredData, $Context)
     
-   
-
+    $outputPath = $Context.Paths.RawDataOutput
     
     foreach ($key in $DiscoveredData.Keys) {
         $dataList = $DiscoveredData[$key]

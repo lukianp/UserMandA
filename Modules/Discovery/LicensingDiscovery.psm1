@@ -7,61 +7,421 @@
 #>
 
 # Modules/Discovery/LicensingDiscovery.psm1
-#Cant use the global thingy fix here because outputpath is used in the  functions
 
-function Invoke-LicensingDiscovery {
-    param([hashtable]$Configuration)
+# Licensing Discovery Prerequisites Function
+function Test-LicensingDiscoveryPrerequisites {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        [DiscoveryResult]$Result,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    Write-MandALog "Validating Licensing Discovery prerequisites..." -Level "INFO" -Context $Context
     
     try {
-        Write-MandALog "Starting Microsoft 365 Licensing discovery" -Level "HEADER"
-        
-        $outputPath = $Configuration.environment.outputPath
-        $rawPath = Join-Path $outputPath "Raw"
-        
-        $discoveryResults = @{}
-        
-        # Verify Graph connection
-        $context = Get-MgContext -ErrorAction SilentlyContinue
-        if (-not $context) {
-            Write-MandALog "Microsoft Graph not connected. Skipping licensing discovery." -Level "WARN"
-            return @{}
+        # Check if Microsoft Graph PowerShell modules are available
+        $requiredModules = @('Microsoft.Graph.Authentication', 'Microsoft.Graph.Identity.DirectoryManagement')
+        foreach ($module in $requiredModules) {
+            if (-not (Get-Module -Name $module -ListAvailable)) {
+                $Result.AddError("$module PowerShell module is not available", $null, @{
+                    Prerequisite = "$module Module"
+                    Resolution = "Install $module PowerShell module using 'Install-Module $module'"
+                })
+                return
+            }
         }
         
-        # License SKUs
-        Write-MandALog "Discovering license SKUs..." -Level "INFO"
-        $discoveryResults.LicenseSKUs = Get-LicenseSKUsData -OutputPath $rawPath -Configuration $Configuration
+        # Import modules if not already loaded
+        foreach ($module in $requiredModules) {
+            if (-not (Get-Module -Name $module)) {
+                Import-Module $module -ErrorAction Stop
+                Write-MandALog "$module module imported successfully" -Level "DEBUG" -Context $Context
+            }
+        }
         
-        # User License Assignments
-        Write-MandALog "Discovering user license assignments..." -Level "INFO"
-        $discoveryResults.UserLicenses = Get-UserLicenseAssignmentsData -OutputPath $rawPath -Configuration $Configuration
+        # Test Microsoft Graph connectivity
+        try {
+            $mgContext = Get-MgContext -ErrorAction Stop
+            if (-not $mgContext) {
+                $Result.AddError("Not connected to Microsoft Graph", $null, @{
+                    Prerequisite = 'Microsoft Graph Authentication'
+                    Resolution = 'Connect to Microsoft Graph using Connect-MgGraph'
+                })
+                return
+            }
+            
+            Write-MandALog "Successfully connected to Microsoft Graph. Context: $($mgContext.Account)" -Level "SUCCESS" -Context $Context
+            $Result.Metadata['GraphContext'] = $mgContext.Account
+            $Result.Metadata['TenantId'] = $mgContext.TenantId
+        }
+        catch {
+            $Result.AddError("Failed to verify Microsoft Graph connection", $_.Exception, @{
+                Prerequisite = 'Microsoft Graph Connectivity'
+                Resolution = 'Verify Microsoft Graph connection and permissions'
+            })
+            return
+        }
         
-        # License Usage Analysis
-        Write-MandALog "Analyzing license usage..." -Level "INFO"
-        $discoveryResults.LicenseUsage = Get-LicenseUsageAnalysisData -OutputPath $rawPath -Configuration $Configuration -SKUs $discoveryResults.LicenseSKUs
+        # Test licensing access
+        try {
+            $testSku = Get-MgSubscribedSku -Top 1 -ErrorAction Stop
+            Write-MandALog "Successfully verified licensing access" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $Result.AddError("Failed to access licensing information", $_.Exception, @{
+                Prerequisite = 'Licensing Access'
+                Resolution = 'Verify Microsoft Graph permissions (Directory.Read.All, Organization.Read.All)'
+            })
+            return
+        }
         
-        # Service Plan Usage
-        Write-MandALog "Analyzing service plan usage..." -Level "INFO"
-        $discoveryResults.ServicePlanUsage = Get-ServicePlanUsageData -OutputPath $rawPath -Configuration $Configuration
+        Write-MandALog "All Licensing Discovery prerequisites validated successfully" -Level "SUCCESS" -Context $Context
         
-        # License Costs
-        Write-MandALog "Calculating license costs..." -Level "INFO"
-        $discoveryResults.LicenseCosts = Get-LicenseCostAnalysisData -OutputPath $rawPath -Configuration $Configuration -SKUs $discoveryResults.LicenseSKUs
-        
-        # License Compliance
-        Write-MandALog "Checking license compliance..." -Level "INFO"
-        $discoveryResults.LicenseCompliance = Get-LicenseComplianceData -OutputPath $rawPath -Configuration $Configuration
-        
-        # Group-Based Licensing
-        Write-MandALog "Discovering group-based licensing..." -Level "INFO"
-        $discoveryResults.GroupLicensing = Get-GroupBasedLicensingData -OutputPath $rawPath -Configuration $Configuration
-        
-        Write-MandALog "Microsoft 365 Licensing discovery completed successfully" -Level "SUCCESS"
-        return $discoveryResults
-        
-    } catch {
-        Write-MandALog "Microsoft 365 Licensing discovery failed: $($_.Exception.Message)" -Level "ERROR"
-        throw
     }
+    catch {
+        $Result.AddError("Unexpected error during prerequisites validation", $_.Exception, @{
+            Prerequisite = 'General Validation'
+        })
+    }
+}
+
+function Get-LicenseSKUsWithErrorHandling {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    $skus = [System.Collections.ArrayList]::new()
+    $retryCount = 0
+    $maxRetries = 3
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            Write-MandALog "Retrieving license SKUs..." -Level "INFO" -Context $Context
+            
+            $subscribedSkus = Get-MgSubscribedSku -All -ErrorAction Stop
+            
+            Write-MandALog "Retrieved $($subscribedSkus.Count) license SKUs" -Level "SUCCESS" -Context $Context
+            
+            # Process SKUs with individual error handling
+            $processedCount = 0
+            foreach ($sku in $subscribedSkus) {
+                try {
+                    $processedCount++
+                    if ($processedCount % 10 -eq 0) {
+                        Write-MandALog "Processed $processedCount/$($subscribedSkus.Count) SKUs" -Level "PROGRESS" -Context $Context
+                    }
+                    
+                    $skuObj = ConvertTo-LicenseSKUObject -SKU $sku -Context $Context
+                    if ($skuObj) {
+                        $null = $skus.Add($skuObj)
+                    }
+                }
+                catch {
+                    Write-MandALog "Error processing SKU at index $processedCount`: $_" -Level "WARN" -Context $Context
+                    # Continue processing other SKUs
+                }
+            }
+            
+            # Success - exit retry loop
+            break
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -ge $maxRetries) {
+                throw "Failed to retrieve license SKUs after $maxRetries attempts: $_"
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount) * 2  # Exponential backoff
+            Write-MandALog "License SKU query failed (attempt $retryCount/$maxRetries). Waiting $waitTime seconds..." -Level "WARN" -Context $Context
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+    
+    return $skus.ToArray()
+}
+
+function ConvertTo-LicenseSKUObject {
+    param($SKU, $Context)
+    
+    try {
+        # Calculate usage percentages
+        $totalLicenses = $SKU.PrepaidUnits.Enabled + $SKU.PrepaidUnits.Warning + $SKU.PrepaidUnits.Suspended
+        $usagePercentage = if ($totalLicenses -gt 0) {
+            [math]::Round(($SKU.ConsumedUnits / $totalLicenses) * 100, 2)
+        } else { 0 }
+        
+        # Get service plans
+        $servicePlans = $SKU.ServicePlans | ForEach-Object {
+            "$($_.ServicePlanName):$($_.ProvisioningStatus)"
+        }
+        
+        return [PSCustomObject]@{
+            SkuId = $SKU.SkuId
+            SkuPartNumber = $SKU.SkuPartNumber
+            DisplayName = Get-FriendlyLicenseName -SkuPartNumber $SKU.SkuPartNumber
+            CapabilityStatus = $SKU.CapabilityStatus
+            AppliesTo = $SKU.AppliesTo
+            TotalLicenses = $totalLicenses
+            EnabledLicenses = $SKU.PrepaidUnits.Enabled
+            WarningLicenses = $SKU.PrepaidUnits.Warning
+            SuspendedLicenses = $SKU.PrepaidUnits.Suspended
+            ConsumedLicenses = $SKU.ConsumedUnits
+            AvailableLicenses = $SKU.PrepaidUnits.Enabled - $SKU.ConsumedUnits
+            UsagePercentage = $usagePercentage
+            ServicePlanCount = $SKU.ServicePlans.Count
+            ServicePlans = ($servicePlans -join ";")
+            AccountId = $SKU.AccountId
+            AccountName = $SKU.AccountName
+            AccountObjectId = $SKU.AccountObjectId
+        }
+    }
+    catch {
+        Write-MandALog "Error converting license SKU object: $_" -Level "WARN" -Context $Context
+        return $null
+    }
+}
+
+function Invoke-LicensingDiscovery {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$false)]
+        $Context
+    )
+    
+    # Initialize result object
+    $result = [DiscoveryResult]::new('Licensing')
+    
+    # Set up error handling preferences
+    $originalErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
+    
+    try {
+        # Create minimal context if not provided
+        if (-not $Context) {
+            $Context = @{
+                ErrorCollector = [PSCustomObject]@{
+                    AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
+                    AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
+                }
+                Paths = @{
+                    RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
+                }
+            }
+        }
+        
+        Write-MandALog "--- Starting Microsoft 365 Licensing Discovery Phase (v2.0.0) ---" -Level "HEADER" -Context $Context
+        
+        # Validate prerequisites
+        Test-LicensingDiscoveryPrerequisites -Configuration $Configuration -Result $result -Context $Context
+        
+        if (-not $result.Success) {
+            Write-MandALog "Prerequisites check failed, aborting Licensing discovery" -Level "ERROR" -Context $Context
+            return $result
+        }
+        
+        # Main discovery logic with nested error handling
+        $licensingData = @{
+            LicenseSKUs = @()
+            UserLicenses = @()
+            LicenseUsage = @()
+            ServicePlanUsage = @()
+            LicenseCosts = @()
+            LicenseCompliance = @()
+            GroupLicensing = @()
+        }
+        
+        # Discover License SKUs with specific error handling
+        try {
+            Write-MandALog "Discovering license SKUs..." -Level "INFO" -Context $Context
+            $licensingData.LicenseSKUs = Get-LicenseSKUsWithErrorHandling -Configuration $Configuration -Context $Context
+            $result.Metadata['LicenseSKUCount'] = $licensingData.LicenseSKUs.Count
+            Write-MandALog "Successfully discovered $($licensingData.LicenseSKUs.Count) license SKUs" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover license SKUs",
+                $_.Exception,
+                @{
+                    Operation = 'Get-MgSubscribedSku'
+                    GraphContext = if ($mgCtx = Get-MgContext) { $mgCtx.Account } else { $null }
+                }
+            )
+            Write-MandALog "Error discovering license SKUs: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            # Continue with other discoveries even if SKUs fail
+        }
+        
+        # Discover User License Assignments with specific error handling
+        try {
+            Write-MandALog "Discovering user license assignments..." -Level "INFO" -Context $Context
+            $licensingData.UserLicenses = Get-UserLicenseAssignmentsData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $result.Metadata['UserLicenseCount'] = $licensingData.UserLicenses.Count
+            Write-MandALog "Successfully discovered $($licensingData.UserLicenses.Count) user license assignments" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover user license assignments",
+                $_.Exception,
+                @{
+                    Operation = 'Get-MgUser'
+                    Property = 'AssignedLicenses'
+                }
+            )
+            Write-MandALog "Error discovering user license assignments: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Analyze License Usage with specific error handling
+        if ($licensingData.LicenseSKUs.Count -gt 0) {
+            try {
+                Write-MandALog "Analyzing license usage..." -Level "INFO" -Context $Context
+                $licensingData.LicenseUsage = Get-LicenseUsageAnalysisData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -SKUs $licensingData.LicenseSKUs
+                $result.Metadata['LicenseUsageAnalysisCount'] = $licensingData.LicenseUsage.Count
+                Write-MandALog "Successfully analyzed license usage" -Level "SUCCESS" -Context $Context
+            }
+            catch {
+                $result.AddError(
+                    "Failed to analyze license usage",
+                    $_.Exception,
+                    @{
+                        Operation = 'Get-LicenseUsageAnalysisData'
+                        SKUCount = $licensingData.LicenseSKUs.Count
+                    }
+                )
+                Write-MandALog "Error analyzing license usage: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+        }
+        
+        # Analyze Service Plan Usage with specific error handling
+        try {
+            Write-MandALog "Analyzing service plan usage..." -Level "INFO" -Context $Context
+            $licensingData.ServicePlanUsage = Get-ServicePlanUsageData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $result.Metadata['ServicePlanUsageCount'] = $licensingData.ServicePlanUsage.Count
+            Write-MandALog "Successfully analyzed service plan usage" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to analyze service plan usage",
+                $_.Exception,
+                @{
+                    Operation = 'Get-ServicePlanUsageData'
+                }
+            )
+            Write-MandALog "Error analyzing service plan usage: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Calculate License Costs with specific error handling
+        if ($licensingData.LicenseSKUs.Count -gt 0) {
+            try {
+                Write-MandALog "Calculating license costs..." -Level "INFO" -Context $Context
+                $licensingData.LicenseCosts = Get-LicenseCostAnalysisData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration -SKUs $licensingData.LicenseSKUs
+                $result.Metadata['LicenseCostAnalysisCount'] = $licensingData.LicenseCosts.Count
+                Write-MandALog "Successfully calculated license costs" -Level "SUCCESS" -Context $Context
+            }
+            catch {
+                $result.AddError(
+                    "Failed to calculate license costs",
+                    $_.Exception,
+                    @{
+                        Operation = 'Get-LicenseCostAnalysisData'
+                        SKUCount = $licensingData.LicenseSKUs.Count
+                    }
+                )
+                Write-MandALog "Error calculating license costs: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+        }
+        
+        # Check License Compliance with specific error handling
+        try {
+            Write-MandALog "Checking license compliance..." -Level "INFO" -Context $Context
+            $licensingData.LicenseCompliance = Get-LicenseComplianceData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $result.Metadata['LicenseComplianceCount'] = $licensingData.LicenseCompliance.Count
+            Write-MandALog "Successfully checked license compliance" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to check license compliance",
+                $_.Exception,
+                @{
+                    Operation = 'Get-LicenseComplianceData'
+                }
+            )
+            Write-MandALog "Error checking license compliance: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover Group-Based Licensing with specific error handling
+        try {
+            Write-MandALog "Discovering group-based licensing..." -Level "INFO" -Context $Context
+            $licensingData.GroupLicensing = Get-GroupBasedLicensingData -OutputPath $Context.Paths.RawDataOutput -Configuration $Configuration
+            $result.Metadata['GroupLicensingCount'] = $licensingData.GroupLicensing.Count
+            Write-MandALog "Successfully discovered group-based licensing" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover group-based licensing",
+                $_.Exception,
+                @{
+                    Operation = 'Get-MgGroup'
+                    Property = 'AssignedLicenses'
+                }
+            )
+            Write-MandALog "Error discovering group-based licensing: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Set the data even if partially successful
+        $result.Data = $licensingData
+        
+        # Determine overall success based on critical data
+        if ($licensingData.LicenseSKUs.Count -eq 0) {
+            $result.Success = $false
+            $result.AddError("No license SKUs retrieved")
+            Write-MandALog "Licensing Discovery failed - no license SKUs retrieved" -Level "ERROR" -Context $Context
+        } else {
+            Write-MandALog "--- Microsoft 365 Licensing Discovery Phase Completed Successfully ---" -Level "SUCCESS" -Context $Context
+        }
+        
+    }
+    catch {
+        # Catch-all for unexpected errors
+        $result.AddError(
+            "Unexpected error in Licensing discovery",
+            $_.Exception,
+            @{
+                ErrorPoint = 'Main Discovery Block'
+                LastOperation = $MyInvocation.MyCommand.Name
+            }
+        )
+        Write-MandALog "Unexpected error in Licensing Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+    }
+    finally {
+        # Always execute cleanup
+        $ErrorActionPreference = $originalErrorActionPreference
+        $result.Complete()
+        
+        # Log summary
+        Write-MandALog "Licensing Discovery completed. Success: $($result.Success), Errors: $($result.Errors.Count), Warnings: $($result.Warnings.Count)" -Level "INFO" -Context $Context
+        
+        # Clean up connections if needed
+        try {
+            # Clear any cached Graph sessions if needed
+            if (Get-Variable -Name 'LicensingSession' -ErrorAction SilentlyContinue) {
+                Remove-Variable -Name 'LicensingSession' -Force
+            }
+        }
+        catch {
+            Write-MandALog "Cleanup warning: $_" -Level "WARN" -Context $Context
+        }
+    }
+    
+    return $result
 }
 
 function Get-LicenseSKUsData {

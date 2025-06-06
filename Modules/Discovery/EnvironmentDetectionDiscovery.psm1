@@ -144,7 +144,63 @@ function Get-CloudUserStatistics {
     return $EnvironmentInfo
 }
 
-# Enhanced main function
+# Prerequisites validation function
+function Test-EnvironmentDetectionDiscoveryPrerequisites {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$false)]
+        $Context
+    )
+    
+    $prerequisites = @{
+        IsValid = $true
+        MissingRequirements = @()
+        Warnings = @()
+    }
+    
+    try {
+        Write-ProgressStep "Validating Environment Detection prerequisites..." -Status Progress
+        
+        # Check for ActiveDirectory module (optional for on-prem detection)
+        if (-not (Get-Module -ListAvailable -Name ActiveDirectory)) {
+            $prerequisites.Warnings += "ActiveDirectory module not available - on-premises AD detection will be limited"
+        }
+        
+        # Check for Microsoft.Graph modules (optional for cloud detection)
+        $graphModules = @('Microsoft.Graph.Authentication', 'Microsoft.Graph.Identity.DirectoryManagement')
+        foreach ($module in $graphModules) {
+            if (-not (Get-Module -ListAvailable -Name $module)) {
+                $prerequisites.Warnings += "$module not available - cloud detection will be limited"
+            }
+        }
+        
+        # Validate output path
+        if (-not $Configuration.environment.outputPath) {
+            $prerequisites.IsValid = $false
+            $prerequisites.MissingRequirements += "Output path not configured"
+        } elseif (-not (Test-Path $Configuration.environment.outputPath)) {
+            try {
+                New-Item -Path $Configuration.environment.outputPath -ItemType Directory -Force | Out-Null
+            } catch {
+                $prerequisites.IsValid = $false
+                $prerequisites.MissingRequirements += "Cannot create output directory: $($_.Exception.Message)"
+            }
+        }
+        
+        Write-ProgressStep "Prerequisites validation completed" -Status Success
+        
+    } catch {
+        $prerequisites.IsValid = $false
+        $prerequisites.MissingRequirements += "Prerequisites validation failed: $($_.Exception.Message)"
+        Write-ProgressStep "Prerequisites validation failed: $($_.Exception.Message)" -Status Error
+    }
+    
+    return $prerequisites
+}
+
+# Enhanced main function with comprehensive error handling
 function Invoke-EnvironmentDetectionDiscovery {
     [CmdletBinding()]
     param(
@@ -154,68 +210,142 @@ function Invoke-EnvironmentDetectionDiscovery {
         $Context
     )
     
-    # Create minimal context if not provided
-    if (-not $Context) {
-        $Context = @{
-            ErrorCollector = [PSCustomObject]@{
-                AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
-                AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
-            }
-            Paths = @{
-                RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
-            }
-        }
-    }
+    # Initialize result object
+    $result = [DiscoveryResult]::new("EnvironmentDetection")
     
     try {
         Write-ProgressStep "Starting Environment Detection Discovery (v3.0.0)" -Status Progress
         
-        # Initialize environment info
-        $environmentInfo = Initialize-EnvironmentInfo
-        
-        # Step 1: Check on-premises
-        Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
-            -CurrentItem "Checking on-premises AD" -ItemsProcessed 1 -TotalItems 5
-        $environmentInfo = Test-OnPremisesAD -EnvironmentInfo $environmentInfo -Context $Context
-        
-        # Step 2: Check Azure AD
-        Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
-            -CurrentItem "Checking Azure AD" -ItemsProcessed 2 -TotalItems 5
-        $environmentInfo = Test-AzureAD -EnvironmentInfo $environmentInfo -Context $Context
-        
-        # Step 3: Check AD Connect
-        if ($environmentInfo.HasOnPremAD -and $environmentInfo.HasAzureAD) {
-            Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
-                -CurrentItem "Checking AD Connect" -ItemsProcessed 3 -TotalItems 5
-            $environmentInfo = Test-ADConnect -EnvironmentInfo $environmentInfo -Context $Context
+        # Create minimal context if not provided
+        if (-not $Context) {
+            $Context = @{
+                ErrorCollector = [PSCustomObject]@{
+                    AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
+                    AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
+                }
+                Paths = @{
+                    RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
+                }
+            }
         }
         
-        # Step 4: Check M365 services
-        if ($environmentInfo.HasAzureAD) {
+        # Validate prerequisites
+        $prerequisites = Test-EnvironmentDetectionDiscoveryPrerequisites -Configuration $Configuration -Context $Context
+        if (-not $prerequisites.IsValid) {
+            throw "Prerequisites validation failed: $($prerequisites.MissingRequirements -join '; ')"
+        }
+        
+        # Log warnings
+        foreach ($warning in $prerequisites.Warnings) {
+            Write-ProgressStep $warning -Status Warning
+            $Context.ErrorCollector.AddWarning("EnvironmentDetection", $warning)
+        }
+        
+        # Initialize environment info
+        $environmentInfo = Initialize-EnvironmentInfo
+        $result.Data = $environmentInfo
+        
+        # Step 1: Check on-premises AD with error handling
+        try {
             Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
-                -CurrentItem "Checking Microsoft 365 services" -ItemsProcessed 4 -TotalItems 5
-            $environmentInfo = Test-Microsoft365Services -EnvironmentInfo $environmentInfo -Context $Context
+                -CurrentItem "Checking on-premises AD" -ItemsProcessed 1 -TotalItems 5
+            
+            $environmentInfo = Get-OnPremisesADWithErrorHandling -EnvironmentInfo $environmentInfo -Context $Context
+            $result.Metadata.SectionsProcessed++
+            
+        } catch {
+            $errorMsg = "Failed to check on-premises AD: $($_.Exception.Message)"
+            Write-ProgressStep $errorMsg -Status Error
+            $Context.ErrorCollector.AddError("EnvironmentDetection", $errorMsg, $_.Exception)
+            $result.Metadata.SectionErrors++
+        }
+        
+        # Step 2: Check Azure AD with error handling
+        try {
+            Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
+                -CurrentItem "Checking Azure AD" -ItemsProcessed 2 -TotalItems 5
+            
+            $environmentInfo = Get-AzureADWithErrorHandling -EnvironmentInfo $environmentInfo -Context $Context
+            $result.Metadata.SectionsProcessed++
+            
+        } catch {
+            $errorMsg = "Failed to check Azure AD: $($_.Exception.Message)"
+            Write-ProgressStep $errorMsg -Status Error
+            $Context.ErrorCollector.AddError("EnvironmentDetection", $errorMsg, $_.Exception)
+            $result.Metadata.SectionErrors++
+        }
+        
+        # Step 3: Check AD Connect with error handling
+        if ($environmentInfo.HasOnPremAD -and $environmentInfo.HasAzureAD) {
+            try {
+                Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
+                    -CurrentItem "Checking AD Connect" -ItemsProcessed 3 -TotalItems 5
+                
+                $environmentInfo = Get-ADConnectWithErrorHandling -EnvironmentInfo $environmentInfo -Context $Context
+                $result.Metadata.SectionsProcessed++
+                
+            } catch {
+                $errorMsg = "Failed to check AD Connect: $($_.Exception.Message)"
+                Write-ProgressStep $errorMsg -Status Error
+                $Context.ErrorCollector.AddError("EnvironmentDetection", $errorMsg, $_.Exception)
+                $result.Metadata.SectionErrors++
+            }
+        }
+        
+        # Step 4: Check M365 services with error handling
+        if ($environmentInfo.HasAzureAD) {
+            try {
+                Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
+                    -CurrentItem "Checking Microsoft 365 services" -ItemsProcessed 4 -TotalItems 5
+                
+                $environmentInfo = Get-Microsoft365ServicesWithErrorHandling -EnvironmentInfo $environmentInfo -Context $Context
+                $result.Metadata.SectionsProcessed++
+                
+            } catch {
+                $errorMsg = "Failed to check Microsoft 365 services: $($_.Exception.Message)"
+                Write-ProgressStep $errorMsg -Status Error
+                $Context.ErrorCollector.AddError("EnvironmentDetection", $errorMsg, $_.Exception)
+                $result.Metadata.SectionErrors++
+            }
         }
         
         # Step 5: Determine environment type
-        Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
-            -CurrentItem "Analyzing environment type" -ItemsProcessed 5 -TotalItems 5
-        $environmentInfo.Type = Determine-EnvironmentType -EnvironmentInfo $environmentInfo
+        try {
+            Show-DiscoveryProgress -Module "EnvironmentDetection" -Status "Running" `
+                -CurrentItem "Analyzing environment type" -ItemsProcessed 5 -TotalItems 5
+            
+            $environmentInfo.Type = Determine-EnvironmentType -EnvironmentInfo $environmentInfo
+            $result.Metadata.SectionsProcessed++
+            
+        } catch {
+            $errorMsg = "Failed to determine environment type: $($_.Exception.Message)"
+            Write-ProgressStep $errorMsg -Status Error
+            $Context.ErrorCollector.AddError("EnvironmentDetection", $errorMsg, $_.Exception)
+            $result.Metadata.SectionErrors++
+            $environmentInfo.Type = "Unknown"
+        }
         
         # Write summary
         Write-EnvironmentSummary -EnvironmentInfo $environmentInfo -Context $Context
         
-        # Export data
-        Write-ProgressStep "Exporting environment detection results..." -Status Progress
-        $outputFile = Join-Path $Context.Paths.RawDataOutput "EnvironmentDetection.csv"
-        $envData = ConvertTo-EnvironmentDataObject -EnvironmentInfo $environmentInfo
-        Export-DataToCSV -Data @($envData) -FilePath $outputFile -Context $Context
-        
-        # Export AD Connect servers if found
-        if ($environmentInfo.ADConnectServers -and $environmentInfo.ADConnectServers.Count -gt 0) {
-            Write-ProgressStep "Exporting AD Connect server information..." -Status Progress
-            $adcOutputFile = Join-Path $Context.Paths.RawDataOutput "ADConnectServers.csv"
-            Export-DataToCSV -Data $environmentInfo.ADConnectServers -FilePath $adcOutputFile -Context $Context
+        # Export data with error handling
+        try {
+            Write-ProgressStep "Exporting environment detection results..." -Status Progress
+            $outputFile = Join-Path $Context.Paths.RawDataOutput "EnvironmentDetection.csv"
+            $envData = ConvertTo-EnvironmentDataObject -EnvironmentInfo $environmentInfo
+            Export-DataToCSV -Data @($envData) -FilePath $outputFile -Context $Context
+            
+            # Export AD Connect servers if found
+            if ($environmentInfo.ADConnectServers -and $environmentInfo.ADConnectServers.Count -gt 0) {
+                Write-ProgressStep "Exporting AD Connect server information..." -Status Progress
+                $adcOutputFile = Join-Path $Context.Paths.RawDataOutput "ADConnectServers.csv"
+                Export-DataToCSV -Data $environmentInfo.ADConnectServers -FilePath $adcOutputFile -Context $Context
+            }
+            
+        } catch {
+            $errorMsg = "Failed to export environment detection data: $($_.Exception.Message)"
+            Write-ProgressStep $errorMsg -Status Error
+            $Context.ErrorCollector.AddError("EnvironmentDetection", $errorMsg, $_.Exception)
         }
         
         # Store in global context if available
@@ -224,17 +354,118 @@ function Invoke-EnvironmentDetectionDiscovery {
             $global:MandA.EnvironmentInfo = $environmentInfo
         }
         
-        Write-ProgressStep "Environment Detection Discovery Completed" -Status Success
-        return $environmentInfo
+        # Update result
+        $result.Data = $environmentInfo
+        $result.Success = $true
+        $result.Metadata.TotalSections = 5
+        $result.Metadata.EndTime = Get-Date
+        $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
         
-    }
-    catch {
+        Write-ProgressStep "Environment Detection Discovery Completed" -Status Success
+        return $result
+        
+    } catch {
+        $result.Success = $false
+        $result.ErrorMessage = $_.Exception.Message
+        $result.Metadata.EndTime = Get-Date
+        $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
+        
         Write-ProgressStep "Environment detection failed: $($_.Exception.Message)" -Status Error
         $Context.ErrorCollector.AddError("EnvironmentDetection", "Discovery failed", $_.Exception)
         
-        return @{
-            Type = "Unknown"
-            Error = $_.Exception.Message
+        return $result
+        
+    } finally {
+        # Cleanup any resources if needed
+        Write-ProgressStep "Environment Detection cleanup completed" -Status Info
+    }
+}
+
+# Enhanced wrapper functions with retry logic
+function Get-OnPremisesADWithErrorHandling {
+    param($EnvironmentInfo, $Context)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Test-OnPremisesAD -EnvironmentInfo $EnvironmentInfo -Context $Context
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "On-premises AD check failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-AzureADWithErrorHandling {
+    param($EnvironmentInfo, $Context)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Test-AzureAD -EnvironmentInfo $EnvironmentInfo -Context $Context
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "Azure AD check failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-ADConnectWithErrorHandling {
+    param($EnvironmentInfo, $Context)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Test-ADConnect -EnvironmentInfo $EnvironmentInfo -Context $Context
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "AD Connect check failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+}
+
+function Get-Microsoft365ServicesWithErrorHandling {
+    param($EnvironmentInfo, $Context)
+    
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            return Test-Microsoft365Services -EnvironmentInfo $EnvironmentInfo -Context $Context
+        } catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount)
+            Write-ProgressStep "Microsoft 365 services check failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
+            Start-Sleep -Seconds $waitTime
         }
     }
 }
@@ -597,66 +828,6 @@ function Write-EnvironmentSummary {
     }
 }
 
-# Main exported function
-function Invoke-EnvironmentDetectionDiscovery {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration,
-        [Parameter(Mandatory=$false)]
-        $Context
-    )
-    
-    # Create minimal context if not provided
-    if (-not $Context) {
-        $Context = @{
-            ErrorCollector = [PSCustomObject]@{
-                AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
-                AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
-            }
-            Paths = @{
-                RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
-            }
-        }
-    }
-    
-    try {
-        Write-MandALog "--- Starting Environment Detection Discovery (v3.0.0) ---" -Level "HEADER" -Context $Context
-        
-        # Run environment detection
-        $environmentInfo = Get-EnvironmentType -Configuration $Configuration -Context $Context
-        
-        # Export main environment info
-        $outputFile = Join-Path $Context.Paths.RawDataOutput "EnvironmentDetection.csv"
-        $envData = ConvertTo-EnvironmentDataObject -EnvironmentInfo $environmentInfo
-        Export-DataToCSV -Data @($envData) -FilePath $outputFile -Context $Context
-        
-        # Export AD Connect servers if found
-        if ($environmentInfo.ADConnectServers -and $environmentInfo.ADConnectServers.Count -gt 0) {
-            $adcOutputFile = Join-Path $Context.Paths.RawDataOutput "ADConnectServers.csv"
-            Export-DataToCSV -Data $environmentInfo.ADConnectServers -FilePath $adcOutputFile -Context $Context
-        }
-        
-        # Store in global context if available
-        if ($null -ne $global:MandA) {
-            $global:MandA.EnvironmentType = $environmentInfo.Type
-            $global:MandA.EnvironmentInfo = $environmentInfo
-        }
-        
-        Write-MandALog "--- Environment Detection Discovery Completed ---" -Level "SUCCESS" -Context $Context
-        return $environmentInfo
-        
-    }
-    catch {
-        $Context.ErrorCollector.AddError("EnvironmentDetection", "Discovery failed", $_.Exception)
-        Write-MandALog "Environment detection failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-        
-        return @{
-            Type = "Unknown"
-            Error = $_.Exception.Message
-        }
-    }
-}
 
 function ConvertTo-EnvironmentDataObject {
     param($EnvironmentInfo)

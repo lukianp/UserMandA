@@ -14,7 +14,431 @@
 # Import shared utilities
 
 
-# Private discovery functions
+# Enhanced error handling functions with retry logic and batch processing
+function Test-ADDiscoveryPrerequisites {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        [DiscoveryResult]$Result,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    Write-MandALog "Validating AD Discovery prerequisites..." -Level "INFO" -Context $Context
+    
+    try {
+        # Validate Active Directory module
+        if (-not (Get-Module -Name ActiveDirectory -ListAvailable)) {
+            $Result.AddError("ActiveDirectory PowerShell module is not available", $null, @{
+                Prerequisite = 'ActiveDirectory Module'
+                Resolution = 'Install RSAT or ActiveDirectory PowerShell module'
+            })
+            return
+        }
+        
+        # Import the module if not already loaded
+        if (-not (Get-Module -Name ActiveDirectory)) {
+            Import-Module ActiveDirectory -ErrorAction Stop
+            Write-MandALog "ActiveDirectory module imported successfully" -Level "DEBUG" -Context $Context
+        }
+        
+        # Validate connectivity to domain controller
+        $targetServer = $Configuration.environment.globalCatalog
+        if (-not $targetServer) { $targetServer = $Configuration.environment.domainController }
+        
+        if ($targetServer) {
+            Write-MandALog "Testing connectivity to AD server: $targetServer" -Level "DEBUG" -Context $Context
+            
+            # Use Invoke-WithRetry for connectivity test
+            $connectivityTest = Invoke-WithRetry -ScriptBlock {
+                Test-Connection -ComputerName $targetServer -Count 1 -Quiet -ErrorAction Stop
+            } -MaxRetries 3 -DelaySeconds 2 -OperationName "AD Connectivity Test" -Context $Context
+            
+            if (-not $connectivityTest) {
+                $Result.AddError("Cannot reach AD server: $targetServer", $null, @{
+                    Prerequisite = 'Network Connectivity'
+                    TargetServer = $targetServer
+                    Resolution = 'Check network connectivity, DNS resolution, and firewall settings'
+                })
+                return
+            }
+            
+            Write-MandALog "Successfully connected to AD server: $targetServer" -Level "SUCCESS" -Context $Context
+        }
+        
+        # Test AD authentication
+        try {
+            $testDomain = Get-ADDomain -ErrorAction Stop
+            Write-MandALog "Successfully authenticated to domain: $($testDomain.DNSRoot)" -Level "SUCCESS" -Context $Context
+            $Result.Metadata['DomainDNSRoot'] = $testDomain.DNSRoot
+            $Result.Metadata['DomainNetBIOSName'] = $testDomain.NetBIOSName
+        }
+        catch {
+            $Result.AddError("Failed to authenticate to Active Directory", $_.Exception, @{
+                Prerequisite = 'AD Authentication'
+                Resolution = 'Check credentials and domain membership'
+            })
+            return
+        }
+        
+        Write-MandALog "All AD Discovery prerequisites validated successfully" -Level "SUCCESS" -Context $Context
+        
+    }
+    catch {
+        $Result.AddError("Unexpected error during prerequisites validation", $_.Exception, @{
+            Prerequisite = 'General Validation'
+        })
+    }
+}
+
+function Get-ADUsersWithErrorHandling {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    $users = [System.Collections.ArrayList]::new()
+    $batchSize = if ($Configuration.discovery.batchSize) { $Configuration.discovery.batchSize } else { 1000 }
+    $retryCount = 0
+    $maxRetries = 3
+    
+    # Get total count first for progress tracking
+    $totalCount = 0
+    try {
+        $serverParams = Get-ServerParameters -Configuration $Configuration
+        $totalCount = (Get-ADUser -Filter * @serverParams -ResultSetSize $null).Count
+        Write-MandALog "Found $totalCount total AD users to process" -Level "INFO" -Context $Context
+    }
+    catch {
+        Write-MandALog "Could not get total user count: $_" -Level "WARN" -Context $Context
+    }
+    
+    # Process in batches with retry logic
+    $processedCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            $userProperties = @(
+                'SamAccountName', 'UserPrincipalName', 'GivenName', 'Surname', 'DisplayName',
+                'Description', 'DistinguishedName', 'Enabled', 'LastLogonTimestamp',
+                'whenCreated', 'whenChanged', 'mail', 'proxyAddresses', 'Department',
+                'Title', 'Manager', 'employeeID', 'physicalDeliveryOfficeName',
+                'telephoneNumber', 'mobile', 'company', 'AccountExpirationDate',
+                'PasswordLastSet', 'PasswordNeverExpires', 'CannotChangePassword',
+                'PasswordNotRequired', 'msDS-UserPasswordExpiryTimeComputed'
+            )
+            
+            # Build filter based on discovery scope
+            $filter = BuildADFilter -Configuration $Configuration -ObjectType "User"
+            $serverParams = Get-ServerParameters -Configuration $Configuration
+            
+            # Use paging for large directories
+            $pageSize = [Math]::Min($batchSize, 1000)
+            $adUsers = Get-ADUser -Filter $filter -Properties $userProperties @serverParams -ResultPageSize $pageSize -ErrorAction Stop
+            
+            # Process results with individual error handling
+            foreach ($user in $adUsers) {
+                try {
+                    $userObj = ConvertTo-UserObject -ADUser $user -Context $Context
+                    $null = $users.Add($userObj)
+                    $processedCount++
+                    
+                    # Progress update every 100 users
+                    if ($processedCount % 100 -eq 0) {
+                        Write-MandALog "Processed $processedCount/$totalCount users" -Level "PROGRESS" -Context $Context
+                    }
+                }
+                catch {
+                    Write-MandALog "Error processing user at index $processedCount`: $_" -Level "WARN" -Context $Context
+                    # Continue processing other users
+                }
+            }
+            
+            # Export data
+            if ($users.Count -gt 0) {
+                Export-DataToCSV -Data $users -FilePath (Join-Path $Context.Paths.RawDataOutput "ADUsers.csv") -Context $Context
+            }
+            
+            # Success - exit retry loop
+            break
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -ge $maxRetries) {
+                throw "Failed to retrieve AD users after $maxRetries attempts: $_"
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount) * 2  # Exponential backoff
+            Write-MandALog "AD user query failed (attempt $retryCount/$maxRetries). Waiting $waitTime seconds..." -Level "WARN" -Context $Context
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+    
+    return $users.ToArray()
+}
+
+function Get-ADGroupsWithErrorHandling {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    $groups = [System.Collections.ArrayList]::new()
+    $groupMembers = [System.Collections.ArrayList]::new()
+    $batchSize = if ($Configuration.discovery.batchSize) { $Configuration.discovery.batchSize } else { 1000 }
+    $retryCount = 0
+    $maxRetries = 3
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            $groupProperties = @(
+                'SamAccountName', 'Name', 'GroupCategory', 'GroupScope',
+                'Description', 'DistinguishedName', 'whenCreated', 'whenChanged',
+                'mail', 'ManagedBy', 'member'
+            )
+            
+            $serverParams = Get-ServerParameters -Configuration $Configuration
+            $pageSize = [Math]::Min($batchSize, 1000)
+            $adGroups = Get-ADGroup -Filter * -Properties $groupProperties @serverParams -ResultPageSize $pageSize -ErrorAction Stop
+            
+            $processedCount = 0
+            foreach ($group in $adGroups) {
+                try {
+                    # Add group object
+                    $groupObj = [PSCustomObject]@{
+                        SamAccountName = $group.SamAccountName
+                        Name = $group.Name
+                        GroupCategory = $group.GroupCategory
+                        GroupScope = $group.GroupScope
+                        Description = $group.Description
+                        DistinguishedName = $group.DistinguishedName
+                        CreatedDate = $group.whenCreated
+                        ModifiedDate = $group.whenChanged
+                        EmailAddress = $group.mail
+                        ManagedBy = $group.ManagedBy
+                        MemberCount = if ($group.member) { $group.member.Count } else { 0 }
+                    }
+                    $null = $groups.Add($groupObj)
+                    
+                    # Process group members with error handling
+                    if ($group.member) {
+                        Process-GroupMembersWithErrorHandling -Group $group -Members $group.member -MembersList $groupMembers -ServerParams $serverParams -Context $Context
+                    }
+                    
+                    $processedCount++
+                    if ($processedCount % 50 -eq 0) {
+                        Write-MandALog "Processed $processedCount groups" -Level "PROGRESS" -Context $Context
+                    }
+                }
+                catch {
+                    Write-MandALog "Error processing group '$($group.SamAccountName)': $_" -Level "WARN" -Context $Context
+                    # Continue with other groups
+                }
+            }
+            
+            # Export data
+            if ($groups.Count -gt 0) {
+                Export-DataToCSV -Data $groups -FilePath (Join-Path $Context.Paths.RawDataOutput "ADGroups.csv") -Context $Context
+            }
+            if ($groupMembers.Count -gt 0) {
+                Export-DataToCSV -Data $groupMembers -FilePath (Join-Path $Context.Paths.RawDataOutput "ADGroupMembers.csv") -Context $Context
+            }
+            
+            # Success - exit retry loop
+            break
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -ge $maxRetries) {
+                throw "Failed to retrieve AD groups after $maxRetries attempts: $_"
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount) * 2  # Exponential backoff
+            Write-MandALog "AD group query failed (attempt $retryCount/$maxRetries). Waiting $waitTime seconds..." -Level "WARN" -Context $Context
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+    
+    return @{
+        Groups = $groups.ToArray()
+        Members = $groupMembers.ToArray()
+    }
+}
+
+function Process-GroupMembersWithErrorHandling {
+    param(
+        $Group,
+        $Members,
+        $MembersList,
+        $ServerParams,
+        $Context
+    )
+    
+    foreach ($memberDN in $Members) {
+        try {
+            # Use retry logic for member resolution
+            $memberObj = Invoke-WithRetry -ScriptBlock {
+                Get-ADObject -Identity $memberDN -Properties SamAccountName, ObjectClass @ServerParams -ErrorAction Stop
+            } -MaxRetries 2 -DelaySeconds 1 -OperationName "Resolve Group Member" -Context $Context
+            
+            if ($memberObj) {
+                $null = $MembersList.Add([PSCustomObject]@{
+                    GroupDN = $Group.DistinguishedName
+                    GroupName = $Group.SamAccountName
+                    MemberDN = $memberDN
+                    MemberSamAccountName = $memberObj.SamAccountName
+                    MemberObjectClass = $memberObj.ObjectClass
+                })
+            }
+        }
+        catch {
+            Write-MandALog "Failed to resolve member '$memberDN' for group '$($Group.SamAccountName)': $_" -Level "WARN" -Context $Context
+            # Continue with other members
+        }
+    }
+}
+
+function Get-ADComputersWithErrorHandling {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    $computers = [System.Collections.ArrayList]::new()
+    $batchSize = if ($Configuration.discovery.batchSize) { $Configuration.discovery.batchSize } else { 1000 }
+    $retryCount = 0
+    $maxRetries = 3
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            $computerProperties = @(
+                'Name', 'DNSHostName', 'OperatingSystem', 'OperatingSystemVersion',
+                'OperatingSystemServicePack', 'Enabled', 'DistinguishedName',
+                'whenCreated', 'whenChanged', 'LastLogonTimestamp', 'Description',
+                'ManagedBy', 'MemberOf'
+            )
+            
+            $serverParams = Get-ServerParameters -Configuration $Configuration
+            $pageSize = [Math]::Min($batchSize, 1000)
+            $adComputers = Get-ADComputer -Filter * -Properties $computerProperties @serverParams -ResultPageSize $pageSize -ErrorAction Stop
+            
+            $processedCount = 0
+            foreach ($computer in $adComputers) {
+                try {
+                    $computerObj = ConvertTo-ComputerObject -ADComputer $computer -Context $Context
+                    $null = $computers.Add($computerObj)
+                    $processedCount++
+                    
+                    if ($processedCount % 100 -eq 0) {
+                        Write-MandALog "Processed $processedCount computers" -Level "PROGRESS" -Context $Context
+                    }
+                }
+                catch {
+                    Write-MandALog "Error processing computer '$($computer.Name)': $_" -Level "WARN" -Context $Context
+                    # Continue with other computers
+                }
+            }
+            
+            # Export data
+            if ($computers.Count -gt 0) {
+                Export-DataToCSV -Data $computers -FilePath (Join-Path $Context.Paths.RawDataOutput "ADComputers.csv") -Context $Context
+            }
+            
+            # Success - exit retry loop
+            break
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -ge $maxRetries) {
+                throw "Failed to retrieve AD computers after $maxRetries attempts: $_"
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount) * 2  # Exponential backoff
+            Write-MandALog "AD computer query failed (attempt $retryCount/$maxRetries). Waiting $waitTime seconds..." -Level "WARN" -Context $Context
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+    
+    return $computers.ToArray()
+}
+
+function Get-ADOUsWithErrorHandling {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    $ous = [System.Collections.ArrayList]::new()
+    $retryCount = 0
+    $maxRetries = 3
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            $ouProperties = @(
+                'Name', 'DistinguishedName', 'Description', 'whenCreated', 'whenChanged',
+                'ManagedBy', 'ProtectedFromAccidentalDeletion'
+            )
+            
+            $serverParams = Get-ServerParameters -Configuration $Configuration
+            $adOUs = Get-ADOrganizationalUnit -Filter * -Properties $ouProperties @serverParams -ErrorAction Stop
+            
+            foreach ($ou in $adOUs) {
+                try {
+                    $ouObj = [PSCustomObject]@{
+                        Name = $ou.Name
+                        DistinguishedName = $ou.DistinguishedName
+                        Description = $ou.Description
+                        CreatedDate = $ou.whenCreated
+                        ModifiedDate = $ou.whenChanged
+                        ManagedBy = $ou.ManagedBy
+                        ProtectedFromAccidentalDeletion = $ou.ProtectedFromAccidentalDeletion
+                    }
+                    $null = $ous.Add($ouObj)
+                }
+                catch {
+                    Write-MandALog "Error processing OU '$($ou.Name)': $_" -Level "WARN" -Context $Context
+                    # Continue with other OUs
+                }
+            }
+            
+            # Export data
+            if ($ous.Count -gt 0) {
+                Export-DataToCSV -Data $ous -FilePath (Join-Path $Context.Paths.RawDataOutput "ADOrganizationalUnits.csv") -Context $Context
+            }
+            
+            # Success - exit retry loop
+            break
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -ge $maxRetries) {
+                throw "Failed to retrieve AD organizational units after $maxRetries attempts: $_"
+            }
+            
+            $waitTime = [Math]::Pow(2, $retryCount) * 2  # Exponential backoff
+            Write-MandALog "AD OU query failed (attempt $retryCount/$maxRetries). Waiting $waitTime seconds..." -Level "WARN" -Context $Context
+            Start-Sleep -Seconds $waitTime
+        }
+    }
+    
+    return $ous.ToArray()
+}
+
+# Legacy function for backward compatibility
 function Get-ADUsersDataInternal {
     [CmdletBinding()]
     param(
@@ -631,6 +1055,41 @@ function ConvertTo-DNSRecordObject {
     }
 }
 
+# Helper function for CSV export with error handling
+function Export-DataToCSV {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.Collections.IEnumerable]$Data,
+        [Parameter(Mandatory=$true)]
+        [string]$FilePath,
+        [Parameter(Mandatory=$true)]
+        $Context
+    )
+    
+    try {
+        if ($Data -and @($Data).Count -gt 0) {
+            # Ensure directory exists
+            $directory = Split-Path -Path $FilePath -Parent
+            if (-not (Test-Path -Path $directory)) {
+                New-Item -Path $directory -ItemType Directory -Force | Out-Null
+                Write-MandALog "Created directory: $directory" -Level "DEBUG" -Context $Context
+            }
+            
+            # Export to CSV with error handling
+            $Data | Export-Csv -Path $FilePath -NoTypeInformation -Encoding UTF8 -ErrorAction Stop
+            Write-MandALog "Successfully exported $(@($Data).Count) records to: $FilePath" -Level "DEBUG" -Context $Context
+        } else {
+            Write-MandALog "No data to export for: $FilePath" -Level "WARN" -Context $Context
+        }
+    }
+    catch {
+        Write-MandALog "Failed to export data to CSV: $FilePath. Error: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        if ($Context.ErrorCollector) {
+            $Context.ErrorCollector.AddWarning("DataExport", "Failed to export data to: $FilePath")
+        }
+    }
+}
 # Main exported function
 function Invoke-ActiveDirectoryDiscovery {
     [CmdletBinding()]
@@ -641,59 +1100,212 @@ function Invoke-ActiveDirectoryDiscovery {
         $Context
     )
     
-    # Create minimal context if not provided (backward compatibility)
-    if (-not $Context) {
-        $Context = @{
-            ErrorCollector = [PSCustomObject]@{
-                AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
-                AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
-            }
-            Paths = @{
-                RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
-            }
-        }
-    }
+    # Initialize result object using the DiscoveryResult class
+    $result = [DiscoveryResult]::new('ActiveDirectory')
     
-    Write-MandALog "--- Starting Active Directory Discovery Phase (v2.0.0) ---" -Level "HEADER" -Context $Context
-    
-    # Validate Active Directory module
-    if (-not (Get-Module -Name ActiveDirectory -ListAvailable)) {
-        $Context.ErrorCollector.AddError("ActiveDirectory", "ActiveDirectory PowerShell module is not available", $null)
-        Write-MandALog "ActiveDirectory module not available. Please install RSAT." -Level "ERROR" -Context $Context
-        return $null
-    }
-    
-    # Validate connectivity
-    $targetServer = $Configuration.environment.globalCatalog
-    if (-not $targetServer) { $targetServer = $Configuration.environment.domainController }
-    
-    if ($targetServer) {
-        if (-not (Test-Connection -ComputerName $targetServer -Count 1 -Quiet)) {
-            $Context.ErrorCollector.AddError("ActiveDirectory", "Cannot reach AD server: $targetServer", $null)
-            Write-MandALog "Target AD server unreachable: $targetServer" -Level "ERROR" -Context $Context
-            return $null
-        }
-    }
-    
-    # Execute discovery functions
-    $discoveredData = @{}
+    # Set up error handling preferences
+    $originalErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
     
     try {
-        $discoveredData.Users = Get-ADUsersDataInternal -Configuration $Configuration -Context $Context
-        $discoveredData.GroupsAndMembers = Get-ADGroupsDataInternal -Configuration $Configuration -Context $Context
-        $discoveredData.Computers = Get-ADComputersDataInternal -Configuration $Configuration -Context $Context
-        $discoveredData.OUs = Get-ADOUsDataInternal -Configuration $Configuration -Context $Context
-        $discoveredData.SitesAndServices = Get-ADSitesAndServicesDataInternal -Configuration $Configuration -Context $Context
-        $discoveredData.DNSInfo = Get-ADDNSZoneDataInternal -Configuration $Configuration -Context $Context
+        # Create minimal context if not provided (backward compatibility)
+        if (-not $Context) {
+            $Context = @{
+                ErrorCollector = [PSCustomObject]@{
+                    AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
+                    AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
+                }
+                Paths = @{
+                    RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
+                }
+            }
+        }
         
-        Write-MandALog "--- Active Directory Discovery Phase Completed Successfully ---" -Level "SUCCESS" -Context $Context
+        Write-MandALog "--- Starting Active Directory Discovery Phase (v2.0.0) ---" -Level "HEADER" -Context $Context
+        
+        # Validate prerequisites
+        Test-ADDiscoveryPrerequisites -Configuration $Configuration -Result $result -Context $Context
+        
+        if (-not $result.Success) {
+            Write-MandALog "Prerequisites check failed, aborting AD discovery" -Level "ERROR" -Context $Context
+            return $result
+        }
+        
+        # Main discovery logic with nested error handling
+        $adData = @{
+            Users = @()
+            Groups = @()
+            GroupMembers = @()
+            Computers = @()
+            OUs = @()
+            SitesAndServices = @{}
+            DNSInfo = @{}
+        }
+        
+        # Discover Users with specific error handling
+        try {
+            Write-MandALog "Discovering AD Users..." -Level "INFO" -Context $Context
+            $adData.Users = Get-ADUsersWithErrorHandling -Configuration $Configuration -Context $Context
+            $result.Metadata['UserCount'] = $adData.Users.Count
+            Write-MandALog "Successfully discovered $($adData.Users.Count) AD users" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover AD users",
+                $_.Exception,
+                @{
+                    Operation = 'Get-ADUser'
+                    DomainController = $Configuration.environment.domainController
+                    Filter = $Configuration.discovery.userFilter
+                }
+            )
+            Write-MandALog "Error discovering AD users: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            # Continue with other discoveries even if users fail
+        }
+        
+        # Discover Groups with specific error handling
+        try {
+            Write-MandALog "Discovering AD Groups..." -Level "INFO" -Context $Context
+            $groupData = Get-ADGroupsWithErrorHandling -Configuration $Configuration -Context $Context
+            $adData.Groups = $groupData.Groups
+            $adData.GroupMembers = $groupData.Members
+            $result.Metadata['GroupCount'] = $adData.Groups.Count
+            $result.Metadata['GroupMembershipCount'] = $adData.GroupMembers.Count
+            Write-MandALog "Successfully discovered $($adData.Groups.Count) AD groups with $($adData.GroupMembers.Count) memberships" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover AD groups",
+                $_.Exception,
+                @{
+                    Operation = 'Get-ADGroup'
+                    DomainController = $Configuration.environment.domainController
+                }
+            )
+            Write-MandALog "Error discovering AD groups: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover Computers with specific error handling
+        try {
+            Write-MandALog "Discovering AD Computers..." -Level "INFO" -Context $Context
+            $adData.Computers = Get-ADComputersWithErrorHandling -Configuration $Configuration -Context $Context
+            $result.Metadata['ComputerCount'] = $adData.Computers.Count
+            Write-MandALog "Successfully discovered $($adData.Computers.Count) AD computers" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover AD computers",
+                $_.Exception,
+                @{
+                    Operation = 'Get-ADComputer'
+                    DomainController = $Configuration.environment.domainController
+                }
+            )
+            Write-MandALog "Error discovering AD computers: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover OUs with specific error handling
+        try {
+            Write-MandALog "Discovering AD Organizational Units..." -Level "INFO" -Context $Context
+            $adData.OUs = Get-ADOUsWithErrorHandling -Configuration $Configuration -Context $Context
+            $result.Metadata['OUCount'] = $adData.OUs.Count
+            Write-MandALog "Successfully discovered $($adData.OUs.Count) AD organizational units" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover AD organizational units",
+                $_.Exception,
+                @{
+                    Operation = 'Get-ADOrganizationalUnit'
+                    DomainController = $Configuration.environment.domainController
+                }
+            )
+            Write-MandALog "Error discovering AD OUs: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover Sites and Services with specific error handling
+        try {
+            Write-MandALog "Discovering AD Sites and Services..." -Level "INFO" -Context $Context
+            $adData.SitesAndServices = Get-ADSitesAndServicesDataInternal -Configuration $Configuration -Context $Context
+            $result.Metadata['SiteCount'] = $adData.SitesAndServices.Sites.Count
+            Write-MandALog "Successfully discovered AD Sites and Services" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover AD sites and services",
+                $_.Exception,
+                @{
+                    Operation = 'Get-ADReplicationSite'
+                    DomainController = $Configuration.environment.domainController
+                }
+            )
+            Write-MandALog "Error discovering AD Sites and Services: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Discover DNS Information with specific error handling
+        try {
+            Write-MandALog "Discovering AD DNS Information..." -Level "INFO" -Context $Context
+            $adData.DNSInfo = Get-ADDNSZoneDataInternal -Configuration $Configuration -Context $Context
+            $result.Metadata['DNSZoneCount'] = $adData.DNSInfo.Zones.Count
+            Write-MandALog "Successfully discovered AD DNS information" -Level "SUCCESS" -Context $Context
+        }
+        catch {
+            $result.AddError(
+                "Failed to discover AD DNS information",
+                $_.Exception,
+                @{
+                    Operation = 'Get-DnsServerZone'
+                    DomainController = $Configuration.environment.domainController
+                }
+            )
+            Write-MandALog "Error discovering AD DNS: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # Set the data even if partially successful
+        $result.Data = $adData
+        
+        # Determine overall success based on critical data
+        if ($adData.Users.Count -eq 0 -and $adData.Groups.Count -eq 0 -and $adData.Computers.Count -eq 0) {
+            $result.Success = $false
+            $result.AddError("No critical data retrieved from Active Directory")
+            Write-MandALog "AD Discovery failed - no critical data retrieved" -Level "ERROR" -Context $Context
+        } else {
+            Write-MandALog "--- Active Directory Discovery Phase Completed Successfully ---" -Level "SUCCESS" -Context $Context
+        }
+        
     }
     catch {
-        $Context.ErrorCollector.AddError("ActiveDirectory", "Critical error during discovery", $_.Exception)
-        Write-MandALog "Critical error during AD Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        # Catch-all for unexpected errors
+        $result.AddError(
+            "Unexpected error in AD discovery",
+            $_.Exception,
+            @{
+                ErrorPoint = 'Main Discovery Block'
+                LastOperation = $MyInvocation.MyCommand.Name
+            }
+        )
+        Write-MandALog "Unexpected error in AD Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+    }
+    finally {
+        # Always execute cleanup
+        $ErrorActionPreference = $originalErrorActionPreference
+        $result.Complete()
+        
+        # Log summary
+        Write-MandALog "AD Discovery completed. Success: $($result.Success), Errors: $($result.Errors.Count), Warnings: $($result.Warnings.Count)" -Level "INFO" -Context $Context
+        
+        # Clean up connections if needed
+        try {
+            if (Get-Variable -Name 'ADSession' -ErrorAction SilentlyContinue) {
+                Remove-Variable -Name 'ADSession' -Force
+            }
+        }
+        catch {
+            Write-MandALog "Cleanup warning: $_" -Level "WARN" -Context $Context
+        }
     }
     
-    return $discoveredData
+    return $result
 }
 
 # Export module members
