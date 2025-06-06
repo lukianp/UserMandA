@@ -8,7 +8,7 @@
 
 <#
 .SYNOPSIS
-
+#>
 
 # Module-scope context variable
 
@@ -37,6 +37,9 @@ function Get-ModuleContext {
     return $script:ModuleContext
 
 }
+
+<#
+.SYNOPSIS
     Secure credential storage and retrieval for M&A Discovery Suite
 .DESCRIPTION
     Handles encrypted credential storage using DPAPI with standardized format

@@ -1,5 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
-<#
+﻿<#
 .SYNOPSIS
     Handles credential file format operations for M&A Discovery Suite
 .DESCRIPTION
@@ -66,4 +65,5 @@ function Save-CredentialFile {
     }
 }
 
+Export-ModuleMember -Function Read-CredentialFile, Save-CredentialFile
 Export-ModuleMember -Function Read-CredentialFile, Save-CredentialFile
