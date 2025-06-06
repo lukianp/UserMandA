@@ -9,35 +9,6 @@
 
 <#
 .SYNOPSIS
-
-
-# Module-scope context variable
-
-$script:ModuleContext = $null
-
-
-
-# Lazy initialization function
-
-function Get-ModuleContext {
-
-    if ($null -eq $script:ModuleContext) {
-
-        if ($null -ne $global:MandA) {
-
-            $script:ModuleContext = $global:MandA
-
-        } else {
-
-            throw "Module context not available"
-
-        }
-
-    }
-
-    return $script:ModuleContext
-
-}
     Provides standardized error handling and retry mechanisms for the M&A Discovery Suite.
 .DESCRIPTION
     This module includes functions to invoke script blocks with retry logic,
@@ -49,12 +20,63 @@ function Get-ModuleContext {
     Date: 2025-06-05
 
     Key Design Points:
-    - Uses Write-MandALog for logging (assumes EnhancedLogging.psm1 is loaded).
+    - Uses Write-SafeLog for logging (assumes EnhancedLogging.psm1 is loaded).
     - Relies on $global:MandA or a passed -Context for logging context.
     - Retry logic is configurable via $global:MandA.Config.environment.
 #>
 
-Export-ModuleMember -Function Invoke-WithRetry, Get-FriendlyErrorMessage, Write-ErrorSummary, Test-CriticalError, Invoke-WithTimeout, Invoke-WithTimeoutAndRetry, Test-OperationTimeout, Add-ErrorContext, New-EnhancedErrorRecord, Export-ErrorContext, New-DiscoveryResult
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
+
+# Fallback logging function if Write-SafeLog is not available
+function Write-FallbackLog {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO",
+        [string]$Component = "ErrorHandling",
+        [PSCustomObject]$Context = $null
+    )
+    
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $color = switch ($Level) {
+        "ERROR" { "Red" }
+        "WARN" { "Yellow" }
+        "SUCCESS" { "Green" }
+        "DEBUG" { "Gray" }
+        "CRITICAL" { "Magenta" }
+        default { "White" }
+    }
+    
+    Write-Host "$timestamp [$Level] [$Component] $Message" -ForegroundColor $color
+}
+
+# Safe logging wrapper
+function Write-SafeLog {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO",
+        [string]$Component = "ErrorHandling",
+        [PSCustomObject]$Context = $null
+    )
+    
+    if (Get-Command Write-SafeLog -ErrorAction SilentlyContinue) {
+        Write-SafeLog -Message $Message -Level $Level -Component $Component -Context $Context
+    } else {
+        Write-FallbackLog -Message $Message -Level $Level -Component $Component -Context $Context
+    }
+}
 
 # DiscoveryResult Class - Consistent error result structure for ALL modules
 class DiscoveryResult {
@@ -172,7 +194,7 @@ function Add-ErrorContext {
                 TenantId = $tenantId
                 UserId = $userId
             }
-            Write-MandALog -Message "Enhanced error captured" -Level "ERROR" -Context $enhancedError
+            Write-SafeLog -Message "Enhanced error captured" -Level "ERROR" -Context $enhancedError
         }
     #>
     [CmdletBinding()]
@@ -193,7 +215,7 @@ function Add-ErrorContext {
         [PSCustomObject]$LoggingContext # For logging context
     )
     
-    Write-MandALog -Message "Capturing enhanced error context for: $($ErrorRecord.Exception.Message)" -Level "DEBUG" -Component "ErrorContextCapture" -Context $LoggingContext
+    Write-SafeLog -Message "Capturing enhanced error context for: $($ErrorRecord.Exception.Message)" -Level "DEBUG" -Component "ErrorContextCapture" -Context $LoggingContext
     
     # Create rich error object
     $enhancedError = @{
@@ -271,7 +293,7 @@ function Add-ErrorContext {
         }
     }
     
-    Write-MandALog -Message "Enhanced error context captured successfully (ID: $($enhancedError.ExecutionId))" -Level "DEBUG" -Component "ErrorContextCapture" -Context $LoggingContext
+    Write-SafeLog -Message "Enhanced error context captured successfully (ID: $($enhancedError.ExecutionId))" -Level "DEBUG" -Component "ErrorContextCapture" -Context $LoggingContext
     
     return $enhancedError
 }
@@ -338,7 +360,7 @@ function New-EnhancedErrorRecord {
     }
     $global:MandAErrorContextStore[$errorRecord.GetHashCode()] = $enhancedContext
     
-    Write-MandALog -Message "Enhanced ErrorRecord created with ID: $ErrorId" -Level "DEBUG" -Component "ErrorRecordCreation" -Context $LoggingContext
+    Write-SafeLog -Message "Enhanced ErrorRecord created with ID: $ErrorId" -Level "DEBUG" -Component "ErrorRecordCreation" -Context $LoggingContext
     
     return $errorRecord
 }
@@ -379,7 +401,7 @@ function Export-ErrorContext {
         # Ensure output directory exists
         if (-not (Test-Path $OutputPath)) {
             New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
-            Write-MandALog -Message "Created error log directory: $OutputPath" -Level "INFO" -Component "ErrorExport" -Context $LoggingContext
+            Write-SafeLog -Message "Created error log directory: $OutputPath" -Level "INFO" -Component "ErrorExport" -Context $LoggingContext
         }
         
         # Generate filename
@@ -397,12 +419,12 @@ function Export-ErrorContext {
         $jsonContent = $EnhancedError | ConvertTo-Json -Depth 10 -Compress:$false
         $jsonContent | Out-File -FilePath $fullPath -Encoding UTF8 -Force
         
-        Write-MandALog -Message "Error context exported to: $fullPath" -Level "INFO" -Component "ErrorExport" -Context $LoggingContext
+        Write-SafeLog -Message "Error context exported to: $fullPath" -Level "INFO" -Component "ErrorExport" -Context $LoggingContext
         
         return $fullPath
         
     } catch {
-        Write-MandALog -Message "Failed to export error context: $($_.Exception.Message)" -Level "ERROR" -Component "ErrorExport" -Context $LoggingContext
+        Write-SafeLog -Message "Failed to export error context: $($_.Exception.Message)" -Level "ERROR" -Component "ErrorExport" -Context $LoggingContext
         throw
     }
 }
@@ -442,7 +464,7 @@ function Invoke-WithRetry {
         $effectiveDelaySeconds = $effectiveConfig.environment.connectivity.retryDelaySeconds | global:Get-OrElse $effectiveConfig.environment.retryDelaySeconds | global:Get-OrElse 5
     }
 
-    Write-MandALog -Message "Attempting operation: '$OperationName'. Max Retries: $effectiveMaxRetries, Delay: $effectiveDelaySeconds s." -Level "DEBUG" -Component "RetryWrapper" -Context $Context
+    Write-SafeLog -Message "Attempting operation: '$OperationName'. Max Retries: $effectiveMaxRetries, Delay: $effectiveDelaySeconds s." -Level "DEBUG" -Component "RetryWrapper" -Context $Context
 
     $attempt = 0
     $lastError = $null
@@ -452,10 +474,10 @@ function Invoke-WithRetry {
     while ($attempt -lt $effectiveMaxRetries) {
         $attempt++
         try {
-            Write-MandALog -Message "Executing '$OperationName', Attempt: $attempt of $effectiveMaxRetries..." -Level "DEBUG" -Component "RetryWrapper" -Context $Context
+            Write-SafeLog -Message "Executing '$OperationName', Attempt: $attempt of $effectiveMaxRetries..." -Level "DEBUG" -Component "RetryWrapper" -Context $Context
             $result = & $ScriptBlock
             $operationSuccessful = $true
-            Write-MandALog -Message "Operation '$OperationName' succeeded on attempt $attempt." -Level "SUCCESS" -Component "RetryWrapper" -Context $Context
+            Write-SafeLog -Message "Operation '$OperationName' succeeded on attempt $attempt." -Level "SUCCESS" -Component "RetryWrapper" -Context $Context
             break 
         } catch {
             $lastError = $_ # Capture the terminating error
@@ -471,14 +493,14 @@ function Invoke-WithRetry {
                 RetryableErrorTypes = $RetryableErrorTypes
             } -LoggingContext $Context
 
-            Write-MandALog -Message "Attempt $attempt for '$OperationName' failed. Error: $errorMessage (Type: $errorType). Enhanced context ID: $($enhancedErrorContext.ExecutionId)" -Level "WARN" -Component "RetryWrapper" -Context $Context
+            Write-SafeLog -Message "Attempt $attempt for '$OperationName' failed. Error: $errorMessage (Type: $errorType). Enhanced context ID: $($enhancedErrorContext.ExecutionId)" -Level "WARN" -Component "RetryWrapper" -Context $Context
 
             # Check if this error type is specifically retryable
             $isRetryableBySpecificType = $false
             if ($null -ne $RetryableErrorTypes -and $RetryableErrorTypes.Count -gt 0) {
                 if ($RetryableErrorTypes -contains $errorType) {
                     $isRetryableBySpecificType = $true
-                    Write-MandALog -Message "Error type '$errorType' is in the list of retryable errors for '$OperationName'." -Level "DEBUG" -Component "RetryWrapper" -Context $Context
+                    Write-SafeLog -Message "Error type '$errorType' is in the list of retryable errors for '$OperationName'." -Level "DEBUG" -Component "RetryWrapper" -Context $Context
                 }
             } else {
                 # If no specific retryable types are given, assume most errors are retryable up to MaxRetries
@@ -487,13 +509,13 @@ function Invoke-WithRetry {
             }
 
             if ($attempt -ge $effectiveMaxRetries -or -not $isRetryableBySpecificType) {
-                Write-MandALog -Message "Operation '$OperationName' failed after $attempt attempt(s). Error: $errorMessage. No more retries or error not retryable." -Level "ERROR" -Component "RetryWrapper" -Context $Context
+                Write-SafeLog -Message "Operation '$OperationName' failed after $attempt attempt(s). Error: $errorMessage. No more retries or error not retryable." -Level "ERROR" -Component "RetryWrapper" -Context $Context
                 # Re-throw the last error to be caught by the caller
                 throw $lastError 
             }
 
             $waitTime = $effectiveDelaySeconds * $attempt # Exponential backoff can be added here if desired (e.g., $effectiveDelaySeconds * (2 ** ($attempt -1)))
-            Write-MandALog -Message "Waiting $waitTime seconds before retrying '$OperationName' (Attempt $($attempt + 1))..." -Level "INFO" -Component "RetryWrapper" -Context $Context
+            Write-SafeLog -Message "Waiting $waitTime seconds before retrying '$OperationName' (Attempt $($attempt + 1))..." -Level "INFO" -Component "RetryWrapper" -Context $Context
             Start-Sleep -Seconds $waitTime
         }
     } # End while
@@ -503,7 +525,7 @@ function Invoke-WithRetry {
     } else {
         # Should have been re-thrown in the catch block if all retries failed
         # This is a fallback, but the 'throw $lastError' in catch should handle it.
-        Write-MandALog -Message "Operation '$OperationName' ultimately failed after all retries." -Level "ERROR" -Component "RetryWrapper" -Context $Context
+        Write-SafeLog -Message "Operation '$OperationName' ultimately failed after all retries." -Level "ERROR" -Component "RetryWrapper" -Context $Context
         throw "Operation '$OperationName' failed after $effectiveMaxRetries attempts. Last Error: $($lastError.Exception.Message)"
     }
 }
@@ -567,7 +589,7 @@ function Get-FriendlyErrorMessage {
         $friendlyMessage += " Occurred in script '$($invocationInfo.ScriptName)' at line $($invocationInfo.ScriptLineNumber), command: '$($invocationInfo.Line)'."
     }
     
-    Write-MandALog -Message "Generated friendly error: $friendlyMessage" -Level "DEBUG" -Component "ErrorHelper" -Context $Context
+    Write-SafeLog -Message "Generated friendly error: $friendlyMessage" -Level "DEBUG" -Component "ErrorHelper" -Context $Context
     return $friendlyMessage
 }
 
@@ -593,7 +615,7 @@ function Invoke-WithTimeout {
         [hashtable]$ArgumentList = @{} # Arguments to pass to the script block
     )
     
-    Write-MandALog -Message "Starting timeout-protected operation: '$OperationName' (Timeout: $TimeoutSeconds seconds)" -Level "DEBUG" -Component "TimeoutWrapper" -Context $Context
+    Write-SafeLog -Message "Starting timeout-protected operation: '$OperationName' (Timeout: $TimeoutSeconds seconds)" -Level "DEBUG" -Component "TimeoutWrapper" -Context $Context
     
     $job = $null
     $result = $null
@@ -606,14 +628,14 @@ function Invoke-WithTimeout {
             $job = Start-Job -ScriptBlock $ScriptBlock
         }
         
-        Write-MandALog -Message "Job started for operation '$OperationName' (Job ID: $($job.Id))" -Level "DEBUG" -Component "TimeoutWrapper" -Context $Context
+        Write-SafeLog -Message "Job started for operation '$OperationName' (Job ID: $($job.Id))" -Level "DEBUG" -Component "TimeoutWrapper" -Context $Context
         
         # Wait for job completion with timeout
         $completed = Wait-Job -Job $job -Timeout $TimeoutSeconds
         
         if (-not $completed) {
             # Timeout occurred
-            Write-MandALog -Message "Operation '$OperationName' timed out after $TimeoutSeconds seconds" -Level "ERROR" -Component "TimeoutWrapper" -Context $Context
+            Write-SafeLog -Message "Operation '$OperationName' timed out after $TimeoutSeconds seconds" -Level "ERROR" -Component "TimeoutWrapper" -Context $Context
             
             # Force stop and clean up the job
             Stop-Job -Job $job -Force
@@ -625,7 +647,7 @@ function Invoke-WithTimeout {
         }
         
         # Job completed within timeout - get the result
-        Write-MandALog -Message "Operation '$OperationName' completed within timeout" -Level "DEBUG" -Component "TimeoutWrapper" -Context $Context
+        Write-SafeLog -Message "Operation '$OperationName' completed within timeout" -Level "DEBUG" -Component "TimeoutWrapper" -Context $Context
         
         # Check if the job had errors
         if ($job.State -eq "Failed") {
@@ -633,7 +655,7 @@ function Invoke-WithTimeout {
             Remove-Job -Job $job -Force
             
             if ($jobErrorVar) {
-                Write-MandALog -Message "Operation '$OperationName' failed with errors: $($jobErrorVar[0].Exception.Message)" -Level "ERROR" -Component "TimeoutWrapper" -Context $Context
+                Write-SafeLog -Message "Operation '$OperationName' failed with errors: $($jobErrorVar[0].Exception.Message)" -Level "ERROR" -Component "TimeoutWrapper" -Context $Context
                 throw $jobErrorVar[0]
             } else {
                 throw "Operation '$OperationName' failed for unknown reasons"
@@ -644,7 +666,7 @@ function Invoke-WithTimeout {
         $result = Receive-Job -Job $job
         Remove-Job -Job $job -Force
         
-        Write-MandALog -Message "Operation '$OperationName' completed successfully" -Level "SUCCESS" -Component "TimeoutWrapper" -Context $Context
+        Write-SafeLog -Message "Operation '$OperationName' completed successfully" -Level "SUCCESS" -Component "TimeoutWrapper" -Context $Context
         return $result
         
     } catch [System.TimeoutException] {
@@ -652,7 +674,7 @@ function Invoke-WithTimeout {
         throw
     } catch {
         # Handle other exceptions
-        Write-MandALog -Message "Unexpected error in timeout wrapper for operation '$OperationName': $($_.Exception.Message)" -Level "ERROR" -Component "TimeoutWrapper" -Context $Context
+        Write-SafeLog -Message "Unexpected error in timeout wrapper for operation '$OperationName': $($_.Exception.Message)" -Level "ERROR" -Component "TimeoutWrapper" -Context $Context
         
         # Clean up job if it still exists
         if ($job -and $job.State -in @("Running", "NotStarted")) {
@@ -660,7 +682,7 @@ function Invoke-WithTimeout {
                 Stop-Job -Job $job -Force -ErrorAction SilentlyContinue
                 Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
             } catch {
-                Write-MandALog -Message "Failed to clean up job for operation '$OperationName': $($_.Exception.Message)" -Level "WARN" -Component "TimeoutWrapper" -Context $Context
+                Write-SafeLog -Message "Failed to clean up job for operation '$OperationName': $($_.Exception.Message)" -Level "WARN" -Component "TimeoutWrapper" -Context $Context
             }
         }
         
@@ -693,7 +715,7 @@ function Invoke-WithTimeoutAndRetry {
         [hashtable]$ArgumentList = @{}
     )
     
-    Write-MandALog -Message "Starting timeout-protected operation with retry: '$OperationName' (Timeout: $TimeoutSeconds s, Max Retries: $MaxRetries)" -Level "DEBUG" -Component "TimeoutRetryWrapper" -Context $Context
+    Write-SafeLog -Message "Starting timeout-protected operation with retry: '$OperationName' (Timeout: $TimeoutSeconds s, Max Retries: $MaxRetries)" -Level "DEBUG" -Component "TimeoutRetryWrapper" -Context $Context
     
     $attempt = 0
     $lastError = $null
@@ -701,28 +723,28 @@ function Invoke-WithTimeoutAndRetry {
     while ($attempt -lt $MaxRetries) {
         $attempt++
         try {
-            Write-MandALog -Message "Attempting '$OperationName' with timeout protection, attempt $attempt of $MaxRetries" -Level "DEBUG" -Component "TimeoutRetryWrapper" -Context $Context
+            Write-SafeLog -Message "Attempting '$OperationName' with timeout protection, attempt $attempt of $MaxRetries" -Level "DEBUG" -Component "TimeoutRetryWrapper" -Context $Context
             
             $result = Invoke-WithTimeout -ScriptBlock $ScriptBlock -TimeoutSeconds $TimeoutSeconds -OperationName "$OperationName (Attempt $attempt)" -Context $Context -ArgumentList $ArgumentList
             
-            Write-MandALog -Message "Operation '$OperationName' succeeded on attempt $attempt" -Level "SUCCESS" -Component "TimeoutRetryWrapper" -Context $Context
+            Write-SafeLog -Message "Operation '$OperationName' succeeded on attempt $attempt" -Level "SUCCESS" -Component "TimeoutRetryWrapper" -Context $Context
             return $result
             
         } catch [System.TimeoutException] {
             $lastError = $_
-            Write-MandALog -Message "Attempt $attempt for '$OperationName' timed out after $TimeoutSeconds seconds" -Level "WARN" -Component "TimeoutRetryWrapper" -Context $Context
+            Write-SafeLog -Message "Attempt $attempt for '$OperationName' timed out after $TimeoutSeconds seconds" -Level "WARN" -Component "TimeoutRetryWrapper" -Context $Context
             
             if ($attempt -ge $MaxRetries) {
-                Write-MandALog -Message "Operation '$OperationName' failed after $attempt timeout attempts" -Level "ERROR" -Component "TimeoutRetryWrapper" -Context $Context
+                Write-SafeLog -Message "Operation '$OperationName' failed after $attempt timeout attempts" -Level "ERROR" -Component "TimeoutRetryWrapper" -Context $Context
                 throw $lastError
             }
             
-            Write-MandALog -Message "Waiting $DelaySeconds seconds before retry attempt $($attempt + 1) for '$OperationName'" -Level "INFO" -Component "TimeoutRetryWrapper" -Context $Context
+            Write-SafeLog -Message "Waiting $DelaySeconds seconds before retry attempt $($attempt + 1) for '$OperationName'" -Level "INFO" -Component "TimeoutRetryWrapper" -Context $Context
             Start-Sleep -Seconds $DelaySeconds
             
         } catch {
             $lastError = $_
-            Write-MandALog -Message "Attempt $attempt for '$OperationName' failed with non-timeout error: $($_.Exception.Message)" -Level "ERROR" -Component "TimeoutRetryWrapper" -Context $Context
+            Write-SafeLog -Message "Attempt $attempt for '$OperationName' failed with non-timeout error: $($_.Exception.Message)" -Level "ERROR" -Component "TimeoutRetryWrapper" -Context $Context
             throw $lastError
         }
     }
@@ -747,19 +769,19 @@ function Test-OperationTimeout {
         [PSCustomObject]$Context
     )
     
-    Write-MandALog -Message "Testing timeout behavior for '$TestName' (Expected timeout: $ExpectedTimeoutSeconds s)" -Level "DEBUG" -Component "TimeoutTester" -Context $Context
+    Write-SafeLog -Message "Testing timeout behavior for '$TestName' (Expected timeout: $ExpectedTimeoutSeconds s)" -Level "DEBUG" -Component "TimeoutTester" -Context $Context
     
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $timedOut = $false
     
     try {
         Invoke-WithTimeout -ScriptBlock $TestScriptBlock -TimeoutSeconds $ExpectedTimeoutSeconds -OperationName $TestName -Context $Context
-        Write-MandALog -Message "Test '$TestName' completed without timeout in $($stopwatch.ElapsedMilliseconds) ms" -Level "INFO" -Component "TimeoutTester" -Context $Context
+        Write-SafeLog -Message "Test '$TestName' completed without timeout in $($stopwatch.ElapsedMilliseconds) ms" -Level "INFO" -Component "TimeoutTester" -Context $Context
     } catch [System.TimeoutException] {
         $timedOut = $true
-        Write-MandALog -Message "Test '$TestName' timed out as expected after $($stopwatch.ElapsedMilliseconds) ms" -Level "SUCCESS" -Component "TimeoutTester" -Context $Context
+        Write-SafeLog -Message "Test '$TestName' timed out as expected after $($stopwatch.ElapsedMilliseconds) ms" -Level "SUCCESS" -Component "TimeoutTester" -Context $Context
     } catch {
-        Write-MandALog -Message "Test '$TestName' failed with unexpected error: $($_.Exception.Message)" -Level "ERROR" -Component "TimeoutTester" -Context $Context
+        Write-SafeLog -Message "Test '$TestName' failed with unexpected error: $($_.Exception.Message)" -Level "ERROR" -Component "TimeoutTester" -Context $Context
         throw
     } finally {
         $stopwatch.Stop()
@@ -780,28 +802,28 @@ function Write-ErrorSummary {
         [PSCustomObject]$Context
     )
     
-    Write-MandALog -Message "--- Error Summary ---" -Level "HEADER" -Component "ErrorSummary" -Context $Context
+    Write-SafeLog -Message "--- Error Summary ---" -Level "HEADER" -Component "ErrorSummary" -Context $Context
     if (-not $ErrorCollector.HasErrors()) {
-        Write-MandALog -Message "No errors recorded during this execution." -Level "SUCCESS" -Component "ErrorSummary" -Context $Context
+        Write-SafeLog -Message "No errors recorded during this execution." -Level "SUCCESS" -Component "ErrorSummary" -Context $Context
         return
     }
 
-    Write-MandALog -Message "Total Errors: $($ErrorCollector.Errors.Count)" -Level "ERROR" -Component "ErrorSummary" -Context $Context
-    Write-MandALog -Message "Total Warnings: $($ErrorCollector.Warnings.Count)" -Level "WARN" -Component "ErrorSummary" -Context $Context
+    Write-SafeLog -Message "Total Errors: $($ErrorCollector.Errors.Count)" -Level "ERROR" -Component "ErrorSummary" -Context $Context
+    Write-SafeLog -Message "Total Warnings: $($ErrorCollector.Warnings.Count)" -Level "WARN" -Component "ErrorSummary" -Context $Context
 
     $errorGroups = $ErrorCollector.Errors | Group-Object Source | Sort-Object Count -Descending
     
-    Write-MandALog -Message "Errors by Source:" -Level "INFO" -Component "ErrorSummary" -Context $Context
+    Write-SafeLog -Message "Errors by Source:" -Level "INFO" -Component "ErrorSummary" -Context $Context
     foreach ($group in $errorGroups) {
-        Write-MandALog -Message ("  {0,-30} : {1} error(s)" -f $group.Name, $group.Count) -Level "INFO" -Component "ErrorSummary" -Context $Context
+        Write-SafeLog -Message ("  {0,-30} : {1} error(s)" -f $group.Name, $group.Count) -Level "INFO" -Component "ErrorSummary" -Context $Context
         # Optionally list a few example messages for each source
-        # $group.Group | Select-Object -First 2 | ForEach-Object { Write-MandALog -Message ("    - $($_.Message -replace "`r|`n"," ")" ) -Level "DEBUG" -Component "ErrorSummary" -Context $Context }
+        # $group.Group | Select-Object -First 2 | ForEach-Object { Write-SafeLog -Message ("    - $($_.Message -replace "`r|`n"," ")" ) -Level "DEBUG" -Component "ErrorSummary" -Context $Context }
     }
 
     if ($ErrorCollector.Warnings.Count -gt 0) {
-        Write-MandALog -Message "Warnings by Source (first 5):" -Level "INFO" -Component "ErrorSummary" -Context $Context
+        Write-SafeLog -Message "Warnings by Source (first 5):" -Level "INFO" -Component "ErrorSummary" -Context $Context
         $ErrorCollector.Warnings | Group-Object Source | Sort-Object Count -Descending | Select-Object -First 5 | ForEach-Object {
-            Write-MandALog -Message ("  {0,-30} : {1} warning(s)" -f $_.Name, $_.Count) -Level "INFO" -Component "ErrorSummary" -Context $Context
+            Write-SafeLog -Message ("  {0,-30} : {1} warning(s)" -f $_.Name, $_.Count) -Level "INFO" -Component "ErrorSummary" -Context $Context
         }
     }
     # The Orchestrator's Complete-MandADiscovery function handles exporting the full error report.
@@ -832,7 +854,7 @@ function Test-CriticalError {
     $errorMessage = $ErrorRecord.Exception.Message
 
     if ($criticalErrorPatterns | Where-Object { $exceptionType -like $_ -or $errorMessage -like "*$_*" }) {
-        Write-MandALog -Message "Critical error detected: $errorMessage (Type: $exceptionType)" -Level "CRITICAL" -Component "ErrorCheck" -Context $Context
+        Write-SafeLog -Message "Critical error detected: $errorMessage (Type: $exceptionType)" -Level "CRITICAL" -Component "ErrorCheck" -Context $Context
         return $true
     }
     
@@ -840,7 +862,7 @@ function Test-CriticalError {
     if ($Context -and $Context.Config -and $Context.Config.environment -and $Context.Config.environment.connectivity) {
         $haltOn = $Context.Config.environment.connectivity.haltOnConnectionError | global:Get-OrElse @()
         if ($haltOn -contains "Authentication" -and $ErrorRecord.CategoryInfo.Category -eq "AuthenticationError") {
-             Write-MandALog -Message "Critical authentication error configured to halt execution: $errorMessage" -Level "CRITICAL" -Component "ErrorCheck" -Context $Context
+             Write-SafeLog -Message "Critical authentication error configured to halt execution: $errorMessage" -Level "CRITICAL" -Component "ErrorCheck" -Context $Context
             return $true
         }
     }
@@ -924,4 +946,21 @@ Export-ModuleMember -Function New-DiscoveryResult
 
 Write-Host "[ErrorHandling.psm1] DiscoveryResult class exported to global scope via Invoke-Expression." -ForegroundColor DarkGray
 Write-Host "[ErrorHandling.psm1] Module loaded." -ForegroundColor DarkGray
+
+# Export all functions
+Export-ModuleMember -Function @(
+    'Invoke-WithRetry',
+    'Get-FriendlyErrorMessage',
+    'Write-ErrorSummary',
+    'Test-CriticalError',
+    'Invoke-WithTimeout',
+    'Invoke-WithTimeoutAndRetry',
+    'Test-OperationTimeout',
+    'Add-ErrorContext',
+    'New-EnhancedErrorRecord',
+    'Export-ErrorContext',
+    'New-DiscoveryResult',
+    'Get-ModuleContext',
+    'Write-SafeLog'
+)
 

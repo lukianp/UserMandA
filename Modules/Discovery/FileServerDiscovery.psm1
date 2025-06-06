@@ -1,5 +1,5 @@
 ﻿# -*- coding: utf-8-bom -*-
-#Requires -Modules ActiveDirectory, CimCmdlets, SmbShare, DfsMgmt, FailoverClusters
+#Requires -Modules ActiveDirectory, CimCmdlets, SmbShare
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
@@ -7,13 +7,21 @@
 # Last Modified: 2025-06-06
 # Change Log: Updated version control header
 
+<#
+.SYNOPSIS
+    Enhanced File Server and Storage Discovery Module for M&A Discovery Suite
+.DESCRIPTION
+    Discovers file servers, shares, DFS namespaces, permissions, storage information,
+    shadow copies, and file server clusters with improved performance and reliability
+.NOTES
+    Author: M&A Discovery Suite
+    Version: 2.0.0
+    Last Modified: 2024-01-20
+#>
 
 # DiscoveryResult class definition
 # DiscoveryResult class is defined globally by the Orchestrator using Add-Type
 # No local definition needed - the global C# class will be used
-
-<#
-.SYNOPSIS
 
 # Module-scope context variable
 $script:ModuleContext = $null
@@ -29,20 +37,41 @@ function Get-ModuleContext {
     }
     return $script:ModuleContext
 }
-    Enhanced File Server and Storage Discovery Module for M&A Discovery Suite
-.DESCRIPTION
-    Discovers file servers, shares, DFS namespaces, permissions, storage information,
-    shadow copies, and file server clusters with improved performance and reliability
-.NOTES
-    Author: M&A Discovery Suite
-    Version: 2.0.0
-    Last Modified: 2024-01-20
-#>
+
+# Safe logging wrapper
+function Write-SafeLog {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO",
+        [string]$Component = "FileServerDiscovery",
+        [PSCustomObject]$Context = $null
+    )
+    
+    if (Get-Command Write-SafeLog -ErrorAction SilentlyContinue) {
+        Write-SafeLog -Message $Message -Level $Level -Component $Component -Context $Context
+    } else {
+        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        $color = switch ($Level) {
+            "ERROR" { "Red" }
+            "WARN" { "Yellow" }
+            "SUCCESS" { "Green" }
+            "DEBUG" { "Gray" }
+            "CRITICAL" { "Magenta" }
+            default { "White" }
+        }
+        Write-Host "$timestamp [$Level] [$Component] $Message" -ForegroundColor $color
+    }
+}
 
 
 
-$authModulePathFromGlobal = Join-Path $global:MandA.Paths.Authentication "DiscoveryModuleBase.psm1"
-Import-Module $authModulePathFromGlobal -Force
+# Import authentication module if available
+if ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.Authentication) {
+    $authModulePathFromGlobal = Join-Path $global:MandA.Paths.Authentication "DiscoveryModuleBase.psm1"
+    if (Test-Path $authModulePathFromGlobal) {
+        Import-Module $authModulePathFromGlobal -Force
+    }
+}
 
 # Module-specific variables
 $script:PerformanceTracker = $null
@@ -845,7 +874,7 @@ function Get-ShareDetails {
                                                              -Context $Context
             } catch {
                 $shareInfo.CollectionErrors += "ACL: $($_.Exception.Message)"
-                Write-MandALog "Failed to get ACLs for $uncPath`: $($_.Exception.Message)" -Level "DEBUG" -Context $Context
+                Write-SafeLog "Failed to get ACLs for $uncPath`: $($_.Exception.Message)" -Level "DEBUG" -Context $Context
             }
         }
         
@@ -867,7 +896,7 @@ function Get-ShareDetails {
                 }
             } catch {
                 $shareInfo.CollectionErrors += "Size: $($_.Exception.Message)"
-                Write-MandALog "Failed to get size for $uncPath`: $($_.Exception.Message)" -Level "DEBUG" -Context $Context
+                Write-SafeLog "Failed to get size for $uncPath`: $($_.Exception.Message)" -Level "DEBUG" -Context $Context
             }
         }
     }
@@ -965,7 +994,7 @@ function Get-ShareSize {
     # Check path depth
     $pathDepth = ($LocalPath -split '[\\/]').Count
     if ($pathDepth -gt $Configuration.SkipShareSizeCalculationForPathDepthExceeding) {
-        Write-MandALog "Skipping size calculation for $UNCPath - path depth exceeds threshold" -Level "DEBUG" -Context $Context
+        Write-SafeLog "Skipping size calculation for $UNCPath - path depth exceeds threshold" -Level "DEBUG" -Context $Context
         return @{
             SizeMB = -1
             FileCount = -1
@@ -1041,7 +1070,7 @@ function Get-ShareSize {
     } else {
         Stop-Job -Job $job -Force
         Remove-Job -Job $job -Force
-        Write-MandALog "Timeout calculating size for $UNCPath after $($Configuration.TimeoutPerShareSizeSeconds) seconds" -Level "DEBUG" -Context $Context
+        Write-SafeLog "Timeout calculating size for $UNCPath after $($Configuration.TimeoutPerShareSizeSeconds) seconds" -Level "DEBUG" -Context $Context
         
         return @{
             SizeMB = -1
@@ -1064,11 +1093,11 @@ function Get-DFSNamespacesEnhanced {
     $dfsNamespaces = [System.Collections.Generic.List[PSObject]]::new()
     
     try {
-        Write-MandALog "Discovering DFS Namespaces..." -Level "INFO" -Context $Context
+        Write-SafeLog "Discovering DFS Namespaces..." -Level "INFO" -Context $Context
         
         # Check if DFS module is available
         if (-not (Get-Module -ListAvailable -Name DfsMgmt)) {
-            Write-MandALog "DfsMgmt module not available. Install RSAT DFS Management Tools." -Level "WARN" -Context $Context
+            Write-SafeLog "DfsMgmt module not available. Install RSAT DFS Management Tools." -Level "WARN" -Context $Context
             return $dfsNamespaces
         }
         
@@ -1078,7 +1107,7 @@ function Get-DFSNamespacesEnhanced {
         $dfsRoots = Get-DfsnRoot -ErrorAction SilentlyContinue
         
         if ($null -eq $dfsRoots -or $dfsRoots.Count -eq 0) {
-            Write-MandALog "No DFS namespaces found" -Level "INFO" -Context $Context
+            Write-SafeLog "No DFS namespaces found" -Level "INFO" -Context $Context
             return $dfsNamespaces
         }
         
@@ -1108,15 +1137,15 @@ function Get-DFSNamespacesEnhanced {
                 $dfsNamespaces.Add($namespaceInfo)
                 
             } catch {
-                Write-MandALog "Error processing DFS namespace $($root.Path): $($_.Exception.Message)" -Level "WARN" -Context $Context
+                Write-SafeLog "Error processing DFS namespace $($root.Path): $($_.Exception.Message)" -Level "WARN" -Context $Context
             }
         }
         
-        Write-MandALog "Found $($dfsNamespaces.Count) DFS namespaces" -Level "SUCCESS" -Context $Context
+        Write-SafeLog "Found $($dfsNamespaces.Count) DFS namespaces" -Level "SUCCESS" -Context $Context
         return $dfsNamespaces
         
     } catch {
-        Write-MandALog "Error discovering DFS namespaces: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-SafeLog "Error discovering DFS namespaces: $($_.Exception.Message)" -Level "ERROR" -Context $Context
         throw
     }
 }
@@ -1131,11 +1160,11 @@ function Get-DFSFoldersEnhanced {
     $dfsFolders = [System.Collections.Generic.List[PSObject]]::new()
     
     try {
-        Write-MandALog "Discovering DFS folders for $($DfsNamespaces.Count) namespaces..." -Level "INFO" -Context $Context
+        Write-SafeLog "Discovering DFS folders for $($DfsNamespaces.Count) namespaces..." -Level "INFO" -Context $Context
         
         foreach ($namespace in $DfsNamespaces) {
             $rootPath = $namespace.NamespacePath
-            Write-MandALog "Processing DFS namespace: $rootPath" -Level "DEBUG" -Context $Context
+            Write-SafeLog "Processing DFS namespace: $rootPath" -Level "DEBUG" -Context $Context
             
             try {
                 # Get all folders in namespace
@@ -1185,15 +1214,15 @@ function Get-DFSFoldersEnhanced {
                 }
                 
             } catch {
-                Write-MandALog "Error processing namespace '$rootPath': $($_.Exception.Message)" -Level "WARN" -Context $Context
+                Write-SafeLog "Error processing namespace '$rootPath': $($_.Exception.Message)" -Level "WARN" -Context $Context
             }
         }
         
-        Write-MandALog "Discovered $($dfsFolders.Count) DFS folders" -Level "SUCCESS" -Context $Context
+        Write-SafeLog "Discovered $($dfsFolders.Count) DFS folders" -Level "SUCCESS" -Context $Context
         return $dfsFolders
         
     } catch {
-        Write-MandALog "Error discovering DFS folders: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-SafeLog "Error discovering DFS folders: $($_.Exception.Message)" -Level "ERROR" -Context $Context
         throw
     }
 }
@@ -1209,7 +1238,7 @@ function Get-StorageAnalysisEnhanced {
     $storageAnalysis = [System.Collections.Generic.List[PSObject]]::new()
     
     try {
-        Write-MandALog "Analyzing storage on $($ServerList.Count) servers..." -Level "INFO" -Context $Context
+        Write-SafeLog "Analyzing storage on $($ServerList.Count) servers..." -Level "INFO" -Context $Context
         
         $currentServer = 0
         foreach ($server in $ServerList) {
@@ -1269,17 +1298,17 @@ function Get-StorageAnalysisEnhanced {
                 }
                 
             } catch {
-                Write-MandALog "Error analyzing storage on $serverName`: $($_.Exception.Message)" -Level "WARN" -Context $Context
+                Write-SafeLog "Error analyzing storage on $serverName`: $($_.Exception.Message)" -Level "WARN" -Context $Context
             }
         }
         
         Write-Progress -Activity "Analyzing Storage" -Completed
         
-        Write-MandALog "Completed storage analysis for $($storageAnalysis.Count) volumes" -Level "SUCCESS" -Context $Context
+        Write-SafeLog "Completed storage analysis for $($storageAnalysis.Count) volumes" -Level "SUCCESS" -Context $Context
         return $storageAnalysis
         
     } catch {
-        Write-MandALog "Error performing storage analysis: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-SafeLog "Error performing storage analysis: $($_.Exception.Message)" -Level "ERROR" -Context $Context
         throw
     }
 }
@@ -1295,7 +1324,7 @@ function Get-ShadowCopyEnhanced {
     $shadowCopies = [System.Collections.Generic.List[PSObject]]::new()
     
     try {
-        Write-MandALog "Discovering shadow copies on $($ServerList.Count) servers..." -Level "INFO" -Context $Context
+        Write-SafeLog "Discovering shadow copies on $($ServerList.Count) servers..." -Level "INFO" -Context $Context
         
         $currentServer = 0
         foreach ($server in $ServerList) {
@@ -1359,17 +1388,17 @@ function Get-ShadowCopyEnhanced {
                 }
                 
             } catch {
-                Write-MandALog "Error querying shadow copies on $serverName`: $($_.Exception.Message)" -Level "WARN" -Context $Context
+                Write-SafeLog "Error querying shadow copies on $serverName`: $($_.Exception.Message)" -Level "WARN" -Context $Context
             }
         }
         
         Write-Progress -Activity "Discovering Shadow Copies" -Completed
         
-        Write-MandALog "Discovered shadow copy configurations on $($shadowCopies.Count) volumes" -Level "SUCCESS" -Context $Context
+        Write-SafeLog "Discovered shadow copy configurations on $($shadowCopies.Count) volumes" -Level "SUCCESS" -Context $Context
         return $shadowCopies
         
     } catch {
-        Write-MandALog "Error discovering shadow copies: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-SafeLog "Error discovering shadow copies: $($_.Exception.Message)" -Level "ERROR" -Context $Context
         throw
     }
 }
@@ -1383,11 +1412,11 @@ function Get-FileServerClustersEnhanced {
     $clusters = [System.Collections.Generic.List[PSObject]]::new()
     
     try {
-        Write-MandALog "Discovering file server clusters..." -Level "INFO" -Context $Context
+        Write-SafeLog "Discovering file server clusters..." -Level "INFO" -Context $Context
         
         # Check if FailoverClusters module is available
         if (-not (Get-Module -ListAvailable -Name FailoverClusters)) {
-            Write-MandALog "FailoverClusters module not available. Install RSAT Failover Clustering Tools." -Level "WARN" -Context $Context
+            Write-SafeLog "FailoverClusters module not available. Install RSAT Failover Clustering Tools." -Level "WARN" -Context $Context
             return $clusters
         }
         
@@ -1399,7 +1428,7 @@ function Get-FileServerClustersEnhanced {
                                          -ErrorAction SilentlyContinue
         
         if ($null -eq $clusterComputers -or $clusterComputers.Count -eq 0) {
-            Write-MandALog "No clusters found in Active Directory" -Level "INFO" -Context $Context
+            Write-SafeLog "No clusters found in Active Directory" -Level "INFO" -Context $Context
             return $clusters
         }
         
@@ -1453,15 +1482,15 @@ function Get-FileServerClustersEnhanced {
                 $clusters.Add($clusterInfo)
                 
             } catch {
-                Write-MandALog "Error querying cluster '$clusterName': $($_.Exception.Message)" -Level "WARN" -Context $Context
+                Write-SafeLog "Error querying cluster '$clusterName': $($_.Exception.Message)" -Level "WARN" -Context $Context
             }
         }
         
-        Write-MandALog "Discovered $($clusters.Count) file server clusters" -Level "SUCCESS" -Context $Context
+        Write-SafeLog "Discovered $($clusters.Count) file server clusters" -Level "SUCCESS" -Context $Context
         return $clusters
         
     } catch {
-        Write-MandALog "Error discovering file server clusters: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-SafeLog "Error discovering file server clusters: $($_.Exception.Message)" -Level "ERROR" -Context $Context
         throw
     }
 }
