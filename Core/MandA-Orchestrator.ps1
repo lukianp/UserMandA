@@ -52,6 +52,75 @@ param(
     [Parameter(Mandatory=$false)]
     [switch]$DebugMode
 )
+# Add this right after the param() block, around line 65
+#===============================================================================
+#                       CRITICAL CLASS DEFINITIONS
+#===============================================================================
+
+# Define DiscoveryResult class in global scope immediately
+if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+    Add-Type -TypeDefinition @'
+public class DiscoveryResult {
+    public bool Success { get; set; }
+    public string ModuleName { get; set; }
+    public object Data { get; set; }
+    public System.Collections.ArrayList Errors { get; set; }
+    public System.Collections.ArrayList Warnings { get; set; }
+    public System.Collections.Hashtable Metadata { get; set; }
+    public System.DateTime StartTime { get; set; }
+    public System.DateTime EndTime { get; set; }
+    public string ExecutionId { get; set; }
+    
+    public DiscoveryResult(string moduleName) {
+        this.ModuleName = moduleName;
+        this.Errors = new System.Collections.ArrayList();
+        this.Warnings = new System.Collections.ArrayList();
+        this.Metadata = new System.Collections.Hashtable();
+        this.StartTime = System.DateTime.Now;
+        this.ExecutionId = System.Guid.NewGuid().ToString();
+        this.Success = true;
+    }
+    
+    public void AddError(string message, System.Exception exception) {
+        AddError(message, exception, new System.Collections.Hashtable());
+    }
+    
+    public void AddError(string message, System.Exception exception, System.Collections.Hashtable context) {
+        var errorEntry = new System.Collections.Hashtable();
+        errorEntry["Timestamp"] = System.DateTime.Now;
+        errorEntry["Message"] = message;
+        errorEntry["Exception"] = exception != null ? exception.ToString() : null;
+        errorEntry["ExceptionType"] = exception != null ? exception.GetType().FullName : null;
+        errorEntry["Context"] = context;
+        errorEntry["StackTrace"] = exception != null ? exception.StackTrace : System.Environment.StackTrace;
+        this.Errors.Add(errorEntry);
+        this.Success = false;
+    }
+    
+    public void AddWarning(string message) {
+        AddWarning(message, new System.Collections.Hashtable());
+    }
+    
+    public void AddWarning(string message, System.Collections.Hashtable context) {
+        var warningEntry = new System.Collections.Hashtable();
+        warningEntry["Timestamp"] = System.DateTime.Now;
+        warningEntry["Message"] = message;
+        warningEntry["Context"] = context;
+        this.Warnings.Add(warningEntry);
+    }
+    
+    public void Complete() {
+        this.EndTime = System.DateTime.Now;
+        if (this.StartTime != null && this.EndTime != null) {
+            var duration = this.EndTime - this.StartTime;
+            this.Metadata["Duration"] = duration;
+            this.Metadata["DurationSeconds"] = duration.TotalSeconds;
+        }
+    }
+}
+'@ -Language CSharp
+    Write-Host "[ORCHESTRATOR DEBUG] DiscoveryResult class defined globally using Add-Type" -ForegroundColor Green
+}
 
 #===============================================================================
 #                       INITIALIZATION
@@ -278,101 +347,68 @@ function Initialize-OrchestratorModules {
     
     Write-OrchestratorLog -Message "Loading modules for phase: $Phase" -Level "INFO"
     
-    # CRITICAL: Define DiscoveryResult class BEFORE loading any modules
+    # Verify DiscoveryResult class is available (should be defined at script start)
     if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
-        Write-OrchestratorLog -Message "Defining DiscoveryResult class in global scope" -Level "DEBUG"
-        Invoke-Expression @'
-class DiscoveryResult {
-    [bool]$Success = $false
-    [string]$ModuleName
-    [object]$Data
-    [System.Collections.ArrayList]$Errors
-    [System.Collections.ArrayList]$Warnings
-    [hashtable]$Metadata
-    [datetime]$StartTime
-    [datetime]$EndTime
-    [string]$ExecutionId
-    
-    DiscoveryResult([string]$moduleName) {
-        $this.ModuleName = $moduleName
-        $this.Errors = [System.Collections.ArrayList]::new()
-        $this.Warnings = [System.Collections.ArrayList]::new()
-        $this.Metadata = @{}
-        $this.StartTime = Get-Date
-        $this.ExecutionId = [guid]::NewGuid().ToString()
-        $this.Success = $true
-    }
-    
-    [void]AddError([string]$message, [Exception]$exception) {
-        $this.AddError($message, $exception, @{})
-    }
-    
-    [void]AddError([string]$message, [Exception]$exception, [hashtable]$context) {
-        $errorEntry = @{
-            Timestamp = Get-Date
-            Message = $message
-            Exception = if ($exception) { $exception.ToString() } else { $null }
-            ExceptionType = if ($exception) { $exception.GetType().FullName } else { $null }
-            Context = $context
-            StackTrace = if ($exception) { $exception.StackTrace } else { (Get-PSCallStack | Out-String) }
-        }
-        [void]$this.Errors.Add($errorEntry)
-        $this.Success = $false
-    }
-    
-    [void]AddWarning([string]$message) {
-        $this.AddWarning($message, @{})
-    }
-    
-    [void]AddWarning([string]$message, [hashtable]$context) {
-        $warningEntry = @{
-            Timestamp = Get-Date
-            Message = $message
-            Context = $context
-        }
-        [void]$this.Warnings.Add($warningEntry)
-    }
-    
-    [void]Complete() {
-        $this.EndTime = Get-Date
-        if ($null -ne $this.StartTime -and $null -ne $this.EndTime) {
-            $this.Metadata['Duration'] = $this.EndTime - $this.StartTime
-            $this.Metadata['DurationSeconds'] = ($this.EndTime - $this.StartTime).TotalSeconds
-        }
-    }
-}
-'@ -ErrorAction Stop
-        Write-OrchestratorLog -Message "DiscoveryResult class defined in global scope successfully" -Level "SUCCESS"
+        Write-OrchestratorLog -Message "ERROR: DiscoveryResult class not found! This should have been defined at script startup." -Level "ERROR"
+        throw "DiscoveryResult class not available. Critical initialization failure."
     } else {
-        Write-OrchestratorLog -Message "DiscoveryResult class already exists in global scope" -Level "DEBUG"
+        Write-OrchestratorLog -Message "DiscoveryResult class verified and available" -Level "DEBUG"
     }
     
-    # NOW load utility modules
+    # Load utility modules FIRST - these are critical dependencies
     $utilityModules = @(
+        "ErrorHandling",        # Must be first - contains Invoke-WithTimeout
         "EnhancedLogging",
-        "ErrorHandling",
         "PerformanceMetrics",
         "FileOperations",
         "ValidationHelpers",
         "ProgressDisplay"
     )
     
-    Write-OrchestratorLog -Message "Loading utility modules..." -Level "DEBUG" -DebugOnly
+    Write-OrchestratorLog -Message "Loading utility modules..." -Level "INFO"
+    $loadedUtilities = 0
+    $failedUtilities = @()
+    
     foreach ($module in $utilityModules) {
         $modulePath = Join-Path (Get-ModuleContext).Paths.Utilities "$module.psm1"
-        Write-OrchestratorLog -Message "Checking utility module: $modulePath" -Level "DEBUG" -DebugOnly
+        Write-OrchestratorLog -Message "Loading utility module: $module from $modulePath" -Level "DEBUG"
         
         if (Test-Path $modulePath) {
             try {
-                Import-Module $modulePath -Force -Global
-                Write-OrchestratorLog -Message "Loaded utility module: $module" -Level "DEBUG"
+                Import-Module $modulePath -Force -Global -ErrorAction Stop
+                $loadedUtilities++
+                Write-OrchestratorLog -Message "Successfully loaded utility module: $module" -Level "SUCCESS"
+                
+                # Verify critical functions are available
+                if ($module -eq "ErrorHandling") {
+                    if (Get-Command "Invoke-WithTimeout" -ErrorAction SilentlyContinue) {
+                        Write-OrchestratorLog -Message "Verified Invoke-WithTimeout function is available" -Level "SUCCESS"
+                    } else {
+                        Write-OrchestratorLog -Message "WARNING: Invoke-WithTimeout function not found after loading ErrorHandling module" -Level "ERROR"
+                    }
+                }
             } catch {
+                $failedUtilities += $module
                 Add-OrchestratorError -Source "ModuleLoader" `
-                    -Message "Failed to load utility module $module" `
-                    -Exception $_.Exception
+                    -Message "Failed to load utility module $module`: $_" `
+                    -Exception $_.Exception `
+                    -Severity "Critical"
+                Write-OrchestratorLog -Message "FAILED to load utility module: $module - $_" -Level "ERROR"
             }
         } else {
-            Write-OrchestratorLog -Message "Utility module not found: $module" -Level "WARN"
+            $failedUtilities += $module
+            Write-OrchestratorLog -Message "Utility module not found: $modulePath" -Level "ERROR"
+            Add-OrchestratorError -Source "ModuleLoader" `
+                -Message "Utility module file not found: $modulePath" `
+                -Severity "Critical"
+        }
+    }
+    
+    Write-OrchestratorLog -Message "Utility module loading complete: $loadedUtilities/$($utilityModules.Count) loaded successfully" -Level "INFO"
+    if ($failedUtilities.Count -gt 0) {
+        Write-OrchestratorLog -Message "Failed utility modules: $($failedUtilities -join ', ')" -Level "ERROR"
+        if ("ErrorHandling" -in $failedUtilities) {
+            throw "Critical utility module 'ErrorHandling' failed to load. Cannot continue without Invoke-WithTimeout function."
         }
     }
     
@@ -435,94 +471,8 @@ function Load-DiscoveryModules {
                 $loadedCount++
                 Write-OrchestratorLog -Message "Successfully loaded discovery module: $source" -Level "DEBUG"
                 
-                # INJECT CLASS DEFINITION INTO MODULE SCOPE
-                $moduleInfo = Get-Module -Name "${source}Discovery"
-                if ($moduleInfo) {
-                    & $moduleInfo {
-                        if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
-                            Invoke-Expression @'
-class DiscoveryResult {
-    [bool]$Success = $false
-    [string]$ModuleName
-    [object]$Data
-    [System.Collections.ArrayList]$Errors
-    [System.Collections.ArrayList]$Warnings
-    [hashtable]$Metadata
-    [datetime]$StartTime
-    [datetime]$EndTime
-    [string]$ExecutionId
-    
-    DiscoveryResult([string]$moduleName) {
-        $this.ModuleName = $moduleName
-        $this.Errors = [System.Collections.ArrayList]::new()
-        $this.Warnings = [System.Collections.ArrayList]::new()
-        $this.Metadata = @{}
-        $this.StartTime = Get-Date
-        $this.ExecutionId = [guid]::NewGuid().ToString()
-        $this.Success = $true
-    }
-    
-    [void]AddError([string]$message, [Exception]$exception) {
-        $this.AddError($message, $exception, @{})
-    }
-    
-    [void]AddError([string]$message, [Exception]$exception, [hashtable]$context) {
-        $errorEntry = @{
-            Timestamp = Get-Date
-            Message = $message
-            Exception = if ($exception) { $exception.ToString() } else { $null }
-            ExceptionType = if ($exception) { $exception.GetType().FullName } else { $null }
-            Context = $context
-            StackTrace = if ($exception) { $exception.StackTrace } else { (Get-PSCallStack | Out-String) }
-        }
-        [void]$this.Errors.Add($errorEntry)
-        $this.Success = $false
-    }
-    
-    [void]AddWarning([string]$message) {
-        $this.AddWarning($message, @{})
-    }
-    
-    [void]AddWarning([string]$message, [hashtable]$context) {
-        $warningEntry = @{
-            Timestamp = Get-Date
-            Message = $message
-            Context = $context
-        }
-        [void]$this.Warnings.Add($warningEntry)
-    }
-    
-    [void]AddErrorWithContext([string]$message, $errorRecord, [hashtable]$context) {
-        if ($null -eq $errorRecord) {
-            $this.AddError($message, $null, $context)
-            return
-        }
-        
-        $exception = if ($errorRecord.Exception) { $errorRecord.Exception } else { $null }
-        $enhancedContext = $context.Clone()
-        
-        if ($errorRecord.InvocationInfo) {
-            $enhancedContext['ScriptName'] = $errorRecord.InvocationInfo.ScriptName
-            $enhancedContext['LineNumber'] = $errorRecord.InvocationInfo.ScriptLineNumber
-            $enhancedContext['Command'] = $errorRecord.InvocationInfo.MyCommand
-        }
-        
-        $this.AddError($message, $exception, $enhancedContext)
-    }
-    
-    [void]Complete() {
-        $this.EndTime = Get-Date
-        if ($null -ne $this.StartTime -and $null -ne $this.EndTime) {
-            $this.Metadata['Duration'] = $this.EndTime - $this.StartTime
-            $this.Metadata['DurationSeconds'] = ($this.EndTime - $this.StartTime).TotalSeconds
-        }
-    }
-}
-'@
-                        }
-                    }
-                    Write-OrchestratorLog -Message "Injected DiscoveryResult class into ${source}Discovery module" -Level "DEBUG" -DebugOnly
-                }
+                # Verify DiscoveryResult class is accessible to the module
+                Write-OrchestratorLog -Message "DiscoveryResult class should be globally available to ${source}Discovery module" -Level "DEBUG" -DebugOnly
                 
                 # Verify module was loaded
                 $moduleLoaded = Get-Module -Name "${source}Discovery" -ErrorAction SilentlyContinue

@@ -9,20 +9,34 @@
 
 <#
 .SYNOPSIS
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
+
+
+# Module-scope context variable
+
+$script:ModuleContext = $null
+
+
+
+# Lazy initialization function
+
+function Get-ModuleContext {
+
+    if ($null -eq $script:ModuleContext) {
+
+        if ($null -ne $global:MandA) {
+
+            $script:ModuleContext = $global:MandA
+
+        } else {
+
+            throw "Module context not available"
+
+        }
+
+    }
+
+    return $script:ModuleContext
+
 }
     Base module providing common functionality for all discovery modules
 .DESCRIPTION
@@ -33,27 +47,8 @@ function Get-ModuleContext {
 #>
 
 
-#Cant use $outputPath here, as it is used in the module 
-# Base discovery result class
-class DiscoveryResult {
-    [bool]$Success
-    [string]$ModuleName
-    [int]$RecordCount
-    [timespan]$Duration
-    [datetime]$Timestamp
-    [hashtable]$Metadata
-    [object[]]$Data
-    [object[]]$Errors
-    [object[]]$Warnings
-    
-    DiscoveryResult([string]$moduleName) {
-        $this.ModuleName = $moduleName
-        $this.Timestamp = Get-Date
-        $this.Metadata = @{}
-        $this.Errors = @()
-        $this.Warnings = @()
-    }
-}
+# DiscoveryResult class is defined globally by the Orchestrator using Add-Type
+# No local definition needed - the global C# class will be used
 
 # Performance tracker for discovery operations
 class DiscoveryPerformanceTracker {
