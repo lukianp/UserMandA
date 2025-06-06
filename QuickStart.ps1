@@ -80,6 +80,35 @@ try {
     }
     Write-Host "[QuickStart] Suite Root detected: $SuiteRoot" -ForegroundColor DarkGray
 
+    # --- Pre-flight Validation ---
+    Write-Host "[QuickStart] Running pre-flight validation..." -ForegroundColor Yellow
+    $PreFlightScript = Join-Path $SuiteRoot "Scripts\Test-PreFlightValidation.ps1"
+    if (Test-Path $PreFlightScript -PathType Leaf) {
+        try {
+            & $PreFlightScript -Quiet
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "[QuickStart] [WARNING] Pre-flight validation failed. Some operations may not work correctly." -ForegroundColor Yellow
+                Write-Host "[QuickStart] Run 'Scripts\Test-PreFlightValidation.ps1' for detailed information." -ForegroundColor Yellow
+            } else {
+                Write-Host "[QuickStart] [OK] Pre-flight validation passed." -ForegroundColor Green
+            }
+        } catch {
+            Write-Host "[QuickStart] [WARNING] Pre-flight validation encountered an error: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    } else {
+        # Fallback: Run inline pre-flight check
+        Write-Host "[QuickStart] Pre-flight script not found. Running basic checks..." -ForegroundColor Yellow
+        if ($PSVersionTable.PSVersion.Major -lt 5 -or
+            ($PSVersionTable.PSVersion.Major -eq 5 -and $PSVersionTable.PSVersion.Minor -lt 1)) {
+            throw "CRITICAL: PowerShell 5.1 or higher required. Current version: $($PSVersionTable.PSVersion)"
+        }
+        $executionPolicy = Get-ExecutionPolicy
+        if ($executionPolicy -eq 'Restricted') {
+            Write-Host "[QuickStart] [WARNING] Execution policy is Restricted. Some operations may fail." -ForegroundColor Yellow
+        }
+        Write-Host "[QuickStart] [OK] Basic pre-flight checks passed." -ForegroundColor Green
+    }
+
     # --- Get or Prompt for CompanyName ---
     if ([string]::IsNullOrWhiteSpace($CompanyName)) {
         Write-Host "[QuickStart] CompanyName not provided. Checking existing profiles or prompting..." -ForegroundColor Yellow

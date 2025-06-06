@@ -81,6 +81,53 @@ $Global:ValidationOverallSuccess = $true # Used to track overall status
 
 # --- Test Functions ---
 
+function Test-SuitePrerequisites {
+    <#
+    .SYNOPSIS
+        Pre-flight validation for M&A Discovery Suite prerequisites
+    .DESCRIPTION
+        Validates PowerShell version, execution policy, and administrator rights
+        before proceeding with other validation checks
+    #>
+    Write-ValidationMessage "`n--- Testing Suite Prerequisites (Pre-flight Validation) ---" -Level "HEADER"
+    $allValid = $true
+    
+    # Check PS version
+    if ($PSVersionTable.PSVersion.Major -lt 5 -or
+        ($PSVersionTable.PSVersion.Major -eq 5 -and $PSVersionTable.PSVersion.Minor -lt 1)) {
+        if (-not (Write-ValidationResult -TestName "PowerShell Version Requirement" -Passed $false -Details "Current: $($PSVersionTable.PSVersion), Required: 5.1+" -Recommendation "Upgrade to PowerShell 5.1 or higher")) {
+            $allValid = $false
+        }
+        # This is critical - throw to stop execution
+        throw "PowerShell 5.1 or higher required. Current version: $($PSVersionTable.PSVersion)"
+    } else {
+        Write-ValidationResult -TestName "PowerShell Version Requirement" -Passed $true -Details "Current: $($PSVersionTable.PSVersion), Required: 5.1+"
+    }
+    
+    # Check execution policy
+    $executionPolicy = Get-ExecutionPolicy
+    $isExecutionPolicyValid = $executionPolicy -ne 'Restricted'
+    if (-not (Write-ValidationResult -TestName "Execution Policy Check" -Passed $isExecutionPolicyValid -Details "Current: $executionPolicy" -Recommendation "Consider setting execution policy to RemoteSigned or Bypass: Set-ExecutionPolicy RemoteSigned -Scope CurrentUser")) {
+        if ($executionPolicy -eq 'Restricted') {
+            Write-ValidationMessage "WARNING: Execution policy is Restricted. Some operations may fail." -Level "WARN" -Color Yellow
+        }
+        $allValid = $false
+    }
+    
+    # Test admin rights for certain operations
+    $currentPrincipal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+    $isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not (Write-ValidationResult -TestName "Administrator Rights Check" -Passed $isAdmin -Details "Running as Administrator: $isAdmin" -Recommendation "Some operations may require administrator privileges. Consider running as administrator if issues occur.")) {
+        if (-not $isAdmin) {
+            Write-ValidationMessage "WARNING: Not running as administrator. Some operations may fail." -Level "WARN" -Color Yellow
+        }
+        # Don't fail validation for this - just warn
+    }
+    
+    if (-not $allValid) { $Global:ValidationOverallSuccess = $false }
+    return $allValid
+}
+
 function Test-SuiteFileStructure {
     Write-ValidationMessage "`n--- Testing Core File and Directory Structure ---" -Level "HEADER"
     $allExist = $true
@@ -243,6 +290,9 @@ Write-ValidationMessage "=======================================================
 Write-ValidationMessage "        M&A Discovery Suite v4.2 - Installation Validation       " -Level "HEADER" -Color Cyan
 Write-ValidationMessage "=================================================================" -Level "HEADER" -Color Cyan
 Write-ValidationMessage "Suite Root: $($global:MandA.Paths.SuiteRoot)" -Level "INFO"
+
+# Run pre-flight validation first - this includes critical checks that may stop execution
+Test-SuitePrerequisites
 
 Test-SuiteFileStructure
 Test-PowerShellVersionCheck
