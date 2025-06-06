@@ -276,6 +276,78 @@ function Initialize-OrchestratorModules {
         }
     }
     
+    # In MandA-Orchestrator.ps1, after loading utility modules (around line 270)
+    # Ensure DiscoveryResult class is globally available
+    if (Get-Module -Name ErrorHandling) {
+        # Force the class definition into global scope
+        $module = Get-Module -Name ErrorHandling
+        & $module {
+            # Re-execute class definition in global scope
+            Invoke-Expression @'
+class DiscoveryResult {
+    [bool]$Success = $false
+    [string]$ModuleName
+    [object]$Data
+    [System.Collections.ArrayList]$Errors
+    [System.Collections.ArrayList]$Warnings
+    [hashtable]$Metadata
+    [datetime]$StartTime
+    [datetime]$EndTime
+    [string]$ExecutionId
+    
+    DiscoveryResult([string]$moduleName) {
+        $this.ModuleName = $moduleName
+        $this.Errors = [System.Collections.ArrayList]::new()
+        $this.Warnings = [System.Collections.ArrayList]::new()
+        $this.Metadata = @{}
+        $this.StartTime = Get-Date
+        $this.ExecutionId = [guid]::NewGuid().ToString()
+        $this.Success = $true
+    }
+    
+    [void]AddError([string]$message, [Exception]$exception) {
+        $this.AddError($message, $exception, @{})
+    }
+    
+    [void]AddError([string]$message, [Exception]$exception, [hashtable]$context) {
+        $errorEntry = @{
+            Timestamp = Get-Date
+            Message = $message
+            Exception = if ($exception) { $exception.ToString() } else { $null }
+            ExceptionType = if ($exception) { $exception.GetType().FullName } else { $null }
+            Context = $context
+            StackTrace = if ($exception) { $exception.StackTrace } else { (Get-PSCallStack | Out-String) }
+        }
+        [void]$this.Errors.Add($errorEntry)
+        $this.Success = $false
+    }
+    
+    [void]AddWarning([string]$message) {
+        $this.AddWarning($message, @{})
+    }
+    
+    [void]AddWarning([string]$message, [hashtable]$context) {
+        $warningEntry = @{
+            Timestamp = Get-Date
+            Message = $message
+            Context = $context
+        }
+        [void]$this.Warnings.Add($warningEntry)
+    }
+    
+    [void]Complete() {
+        $this.EndTime = Get-Date
+        if ($null -ne $this.StartTime -and $null -ne $this.EndTime) {
+            $this.Metadata['Duration'] = $this.EndTime - $this.StartTime
+            $this.Metadata['DurationSeconds'] = ($this.EndTime - $this.StartTime).TotalSeconds
+        }
+    }
+}
+'@ -ErrorAction Stop
+        }
+        Write-OrchestratorLog -Message "DiscoveryResult class re-defined in global scope" -Level "DEBUG"
+    }
+    
     # Load phase-specific modules
     switch ($Phase) {
         { $_ -in "Discovery", "Full", "AzureOnly" } {
@@ -1407,28 +1479,22 @@ try {
             $moduleCheckOutput = & $moduleCheckScript 2>&1
             $moduleCheckExitCode = $LASTEXITCODE
             
-            # Check if the output contains the success message for critical modules
-            $criticalModulesOK = $false
-            foreach ($line in $moduleCheckOutput) {
-                if ($line -like "*SUCCESS*All CRITICAL REQUIRED modules are properly configured*") {
-                    $criticalModulesOK = $true
-                    break
+            # Handle different exit codes from module check
+            switch ($moduleCheckExitCode) {
+                0 {
+                    Write-OrchestratorLog -Message "All modules OK - proceeding" -Level "SUCCESS"
                 }
-            }
-            
-            if ($criticalModulesOK) {
-                Write-OrchestratorLog -Message "All CRITICAL modules passed - continuing" -Level "SUCCESS"
-                
-                # Log any warnings about conditional modules
-                if ($moduleCheckExitCode -ne 0) {
-                    Write-OrchestratorLog -Message "Some CONDITIONAL/OPTIONAL modules have issues (non-blocking)" -Level "WARN"
-                    Write-OrchestratorLog -Message "Missing conditional modules may limit some discovery features" -Level "INFO"
+                1 {
+                    Write-OrchestratorLog -Message "Some optional modules missing - proceeding with reduced functionality" -Level "WARN"
+                    Write-OrchestratorLog -Message "DFS discovery will be skipped due to missing DfsMgmt module" -Level "INFO"
                 }
-            } else {
-                # Only fail if critical modules are missing
-                Write-OrchestratorLog -Message "CRITICAL module dependencies are not met" -Level "ERROR"
-                Write-OrchestratorLog -Message "Run: .\Scripts\DiscoverySuiteModuleCheck.ps1 -AutoFix" -Level "INFO"
-                throw "Critical module prerequisites not met. Cannot proceed."
+                2 {
+                    Write-OrchestratorLog -Message "CRITICAL modules missing - cannot proceed" -Level "ERROR"
+                    throw "Critical module prerequisites not met"
+                }
+                default {
+                    Write-OrchestratorLog -Message "Unknown module check result - proceeding with caution" -Level "WARN"
+                }
             }
             
         } catch {
@@ -1596,7 +1662,7 @@ try {
     }
     
     # Generate summary
-    Write-OrchestratorLog -Message "" -Level "INFO"
+    Write-OrchestratorLog -Message "Discovery phase completed" -Level "INFO"
     Write-OrchestratorLog -Message "========================================" -Level "HEADER"
     Write-OrchestratorLog -Message "EXECUTION SUMMARY" -Level "HEADER"
     Write-OrchestratorLog -Message "========================================" -Level "HEADER"

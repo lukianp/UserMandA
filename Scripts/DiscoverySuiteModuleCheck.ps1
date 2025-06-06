@@ -846,13 +846,30 @@ if (-not $overallSuccess -and -not $AutoFix.IsPresent) {
 
 Write-Host ""
 
-if (-not $overallSuccess) { 
-    if ($Host.Name -eq "ConsoleHost") { 
-        if ($criticalIssues.Count -gt 0) {
-            exit 1 
-        }
-    }
-    if ($criticalIssues.Count -gt 0) { 
-        throw "Critical module dependencies are not met. Review the output above." 
-    } 
+# Determine exit code based on module criticality
+$exitCode = 0
+if ($criticalIssues.Count -gt 0) {
+    $exitCode = 2  # Critical modules missing (blocking)
+} elseif ($otherIssues.Count -gt 0) {
+    $exitCode = 1  # Conditional/optional modules missing (non-blocking)
+} else {
+    $exitCode = 0  # All modules OK
+}
+
+Write-Host "  " -NoNewline
+Write-Host " EXIT CODE " -BackgroundColor DarkBlue -ForegroundColor White -NoNewline
+Write-Host " $exitCode " -ForegroundColor $(switch ($exitCode) { 0 { "Green" } 1 { "Yellow" } 2 { "Red" } }) -NoNewline
+Write-Host " - " -NoNewline
+switch ($exitCode) {
+    0 { Write-Host "All modules OK" -ForegroundColor Green }
+    1 { Write-Host "Conditional/optional modules missing (non-blocking)" -ForegroundColor Yellow }
+    2 { Write-Host "Critical modules missing (blocking)" -ForegroundColor Red }
+}
+
+if ($Host.Name -eq "ConsoleHost") {
+    exit $exitCode
+}
+
+if ($criticalIssues.Count -gt 0) {
+    throw "Critical module dependencies are not met. Review the output above."
 }
