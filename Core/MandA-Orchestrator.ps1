@@ -406,6 +406,95 @@ function Load-DiscoveryModules {
                 $loadedCount++
                 Write-OrchestratorLog -Message "Successfully loaded discovery module: $source" -Level "DEBUG"
                 
+                # INJECT CLASS DEFINITION INTO MODULE SCOPE
+                $moduleInfo = Get-Module -Name "${source}Discovery"
+                if ($moduleInfo) {
+                    & $moduleInfo {
+                        if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+                            Invoke-Expression @'
+class DiscoveryResult {
+    [bool]$Success = $false
+    [string]$ModuleName
+    [object]$Data
+    [System.Collections.ArrayList]$Errors
+    [System.Collections.ArrayList]$Warnings
+    [hashtable]$Metadata
+    [datetime]$StartTime
+    [datetime]$EndTime
+    [string]$ExecutionId
+    
+    DiscoveryResult([string]$moduleName) {
+        $this.ModuleName = $moduleName
+        $this.Errors = [System.Collections.ArrayList]::new()
+        $this.Warnings = [System.Collections.ArrayList]::new()
+        $this.Metadata = @{}
+        $this.StartTime = Get-Date
+        $this.ExecutionId = [guid]::NewGuid().ToString()
+        $this.Success = $true
+    }
+    
+    [void]AddError([string]$message, [Exception]$exception) {
+        $this.AddError($message, $exception, @{})
+    }
+    
+    [void]AddError([string]$message, [Exception]$exception, [hashtable]$context) {
+        $errorEntry = @{
+            Timestamp = Get-Date
+            Message = $message
+            Exception = if ($exception) { $exception.ToString() } else { $null }
+            ExceptionType = if ($exception) { $exception.GetType().FullName } else { $null }
+            Context = $context
+            StackTrace = if ($exception) { $exception.StackTrace } else { (Get-PSCallStack | Out-String) }
+        }
+        [void]$this.Errors.Add($errorEntry)
+        $this.Success = $false
+    }
+    
+    [void]AddWarning([string]$message) {
+        $this.AddWarning($message, @{})
+    }
+    
+    [void]AddWarning([string]$message, [hashtable]$context) {
+        $warningEntry = @{
+            Timestamp = Get-Date
+            Message = $message
+            Context = $context
+        }
+        [void]$this.Warnings.Add($warningEntry)
+    }
+    
+    [void]AddErrorWithContext([string]$message, $errorRecord, [hashtable]$context) {
+        if ($null -eq $errorRecord) {
+            $this.AddError($message, $null, $context)
+            return
+        }
+        
+        $exception = if ($errorRecord.Exception) { $errorRecord.Exception } else { $null }
+        $enhancedContext = $context.Clone()
+        
+        if ($errorRecord.InvocationInfo) {
+            $enhancedContext['ScriptName'] = $errorRecord.InvocationInfo.ScriptName
+            $enhancedContext['LineNumber'] = $errorRecord.InvocationInfo.ScriptLineNumber
+            $enhancedContext['Command'] = $errorRecord.InvocationInfo.MyCommand
+        }
+        
+        $this.AddError($message, $exception, $enhancedContext)
+    }
+    
+    [void]Complete() {
+        $this.EndTime = Get-Date
+        if ($null -ne $this.StartTime -and $null -ne $this.EndTime) {
+            $this.Metadata['Duration'] = $this.EndTime - $this.StartTime
+            $this.Metadata['DurationSeconds'] = ($this.EndTime - $this.StartTime).TotalSeconds
+        }
+    }
+}
+'@
+                        }
+                    }
+                    Write-OrchestratorLog -Message "Injected DiscoveryResult class into ${source}Discovery module" -Level "DEBUG" -DebugOnly
+                }
+                
                 # Verify module was loaded
                 $moduleLoaded = Get-Module -Name "${source}Discovery" -ErrorAction SilentlyContinue
                 if ($moduleLoaded) {
