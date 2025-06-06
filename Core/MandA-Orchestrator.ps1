@@ -202,7 +202,7 @@ function Test-OrchestratorPrerequisites {
     $prereqMet = $true
     
     # Check PowerShell version
-    if ($PSVersionTable.PSVersion.Major -lt 5 -or 
+    if ($PSVersionTable.PSVersion.Major -lt 5 -or
         ($PSVersionTable.PSVersion.Major -eq 5 -and $PSVersionTable.PSVersion.Minor -lt 1)) {
         Add-OrchestratorError -Source "Prerequisites" `
             -Message "PowerShell 5.1 or higher required. Current: $($PSVersionTable.PSVersion)" `
@@ -231,6 +231,37 @@ function Test-OrchestratorPrerequisites {
         }
     }
     
+    # Add Pre-flight Check: Validate DiscoveryResult class availability
+    Write-OrchestratorLog -Message "Validating DiscoveryResult class availability..." -Level "DEBUG"
+    if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+        Write-OrchestratorLog -Message "DiscoveryResult class not found, will be defined during initialization" -Level "WARN"
+        # Note: This is not a critical error as the class will be defined during module initialization
+        # But we log it as a warning to track the dependency state
+    } else {
+        Write-OrchestratorLog -Message "DiscoveryResult class already available in current session" -Level "DEBUG" -DebugOnly
+    }
+    
+    # Validate other critical PowerShell types and assemblies
+    Write-OrchestratorLog -Message "Validating critical .NET assemblies..." -Level "DEBUG" -DebugOnly
+    $requiredAssemblies = @(
+        'System.Collections',
+        'System.Management.Automation'
+    )
+    
+    foreach ($assembly in $requiredAssemblies) {
+        try {
+            $loadedAssembly = [System.AppDomain]::CurrentDomain.GetAssemblies() |
+                Where-Object { $_.GetName().Name -eq $assembly }
+            if ($loadedAssembly) {
+                Write-OrchestratorLog -Message "Assembly OK: $assembly" -Level "DEBUG" -DebugOnly
+            } else {
+                Write-OrchestratorLog -Message "Assembly not loaded: $assembly" -Level "WARN"
+            }
+        } catch {
+            Write-OrchestratorLog -Message "Error checking assembly $assembly`: $_" -Level "WARN"
+        }
+    }
+    
     # Debug output for configuration
     if ($script:DebugMode) {
         Write-OrchestratorLog -Message "Configuration metadata:" -Level "DEBUG"
@@ -247,43 +278,10 @@ function Initialize-OrchestratorModules {
     
     Write-OrchestratorLog -Message "Loading modules for phase: $Phase" -Level "INFO"
     
-    # Load utility modules first
-    $utilityModules = @(
-        "EnhancedLogging",
-        "ErrorHandling",
-        "PerformanceMetrics",
-        "FileOperations",
-        "ValidationHelpers",
-        "ProgressDisplay"
-    )
-    
-    Write-OrchestratorLog -Message "Loading utility modules..." -Level "DEBUG" -DebugOnly
-    foreach ($module in $utilityModules) {
-        $modulePath = Join-Path (Get-ModuleContext).Paths.Utilities "$module.psm1"
-        Write-OrchestratorLog -Message "Checking utility module: $modulePath" -Level "DEBUG" -DebugOnly
-        
-        if (Test-Path $modulePath) {
-            try {
-                Import-Module $modulePath -Force -Global
-                Write-OrchestratorLog -Message "Loaded utility module: $module" -Level "DEBUG"
-            } catch {
-                Add-OrchestratorError -Source "ModuleLoader" `
-                    -Message "Failed to load utility module $module" `
-                    -Exception $_.Exception
-            }
-        } else {
-            Write-OrchestratorLog -Message "Utility module not found: $module" -Level "WARN"
-        }
-    }
-    
-    # In MandA-Orchestrator.ps1, after loading utility modules (around line 270)
-    # Ensure DiscoveryResult class is globally available
-    if (Get-Module -Name ErrorHandling) {
-        # Force the class definition into global scope
-        $module = Get-Module -Name ErrorHandling
-        & $module {
-            # Re-execute class definition in global scope
-            Invoke-Expression @'
+    # CRITICAL: Define DiscoveryResult class BEFORE loading any modules
+    if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+        Write-OrchestratorLog -Message "Defining DiscoveryResult class in global scope" -Level "DEBUG"
+        Invoke-Expression @'
 class DiscoveryResult {
     [bool]$Success = $false
     [string]$ModuleName
@@ -344,9 +342,40 @@ class DiscoveryResult {
     }
 }
 '@ -ErrorAction Stop
-        }
-        Write-OrchestratorLog -Message "DiscoveryResult class re-defined in global scope" -Level "DEBUG"
+        Write-OrchestratorLog -Message "DiscoveryResult class defined in global scope successfully" -Level "SUCCESS"
+    } else {
+        Write-OrchestratorLog -Message "DiscoveryResult class already exists in global scope" -Level "DEBUG"
     }
+    
+    # NOW load utility modules
+    $utilityModules = @(
+        "EnhancedLogging",
+        "ErrorHandling",
+        "PerformanceMetrics",
+        "FileOperations",
+        "ValidationHelpers",
+        "ProgressDisplay"
+    )
+    
+    Write-OrchestratorLog -Message "Loading utility modules..." -Level "DEBUG" -DebugOnly
+    foreach ($module in $utilityModules) {
+        $modulePath = Join-Path (Get-ModuleContext).Paths.Utilities "$module.psm1"
+        Write-OrchestratorLog -Message "Checking utility module: $modulePath" -Level "DEBUG" -DebugOnly
+        
+        if (Test-Path $modulePath) {
+            try {
+                Import-Module $modulePath -Force -Global
+                Write-OrchestratorLog -Message "Loaded utility module: $module" -Level "DEBUG"
+            } catch {
+                Add-OrchestratorError -Source "ModuleLoader" `
+                    -Message "Failed to load utility module $module" `
+                    -Exception $_.Exception
+            }
+        } else {
+            Write-OrchestratorLog -Message "Utility module not found: $module" -Level "WARN"
+        }
+    }
+    
     
     # Load phase-specific modules
     switch ($Phase) {

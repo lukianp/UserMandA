@@ -1,4 +1,4 @@
-# DiscoveryResult Class Scope Fix - Implementation Summary
+# DiscoveryResult Class Scope Fix - Complete Implementation Summary
 
 ## Problem Description
 
@@ -8,9 +8,9 @@ The `DiscoveryResult` class was defined in `ErrorHandling.psm1` but was not acce
 
 PowerShell module scoping prevents classes defined in one module from being directly accessible in others without proper export/import mechanisms. The original implementation attempted to export the class to global scope using `$global:DiscoveryResult = [DiscoveryResult]`, but this approach was insufficient for cross-module access.
 
-## Solution Implemented
+## Complete Solution Implemented
 
-### 1. Global Class Definition via Invoke-Expression
+### 1. Enhanced ErrorHandling.psm1 Module
 
 Added a comprehensive class definition string that gets executed in the global scope using `Invoke-Expression`:
 
@@ -54,6 +54,39 @@ Modified the `Export-ModuleMember` statement to include the new function:
 
 ```powershell
 Export-ModuleMember -Function Invoke-WithRetry, Get-FriendlyErrorMessage, Write-ErrorSummary, Test-CriticalError, Invoke-WithTimeout, Invoke-WithTimeoutAndRetry, Test-OperationTimeout, Add-ErrorContext, New-EnhancedErrorRecord, Export-ErrorContext, New-DiscoveryResult
+### 2. Critical Orchestrator Enhancement
+
+Modified `Core/MandA-Orchestrator.ps1` to ensure the DiscoveryResult class is defined BEFORE loading any discovery modules:
+
+```powershell
+function Initialize-OrchestratorModules {
+    param([string]$Phase)
+    
+    Write-OrchestratorLog -Message "Loading modules for phase: $Phase" -Level "INFO"
+    
+    # CRITICAL: Define DiscoveryResult class BEFORE loading any modules
+    if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+        Write-OrchestratorLog -Message "Defining DiscoveryResult class in global scope" -Level "DEBUG"
+        Invoke-Expression @'
+class DiscoveryResult {
+    # Complete class definition here...
+}
+'@ -ErrorAction Stop
+        Write-OrchestratorLog -Message "DiscoveryResult class defined in global scope successfully" -Level "SUCCESS"
+    } else {
+        Write-OrchestratorLog -Message "DiscoveryResult class already exists in global scope" -Level "DEBUG"
+    }
+    
+    # NOW load utility modules
+    # ... rest of module loading
+}
+```
+
+This ensures that:
+- The class is available before any discovery modules are loaded
+- Discovery modules can immediately access the class when they're imported
+- No timing issues occur during module initialization
+- The class definition is consistent across all contexts
 ```
 
 ## Key Features of the Fix
@@ -119,9 +152,18 @@ The fix has been thoroughly tested and verified:
    - Updated `Export-ModuleMember` statement
    - Enhanced logging messages
 
-2. **`Scripts/Test-DiscoveryResultFix.ps1`** (Created)
+2. **`Core/MandA-Orchestrator.ps1`**
+   - Added early DiscoveryResult class definition in `Initialize-OrchestratorModules`
+   - Removed redundant class injection code
+   - Added proper type checking to prevent duplicate definitions
+   - Enhanced logging for class definition status
+
+3. **`Scripts/Test-DiscoveryResultFix.ps1`** (Created)
    - Comprehensive test script to verify the fix
    - Tests all major functionality of the DiscoveryResult class
+
+4. **`Documentation/DiscoveryResult_Class_Scope_Fix_Summary.md`** (Created)
+   - Complete documentation of the implementation and fix
 
 ## Impact
 
