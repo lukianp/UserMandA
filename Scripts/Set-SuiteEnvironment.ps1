@@ -265,7 +265,7 @@ if (-not $configurationHashtable.metadata.HashtableContains('companyName') -or
 }
 
 # 4. Define and Resolve Paths
-$profilesBasePath = $configurationHashtable.environment.profilesBasePath | global:Get-OrElse "C:\MandADiscovery\Profiles"
+$profilesBasePath = global:Get-OrElse $configurationHashtable.environment.profilesBasePath "C:\MandADiscovery\Profiles"
 if (-not ([System.IO.Path]::IsPathRooted($profilesBasePath))) {
     $profilesBasePathResolved = Join-Path $determinedSuiteRoot $profilesBasePath | Resolve-Path -ErrorAction SilentlyContinue
     if (-not $profilesBasePathResolved) { 
@@ -295,7 +295,7 @@ $resolvedPaths = @{
     ProcessedDataOutput = Join-Path $companyProfileRootPath "Processed"
     ExportOutput        = Join-Path $companyProfileRootPath "Exports"
     TempPath            = Join-Path $companyProfileRootPath "Temp"
-    CredentialFile      = Join-Path $companyProfileRootPath ($configurationHashtable.authentication.credentialFileName | global:Get-OrElse "credentials.config")
+    CredentialFile      = Join-Path $companyProfileRootPath (global:Get-OrElse $configurationHashtable.authentication.credentialFileName "credentials.config")
     ConfigFile          = $configFilePath
     ConfigSchema        = Join-Path $determinedSuiteRoot "Configuration\config.schema.json"
     QuickStartScript    = Join-Path $determinedSuiteRoot "QuickStart.ps1" 
@@ -317,7 +317,7 @@ if ($null -eq $global:MandA) {
     $global:MandA = @{}
 }
 
-$global:MandA.Version             = $configurationHashtable.metadata.version | global:Get-OrElse "5.2.2" 
+$global:MandA.Version             = global:Get-OrElse $configurationHashtable.metadata.version "5.2.2"
 $global:MandA.SuiteRoot           = $determinedSuiteRoot 
 $global:MandA.CompanyName         = $SanitizedCompanyName
 $global:MandA.Config              = $configurationHashtable 
@@ -399,8 +399,8 @@ foreach ($utilModuleFile in $criticalUtilModulesForEarlyLoad) {
         Write-Warning "[Set-SuiteEnvironment]   Critical utility module '$utilModuleFile' not found at '$utilModulePath'."
     }
 }
-
 # 8. Initialize Logging System
+
 if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
     try {
         if (-not $global:MandA.Config.environment.HashtableContains('logPath') -or 
@@ -409,7 +409,7 @@ if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
             Write-MandALog -Message "[Set-SuiteEnvironment] Corrected logPath in config to: $($resolvedPaths.LogOutput)" -Level DEBUG -Context $global:MandA 
         }
         
-        Initialize-Logging -Configuration $global:MandA.Config 
+        Initialize-Logging -Context $global:MandA
         $global:MandA.LoggingInitialized = $true
         Write-MandALog -Message "[Set-SuiteEnvironment] Logging initialized." -Level INFO -Context $global:MandA
     } catch {

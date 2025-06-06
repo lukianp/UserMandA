@@ -43,7 +43,8 @@ $script:ModuleContext = $null
 function Get-ModuleContext {
     if ($null -eq $script:ModuleContext) {
         if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
+            # Create a shallow copy to avoid reference issues
+            $script:ModuleContext = $global:MandA.Clone()
         } else {
             throw "Module context not available"
         }
@@ -81,11 +82,11 @@ function Get-EffectiveLoggingSetting {
         $Context.Config.PSObject.Properties['environment'] -and `
         $Context.Config.environment.PSObject.Properties['logging'] -and `
         $Context.Config.environment.logging.PSObject.Properties[$SettingName]) {
-        return $Context.Config.environment.logging.$SettingName | global:Get-OrElse $DefaultValue
+        return global:Get-OrElse $Context.Config.environment.logging.$SettingName $DefaultValue
     }
     
     if ($script:LoggingConfig.ContainsKey($SettingName)) {
-        return $script:LoggingConfig[$SettingName] | global:Get-OrElse $DefaultValue
+        return global:Get-OrElse $script:LoggingConfig[$SettingName] $DefaultValue
     }
     
     return $DefaultValue
@@ -138,95 +139,38 @@ function Get-LogEmojiInternal {
 function Initialize-Logging {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$false)] 
-        [PSCustomObject]$Context 
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context
     )
 
     Write-Host "[EnhancedLogging.Initialize-Logging] Initializing logging system..." -ForegroundColor DarkCyan
     
-    $effectiveConfig = $null
-    $effectivePaths = $null
-    $currentCompanyNameForLog = "General"
-
-    if ($null -ne $Context) {
-        if ($Context.PSObject.Properties['Config']) { $effectiveConfig = $Context.Config }
-        if ($Context.PSObject.Properties['Paths']) { $effectivePaths = $Context.Paths }
-        if ($Context.PSObject.Properties['CompanyName'] -and -not [string]::IsNullOrWhiteSpace($Context.CompanyName)) {
-            $currentCompanyNameForLog = $Context.CompanyName -replace '[<>:"/\\|?*]', '_'
-        } elseif ($effectiveConfig -and $effectiveConfig.PSObject.Properties['metadata'] -and $effectiveConfig.metadata.PSObject.Properties['companyName']) {
-            $currentCompanyNameForLog = $effectiveConfig.metadata.companyName -replace '[<>:"/\\|?*]', '_'
-        }
-        $script:LoggingConfig.DefaultContext = $Context 
-    } elseif ($null -ne $global:MandA -and ($global:MandA -is [hashtable])) {
-        Write-Host "[EnhancedLogging.Initialize-Logging] No -Context provided, attempting to use `\$global:MandA." -ForegroundColor DarkYellow
-        $moduleContext = Get-ModuleContext
-        if ($moduleContext.ContainsKey('Config')) { $effectiveConfig = $moduleContext.Config }
-        if ($moduleContext.ContainsKey('Paths')) { $effectivePaths = $moduleContext.Paths }
-        if ($global:MandA.ContainsKey('CompanyName') -and -not [string]::IsNullOrWhiteSpace($global:MandA.CompanyName)) {
-            $currentCompanyNameForLog = $moduleContext.CompanyName -replace '[<>:"/\\|?*]', '_'
-        }
-        $script:LoggingConfig.DefaultContext = $moduleContext
+    # Simple initialization without complex context processing to avoid corruption
+    $script:LoggingConfig.Initialized = $true
+    
+    # Use default log path if not set
+    if ([string]::IsNullOrWhiteSpace($script:LoggingConfig.LogPath)) {
+        $script:LoggingConfig.LogPath = "C:\MandADiscovery\Logs"
     }
-
-    if ($null -ne $effectiveConfig -and ($effectiveConfig -is [hashtable])) {
-        $envSettings = $effectiveConfig.environment | global:Get-OrElse @{}
-        $loggingSettings = $envSettings.logging | global:Get-OrElse @{}
-
-        $script:LoggingConfig.LogLevel = $envSettings.logLevel | global:Get-OrElse "INFO"
-        $script:LoggingConfig.UseEmojis = $loggingSettings.useEmojis | global:Get-OrElse $true
-        $script:LoggingConfig.UseColors = $loggingSettings.useColors | global:Get-OrElse $true
-        $script:LoggingConfig.ShowTimestamp = $loggingSettings.showTimestamp | global:Get-OrElse $true
-        $script:LoggingConfig.ShowComponent = $loggingSettings.showComponent | global:Get-OrElse $true
-        $script:LoggingConfig.MaxLogSizeMB = $loggingSettings.maxLogSizeMB | global:Get-OrElse 50
-        $script:LoggingConfig.LogRetentionDays = $loggingSettings.logRetentionDays | global:Get-OrElse 30
-        
-        if ($null -ne $effectivePaths -and $effectivePaths.HashtableContains('LogOutput') -and -not [string]::IsNullOrWhiteSpace($effectivePaths.LogOutput)) {
-            $script:LoggingConfig.LogPath = $effectivePaths.LogOutput
-        } elseif ($loggingSettings.HashtableContains('logPath') -and -not [string]::IsNullOrWhiteSpace($loggingSettings.logPath)) {
-            $configuredLogPath = $loggingSettings.logPath
-            if ((-not ([System.IO.Path]::IsPathRooted($configuredLogPath))) -and $effectivePaths -and $effectivePaths.HashtableContains('SuiteRoot')) {
-                $script:LoggingConfig.LogPath = Join-Path $effectivePaths.SuiteRoot $configuredLogPath | Resolve-Path -ErrorAction SilentlyContinue
-            } else {
-                $script:LoggingConfig.LogPath = $configuredLogPath
-            }
-        } elseif ($envSettings.HashtableContains('outputPath') -and -not [string]::IsNullOrWhiteSpace($envSettings.outputPath)) {
-            $script:LoggingConfig.LogPath = Join-Path $envSettings.outputPath "Logs"
-        } 
-        
-    } else {
-        Write-Warning "[EnhancedLogging.Initialize-Logging] No valid configuration source found. Using script default logging settings."
-    }
-
+    
+    # Create log directory if it doesn't exist
     if (-not (Test-Path $script:LoggingConfig.LogPath -PathType Container)) {
         try {
             New-Item -Path $script:LoggingConfig.LogPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
             Write-Host "[EnhancedLogging.Initialize-Logging] Created log directory: $($script:LoggingConfig.LogPath)" -ForegroundColor Green
         } catch {
-            Write-Error "[EnhancedLogging.Initialize-Logging] CRITICAL: Failed to create log directory: $($script:LoggingConfig.LogPath). Error: $($_.Exception.Message). File logging will fail."
-            $script:LoggingConfig.LogFile = $null 
-            $script:LoggingConfig.Initialized = $true 
+            Write-Warning "[EnhancedLogging.Initialize-Logging] Failed to create log directory: $($script:LoggingConfig.LogPath). Error: $($_.Exception.Message). File logging will be disabled."
+            $script:LoggingConfig.LogFile = $null
             return
         }
     }
     
-    $logFileBaseName = "MandADiscoverySuite_${currentCompanyNameForLog}"
+    # Set up log file
+    $logFileBaseName = "MandA_Discovery"
     $timestampForFile = Get-Date -Format "yyyyMMdd_HHmmss"
     $script:LoggingConfig.LogFile = Join-Path $script:LoggingConfig.LogPath "$($logFileBaseName)_$timestampForFile.log"
-    $script:LoggingConfig.Initialized = $true 
     
-    $initialLogContext = if ($null -ne $Context) {$Context} elseif ($null -ne $global:MandA) {Get-ModuleContext} else {[PSCustomObject]@{Config = $effectiveConfig}}
-    Write-MandALog -Message "Logging system initialized. LogLevel: $($script:LoggingConfig.LogLevel). LogFile: $($script:LoggingConfig.LogFile)" -Level "INFO" -Component "LoggerInit" -Context $initialLogContext
-    
-    $cleanupContext = $initialLogContext
-    if (-not ($cleanupContext.PSObject.Properties['Paths'] -and $cleanupContext.Paths.PSObject.Properties['LogOutput'])) {
-        $tempPathsForCleanup = @{ LogOutput = $script:LoggingConfig.LogPath }
-        if ($cleanupContext.PSObject.Properties['Paths']) { 
-            $cleanupContext.Paths.LogOutput = $script:LoggingConfig.LogPath
-        } else {
-            $cleanupContext = Add-Member -InputObject $cleanupContext -MemberType NoteProperty -Name Paths -Value $tempPathsForCleanup -PassThru
-        }
-    }
-    Clear-OldLogFiles -Context $cleanupContext
+    Write-Host "[EnhancedLogging.Initialize-Logging] Logging initialized. LogFile: $($script:LoggingConfig.LogFile)" -ForegroundColor Green
 }
 
 function Write-MandALog {
@@ -260,15 +204,15 @@ function Write-MandALog {
         return
     }
     
-    $effectiveContext = $Context | global:Get-OrElse $script:LoggingConfig.DefaultContext 
+    $effectiveContext = global:Get-OrElse $Context $script:LoggingConfig.DefaultContext
     
     $currentLogLevel = Get-EffectiveLoggingSetting -SettingName 'LogLevel' -Context $effectiveContext -DefaultValue "INFO"
     $showTimestampSetting = Get-EffectiveLoggingSetting -SettingName 'ShowTimestamp' -Context $effectiveContext -DefaultValue $true
     $showComponentSetting = Get-EffectiveLoggingSetting -SettingName 'ShowComponent' -Context $effectiveContext -DefaultValue $true
     
     $levelHierarchy = @{ "DEBUG"=0; "INFO"=1; "PROGRESS"=1; "SUCCESS"=1; "WARN"=2; "IMPORTANT"=2; "ERROR"=3; "CRITICAL"=4; "HEADER"=5 } 
-    $configLogLevelNum = $levelHierarchy[$currentLogLevel.ToUpper()] | global:Get-OrElse 1
-    $messageLogLevelNum = $levelHierarchy[$Level.ToUpper()] | global:Get-OrElse 1
+    $configLogLevelNum = global:Get-OrElse $levelHierarchy[$currentLogLevel.ToUpper()] 1
+    $messageLogLevelNum = global:Get-OrElse $levelHierarchy[$Level.ToUpper()] 1
 
     if ($messageLogLevelNum -lt $configLogLevelNum) { return }
 
@@ -375,10 +319,10 @@ function Move-LogFile {
         if ($Context -and $Context.PSObject.Properties['CompanyName']) {
             $companyNameForNewLog = $Context.CompanyName -replace '[<>:"/\\|?*]', '_'
         } elseif ($Context -and $Context.PSObject.Properties['Config'] -and $Context.Config.metadata) {
-            $companyNameForNewLog = $Context.Config.metadata.companyName -replace '[<>:"/\\|?*]', '_' | global:Get-OrElse "General"
+            $companyNameForNewLog = global:Get-OrElse ($Context.Config.metadata.companyName -replace '[<>:"/\\|?*]', '_') "General"
         }
 
-        $newLogFileBase = "MandADiscoverySuite_${companyNameForNewLog}"
+        $newLogFileBase = "MandA_Discovery"
         $newTimestampForFile = Get-Date -Format "yyyyMMdd_HHmmss"
         $script:LoggingConfig.LogFile = Join-Path $logDir "$($newLogFileBase)_$newTimestampForFile.log"
         Write-Host "[INFO] [Logger] New log file started: $($script:LoggingConfig.LogFile)"
@@ -399,7 +343,7 @@ function Clear-OldLogFiles {
         return
     }
 
-    $logPathForClear = (Get-ModuleContext).Paths.LogOutput | global:Get-OrElse $script:LoggingConfig.LogPath
+    $logPathForClear = global:Get-OrElse (Get-ModuleContext).Paths.LogOutput $script:LoggingConfig.LogPath
     $retentionDays = Get-EffectiveLoggingSetting -SettingName 'LogRetentionDays' -Context $Context -DefaultValue 30
 
     if ($retentionDays -le 0) {
