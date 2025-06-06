@@ -13,22 +13,86 @@
 # Last Modified: 2025-06-06
 # Change Log: Initial version - any future changes require version increment
 
+
+# DiscoveryResult class definition
+if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+    class DiscoveryResult {
+        [bool]$Success = $false
+        [string]$ModuleName
+        [object]$Data
+        [System.Collections.ArrayList]$Errors
+        [System.Collections.ArrayList]$Warnings  
+        [hashtable]$Metadata
+        [datetime]$StartTime
+        [datetime]$EndTime
+        [string]$ExecutionId
+        
+        DiscoveryResult([string]$moduleName) {
+            $this.ModuleName = $moduleName
+            $this.Errors = [System.Collections.ArrayList]::new()
+            $this.Warnings = [System.Collections.ArrayList]::new()
+            $this.Metadata = @{}
+            $this.StartTime = Get-Date
+            $this.ExecutionId = [guid]::NewGuid().ToString()
+            $this.Success = $true
+        }
+        
+        [void]AddError([string]$message, [Exception]$exception) {
+            $this.AddError($message, $exception, @{})
+        }
+        
+        [void]AddError([string]$message, [Exception]$exception, [hashtable]$context) {
+            $errorEntry = @{
+                Timestamp = Get-Date
+                Message = $message
+                Exception = if ($exception) { $exception.ToString() } else { $null }
+                ExceptionType = if ($exception) { $exception.GetType().FullName } else { $null }
+                Context = $context
+                StackTrace = if ($exception) { $exception.StackTrace } else { (Get-PSCallStack | Out-String) }
+            }
+            [void]$this.Errors.Add($errorEntry)
+            $this.Success = $false
+        }
+        
+        [void]AddWarning([string]$message) {
+            $this.AddWarning($message, @{})
+        }
+        
+        [void]AddWarning([string]$message, [hashtable]$context) {
+            $warningEntry = @{
+                Timestamp = Get-Date
+                Message = $message
+                Context = $context
+            }
+            [void]$this.Warnings.Add($warningEntry)
+        }
+        
+        [void]Complete() {
+            $this.EndTime = Get-Date
+            if ($null -ne $this.StartTime -and $null -ne $this.EndTime) {
+                $this.Metadata['Duration'] = $this.EndTime - $this.StartTime
+                $this.Metadata['DurationSeconds'] = ($this.EndTime - $this.StartTime).TotalSeconds
+            }
+        }
+    }
+}
+
 <#
 .SYNOPSIS
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
 }
     Network Infrastructure discovery for M&A Discovery Suite
 .DESCRIPTION
@@ -1161,3 +1225,4 @@ Export-ModuleMember -Function @(
     'Get-ADSubnetsData',
     'Get-ADSitesData'
 )
+

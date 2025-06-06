@@ -9,20 +9,34 @@
 
 <#
 .SYNOPSIS
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
+
+
+# Module-scope context variable
+
+$script:ModuleContext = $null
+
+
+
+# Lazy initialization function
+
+function Get-ModuleContext {
+
+    if ($null -eq $script:ModuleContext) {
+
+        if ($null -ne $global:MandA) {
+
+            $script:ModuleContext = $global:MandA
+
+        } else {
+
+            throw "Module context not available"
+
+        }
+
+    }
+
+    return $script:ModuleContext
+
 }
     Provides standardized error handling and retry mechanisms for the M&A Discovery Suite.
 .DESCRIPTION
@@ -40,7 +54,7 @@ function Get-ModuleContext {
     - Retry logic is configurable via $global:MandA.Config.environment.
 #>
 
-Export-ModuleMember -Function Invoke-WithRetry, Get-FriendlyErrorMessage, Write-ErrorSummary, Test-CriticalError, Invoke-WithTimeout, Invoke-WithTimeoutAndRetry, Test-OperationTimeout, Add-ErrorContext, New-EnhancedErrorRecord, Export-ErrorContext
+Export-ModuleMember -Function Invoke-WithRetry, Get-FriendlyErrorMessage, Write-ErrorSummary, Test-CriticalError, Invoke-WithTimeout, Invoke-WithTimeoutAndRetry, Test-OperationTimeout, Add-ErrorContext, New-EnhancedErrorRecord, Export-ErrorContext, New-DiscoveryResult
 
 # DiscoveryResult Class - Consistent error result structure for ALL modules
 class DiscoveryResult {
@@ -834,16 +848,80 @@ function Test-CriticalError {
     return $false
 }
 
-# Export the DiscoveryResult class
-if ($PSVersionTable.PSVersion.Major -ge 5) {
-    try {
-        # Make DiscoveryResult available in the global scope
-        $global:DiscoveryResult = [DiscoveryResult]
-        Write-Host "[ErrorHandling.psm1] DiscoveryResult class exported to global scope." -ForegroundColor DarkGray
-    } catch {
-        Write-Warning "[ErrorHandling.psm1] Failed to export DiscoveryResult class: $($_.Exception.Message)"
+# Export the class definition to global scope
+$classDefinition = @'
+class DiscoveryResult {
+    [bool]$Success = $false
+    [string]$ModuleName
+    [object]$Data
+    [System.Collections.ArrayList]$Errors
+    [System.Collections.ArrayList]$Warnings
+    [hashtable]$Metadata
+    [datetime]$StartTime
+    [datetime]$EndTime
+    [string]$ExecutionId
+    
+    DiscoveryResult([string]$moduleName) {
+        $this.ModuleName = $moduleName
+        $this.Errors = [System.Collections.ArrayList]::new()
+        $this.Warnings = [System.Collections.ArrayList]::new()
+        $this.Metadata = @{}
+        $this.StartTime = Get-Date
+        $this.ExecutionId = [guid]::NewGuid().ToString()
+        $this.Success = $true
+    }
+    
+    [void]AddError([string]$message, [Exception]$exception) {
+        $this.AddError($message, $exception, @{})
+    }
+    
+    [void]AddError([string]$message, [Exception]$exception, [hashtable]$context) {
+        $errorEntry = @{
+            Timestamp = Get-Date
+            Message = $message
+            Exception = if ($exception) { $exception.ToString() } else { $null }
+            ExceptionType = if ($exception) { $exception.GetType().FullName } else { $null }
+            Context = $context
+            StackTrace = if ($exception) { $exception.StackTrace } else { (Get-PSCallStack | Out-String) }
+        }
+        [void]$this.Errors.Add($errorEntry)
+        $this.Success = $false
+    }
+    
+    [void]AddWarning([string]$message) {
+        $this.AddWarning($message, @{})
+    }
+    
+    [void]AddWarning([string]$message, [hashtable]$context) {
+        $warningEntry = @{
+            Timestamp = Get-Date
+            Message = $message
+            Context = $context
+        }
+        [void]$this.Warnings.Add($warningEntry)
+    }
+    
+    [void]Complete() {
+        $this.EndTime = Get-Date
+        if ($null -ne $this.StartTime -and $null -ne $this.EndTime) {
+            $this.Metadata['Duration'] = $this.EndTime - $this.StartTime
+            $this.Metadata['DurationSeconds'] = ($this.EndTime - $this.StartTime).TotalSeconds
+        }
     }
 }
+'@
 
+# Define class in global scope
+Invoke-Expression $classDefinition -ErrorAction Stop
+
+# Export the class constructor as a function
+function New-DiscoveryResult {
+    param([string]$ModuleName)
+    return [DiscoveryResult]::new($ModuleName)
+}
+
+Export-ModuleMember -Function New-DiscoveryResult
+
+Write-Host "[ErrorHandling.psm1] DiscoveryResult class exported to global scope via Invoke-Expression." -ForegroundColor DarkGray
 Write-Host "[ErrorHandling.psm1] Module loaded." -ForegroundColor DarkGray
 
