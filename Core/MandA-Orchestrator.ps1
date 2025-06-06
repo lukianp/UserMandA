@@ -179,7 +179,15 @@ function Add-OrchestratorError {
         default { $null = $script:ErrorCollector.Errors.Add($errorEntry) }
     }
     
-    Write-OrchestratorLog -Message "[$Source] $Message" -Level $Severity.ToUpper()
+    # FIX: Map severity names to valid log levels
+    $logLevel = switch ($Severity.ToUpper()) {
+        "WARNING" { "WARN" }
+        "CRITICAL" { "CRITICAL" }
+        "ERROR" { "ERROR" }
+        default { "ERROR" }
+    }
+    
+    Write-OrchestratorLog -Message "[$Source] $Message" -Level $logLevel
     
     if ($script:DebugMode -and $Exception) {
         Write-OrchestratorLog -Message "Exception Type: $($Exception.GetType().FullName)" -Level "DEBUG"
@@ -1384,7 +1392,48 @@ try {
     if (-not (Test-OrchestratorPrerequisites)) {
         throw "Prerequisites validation failed"
     }
-    
+
+    # ADD THIS NEW SECTION - Module Prerequisites Check
+    Write-OrchestratorLog -Message "========================================" -Level "HEADER"
+    Write-OrchestratorLog -Message "CHECKING MODULE PREREQUISITES" -Level "HEADER"
+    Write-OrchestratorLog -Message "========================================" -Level "HEADER"
+
+    $moduleCheckScript = Join-Path (Get-ModuleContext).Paths.Scripts "DiscoverySuiteModuleCheck.ps1"
+    if (Test-Path $moduleCheckScript) {
+        Write-OrchestratorLog -Message "Running module prerequisites check..." -Level "INFO"
+        
+        try {
+            # Run the module check script
+            $moduleCheckResult = & $moduleCheckScript
+            $moduleCheckExitCode = $LASTEXITCODE
+            
+            if ($moduleCheckExitCode -ne 0) {
+                Write-OrchestratorLog -Message "Module prerequisites check FAILED" -Level "CRITICAL"
+                Write-OrchestratorLog -Message "Critical module dependencies are not met." -Level "ERROR"
+                Write-OrchestratorLog -Message "Run the following command to view detailed status:" -Level "INFO"
+                Write-OrchestratorLog -Message "  .\Scripts\DiscoverySuiteModuleCheck.ps1" -Level "INFO"
+                Write-OrchestratorLog -Message "To auto-install missing modules, run:" -Level "INFO"
+                Write-OrchestratorLog -Message "  .\Scripts\DiscoverySuiteModuleCheck.ps1 -AutoFix" -Level "INFO"
+                
+                # This is a GO/NO-GO moment - stop execution
+                throw "Module prerequisites not met. Cannot proceed with discovery."
+            } else {
+                Write-OrchestratorLog -Message "Module prerequisites check PASSED" -Level "SUCCESS"
+            }
+        } catch {
+            if ($_.Exception.Message -like "*Module prerequisites not met*") {
+                throw $_
+            } else {
+                Write-OrchestratorLog -Message "Error running module check: $_" -Level "ERROR"
+                Write-OrchestratorLog -Message "Continuing anyway (not recommended)" -Level "WARN"
+            }
+        }
+    } else {
+        Write-OrchestratorLog -Message "Module check script not found at: $moduleCheckScript" -Level "WARN"
+        Write-OrchestratorLog -Message "Skipping module prerequisites validation (not recommended)" -Level "WARN"
+    }
+
+    # Continue with loading configuration...
     # Load configuration
     $config = $global:MandA.Config
     if (-not [string]::IsNullOrWhiteSpace($ConfigurationFile)) {

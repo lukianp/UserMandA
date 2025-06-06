@@ -1,48 +1,41 @@
-# Fix-ModuleContext.ps1
-# Fixes module loading context issues
-
-$modulePaths = @(
-    ".\Modules\Processing\DataValidation.psm1",
-    ".\Modules\Processing\UserProfileBuilder.psm1",
-    ".\Modules\Processing\WaveGeneration.psm1",
-    ".\Modules\Processing\DataAggregation.psm1",
-    ".\Modules\Export\CSVExport.psm1",
-    ".\Modules\Export\JSONExport.psm1",
-    ".\Modules\Export\ExcelExport.psm1",
-    ".\Modules\Export\PowerAppsExporter.psm1",
-    ".\Modules\Export\CompanyControlSheetExporter.psm1"
+# Fix-MandAIssues.ps1
+param(
+    [switch]$DisableProblematicModules
 )
 
-foreach ($modulePath in $modulePaths) {
-    if (Test-Path $modulePath) {
-        Write-Host "Fixing module: $modulePath" -ForegroundColor Yellow
+Write-Host "Fixing M&A Discovery Suite issues..." -ForegroundColor Cyan
+
+# 1. Fix CredentialManagement recursion
+$credPath = "C:\UserMigration\Modules\Authentication\CredentialManagement.psm1"
+if (Test-Path $credPath) {
+    $content = Get-Content $credPath -Raw
+    
+    # Check if there's a local Write-MandALog function
+    if ($content -match 'function\s+Write-MandALog') {
+        Write-Host "Found local Write-MandALog in CredentialManagement - fixing..." -ForegroundColor Yellow
         
-        $content = Get-Content $modulePath -Raw -Encoding UTF8
+        # Backup original
+        Copy-Item $credPath "$credPath.backup" -Force
         
-        # Remove problematic module-scope context access
-        $patterns = @(
-            # Pattern 1: Direct global context access at module scope
-            '(?ms)# Access context information.*?^\$ModuleScope_ContextPaths = \$global:_MandALoadingContext\.Paths',
-            
-            # Pattern 2: Global environment check at module scope  
-            '(?ms)if \(\$null -eq \$global:_MandALoadingContext.*?\s*throw.*?\s*\}',
-            
-            # Pattern 3: Module scope path validation
-            '(?ms)# Validate critical paths exist.*?Write-Warning.*?\s*\}',
-            
-            # Pattern 4: Module initialization checks
-            '(?ms)# Module initialization.*?^\s*\}'
-        )
+        # Fix the function name
+        $content = $content -replace 'function\s+Write-MandALog', 'function Write-CredentialLog'
+        $content = $content -replace 'Write-MandALog\s+-Message', 'Write-CredentialLog -Message'
         
-        foreach ($pattern in $patterns) {
-            if ($content -match $pattern) {
-                $content = $content -replace $pattern, "# NOTE: Context access has been moved to function scope to avoid module loading issues.`n# The global context (`$global:MandA) will be accessed by functions when they are called,`n# rather than at module import time."
-                Write-Host "  Removed module-scope context access" -ForegroundColor Green
-            }
-        }
-        
-        Set-Content -Path $modulePath -Value $content -Encoding UTF8 -NoNewline
+        $content | Set-Content $credPath -Encoding UTF8
+        Write-Host "Fixed CredentialManagement.psm1" -ForegroundColor Green
     }
 }
 
-Write-Host "Module context fixes complete!" -ForegroundColor Green
+# 2. Disable problematic modules if requested
+if ($DisableProblematicModules) {
+    $configPath = "C:\UserMigration\Configuration\default-config.json"
+    $config = Get-Content $configPath | ConvertFrom-Json
+    
+    $problemModules = @("FileServer", "SQLServer")
+    $config.discovery.enabledSources = $config.discovery.enabledSources | Where-Object { $_ -notin $problemModules }
+    
+    $config | ConvertTo-Json -Depth 10 | Set-Content $configPath -Encoding UTF8
+    Write-Host "Disabled problematic modules: $($problemModules -join ', ')" -ForegroundColor Green
+}
+
+Write-Host "`nFixes applied. Try running QuickStart.ps1 again." -ForegroundColor Green
