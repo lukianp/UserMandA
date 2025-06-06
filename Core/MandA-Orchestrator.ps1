@@ -1393,7 +1393,7 @@ try {
         throw "Prerequisites validation failed"
     }
 
-    # ADD THIS NEW SECTION - Module Prerequisites Check
+    # Module Prerequisites Check
     Write-OrchestratorLog -Message "========================================" -Level "HEADER"
     Write-OrchestratorLog -Message "CHECKING MODULE PREREQUISITES" -Level "HEADER"
     Write-OrchestratorLog -Message "========================================" -Level "HEADER"
@@ -1403,25 +1403,36 @@ try {
         Write-OrchestratorLog -Message "Running module prerequisites check..." -Level "INFO"
         
         try {
-            # Run the module check script
-            $moduleCheckResult = & $moduleCheckScript
+            # Capture the output to analyze it
+            $moduleCheckOutput = & $moduleCheckScript 2>&1
             $moduleCheckExitCode = $LASTEXITCODE
             
-            if ($moduleCheckExitCode -ne 0) {
-                Write-OrchestratorLog -Message "Module prerequisites check FAILED" -Level "CRITICAL"
-                Write-OrchestratorLog -Message "Critical module dependencies are not met." -Level "ERROR"
-                Write-OrchestratorLog -Message "Run the following command to view detailed status:" -Level "INFO"
-                Write-OrchestratorLog -Message "  .\Scripts\DiscoverySuiteModuleCheck.ps1" -Level "INFO"
-                Write-OrchestratorLog -Message "To auto-install missing modules, run:" -Level "INFO"
-                Write-OrchestratorLog -Message "  .\Scripts\DiscoverySuiteModuleCheck.ps1 -AutoFix" -Level "INFO"
-                
-                # This is a GO/NO-GO moment - stop execution
-                throw "Module prerequisites not met. Cannot proceed with discovery."
-            } else {
-                Write-OrchestratorLog -Message "Module prerequisites check PASSED" -Level "SUCCESS"
+            # Check if the output contains the success message for critical modules
+            $criticalModulesOK = $false
+            foreach ($line in $moduleCheckOutput) {
+                if ($line -like "*SUCCESS*All CRITICAL REQUIRED modules are properly configured*") {
+                    $criticalModulesOK = $true
+                    break
+                }
             }
+            
+            if ($criticalModulesOK) {
+                Write-OrchestratorLog -Message "All CRITICAL modules passed - continuing" -Level "SUCCESS"
+                
+                # Log any warnings about conditional modules
+                if ($moduleCheckExitCode -ne 0) {
+                    Write-OrchestratorLog -Message "Some CONDITIONAL/OPTIONAL modules have issues (non-blocking)" -Level "WARN"
+                    Write-OrchestratorLog -Message "Missing conditional modules may limit some discovery features" -Level "INFO"
+                }
+            } else {
+                # Only fail if critical modules are missing
+                Write-OrchestratorLog -Message "CRITICAL module dependencies are not met" -Level "ERROR"
+                Write-OrchestratorLog -Message "Run: .\Scripts\DiscoverySuiteModuleCheck.ps1 -AutoFix" -Level "INFO"
+                throw "Critical module prerequisites not met. Cannot proceed."
+            }
+            
         } catch {
-            if ($_.Exception.Message -like "*Module prerequisites not met*") {
+            if ($_.Exception.Message -like "*Critical module prerequisites not met*") {
                 throw $_
             } else {
                 Write-OrchestratorLog -Message "Error running module check: $_" -Level "ERROR"
