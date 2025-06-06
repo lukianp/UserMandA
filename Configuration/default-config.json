@@ -18,7 +18,7 @@
     "environment":  {
                         "profilesBasePath":  "C:\\MandADiscovery\\Profiles",
                         "tempPath":  "C:\\MandADiscovery\\Temp",
-                        "logLevel":  "INFO",
+                        "logLevel":  "DEBUG",
                         "maxRetries":  3,
                         "domainController":  "ad.zedra.com",
                         "globalCatalog":  "ad.zedra.com",
@@ -28,7 +28,8 @@
                                         "showTimestamp":  true,
                                         "showComponent":  true,
                                         "maxLogSizeMB":  50,
-                                        "logRetentionDays":  30
+                                        "logRetentionDays":  30,
+                                        "verboseProgress":  true
                                     },
                         "connectivity":  {
                                              "preferInteractiveAuth":  false,

@@ -8,20 +8,34 @@
 
 <#
 .SYNOPSIS
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
+
+
+# Module-scope context variable
+
+$script:ModuleContext = $null
+
+
+
+# Lazy initialization function
+
+function Get-ModuleContext {
+
+    if ($null -eq $script:ModuleContext) {
+
+        if ($null -ne $global:MandA) {
+
+            $script:ModuleContext = $global:MandA
+
+        } else {
+
+            throw "Module context not available"
+
+        }
+
+    }
+
+    return $script:ModuleContext
+
 }
     Secure credential storage and retrieval for M&A Discovery Suite
 .DESCRIPTION
@@ -43,26 +57,20 @@ function Ensure-CredentialFormatHandler {
     }
     
     $formatHandlerPath = $null
-    
-    # Try multiple approaches to find the module
-    if ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.Utilities) {
-        $formatHandlerPath = Join-Path $global:MandA.Paths.Utilities "CredentialFormatHandler.psm1"
-    } elseif ($PSScriptRoot) {
-        $formatHandlerPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\CredentialFormatHandler.psm1"
-    } else {
-        # Fallback: try relative to current location
-        $testPaths = @(
-            "..\..\Modules\Utilities\CredentialFormatHandler.psm1",
-            "..\Utilities\CredentialFormatHandler.psm1",
-            "C:\MandADiscovery\Modules\Utilities\CredentialFormatHandler.psm1"
-        )
-        
-        foreach ($testPath in $testPaths) {
-            if (Test-Path $testPath) {
-                $formatHandlerPath = $testPath
-                break
-            }
+
+    # Try to get from module context first
+    try {
+        $moduleContext = Get-ModuleContext
+        if ($moduleContext.Paths.Utilities) {
+            $formatHandlerPath = Join-Path $moduleContext.Paths.Utilities "CredentialFormatHandler.psm1"
         }
+    } catch {
+        # Fallback if context not available
+    }
+
+    # If not found, try relative path
+    if (-not $formatHandlerPath -or -not (Test-Path $formatHandlerPath)) {
+        $formatHandlerPath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) "Modules\Utilities\CredentialFormatHandler.psm1"
     }
     
     if ($formatHandlerPath -and (Test-Path $formatHandlerPath)) {

@@ -9,20 +9,34 @@
 
 <#
 .SYNOPSIS
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
+
+
+# Module-scope context variable
+
+$script:ModuleContext = $null
+
+
+
+# Lazy initialization function
+
+function Get-ModuleContext {
+
+    if ($null -eq $script:ModuleContext) {
+
+        if ($null -ne $global:MandA) {
+
+            $script:ModuleContext = $global:MandA
+
+        } else {
+
+            throw "Module context not available"
+
+        }
+
+    }
+
+    return $script:ModuleContext
+
 }
     Core authentication orchestration for M&A Discovery Suite
 .DESCRIPTION
@@ -49,19 +63,31 @@ $script:MaxAuthInitializationAttempts = 3 # Max attempts for a single Initialize
 
 # Ensure Write-MandALog is available or provide a fallback for internal logging
 # This module should ideally be loaded after EnhancedLogging.psm1 by the orchestrator.
-function _AuthLog {
-    param([string]$Message, [string]$Level = "INFO", [MandAContext]$ContextForLog = $null)
-    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-        # If Context is passed, use it, otherwise try to use global context if available for logging
-        $effectiveContext = $ContextForLog
-        if ($null -eq $effectiveContext -and $global:MandA) {
-            $effectiveContext = $global:MandA # Assuming $global:MandA is the structure Write-MandALog expects for Config
-        }
-        try {
-            Write-MandALog -Message $Message -Level $Level -Component "Authentication" -Context $effectiveContext
-        } catch { Write-Host "[AUTH-$Level] $Message (Write-MandALog failed: $($_.Exception.Message))" }
+function Write-MandALog {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO",
+        [string]$Component = "General",
+        $Context
+    )
+    
+    # This is a fallback - the real function should be loaded from EnhancedLogging
+    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue -CommandType Function) {
+        # Call the real function if it exists
+        & Write-MandALog $Message -Level $Level -Component $Component -Context $Context
     } else {
-        Write-Host "[AUTH-$Level] $Message"
+        # Basic fallback
+        $color = switch ($Level) {
+            "ERROR" { "Red" }
+            "WARN" { "Yellow" }
+            "SUCCESS" { "Green" }
+            "INFO" { "White" }
+            "DEBUG" { "Gray" }
+            "HEADER" { "Cyan" }
+            "CRITICAL" { "Magenta" }
+            default { "White" }
+        }
+        Write-Host "[$Level] [$Component] $Message" -ForegroundColor $color
     }
 }
 
@@ -415,9 +441,9 @@ function Test-AuthenticationStatus {
         [MandAContext]$Context
     )
     try {
-        _AuthLog "Testing authentication status..." -Level "DEBUG" -ContextForLog $Context
+        Write-MandALog "Testing authentication status..." -Level "DEBUG" -Component "Authentication" -Context $Context
         if (-not $script:AuthContext) {
-            _AuthLog "No authentication context found. Re-initializing." -Level "WARN" -ContextForLog $Context
+            Write-MandALog "No authentication context found. Re-initializing." -Level "WARN" -Component "Authentication" -Context $Context
             # Attempt to re-initialize. This could be a source of recursion if not handled well.
             # Consider if this function should simply report status rather than trigger re-auth.
             $initResult = Initialize-MandAAuthentication -Configuration $Configuration -Context $Context
@@ -425,13 +451,13 @@ function Test-AuthenticationStatus {
         }
         
         if ((Get-Date) -gt $script:AuthContext.TokenExpiry) {
-            _AuthLog "Authentication token expired. Refreshing..." -Level "WARN" -ContextForLog $Context
+            Write-MandALog "Authentication token expired. Refreshing..." -Level "WARN" -Component "Authentication" -Context $Context
             return Update-AuthenticationTokens -Configuration $Configuration -Context $Context
         }
-        _AuthLog "Authentication is valid." -Level "DEBUG" -ContextForLog $Context
+        Write-MandALog "Authentication is valid." -Level "DEBUG" -Component "Authentication" -Context $Context
         return $true
     } catch {
-        _AuthLog "Failed to test authentication status: $($_.Exception.Message)" -Level "ERROR" -ContextForLog $Context
+        Write-MandALog "Failed to test authentication status: $($_.Exception.Message)" -Level "ERROR" -Component "Authentication" -Context $Context
         return $false
     }
 }
@@ -445,21 +471,21 @@ function Update-AuthenticationTokens {
         [MandAContext]$Context
     )
     try {
-        _AuthLog "Refreshing authentication tokens..." -Level "INFO" -ContextForLog $Context
+        Write-MandALog "Refreshing authentication tokens..." -Level "INFO" -Component "Authentication" -Context $Context
         # This directly calls Initialize-MandAAuthentication again.
         # The recursion guards in Initialize-MandAAuthentication are critical here.
         $refreshResult = Initialize-MandAAuthentication -Configuration $Configuration -Context $Context
         
         if ($refreshResult -and $refreshResult.Authenticated) {
-            _AuthLog "Authentication tokens refreshed successfully." -Level "SUCCESS" -ContextForLog $Context
+            Write-MandALog "Authentication tokens refreshed successfully." -Level "SUCCESS" -Component "Authentication" -Context $Context
             return $true
         } else {
             $errorMsg = $refreshResult.Error | Get-OrElse "Unknown error during token refresh"
-            _AuthLog "Token refresh failed: $errorMsg" -Level "ERROR" -ContextForLog $Context
+            Write-MandALog "Token refresh failed: $errorMsg" -Level "ERROR" -Component "Authentication" -Context $Context
             return $false
         }
     } catch {
-        _AuthLog "Token refresh failed with exception: $($_.Exception.Message)" -Level "ERROR" -ContextForLog $Context
+        Write-MandALog "Token refresh failed with exception: $($_.Exception.Message)" -Level "ERROR" -Component "Authentication" -Context $Context
         return $false
     }
 }
@@ -472,15 +498,15 @@ function Get-AuthenticationContext {
     )
     try {
         if ($script:AuthContext) {
-            _AuthLog "Returning stored auth context." -Level "DEBUG" -ContextForLog $Context
+            Write-MandALog "Returning stored auth context." -Level "DEBUG" -Component "Authentication" -Context $Context
             # Ensure the returned context is a clone or a safe subset if it's to be modified elsewhere
             return $script:AuthContext.Clone() 
         } else {
-            _AuthLog "No authentication context available to return." -Level "DEBUG" -ContextForLog $Context
+            Write-MandALog "No authentication context available to return." -Level "DEBUG" -Component "Authentication" -Context $Context
             return $null
         }
     } catch {
-        _AuthLog "Failed to get authentication context: $($_.Exception.Message)" -Level "ERROR" -ContextForLog $Context
+        Write-MandALog "Failed to get authentication context: $($_.Exception.Message)" -Level "ERROR" -Component "Authentication" -Context $Context
         return $null
     }
 }
@@ -495,9 +521,9 @@ function Clear-AuthenticationContext {
         $script:AuthContext = $null
         $script:LastAuthAttemptTimestamp = $null
         $script:AuthInitializationAttempts = 0 # Reset attempts as well
-        _AuthLog "Authentication context cleared." -Level "INFO" -ContextForLog $Context
+        Write-MandALog "Authentication context cleared." -Level "INFO" -Component "Authentication" -Context $Context
     } catch {
-        _AuthLog "Failed to clear authentication context: $($_.Exception.Message)" -Level "ERROR" -ContextForLog $Context
+        Write-MandALog "Failed to clear authentication context: $($_.Exception.Message)" -Level "ERROR" -Component "Authentication" -Context $Context
     }
 }
 
@@ -535,12 +561,12 @@ function Get-AuthenticationStatus {
         }
         return $status
     } catch {
-        _AuthLog "Failed to get authentication status: $($_.Exception.Message)" -Level "ERROR" -ContextForLog $Context
+        Write-MandALog "Failed to get authentication status: $($_.Exception.Message)" -Level "ERROR" -Component "Authentication" -Context $Context
         return @{ IsAuthenticated = $false; Error = $_.Exception.Message }
     }
 }
 
 Export-ModuleMember -Function Initialize-MandAAuthentication, Test-AuthenticationStatus, Update-AuthenticationTokens, Get-AuthenticationContext, Clear-AuthenticationContext, Get-AuthenticationStatus
 
-_AuthLog "[Authentication.psm1] Module loaded. Recursion guard initialized." -Level "DEBUG"
+Write-MandALog "[Authentication.psm1] Module loaded. Recursion guard initialized." -Level "DEBUG" -Component "Authentication"
 

@@ -362,7 +362,8 @@ function Initialize-OrchestratorModules {
         "PerformanceMetrics",
         "FileOperations",
         "ValidationHelpers",
-        "ProgressDisplay"
+        "ProgressDisplay",
+        "AuthenticationMonitoring"  # Authentication status monitoring
     )
     
     Write-OrchestratorLog -Message "Loading utility modules..." -Level "INFO"
@@ -416,6 +417,7 @@ function Initialize-OrchestratorModules {
     # Load phase-specific modules
     switch ($Phase) {
         { $_ -in "Discovery", "Full", "AzureOnly" } {
+            Load-AuthenticationModules
             Load-DiscoveryModules
         }
         { $_ -in "Processing", "Full", "AzureOnly" } {
@@ -580,6 +582,46 @@ function Load-ExportModules {
     Write-OrchestratorLog -Message "Export module loading complete: $loadedCount/$($enabledFormats.Count) loaded" -Level "INFO"
 }
 
+function Load-AuthenticationModules {
+    Write-OrchestratorLog -Message "Loading authentication modules..." -Level "INFO"
+    
+    $authModules = @(
+        "Authentication",
+        "CredentialManagement"
+    )
+    
+    $loadedCount = 0
+    $failedModules = @()
+    
+    foreach ($module in $authModules) {
+        $modulePath = Join-Path (Get-ModuleContext).Paths.Authentication "$module.psm1"
+        Write-OrchestratorLog -Message "Loading authentication module: $modulePath" -Level "DEBUG" -DebugOnly
+        
+        if (Test-Path $modulePath) {
+            try {
+                Import-Module $modulePath -Force -Global -ErrorAction Stop
+                $loadedCount++
+                Write-OrchestratorLog -Message "Successfully loaded authentication module: $module" -Level "SUCCESS"
+            } catch {
+                $failedModules += $module
+                Add-OrchestratorError -Source "ModuleLoader" `
+                    -Message "Failed to load authentication module $module" `
+                    -Exception $_.Exception `
+                    -Severity "Critical"
+            }
+        } else {
+            $failedModules += $module
+            Write-OrchestratorLog -Message "Authentication module not found: $modulePath" -Level "ERROR"
+        }
+    }
+    
+    Write-OrchestratorLog -Message "Authentication module loading complete: $loadedCount/$($authModules.Count) loaded" -Level "INFO"
+    if ($failedModules.Count -gt 0) {
+        Write-OrchestratorLog -Message "Failed authentication modules: $($failedModules -join ', ')" -Level "ERROR"
+        throw "Critical authentication modules failed to load. Cannot continue."
+    }
+}
+
 function Test-ModuleLoadStatus {
     <#
     .SYNOPSIS
@@ -627,6 +669,19 @@ function Test-ModuleLoadStatus {
 function Invoke-DiscoveryPhase {
     Write-OrchestratorLog -Message "STARTING DISCOVERY PHASE" -Level "HEADER"
     
+    # Show authentication status before starting discovery
+    Show-AuthenticationStatus -Context $global:MandA
+
+    # Log authentication details
+    Write-OrchestratorLog -Message "Authentication Context Details:" -Level "INFO"
+    $authContext = Get-AuthenticationContext
+    if ($authContext) {
+        Write-OrchestratorLog -Message "  ClientId: $($authContext.ClientId.Substring(0,8))..." -Level "DEBUG"
+        Write-OrchestratorLog -Message "  TenantId: $($authContext.TenantId)" -Level "DEBUG"
+        Write-OrchestratorLog -Message "  Method: $($authContext.AuthenticationMethod)" -Level "DEBUG"
+        Write-OrchestratorLog -Message "  Token Valid Until: $($authContext.TokenExpiry)" -Level "DEBUG"
+    }
+    
     $phaseResult = @{
         Success = $true
         ModuleResults = @{}
@@ -636,27 +691,28 @@ function Invoke-DiscoveryPhase {
     }
     
     try {
-        # Initialize authentication if needed
-        if (Get-Command Initialize-MandAAuthentication -ErrorAction SilentlyContinue) {
-            Write-OrchestratorLog -Message "Initializing authentication..." -Level "INFO"
-            
-            # FIX: Create proper context object for authentication
-            $authContext = @{
-                Config = $global:MandA.Config
-                Paths = $global:MandA.Paths
-                CompanyName = $global:MandA.CompanyName
-            }
-            
-            Write-OrchestratorLog -Message "Auth context type: $($authContext.GetType().FullName)" -Level "DEBUG" -DebugOnly
-            
+        # Display authentication status before starting discovery
+        if (Get-Command Show-AuthenticationStatus -ErrorAction SilentlyContinue) {
+            Write-OrchestratorLog -Message "Checking authentication status..." -Level "INFO"
             try {
-                # Try with Configuration parameter first
-                $authResult = Initialize-MandAAuthentication -Configuration $global:MandA.Config
+                Show-AuthenticationStatus -Context $global:MandA
             } catch {
-                Write-OrchestratorLog -Message "Failed with Configuration parameter, trying Context parameter" -Level "DEBUG"
-                # Try with Context parameter
-                $authResult = Initialize-MandAAuthentication -Context $authContext
+                Write-OrchestratorLog -Message "Error displaying authentication status: $_" -Level "WARN"
             }
+        }
+        
+        # Initialize authentication
+        Write-OrchestratorLog -Message "Initializing authentication..." -Level "INFO"
+
+        try {
+            # First check if authentication module is loaded
+            if (-not (Get-Command Initialize-MandAAuthentication -ErrorAction SilentlyContinue)) {
+                Write-OrchestratorLog -Message "Authentication module not loaded, attempting to load..." -Level "WARN"
+                Load-AuthenticationModules
+            }
+            
+            # Initialize authentication with configuration
+            $authResult = Initialize-MandAAuthentication -Configuration $global:MandA.Config
             
             if (-not $authResult -or -not $authResult.Authenticated) {
                 $errorMsg = if ($authResult.Error) { $authResult.Error } else { "Unknown authentication error" }
@@ -665,25 +721,36 @@ function Invoke-DiscoveryPhase {
             
             Write-OrchestratorLog -Message "Authentication successful" -Level "SUCCESS"
             
+            # Get authentication context for logging
+            $authContext = Get-AuthenticationContext
+            if ($authContext) {
+                Write-OrchestratorLog -Message "Authentication method: $($authContext.AuthenticationMethod)" -Level "INFO"
+                Write-OrchestratorLog -Message "Tenant ID: $($authContext.TenantId)" -Level "INFO"
+            }
+            
             # Initialize connections
             if (Get-Command Initialize-AllConnections -ErrorAction SilentlyContinue) {
                 Write-OrchestratorLog -Message "Initializing service connections..." -Level "INFO"
-                
-                $connectionAuth = if ($authResult.Context) { $authResult.Context } else { $authResult }
-                $connections = Initialize-AllConnections -Configuration $global:MandA.Config `
-                    -AuthContext $connectionAuth
+                $connections = Initialize-AllConnections -Configuration $global:MandA.Config -AuthContext $authContext
                 
                 foreach ($service in $connections.Keys) {
                     $status = $connections[$service]
-                    $connected = if ($status -is [bool]) { $status }
-                                else { $status.Connected }
+                    $connected = if ($status -is [bool]) { $status } else { $status.Connected }
                     
                     Write-OrchestratorLog -Message "Connection to $service`: $connected" `
                         -Level $(if ($connected) { "SUCCESS" } else { "WARN" })
                 }
             }
-        } else {
-            Write-OrchestratorLog -Message "Authentication module not found, skipping authentication" -Level "WARN"
+        } catch {
+            Write-OrchestratorLog -Message "Authentication initialization failed: $_" -Level "ERROR"
+            Add-OrchestratorError -Source "Authentication" `
+                -Message "Failed to initialize authentication" `
+                -Exception $_.Exception `
+                -Severity "Critical"
+            
+            # Cannot continue without authentication
+            $phaseResult.Success = $false
+            return $phaseResult
         }
         
         $enabledSources = (Get-ModuleContext).Config.discovery.enabledSources
@@ -783,94 +850,51 @@ function Invoke-DiscoveryModule {
     
     $moduleFunction = "Invoke-${ModuleName}Discovery"
     
-    # Validate module is loaded
-    if (-not (Get-Command $moduleFunction -ErrorAction SilentlyContinue)) {
-        throw "Discovery function '$moduleFunction' not found. Ensure module is loaded."
-    }
+    # Show module start
+    Write-Host "`n>>> Starting $ModuleName Discovery..." -ForegroundColor Cyan
+    Write-Progress -Activity "Discovery Phase" -Status "Running $ModuleName Discovery" -PercentComplete -1
     
-    # Use performance measurement wrapper if available
-    if (Get-Command Measure-Operation -ErrorAction SilentlyContinue) {
-        return Measure-Operation -Operation {
-            # Set up isolated error handling
-            $errorCapture = [System.Collections.ArrayList]::new()
-            $originalErrorVariable = $Error.Clone()
-            
-            try {
-                # Clear error variable to capture only this module's errors
-                $Error.Clear()
-                
-                # Invoke with timeout protection
-                $result = Invoke-WithTimeout -ScriptBlock {
-                    & $moduleFunction -Configuration $Configuration
-                } -TimeoutSeconds 300 -TimeoutMessage "Discovery module $ModuleName timed out after 5 minutes"
-                
-                # Capture any non-terminating errors
-                foreach ($err in $Error) {
-                    if ($err -notin $originalErrorVariable) {
-                        $null = $errorCapture.Add($err)
-                    }
-                }
-                
-                # Add captured errors to result if it doesn't have them
-                if ($errorCapture.Count -gt 0 -and $result.Errors.Count -eq 0) {
-                    foreach ($err in $errorCapture) {
-                        $result.AddError($err.Exception.Message, $err.Exception)
-                    }
-                }
-                
-                return $result
+    try {
+        # Create a progress tracking job
+        $progressJob = Start-Job -ScriptBlock {
+            $i = 0
+            while ($true) {
+                Write-Progress -Activity "$using:ModuleName Discovery" `
+                               -Status "Processing... ($i seconds)" `
+                               -PercentComplete -1
+                Start-Sleep -Seconds 1
+                $i++
             }
-            catch {
-                # Create a failed result if module didn't return one
-                $failedResult = [DiscoveryResult]::new($ModuleName)
-                $failedResult.AddError("Module execution failed", $_.Exception)
-                $failedResult.Complete()
-                return $failedResult
-            }
-        } -OperationName "${ModuleName}Discovery" -Category "Discovery" -Context $global:MandA -Data @{
-            ModuleName = $ModuleName
-            TimeoutSeconds = 300
         }
-    } else {
-        # Fallback to original implementation if Measure-Operation not available
-        Write-OrchestratorLog -Message "Performance metrics not available, using standard execution for $ModuleName" -Level "DEBUG"
         
-        # Set up isolated error handling
-        $errorCapture = [System.Collections.ArrayList]::new()
-        $originalErrorVariable = $Error.Clone()
+        # Execute discovery
+        $startTime = Get-Date
+        $result = & $moduleFunction -Configuration $Configuration
+        $duration = (Get-Date) - $startTime
         
-        try {
-            # Clear error variable to capture only this module's errors
-            $Error.Clear()
-            
-            # Invoke with timeout protection
-            $result = Invoke-WithTimeout -ScriptBlock {
-                & $moduleFunction -Configuration $Configuration
-            } -TimeoutSeconds 300 -TimeoutMessage "Discovery module $ModuleName timed out after 5 minutes"
-            
-            # Capture any non-terminating errors
-            foreach ($err in $Error) {
-                if ($err -notin $originalErrorVariable) {
-                    $null = $errorCapture.Add($err)
-                }
-            }
-            
-            # Add captured errors to result if it doesn't have them
-            if ($errorCapture.Count -gt 0 -and $result.Errors.Count -eq 0) {
-                foreach ($err in $errorCapture) {
-                    $result.AddError($err.Exception.Message, $err.Exception)
-                }
-            }
-            
-            return $result
+        # Stop progress job
+        Stop-Job $progressJob -Force
+        Remove-Job $progressJob -Force
+        
+        # Show completion
+        Write-Progress -Activity "Discovery Phase" -Completed
+        Write-Host "<<< Completed $ModuleName Discovery in $($duration.TotalSeconds) seconds" -ForegroundColor Green
+        
+        # Show result summary
+        if ($result.Success) {
+            Write-Host "    Records collected: $($result.Data.Count)" -ForegroundColor Gray
+        } else {
+            Write-Host "    Errors: $($result.Errors.Count)" -ForegroundColor Red
         }
-        catch {
-            # Create a failed result if module didn't return one
-            $failedResult = [DiscoveryResult]::new($ModuleName)
-            $failedResult.AddError("Module execution failed", $_.Exception)
-            $failedResult.Complete()
-            return $failedResult
-        }
+        
+        return $result
+        
+    } catch {
+        Stop-Job $progressJob -Force -ErrorAction SilentlyContinue
+        Remove-Job $progressJob -Force -ErrorAction SilentlyContinue
+        Write-Progress -Activity "Discovery Phase" -Completed
+        Write-Host "<<< Failed $ModuleName Discovery: $_" -ForegroundColor Red
+        throw
     }
 }
 

@@ -218,6 +218,43 @@ Write-Host "  Validate Only: $(if ($ValidateOnly) { 'Yes' } else { 'No' })" -For
 Write-Host "  Parallel Throttle (Parameter): $ParallelThrottle" -ForegroundColor White
     Write-Host ""
 
+    # --- Launch Monitoring Windows ---
+    Write-Host "[QuickStart] Launching monitoring windows..." -ForegroundColor Yellow
+    
+    # Launch Log Monitor in separate window
+    $logMonitorScript = Join-Path $SuiteRoot "Scripts\Show-LogMonitor.ps1"
+    if (Test-Path $logMonitorScript) {
+        $logMonitorArgs = @(
+            "-ExecutionPolicy", "Bypass"
+            "-File", "`"$logMonitorScript`""
+            "-CompanyName", "`"$($global:MandA.CompanyName)`""
+            "-LogPath", "`"$($global:MandA.Paths.LogOutput)`""
+        )
+        
+        Write-Host "[QuickStart] Starting Log Monitor window..." -ForegroundColor Green
+        Start-Process "powershell.exe" -ArgumentList $logMonitorArgs -WindowStyle Normal
+    } else {
+        Write-Host "[QuickStart] [WARNING] Log Monitor script not found: $logMonitorScript" -ForegroundColor Yellow
+    }
+    
+    # Launch Discovery Status Dashboard in separate window
+    $dashboardScript = Join-Path $SuiteRoot "Scripts\Show-DiscoveryStatus.ps1"
+    if (Test-Path $dashboardScript) {
+        $dashboardArgs = @(
+            "-ExecutionPolicy", "Bypass"
+            "-File", "`"$dashboardScript`""
+            "-CompanyName", "`"$($global:MandA.CompanyName)`""
+        )
+        
+        Write-Host "[QuickStart] Starting Discovery Status Dashboard window..." -ForegroundColor Green
+        Start-Process "powershell.exe" -ArgumentList $dashboardArgs -WindowStyle Normal
+    } else {
+        Write-Host "[QuickStart] [WARNING] Discovery Status script not found: $dashboardScript" -ForegroundColor Yellow
+    }
+    
+    # Give monitoring windows time to start
+    Start-Sleep -Seconds 2
+    
     # --- Launch Orchestrator ---
     Write-Host "[QuickStart] Launching M&A Discovery Suite Orchestrator..." -ForegroundColor Yellow
     Write-Host ("=" * 75) -ForegroundColor DarkGray
