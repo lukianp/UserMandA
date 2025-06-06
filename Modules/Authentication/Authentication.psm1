@@ -61,35 +61,8 @@ $script:AuthInitializationInProgress = $false
 $script:AuthInitializationAttempts = 0
 $script:MaxAuthInitializationAttempts = 3 # Max attempts for a single Initialize-MandAAuthentication call chain
 
-# Ensure Write-MandALog is available or provide a fallback for internal logging
-# This module should ideally be loaded after EnhancedLogging.psm1 by the orchestrator.
-function Write-MandALog {
-    param(
-        [string]$Message,
-        [string]$Level = "INFO",
-        [string]$Component = "General",
-        $Context
-    )
-    
-    # This is a fallback - the real function should be loaded from EnhancedLogging
-    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue -CommandType Function) {
-        # Call the real function if it exists
-        & Write-MandALog $Message -Level $Level -Component $Component -Context $Context
-    } else {
-        # Basic fallback
-        $color = switch ($Level) {
-            "ERROR" { "Red" }
-            "WARN" { "Yellow" }
-            "SUCCESS" { "Green" }
-            "INFO" { "White" }
-            "DEBUG" { "Gray" }
-            "HEADER" { "Cyan" }
-            "CRITICAL" { "Magenta" }
-            default { "White" }
-        }
-        Write-Host "[$Level] [$Component] $Message" -ForegroundColor $color
-    }
-}
+# Write-MandALog function is provided by EnhancedLogging.psm1
+# This module should be loaded after EnhancedLogging.psm1 by the orchestrator.
 
 function Initialize-MandAAuthentication {
     <#
@@ -297,11 +270,7 @@ function Initialize-MandAAuthentication {
         $authResult.Method = $authMethod
         
         # Write success message
-        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-            Write-MandALog -Message "Authentication initialized successfully using $authMethod" -Level "SUCCESS" -Component "Authentication"
-        } else {
-            Write-Host "[SUCCESS] Authentication initialized successfully using $authMethod" -ForegroundColor Green
-        }
+        Write-MandALog -Message "Authentication initialized successfully using $authMethod" -Level "SUCCESS" -Component "Authentication" -Context $Context
         
     } catch {
         # Capture error details
@@ -315,11 +284,7 @@ function Initialize-MandAAuthentication {
         $authResult.Error = $errorDetails.Message
         
         # Log error
-        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-            Write-MandALog -Message "Authentication initialization failed: $($errorDetails.Message)" -Level "ERROR" -Component "Authentication"
-        } else {
-            Write-Host "[ERROR] Authentication initialization failed: $($errorDetails.Message)" -ForegroundColor Red
-        }
+        Write-MandALog -Message "Authentication initialization failed: $($errorDetails.Message)" -Level "ERROR" -Component "Authentication" -Context $Context
         
         Write-Verbose "[Initialize-MandAAuthentication] Error details:"
         Write-Verbose "  Type: $($errorDetails.Type)"
@@ -568,5 +533,10 @@ function Get-AuthenticationStatus {
 
 Export-ModuleMember -Function Initialize-MandAAuthentication, Test-AuthenticationStatus, Update-AuthenticationTokens, Get-AuthenticationContext, Clear-AuthenticationContext, Get-AuthenticationStatus
 
-Write-MandALog "[Authentication.psm1] Module loaded. Recursion guard initialized." -Level "DEBUG" -Component "Authentication"
+# Module loaded message - will use Write-MandALog from EnhancedLogging if available
+if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+    Write-MandALog "[Authentication.psm1] Module loaded. Recursion guard initialized." -Level "DEBUG" -Component "Authentication"
+} else {
+    Write-Host "[DEBUG] [Authentication] Authentication.psm1 Module loaded. Recursion guard initialized." -ForegroundColor Gray
+}
 

@@ -728,18 +728,36 @@ function Invoke-DiscoveryPhase {
                 Write-OrchestratorLog -Message "Tenant ID: $($authContext.TenantId)" -Level "INFO"
             }
             
-            # Initialize connections
+            # Initialize connections - Load EnhancedConnectionManager if needed
             if (Get-Command Initialize-AllConnections -ErrorAction SilentlyContinue) {
                 Write-OrchestratorLog -Message "Initializing service connections..." -Level "INFO"
+                
+                # Load the EnhancedConnectionManager if not already loaded
+                if (-not (Get-Module -Name "EnhancedConnectionManager")) {
+                    $connMgrPath = Join-Path (Get-ModuleContext).Paths.Connectivity "EnhancedConnectionManager.psm1"
+                    if (Test-Path $connMgrPath) {
+                        Import-Module $connMgrPath -Force
+                        Write-OrchestratorLog -Message "Loaded EnhancedConnectionManager module" -Level "DEBUG"
+                    }
+                }
+                
+                # Initialize all connections using the enhanced manager
                 $connections = Initialize-AllConnections -Configuration $global:MandA.Config -AuthContext $authContext
                 
+                # Log connection results
                 foreach ($service in $connections.Keys) {
                     $status = $connections[$service]
                     $connected = if ($status -is [bool]) { $status } else { $status.Connected }
                     
-                    Write-OrchestratorLog -Message "Connection to $service`: $connected" `
+                    Write-OrchestratorLog -Message "Connection to ${service}: $connected" `
                         -Level $(if ($connected) { "SUCCESS" } else { "WARN" })
+                        
+                    if (-not $connected -and $status.Error) {
+                        Write-OrchestratorLog -Message "  Error: $($status.Error)" -Level "ERROR"
+                    }
                 }
+            } else {
+                Write-OrchestratorLog -Message "Initialize-AllConnections function not found!" -Level "ERROR"
             }
         } catch {
             Write-OrchestratorLog -Message "Authentication initialization failed: $_" -Level "ERROR"
