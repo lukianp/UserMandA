@@ -10,21 +10,6 @@
 
 <#
 .SYNOPSIS
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
-}
     Enhanced Data Aggregation Module for M&A Discovery Suite
 .DESCRIPTION
     This module is the core of the processing phase. It reads all raw CSV files,
@@ -43,6 +28,21 @@ function Get-ModuleContext {
                  Propagated $Context to helper functions for consistent logging.
                  Improved Get-DomainFromDN.
 #>
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
 
 # NOTE: Global environment check has been moved to function scope to avoid module loading issues.
 # Functions will check for the global context when they are called, rather than at module import time.

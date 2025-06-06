@@ -140,7 +140,7 @@ function Get-GPODataWithErrorHandling {
 function Get-GPODataEnhanced {
     param(
         [hashtable]$Configuration,
-        [MandAContext]$Context,
+        $Context,
         [PSCredential]$Credential
     )
     
@@ -676,7 +676,7 @@ function Invoke-GPODiscovery {
         [hashtable]$Configuration,
         
         [Parameter(Mandatory=$true)]
-        [MandAContext]$Context,
+        $Context,
         
         [Parameter(Mandatory=$false)]
         [PSCredential]$Credential
@@ -767,5 +767,6 @@ Export-ModuleMember -Function @(
     'Export-GPODataToCSV',
     'Invoke-GPODiscovery'
 )
+
 
 

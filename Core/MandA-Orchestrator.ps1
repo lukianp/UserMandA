@@ -627,17 +627,41 @@ function Test-ModuleLoadStatus {
     .SYNOPSIS
         Validates that all required modules have been successfully loaded
     .DESCRIPTION
-        Checks for the presence of critical modules and throws an error if any are missing
+        Checks for the presence of critical modules and throws an error if any are missing.
+        Only validates modules that are actually needed for the current execution mode.
     #>
-    
-    Write-OrchestratorLog -Message "Validating module load status..." -Level "INFO"
-    
-    $requiredModules = @(
-        'ActiveDirectoryDiscovery',
-        'GraphDiscovery',
-        'DataAggregation',
-        'CSVExport'
+    param(
+        [string]$Mode = "Full"
     )
+    
+    Write-OrchestratorLog -Message "Validating module load status for mode: $Mode..." -Level "INFO"
+    
+    # Define required modules based on execution mode
+    $requiredModules = @()
+    
+    # Discovery phase modules
+    if ($Mode -in @("Discovery", "Full", "AzureOnly")) {
+        $requiredModules += @(
+            'ActiveDirectoryDiscovery',
+            'GraphDiscovery'
+        )
+    }
+    
+    # Processing phase modules
+    if ($Mode -in @("Processing", "Full", "AzureOnly")) {
+        $requiredModules += @(
+            'DataAggregation'
+        )
+    }
+    
+    # Export phase modules
+    if ($Mode -in @("Export", "Full", "AzureOnly")) {
+        $requiredModules += @(
+            'CSVExport'
+        )
+    }
+    
+    Write-OrchestratorLog -Message "Checking $($requiredModules.Count) required modules for mode '$Mode'" -Level "DEBUG"
     
     $failedModules = @()
     
@@ -652,14 +676,14 @@ function Test-ModuleLoadStatus {
     }
     
     if ($failedModules.Count -gt 0) {
-        $errorMessage = "Critical module(s) failed to load: $($failedModules -join ', ')"
+        $errorMessage = "Critical module(s) failed to load for mode '$Mode': $($failedModules -join ', ')"
         Add-OrchestratorError -Source "ModuleValidation" `
             -Message $errorMessage `
             -Severity "Critical"
         throw $errorMessage
     }
     
-    Write-OrchestratorLog -Message "All required modules loaded successfully" -Level "SUCCESS"
+    Write-OrchestratorLog -Message "All required modules for mode '$Mode' loaded successfully" -Level "SUCCESS"
 }
 
 #===============================================================================
@@ -728,36 +752,50 @@ function Invoke-DiscoveryPhase {
                 Write-OrchestratorLog -Message "Tenant ID: $($authContext.TenantId)" -Level "INFO"
             }
             
-            # Initialize connections - Load EnhancedConnectionManager if needed
+            # Initialize connections - Load EnhancedConnectionManager first
+            Write-OrchestratorLog -Message "Loading connection manager..." -Level "INFO"
+            
+            # Load the EnhancedConnectionManager if not already loaded
+            if (-not (Get-Module -Name "EnhancedConnectionManager")) {
+                $connMgrPath = Join-Path (Get-ModuleContext).Paths.Connectivity "EnhancedConnectionManager.psm1"
+                if (Test-Path $connMgrPath) {
+                    try {
+                        Import-Module $connMgrPath -Force -Global -ErrorAction Stop
+                        Write-OrchestratorLog -Message "Loaded EnhancedConnectionManager module" -Level "SUCCESS"
+                    } catch {
+                        Write-OrchestratorLog -Message "Failed to load EnhancedConnectionManager: $_" -Level "ERROR"
+                    }
+                } else {
+                    Write-OrchestratorLog -Message "EnhancedConnectionManager module not found at: $connMgrPath" -Level "WARN"
+                }
+            }
+            
+            # Now check if Initialize-AllConnections is available
             if (Get-Command Initialize-AllConnections -ErrorAction SilentlyContinue) {
                 Write-OrchestratorLog -Message "Initializing service connections..." -Level "INFO"
                 
-                # Load the EnhancedConnectionManager if not already loaded
-                if (-not (Get-Module -Name "EnhancedConnectionManager")) {
-                    $connMgrPath = Join-Path (Get-ModuleContext).Paths.Connectivity "EnhancedConnectionManager.psm1"
-                    if (Test-Path $connMgrPath) {
-                        Import-Module $connMgrPath -Force
-                        Write-OrchestratorLog -Message "Loaded EnhancedConnectionManager module" -Level "DEBUG"
-                    }
-                }
-                
-                # Initialize all connections using the enhanced manager
-                $connections = Initialize-AllConnections -Configuration $global:MandA.Config -AuthContext $authContext
-                
-                # Log connection results
-                foreach ($service in $connections.Keys) {
-                    $status = $connections[$service]
-                    $connected = if ($status -is [bool]) { $status } else { $status.Connected }
+                try {
+                    # Initialize all connections using the enhanced manager
+                    $connections = Initialize-AllConnections -Configuration $global:MandA.Config -AuthContext $authContext
                     
-                    Write-OrchestratorLog -Message "Connection to ${service}: $connected" `
-                        -Level $(if ($connected) { "SUCCESS" } else { "WARN" })
+                    # Log connection results
+                    foreach ($service in $connections.Keys) {
+                        $status = $connections[$service]
+                        $connected = if ($status -is [bool]) { $status } else { $status.Connected }
                         
-                    if (-not $connected -and $status.Error) {
-                        Write-OrchestratorLog -Message "  Error: $($status.Error)" -Level "ERROR"
+                        Write-OrchestratorLog -Message "Connection to ${service}: $connected" `
+                            -Level $(if ($connected) { "SUCCESS" } else { "WARN" })
+                            
+                        if (-not $connected -and $status.Error) {
+                            Write-OrchestratorLog -Message "  Error: $($status.Error)" -Level "ERROR"
+                        }
                     }
+                } catch {
+                    Write-OrchestratorLog -Message "Error initializing connections: $_" -Level "ERROR"
                 }
             } else {
-                Write-OrchestratorLog -Message "Initialize-AllConnections function not found!" -Level "ERROR"
+                Write-OrchestratorLog -Message "Initialize-AllConnections function not found after loading module!" -Level "ERROR"
+                Write-OrchestratorLog -Message "Available connection functions: $(Get-Command -Name '*Connection*' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)" -Level "DEBUG"
             }
         } catch {
             Write-OrchestratorLog -Message "Authentication initialization failed: $_" -Level "ERROR"
@@ -887,7 +925,7 @@ function Invoke-DiscoveryModule {
         
         # Execute discovery
         $startTime = Get-Date
-        $result = & $moduleFunction -Configuration $Configuration
+        $result = & $moduleFunction -Configuration $Configuration -Context $global:MandA
         $duration = (Get-Date) - $startTime
         
         # Stop progress job
@@ -992,7 +1030,7 @@ function Invoke-SequentialDiscovery {
                 $startTime = Get-Date
                 
                 Write-OrchestratorLog -Message "Executing $functionName with configuration" -Level "DEBUG" -DebugOnly
-                $data = & $functionName -Configuration $global:MandA.Config
+                $data = & $functionName -Configuration $global:MandA.Config -Context $global:MandA
                 
                 $duration = (Get-Date) - $startTime
                 
@@ -1057,7 +1095,7 @@ function Invoke-ParallelDiscovery {
     
     # Discovery script block
     $scriptBlock = {
-        param($Source, $Config, $ModulePath)
+        param($Source, $Config, $ModulePath, $Context)
         
         try {
             # Import required module
@@ -1067,7 +1105,7 @@ function Invoke-ParallelDiscovery {
             # Execute discovery
             $functionName = "Invoke-${Source}Discovery"
             $startTime = Get-Date
-            $data = & $functionName -Configuration $Config
+            $data = & $functionName -Configuration $Config -Context $Context
             
             return @{
                 Source = $Source
@@ -1098,6 +1136,7 @@ function Invoke-ParallelDiscovery {
         [void]$powershell.AddArgument($source)
         [void]$powershell.AddArgument($global:MandA.Config)
         [void]$powershell.AddArgument($global:MandA.Paths.Discovery)
+        [void]$powershell.AddArgument($global:MandA)
         
         $jobs += @{
             PowerShell = $powershell
@@ -1680,7 +1719,7 @@ try {
     Initialize-OrchestratorModules -Phase $Mode
     
     # Validate module loading
-    Test-ModuleLoadStatus
+    Test-ModuleLoadStatus -Mode $Mode
     
     # Execute validation if requested
     if ($ValidateOnly) {

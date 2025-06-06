@@ -132,7 +132,7 @@ function Invoke-NetworkInfrastructureDiscovery {
         [hashtable]$Configuration,
         
         [Parameter(Mandatory=$true)]
-        [MandAContext]$Context,
+        $Context,
         
         [Parameter(Mandatory=$false)]
         [PSCredential]$Credential
@@ -1166,5 +1166,6 @@ Export-ModuleMember -Function @(
     'Get-ADSubnetsData',
     'Get-ADSitesData'
 )
+
 
 

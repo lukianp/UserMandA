@@ -66,7 +66,7 @@ function Get-B2BGuestUsersEnhanced {
         [Parameter(Mandatory = $true)]
         [hashtable]$Configuration,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context
+        $Context
     )
     
     $guestDataList = [System.Collections.Generic.List[PSObject]]::new()
@@ -265,7 +265,7 @@ function Invoke-ExternalIdentityDiscovery {
         [Parameter(Mandatory = $true)]
         [hashtable]$Configuration,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context
+        $Context
     )
     
     # Initialize result object
@@ -532,7 +532,7 @@ function Get-GraphDataInBatches {
         [string]$ExpandProperty,
         [int]$BatchSize = 999,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context
+        $Context
     )
     
     $allData = [System.Collections.Generic.List[PSObject]]::new()
@@ -634,7 +634,7 @@ function Write-MandALog {
         [Parameter(Mandatory = $true)]
         [string]$Level,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context
+        $Context
     )
     Write-Verbose -Message "[$Level] $Message"
 }
@@ -647,7 +647,7 @@ function Invoke-DiscoveryWithRetry {
         [Parameter(Mandatory = $true)]
         [string]$OperationName,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context,
+        $Context,
         [Parameter(Mandatory = $true)]
         [CircuitBreaker]$CircuitBreaker
     )
@@ -730,7 +730,7 @@ function Get-B2BGuestUsersEnhanced {
         [Parameter(Mandatory = $true)]
         [hashtable]$Configuration,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context
+        $Context
     )
     
     $guestDataList = [System.Collections.Generic.List[PSObject]]::new()
@@ -859,7 +859,7 @@ function Get-ExternalCollaborationSettingsEnhanced {
         [Parameter(Mandatory = $true)]
         [hashtable]$Configuration,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context
+        $Context
     )
     
     $settingsData = [System.Collections.Generic.List[PSObject]]::new()
@@ -1017,7 +1017,7 @@ function Get-GuestUserActivityEnhanced {
         [Parameter(Mandatory = $true)]
         [hashtable]$Configuration,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context
+        $Context
     )
     
     $activityDataList = [System.Collections.Generic.List[PSObject]]::new()
@@ -1138,7 +1138,7 @@ function Get-PartnerOrganizationsEnhanced {
         [Parameter(Mandatory = $true)]
         [hashtable]$Configuration,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context
+        $Context
     )
     
     $partnerDataList = [System.Collections.Generic.List[PSObject]]::new()
@@ -1227,7 +1227,7 @@ function Get-ExternalIdentityProvidersEnhanced {
         [Parameter(Mandatory = $true)]
         [hashtable]$Configuration,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context
+        $Context
     )
     
 $providerDataList = [System.Collections.Generic.List[PSObject]]::new()
@@ -1304,7 +1304,7 @@ function Get-GuestInvitationsEnhanced {
         [Parameter(Mandatory = $true)]
         [hashtable]$Configuration,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context,
+        $Context,
         [Parameter(Mandatory = $true)]
         [array]$GuestUsers
     )
@@ -1391,7 +1391,7 @@ function Get-CrossTenantAccessEnhanced {
         [Parameter(Mandatory = $true)]
         [hashtable]$Configuration,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context
+        $Context
     )
     
     $results = @{
@@ -1491,7 +1491,7 @@ function Get-GraphDataInBatches {
         [string]$ExpandProperty,
         [int]$BatchSize = 999,
         [Parameter(Mandatory = $true)]
-        [MandAContext]$Context
+        $Context
     )
     
     $allData = [System.Collections.Generic.List[PSObject]]::new()
@@ -1709,5 +1709,6 @@ function Convert-ToFlattenedData {
 }
 
 Export-ModuleMember -Function 'Invoke-ExternalIdentityDiscovery'
+
 
 

@@ -152,7 +152,7 @@ function Invoke-FileServerDiscovery {
         [hashtable]$Configuration,
         
         [Parameter(Mandatory=$true)]
-        [MandAContext]$Context,
+        $Context,
         
         [Parameter(Mandatory=$false)]
         [PSCredential]$Credential
@@ -534,7 +534,7 @@ function Get-FileServerConfig {
 function Get-FileServersEnhanced {
     param(
         [hashtable]$Configuration,
-        [MandAContext]$Context,
+        $Context,
         [PSCredential]$Credential
     )
     
@@ -705,7 +705,7 @@ function Get-FileSharesEnhanced {
     param(
         [array]$ServerList,
         [hashtable]$Configuration,
-        [MandAContext]$Context,
+        $Context,
         [PSCredential]$Credential
     )
     
@@ -833,7 +833,7 @@ function Get-ShareDetails {
         [string]$ServerName,
         $Share,
         [hashtable]$Configuration,
-        [MandAContext]$Context,
+        $Context,
         [PSCredential]$Credential
     )
     
@@ -919,7 +919,7 @@ function Get-SharePermissions {
         [string]$ShareName,
         [int]$Timeout,
         [PSCredential]$Credential,
-        [MandAContext]$Context
+        $Context
     )
     
     $job = Start-Job -ScriptBlock {
@@ -988,7 +988,7 @@ function Get-ShareSize {
         [string]$LocalPath,
         [hashtable]$Configuration,
         [PSCredential]$Credential,
-        [MandAContext]$Context
+        $Context
     )
     
     # Check path depth
@@ -1087,7 +1087,7 @@ function Get-ShareSize {
 function Get-DFSNamespacesEnhanced {
     param(
         [hashtable]$Configuration,
-        [MandAContext]$Context
+        $Context
     )
     
     $dfsNamespaces = [System.Collections.Generic.List[PSObject]]::new()
@@ -1154,7 +1154,7 @@ function Get-DFSFoldersEnhanced {
     param(
         [array]$DfsNamespaces,
         [hashtable]$Configuration,
-        [MandAContext]$Context
+        $Context
     )
     
     $dfsFolders = [System.Collections.Generic.List[PSObject]]::new()
@@ -1231,7 +1231,7 @@ function Get-StorageAnalysisEnhanced {
     param(
         [array]$ServerList,
         [hashtable]$Configuration,
-        [MandAContext]$Context,
+        $Context,
         [PSCredential]$Credential
     )
     
@@ -1317,7 +1317,7 @@ function Get-ShadowCopyEnhanced {
     param(
         [array]$ServerList,
         [hashtable]$Configuration,
-        [MandAContext]$Context,
+        $Context,
         [PSCredential]$Credential
     )
     
@@ -1406,7 +1406,7 @@ function Get-ShadowCopyEnhanced {
 function Get-FileServerClustersEnhanced {
     param(
         [hashtable]$Configuration,
-        [MandAContext]$Context
+        $Context
     )
     
     $clusters = [System.Collections.Generic.List[PSObject]]::new()
@@ -1626,5 +1626,6 @@ function Clear-FileServerResources {
 
 # Export module members
 Export-ModuleMember -Function 'Invoke-FileServerDiscovery'
+
 
 

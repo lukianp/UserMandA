@@ -72,6 +72,63 @@ function Initialize-MandAAuthentication {
     )
     # Handle both parameter types
 }
+# Helper functions for progress display
+function Write-ProgressHeader {
+    param([string]$Title)
+    Write-Host ""
+    Write-Host "===============================================" -ForegroundColor Cyan
+    Write-Host "  $Title" -ForegroundColor Cyan
+    Write-Host "===============================================" -ForegroundColor Cyan
+}
+
+function Write-ProgressStep {
+    param(
+        [string]$Message,
+        [string]$Status = "Info"
+    )
+    
+    $color = switch ($Status) {
+        "Progress" { "Yellow" }
+        "Success" { "Green" }
+        "Warning" { "Yellow" }
+        "Error" { "Red" }
+        default { "White" }
+    }
+    
+    Write-Host "  $Message" -ForegroundColor $color
+}
+
+function Show-ConnectionStatus {
+    param(
+        [string]$Service,
+        [string]$Status,
+        [string]$Details = ""
+    )
+    
+    $statusColor = switch ($Status) {
+        "Connecting" { "Yellow" }
+        "Connected" { "Green" }
+        "Failed" { "Red" }
+        "Skipped" { "Gray" }
+        default { "White" }
+    }
+    
+    $statusIcon = switch ($Status) {
+        "Connecting" { "⏳" }
+        "Connected" { "✅" }
+        "Failed" { "❌" }
+        "Skipped" { "⏭️" }
+        default { "ℹ️" }
+    }
+    
+    $message = "  $statusIcon $Service : $Status"
+    if ($Details) {
+        $message += " - $Details"
+    }
+    
+    Write-Host $message -ForegroundColor $statusColor
+}
+
 function Initialize-AllConnections {
     [CmdletBinding()]
     param(
@@ -149,6 +206,133 @@ function Initialize-AllConnections {
         -Status $(if ($failed -eq 0) { 'Success' } else { 'Warning' })
     
     return $connectionResults
+}
+
+# Individual connection functions called by Initialize-AllConnections
+function Connect-ToMicrosoftGraph {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        
+        [Parameter(Mandatory=$true)]
+        $AuthContext
+    )
+    
+    return Connect-MandAGraphEnhanced -AuthContext $AuthContext -Configuration $Configuration
+}
+
+function Connect-ToExchangeOnline {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        
+        [Parameter(Mandatory=$true)]
+        $AuthContext
+    )
+    
+    return Connect-MandAExchangeEnhanced -AuthContext $AuthContext -Configuration $Configuration
+}
+
+function Connect-ToSharePointOnline {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        
+        [Parameter(Mandatory=$true)]
+        $AuthContext
+    )
+    
+    try {
+        Write-MandALog "Starting SharePoint Online connection process..." -Level "PROGRESS"
+        
+        # SharePoint Online requires certificate-based authentication for app-only access
+        $certificateThumbprint = $Configuration.authentication.certificateThumbprint
+        
+        if (-not $certificateThumbprint) {
+            Write-MandALog "WARN: SharePoint Online requires certificate-based authentication" -Level "WARN"
+            Write-MandALog "No certificate thumbprint configured, skipping SharePoint connection" -Level "INFO"
+            return $false
+        }
+        
+        # Import SharePoint module
+        try {
+            Import-Module Microsoft.Online.SharePoint.PowerShell -Force -ErrorAction Stop
+            Write-MandALog "  - Loaded: Microsoft.Online.SharePoint.PowerShell" -Level "DEBUG"
+        } catch {
+            Write-MandALog "  - WARNING: Could not load SharePoint module: $($_.Exception.Message)" -Level "WARN"
+            return $false
+        }
+        
+        # Connect to SharePoint
+        $spoUrl = "https://$($AuthContext.TenantId)-admin.sharepoint.com"
+        Connect-SPOService -Url $spoUrl -ClientId $AuthContext.ClientId -CertificateThumbprint $certificateThumbprint
+        
+        Write-MandALog "[OK] Successfully connected to SharePoint Online" -Level "SUCCESS"
+        return $true
+        
+    } catch {
+        Write-MandALog "ERROR: SharePoint Online connection failed: $($_.Exception.Message)" -Level "ERROR"
+        return $false
+    }
+}
+
+function Connect-ToTeams {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        
+        [Parameter(Mandatory=$true)]
+        $AuthContext
+    )
+    
+    try {
+        Write-MandALog "Starting Microsoft Teams connection process..." -Level "PROGRESS"
+        
+        # Teams requires certificate-based authentication for app-only access
+        $certificateThumbprint = $Configuration.authentication.certificateThumbprint
+        
+        if (-not $certificateThumbprint) {
+            Write-MandALog "WARN: Microsoft Teams requires certificate-based authentication" -Level "WARN"
+            Write-MandALog "No certificate thumbprint configured, skipping Teams connection" -Level "INFO"
+            return $false
+        }
+        
+        # Import Teams module
+        try {
+            Import-Module MicrosoftTeams -Force -ErrorAction Stop
+            Write-MandALog "  - Loaded: MicrosoftTeams" -Level "DEBUG"
+        } catch {
+            Write-MandALog "  - WARNING: Could not load Teams module: $($_.Exception.Message)" -Level "WARN"
+            return $false
+        }
+        
+        # Connect to Teams
+        Connect-MicrosoftTeams -ApplicationId $AuthContext.ClientId -CertificateThumbprint $certificateThumbprint -TenantId $AuthContext.TenantId
+        
+        Write-MandALog "[OK] Successfully connected to Microsoft Teams" -Level "SUCCESS"
+        return $true
+        
+    } catch {
+        Write-MandALog "ERROR: Microsoft Teams connection failed: $($_.Exception.Message)" -Level "ERROR"
+        return $false
+    }
+}
+
+function Connect-ToAzure {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        
+        [Parameter(Mandatory=$true)]
+        $AuthContext
+    )
+    
+    return Connect-MandAAzureEnhanced -AuthContext $AuthContext -Configuration $Configuration
 }
 
 function Connect-MandAGraphEnhanced {
@@ -1048,6 +1232,11 @@ function Disconnect-AllServices {
 # Export functions
 Export-ModuleMember -Function @(
     'Initialize-AllConnections',
+    'Connect-ToMicrosoftGraph',
+    'Connect-ToExchangeOnline',
+    'Connect-ToSharePointOnline',
+    'Connect-ToTeams',
+    'Connect-ToAzure',
     'Connect-MandAGraphEnhanced',
     'Connect-MandAAzureEnhanced',
     'Connect-MandAExchangeEnhanced',
@@ -1061,4 +1250,8 @@ Export-ModuleMember -Function @(
     'Test-ActiveDirectoryConnection'
 )
 
-Write-MandALog "EnhancedConnectionManager module loaded successfully" -Level "DEBUG"
+if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+    Write-MandALog "EnhancedConnectionManager module loaded successfully" -Level "DEBUG"
+} else {
+    Write-Host "[DEBUG] EnhancedConnectionManager module loaded successfully" -ForegroundColor Gray
+}

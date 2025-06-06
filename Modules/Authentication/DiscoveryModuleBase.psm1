@@ -161,7 +161,7 @@ function Invoke-DiscoveryWithRetry {
         [CircuitBreaker]$CircuitBreaker,
         
         [Parameter(Mandatory=$false)]
-        [MandAContext]$Context
+        $Context
     )
     
     # Check circuit breaker
@@ -289,7 +289,7 @@ function Invoke-BaseDiscovery {
         [hashtable]$Configuration,
         
         [Parameter(Mandatory=$true)]
-        [MandAContext]$Context,
+        $Context,
         
         [Parameter(Mandatory=$false)]
         [string[]]$RequiredPermissions = @(),
@@ -381,7 +381,7 @@ function Test-DiscoveryPrerequisites {
     param(
         [string]$ModuleName,
         [hashtable]$Configuration,
-        [MandAContext]$Context,
+        $Context,
         [string[]]$RequiredPermissions
     )
     
@@ -431,7 +431,7 @@ function Get-ExistingDiscoveryData {
     param(
         [string]$ModuleName,
         [string]$OutputPath,
-        [MandAContext]$Context
+        $Context
     )
     
     # Define expected file names for each module
@@ -475,7 +475,7 @@ function Test-DiscoveryDataQuality {
     param(
         [object[]]$Data,
         [string]$ModuleName,
-        [MandAContext]$Context
+        $Context
     )
     
     $warnings = @()
@@ -544,7 +544,7 @@ function Export-DiscoveryData {
         [object[]]$Data,
         [string]$ModuleName,
         [string]$OutputPath,
-        [MandAContext]$Context,
+        $Context,
         [hashtable]$FileMap = $null
     )
     
@@ -596,3 +596,4 @@ Export-ModuleMember -Function @(
 
 # Export classes
 Export-ModuleMember -Function * -Variable * -Alias * -Cmdlet *
+

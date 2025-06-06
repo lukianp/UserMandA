@@ -403,7 +403,7 @@ function Test-AuthenticationStatus {
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration,
         [Parameter(Mandatory=$false)]
-        [MandAContext]$Context
+        $Context
     )
     try {
         Write-MandALog "Testing authentication status..." -Level "DEBUG" -Component "Authentication" -Context $Context
@@ -433,7 +433,7 @@ function Update-AuthenticationTokens {
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration,
         [Parameter(Mandatory=$false)]
-        [MandAContext]$Context
+        $Context
     )
     try {
         Write-MandALog "Refreshing authentication tokens..." -Level "INFO" -Component "Authentication" -Context $Context
@@ -459,7 +459,7 @@ function Get-AuthenticationContext {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false)]
-        [MandAContext]$Context # For logging context, not for deriving auth context
+        $Context # For logging context, not for deriving auth context
     )
     try {
         if ($script:AuthContext) {
@@ -480,7 +480,7 @@ function Clear-AuthenticationContext {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false)]
-        [MandAContext]$Context # For logging context
+        $Context # For logging context
     )
     try {
         $script:AuthContext = $null
@@ -496,7 +496,7 @@ function Get-AuthenticationStatus {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false)]
-        [MandAContext]$Context # For logging context
+        $Context # For logging context
     )
     try {
         $status = @{
