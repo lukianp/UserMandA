@@ -347,7 +347,8 @@ function Get-IntuneDeviceSoftwareInternal {
     }
 
     if ($allDeviceSoftware.Count -gt 0) {
-        Export-DataToCSV -Data $allDeviceSoftware -FileName "IntuneDeviceSoftware.csv" -OutputPath $script:outputPath
+        $filePath = Join-Path $script:outputPath "IntuneDeviceSoftware.csv"
+        Export-DataToCSV -Data $allDeviceSoftware -FilePath $filePath
         Write-MandALog "Successfully exported $($allDeviceSoftware.Count) software entries." -Level "SUCCESS"
     } else {
         Write-MandALog "No device software found across all devices." -Level "INFO"
@@ -379,7 +380,8 @@ function Get-IntuneDeviceConfigurationsInternal {
         }
         
         if ($allConfigs.Count -gt 0) {
-            Export-DataToCSV -Data $allConfigs -FileName "IntuneDeviceConfigurations.csv" -OutputPath $script:outputPath
+            $filePath = Join-Path $script:outputPath "IntuneDeviceConfigurations.csv"
+            Export-DataToCSV -Data $allConfigs -FilePath $filePath
             Write-MandALog "Exported $($allConfigs.Count) device configurations." -Level "SUCCESS"
         }
     } catch {
@@ -412,7 +414,8 @@ function Get-IntuneDeviceCompliancePoliciesInternal {
         }
         
         if ($allPolicies.Count -gt 0) {
-            Export-DataToCSV -Data $allPolicies -FileName "IntuneCompliancePolicies.csv" -OutputPath $script:outputPath
+            $filePath = Join-Path $script:outputPath "IntuneCompliancePolicies.csv"
+            Export-DataToCSV -Data $allPolicies -FilePath $filePath
             Write-MandALog "Exported $($allPolicies.Count) compliance policies." -Level "SUCCESS"
         }
     } catch {
@@ -452,7 +455,8 @@ function Get-IntuneManagedAppsInternal {
         }
         
         if ($allApps.Count -gt 0) {
-            Export-DataToCSV -Data $allApps -FileName "IntuneManagedApps.csv" -OutputPath $script:outputPath
+            $filePath = Join-Path $script:outputPath "IntuneManagedApps.csv"
+            Export-DataToCSV -Data $allApps -FilePath $filePath
             Write-MandALog "Exported $($allApps.Count) managed apps." -Level "SUCCESS"
         }
     } catch {
@@ -499,7 +503,8 @@ function Get-IntuneAppProtectionPoliciesInternal {
         }
         
         if ($allPolicies.Count -gt 0) {
-            Export-DataToCSV -Data $allPolicies -FileName "IntuneAppProtectionPolicies.csv" -OutputPath $script:outputPath
+            $filePath = Join-Path $script:outputPath "IntuneAppProtectionPolicies.csv"
+            Export-DataToCSV -Data $allPolicies -FilePath $filePath
             Write-MandALog "Exported $($allPolicies.Count) app protection policies." -Level "SUCCESS"
         }
     } catch {
@@ -533,7 +538,8 @@ function Get-IntuneEnrollmentRestrictionsInternal {
         }
         
         if ($allRestrictions.Count -gt 0) {
-            Export-DataToCSV -Data $allRestrictions -FileName "IntuneEnrollmentRestrictions.csv" -OutputPath $script:outputPath
+            $filePath = Join-Path $script:outputPath "IntuneEnrollmentRestrictions.csv"
+            Export-DataToCSV -Data $allRestrictions -FilePath $filePath
             Write-MandALog "Exported $($allRestrictions.Count) enrollment restrictions." -Level "SUCCESS"
         }
     } catch {

@@ -127,6 +127,22 @@ function Get-ADUsersWithErrorHandling {
         $Context
     )
     
+    # Check if we should skip based on existing valid file
+    $outputFile = Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADUsers.csv"
+    if (Test-DiscoveryFileSkippable -Configuration $Configuration -FilePath $outputFile -ModuleName "ActiveDirectory-Users" -MinimumRecords 10 -RequiredHeaders @('SamAccountName', 'UserPrincipalName', 'Enabled')) {
+        Write-MandALog "Skipping AD Users discovery - valid file exists" -Level "INFO" -Context $Context
+        # Load existing data for return
+        if (Test-Path $outputFile) {
+            try {
+                $existingData = Import-Csv $outputFile
+                Write-MandALog "Loaded $($existingData.Count) existing AD users from file" -Level "SUCCESS" -Context $Context
+                return $existingData
+            } catch {
+                Write-MandALog "Failed to load existing users file, proceeding with discovery" -Level "WARN" -Context $Context
+            }
+        }
+    }
+    
     $users = [System.Collections.ArrayList]::new()
     $batchSize = if ($Configuration.discovery.batchSize) { $Configuration.discovery.batchSize } else { 1000 }
     $retryCount = 0
@@ -215,6 +231,26 @@ function Get-ADGroupsWithErrorHandling {
         [Parameter(Mandatory=$true)]
         $Context
     )
+    
+    # Check if we should skip based on existing valid files
+    $groupsFile = Join-Path (Get-ModuleContext).Paths.RawDataOutput "SecurityGroups.csv"
+    $membersFile = Join-Path (Get-ModuleContext).Paths.RawDataOutput "SecurityGroupMembers.csv"
+    
+    if (Test-DiscoveryFileSkippable -Configuration $Configuration -FilePath $groupsFile -ModuleName "ActiveDirectory-Groups" -MinimumRecords 5 -RequiredHeaders @('SamAccountName', 'Name', 'GroupCategory')) {
+        Write-MandALog "Skipping AD Groups discovery - valid files exist" -Level "INFO" -Context $Context
+        # Load existing data for return
+        try {
+            $existingGroups = if (Test-Path $groupsFile) { Import-Csv $groupsFile } else { @() }
+            $existingMembers = if (Test-Path $membersFile) { Import-Csv $membersFile } else { @() }
+            Write-MandALog "Loaded $($existingGroups.Count) existing groups and $($existingMembers.Count) memberships from files" -Level "SUCCESS" -Context $Context
+            return @{
+                Groups = $existingGroups
+                Members = $existingMembers
+            }
+        } catch {
+            Write-MandALog "Failed to load existing group files, proceeding with discovery" -Level "WARN" -Context $Context
+        }
+    }
     
     $groups = [System.Collections.ArrayList]::new()
     $groupMembers = [System.Collections.ArrayList]::new()
@@ -339,6 +375,22 @@ function Get-ADComputersWithErrorHandling {
         [Parameter(Mandatory=$true)]
         $Context
     )
+    
+    # Check if we should skip based on existing valid file
+    $outputFile = Join-Path (Get-ModuleContext).Paths.RawDataOutput "ADComputers.csv"
+    if (Test-DiscoveryFileSkippable -Configuration $Configuration -FilePath $outputFile -ModuleName "ActiveDirectory-Computers" -MinimumRecords 5 -RequiredHeaders @('Name', 'DNSHostName', 'Enabled')) {
+        Write-MandALog "Skipping AD Computers discovery - valid file exists" -Level "INFO" -Context $Context
+        # Load existing data for return
+        if (Test-Path $outputFile) {
+            try {
+                $existingData = Import-Csv $outputFile
+                Write-MandALog "Loaded $($existingData.Count) existing AD computers from file" -Level "SUCCESS" -Context $Context
+                return $existingData
+            } catch {
+                Write-MandALog "Failed to load existing computers file, proceeding with discovery" -Level "WARN" -Context $Context
+            }
+        }
+    }
     
     $computers = [System.Collections.ArrayList]::new()
     $batchSize = if ($Configuration.discovery.batchSize) { $Configuration.discovery.batchSize } else { 1000 }
@@ -1094,25 +1146,41 @@ function Export-DataToCSV {
     
     try {
         if ($Data -and @($Data).Count -gt 0) {
-            # Ensure directory exists
+            # Ensure directory exists with proper permissions
             $directory = Split-Path -Path $FilePath -Parent
             if (-not (Test-Path -Path $directory)) {
-                New-Item -Path $directory -ItemType Directory -Force | Out-Null
-                Write-MandALog "Created directory: $directory" -Level "DEBUG" -Context $Context
+                try {
+                    New-Item -Path $directory -ItemType Directory -Force -ErrorAction Stop | Out-Null
+                    Write-MandALog "Created directory: $directory" -Level "DEBUG" -Context $Context
+                } catch {
+                    Write-MandALog "Failed to create directory: $directory. Error: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+                    throw "Cannot create output directory: $directory"
+                }
+            }
+            
+            # Test write permissions before attempting export
+            $testFile = Join-Path $directory "test_write_$(Get-Random).tmp"
+            try {
+                "test" | Out-File -FilePath $testFile -ErrorAction Stop
+                Remove-Item -Path $testFile -Force -ErrorAction SilentlyContinue
+            } catch {
+                Write-MandALog "No write permission to directory: $directory. Error: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+                throw "Access denied to output directory: $directory"
             }
             
             # Export to CSV with error handling
             $Data | Export-Csv -Path $FilePath -NoTypeInformation -Encoding UTF8 -ErrorAction Stop
-            Write-MandALog "Successfully exported $(@($Data).Count) records to: $FilePath" -Level "DEBUG" -Context $Context
+            Write-MandALog "Successfully exported $(@($Data).Count) records to: $FilePath" -Level "SUCCESS" -Context $Context
         } else {
             Write-MandALog "No data to export for: $FilePath" -Level "WARN" -Context $Context
         }
     }
     catch {
-        Write-MandALog "Failed to export data to CSV: $FilePath. Error: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-        if ($Context.ErrorCollector) {
+        Write-MandALog "Failed to export data to CSV '$FilePath'. Error: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        if ($Context -and $Context.PSObject.Properties['ErrorCollector']) {
             $Context.ErrorCollector.AddWarning("DataExport", "Failed to export data to: $FilePath")
         }
+        # Don't throw here - let the calling function handle the error gracefully
     }
 }
 # Main exported function

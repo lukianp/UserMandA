@@ -7,8 +7,28 @@ $Host.UI.RawUI.WindowTitle = "M&A Discovery Suite - Status Dashboard ($CompanyNa
 if ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.RawDataOutput) {
     $outputPath = $global:MandA.Paths.RawDataOutput
 } else {
-    # Fallback to standard path structure
-    $outputPath = "C:\MandADiscovery\Profiles\$CompanyName\Output\Raw"
+    # Check multiple possible locations for raw data files
+    $possiblePaths = @(
+        "C:\MandADiscovery\Profiles\$CompanyName\Output\Raw",
+        "C:\MandADiscovery\Olddata\Output",
+        "C:\MandADiscovery\Profiles\$CompanyName\RawData"
+    )
+    
+    $outputPath = $null
+    foreach ($path in $possiblePaths) {
+        if (Test-Path $path) {
+            $csvFiles = Get-ChildItem "$path\*.csv" -ErrorAction SilentlyContinue
+            if ($csvFiles.Count -gt 0) {
+                $outputPath = $path
+                break
+            }
+        }
+    }
+    
+    # If no path with CSV files found, use the first possible path as default
+    if (-not $outputPath) {
+        $outputPath = $possiblePaths[0]
+    }
 }
 
 while ($true) {

@@ -8,21 +8,6 @@
 
 <#
 .SYNOPSIS
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
-}
     Exports processed M&A discovery data to a series of CSV files formatted for a Company Control Sheet.
 .DESCRIPTION
     This module contains the Export-ToCompanyControlSheet function, which takes the aggregated and processed
@@ -63,16 +48,23 @@ function Get-ModuleContext {
     comprehensiveness; actual data presence will vary.
 #>
 
+# Module-scope context variable
+$script:ModuleContext = $null
 
-
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
 
 # NOTE: Global environment check has been moved to function scope to avoid module loading issues.
 # Functions will check for the global context when they are called, rather than at module import time.
-        $outputPath = (Get-ModuleContext).Paths.RawDataOutput
-
-        if (-not (Test-Path (Get-ModuleContext).Paths.RawDataOutput)) {
-    New-Item -Path (Get-ModuleContext).Paths.RawDataOutput -ItemType Directory -Force
-}
 
 function Export-ToCompanyControlSheet {
     [CmdletBinding()]

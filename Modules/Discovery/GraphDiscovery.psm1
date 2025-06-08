@@ -128,7 +128,8 @@ function Get-GraphUsersDataInternal {
             
             if ($allGraphUsers.Count -gt 0) {
                 Write-ProgressStep "Exporting $($allGraphUsers.Count) Graph users to CSV..." -Status Progress
-                Export-DataToCSV -InputObject $allGraphUsers -FileName "GraphUsers.csv" -OutputPath $outputPath
+                $filePath = Join-Path $outputPath "GraphUsers.csv"
+                Export-DataToCSV -Data $allGraphUsers -FilePath $filePath
                 Write-ProgressStep "Successfully exported Graph Users" -Status Success
             } else {
                 Write-ProgressStep "No Graph User objects constructed" -Status Warning
@@ -227,7 +228,8 @@ function Get-GraphGroupsDataInternal {
             
             if ($allGraphGroups.Count -gt 0) {
                 Write-ProgressStep "Exporting $($allGraphGroups.Count) Graph groups to CSV..." -Status Progress
-                Export-DataToCSV -InputObject $allGraphGroups -FileName "GraphGroups.csv" -OutputPath $outputPath
+                $filePath = Join-Path $outputPath "GraphGroups.csv"
+                Export-DataToCSV -Data $allGraphGroups -FilePath $filePath
                 Write-ProgressStep "Successfully exported Graph Groups" -Status Success
             } else {
                 Write-ProgressStep "No Graph Group objects constructed" -Status Warning
@@ -235,7 +237,8 @@ function Get-GraphGroupsDataInternal {
             
             if ($allGraphGroupMembers.Count -gt 0) {
                 Write-ProgressStep "Exporting $($allGraphGroupMembers.Count) group memberships to CSV..." -Status Progress
-                Export-DataToCSV -InputObject $allGraphGroupMembers -FileName "GraphGroupMembers.csv" -OutputPath $outputPath
+                $filePath = Join-Path $outputPath "GraphGroupMembers.csv"
+                Export-DataToCSV -Data $allGraphGroupMembers -FilePath $filePath
                 Write-ProgressStep "Successfully exported Graph Group Memberships" -Status Success
             }
         } else {
@@ -595,7 +598,12 @@ function Invoke-GraphDiscovery {
             
             # Export users data
             if ($graphData.Users.Count -gt 0) {
-                Export-DataToCSV -Data $graphData.Users -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "GraphUsers.csv") -Context $Context
+                try {
+                    $usersFilePath = Join-Path (Get-ModuleContext).Paths.RawDataOutput "GraphUsers.csv"
+                    Export-DataToCSV -Data $graphData.Users -FilePath $usersFilePath -Context $Context
+                } catch {
+                    Write-MandALog "Failed to export Graph users data: $_" -Level "ERROR" -Context $Context
+                }
             }
         }
         catch {
@@ -623,10 +631,20 @@ function Invoke-GraphDiscovery {
             
             # Export groups data
             if ($graphData.Groups.Count -gt 0) {
-                Export-DataToCSV -Data $graphData.Groups -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "GraphGroups.csv") -Context $Context
+                try {
+                    $groupsFilePath = Join-Path (Get-ModuleContext).Paths.RawDataOutput "GraphGroups.csv"
+                    Export-DataToCSV -Data $graphData.Groups -FilePath $groupsFilePath -Context $Context
+                } catch {
+                    Write-MandALog "Failed to export Graph groups data: $_" -Level "ERROR" -Context $Context
+                }
             }
             if ($graphData.GroupMembers.Count -gt 0) {
-                Export-DataToCSV -Data $graphData.GroupMembers -FilePath (Join-Path (Get-ModuleContext).Paths.RawDataOutput "GraphGroupMembers.csv") -Context $Context
+                try {
+                    $membersFilePath = Join-Path (Get-ModuleContext).Paths.RawDataOutput "GraphGroupMembers.csv"
+                    Export-DataToCSV -Data $graphData.GroupMembers -FilePath $membersFilePath -Context $Context
+                } catch {
+                    Write-MandALog "Failed to export Graph group members data: $_" -Level "ERROR" -Context $Context
+                }
             }
         }
         catch {

@@ -940,15 +940,45 @@ function Invoke-DiscoveryModule {
         
         # Execute discovery
         $startTime = Get-Date
-        # Explicitly control parameters - discovery modules do not accept Force parameter
+        
+        # Explicitly control parameters - discovery modules only accept Configuration and Context
         $moduleParams = @{
             Configuration = $Configuration
             Context = $global:MandA
         }
         
-        # Note: Discovery modules do not accept Force parameter, so we never pass it
+        # Verify the function exists and get its parameters
+        $functionInfo = Get-Command $moduleFunction -ErrorAction SilentlyContinue
+        if (-not $functionInfo) {
+            throw "Discovery function '$moduleFunction' not found"
+        }
         
-        $result = & $moduleFunction @moduleParams
+        # Only pass parameters that the function actually accepts
+        $validParams = @{}
+        foreach ($paramName in $moduleParams.Keys) {
+            if ($functionInfo.Parameters.ContainsKey($paramName)) {
+                $validParams[$paramName] = $moduleParams[$paramName]
+            } else {
+                Write-OrchestratorLog -Message "Parameter '$paramName' not accepted by $moduleFunction, skipping" -Level "DEBUG" -DebugOnly
+            }
+        }
+        
+        Write-OrchestratorLog -Message "Calling $moduleFunction with parameters: $($validParams.Keys -join ', ')" -Level "DEBUG" -DebugOnly
+        
+        # Call the function with only valid parameters
+        # Use a clean scope to prevent parameter inheritance
+        if ($validParams.Count -gt 0) {
+            $result = & {
+                param($FunctionName, $Parameters)
+                & $FunctionName @Parameters
+            } $moduleFunction $validParams
+        } else {
+            # Call with no parameters if none are valid
+            $result = & {
+                param($FunctionName)
+                & $FunctionName
+            } $moduleFunction
+        }
         $duration = (Get-Date) - $startTime
         
         # Stop progress job
