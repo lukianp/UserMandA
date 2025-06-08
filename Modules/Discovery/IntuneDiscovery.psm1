@@ -448,6 +448,12 @@ function Get-IntuneManagedAppsInternal {
     $allApps = [System.Collections.Generic.List[PSObject]]::new()
     
     try {
+        # Import required module for mobile apps
+        if (-not (Get-Module -Name "Microsoft.Graph.Devices.CorporateManagement")) {
+            Write-MandALog "Importing Microsoft.Graph.Devices.CorporateManagement module..." -Level "INFO"
+            Import-Module Microsoft.Graph.Devices.CorporateManagement -Force -ErrorAction Stop
+        }
+        
         # Get mobile apps
         $mobileApps = Get-MgDeviceAppManagementMobileApp -All -ErrorAction Stop
         
@@ -489,6 +495,12 @@ function Get-IntuneAppProtectionPoliciesInternal {
     $allPolicies = [System.Collections.Generic.List[PSObject]]::new()
     
     try {
+        # Import required module for app protection policies
+        if (-not (Get-Module -Name "Microsoft.Graph.Devices.CorporateManagement")) {
+            Write-MandALog "Importing Microsoft.Graph.Devices.CorporateManagement module..." -Level "INFO"
+            Import-Module Microsoft.Graph.Devices.CorporateManagement -Force -ErrorAction Stop
+        }
+        
         # iOS policies
         $iosPolicies = Get-MgDeviceAppManagementIosManagedAppProtection -All -ErrorAction SilentlyContinue
         foreach ($policy in $iosPolicies) {
@@ -537,6 +549,12 @@ function Get-IntuneEnrollmentRestrictionsInternal {
     $allRestrictions = [System.Collections.Generic.List[PSObject]]::new()
     
     try {
+        # Import required module for enrollment restrictions
+        if (-not (Get-Module -Name "Microsoft.Graph.DeviceManagement.Enrollment")) {
+            Write-MandALog "Importing Microsoft.Graph.DeviceManagement.Enrollment module..." -Level "INFO"
+            Import-Module Microsoft.Graph.DeviceManagement.Enrollment -Force -ErrorAction Stop
+        }
+        
         $enrollmentConfigs = Get-MgDeviceManagementDeviceEnrollmentConfiguration -All -ErrorAction Stop
         
         foreach ($config in $enrollmentConfigs) {

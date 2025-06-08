@@ -57,41 +57,66 @@ function Test-TeamsDiscoveryPrerequisites {
     Write-MandALog "Validating Teams Discovery prerequisites..." -Level "INFO" -Context $Context
     
     try {
-        # Check if Microsoft Teams PowerShell is available
-        if (-not (Get-Module -Name MicrosoftTeams -ListAvailable)) {
-            $Result.AddError("MicrosoftTeams PowerShell module is not available", $null, @{
-                Prerequisite = 'MicrosoftTeams Module'
-                Resolution = 'Install MicrosoftTeams PowerShell module using Install-Module MicrosoftTeams'
+        # Check if Microsoft Graph PowerShell modules are available
+        $requiredModules = @('Microsoft.Graph.Authentication', 'Microsoft.Graph.Teams')
+        foreach ($module in $requiredModules) {
+            if (-not (Get-Module -Name $module -ListAvailable)) {
+                $Result.AddError("$module PowerShell module is not available", $null, @{
+                    Prerequisite = "$module Module"
+                    Resolution = "Install $module PowerShell module using 'Install-Module $module'"
+                })
+                return
+            }
+        }
+        
+        # Import modules if not already loaded
+        foreach ($module in $requiredModules) {
+            if (-not (Get-Module -Name $module)) {
+                Import-Module $module -ErrorAction Stop
+                Write-MandALog "$module module imported successfully" -Level "DEBUG" -Context $Context
+            }
+        }
+        
+        # Test Microsoft Graph connectivity
+        try {
+            $mgContext = Get-MgContext -ErrorAction SilentlyContinue
+            if (-not $mgContext) {
+                $Result.AddError("Not connected to Microsoft Graph", $null, @{
+                    Prerequisite = 'Microsoft Graph Authentication'
+                    Resolution = 'Connect to Microsoft Graph using Connect-MgGraph'
+                })
+                return
+            }
+            
+            Write-MandALog "Successfully connected to Microsoft Graph. Context:" -Level "SUCCESS" -Context $Context
+            if ($mgContext.Account) {
+                $Result.Metadata['GraphContext'] = $mgContext.Account
+                Write-MandALog "  Account: $($mgContext.Account)" -Level "INFO" -Context $Context
+            }
+            if ($mgContext.TenantId) {
+                $Result.Metadata['TenantId'] = $mgContext.TenantId
+                Write-MandALog "  Tenant: $($mgContext.TenantId)" -Level "INFO" -Context $Context
+            }
+        }
+        catch {
+            $Result.AddError("Failed to verify Microsoft Graph connection", $_.Exception, @{
+                Prerequisite = 'Microsoft Graph Connectivity'
+                Resolution = 'Verify Microsoft Graph connection and permissions'
             })
             return
         }
         
-        # Import the module if not already loaded
-        if (-not (Get-Module -Name MicrosoftTeams)) {
-            Import-Module MicrosoftTeams -ErrorAction Stop
-            Write-MandALog "MicrosoftTeams module imported successfully" -Level "DEBUG" -Context $Context
-        }
-        
-        # Test Teams connectivity
+        # Test Teams access via Graph API
         try {
-            $testTeams = Get-Team -ErrorAction Stop | Select-Object -First 1
-            Write-MandALog "Successfully connected to Microsoft Teams" -Level "SUCCESS" -Context $Context
-            $Result.Metadata['TeamsConnected'] = $true
+            $testTeams = Get-MgTeam -Top 1 -ErrorAction Stop
+            Write-MandALog "Successfully verified Teams access via Graph API" -Level "SUCCESS" -Context $Context
         }
         catch {
-            if ($_.Exception.Message -like "*You must call the Connect-MicrosoftTeams*") {
-                $Result.AddError("Not connected to Microsoft Teams", $_.Exception, @{
-                    Prerequisite = 'Teams Authentication'
-                    Resolution = 'Connect to Microsoft Teams using Connect-MicrosoftTeams'
-                })
-                return
-            } else {
-                $Result.AddError("Failed to access Microsoft Teams", $_.Exception, @{
-                    Prerequisite = 'Teams Access'
-                    Resolution = 'Verify Microsoft Teams connection and permissions'
-                })
-                return
-            }
+            $Result.AddError("Failed to access Teams via Graph API", $_.Exception, @{
+                Prerequisite = 'Teams Access'
+                Resolution = 'Verify Microsoft Graph permissions (Team.ReadBasic.All, Group.Read.All)'
+            })
+            return
         }
         
         Write-MandALog "All Teams Discovery prerequisites validated successfully" -Level "SUCCESS" -Context $Context
@@ -119,9 +144,10 @@ function Get-TeamsWithErrorHandling {
     
     while ($retryCount -lt $maxRetries) {
         try {
-            Write-MandALog "Retrieving all Teams..." -Level "INFO" -Context $Context
+            Write-MandALog "Retrieving all Teams via Graph API..." -Level "INFO" -Context $Context
             
-            $allTeams = Get-Team -ErrorAction Stop
+            # Use Graph API instead of legacy Teams cmdlets
+            $allTeams = Get-MgTeam -All -ErrorAction Stop
             
             if ($null -eq $allTeams -or $allTeams.Count -eq 0) {
                 Write-MandALog "No teams found in the tenant" -Level "WARN" -Context $Context
@@ -172,57 +198,67 @@ function ConvertTo-TeamsObject {
     param($Team, $Context)
     
     try {
-        # Get team details
-        $teamDetails = Get-Team -GroupId $Team.GroupId -ErrorAction Stop
+        # Get team details via Graph API
+        $teamDetails = $null
+        try {
+            $teamDetails = Get-MgTeam -TeamId $Team.Id -ErrorAction SilentlyContinue
+        } catch {
+            Write-MandALog "Could not get detailed team info for $($Team.DisplayName)" -Level "DEBUG" -Context $Context
+        }
         
-        # Get owner and member counts
+        # Get group members via Graph API
         $owners = @()
         $members = @()
         $guests = @()
         
         try {
-            $owners = @(Get-TeamUser -GroupId $Team.GroupId -Role Owner -ErrorAction SilentlyContinue)
-        } catch {
-            Write-MandALog "Could not get owners for team $($Team.DisplayName)" -Level "DEBUG" -Context $Context
-        }
-        
-        try {
-            $members = @(Get-TeamUser -GroupId $Team.GroupId -Role Member -ErrorAction SilentlyContinue)
+            $groupMembers = Get-MgGroupMember -GroupId $Team.Id -All -ErrorAction SilentlyContinue
+            $groupOwners = Get-MgGroupOwner -GroupId $Team.Id -All -ErrorAction SilentlyContinue
+            
+            $owners = @($groupOwners)
+            $allMembers = @($groupMembers)
+            
+            # Filter members vs guests (simplified approach)
+            foreach ($member in $allMembers) {
+                if ($member.Id -notin $owners.Id) {
+                    # Try to determine if guest based on user principal name pattern
+                    if ($member.AdditionalProperties.userPrincipalName -like "*#EXT#*") {
+                        $guests += $member
+                    } else {
+                        $members += $member
+                    }
+                }
+            }
         } catch {
             Write-MandALog "Could not get members for team $($Team.DisplayName)" -Level "DEBUG" -Context $Context
         }
         
-        try {
-            $guests = @(Get-TeamUser -GroupId $Team.GroupId -Role Guest -ErrorAction SilentlyContinue)
-        } catch {
-            Write-MandALog "Could not get guests for team $($Team.DisplayName)" -Level "DEBUG" -Context $Context
-        }
-        
         return [PSCustomObject]@{
-            GroupId = $Team.GroupId
+            GroupId = $Team.Id
             DisplayName = $Team.DisplayName
             Description = $Team.Description
-            Visibility = $Team.Visibility
-            Archived = $Team.Archived
-            MailNickName = $Team.MailNickName
-            Classification = $Team.Classification
-            CreatedDateTime = if ($teamDetails.CreatedDateTime) { $teamDetails.CreatedDateTime } else { $null }
+            Visibility = if ($Team.Visibility) { $Team.Visibility } else { "Unknown" }
+            Archived = if ($teamDetails -and $teamDetails.IsArchived) { $teamDetails.IsArchived } else { $false }
+            MailNickName = if ($Team.AdditionalProperties.mailNickname) { $Team.AdditionalProperties.mailNickname } else { $null }
+            Classification = if ($Team.AdditionalProperties.classification) { $Team.AdditionalProperties.classification } else { $null }
+            CreatedDateTime = if ($Team.CreatedDateTime) { $Team.CreatedDateTime } else { $null }
             OwnerCount = $owners.Count
             MemberCount = $members.Count
             GuestCount = $guests.Count
             TotalMemberCount = $owners.Count + $members.Count + $guests.Count
-            AllowCreateUpdateChannels = $teamDetails.AllowCreateUpdateChannels
-            AllowDeleteChannels = $teamDetails.AllowDeleteChannels
-            AllowAddRemoveApps = $teamDetails.AllowAddRemoveApps
-            AllowCreateUpdateRemoveTabs = $teamDetails.AllowCreateUpdateRemoveTabs
-            AllowCreateUpdateRemoveConnectors = $teamDetails.AllowCreateUpdateRemoveConnectors
-            AllowUserEditMessages = $teamDetails.AllowUserEditMessages
-            AllowUserDeleteMessages = $teamDetails.AllowUserDeleteMessages
-            AllowOwnerDeleteMessages = $teamDetails.AllowOwnerDeleteMessages
-            AllowTeamMentions = $teamDetails.AllowTeamMentions
-            AllowChannelMentions = $teamDetails.AllowChannelMentions
-            AllowGuestCreateUpdateChannels = $teamDetails.AllowGuestCreateUpdateChannels
-            AllowGuestDeleteChannels = $teamDetails.AllowGuestDeleteChannels
+            # Team settings - use defaults if not available via Graph
+            AllowCreateUpdateChannels = if ($teamDetails -and $teamDetails.MemberSettings) { $teamDetails.MemberSettings.AllowCreateUpdateChannels } else { $null }
+            AllowDeleteChannels = if ($teamDetails -and $teamDetails.MemberSettings) { $teamDetails.MemberSettings.AllowDeleteChannels } else { $null }
+            AllowAddRemoveApps = if ($teamDetails -and $teamDetails.MemberSettings) { $teamDetails.MemberSettings.AllowAddRemoveApps } else { $null }
+            AllowCreateUpdateRemoveTabs = if ($teamDetails -and $teamDetails.MemberSettings) { $teamDetails.MemberSettings.AllowCreateUpdateRemoveTabs } else { $null }
+            AllowCreateUpdateRemoveConnectors = if ($teamDetails -and $teamDetails.MemberSettings) { $teamDetails.MemberSettings.AllowCreateUpdateRemoveConnectors } else { $null }
+            AllowUserEditMessages = if ($teamDetails -and $teamDetails.MessagingSettings) { $teamDetails.MessagingSettings.AllowUserEditMessages } else { $null }
+            AllowUserDeleteMessages = if ($teamDetails -and $teamDetails.MessagingSettings) { $teamDetails.MessagingSettings.AllowUserDeleteMessages } else { $null }
+            AllowOwnerDeleteMessages = if ($teamDetails -and $teamDetails.MessagingSettings) { $teamDetails.MessagingSettings.AllowOwnerDeleteMessages } else { $null }
+            AllowTeamMentions = if ($teamDetails -and $teamDetails.MessagingSettings) { $teamDetails.MessagingSettings.AllowTeamMentions } else { $null }
+            AllowChannelMentions = if ($teamDetails -and $teamDetails.MessagingSettings) { $teamDetails.MessagingSettings.AllowChannelMentions } else { $null }
+            AllowGuestCreateUpdateChannels = if ($teamDetails -and $teamDetails.GuestSettings) { $teamDetails.GuestSettings.AllowCreateUpdateChannels } else { $null }
+            AllowGuestDeleteChannels = if ($teamDetails -and $teamDetails.GuestSettings) { $teamDetails.GuestSettings.AllowDeleteChannels } else { $null }
             HasGuests = $guests.Count -gt 0
         }
     }
@@ -452,10 +488,8 @@ function Invoke-TeamsDiscovery {
         
         # Clean up connections if needed
         try {
-            # Disconnect from Teams if needed
-            if (Get-Command Disconnect-MicrosoftTeams -ErrorAction SilentlyContinue) {
-                Disconnect-MicrosoftTeams -ErrorAction SilentlyContinue
-            }
+            # Graph API connections are managed globally, no specific Teams disconnect needed
+            Write-MandALog "Teams discovery cleanup completed" -Level "DEBUG" -Context $Context
         }
         catch {
             Write-MandALog "Cleanup warning: $_" -Level "WARN" -Context $Context
