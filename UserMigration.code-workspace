@@ -7,5 +7,7 @@
 			"path": "../MandADiscovery"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"powershell.cwd": "UserMigration"
+	}
 }

@@ -248,14 +248,8 @@ function Connect-ToSharePointOnline {
     try {
         Write-MandALog "Starting SharePoint Online connection process..." -Level "PROGRESS"
         
-        # SharePoint Online requires certificate-based authentication for app-only access
+        # Try ClientSecret authentication first (like Graph), fallback to certificate if available
         $certificateThumbprint = $Configuration.authentication.certificateThumbprint
-        
-        if (-not $certificateThumbprint) {
-            Write-MandALog "WARN: SharePoint Online requires certificate-based authentication" -Level "WARN"
-            Write-MandALog "No certificate thumbprint configured, skipping SharePoint connection" -Level "INFO"
-            return $false
-        }
         
         # Import SharePoint module
         try {
@@ -292,14 +286,8 @@ function Connect-ToTeams {
     try {
         Write-MandALog "Starting Microsoft Teams connection process..." -Level "PROGRESS"
         
-        # Teams requires certificate-based authentication for app-only access
+        # Try ClientSecret authentication first (like Graph), fallback to certificate if available
         $certificateThumbprint = $Configuration.authentication.certificateThumbprint
-        
-        if (-not $certificateThumbprint) {
-            Write-MandALog "WARN: Microsoft Teams requires certificate-based authentication" -Level "WARN"
-            Write-MandALog "No certificate thumbprint configured, skipping Teams connection" -Level "INFO"
-            return $false
-        }
         
         # Import Teams module
         try {
@@ -672,9 +660,7 @@ function Connect-MandAExchangeEnhanced {
                     $script:ConnectionStatus.ExchangeOnline.Method = "Certificate (App-Only)"
                     
                 } else {
-                    Write-MandALog "WARN: No certificate thumbprint configured for Exchange Online" -Level "WARN"
-                    Write-MandALog "Exchange Online requires certificate-based authentication for app-only access" -Level "WARN"
-                    Write-MandALog "Attempting delegated authentication (will require user interaction)..." -Level "INFO"
+                    Write-MandALog "INFO: No certificate thumbprint configured, attempting ClientSecret authentication..." -Level "INFO"
                     
                     # Try delegated auth as fallback
                     $connectParams = @{

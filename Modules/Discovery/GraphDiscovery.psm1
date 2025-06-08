@@ -600,7 +600,17 @@ function Invoke-GraphDiscovery {
             if ($graphData.Users.Count -gt 0) {
                 try {
                     $usersFilePath = Join-Path (Get-ModuleContext).Paths.RawDataOutput "GraphUsers.csv"
-                    Export-DataToCSV -Data $graphData.Users -FilePath $usersFilePath -Context $Context
+                    
+                    # Check if file should be skipped based on configuration and existing file quality
+                    if (Get-Command Test-DiscoveryFileSkippable -ErrorAction SilentlyContinue) {
+                        $shouldSkip = Test-DiscoveryFileSkippable -Configuration $Configuration -FilePath $usersFilePath -ModuleName "Graph" -MinimumRecords 1
+                        if (-not $shouldSkip) {
+                            Export-DataToCSV -Data $graphData.Users -FilePath $usersFilePath -Context $Context
+                        }
+                    } else {
+                        # Fallback if validation module not available
+                        Export-DataToCSV -Data $graphData.Users -FilePath $usersFilePath -Context $Context
+                    }
                 } catch {
                     Write-MandALog "Failed to export Graph users data: $_" -Level "ERROR" -Context $Context
                 }
@@ -633,7 +643,17 @@ function Invoke-GraphDiscovery {
             if ($graphData.Groups.Count -gt 0) {
                 try {
                     $groupsFilePath = Join-Path (Get-ModuleContext).Paths.RawDataOutput "GraphGroups.csv"
-                    Export-DataToCSV -Data $graphData.Groups -FilePath $groupsFilePath -Context $Context
+                    
+                    # Check if file should be skipped based on configuration and existing file quality
+                    if (Get-Command Test-DiscoveryFileSkippable -ErrorAction SilentlyContinue) {
+                        $shouldSkip = Test-DiscoveryFileSkippable -Configuration $Configuration -FilePath $groupsFilePath -ModuleName "Graph" -MinimumRecords 1
+                        if (-not $shouldSkip) {
+                            Export-DataToCSV -Data $graphData.Groups -FilePath $groupsFilePath -Context $Context
+                        }
+                    } else {
+                        # Fallback if validation module not available
+                        Export-DataToCSV -Data $graphData.Groups -FilePath $groupsFilePath -Context $Context
+                    }
                 } catch {
                     Write-MandALog "Failed to export Graph groups data: $_" -Level "ERROR" -Context $Context
                 }
@@ -641,7 +661,17 @@ function Invoke-GraphDiscovery {
             if ($graphData.GroupMembers.Count -gt 0) {
                 try {
                     $membersFilePath = Join-Path (Get-ModuleContext).Paths.RawDataOutput "GraphGroupMembers.csv"
-                    Export-DataToCSV -Data $graphData.GroupMembers -FilePath $membersFilePath -Context $Context
+                    
+                    # Check if file should be skipped based on configuration and existing file quality
+                    if (Get-Command Test-DiscoveryFileSkippable -ErrorAction SilentlyContinue) {
+                        $shouldSkip = Test-DiscoveryFileSkippable -Configuration $Configuration -FilePath $membersFilePath -ModuleName "Graph" -MinimumRecords 1
+                        if (-not $shouldSkip) {
+                            Export-DataToCSV -Data $graphData.GroupMembers -FilePath $membersFilePath -Context $Context
+                        }
+                    } else {
+                        # Fallback if validation module not available
+                        Export-DataToCSV -Data $graphData.GroupMembers -FilePath $membersFilePath -Context $Context
+                    }
                 } catch {
                     Write-MandALog "Failed to export Graph group members data: $_" -Level "ERROR" -Context $Context
                 }

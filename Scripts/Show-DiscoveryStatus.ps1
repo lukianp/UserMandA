@@ -9,9 +9,10 @@ if ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.RawDataOutpu
 } else {
     # Check multiple possible locations for raw data files
     $possiblePaths = @(
+        "C:\MandADiscovery\Profiles\$CompanyName\Raw",
         "C:\MandADiscovery\Profiles\$CompanyName\Output\Raw",
-        "C:\MandADiscovery\Olddata\Output",
-        "C:\MandADiscovery\Profiles\$CompanyName\RawData"
+        "C:\MandADiscovery\Profiles\$CompanyName\RawData",
+        "C:\MandADiscovery\Olddata\Output"
     )
     
     $outputPath = $null
@@ -76,17 +77,79 @@ while ($true) {
         Write-Host ("Total: {0} files, {1} records, {2} active" -f
                    $csvFiles.Count, $totalRecords, $activeFiles) -ForegroundColor Cyan
         
-        # Show discovery progress indicators
-        $discoveryModules = @("ActiveDirectory", "Graph", "Azure", "Exchange", "SharePoint", "Teams", "Intune", "FileServer")
+        # Show discovery progress indicators - Updated to include all 14 configured modules
+        $discoveryModules = @("ActiveDirectory", "Graph", "Azure", "Exchange", "SharePoint", "Teams", "Intune", "FileServer", "GPO", "EnvironmentDetection", "ExternalIdentity", "Licensing", "NetworkInfrastructure", "SQLServer")
         Write-Host ""
         Write-Host "Discovery Module Status:" -ForegroundColor Yellow
         foreach ($module in $discoveryModules) {
-            $moduleFile = $csvFiles | Where-Object { $_.Name -like "*$module*" }
-            if ($moduleFile) {
-                $age = (Get-Date) - $moduleFile.LastWriteTime
-                $status = if ($age.TotalMinutes -lt 5) { "[RUNNING]" } else { "[COMPLETE]" }
-                $color = if ($age.TotalMinutes -lt 5) { "Green" } else { "White" }
-                Write-Host ("  {0,-15} {1}" -f $module, $status) -ForegroundColor $color
+            # Handle different naming patterns for modules
+            $searchPattern = switch ($module) {
+                "ActiveDirectory" { "AD*" }
+                "Graph" { "Graph*" }
+                "Azure" { "Azure*" }
+                "Exchange" { "Exchange*" }
+                "SharePoint" { "SharePoint*" }
+                "Teams" { "Teams*" }
+                "Intune" { "Intune*" }
+                "FileServer" { "FileServer*" }
+                default { "*$module*" }
+            }
+            
+            $moduleFiles = $csvFiles | Where-Object { $_.Name -like $searchPattern }
+            
+            if ($moduleFiles) {
+                try {
+                    # Get the most recent file for this module
+                    $latestFile = $moduleFiles | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+                    $age = (Get-Date) - $latestFile.LastWriteTime
+                    $isRecent = $age.TotalMinutes -lt 5
+                    
+                    # Check if files are substantial (not just header-only files)
+                    $totalRecords = 0
+                    $totalSize = 0
+                    $hasSubstantialData = $false
+                    
+                    foreach ($file in $moduleFiles) {
+                        try {
+                            $records = (Import-Csv $file.FullName -ErrorAction SilentlyContinue | Measure-Object).Count
+                            $totalRecords += $records
+                            $totalSize += $file.Length
+                            
+                            # Consider substantial if any file has more than 1 record (not just headers)
+                            if ($records -gt 1) { $hasSubstantialData = $true }
+                        } catch {
+                            # If we can't read the file, assume it's being written to
+                        }
+                    }
+                    
+                    # Determine status based on multiple factors
+                    if ($isRecent) {
+                        $status = "[RUNNING]"
+                        $color = "Green"
+                    } elseif ($hasSubstantialData -and $totalRecords -gt 10) {
+                        # Module has completed with substantial data
+                        $status = "[COMPLETE]"
+                        $color = "White"
+                    } elseif ($totalRecords -le 1 -and $totalSize -lt 1KB) {
+                        # Files exist but are too small - likely incomplete or failed
+                        $status = "[INCOMPLETE]"
+                        $color = "Yellow"
+                    } elseif ($totalRecords -gt 1 -and $totalRecords -le 10) {
+                        # Some data but might be incomplete
+                        $status = "[PARTIAL]"
+                        $color = "Cyan"
+                    } else {
+                        $status = "[COMPLETE]"
+                        $color = "White"
+                    }
+                    
+                    # Add record count for context
+                    $statusWithCount = "$status ($totalRecords records)"
+                    Write-Host ("  {0,-15} {1}" -f $module, $statusWithCount) -ForegroundColor $color
+                    
+                } catch {
+                    Write-Host ("  {0,-15} {1}" -f $module, "[ERROR]") -ForegroundColor Red
+                }
             } else {
                 Write-Host ("  {0,-15} {1}" -f $module, "[PENDING]") -ForegroundColor DarkGray
             }
