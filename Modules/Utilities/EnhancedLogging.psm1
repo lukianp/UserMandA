@@ -27,7 +27,7 @@
     - Addresses FAULT 7: Write-MandALog now checks if logging is initialized and has a basic fallback.
       Initialize-Logging is the primary function to set up the logging system.
     - Addresses FAULT 16: Write-MandALog standardizes on a -Context parameter.
-    - Relies on global:Get-OrElse for safe configuration access.
+    - Relies on Get-OrElse for safe configuration access.
     - Supports PowerShell 5.1.
     - Ensures UTF-8 encoding for log files.
     - Replaced direct emoji characters in Get-LogEmojiInternal with text equivalents.
@@ -72,21 +72,28 @@ $script:LoggingConfig = @{
 
 function Get-EffectiveLoggingSetting {
     param(
-        [string]$SettingName, 
-        [object]$Context,       
-        [object]$DefaultValue 
+        [string]$SettingName,
+        [object]$Context,
+        [object]$DefaultValue
     )
     
-    # Get-OrElse should be globally available from Set-SuiteEnvironment.ps1
+    # Local Get-OrElse implementation to avoid dependency
+    function Get-OrElse {
+        param($Value, $Default)
+        if ($null -ne $Value) { return $Value } else { return $Default }
+    }
+    
+    # Check context configuration first
     if ($Context -and $Context.PSObject.Properties['Config'] -and `
         $Context.Config.PSObject.Properties['environment'] -and `
         $Context.Config.environment.PSObject.Properties['logging'] -and `
         $Context.Config.environment.logging.PSObject.Properties[$SettingName]) {
-        return global:Get-OrElse $Context.Config.environment.logging.$SettingName $DefaultValue
+        return Get-OrElse $Context.Config.environment.logging.$SettingName $DefaultValue
     }
     
+    # Check script configuration
     if ($script:LoggingConfig.ContainsKey($SettingName)) {
-        return global:Get-OrElse $script:LoggingConfig[$SettingName] $DefaultValue
+        return Get-OrElse $script:LoggingConfig[$SettingName] $DefaultValue
     }
     
     return $DefaultValue
@@ -148,9 +155,13 @@ function Initialize-Logging {
     # Simple initialization without complex context processing to avoid corruption
     $script:LoggingConfig.Initialized = $true
     
-    # Use default log path if not set
-    if ([string]::IsNullOrWhiteSpace($script:LoggingConfig.LogPath)) {
+    # Use context log path if available, otherwise use default
+    if ($Context -and $Context.Paths -and $Context.Paths.LogOutput) {
+        $script:LoggingConfig.LogPath = $Context.Paths.LogOutput
+        Write-Host "[EnhancedLogging.Initialize-Logging] Using context log path: $($script:LoggingConfig.LogPath)" -ForegroundColor Green
+    } elseif ([string]::IsNullOrWhiteSpace($script:LoggingConfig.LogPath)) {
         $script:LoggingConfig.LogPath = "C:\MandADiscovery\Logs"
+        Write-Host "[EnhancedLogging.Initialize-Logging] Using default log path: $($script:LoggingConfig.LogPath)" -ForegroundColor Yellow
     }
     
     # Create log directory if it doesn't exist
@@ -204,15 +215,21 @@ function Write-MandALog {
         return
     }
     
-    $effectiveContext = global:Get-OrElse $Context $script:LoggingConfig.DefaultContext
+    # Local Get-OrElse implementation
+    function Get-OrElse {
+        param($Value, $Default)
+        if ($null -ne $Value) { return $Value } else { return $Default }
+    }
+    
+    $effectiveContext = Get-OrElse $Context $script:LoggingConfig.DefaultContext
     
     $currentLogLevel = Get-EffectiveLoggingSetting -SettingName 'LogLevel' -Context $effectiveContext -DefaultValue "INFO"
     $showTimestampSetting = Get-EffectiveLoggingSetting -SettingName 'ShowTimestamp' -Context $effectiveContext -DefaultValue $true
     $showComponentSetting = Get-EffectiveLoggingSetting -SettingName 'ShowComponent' -Context $effectiveContext -DefaultValue $true
     
-    $levelHierarchy = @{ "DEBUG"=0; "INFO"=1; "PROGRESS"=1; "SUCCESS"=1; "WARN"=2; "IMPORTANT"=2; "ERROR"=3; "CRITICAL"=4; "HEADER"=5 } 
-    $configLogLevelNum = global:Get-OrElse $levelHierarchy[$currentLogLevel.ToUpper()] 1
-    $messageLogLevelNum = global:Get-OrElse $levelHierarchy[$Level.ToUpper()] 1
+    $levelHierarchy = @{ "DEBUG"=0; "INFO"=1; "PROGRESS"=1; "SUCCESS"=1; "WARN"=2; "IMPORTANT"=2; "ERROR"=3; "CRITICAL"=4; "HEADER"=5 }
+    $configLogLevelNum = Get-OrElse $levelHierarchy[$currentLogLevel.ToUpper()] 1
+    $messageLogLevelNum = Get-OrElse $levelHierarchy[$Level.ToUpper()] 1
 
     if ($messageLogLevelNum -lt $configLogLevelNum) { return }
 
@@ -319,7 +336,7 @@ function Move-LogFile {
         if ($Context -and $Context.PSObject.Properties['CompanyName']) {
             $companyNameForNewLog = $Context.CompanyName -replace '[<>:"/\\|?*]', '_'
         } elseif ($Context -and $Context.PSObject.Properties['Config'] -and $Context.Config.metadata) {
-            $companyNameForNewLog = global:Get-OrElse ($Context.Config.metadata.companyName -replace '[<>:"/\\|?*]', '_') "General"
+            $companyNameForNewLog = Get-OrElse ($Context.Config.metadata.companyName -replace '[<>:"/\\|?*]', '_') "General"
         }
 
         $newLogFileBase = "MandA_Discovery"
@@ -343,7 +360,7 @@ function Clear-OldLogFiles {
         return
     }
 
-    $logPathForClear = global:Get-OrElse (Get-ModuleContext).Paths.LogOutput $script:LoggingConfig.LogPath
+    $logPathForClear = Get-OrElse (Get-ModuleContext).Paths.LogOutput $script:LoggingConfig.LogPath
     $retentionDays = Get-EffectiveLoggingSetting -SettingName 'LogRetentionDays' -Context $Context -DefaultValue 30
 
     if ($retentionDays -le 0) {

@@ -9,20 +9,34 @@
 
 <#
 .SYNOPSIS
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
+
+
+# Module-scope context variable
+
+$script:ModuleContext = $null
+
+
+
+# Lazy initialization function
+
+function Get-ModuleContext {
+
+    if ($null -eq $script:ModuleContext) {
+
+        if ($null -ne $global:MandA) {
+
+            $script:ModuleContext = $global:MandA
+
+        } else {
+
+            throw "Module context not available"
+
+        }
+
+    }
+
+    return $script:ModuleContext
+
 }
     Provides common file and directory operation utilities for the M&A Discovery Suite.
 .DESCRIPTION
@@ -41,7 +55,7 @@ function Get-ModuleContext {
     - Context parameter for logging and potentially for default paths if needed.
 #>
 
-Export-ModuleMember -Function Import-DataFromCSV, Export-DataToCSV, Test-FileWriteAccess, Backup-File, Ensure-DirectoryExists, Clear-OldFiles, Get-DirectorySizeFormatted
+# Export-ModuleMember moved to end of file
 
 function Ensure-DirectoryExists {
     [CmdletBinding()]
@@ -342,6 +356,9 @@ function Get-RandomInt {
     return Get-Random -Minimum $Min -Maximum ($Max + 1) # Get-Random's Max is exclusive
 }
 
+
+# Export all public functions
+Export-ModuleMember -Function Import-DataFromCSV, Export-DataToCSV, Test-FileWriteAccess, Backup-File, Ensure-DirectoryExists, Clear-OldFiles, Get-DirectorySizeFormatted
 
 Write-Host "[FileOperations.psm1] Module loaded." -ForegroundColor DarkGray
 

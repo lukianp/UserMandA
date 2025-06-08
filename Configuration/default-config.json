@@ -46,8 +46,7 @@
     "authentication":  {
                            "useServicePrincipal":  true,
                            "useInteractiveAuth":  false,
-                           "credentialFileName":  "credentials.config",
-                           "certificateThumbprint":  "",
+                           "credentialFileName":  "credentials.json",
                            "tokenRefreshThreshold":  600,
                            "authenticationMethod":  "ClientSecret"
                        },

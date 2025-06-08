@@ -380,21 +380,6 @@ function Initialize-OrchestratorModules {
                 $loadedUtilities++
                 Write-OrchestratorLog -Message "Successfully loaded utility module: $module" -Level "SUCCESS"
                 
-                # Initialize logging system after EnhancedLogging module is loaded
-                if ($module -eq "EnhancedLogging") {
-                    if (Get-Command "Initialize-Logging" -ErrorAction SilentlyContinue) {
-                        Write-OrchestratorLog -Message "Initializing logging system..." -Level "INFO"
-                        try {
-                            Initialize-Logging -Context $global:MandA
-                            Write-OrchestratorLog -Message "Logging system initialized successfully" -Level "SUCCESS"
-                        } catch {
-                            Write-OrchestratorLog -Message "Failed to initialize logging system: $_" -Level "ERROR"
-                        }
-                    } else {
-                        Write-OrchestratorLog -Message "WARNING: Initialize-Logging function not found after loading EnhancedLogging module" -Level "ERROR"
-                    }
-                }
-                
                 # Verify critical functions are available
                 if ($module -eq "ErrorHandling") {
                     if (Get-Command "Invoke-WithTimeout" -ErrorAction SilentlyContinue) {
@@ -940,15 +925,7 @@ function Invoke-DiscoveryModule {
         
         # Execute discovery
         $startTime = Get-Date
-        # Explicitly control parameters - discovery modules do not accept Force parameter
-        $moduleParams = @{
-            Configuration = $Configuration
-            Context = $global:MandA
-        }
-        
-        # Note: Discovery modules do not accept Force parameter, so we never pass it
-        
-        $result = & $moduleFunction @moduleParams
+        $result = & $moduleFunction -Configuration $Configuration -Context $global:MandA
         $duration = (Get-Date) - $startTime
         
         # Stop progress job

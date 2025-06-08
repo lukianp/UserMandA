@@ -44,96 +44,252 @@ function Get-ModuleContext {
 function Export-ToCSV {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [hashtable]$ProcessedData, # Contains UserProfiles, MigrationWaves, ComplexityAnalysis, etc.
 
         [Parameter(Mandatory = $true)]
-        [hashtable]$Configuration
+        [hashtable]$Configuration,
+        
+        [Parameter(Mandatory = $false)]
+        $Context = $null
     )
 
-    Write-MandALog "Starting CSV Export Process..." -Level "INFO"
-    $processedOutputPath = Join-Path $Configuration.environment.outputPath "Processed" # Standard location for processed outputs
+    # Define local logging wrappers
+    $LogInfo = {
+        param($MessageParam, $LevelParam="INFO")
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+            Write-MandALog -Message $MessageParam -Level $LevelParam -Component "CSVExport" -Context $Context
+        } else {
+            Write-Host "[$LevelParam][CSVExport] $MessageParam" -ForegroundColor $(
+                switch ($LevelParam) {
+                    "ERROR" { "Red" }
+                    "WARN" { "Yellow" }
+                    "SUCCESS" { "Green" }
+                    "DEBUG" { "Gray" }
+                    default { "White" }
+                }
+            )
+        }
+    }
+    $LogError = { param($MessageParam) & $LogInfo $MessageParam "ERROR" }
+    $LogSuccess = { param($MessageParam) & $LogInfo $MessageParam "SUCCESS" }
+    $LogWarn = { param($MessageParam) & $LogInfo $MessageParam "WARN" }
+    $LogDebug = { param($MessageParam) & $LogInfo $MessageParam "DEBUG" }
 
-    # Ensure the output directory exists (FileOperations.psm1 should be loaded)
+    & $LogInfo "Starting CSV Export Process..."
+    
+    # Determine output path - try multiple configuration paths
+    $processedOutputPath = $null
+    if ($Context -and $Context.Paths -and $Context.Paths.ProcessedDataOutput) {
+        $processedOutputPath = $Context.Paths.ProcessedDataOutput
+    } elseif ($Configuration.environment -and $Configuration.environment.outputPath) {
+        $processedOutputPath = Join-Path $Configuration.environment.outputPath "Processed"
+    } elseif ($Configuration.paths -and $Configuration.paths.processedDataOutput) {
+        $processedOutputPath = $Configuration.paths.processedDataOutput
+    } else {
+        & $LogError "Cannot determine processed data output path from configuration"
+        return $false
+    }
+
+    # Ensure the output directory exists
     if (-not (Test-Path $processedOutputPath)) {
         try {
-            Initialize-OutputDirectories -Path $processedOutputPath # Assuming this function can take a specific path
-            Write-MandALog "Created directory for CSV exports: $processedOutputPath" -Level "INFO"
+            New-Item -Path $processedOutputPath -ItemType Directory -Force | Out-Null
+            & $LogInfo "Created directory for CSV exports: $processedOutputPath"
         } catch {
-            Write-MandALog "Failed to create CSV export directory '$processedOutputPath': $($_.Exception.Message)" -Level "ERROR"
-            return # Cannot proceed without output directory
+            & $LogError "Failed to create CSV export directory '$processedOutputPath': $($_.Exception.Message)"
+            return $false
         }
     }
 
     # Helper to handle data loading if $ProcessedData is null (for "Export Only" mode)
     function Get-DataForExport {
         param(
-            [string]$KeyName, # e.g., "UserProfiles"
+            [string]$KeyName, # e.g., "Users"
             [hashtable]$DirectInputData,
             [string]$ExpectedFilePath
         )
         if ($null -ne $DirectInputData -and $DirectInputData.ContainsKey($KeyName) -and $null -ne $DirectInputData[$KeyName]) {
-            Write-MandALog "Using $KeyName data passed directly to export function." -Level "DEBUG"
+            & $LogDebug "Using $KeyName data passed directly to export function."
             return $DirectInputData[$KeyName]
         } elseif (Test-Path $ExpectedFilePath) {
-            Write-MandALog "Loading $KeyName data from file for export: $ExpectedFilePath" -Level "INFO"
+            & $LogInfo "Loading $KeyName data from file for export: $ExpectedFilePath"
             try {
-                return Import-DataFromCSV -FilePath $ExpectedFilePath
+                return Import-Csv -Path $ExpectedFilePath
             } catch {
-                Write-MandALog "Failed to load $KeyName from $ExpectedFilePath. Error: $($_.Exception.Message)" -Level "WARN"
+                & $LogWarn "Failed to load $KeyName from $ExpectedFilePath. Error: $($_.Exception.Message)"
                 return @()
             }
         } else {
-            Write-MandALog "$KeyName data not passed directly and file not found at $ExpectedFilePath. Cannot export." -Level "WARN"
+            & $LogWarn "$KeyName data not passed directly and file not found at $ExpectedFilePath. Cannot export."
             return @()
         }
     }
 
-    # Define files to export and the corresponding keys in $ProcessedData or file paths
-    $exportItems = @(
-        @{ Key = "UserProfiles"; FileName = "UserProfiles.csv" }
-        @{ Key = "MigrationWaves"; FileName = "MigrationWaves.csv" }
-        @{ Key = "ComplexityAnalysis"; FileName = "ComplexityAnalysis.csv" }
-        @{ Key = "ValidationResults"; FileName = "DataQualityIssues.csv"; DataPath = "Issues" } # If ValidationResults.Issues is the list
-        # Add more items as needed, e.g., from AggregatedDataStore or RelationshipGraph if direct export is desired
-    )
-
-    foreach ($item in $exportItems) {
-        $dataToExport = $null
-        $expectedFilePath = Join-Path $processedOutputPath $item.FileName
+    # Check if we have processed data from DataAggregation module
+    $exportStats = @{ FilesExported = 0; RecordsExported = 0; Errors = 0 }
+    
+    if ($ProcessedData -and $ProcessedData.ContainsKey("Users") -and $ProcessedData.Users.Count -gt 0) {
+        & $LogInfo "Exporting aggregated user data from DataAggregation module..."
         
-        if ($item.ContainsKey("DataPath")) { # e.g. $ProcessedData.ValidationResults.Issues
-            $mainData = Get-DataForExport -KeyName $item.Key -DirectInputData $ProcessedData -ExpectedFilePath $expectedFilePath # Path here is for the main object
-            if ($mainData -and $mainData.PSObject.Properties[$item.DataPath]) {
-                $dataToExport = $mainData.PSObject.Properties[$item.DataPath].Value
-            }
-        } else {
-            $dataToExport = Get-DataForExport -KeyName $item.Key -DirectInputData $ProcessedData -ExpectedFilePath $expectedFilePath
-        }
-
-        if ($null -ne $dataToExport -and $dataToExport.Count -gt 0) {
-            $filePath = Join-Path $processedOutputPath $item.FileName # Output to Processed folder
-            try {
-                # Use Export-DataToCSV from FileOperations.psm1 if it exists and is preferred
-                # Otherwise, use standard Export-Csv
-                if (Get-Command 'Export-DataToCSV' -ErrorAction SilentlyContinue) {
-                    Export-DataToCSV -Data $dataToExport -FilePath $filePath
-                } else {
-                    $dataToExport | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
-                    Write-MandALog "Exported $($item.Key) to $filePath using Export-Csv." -Level "SUCCESS"
+        # Export main Users.csv (consolidated user data)
+        try {
+            $userFile = Join-Path $processedOutputPath "Users.csv"
+            $exportUsers = foreach ($user in $ProcessedData.Users) {
+                $exportUser = $user.PSObject.Copy()
+                # Flatten complex properties for CSV export
+                if ($exportUser.PSObject.Properties['GroupMemberships'] -and $exportUser.GroupMemberships -is [array]) {
+                    $exportUser.GroupMemberships = $exportUser.GroupMemberships -join ';'
                 }
-            } catch {
-                Write-MandALog "Failed to export $($item.Key) to $filePath. Error: $($_.Exception.Message)" -Level "ERROR"
+                if ($exportUser.PSObject.Properties['AssociatedDevices'] -and $exportUser.AssociatedDevices -is [array]) {
+                    $exportUser.AssociatedDevices = ($exportUser.AssociatedDevices | ForEach-Object {
+                        if ($_.PSObject.Properties['DisplayName']) { $_.DisplayName } else { $_.ToString() }
+                    }) -join ';'
+                }
+                if ($exportUser.PSObject.Properties['TeamMemberships'] -and $exportUser.TeamMemberships -is [array]) {
+                    $exportUser.TeamMemberships = ($exportUser.TeamMemberships | ForEach-Object {
+                        if ($_.PSObject.Properties['TeamName']) { $_.TeamName } else { $_.ToString() }
+                    }) -join ';'
+                }
+                if ($exportUser.PSObject.Properties['AssignedLicenses'] -and $exportUser.AssignedLicenses -is [array]) {
+                    $exportUser.AssignedLicenses = ($exportUser.AssignedLicenses | ForEach-Object {
+                        if ($_.PSObject.Properties['SkuPartNumber']) { $_.SkuPartNumber } else { $_.ToString() }
+                    }) -join ';'
+                }
+                if ($exportUser.PSObject.Properties['DirectReports'] -and $exportUser.DirectReports -is [array]) {
+                    $exportUser.DirectReports = $exportUser.DirectReports -join ';'
+                }
+                
+                # Remove system properties from merge
+                $propsToRemove = @('DataSources', 'MergeCount', 'LastModified')
+                foreach($propName in $propsToRemove){
+                    if($exportUser.PSObject.Properties.Name -contains $propName){
+                        $exportUser.PSObject.Properties.Remove($propName)
+                    }
+                }
+                $exportUser
             }
-        } else {
-            Write-MandALog "No data available for $($item.Key), skipping CSV export for this item." -Level "INFO"
+            
+            $exportUsers | Export-Csv -Path $userFile -NoTypeInformation -Encoding UTF8 -Force
+            & $LogSuccess "Exported Users.csv ($($ProcessedData.Users.Count) records)"
+            $exportStats.FilesExported++
+            $exportStats.RecordsExported += $ProcessedData.Users.Count
+            
+        } catch {
+            & $LogError "Failed to export Users.csv: $($_.Exception.Message)"
+            $exportStats.Errors++
+        }
+        
+        # Export UserProfiles.csv for downstream compatibility
+        try {
+            $profileFile = Join-Path $processedOutputPath "UserProfiles.csv"
+            $ProcessedData.Users | Select-Object UserPrincipalName, DisplayName, GivenName, Surname,
+                                    Department, Title,
+                                    @{N='Manager';E={if($_.PSObject.Properties['ManagerUPN']){$_.ManagerUPN}else{$_.Manager}}},
+                                    Enabled, Mail, HasExchangeMailbox, MailboxType, IsGuestUser,
+                                    DeviceCount, GroupCount, LicenseCount, TeamCount,
+                                    @{N='ComplexityScore';E={if($_.PSObject.Properties['ComplexityScore']){$_.ComplexityScore}else{0}}},
+                                    @{N='MigrationCategory';E={if($_.PSObject.Properties['MigrationCategory']){$_.MigrationCategory}else{'Not Assessed'}}},
+                                    @{N='ReadinessStatus';E={if($_.PSObject.Properties['ReadinessStatus']){$_.ReadinessStatus}else{'Not Assessed'}}} |
+                Export-Csv -Path $profileFile -NoTypeInformation -Encoding UTF8 -Force
+            & $LogSuccess "Exported UserProfiles.csv for downstream compatibility"
+            $exportStats.FilesExported++
+            
+        } catch {
+            & $LogError "Failed to export UserProfiles.csv: $($_.Exception.Message)"
+            $exportStats.Errors++
+        }
+    }
+    
+    # Export devices if available
+    if ($ProcessedData -and $ProcessedData.ContainsKey("Devices") -and $ProcessedData.Devices.Count -gt 0) {
+        try {
+            $deviceFile = Join-Path $processedOutputPath "Devices.csv"
+            $exportDevices = foreach ($device in $ProcessedData.Devices) {
+                $exportDevice = $device.PSObject.Copy()
+                # Remove system properties from merge
+                $propsToRemove = @('DataSources', 'MergeCount', 'LastModified')
+                foreach($propName in $propsToRemove){
+                    if($exportDevice.PSObject.Properties.Name -contains $propName){
+                        $exportDevice.PSObject.Properties.Remove($propName)
+                    }
+                }
+                $exportDevice
+            }
+            
+            $exportDevices | Export-Csv -Path $deviceFile -NoTypeInformation -Encoding UTF8 -Force
+            & $LogSuccess "Exported Devices.csv ($($ProcessedData.Devices.Count) records)"
+            $exportStats.FilesExported++
+            $exportStats.RecordsExported += $ProcessedData.Devices.Count
+            
+        } catch {
+            & $LogError "Failed to export Devices.csv: $($_.Exception.Message)"
+            $exportStats.Errors++
+        }
+    }
+    
+    # Export other data sources if available
+    if ($ProcessedData -and $ProcessedData.ContainsKey("DataSources")) {
+        $skipSources = @( # Already handled above or derived data
+            'ADUsers', 'ActiveDirectory_Users', 'AD_Users', 'GraphUsers', 'Graph_Users', 'AAD_Users', 'AzureAD_Users',
+            'ExchangeMailboxUsers', 'Exchange_MailboxUsers', 'ExchangeUsers', 'MailboxUsers',
+            'ADComputers', 'ActiveDirectory_Computers', 'AD_Computers', 'GraphDevices', 'Graph_Devices', 'AAD_Devices', 'AzureAD_Devices',
+            'IntuneDevices', 'Intune_Devices', 'MDM_Devices', 'UserProfiles'
+        )
+        
+        foreach ($sourceKey in $ProcessedData.DataSources.Keys) {
+            if ($sourceKey -notin $skipSources -and $ProcessedData.DataSources[$sourceKey] -and @($ProcessedData.DataSources[$sourceKey]).Count -gt 0) {
+                try {
+                    $fileName = "$sourceKey.csv"
+                    $filePath = Join-Path $processedOutputPath $fileName
+                    $sourceData = @($ProcessedData.DataSources[$sourceKey])
+                    
+                    $sourceData | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8 -Force
+                    & $LogSuccess "Exported $fileName ($($sourceData.Count) records)"
+                    $exportStats.FilesExported++
+                    $exportStats.RecordsExported += $sourceData.Count
+                    
+                } catch {
+                    & $LogError "Failed to export $sourceKey.csv: $($_.Exception.Message)"
+                    $exportStats.Errors++
+                }
+            }
+        }
+    }
+    
+    # Export aggregation summary if available
+    if ($ProcessedData -and $ProcessedData.ContainsKey("Stats")) {
+        try {
+            $summaryFile = Join-Path $processedOutputPath "AggregationSummary.json"
+            $summaryData = @{
+                Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                Statistics = $ProcessedData.Stats
+                UserCount = if($ProcessedData.Users){$ProcessedData.Users.Count}else{0}
+                DeviceCount = if($ProcessedData.Devices){$ProcessedData.Devices.Count}else{0}
+                DataSourcesProcessed = if($ProcessedData.DataSources){$ProcessedData.DataSources.Keys.Count}else{0}
+                ExportStats = $exportStats
+            }
+            $summaryData | ConvertTo-Json -Depth 5 | Set-Content -Path $summaryFile -Encoding UTF8
+            & $LogSuccess "Exported AggregationSummary.json"
+            $exportStats.FilesExported++
+            
+        } catch {
+            & $LogError "Failed to export AggregationSummary.json: $($_.Exception.Message)"
+            $exportStats.Errors++
         }
     }
 
-    Write-MandALog "CSV Export Process completed." -Level "SUCCESS"
-    # Typically, export functions don't return large data, their output is files.
-    # They might return a summary or status.
-    return @{ Status = "Completed"; FilesExported = $exportItems.FileName }
+    & $LogInfo "CSV Export Process completed: $($exportStats.FilesExported) files, $($exportStats.RecordsExported) total records"
+    if ($exportStats.Errors -gt 0) {
+        & $LogWarn "Export completed with $($exportStats.Errors) errors"
+    }
+    
+    return @{
+        Status = if ($exportStats.Errors -eq 0) { "Completed" } else { "Completed with errors" }
+        FilesExported = $exportStats.FilesExported
+        RecordsExported = $exportStats.RecordsExported
+        Errors = $exportStats.Errors
+    }
 }
 
 Export-ModuleMember -Function Export-ToCSV

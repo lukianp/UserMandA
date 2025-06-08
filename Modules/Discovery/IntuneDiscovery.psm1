@@ -11,8 +11,17 @@
 # DiscoveryResult class is defined globally by the Orchestrator using Add-Type
 # No local definition needed - the global C# class will be used
 
+# Import FileOperations module for Export-DataToCSV function
+if ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.Utilities) {
+    $fileOpsPath = Join-Path $global:MandA.Paths.Utilities "FileOperations.psm1"
+    if (Test-Path $fileOpsPath) {
+        Import-Module $fileOpsPath -Force -Global -ErrorAction SilentlyContinue
+    }
+}
+
 <#
 .SYNOPSIS
+    Enhanced Intune Discovery Module for M&A Discovery Suite
 
 # Module-scope context variable
 $script:ModuleContext = $null
@@ -28,7 +37,6 @@ function Get-ModuleContext {
     }
     return $script:ModuleContext
 }
-    Enhanced Intune Discovery Module for M&A Discovery Suite
 .DESCRIPTION
     Discovers Intune managed devices, configurations, policies, apps, and user associations
 .NOTES

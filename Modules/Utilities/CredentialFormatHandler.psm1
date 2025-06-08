@@ -13,13 +13,42 @@ function Read-CredentialFile {
     }
     
     try {
-        $encryptedData = Get-Content $Path -Raw
-        $secureData = ConvertTo-SecureString $encryptedData -ErrorAction Stop
-        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureData)
-        $jsonData = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-        return ($jsonData | ConvertFrom-Json)
+        $fileContent = Get-Content $Path -Raw -Encoding UTF8
+        if ([string]::IsNullOrWhiteSpace($fileContent)) {
+            throw "Credential file is empty or corrupted"
+        }
+        
+        # Check if it's a plain JSON file (starts with '{' or '[')
+        if ($fileContent.Trim().StartsWith('{') -or $fileContent.Trim().StartsWith('[')) {
+            # Plain JSON file
+            $credentialObject = $fileContent | ConvertFrom-Json
+            if (-not $credentialObject) {
+                throw "Failed to parse credential data as JSON"
+            }
+            return $credentialObject
+        } else {
+            # Encrypted file - try to decrypt
+            $secureData = ConvertTo-SecureString $fileContent -ErrorAction Stop
+            $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureData)
+            $jsonData = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+            
+            if ([string]::IsNullOrWhiteSpace($jsonData)) {
+                throw "Decrypted data is empty - credential file may be corrupted"
+            }
+            
+            $credentialObject = $jsonData | ConvertFrom-Json
+            if (-not $credentialObject) {
+                throw "Failed to parse credential data as JSON"
+            }
+            
+            return $credentialObject
+        }
+    } catch [System.Security.Cryptography.CryptographicException] {
+        throw "Failed to decrypt credential file - it may have been created by a different user or on a different machine: $($_.Exception.Message)"
+    } catch [System.ArgumentException] {
+        throw "Invalid credential file format: $($_.Exception.Message)"
     } catch {
-        throw "Failed to read credential file: $_"
+        throw "Failed to read credential file: $($_.Exception.Message)"
     } finally {
         if ($bstr) {
             [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
@@ -65,5 +94,4 @@ function Save-CredentialFile {
     }
 }
 
-Export-ModuleMember -Function Read-CredentialFile, Save-CredentialFile
 Export-ModuleMember -Function Read-CredentialFile, Save-CredentialFile

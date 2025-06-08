@@ -209,19 +209,6 @@ function Initialize-MandAAuthentication {
                 $authResult.Method = "ClientSecret"
             }
             
-            "Certificate" {
-                if (-not $credentials.ClientId -or -not $credentials.TenantId) {
-                    throw "Certificate authentication requires ClientId and TenantId"
-                }
-                
-                $certThumbprint = $workingConfig.authentication.certificateThumbprint
-                if ([string]::IsNullOrWhiteSpace($certThumbprint)) {
-                    throw "Certificate authentication requires certificateThumbprint in configuration"
-                }
-                
-                Write-Verbose "[Initialize-MandAAuthentication] Certificate thumbprint: $certThumbprint"
-                $authResult.Method = "Certificate"
-            }
             
             "Interactive" {
                 Write-Verbose "[Initialize-MandAAuthentication] Interactive authentication selected"
@@ -247,7 +234,6 @@ function Initialize-MandAAuthentication {
             ClientId = $credentials.ClientId
             TenantId = $credentials.TenantId
             ClientSecret = $credentials.ClientSecret
-            CertificateThumbprint = if ($authMethod -eq "Certificate") { $workingConfig.authentication.certificateThumbprint } else { $null }
             AuthenticationMethod = $authMethod
             TokenExpiry = (Get-Date).AddMinutes(60)  # Default 60 minutes, will be updated by actual token
             LastRefresh = Get-Date
@@ -364,24 +350,6 @@ function Test-CredentialValidity {
                 Write-Verbose "[Test-CredentialValidity] ClientSecret present"
             }
             
-            "Certificate" {
-                $thumbprint = $Configuration.authentication.certificateThumbprint
-                if ([string]::IsNullOrWhiteSpace($thumbprint)) {
-                    throw "Certificate thumbprint not found in configuration"
-                }
-                
-                # Try to find certificate
-                $cert = Get-ChildItem -Path "Cert:\CurrentUser\My\$thumbprint" -ErrorAction SilentlyContinue
-                if (-not $cert) {
-                    $cert = Get-ChildItem -Path "Cert:\LocalMachine\My\$thumbprint" -ErrorAction SilentlyContinue
-                }
-                
-                if (-not $cert) {
-                    throw "Certificate with thumbprint $thumbprint not found in certificate store"
-                }
-                
-                Write-Verbose "[Test-CredentialValidity] Certificate found: $($cert.Subject)"
-            }
         }
         
         Write-Verbose "[Test-CredentialValidity] Credential validation passed"

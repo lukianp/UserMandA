@@ -28,9 +28,14 @@
 #Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Users, Microsoft.Graph.Groups 
 # Add other Microsoft.Graph.* modules as needed by specific internal functions
 
-# --- Helper Functions (Assumed to be available globally) ---
-# Export-DataToCSV
-# Write-MandALog
+# --- Helper Functions (Load required modules) ---
+# Import FileOperations module for Export-DataToCSV function
+if ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.Utilities) {
+    $fileOpsPath = Join-Path $global:MandA.Paths.Utilities "FileOperations.psm1"
+    if (Test-Path $fileOpsPath) {
+        Import-Module $fileOpsPath -Force -Global -ErrorAction SilentlyContinue
+    }
+}
 
 # Module-scope context variable
 $script:ModuleContext = $null
