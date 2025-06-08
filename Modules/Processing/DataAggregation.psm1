@@ -936,7 +936,7 @@ function Start-DataAggregation {
         $missingPaths = @()
         
         foreach ($pathName in $requiredPaths) {
-            if (-not ((Get-ModuleContext).Paths.PSObject.Properties.Name -contains $pathName)) {
+            if (-not ($Context.Paths.PSObject.Properties.Name -contains $pathName)) {
                 $missingPaths += $pathName
             } elseif ([string]::IsNullOrWhiteSpace($Context.Paths.$pathName)) {
                 $missingPaths += "$pathName (empty)"
@@ -948,8 +948,8 @@ function Start-DataAggregation {
         }
         
         # Validate paths exist
-        $rawDataPath = (Get-ModuleContext).Paths.RawDataOutput
-        $processedDataPath = (Get-ModuleContext).Paths.ProcessedDataOutput
+        $rawDataPath = $Context.Paths.RawDataOutput
+        $processedDataPath = $Context.Paths.ProcessedDataOutput
         
         if (-not (Test-Path $rawDataPath -PathType Container)) {
             throw "Raw data path does not exist: $rawDataPath"

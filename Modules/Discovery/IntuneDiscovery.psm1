@@ -15,7 +15,15 @@
 if ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.Utilities) {
     $fileOpsPath = Join-Path $global:MandA.Paths.Utilities "FileOperations.psm1"
     if (Test-Path $fileOpsPath) {
-        Import-Module $fileOpsPath -Force -Global -ErrorAction SilentlyContinue
+        try {
+            Import-Module $fileOpsPath -Force -Global -ErrorAction Stop
+            Write-Verbose "FileOperations module imported successfully"
+        }
+        catch {
+            Write-Warning "Failed to import FileOperations module: $_"
+        }
+    } else {
+        Write-Warning "FileOperations module not found at: $fileOpsPath"
     }
 }
 
@@ -85,7 +93,7 @@ function Test-IntuneDiscoveryPrerequisites {
     
     try {
         # Check if Microsoft Graph PowerShell modules are available
-        $requiredModules = @('Microsoft.Graph.Authentication', 'Microsoft.Graph.DeviceManagement')
+        $requiredModules = @('Microsoft.Graph.Authentication', 'Microsoft.Graph.DeviceManagement', 'Microsoft.Graph.Beta.DeviceManagement')
         foreach ($module in $requiredModules) {
             if (-not (Get-Module -Name $module -ListAvailable)) {
                 $Result.AddError("$module PowerShell module is not available", $null, @{
@@ -294,7 +302,14 @@ function Get-IntuneDeviceSoftwareInternal {
     $useBeta = $false
     if ($Configuration.graphAPI -and $Configuration.graphAPI.useBetaEndpoint) {
         $useBeta = $true
-        Select-MgProfile -Name "beta"
+        try {
+            Select-MgProfile -Name "beta" -ErrorAction Stop
+            Write-MandALog "Switched to Microsoft Graph Beta profile for enhanced software detection" -Level "DEBUG"
+        }
+        catch {
+            Write-MandALog "Failed to switch to Beta profile, using v1.0: $_" -Level "WARN"
+            $useBeta = $false
+        }
     }
 
     $totalDevices = $ManagedDevices.Count
@@ -776,8 +791,15 @@ function Invoke-IntuneDiscovery {
         # Clean up Graph connections if needed
         try {
             # Reset Graph profile to default if we changed it
-            if (Get-MgContext -ErrorAction SilentlyContinue) {
-                Select-MgProfile -Name "v1.0" -ErrorAction SilentlyContinue
+            $currentContext = Get-MgContext -ErrorAction SilentlyContinue
+            if ($currentContext) {
+                try {
+                    Select-MgProfile -Name "v1.0" -ErrorAction Stop
+                    Write-MandALog "Reset Graph profile to v1.0" -Level "DEBUG" -Context $Context
+                }
+                catch {
+                    Write-MandALog "Could not reset Graph profile (non-critical): $_" -Level "DEBUG" -Context $Context
+                }
             }
         }
         catch {

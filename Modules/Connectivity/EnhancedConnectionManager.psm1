@@ -232,7 +232,24 @@ function Connect-ToExchangeOnline {
         $AuthContext
     )
     
-    return Connect-MandAExchangeEnhanced -AuthContext $AuthContext -Configuration $Configuration
+    # Exchange data is now accessed via Graph API - no separate connection needed
+    # Just verify Graph connection is working
+    try {
+        Write-MandALog "Exchange Online: Using Graph API (no separate connection required)" -Level "SUCCESS"
+        
+        # Test Graph connection for Exchange data
+        if (Get-Command Get-MgUser -ErrorAction SilentlyContinue) {
+            $testUser = Get-MgUser -Top 1 -ErrorAction Stop
+            Write-MandALog "[OK] Graph API available for Exchange data" -Level "SUCCESS"
+            return $true
+        } else {
+            Write-MandALog "ERROR: Graph API not available for Exchange data" -Level "ERROR"
+            return $false
+        }
+    } catch {
+        Write-MandALog "ERROR: Graph API test failed for Exchange: $($_.Exception.Message)" -Level "ERROR"
+        return $false
+    }
 }
 
 function Connect-ToSharePointOnline {
@@ -245,30 +262,24 @@ function Connect-ToSharePointOnline {
         $AuthContext
     )
     
+    # SharePoint data is now accessed via Graph API - no separate connection needed
+    # Just verify Graph connection is working for SharePoint endpoints
     try {
-        Write-MandALog "Starting SharePoint Online connection process..." -Level "PROGRESS"
+        Write-MandALog "SharePoint Online: Using Graph API (no separate connection required)" -Level "SUCCESS"
         
-        # Try ClientSecret authentication first (like Graph), fallback to certificate if available
-        $certificateThumbprint = $Configuration.authentication.certificateThumbprint
-        
-        # Import SharePoint module
-        try {
-            Import-Module Microsoft.Online.SharePoint.PowerShell -Force -ErrorAction Stop
-            Write-MandALog "  - Loaded: Microsoft.Online.SharePoint.PowerShell" -Level "DEBUG"
-        } catch {
-            Write-MandALog "  - WARNING: Could not load SharePoint module: $($_.Exception.Message)" -Level "WARN"
+        # Test Graph connection for SharePoint data
+        if (Get-Command Get-MgSite -ErrorAction SilentlyContinue) {
+            # Test with root site
+            $rootSite = Get-MgSite -SiteId "root" -ErrorAction Stop
+            Write-MandALog "[OK] Graph API available for SharePoint data" -Level "SUCCESS"
+            Write-MandALog "  - Root site: $($rootSite.DisplayName)" -Level "INFO"
+            return $true
+        } else {
+            Write-MandALog "ERROR: Graph API not available for SharePoint data" -Level "ERROR"
             return $false
         }
-        
-        # Connect to SharePoint
-        $spoUrl = "https://$($AuthContext.TenantId)-admin.sharepoint.com"
-        Connect-SPOService -Url $spoUrl -ClientId $AuthContext.ClientId -CertificateThumbprint $certificateThumbprint
-        
-        Write-MandALog "[OK] Successfully connected to SharePoint Online" -Level "SUCCESS"
-        return $true
-        
     } catch {
-        Write-MandALog "ERROR: SharePoint Online connection failed: $($_.Exception.Message)" -Level "ERROR"
+        Write-MandALog "ERROR: Graph API test failed for SharePoint: $($_.Exception.Message)" -Level "ERROR"
         return $false
     }
 }
@@ -283,29 +294,26 @@ function Connect-ToTeams {
         $AuthContext
     )
     
+    # Teams data is now accessed via Graph API - no separate connection needed
+    # Just verify Graph connection is working for Teams endpoints
     try {
-        Write-MandALog "Starting Microsoft Teams connection process..." -Level "PROGRESS"
+        Write-MandALog "Microsoft Teams: Using Graph API (no separate connection required)" -Level "SUCCESS"
         
-        # Try ClientSecret authentication first (like Graph), fallback to certificate if available
-        $certificateThumbprint = $Configuration.authentication.certificateThumbprint
-        
-        # Import Teams module
-        try {
-            Import-Module MicrosoftTeams -Force -ErrorAction Stop
-            Write-MandALog "  - Loaded: MicrosoftTeams" -Level "DEBUG"
-        } catch {
-            Write-MandALog "  - WARNING: Could not load Teams module: $($_.Exception.Message)" -Level "WARN"
+        # Test Graph connection for Teams data
+        if (Get-Command Get-MgTeam -ErrorAction SilentlyContinue) {
+            # Test with a simple teams query (limit to 1 to avoid large results)
+            $teams = Get-MgTeam -Top 1 -ErrorAction Stop
+            Write-MandALog "[OK] Graph API available for Teams data" -Level "SUCCESS"
+            if ($teams) {
+                Write-MandALog "  - Found Teams data available" -Level "INFO"
+            }
+            return $true
+        } else {
+            Write-MandALog "ERROR: Graph API not available for Teams data" -Level "ERROR"
             return $false
         }
-        
-        # Connect to Teams
-        Connect-MicrosoftTeams -ApplicationId $AuthContext.ClientId -CertificateThumbprint $certificateThumbprint -TenantId $AuthContext.TenantId
-        
-        Write-MandALog "[OK] Successfully connected to Microsoft Teams" -Level "SUCCESS"
-        return $true
-        
     } catch {
-        Write-MandALog "ERROR: Microsoft Teams connection failed: $($_.Exception.Message)" -Level "ERROR"
+        Write-MandALog "ERROR: Graph API test failed for Teams: $($_.Exception.Message)" -Level "ERROR"
         return $false
     }
 }
@@ -601,118 +609,7 @@ function Connect-MandAAzureEnhanced {
     }
 }
 
-function Connect-MandAExchangeEnhanced {
-    param(
-        [hashtable]$AuthContext,
-        [hashtable]$Configuration
-    )
-    
-    try {
-        Write-MandALog "Starting Exchange Online connection process..." -Level "PROGRESS"
-        
-        # Debug logging
-        Write-MandALog "DEBUG: Connect-MandAExchangeEnhanced called" -Level "DEBUG"
-        Write-MandALog "  - AuthContext present: $($null -ne $AuthContext)" -Level "DEBUG"
-        
-        # Validate auth context
-        if (-not $AuthContext -or -not $AuthContext.ClientId -or -not $AuthContext.TenantId) {
-            Write-MandALog "ERROR: Invalid or incomplete authentication context for Exchange" -Level "ERROR"
-            $script:ConnectionStatus.ExchangeOnline.LastError = "Missing required authentication properties"
-            return $false
-        }
-        
-        Write-MandALog "DEBUG: Loading Exchange Online module..." -Level "DEBUG"
-        
-        # Import module
-        try {
-            Import-Module ExchangeOnlineManagement -Force -ErrorAction Stop
-            Write-MandALog "  - Loaded: ExchangeOnlineManagement" -Level "DEBUG"
-        } catch {
-            Write-MandALog "  - WARNING: Could not load ExchangeOnlineManagement: $($_.Exception.Message)" -Level "WARN"
-            $script:ConnectionStatus.ExchangeOnline.LastError = "ExchangeOnlineManagement module not available"
-            return $false
-        }
-        
-        $maxRetries = $Configuration.environment.maxRetries
-        
-        for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
-            try {
-                Write-MandALog "Exchange connection attempt $attempt of $maxRetries..." -Level "PROGRESS"
-                
-                # Check if we have a certificate thumbprint for app-only auth
-                $certificateThumbprint = $Configuration.authentication.certificateThumbprint
-                
-                if ($certificateThumbprint) {
-                    Write-MandALog "DEBUG: Certificate thumbprint found, attempting app-only authentication" -Level "INFO"
-                    Write-MandALog "  - Certificate: $certificateThumbprint" -Level "DEBUG"
-                    Write-MandALog "  - AppId: $($AuthContext.ClientId)" -Level "DEBUG"
-                    Write-MandALog "  - Organization: $($AuthContext.TenantId).onmicrosoft.com" -Level "DEBUG"
-                    
-                    $connectParams = @{
-                        AppId = $AuthContext.ClientId
-                        CertificateThumbprint = $certificateThumbprint
-                        Organization = "$($AuthContext.TenantId).onmicrosoft.com"
-                        ShowBanner = $false
-                        ErrorAction = "Stop"
-                    }
-                    
-                    Connect-ExchangeOnline @connectParams
-                    $script:ConnectionStatus.ExchangeOnline.Method = "Certificate (App-Only)"
-                    
-                } else {
-                    Write-MandALog "INFO: No certificate thumbprint configured, attempting ClientSecret authentication..." -Level "INFO"
-                    
-                    # Try delegated auth as fallback
-                    $connectParams = @{
-                        UserPrincipalName = $null  # Will prompt
-                        ShowBanner = $false
-                        ErrorAction = "Stop"
-                    }
-                    
-                    Connect-ExchangeOnline @connectParams
-                    $script:ConnectionStatus.ExchangeOnline.Method = "Delegated (Interactive)"
-                }
-                
-                # Test connection
-                Write-MandALog "DEBUG: Testing Exchange connection..." -Level "DEBUG"
-                $mailbox = Get-Mailbox -ResultSize 1 -ErrorAction Stop
-                
-                Write-MandALog "[OK] Successfully connected to Exchange Online" -Level "SUCCESS"
-                Write-MandALog "  - Connection method: $($script:ConnectionStatus.ExchangeOnline.Method)" -Level "INFO"
-                
-                $script:ConnectionStatus.ExchangeOnline.Connected = $true
-                $script:ConnectionStatus.ExchangeOnline.LastError = $null
-                $script:ConnectionStatus.ExchangeOnline.ConnectedTime = Get-Date
-                
-                return $true
-                
-            } catch {
-                $errorMessage = $_.Exception.Message
-                Write-MandALog "ERROR: Exchange connection attempt $attempt failed: $errorMessage" -Level "ERROR"
-                Write-MandALog "DEBUG: Full error: $($_.Exception.ToString())" -Level "DEBUG"
-                $script:ConnectionStatus.ExchangeOnline.LastError = $errorMessage
-                
-                if ($attempt -lt $maxRetries) {
-                    Write-MandALog "Retrying in 5 seconds..." -Level "INFO"
-                    Start-Sleep -Seconds 5
-                }
-            }
-        }
-        
-        Write-MandALog "ERROR: Failed to establish Exchange Online connection" -Level "ERROR"
-        Write-MandALog "NOTE: Exchange Online requires certificate-based authentication for app-only access" -Level "INFO"
-        Write-MandALog "To enable Exchange discovery, configure a certificate in the authentication settings" -Level "INFO"
-        $script:ConnectionStatus.ExchangeOnline.Connected = $false
-        return $false
-        
-    } catch {
-        Write-MandALog "CRITICAL ERROR in Connect-MandAExchangeEnhanced: $($_.Exception.Message)" -Level "ERROR"
-        Write-MandALog "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG"
-        $script:ConnectionStatus.ExchangeOnline.Connected = $false
-        $script:ConnectionStatus.ExchangeOnline.LastError = $_.Exception.Message
-        return $false
-    }
-}
+# Exchange connection is now handled via Graph API - no separate connection function needed
 
 function Connect-MandAActiveDirectory {
     param([hashtable]$Configuration)
@@ -1225,7 +1122,7 @@ Export-ModuleMember -Function @(
     'Connect-ToAzure',
     'Connect-MandAGraphEnhanced',
     'Connect-MandAAzureEnhanced',
-    'Connect-MandAExchangeEnhanced',
+    
     'Connect-MandAActiveDirectory',
     'Get-ConnectionStatus',
     'Disconnect-AllServices',

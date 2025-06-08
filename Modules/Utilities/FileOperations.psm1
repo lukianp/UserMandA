@@ -159,7 +159,6 @@ function Export-DataToCSV {
         Write-MandALog -Message "Exporting $($Data.Count) records to CSV: '$FilePath' (Append: $($Append.IsPresent))." -Level "DEBUG" -Component "FileOps" -Context $Context
         
         $exportParams = @{
-            InputObject = $Data
             Path = $FilePath
             Delimiter = $Delimiter
             Encoding = "UTF8" # Standardize on UTF8 for export
@@ -168,7 +167,8 @@ function Export-DataToCSV {
         if ($NoTypeInformation) { $exportParams.NoTypeInformation = $true }
         if ($Append) { $exportParams.Append = $true }
 
-        Export-Csv @exportParams
+        # Use pipeline to properly handle array of objects
+        $Data | Export-Csv @exportParams
         
         Write-MandALog -Message "Successfully exported data to '$FilePath'." -Level "SUCCESS" -Component "FileOps" -Context $Context
         return $true

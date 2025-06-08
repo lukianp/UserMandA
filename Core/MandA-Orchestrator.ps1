@@ -264,6 +264,138 @@ function Add-OrchestratorError {
     }
 }
 
+function Test-ModuleCompletionStatus {
+    <#
+    .SYNOPSIS
+        Tests whether a discovery module should run based on its completion status and data validity
+    .DESCRIPTION
+        Implements smart Force logic by checking if a module has already completed successfully
+        with valid data. Returns whether the module should run and the reason.
+    .PARAMETER ModuleName
+        The name of the discovery module to check
+    .PARAMETER Context
+        The global M&A context containing paths and configuration
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$ModuleName,
+        
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context
+    )
+    
+    $result = @{
+        ShouldRun = $true
+        Reason = "Module not yet executed"
+        CompletionStatus = "NotStarted"
+        DataFiles = @()
+        RecordCount = 0
+    }
+    
+    try {
+        # Define expected output files for each module
+        $moduleFileMapping = @{
+            "ActiveDirectory" = @("ADUsers.csv", "ADGroups.csv", "ADGroupMembers.csv", "ADComputers.csv", "ADOUs.csv", "ADSites.csv", "ADSiteLinks.csv", "ADSubnets.csv")
+            "Graph" = @("GraphUsers.csv", "GraphGroups.csv")
+            "Azure" = @("AzureSubscriptions.csv", "AzureResources.csv")
+            "Intune" = @("IntuneManagedDevices.csv", "IntuneDeviceConfigurations.csv", "IntuneCompliancePolicies.csv", "IntuneManagedApps.csv", "IntuneAppProtectionPolicies.csv", "IntuneEnrollmentRestrictions.csv")
+            "Exchange" = @("ExchangeMailboxes.csv", "ExchangeDistributionGroups.csv")
+            "SharePoint" = @("SharePointSites.csv", "SharePointLists.csv")
+            "Teams" = @("TeamsTeams.csv", "TeamsChannels.csv", "TeamsUsers.csv")
+            "GPO" = @("GPODriveMappings.csv", "GPOFolderRedirections.csv", "GPOLogonScripts.csv")
+            "SQLServer" = @("SQLInstances.csv", "SQLDatabases.csv", "SQLLogins.csv")
+            "FileServer" = @("FileShares.csv", "FilePermissions.csv")
+            "Licensing" = @("LicenseAssignments.csv", "LicenseUsage.csv")
+            "EnvironmentDetection" = @("EnvironmentSummary.csv")
+            "ExternalIdentity" = @("ExternalUsers.csv", "ExternalGroups.csv")
+            "NetworkInfrastructure" = @("NetworkDevices.csv", "NetworkConfiguration.csv")
+        }
+        
+        $expectedFiles = $moduleFileMapping[$ModuleName]
+        if (-not $expectedFiles) {
+            Write-OrchestratorLog -Message "No file mapping found for module: $ModuleName" -Level "WARN"
+            return $result
+        }
+        
+        $rawDataPath = $Context.Paths.RawDataOutput
+        $existingFiles = @()
+        $totalRecords = 0
+        $validFiles = 0
+        
+        # Check each expected file
+        foreach ($fileName in $expectedFiles) {
+            $filePath = Join-Path $rawDataPath $fileName
+            
+            if (Test-Path $filePath) {
+                $fileInfo = Get-Item $filePath
+                $existingFiles += $fileName
+                
+                # Check if file has meaningful content (more than just headers)
+                if ($fileInfo.Length -gt 100) {  # Minimum size threshold
+                    try {
+                        # Try to count records in CSV
+                        $csvContent = Import-Csv $filePath -ErrorAction Stop
+                        $recordCount = $csvContent.Count
+                        $totalRecords += $recordCount
+                        
+                        if ($recordCount -gt 0) {
+                            $validFiles++
+                            Write-OrchestratorLog -Message "Valid file found: $fileName ($recordCount records)" -Level "DEBUG" -DebugOnly
+                        } else {
+                            Write-OrchestratorLog -Message "Empty file found: $fileName" -Level "DEBUG" -DebugOnly
+                        }
+                    } catch {
+                        Write-OrchestratorLog -Message "Invalid CSV file: $fileName - $_" -Level "DEBUG" -DebugOnly
+                    }
+                } else {
+                    Write-OrchestratorLog -Message "File too small: $fileName ($($fileInfo.Length) bytes)" -Level "DEBUG" -DebugOnly
+                }
+            }
+        }
+        
+        $result.DataFiles = $existingFiles
+        $result.RecordCount = $totalRecords
+        
+        # Determine completion status
+        $completionPercentage = if ($expectedFiles.Count -gt 0) {
+            ($validFiles / $expectedFiles.Count) * 100
+        } else { 0 }
+        
+        if ($validFiles -eq $expectedFiles.Count -and $totalRecords -gt 0) {
+            $result.CompletionStatus = "Complete"
+            $result.ShouldRun = $false
+            $result.Reason = "Module completed successfully with $totalRecords records across $validFiles files"
+        } elseif ($validFiles -gt 0) {
+            $result.CompletionStatus = "Partial"
+            $result.ShouldRun = $true
+            $result.Reason = "Module partially complete ($validFiles/$($expectedFiles.Count) files, $totalRecords records) - will re-run"
+        } else {
+            $result.CompletionStatus = "NotStarted"
+            $result.ShouldRun = $true
+            $result.Reason = "No valid data files found - will run"
+        }
+        
+        # Special handling for modules that are currently running
+        $activeFiles = Get-ChildItem -Path $rawDataPath -Filter "*.csv" | Where-Object {
+            $_.Name -in $expectedFiles -and $_.Length -lt 1000 -and
+            (Get-Date) - $_.LastWriteTime -lt [TimeSpan]::FromMinutes(5)
+        }
+        
+        if ($activeFiles.Count -gt 0) {
+            $result.CompletionStatus = "Running"
+            $result.ShouldRun = $false
+            $result.Reason = "Module currently running (active files detected)"
+        }
+        
+    } catch {
+        Write-OrchestratorLog -Message "Error checking module completion status for $ModuleName`: $_" -Level "WARN"
+        $result.ShouldRun = $true
+        $result.Reason = "Error checking status - will run to be safe"
+    }
+    
+    return $result
+}
+
 function Test-OrchestratorPrerequisites {
     Write-OrchestratorLog -Message "Validating orchestrator prerequisites..." -Level "INFO"
     Write-OrchestratorLog -Message "Checking PowerShell version..." -Level "DEBUG" -DebugOnly
@@ -836,6 +968,29 @@ function Invoke-DiscoveryPhase {
         # Filter to string sources only
         $validSources = @($enabledSources | Where-Object { $_ -is [string] })
         Write-OrchestratorLog -Message "Valid discovery sources: $($validSources.Count) of $($enabledSources.Count)" -Level "INFO"
+        
+        # Apply smart completion checking - ALWAYS check module completion status
+        # This prevents rerunning modules that have already completed successfully
+        Write-OrchestratorLog -Message "Smart completion checking: Analyzing module completion status..." -Level "INFO"
+        $sourcesToRun = @()
+        
+        foreach ($source in $validSources) {
+            $moduleStatus = Test-ModuleCompletionStatus -ModuleName $source -Context $global:MandA
+            
+            # Override completion check if Force mode is explicitly enabled
+            if ($Force -and $global:MandA.Config.discovery.forceMode) {
+                Write-OrchestratorLog -Message "Force mode: Will run $source regardless of completion status" -Level "WARN"
+                $sourcesToRun += $source
+            } elseif ($moduleStatus.ShouldRun) {
+                $sourcesToRun += $source
+                Write-OrchestratorLog -Message "Will run $source`: $($moduleStatus.Reason)" -Level "INFO"
+            } else {
+                Write-OrchestratorLog -Message "Skipping $source`: $($moduleStatus.Reason)" -Level "SUCCESS"
+            }
+        }
+        
+        $validSources = $sourcesToRun
+        Write-OrchestratorLog -Message "Completion check filtered sources: $($validSources.Count) modules to run" -Level "INFO"
         
         foreach ($source in $validSources) {
             Write-OrchestratorLog -Message "Executing $source discovery..." -Level "INFO"
@@ -1771,10 +1926,16 @@ try {
         }
     }
     
-    # Apply command-line overrides
+    # Apply command-line overrides with smart Force logic
     if ($Force) {
-        $global:MandA.Config.discovery.skipExistingFiles = $false
-        Write-OrchestratorLog -Message "Force mode enabled - will overwrite existing files" -Level "INFO"
+        # Instead of blindly overwriting all files, implement smart Force logic
+        # Force mode should only re-run modules that failed or have incomplete data
+        Write-OrchestratorLog -Message "Force mode enabled - will re-run failed modules and skip completed ones" -Level "INFO"
+        
+        # Don't globally disable skipExistingFiles - let individual modules decide
+        # based on their completion status and data validity
+        $global:MandA.Config.discovery.forceMode = $true
+        $global:MandA.Config.discovery.smartForce = $true
     }
     
     # Handle AzureOnly mode
