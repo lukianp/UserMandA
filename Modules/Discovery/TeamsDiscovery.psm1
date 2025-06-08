@@ -138,13 +138,56 @@ function Get-TeamsWithErrorHandling {
         $Context
     )
     
+    # Validate parameters
+    if (-not $Configuration) {
+        throw "Configuration parameter is missing"
+    }
+    
+    if (-not $Context) {
+        throw "Context parameter is missing"
+    }
+    
     $teams = [System.Collections.ArrayList]::new()
     $retryCount = 0
     $maxRetries = 3
     
+    # Check if we have cached teams data
+    if ($global:TeamsCache.Teams -and $global:TeamsCache.LastUpdated -and
+        ((Get-Date) - $global:TeamsCache.LastUpdated).TotalMinutes -lt 30) {
+        Write-MandALog "Using cached Teams data (updated $($global:TeamsCache.LastUpdated))" -Level "INFO" -Context $Context
+        return $global:TeamsCache.Teams
+    }
+    
     while ($retryCount -lt $maxRetries) {
         try {
-            Write-MandALog "Retrieving all Teams via Graph API..." -Level "INFO" -Context $Context
+            Write-MandALog "Retrieving all Teams via Graph API (attempt $($retryCount + 1)/$maxRetries)..." -Level "INFO" -Context $Context
+            
+            # Validate Graph API permissions first
+            try {
+                $mgContext = Get-MgContext -ErrorAction Stop
+                if (-not $mgContext) {
+                    throw "Not connected to Microsoft Graph"
+                }
+                
+                # Check required permissions
+                $requiredScopes = @('Team.ReadBasic.All', 'Group.Read.All', 'TeamMember.Read.All')
+                $currentScopes = $mgContext.Scopes
+                $missingScopes = @()
+                
+                foreach ($scope in $requiredScopes) {
+                    if ($scope -notin $currentScopes) {
+                        $missingScopes += $scope
+                    }
+                }
+                
+                if ($missingScopes.Count -gt 0) {
+                    Write-MandALog "Missing required Graph API scopes: $($missingScopes -join ', ')" -Level "WARN" -Context $Context
+                    Write-MandALog "Current scopes: $($currentScopes -join ', ')" -Level "DEBUG" -Context $Context
+                }
+                
+            } catch {
+                throw "Graph API validation failed: $($_.Exception.Message)"
+            }
             
             # Use Graph API instead of legacy Teams cmdlets
             $allTeams = Get-MgTeam -All -ErrorAction Stop
@@ -176,17 +219,35 @@ function Get-TeamsWithErrorHandling {
                 }
             }
             
+            # Cache the results for efficiency
+            $global:TeamsCache.Teams = $teams.ToArray()
+            $global:TeamsCache.LastUpdated = Get-Date
+            
+            Write-MandALog "Teams data cached for future use" -Level "DEBUG" -Context $Context
+            
             # Success - exit retry loop
             break
         }
         catch {
             $retryCount++
             if ($retryCount -ge $maxRetries) {
-                throw "Failed to retrieve Teams after $maxRetries attempts: $_"
+                $errorMsg = "Failed to retrieve Teams after $maxRetries attempts: $($_.Exception.Message)"
+                Write-MandALog $errorMsg -Level "ERROR" -Context $Context
+                
+                # Check if this is a permissions issue
+                if ($_.Exception.Message -like "*Forbidden*" -or $_.Exception.Message -like "*Unauthorized*") {
+                    Write-MandALog "This appears to be a permissions issue. Ensure the following Graph API permissions are granted:" -Level "ERROR" -Context $Context
+                    Write-MandALog "  - Team.ReadBasic.All" -Level "ERROR" -Context $Context
+                    Write-MandALog "  - Group.Read.All" -Level "ERROR" -Context $Context
+                    Write-MandALog "  - TeamMember.Read.All" -Level "ERROR" -Context $Context
+                }
+                
+                throw $errorMsg
             }
             
             $waitTime = [Math]::Pow(2, $retryCount) * 2  # Exponential backoff
-            Write-MandALog "Teams query failed (attempt $retryCount/$maxRetries). Waiting $waitTime seconds..." -Level "WARN" -Context $Context
+            Write-MandALog "Teams query failed (attempt $retryCount/$maxRetries): $($_.Exception.Message)" -Level "WARN" -Context $Context
+            Write-MandALog "Waiting $waitTime seconds before retry..." -Level "INFO" -Context $Context
             Start-Sleep -Seconds $waitTime
         }
     }
@@ -277,6 +338,24 @@ function Invoke-TeamsDiscovery {
         $Context
     )
     
+    # Enhanced parameter validation
+    if (-not $Configuration) {
+        throw "Configuration parameter is null or missing"
+    }
+    
+    if (-not $Context) {
+        throw "Context parameter is null or missing"
+    }
+    
+    # Validate critical Context.Paths properties
+    if (-not $Context.Paths) {
+        throw "Context.Paths is null or missing"
+    }
+    
+    if (-not $Context.Paths.RawDataOutput) {
+        throw "Context.Paths.RawDataOutput is null or missing"
+    }
+    
     # Initialize result object
     $result = [DiscoveryResult]::new('Teams')
     
@@ -284,19 +363,17 @@ function Invoke-TeamsDiscovery {
     $originalErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Stop'
     
+    # Cache Teams connection globally for efficiency
+    if (-not $global:TeamsCache) {
+        $global:TeamsCache = @{}
+    }
+    
     try {
-        # Create minimal context if not provided
-        if (-not $Context) {
-            $Context = @{
-                ErrorCollector = [PSCustomObject]@{
-                    AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
-                    AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
-                }
-                Paths = @{
-                    RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
-                }
-            }
-        }
+        # Log parameter validation success
+        Write-MandALog "Parameter validation successful for Teams discovery" -Level "INFO" -Context $Context
+        Write-MandALog "Configuration type: $($Configuration.GetType().Name)" -Level "DEBUG" -Context $Context
+        Write-MandALog "Context type: $($Context.GetType().Name)" -Level "DEBUG" -Context $Context
+        Write-MandALog "RawDataOutput: $($Context.Paths.RawDataOutput)" -Level "DEBUG" -Context $Context
         
         Write-MandALog "--- Starting Teams Discovery Phase (v2.0.0) ---" -Level "HEADER" -Context $Context
         

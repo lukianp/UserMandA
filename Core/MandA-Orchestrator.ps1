@@ -1235,9 +1235,35 @@ Set-Location '$suiteRoot'
 # Import the discovery module
 Import-Module '$moduleFile' -Force
 
-# Recreate Configuration and Context from JSON
-`$Configuration = '$configJson' | ConvertFrom-Json -AsHashtable
-`$Context = '$contextJson' | ConvertFrom-Json -AsHashtable
+# Recreate Configuration and Context from JSON (PowerShell 5.1 compatible)
+`$Configuration = '$configJson' | ConvertFrom-Json
+`$Context = '$contextJson' | ConvertFrom-Json
+
+# Convert PSCustomObject to Hashtable for PowerShell 5.1 compatibility
+function ConvertTo-Hashtable {
+    param([Parameter(ValueFromPipeline)]`$InputObject)
+    process {
+        if (`$null -eq `$InputObject) { return `$null }
+        if (`$InputObject -is [System.Collections.IDictionary]) { return `$InputObject }
+        if (`$InputObject -is [PSCustomObject]) {
+            `$hash = @{}
+            `$InputObject.PSObject.Properties | ForEach-Object {
+                `$value = `$_.Value
+                if (`$value -is [PSCustomObject]) {
+                    `$value = ConvertTo-Hashtable `$value
+                } elseif (`$value -is [System.Collections.IEnumerable] -and `$value -isnot [string]) {
+                    `$value = @(`$value | ForEach-Object { if (`$_ -is [PSCustomObject]) { ConvertTo-Hashtable `$_ } else { `$_ } })
+                }
+                `$hash[`$_.Name] = `$value
+            }
+            return `$hash
+        }
+        return `$InputObject
+    }
+}
+
+`$Configuration = ConvertTo-Hashtable `$Configuration
+`$Context = ConvertTo-Hashtable `$Context
 
 # Set global context
 `$global:MandA = `$Context
@@ -1399,23 +1425,57 @@ function Show-ProgressBar {
             $powershell.Commands.Clear()
             $powershell.Streams.Error.Clear()
             
-            # Now call the discovery function with only the required parameters
+            # Now call the discovery function with proper parameter validation
             $executionScript = @"
-# Call the discovery function with proper parameters
-try {
-    if (`$Configuration -and `$Context) {
-        `$result = $moduleFunction -Configuration `$Configuration -Context `$Context
-    } elseif (`$Configuration) {
-        `$result = $moduleFunction -Configuration `$Configuration
-    } else {
-        `$result = $moduleFunction
-    }
-    return `$result
-} catch {
-    Write-MandALog -Message "Error in $moduleFunction`: `$(`$_.Exception.Message)" -Level "ERROR"
-    throw
-}
-"@
+            # Validate parameters before calling discovery function
+            try {
+                # Validate Configuration parameter
+                if (-not `$Configuration) {
+                    throw "Configuration parameter is null or missing"
+                }
+                
+                # Validate Context parameter
+                if (-not `$Context) {
+                    throw "Context parameter is null or missing"
+                }
+                
+                # Validate critical Context.Paths properties
+                if (-not `$Context.Paths) {
+                    throw "Context.Paths is null or missing"
+                }
+                
+                if (-not `$Context.Paths.RawDataOutput) {
+                    throw "Context.Paths.RawDataOutput is null or missing"
+                }
+                
+                if (-not `$Context.Paths.ProcessedDataOutput) {
+                    throw "Context.Paths.ProcessedDataOutput is null or missing"
+                }
+                
+                # Log parameter validation success
+                Write-MandALog -Message "Parameter validation successful for $moduleFunction" -Level "INFO"
+                Write-MandALog -Message "Configuration type: `$(`$Configuration.GetType().Name)" -Level "DEBUG"
+                Write-MandALog -Message "Context type: `$(`$Context.GetType().Name)" -Level "DEBUG"
+                Write-MandALog -Message "RawDataOutput: `$(`$Context.Paths.RawDataOutput)" -Level "DEBUG"
+                Write-MandALog -Message "ProcessedDataOutput: `$(`$Context.Paths.ProcessedDataOutput)" -Level "DEBUG"
+                
+                # Call the discovery function with validated parameters
+                `$result = $moduleFunction -Configuration `$Configuration -Context `$Context
+                
+                # Validate result
+                if (-not `$result) {
+                    Write-MandALog -Message "$moduleFunction returned null result" -Level "WARN"
+                } else {
+                    Write-MandALog -Message "$moduleFunction completed successfully" -Level "SUCCESS"
+                }
+                
+                return `$result
+            } catch {
+                Write-MandALog -Message "Error in $moduleFunction`: `$(`$_.Exception.Message)" -Level "ERROR"
+                Write-MandALog -Message "Stack trace: `$(`$_.ScriptStackTrace)" -Level "DEBUG"
+                throw
+            }
+            "@
             
             $null = $powershell.AddScript($executionScript)
             Write-OrchestratorLog -Message "Executing $moduleFunction in isolated runspace" -Level "DEBUG" -DebugOnly
@@ -1766,13 +1826,39 @@ function Invoke-ProcessingPhase {
     }
     
     try {
+        # Validate Context.Paths before processing
+        Write-OrchestratorLog -Message "Validating Context.Paths for processing phase..." -Level "INFO"
+        
+        if (-not $global:MandA.Paths) {
+            throw "Context.Paths is missing from global MandA context"
+        }
+        
+        if (-not $global:MandA.Paths.RawDataOutput) {
+            throw "Context.Paths.RawDataOutput is missing - cannot locate raw data"
+        }
+        
+        if (-not $global:MandA.Paths.ProcessedDataOutput) {
+            throw "Context.Paths.ProcessedDataOutput is missing - cannot determine output location"
+        }
+        
         # Verify raw data exists
         $rawDataPath = $global:MandA.Paths.RawDataOutput
         Write-OrchestratorLog -Message "Checking raw data path: $rawDataPath" -Level "DEBUG" -DebugOnly
         
         if (-not (Test-Path $rawDataPath)) {
-            throw "Raw data directory not found. Run Discovery phase first."
+            throw "Raw data directory not found: $rawDataPath. Run Discovery phase first."
         }
+        
+        # Ensure processed data output directory exists
+        $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
+        if (-not (Test-Path $processedDataPath)) {
+            Write-OrchestratorLog -Message "Creating processed data directory: $processedDataPath" -Level "INFO"
+            New-Item -Path $processedDataPath -ItemType Directory -Force | Out-Null
+        }
+        
+        Write-OrchestratorLog -Message "Context validation successful:" -Level "SUCCESS"
+        Write-OrchestratorLog -Message "  RawDataOutput: $rawDataPath" -Level "INFO"
+        Write-OrchestratorLog -Message "  ProcessedDataOutput: $processedDataPath" -Level "INFO"
         
         $csvFiles = Get-ChildItem -Path $rawDataPath -Filter "*.csv" -File
         if ($csvFiles.Count -eq 0) {
@@ -2169,6 +2255,51 @@ try {
     Write-OrchestratorLog -Message "M&A Discovery Suite Orchestrator v6.1.0-DEBUG" -Level "HEADER"
     Write-OrchestratorLog -Message "========================================" -Level "HEADER"
     Write-OrchestratorLog -Message "Company: $CompanyName | Mode: $Mode" -Level "INFO"
+    
+    # Enhanced Context Validation
+    Write-OrchestratorLog -Message "Performing enhanced context validation..." -Level "INFO"
+    
+    # Validate global MandA context
+    if (-not $global:MandA) {
+        throw "Global MandA context is null or missing"
+    }
+    
+    if (-not $global:MandA.Paths) {
+        throw "Global MandA.Paths is null or missing"
+    }
+    
+    # Validate critical paths exist
+    $criticalPaths = @(
+        'RawDataOutput',
+        'ProcessedDataOutput',
+        'ExportOutput',
+        'LogOutput',
+        'SuiteRoot',
+        'Modules',
+        'Discovery'
+    )
+    
+    $missingPaths = @()
+    foreach ($pathKey in $criticalPaths) {
+        if (-not $global:MandA.Paths.ContainsKey($pathKey)) {
+            $missingPaths += $pathKey
+        } elseif ([string]::IsNullOrWhiteSpace($global:MandA.Paths[$pathKey])) {
+            $missingPaths += "$pathKey (empty)"
+        } else {
+            Write-OrchestratorLog -Message "Path validated: $pathKey = $($global:MandA.Paths[$pathKey])" -Level "DEBUG" -DebugOnly
+        }
+    }
+    
+    if ($missingPaths.Count -gt 0) {
+        $errorMsg = "Critical paths missing from Context.Paths: $($missingPaths -join ', ')"
+        Write-OrchestratorLog -Message $errorMsg -Level "ERROR"
+        throw $errorMsg
+    }
+    
+    # Log context validation success
+    Write-OrchestratorLog -Message "Context validation successful - all critical paths present" -Level "SUCCESS"
+    Write-OrchestratorLog -Message "Configuration type: $($global:MandA.Config.GetType().Name)" -Level "DEBUG" -DebugOnly
+    Write-OrchestratorLog -Message "Paths count: $($global:MandA.Paths.Keys.Count)" -Level "DEBUG" -DebugOnly
     
     # Validate prerequisites
     if (-not (Test-OrchestratorPrerequisites)) {

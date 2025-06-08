@@ -145,13 +145,56 @@ function Get-LicenseSKUsWithErrorHandling {
         $Context
     )
     
+    # Validate parameters
+    if (-not $Configuration) {
+        throw "Configuration parameter is missing"
+    }
+    
+    if (-not $Context) {
+        throw "Context parameter is missing"
+    }
+    
     $skus = [System.Collections.ArrayList]::new()
     $retryCount = 0
     $maxRetries = 3
     
+    # Check if we have cached license data
+    if ($global:LicenseCache.SKUs -and $global:LicenseCache.LastUpdated -and
+        ((Get-Date) - $global:LicenseCache.LastUpdated).TotalMinutes -lt 30) {
+        Write-MandALog "Using cached license SKU data (updated $($global:LicenseCache.LastUpdated))" -Level "INFO" -Context $Context
+        return $global:LicenseCache.SKUs
+    }
+    
     while ($retryCount -lt $maxRetries) {
         try {
-            Write-MandALog "Retrieving license SKUs..." -Level "INFO" -Context $Context
+            Write-MandALog "Retrieving license SKUs (attempt $($retryCount + 1)/$maxRetries)..." -Level "INFO" -Context $Context
+            
+            # Validate Graph API permissions first
+            try {
+                $mgContext = Get-MgContext -ErrorAction Stop
+                if (-not $mgContext) {
+                    throw "Not connected to Microsoft Graph"
+                }
+                
+                # Check required permissions
+                $requiredScopes = @('Directory.Read.All', 'Organization.Read.All')
+                $currentScopes = $mgContext.Scopes
+                $missingScopes = @()
+                
+                foreach ($scope in $requiredScopes) {
+                    if ($scope -notin $currentScopes) {
+                        $missingScopes += $scope
+                    }
+                }
+                
+                if ($missingScopes.Count -gt 0) {
+                    Write-MandALog "Missing required Graph API scopes: $($missingScopes -join ', ')" -Level "WARN" -Context $Context
+                    Write-MandALog "Current scopes: $($currentScopes -join ', ')" -Level "DEBUG" -Context $Context
+                }
+                
+            } catch {
+                throw "Graph API validation failed: $($_.Exception.Message)"
+            }
             
             $subscribedSkus = Get-MgSubscribedSku -All -ErrorAction Stop
             
@@ -177,17 +220,34 @@ function Get-LicenseSKUsWithErrorHandling {
                 }
             }
             
+            # Cache the results for efficiency
+            $global:LicenseCache.SKUs = $skus.ToArray()
+            $global:LicenseCache.LastUpdated = Get-Date
+            
+            Write-MandALog "License SKU data cached for future use" -Level "DEBUG" -Context $Context
+            
             # Success - exit retry loop
             break
         }
         catch {
             $retryCount++
             if ($retryCount -ge $maxRetries) {
-                throw "Failed to retrieve license SKUs after $maxRetries attempts: $_"
+                $errorMsg = "Failed to retrieve license SKUs after $maxRetries attempts: $($_.Exception.Message)"
+                Write-MandALog $errorMsg -Level "ERROR" -Context $Context
+                
+                # Check if this is a permissions issue
+                if ($_.Exception.Message -like "*Forbidden*" -or $_.Exception.Message -like "*Unauthorized*") {
+                    Write-MandALog "This appears to be a permissions issue. Ensure the following Graph API permissions are granted:" -Level "ERROR" -Context $Context
+                    Write-MandALog "  - Directory.Read.All" -Level "ERROR" -Context $Context
+                    Write-MandALog "  - Organization.Read.All" -Level "ERROR" -Context $Context
+                }
+                
+                throw $errorMsg
             }
             
             $waitTime = [Math]::Pow(2, $retryCount) * 2  # Exponential backoff
-            Write-MandALog "License SKU query failed (attempt $retryCount/$maxRetries). Waiting $waitTime seconds..." -Level "WARN" -Context $Context
+            Write-MandALog "License SKU query failed (attempt $retryCount/$maxRetries): $($_.Exception.Message)" -Level "WARN" -Context $Context
+            Write-MandALog "Waiting $waitTime seconds before retry..." -Level "INFO" -Context $Context
             Start-Sleep -Seconds $waitTime
         }
     }
@@ -245,6 +305,24 @@ function Invoke-LicensingDiscovery {
         $Context
     )
     
+    # Enhanced parameter validation
+    if (-not $Configuration) {
+        throw "Configuration parameter is null or missing"
+    }
+    
+    if (-not $Context) {
+        throw "Context parameter is null or missing"
+    }
+    
+    # Validate critical Context.Paths properties
+    if (-not $Context.Paths) {
+        throw "Context.Paths is null or missing"
+    }
+    
+    if (-not $Context.Paths.RawDataOutput) {
+        throw "Context.Paths.RawDataOutput is null or missing"
+    }
+    
     # Initialize result object
     $result = [DiscoveryResult]::new('Licensing')
     
@@ -252,19 +330,17 @@ function Invoke-LicensingDiscovery {
     $originalErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Stop'
     
+    # Cache licensing data globally for efficiency
+    if (-not $global:LicenseCache) {
+        $global:LicenseCache = @{}
+    }
+    
     try {
-        # Create minimal context if not provided
-        if (-not $Context) {
-            $Context = @{
-                ErrorCollector = [PSCustomObject]@{
-                    AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
-                    AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
-                }
-                Paths = @{
-                    RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
-                }
-            }
-        }
+        # Log parameter validation success
+        Write-MandALog "Parameter validation successful for Licensing discovery" -Level "INFO" -Context $Context
+        Write-MandALog "Configuration type: $($Configuration.GetType().Name)" -Level "DEBUG" -Context $Context
+        Write-MandALog "Context type: $($Context.GetType().Name)" -Level "DEBUG" -Context $Context
+        Write-MandALog "RawDataOutput: $($Context.Paths.RawDataOutput)" -Level "DEBUG" -Context $Context
         
         Write-MandALog "--- Starting Microsoft 365 Licensing Discovery Phase (v2.0.0) ---" -Level "HEADER" -Context $Context
         
