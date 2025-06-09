@@ -91,10 +91,19 @@ public class DiscoveryResult {
         var errorEntry = new System.Collections.Hashtable();
         errorEntry["Timestamp"] = System.DateTime.Now;
         errorEntry["Message"] = message;
-        errorEntry["Exception"] = exception != null ? exception.ToString() : null;
-        errorEntry["ExceptionType"] = exception != null ? exception.GetType().FullName : null;
-        errorEntry["Context"] = context;
-        errorEntry["StackTrace"] = exception != null ? exception.StackTrace : System.Environment.StackTrace;
+        
+        // Safely handle exception properties
+        if (exception != null) {
+            errorEntry["Exception"] = exception.ToString();
+            errorEntry["ExceptionType"] = exception.GetType().FullName;
+            errorEntry["StackTrace"] = exception.StackTrace;
+        } else {
+            errorEntry["Exception"] = null;
+            errorEntry["ExceptionType"] = null;
+            errorEntry["StackTrace"] = System.Environment.StackTrace;
+        }
+        
+        errorEntry["Context"] = context ?? new System.Collections.Hashtable();
         this.Errors.Add(errorEntry);
         this.Success = false;
     }
@@ -821,19 +830,37 @@ function Invoke-DiscoveryPhase {
                 
                 Import-Module -Name $discoveryModulePath -Force
                 
-                # Execute discovery
+                # Execute discovery with timeout handling
                 $functionName = "Invoke-${modName}Discovery"
                 if (-not (Get-Command $functionName -ErrorAction SilentlyContinue)) {
                     throw "Discovery function not found: $functionName"
                 }
                 
-                # Check if function accepts Context parameter
-                $functionParams = (Get-Command $functionName).Parameters
-                if ($functionParams.ContainsKey('Context')) {
-                    $result = & $functionName -Configuration $modConfig -Context $globalContext
+                # Add timeout to the discovery execution
+                $result = $null
+                $timeoutSeconds = 900 # 4 minutes max per module
+
+                $job = Start-Job -ScriptBlock {
+                    param($funcName, $config, $context)
+                    
+                    # Check if function accepts Context parameter
+                    $functionParams = (Get-Command $funcName).Parameters
+                    if ($functionParams.ContainsKey('Context')) {
+                        & $funcName -Configuration $config -Context $context
+                    } else {
+                        & $funcName -Configuration $config
+                    }
+                } -ArgumentList $functionName, $modConfig, $globalContext
+
+                # Wait for job with timeout
+                $completed = Wait-Job -Job $job -Timeout $timeoutSeconds
+                if ($completed) {
+                    $result = Receive-Job -Job $job
+                    Remove-Job -Job $job
                 } else {
-                    # Call without Context for modules that don't support it
-                    $result = & $functionName -Configuration $modConfig
+                    Stop-Job -Job $job
+                    Remove-Job -Job $job
+                    throw "Module execution timed out after $timeoutSeconds seconds"
                 }
                 
                 if ($result -and $result -is [DiscoveryResult]) {
@@ -1080,6 +1107,7 @@ function Invoke-ProcessingPhase {
         if (Get-Command Start-DataAggregation -ErrorAction SilentlyContinue) {
             Write-OrchestratorLog -Message "Starting data aggregation..." -Level "INFO"
             
+            # Ensure we pass the full global context, not just Configuration
             $aggregationResult = Start-DataAggregation -Configuration $global:MandA.Config -Context $global:MandA
             
             if (-not $aggregationResult) {
@@ -1261,17 +1289,32 @@ function Export-ErrorReport {
 }
 
 function Export-PerformanceReport {
+    # Replace the MemoryUsage calculation with error handling:
+    $memoryUsage = @{
+        Snapshots = $script:PerformanceMetrics.MemorySnapshots
+        PeakWorkingSetMB = if ($script:PerformanceMetrics.MemorySnapshots.Count -gt 0) {
+            try {
+                ($script:PerformanceMetrics.MemorySnapshots |
+                 Where-Object { $_.WorkingSetMB } |
+                 Measure-Object -Property WorkingSetMB -Maximum -ErrorAction SilentlyContinue).Maximum
+            } catch { 0 }
+        } else { 0 }
+        AverageWorkingSetMB = if ($script:PerformanceMetrics.MemorySnapshots.Count -gt 0) {
+            try {
+                [Math]::Round(($script:PerformanceMetrics.MemorySnapshots |
+                              Where-Object { $_.WorkingSetMB } |
+                              Measure-Object -Property WorkingSetMB -Average -ErrorAction SilentlyContinue).Average, 2)
+            } catch { 0 }
+        } else { 0 }
+    }
+
     $performanceReport = @{
         Timestamp = Get-Date
         ExecutionId = $script:CorrelationId
         TotalDuration = (Get-Date) - $script:StartTime
         PhaseTimings = $script:PerformanceMetrics.PhaseTimings
         ModuleTimings = $script:PerformanceMetrics.ModuleTimings
-        MemoryUsage = @{
-            Snapshots = $script:PerformanceMetrics.MemorySnapshots
-            PeakWorkingSetMB = ($script:PerformanceMetrics.MemorySnapshots | Measure-Object -Property WorkingSetMB -Maximum).Maximum
-            AverageWorkingSetMB = [Math]::Round(($script:PerformanceMetrics.MemorySnapshots | Measure-Object -Property WorkingSetMB -Average).Average, 2)
-        }
+        MemoryUsage = $memoryUsage
         Configuration = @{
             Company = $CompanyName
             Mode = $Mode
