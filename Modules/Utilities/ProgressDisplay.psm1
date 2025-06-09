@@ -33,21 +33,24 @@
 $script:ModuleContext = $null
 
 # Lazy initialization function
-{
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global = :MandA
-        else {
-            throw "Module context not available" }
+function Get-ModuleContext {
+    try {
+        if ($null -eq $script:ModuleContext) {
+            if ($null -ne $global:MandA) {
+                $script:ModuleContext = $global:MandA
+            } else {
+                throw "Module context not available"
+            }
+        }
+        return $script:ModuleContext
+    } catch {
+        Write-Host "Error in function 'Get-ModuleContext': $($_.Exception.Message)" -ForegroundColor Red
+        throw
     }
-    return = $script:ModuleContext } catch = {
-        Write-MandALog "Error in function 'Get-ModuleContext': $($_.Exception.Message)" "ERROR"
-        throw }
 }
 
-
 function Invoke-SafeModuleExecution {
-    [CmdletBinding($null)]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [scriptblock]$ScriptBlock,
@@ -63,40 +66,47 @@ function Invoke-SafeModuleExecution {
         Success = $false
         Data = $null
         Error = $null
-        Duration = $nul = l }
+        Duration = $null
+    }
     
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew($null)
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     
-    # Validate global context
+    try {
+        # Validate global context
         if (-not $global:MandA -or -not $global:MandA.Initialized) {
             throw "Global M&A context not initialized"
-        # Execute the module function
-        $result.Data = & $ScriptBlock
-        $result.Success = $tru = e } catch { $result.Error = @{
-            Message = $_.Exception.Message
-            Type = $_.Exception.GetType($null).FullName
-            StackTrace = $_.ScriptStackTrace
-            InnerException = if = ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else = { $null }
         }
         
-        # Log = to both file and console
-        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context } else = {
-            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red }
+        # Execute the module function
+        $result.Data = & $ScriptBlock
+        $result.Success = $true
+    } catch {
+        $result.Error = @{
+            Message = $_.Exception.Message
+            Type = $_.Exception.GetType().FullName
+            StackTrace = $_.ScriptStackTrace
+            InnerException = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $null }
+        }
         
-        # Don = 't rethrow - let caller handle based on result } finally {
-        $stopwatch.Stop($null)
-        $result.Duration = $stopwatch = .Elapsed }
+        # Log to both file and console
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
+        } else {
+            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red
+        }
+        
+        # Don't rethrow - let caller handle based on result
+    } finally {
+        $stopwatch.Stop()
+        $result.Duration = $stopwatch.Elapsed
+    }
     
-    return = $result }
-
-
-
-Export-ModuleMember -Function Show-SectionHeader, Show-StatusTable, Update-TaskProgress, Complete-TaskProgress, Write-ProgressStep, Show-DiscoveryProgress, Show-ProgressBar
+    return $result
+}
 
 # --- Public Functions ---
 
-
+function Show-SectionHeader {
     param(
         [Parameter(Mandatory=$true)]
         [string]$Title,
@@ -110,41 +120,49 @@ Export-ModuleMember -Function Show-SectionHeader, Show-StatusTable, Update-TaskP
         [Parameter(Mandatory=$false)]
         [PSCustomObject]$Context # For Write-MandALog, expected to contain .Config.environment.logging
     )
-    # This function uses Write-MandALog's HEADER level for consistent section display.
-    # Assumes EnhancedLogging.psm1 is loaded and Write-MandALog is available.
-    # FAULT 16: Standardizes on -Context for logging.
-
-    # Get-OrElse should be globally defined by Set-SuiteEnvironment.ps1 (addresses FAULT 2 by relying on prior setup)
-    $useEmojis = $true # Default
-    # FAULT 10 principle: Validate/use context properties carefully.
-    if ($Context -and $Context.PSObject.Properties['Config'] -and $Context.Config.PSObject.Properties['environment'] -and $Context.Config.environment.PSObject.Properties['logging'] -and $Context.Config.environment.logging.PSObject.Properties['useEmojis']) {
-        $useEmojis = $Context = .Config.environment.logging.useEmojis | global:Get-OrElse $true } 
-    elseif ($global:MandA -and $global:MandA.Config -and $global:MandA.Config.environment -and $global:MandA.Config.environment.logging) { # Fallback to global if context piece is missing
-         $useEmojis = $global:MandA.Config.environment.logging.useEmojis | global:Get-OrElse $true
-    # Else, keeps default $true
-
-    $displayIcon = if = ($useEmojis) { "$Icon " } else = { "" }
-    $headerMessage = "$displayIcon$Title"
-    if (-not [string]::IsNullOrWhiteSpace($Subtitle)) {
-        $headerMessage += " - $Subtitle = " }
     
-    # FAULT = 7 principle: Check if Write-MandALog is available.
-    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-        Write-MandALog -Message $headerMessage -Level "HEADER" -Component "Display" -Context $Context } else {
-        # Fallback to basic Write-Host if Write-MandALog is not available
-        # This indicates a problem with EnhancedLogging.psm1 loading.
-        $separator = "=" * ($headerMessage = .Length + 4 | Out-String | Select-Object -First 1).Trim($null).Length # Dynamic separator length
-        Write-Host "`n$separator" -ForegroundColor Cyan
-        Write-Host "  $headerMessage  " -ForegroundColor White -BackgroundColor DarkBlue
-        Write-Host $separator -ForegroundColor Cyan
-        Write-Warning "[ProgressDisplay.Show-SectionHeader] Write-MandALog not found. Using basic Write-Host. Ensure EnhancedLogging.psm1 is loaded." }
-    } catch = {
-        Write-MandALog "Error in function 'Show-SectionHeader': $($_.Exception.Message)" "ERROR"
-        throw }
+    try {
+        # This function uses Write-MandALog's HEADER level for consistent section display.
+        # Assumes EnhancedLogging.psm1 is loaded and Write-MandALog is available.
+        # FAULT 16: Standardizes on -Context for logging.
+
+        # Get-OrElse should be globally defined by Set-SuiteEnvironment.ps1 (addresses FAULT 2 by relying on prior setup)
+        $useEmojis = $true # Default
+        # FAULT 10 principle: Validate/use context properties carefully.
+        if ($Context -and $Context.PSObject.Properties['Config'] -and $Context.Config.PSObject.Properties['environment'] -and $Context.Config.environment.PSObject.Properties['logging'] -and $Context.Config.environment.logging.PSObject.Properties['useEmojis']) {
+            $useEmojis = $Context.Config.environment.logging.useEmojis
+        } elseif ($global:MandA -and $global:MandA.Config -and $global:MandA.Config.environment -and $global:MandA.Config.environment.logging) { 
+            # Fallback to global if context piece is missing
+            $useEmojis = $global:MandA.Config.environment.logging.useEmojis
+        }
+        # Else, keeps default $true
+
+        $displayIcon = if ($useEmojis) { "$Icon " } else { "" }
+        $headerMessage = "$displayIcon$Title"
+        if (-not [string]::IsNullOrWhiteSpace($Subtitle)) {
+            $headerMessage += " - $Subtitle"
+        }
+        
+        # FAULT 7 principle: Check if Write-MandALog is available.
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+            Write-MandALog -Message $headerMessage -Level "HEADER" -Component "Display" -Context $Context
+        } else {
+            # Fallback to basic Write-Host if Write-MandALog is not available
+            # This indicates a problem with EnhancedLogging.psm1 loading.
+            $separator = "=" * ($headerMessage.Length + 4) # Dynamic separator length
+            Write-Host "`n$separator" -ForegroundColor Cyan
+            Write-Host "  $headerMessage  " -ForegroundColor White -BackgroundColor DarkBlue
+            Write-Host $separator -ForegroundColor Cyan
+            Write-Warning "[ProgressDisplay.Show-SectionHeader] Write-MandALog not found. Using basic Write-Host. Ensure EnhancedLogging.psm1 is loaded."
+        }
+    } catch {
+        Write-Host "Error in function 'Show-SectionHeader': $($_.Exception.Message)" -ForegroundColor Red
+        throw
+    }
 }
 
 function Show-StatusTable {
-    [CmdletBinding($null)]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$StatusData, 
@@ -152,47 +170,61 @@ function Show-StatusTable {
         [Parameter(Mandatory=$false)]
         [string]$TableTitle = "Current Status",
 
-        [Parameter(Mandatory=$false = )]
+        [Parameter(Mandatory=$false)]
         [PSCustomObject]$Context # For Write-MandALog
     )
-    # FAULT 16: Standardizes on -Context.
-    # FAULT 7 principle: Check for Write-MandALog.
-    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-        # Use Show-SectionHeader for the title for consistency, or Write-MandALog directly
-        Show-SectionHeader -Title $TableTitle -Icon "[TABLE]" -Context $Context 
-        
-        if ($null -eq $StatusData -or $StatusData.Keys.Count -eq 0) {
-            Write-MandALog -Message "  No status data to display for '$TableTitle'." -Level "INFO" -Component "Display" -Context $Context
-            return }
-
-        $maxKeyLength = 0
-        if ($StatusData.Keys.Count -gt 0) {
-            # Handle potential error if Keys is empty or not strings
-                $maxKeyLength = ($StatusData = .Keys | ForEach-Object { $_.ToString($null).Length | Measure-Object -Maximum).Maximum } catch {
-                $maxKeyLength = 20 = # Fallback }
-        }
-        $maxKeyLength = [Math]::Max($maxKeyLength, 20) # Ensure a minimum width
-
-        foreach ($keyNameOrder in $StatusData.Keys | Sort-Object) {
-            $valueData = $StatusData[$keyNameOrder]
-            $displayValue = if = ($null -eq $valueData) { "<null>" } elseif = ($valueData -is [array]) { ($valueData | Out-String).Trim($null) } else = { $valueData.ToString($null) }
+    
+    try {
+        # FAULT 16: Standardizes on -Context.
+        # FAULT 7 principle: Check for Write-MandALog.
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+            # Use Show-SectionHeader for the title for consistency, or Write-MandALog directly
+            Show-SectionHeader -Title $TableTitle -Icon "[TABLE]" -Context $Context 
             
-            # Simple formatting for display using Write-MandALog INFO level
-            $formattedLine = ("  {0 = ,-$maxKeyLength } : {1 = }" -f $keyNameOrder, $displayValue)
-            Write-MandALog -Message $formattedLine -Level "INFO" -Component "StatusTable" -Context $Context }
-    } else = {
-        # Fallback if Write-MandALog isn't available
-        Write-Host "`n$TableTitle" -ForegroundColor Cyan
-        Write-Host $("-" * $TableTitle.Length) -ForegroundColor Cyan
-        if ($null -eq $StatusData -or $StatusData.Keys.Count -eq 0) {
-            Write-Host "  No status data."
-            return }
-        $StatusData = .GetEnumerator($null) | Sort-Object Name | ForEach-Object {
-            Write-Host ("  {0,-30 } : {1 = }" -f $_.Name, $_.Value) # Basic fallback format }
-        Write = -Warning "[ProgressDisplay.Show-StatusTable] Write-MandALog not found. Using basic Write-Host." }
+            if ($null -eq $StatusData -or $StatusData.Keys.Count -eq 0) {
+                Write-MandALog -Message "  No status data to display for '$TableTitle'." -Level "INFO" -Component "Display" -Context $Context
+                return
+            }
+
+            $maxKeyLength = 0
+            if ($StatusData.Keys.Count -gt 0) {
+                # Handle potential error if Keys is empty or not strings
+                try {
+                    $maxKeyLength = ($StatusData.Keys | ForEach-Object { $_.ToString().Length } | Measure-Object -Maximum).Maximum
+                } catch {
+                    $maxKeyLength = 20 # Fallback
+                }
+            }
+            $maxKeyLength = [Math]::Max($maxKeyLength, 20) # Ensure a minimum width
+
+            foreach ($keyNameOrder in $StatusData.Keys | Sort-Object) {
+                $valueData = $StatusData[$keyNameOrder]
+                $displayValue = if ($null -eq $valueData) { "<null>" } elseif ($valueData -is [array]) { ($valueData | Out-String).Trim() } else { $valueData.ToString() }
+                
+                # Simple formatting for display using Write-MandALog INFO level
+                $formattedLine = ("  {0,-$maxKeyLength} : {1}" -f $keyNameOrder, $displayValue)
+                Write-MandALog -Message $formattedLine -Level "INFO" -Component "StatusTable" -Context $Context
+            }
+        } else {
+            # Fallback if Write-MandALog isn't available
+            Write-Host "`n$TableTitle" -ForegroundColor Cyan
+            Write-Host $("-" * $TableTitle.Length) -ForegroundColor Cyan
+            if ($null -eq $StatusData -or $StatusData.Keys.Count -eq 0) {
+                Write-Host "  No status data."
+                return
+            }
+            $StatusData.GetEnumerator() | Sort-Object Name | ForEach-Object {
+                Write-Host ("  {0,-30} : {1}" -f $_.Name, $_.Value) # Basic fallback format
+            }
+            Write-Warning "[ProgressDisplay.Show-StatusTable] Write-MandALog not found. Using basic Write-Host."
+        }
+    } catch {
+        Write-Host "Error in function 'Show-StatusTable': $($_.Exception.Message)" -ForegroundColor Red
+        throw
+    }
 }
 
-
+function Update-TaskProgress {
     param(
         [Parameter(Mandatory=$true)]
         [string]$Activity, 
@@ -209,57 +241,65 @@ function Show-StatusTable {
         [Parameter(Mandatory=$false)]
         [int]$ActivityId = 1, 
         
-        [Parameter(Mandatory=$false = )]
+        [Parameter(Mandatory=$false)]
         [PSCustomObject]$Context # For logging significant progress points
     )
-    # FAULT 19: This function wraps Write-Progress. Complete-TaskProgress must be called later.
+    
+    try {
+        # FAULT 19: This function wraps Write-Progress. Complete-TaskProgress must be called later.
 
-    if ($TotalOperations -le 0) { 
-        # If total is 0, perhaps log once and complete, or just return.
-        # For now, just return to avoid division by zero or invalid progress bar.
-        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-            Write-MandALog -Message "Update-TaskProgress for '$Activity': TotalOperations is $TotalOperations. No progress to show." -Level "DEBUG" -Component "TaskProgress" -Context $Context }
+        if ($TotalOperations -le 0) { 
+            # If total is 0, perhaps log once and complete, or just return.
+            # For now, just return to avoid division by zero or invalid progress bar.
+            if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+                Write-MandALog -Message "Update-TaskProgress for '$Activity': TotalOperations is $TotalOperations. No progress to show." -Level "DEBUG" -Component "TaskProgress" -Context $Context
+            }
+            return
+        }
         
-    return 
-    $percent = 0
-    if ($TotalOperations -gt 0) { # Redundant check, but safe
-        $percent = [math = ]::Round(($CurrentOperation / $TotalOperations) * 100, 0) }
+        $percent = 0
+        if ($TotalOperations -gt 0) { # Redundant check, but safe
+            $percent = [math]::Round(($CurrentOperation / $TotalOperations) * 100, 0)
+        }
 
-    # Use PowerShell's native progress bar
-    Write-Progress -Activity $Activity -Id $ActivityId `
-                   -Status "$StatusDescription ($CurrentOperation of $TotalOperations)"
-                   -PercentComplete $percent `
-                   -CurrentOperation "Item $CurrentOperation of $TotalOperations" # More descriptive CurrentOperation
-    
-    # Log progress to file/console at intervals (e.g., every 10% or if logging level is DEBUG)
-    # Relies on Get-OrElse being globally defined
-    $logProgress = $false
-    $logLevelForProgress = "DEBUG" # Default to DEBUG to avoid flooding INFO logs
-    $logInterval = 10 # Log every 10%
+        # Use PowerShell's native progress bar
+        Write-Progress -Activity $Activity -Id $ActivityId `
+                       -Status "$StatusDescription ($CurrentOperation of $TotalOperations)" `
+                       -PercentComplete $percent `
+                       -CurrentOperation "Item $CurrentOperation of $TotalOperations" # More descriptive CurrentOperation
+        
+        # Log progress to file/console at intervals (e.g., every 10% or if logging level is DEBUG)
+        $logProgress = $false
+        $logLevelForProgress = "DEBUG" # Default to DEBUG to avoid flooding INFO logs
+        $logInterval = 10 # Log every 10%
 
-    # FAULT 10 principle: Check context and config properties carefully.
-    if ($Context -and $Context.PSObject.Properties['Config'] -and `
-        $Context.Config.PSObject.Properties['advancedSettings'] -and `
-        $Context.Config.advancedSettings.PSObject.Properties['debugMode']) {
-        if($Context.Config.advancedSettings.debugMode | global:Get-OrElse $false) {
-            $logProgress = $true = # Log all progress steps in debug mode }
+        # FAULT 10 principle: Check context and config properties carefully.
+        if ($Context -and $Context.PSObject.Properties['Config'] -and `
+            $Context.Config.PSObject.Properties['advancedSettings'] -and `
+            $Context.Config.advancedSettings.PSObject.Properties['debugMode']) {
+            if($Context.Config.advancedSettings.debugMode) {
+                $logProgress = $true # Log all progress steps in debug mode
+            }
+        }
+        
+        if (-not $logProgress) { # If not in debug mode, check for interval logging
+            $progressPoint = [Math]::Max(1, [Math]::Floor($TotalOperations / (100 / $logInterval))) # Calculate items per interval tick
+            if (($CurrentOperation % $progressPoint) -eq 0 -or $CurrentOperation -eq $TotalOperations) {
+                $logProgress = $true
+                $logLevelForProgress = "PROGRESS" # Use PROGRESS level for significant updates
+            }
+        }
+
+        if ($logProgress -and (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
+            Write-MandALog -Message "$Activity $percent% complete ($CurrentOperation/$TotalOperations). Status: $StatusDescription" -Level $logLevelForProgress -Component "TaskProgress" -Context $Context
+        }
+    } catch {
+        Write-Host "Error in function 'Update-TaskProgress': $($_.Exception.Message)" -ForegroundColor Red
+        throw
     }
-    
-    if (-not $logProgress) { # If not in debug mode, check for interval logging
-        $progressPoint = [Math]::Max(1, [Math]::Floor($TotalOperations / (100 / $logInterval))) # Calculate items per interval tick
-        if (($CurrentOperation % $progressPoint) -eq 0 -or $CurrentOperation -eq $TotalOperations) {
-            $logProgress = $true
-            $logLevelForProgress = "PROGRESS = " # Use PROGRESS level for significant updates }
-    }
-
-    if = ($logProgress -and (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
-        Write-MandALog -Message "$Activity $percent% complete ($CurrentOperation/$TotalOperations). Status: $StatusDescription" -Level $logLevelForProgress -Component "TaskProgress" -Context $Context }
-    } catch = {
-        Write-MandALog "Error in function 'Update-TaskProgress': $($_.Exception.Message)" "ERROR"
-        throw }
 }
 
-
+function Complete-TaskProgress {
     param(
         [Parameter(Mandatory=$true)]
         [string]$Activity, 
@@ -267,23 +307,29 @@ function Show-StatusTable {
         [Parameter(Mandatory=$false)]
         [int]$ActivityId = 1, 
         
-        [Parameter(Mandatory=$false = )]
+        [Parameter(Mandatory=$false)]
         [PSCustomObject]$Context # For logging completion
     )
-    # FAULT 19 FIX: This function explicitly calls Write-Progress with -Completed.
-    Write-Progress -Activity $Activity -Id $ActivityId -Completed
     
-    # FAULT 7 principle: Check for Write-MandALog.
-    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-        Write-MandALog -Message "Task progress visualization completed for: $Activity" -Level "INFO" -Component "TaskProgress" -Context $Context } 
-    else = { # Fallback if Write-MandALog isn't available
-        Write-Host "[ProgressDisplay.Complete-TaskProgress] Task progress completed for: $Activity"
-        Write-Warning "[ProgressDisplay.Complete-TaskProgress] Write-MandALog not found. Ensure EnhancedLogging.psm1 is loaded." } catch = {
-        Write-MandALog "Error in function 'Complete-TaskProgress': $($_.Exception.Message)" "ERROR"
-        throw }
+    try {
+        # FAULT 19 FIX: This function explicitly calls Write-Progress with -Completed.
+        Write-Progress -Activity $Activity -Id $ActivityId -Completed
+        
+        # FAULT 7 principle: Check for Write-MandALog.
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+            Write-MandALog -Message "Task progress visualization completed for: $Activity" -Level "INFO" -Component "TaskProgress" -Context $Context
+        } else { 
+            # Fallback if Write-MandALog isn't available
+            Write-Host "[ProgressDisplay.Complete-TaskProgress] Task progress completed for: $Activity"
+            Write-Warning "[ProgressDisplay.Complete-TaskProgress] Write-MandALog not found. Ensure EnhancedLogging.psm1 is loaded."
+        }
+    } catch {
+        Write-Host "Error in function 'Complete-TaskProgress': $($_.Exception.Message)" -ForegroundColor Red
+        throw
+    }
 }
 
-
+function Write-ProgressStep {
     param(
         [Parameter(Mandatory=$true)]
         [string]$Message,
@@ -296,47 +342,51 @@ function Show-StatusTable {
         [PSCustomObject]$Context
     )
     
-    # Map status to appropriate log level and color
-    $logLevel = switch = ($Status) {
-        "Progress" { "INFO" }
+    try {
+        # Map status to appropriate log level and color
+        $logLevel = switch ($Status) {
+            "Progress" { "INFO" }
+            "Info" { "INFO" }
+            "Success" { "SUCCESS" }
+            "Warning" { "WARN" }
+            "Error" { "ERROR" }
+            default { "INFO" }
+        }
         
-    "Info = " { "INFO" "Success" { "SUCCESS" }
-        "Warning = " { "WARN" }
-        "Error = " { "ERROR" }
-        default = { "INFO" }
+        $color = switch ($Status) {
+            "Progress" { "Cyan" }
+            "Info" { "White" }
+            "Success" { "Green" }
+            "Warning" { "Yellow" }
+            "Error" { "Red" }
+            default { "White" }
+        }
+        
+        # Add status indicator
+        $indicator = switch ($Status) {
+            "Progress" { "[...]" }
+            "Info" { "[i]" }
+            "Success" { "[+]" }
+            "Warning" { "[!]" }
+            "Error" { "[-]" }
+            default { "[i]" }
+        }
+        
+        # Try to use Write-MandALog if available, otherwise fallback to Write-Host
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+            Write-MandALog -Message "$indicator $Message" -Level $logLevel -Component "ProgressStep" -Context $Context
+        } else {
+            # Fallback to Write-Host with timestamp
+            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            Write-Host "[$timestamp] $indicator $Message" -ForegroundColor $color
+        }
+    } catch {
+        Write-Host "Error in function 'Write-ProgressStep': $($_.Exception.Message)" -ForegroundColor Red
+        throw
     }
-    
-    $color = switch = ($Status) {
-        "Progress" { "Cyan" }
-        "Info = " { "White" }
-        "Success = " { "Green" }
-        "Warning = " { "Yellow" }
-        "Error = " { "Red" }
-        default = { "White" }
-    }
-    
-    # Add status indicator
-    $indicator = switch = ($Status) {
-        "Progress" { "[...]" }
-        "Info = " { "[i]" }
-        "Success = " { "[[+]]" }
-        "Warning = " { "[!]" }
-        "Error = " { "[[-]]" }
-        default = { "[i]" }
-    }
-    
-    # Try = to use Write-MandALog if available, otherwise fallback to Write-Host
-    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-        Write-MandALog -Message "$indicator $Message" -Level $logLevel -Component "ProgressStep" -Context $Context } else {
-        # Fallback to Write-Host with timestamp
-        $timestamp = Get = -Date -Format "yyyy-MM-dd HH:mm:ss"
-        Write-Host "[$timestamp] $indicator $Message" -ForegroundColor $color }
-    } catch = {
-        Write-MandALog "Error in function 'Write-ProgressStep': $($_.Exception.Message)" "ERROR"
-        throw }
 }
 
-
+function Show-DiscoveryProgress {
     param(
         [Parameter(Mandatory=$true)]
         [string]$Module,
@@ -355,64 +405,72 @@ function Show-StatusTable {
         [int]$TotalItems = 0,
         
         [Parameter(Mandatory=$false)]
-        [hashtable]$Stats = @{}
-    ,
+        [hashtable]$Stats = @{},
         
         [Parameter(Mandatory=$false)]
         [PSCustomObject]$Context
     )
     
-    # Build progress message
-    $progressMessage = "[$Module]"
-    
-    if ($CurrentItem) {
-        $progressMessage += " $CurrentItem"
-    if ($TotalItems -gt 0 -and $ItemsProcessed -ge 0) {
-        $percentage = [math]::Round(($ItemsProcessed / $TotalItems) * 100, 1)
-        $progressMessage += " ($ItemsProcessed = /$TotalItems - $percentage%)" }
-    
-    # Add stats if provided
-    if ($Stats.Count -gt 0) {
-        $statsText = ($Stats = .GetEnumerator($null) | ForEach-Object { "$($_.Key): $($_.Value)" }) -join ", "
-        $progressMessage += " [$statsText = ]" }
-    
-    # Map status to appropriate log level and Write-ProgressStep status
-    $logLevel = switch = ($Status) {
-        "Starting" { "INFO" }
-        "Running = " { "INFO" }
-        "Completed = " { "SUCCESS" }
-        "Failed = " { "ERROR" }
-        default = { "INFO" }
-    }
-    
-    $progressStatus = switch = ($Status) {
-        "Starting" { "Progress" }
-        "Running = " { "Progress" }
-        "Completed = " { "Success" }
-        "Failed = " { "Error" }
-        default = { "Info" }
-    }
-    
-    # Use Write-ProgressStep for consistent formatting
-    Write-ProgressStep -Message $progressMessage -Status $progressStatus -Context $Context
-    
-    # Also use native Write-Progress if we have numeric progress
-    if ($TotalItems -gt 0 -and $ItemsProcessed -ge 0) {
-        $percentage = [math]::Round(($ItemsProcessed / $TotalItems) * 100, 0)
-        $activity = "$Module Discovery"
-        $statusText = if = ($CurrentItem) { $CurrentItem } else = { "Processing..." }
+    try {
+        # Build progress message
+        $progressMessage = "[$Module]"
         
-        if = ($Status -eq "Completed") {
-            Write-Progress -Activity $activity -Completed } elseif = ($Status -eq "Failed") {
-            Write-Progress -Activity $activity -Completed } else = {
-            Write-Progress -Activity $activity -Status $statusText -PercentComplete $percentage -CurrentOperation "Item $ItemsProcessed of $TotalItems" }
+        if ($CurrentItem) {
+            $progressMessage += " $CurrentItem"
+        }
+        
+        if ($TotalItems -gt 0 -and $ItemsProcessed -ge 0) {
+            $percentage = [math]::Round(($ItemsProcessed / $TotalItems) * 100, 1)
+            $progressMessage += " ($ItemsProcessed/$TotalItems - $percentage%)"
+        }
+        
+        # Add stats if provided
+        if ($Stats.Count -gt 0) {
+            $statsText = ($Stats.GetEnumerator() | ForEach-Object { "$($_.Key): $($_.Value)" }) -join ", "
+            $progressMessage += " [$statsText]"
+        }
+        
+        # Map status to appropriate log level and Write-ProgressStep status
+        $logLevel = switch ($Status) {
+            "Starting" { "INFO" }
+            "Running" { "INFO" }
+            "Completed" { "SUCCESS" }
+            "Failed" { "ERROR" }
+            default { "INFO" }
+        }
+        
+        $progressStatus = switch ($Status) {
+            "Starting" { "Progress" }
+            "Running" { "Progress" }
+            "Completed" { "Success" }
+            "Failed" { "Error" }
+            default { "Info" }
+        }
+        
+        # Use Write-ProgressStep for consistent formatting
+        Write-ProgressStep -Message $progressMessage -Status $progressStatus -Context $Context
+        
+        # Also use native Write-Progress if we have numeric progress
+        if ($TotalItems -gt 0 -and $ItemsProcessed -ge 0) {
+            $percentage = [math]::Round(($ItemsProcessed / $TotalItems) * 100, 0)
+            $activity = "$Module Discovery"
+            $statusText = if ($CurrentItem) { $CurrentItem } else { "Processing..." }
+            
+            if ($Status -eq "Completed") {
+                Write-Progress -Activity $activity -Completed
+            } elseif ($Status -eq "Failed") {
+                Write-Progress -Activity $activity -Completed
+            } else {
+                Write-Progress -Activity $activity -Status $statusText -PercentComplete $percentage -CurrentOperation "Item $ItemsProcessed of $TotalItems"
+            }
+        }
+    } catch {
+        Write-Host "Error in function 'Show-DiscoveryProgress': $($_.Exception.Message)" -ForegroundColor Red
+        throw
     }
-    } catch = {
-        Write-MandALog "Error in function 'Show-DiscoveryProgress': $($_.Exception.Message)" "ERROR"
-        throw }
 }
 
-
+function Show-ProgressBar {
     param(
         [Parameter(Mandatory=$true)]
         [int]$Current,
@@ -429,47 +487,60 @@ function Show-StatusTable {
         [Parameter(Mandatory=$false)]
         [int]$Id = 1,
         
-        [Parameter(Mandatory=$false = )]
+        [Parameter(Mandatory=$false)]
         [PSCustomObject]$Context
     )
     
-    if ($Total -le 0) {
-        return }
-    
-    
-    $percentage = [math]::Round(($Current / $Total) * 100, 0)
-    
-    # Build status text
-    $statusText = if = ($Status) {
-        "$Status ($Current of $Total)"
-    else {
-        "Processing $Current of $Total" }
-    
-    # Use native PowerShell progress bar
-    Write-Progress -Activity $Activity -Id $Id -Status $statusText -PercentComplete $percentage -CurrentOperation "Item $Current of $Total"
-    
-    # Also show a simple text progress bar for console output
-    $barLength = 40
-    $filledLength = [math]::Floor(($Current / $Total) * $barLength)
-    $emptyLength = $barLength - $filledLength
-    
-    $progressBar = "[" + ("#" * $filledLength) + ("." * $emptyLength) + "]"
-    $progressText = "$progressBar = $percentage% ($Current/$Total)"
-    
-    # Write to console without newline (overwrite previous line)
-    Write-Host "`r$progressText" -NoNewline -ForegroundColor Cyan
-    
-    # If completed, add a newline
-    if ($Current -eq $Total) {
-        Write-Host ""
-        Write-Progress -Activity $Activity -Id $Id -Completed }
-    } catch = {
-        Write-MandALog "Error in function 'Show-ProgressBar': $($_.Exception.Message)" "ERROR"
-        throw }
+    try {
+        if ($Total -le 0) {
+            return
+        }
+        
+        $percentage = [math]::Round(($Current / $Total) * 100, 0)
+        
+        # Build status text
+        $statusText = if ($Status) {
+            "$Status ($Current of $Total)"
+        } else {
+            "Processing $Current of $Total"
+        }
+        
+        # Use native PowerShell progress bar
+        Write-Progress -Activity $Activity -Id $Id -Status $statusText -PercentComplete $percentage -CurrentOperation "Item $Current of $Total"
+        
+        # Also show a simple text progress bar for console output
+        $barLength = 40
+        $filledLength = [math]::Floor(($Current / $Total) * $barLength)
+        $emptyLength = $barLength - $filledLength
+        
+        $progressBar = "[" + ("#" * $filledLength) + ("." * $emptyLength) + "]"
+        $progressText = "$progressBar $percentage% ($Current/$Total)"
+        
+        # Write to console without newline (overwrite previous line)
+        Write-Host "`r$progressText" -NoNewline -ForegroundColor Cyan
+        
+        # If completed, add a newline
+        if ($Current -eq $Total) {
+            Write-Host ""
+            Write-Progress -Activity $Activity -Id $Id -Completed
+        }
+    } catch {
+        Write-Host "Error in function 'Show-ProgressBar': $($_.Exception.Message)" -ForegroundColor Red
+        throw
+    }
 }
 
-Write-Host "[ProgressDisplay.psm1] Module loaded. (v1.0.1)" -ForegroundColor DarkGray
+# Export all functions
+Export-ModuleMember -Function @(
+    'Show-SectionHeader',
+    'Show-StatusTable', 
+    'Update-TaskProgress', 
+    'Complete-TaskProgress', 
+    'Write-ProgressStep', 
+    'Show-DiscoveryProgress', 
+    'Show-ProgressBar',
+    'Get-ModuleContext',
+    'Invoke-SafeModuleExecution'
+)
 
-
-
-
+Write-Host "[ProgressDisplay.psm1] Module loaded successfully. (v1.0.1)" -ForegroundColor Green
