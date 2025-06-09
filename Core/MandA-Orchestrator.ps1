@@ -1210,7 +1210,7 @@ function Invoke-DiscoveryModule {
             errorEntry["Timestamp"] = System.DateTime.Now;
             errorEntry["Message"] = message;
             # FIX: Access the correct Exception property
-            errorEntry["Exception"] = exception != null ? exception.Exception.ToString() : null;
+            errorEntry["Exception"] = exception != null ? exception.ToString() : null;
             errorEntry["ExceptionType"] = exception != null ? exception.GetType().FullName : null;
             errorEntry["Context"] = context;
             errorEntry["StackTrace"] = exception != null ? exception.StackTrace : System.Environment.StackTrace;
