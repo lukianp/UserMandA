@@ -44,6 +44,65 @@ function Get-ModuleContext {
     return $script:ModuleContext
 }
 
+
+function Invoke-SafeModuleExecution {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [scriptblock]$ScriptBlock,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$ModuleName,
+        
+        [Parameter(Mandatory=$false)]
+        $Context
+    )
+    
+    $result = @{
+        Success = $false
+        Data = $null
+        Error = $null
+        Duration = $null
+    }
+    
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    
+    try {
+        # Validate global context
+        if (-not $global:MandA -or -not $global:MandA.Initialized) {
+            throw "Global M&A context not initialized"
+        }
+        
+        # Execute the module function
+        $result.Data = & $ScriptBlock
+        $result.Success = $true
+        
+    } catch {
+        $result.Error = @{
+            Message = $_.Exception.Message
+            Type = $_.Exception.GetType().FullName
+            StackTrace = $_.ScriptStackTrace
+            InnerException = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $null }
+        }
+        
+        # Log to both file and console
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
+        } else {
+            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red
+        }
+        
+        # Don't rethrow - let caller handle based on result
+    } finally {
+        $stopwatch.Stop()
+        $result.Duration = $stopwatch.Elapsed
+    }
+    
+    return $result
+}
+
+
+
 # NOTE: Global environment check has been moved to function scope to avoid module loading issues.
 # Functions will check for the global context when they are called, rather than at module import time.
 
@@ -1136,4 +1195,5 @@ if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
     # This fallback should ideally not be needed if EnhancedLogging loads first and reliably.
     Write-Host "DEBUG: DataAggregation module v2.1.0 loaded and parsed (Write-MandALog not found, check EnhancedLogging.psm1 load order/status)." -ForegroundColor Gray
 }
+
 

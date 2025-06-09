@@ -190,13 +190,24 @@ function Write-OrchestratorLog {
         [string]$Message,
         [string]$Level = "INFO",
         [string]$Component = "Orchestrator",
-        [switch]$DebugOnly
+        [switch]$DebugOnly,
+        [string]$CorrelationId = ""  # Add this parameter
     )
     
+    # Skip debug-only messages if not in debug mode
     if ($DebugOnly -and -not $script:DebugMode) { return }
     
     if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-        Write-MandALog -Message $Message -Level $Level -Component $Component -CorrelationId $script:CorrelationId
+        # Pass CorrelationId if the underlying function supports it
+        $params = @{
+            Message = $Message
+            Level = $Level
+            Component = $Component
+        }
+        if ($CorrelationId) {
+            $params['CorrelationId'] = $CorrelationId
+        }
+        Write-MandALog @params
     } else {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
         $color = switch ($Level) {
@@ -209,13 +220,14 @@ function Write-OrchestratorLog {
             default { "White" }
         }
         
+        # Add visual indicators
         $indicator = switch ($Level) {
-            "ERROR" { "[X]" }
-            "WARN" { "[!]" }
+            "ERROR" { "[!!]" }
+            "WARN" { "[??]" }
             "SUCCESS" { "[OK]" }
             "DEBUG" { "[>>]" }
             "HEADER" { "[==]" }
-            "CRITICAL" { "[!!]" }
+            "CRITICAL" { "[XX]" }
             default { "[--]" }
         }
         

@@ -24,6 +24,65 @@ function Get-ModuleContext {
     }
     return $script:ModuleContext
 }
+
+
+function Invoke-SafeModuleExecution {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [scriptblock]$ScriptBlock,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$ModuleName,
+        
+        [Parameter(Mandatory=$false)]
+        $Context
+    )
+    
+    $result = @{
+        Success = $false
+        Data = $null
+        Error = $null
+        Duration = $null
+    }
+    
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    
+    try {
+        # Validate global context
+        if (-not $global:MandA -or -not $global:MandA.Initialized) {
+            throw "Global M&A context not initialized"
+        }
+        
+        # Execute the module function
+        $result.Data = & $ScriptBlock
+        $result.Success = $true
+        
+    } catch {
+        $result.Error = @{
+            Message = $_.Exception.Message
+            Type = $_.Exception.GetType().FullName
+            StackTrace = $_.ScriptStackTrace
+            InnerException = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $null }
+        }
+        
+        # Log to both file and console
+        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
+        } else {
+            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red
+        }
+        
+        # Don't rethrow - let caller handle based on result
+    } finally {
+        $stopwatch.Stop()
+        $result.Duration = $stopwatch.Elapsed
+    }
+    
+    return $result
+}
+
+
     Provides comprehensive error reporting and export capabilities for the M&A Discovery Suite.
 .DESCRIPTION
     This module includes functions to generate detailed error reports, export them in multiple formats,
@@ -1216,4 +1275,5 @@ function Get-ErrorStatistics {
 }
 
 Write-Host "[ErrorReporting.psm1] Module loaded." -ForegroundColor DarkGray
+
 
