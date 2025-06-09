@@ -1,0 +1,238 @@
+﻿{
+    "Details":  [
+                    {
+                        "TestName":  "Orchestrator File Exists",
+                        "Status":  "PASS",
+                        "Message":  "Found at: C:\\UserMigration\\Scripts\\..\\Core\\MandA-Orchestrator.ps1",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771784)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Context Integrity Fix",
+                        "Status":  "PASS",
+                        "Message":  "Found proper context copy implementation",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771803)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Error Collection Enhancement",
+                        "Status":  "PASS",
+                        "Message":  "Found enhanced error collection",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771804)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Export-ErrorReport Enhancement",
+                        "Status":  "PASS",
+                        "Message":  "Found enhanced error report function",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771807)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Prerequisites Validation",
+                        "Status":  "PASS",
+                        "Message":  "Found Test-DiscoveryPrerequisites function",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771810)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Processing Phase Context Validation",
+                        "Status":  "PASS",
+                        "Message":  "Found context validation in processing phase",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771813)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Stuck Jobs Resolution",
+                        "Status":  "PASS",
+                        "Message":  "Found enhanced timeout handling",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771814)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "SharePoint Configuration Validation",
+                        "Status":  "PASS",
+                        "Message":  "Found SharePoint tenant validation",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771816)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "PowerShell Syntax",
+                        "Status":  "PASS",
+                        "Message":  "No syntax errors detected",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771879)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Script Compilation",
+                        "Status":  "PASS",
+                        "Message":  "Script compiles successfully",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771891)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Function Definition: Test-DiscoveryPrerequisites",
+                        "Status":  "PASS",
+                        "Message":  "Function is defined",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771933)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Function Definition: Test-ExchangeOnlineAvailable",
+                        "Status":  "PASS",
+                        "Message":  "Function is defined",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771935)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Function Definition: Export-ErrorReport",
+                        "Status":  "PASS",
+                        "Message":  "Function is defined",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771937)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Function Definition: Invoke-DiscoveryPhase",
+                        "Status":  "PASS",
+                        "Message":  "Function is defined",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771939)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Function Definition: Invoke-ProcessingPhase",
+                        "Status":  "PASS",
+                        "Message":  "Function is defined",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771941)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Function Definition: Invoke-ExportPhase",
+                        "Status":  "PASS",
+                        "Message":  "Function is defined",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771943)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Enhanced Error Context",
+                        "Status":  "PASS",
+                        "Message":  "Found context preservation logic",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771947)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Timeout Exception Handling",
+                        "Status":  "PASS",
+                        "Message":  "Found proper timeout exception handling",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771949)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Module Error Aggregation",
+                        "Status":  "PASS",
+                        "Message":  "Found module error aggregation",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771951)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Memory Management",
+                        "Status":  "PASS",
+                        "Message":  "Found garbage collection logic",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771955)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Runspace Cleanup",
+                        "Status":  "PASS",
+                        "Message":  "Found immediate cleanup logic",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749486771957)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 5:32:51 PM"
+                                      }
+                    }
+                ],
+    "Skipped":  0,
+    "Failed":  0,
+    "Passed":  21
+}

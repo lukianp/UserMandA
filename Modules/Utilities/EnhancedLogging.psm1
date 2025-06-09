@@ -34,10 +34,16 @@
 #>
 
 # Export functions to be available when the module is imported.
-Export-ModuleMember -Function Initialize-Logging, Write-MandALog, Move-LogFile, Clear-OldLogFiles
+Export-ModuleMember -Function Initialize-Logging, Write-MandALog, Move-LogFile, Clear-OldLogFiles, Start-PerformanceTimer, Stop-PerformanceTimer, New-CorrelationId
 
 # Module-scope context variable
 $script:ModuleContext = $null
+
+# Module-scope correlation tracking
+$script:CurrentCorrelationId = $null
+
+# Module-scope performance tracking
+$script:PerformanceLog = @{}
 
 # Lazy initialization function
 function Get-ModuleContext {
@@ -129,6 +135,7 @@ $script:LoggingConfig = @{
     DefaultContext      = $null
     InitializedWarningShown = $false # Track if the "not initialized" warning was shown
     StructuredLogging   = $true # Enable structured logging
+    EnablePerformanceTracking = $true # Enable performance metrics logging
 }
 
 # --- Private Helper Functions ---
@@ -283,7 +290,7 @@ function Write-MandALog {
         [PSCustomObject]$Context,
         
         [Parameter(Mandatory=$false)]
-        [string]$CorrelationId = "",
+        [string]$CorrelationId = $script:CurrentCorrelationId,
         
         [Parameter(Mandatory=$false)]
         [hashtable]$StructuredData = @{}
@@ -357,8 +364,9 @@ function Write-MandALog {
                     Level = $Level
                     Component = $Component
                     Message = $Message
-                    CorrelationId = $CorrelationId
-                    Data = $StructuredData
+                    CorrelationId = if ([string]::IsNullOrWhiteSpace($CorrelationId)) { $script:CurrentCorrelationId } else { $CorrelationId }
+                    StructuredData = $StructuredData
+                    ThreadId = [System.Threading.Thread]::CurrentThread.ManagedThreadId
                 } | ConvertTo-Json -Compress
                 
                 # Write to structured log file
@@ -507,7 +515,127 @@ function Clear-OldLogFiles {
     }
 }
 
-Write-Host "[EnhancedLogging.psm1] Module loaded. (v1.0.2 - Text Emojis)" -ForegroundColor DarkGray
+# --- Performance Metrics Functions ---
+
+function New-CorrelationId {
+    <#
+    .SYNOPSIS
+        Generates a new correlation ID for tracking related operations.
+    .DESCRIPTION
+        Creates a unique correlation ID that can be used to track related log entries
+        across multiple operations and components.
+    .EXAMPLE
+        $correlationId = New-CorrelationId
+        Write-MandALog -Message "Starting operation" -CorrelationId $correlationId
+    #>
+    [CmdletBinding()]
+    param()
+    
+    $correlationId = [System.Guid]::NewGuid().ToString("N").Substring(0, 8)
+    $script:CurrentCorrelationId = $correlationId
+    return $correlationId
+}
+
+function Start-PerformanceTimer {
+    <#
+    .SYNOPSIS
+        Starts a performance timer for the specified operation.
+    .DESCRIPTION
+        Begins tracking performance metrics for a named operation, including
+        start time and memory usage.
+    .PARAMETER OperationName
+        The name of the operation to track.
+    .PARAMETER CorrelationId
+        Optional correlation ID to associate with this performance measurement.
+    .EXAMPLE
+        Start-PerformanceTimer -OperationName "UserDiscovery"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$OperationName,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$CorrelationId = $script:CurrentCorrelationId
+    )
+    
+    try {
+        $performanceEnabled = Get-EffectiveLoggingSetting -SettingName 'EnablePerformanceTracking' -Context $null -DefaultValue $true
+        if (-not $performanceEnabled) {
+            Write-MandALog -Message "Performance tracking is disabled" -Level "DEBUG" -Component "PerformanceTimer"
+            return
+        }
+        
+        $script:PerformanceLog[$OperationName] = @{
+            Start = Get-Date
+            Memory = [System.GC]::GetTotalMemory($false)
+            CorrelationId = $CorrelationId
+            ThreadId = [System.Threading.Thread]::CurrentThread.ManagedThreadId
+        }
+        
+        Write-MandALog -Message "Performance timer started for operation: $OperationName" -Level "DEBUG" -Component "PerformanceTimer" -CorrelationId $CorrelationId -StructuredData @{
+            OperationName = $OperationName
+            StartTime = $script:PerformanceLog[$OperationName].Start
+            InitialMemory = $script:PerformanceLog[$OperationName].Memory
+        }
+    } catch {
+        Write-MandALog -Message "Error starting performance timer for '$OperationName': $($_.Exception.Message)" -Level "ERROR" -Component "PerformanceTimer"
+    }
+}
+
+function Stop-PerformanceTimer {
+    <#
+    .SYNOPSIS
+        Stops a performance timer and logs the results.
+    .DESCRIPTION
+        Ends performance tracking for a named operation and logs the duration,
+        memory usage delta, and other performance metrics.
+    .PARAMETER OperationName
+        The name of the operation to stop tracking.
+    .PARAMETER CorrelationId
+        Optional correlation ID to associate with this performance measurement.
+    .EXAMPLE
+        Stop-PerformanceTimer -OperationName "UserDiscovery"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$OperationName,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$CorrelationId = $script:CurrentCorrelationId
+    )
+    
+    try {
+        $performanceEnabled = Get-EffectiveLoggingSetting -SettingName 'EnablePerformanceTracking' -Context $null -DefaultValue $true
+        if (-not $performanceEnabled) {
+            Write-MandALog -Message "Performance tracking is disabled" -Level "DEBUG" -Component "PerformanceTimer"
+            return
+        }
+        
+        if ($script:PerformanceLog.ContainsKey($OperationName)) {
+            $perf = $script:PerformanceLog[$OperationName]
+            $perf.End = Get-Date
+            $perf.Duration = ($perf.End - $perf.Start).TotalSeconds
+            $perf.MemoryDelta = [System.GC]::GetTotalMemory($false) - $perf.Memory
+            $perf.EndMemory = [System.GC]::GetTotalMemory($false)
+            
+            # Use the correlation ID from the timer start if not provided
+            $effectiveCorrelationId = if ([string]::IsNullOrWhiteSpace($CorrelationId)) { $perf.CorrelationId } else { $CorrelationId }
+            
+            Write-MandALog -Message "Performance: $OperationName completed in $([math]::Round($perf.Duration, 3)) seconds" -Level "INFO" -Component "PerformanceTimer" -CorrelationId $effectiveCorrelationId -StructuredData $perf
+            
+            # Clean up the performance log entry
+            $script:PerformanceLog.Remove($OperationName)
+        } else {
+            Write-MandALog -Message "Performance timer for operation '$OperationName' was not found. Timer may not have been started." -Level "WARN" -Component "PerformanceTimer" -CorrelationId $CorrelationId
+        }
+    } catch {
+        Write-MandALog -Message "Error stopping performance timer for '$OperationName': $($_.Exception.Message)" -Level "ERROR" -Component "PerformanceTimer"
+    }
+}
+
+Write-Host "[EnhancedLogging.psm1] Module loaded. (v1.1.0 - Enhanced Correlation & Performance Tracking)" -ForegroundColor DarkGray
 
 
 # Export all public functions
@@ -518,5 +646,8 @@ Export-ModuleMember -Function @(
     'Clear-OldLogFiles',
     'Get-EffectiveLoggingSetting',
     'Get-LogColorInternal',
-    'Get-LogEmojiInternal'
+    'Get-LogEmojiInternal',
+    'New-CorrelationId',
+    'Start-PerformanceTimer',
+    'Stop-PerformanceTimer'
 )

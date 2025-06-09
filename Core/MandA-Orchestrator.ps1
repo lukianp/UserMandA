@@ -446,6 +446,61 @@ function Test-OrchestratorPrerequisites {
     }
     
     return $prereqMet
+function Test-DiscoveryPrerequisites {
+    Write-OrchestratorLog -Message "Validating discovery prerequisites..." -Level "INFO"
+    
+    $issues = @()
+    
+    # Check Exchange Online module
+    if ($global:MandA.Config.discovery.enabledSources -contains "Exchange" -or
+        $global:MandA.Config.discovery.enabledSources -contains "ExternalIdentity") {
+        if (-not (Get-Module -Name ExchangeOnlineManagement -ListAvailable)) {
+            $issues += "ExchangeOnlineManagement module not installed"
+        }
+    }
+    
+    # Check SharePoint configuration
+    if ($global:MandA.Config.discovery.enabledSources -contains "SharePoint") {
+        if (-not $global:MandA.Config.discovery.sharepoint -or
+            -not $global:MandA.Config.discovery.sharepoint.tenantName) {
+            $issues += "SharePoint tenant name not configured in discovery.sharepoint.tenantName"
+        }
+    }
+    
+    # Check Azure modules
+    if ($global:MandA.Config.discovery.enabledSources -contains "Azure") {
+        if (-not (Get-Module -Name Az.Accounts -ListAvailable)) {
+            $issues += "Az.Accounts module not installed"
+        }
+    }
+    
+    if ($issues.Count -gt 0) {
+        Write-OrchestratorLog -Message "Prerequisites validation found issues:" -Level "WARN"
+        $issues | ForEach-Object { Write-OrchestratorLog -Message "  - $_" -Level "WARN" }
+        
+        # Don't fail, but log the issues
+        return $true
+    }
+    
+    return $true
+}
+
+function Test-ExchangeOnlineAvailable {
+    $exoModule = Get-Module -Name ExchangeOnlineManagement -ListAvailable
+    if (-not $exoModule) {
+        Write-OrchestratorLog -Message "ExchangeOnlineManagement module not installed" -Level "WARN"
+        return $false
+    }
+    
+    # Check if we can import it
+    try {
+        Import-Module ExchangeOnlineManagement -ErrorAction Stop
+        return $true
+    } catch {
+        Write-OrchestratorLog -Message "Failed to import ExchangeOnlineManagement: $_" -Level "WARN"
+        return $false
+    }
+}
 }
 
 function Initialize-OrchestratorModules {
@@ -674,6 +729,9 @@ function Invoke-DiscoveryPhase {
     # Take initial memory snapshot
     $null = $script:PerformanceMetrics.MemorySnapshots.Add((Get-MemorySnapshot))
     
+    # Run discovery prerequisites check
+    Test-DiscoveryPrerequisites
+    
     # Initialize authentication
     try {
         Write-OrchestratorLog -Message "Initializing authentication..." -Level "INFO"
@@ -701,6 +759,15 @@ function Invoke-DiscoveryPhase {
     
     $enabledSources = $global:MandA.Config.discovery.enabledSources
     $sourcesToRun = @($enabledSources | Where-Object {
+        # Validate module-specific prerequisites
+        if ($_ -eq "SharePoint") {
+            if (-not $global:MandA.Config.discovery.sharepoint -or
+                -not $global:MandA.Config.discovery.sharepoint.tenantName) {
+                Write-OrchestratorLog -Message "SharePoint tenant name not configured. Skipping module." -Level "WARN"
+                return $false
+            }
+        }
+        
         if ($Force) { return $true }
         $status = Test-ModuleCompletionStatus -ModuleName $_ -Context $global:MandA
         if ($status.ShouldRun) {
@@ -843,8 +910,19 @@ function Write-ProgressStep {
             $discoveryResult = [DiscoveryResult]::new($modName)
 
             try {
-                # Set up context for this thread
-                $global:MandA = $globalContext
+                # Set up context for this thread - CREATE A PROPER COPY
+                $global:MandA = @{
+                    Initialized = $true
+                    CompanyName = $globalContext.CompanyName
+                    Config = $globalContext.Config
+                    Paths = @{}
+                    Version = $globalContext.Version
+                }
+                
+                # Deep copy paths to avoid reference issues
+                foreach ($key in $globalContext.Paths.Keys) {
+                    $global:MandA.Paths[$key] = $globalContext.Paths[$key]
+                }
                 
                 # Add error handling wrapper
                 trap {
@@ -984,7 +1062,15 @@ function Write-ProgressStep {
                         Write-OrchestratorLog -Message "Module $($job.ModuleName) completed in $([Math]::Round($jobResult.Duration.TotalSeconds, 1))s" -Level "SUCCESS"
                     } else {
                         $jobMonitor.FailedJobs++
-                        Write-OrchestratorLog -Message "Module $($job.ModuleName) failed: $($jobResult.Error)" -Level "ERROR"
+                        $errorMessage = if ($jobResult -and $jobResult.Error) { $jobResult.Error } else { "Unknown error" }
+                        Write-OrchestratorLog -Message "Module $($job.ModuleName) failed: $errorMessage" -Level "ERROR"
+                        
+                        # Add to phase result errors
+                        $null = $phaseResult.RecoverableErrors.Add([PSCustomObject]@{
+                            Module = $job.ModuleName
+                            Error = $errorMessage
+                            Timestamp = Get-Date
+                        })
                     }
                     
                 } catch {
@@ -1022,11 +1108,24 @@ function Write-ProgressStep {
                         $job.Completed = $true
                         $jobMonitor.FailedJobs++
                         
-                        # Create timeout result
+                        # Create timeout result with proper error
                         $timeoutResult = [DiscoveryResult]::new($job.ModuleName)
-                        $timeoutResult.AddError("Timeout after $([Math]::Round($runtime.TotalMinutes, 1)) minutes", $null)
+                        $timeoutResult.Success = $false
+                        $timeoutResult.AddError(
+                            "Module execution timed out after $([Math]::Round($runtime.TotalMinutes, 1)) minutes",
+                            [System.TimeoutException]::new("Execution timeout"),
+                            @{ Module = $job.ModuleName; Runtime = $runtime.TotalSeconds }
+                        )
                         $timeoutResult.Complete()
                         $ResultsCollection.Add($timeoutResult)
+                        
+                        # Add to phase errors
+                        $null = $phaseResult.RecoverableErrors.Add([PSCustomObject]@{
+                            Module = $job.ModuleName
+                            Error = "Execution timeout after $([Math]::Round($runtime.TotalMinutes, 1)) minutes"
+                            Type = "Timeout"
+                            Timestamp = Get-Date
+                        })
                         
                         # Dispose immediately to free memory
                         $job.PowerShell.Dispose()
@@ -1127,6 +1226,12 @@ function Invoke-ProcessingPhase {
     Write-OrchestratorLog -Message "STARTING PROCESSING PHASE" -Level "HEADER"
     $phaseStartTime = Get-Date
     
+    # Validate context first
+    if (-not $global:MandA -or -not $global:MandA.Paths) {
+        Write-OrchestratorLog -Message "Global context not available or corrupted" -Level "ERROR"
+        return @{ Success = $false; ProcessedFiles = @() }
+    }
+    
     $phaseResult = @{
         Success = $true
         ProcessedFiles = @()
@@ -1152,17 +1257,10 @@ function Invoke-ProcessingPhase {
         if (Get-Command Start-DataAggregation -ErrorAction SilentlyContinue) {
             Write-OrchestratorLog -Message "Starting data aggregation..." -Level "INFO"
             
-            # Ensure we pass the full global context, not just Configuration
+            # Pass full context to aggregation
             $aggregationParams = @{
                 Configuration = $global:MandA.Config
-            }
-
-            # Check if Start-DataAggregation accepts Context parameter
-            if ((Get-Command Start-DataAggregation).Parameters.ContainsKey('Context')) {
-                $aggregationParams['Context'] = $global:MandA
-            } else {
-                # Fallback: ensure Paths are available
-                $aggregationParams['Paths'] = $global:MandA.Paths
+                Context = $global:MandA  # Pass full context
             }
 
             $aggregationResult = Start-DataAggregation @aggregationParams
@@ -1291,15 +1389,44 @@ function Invoke-ExportPhase {
 function Export-ErrorReport {
     param([hashtable]$PhaseResult)
     
-    $actualModuleResults = $PhaseResult.ModuleResults.Values | Where-Object { $_ -ne $null }
-    $successfulModules = ($actualModuleResults | Where-Object { $_.Success -eq $true }).Count
+    # Collect errors from module results
+    $moduleErrors = @()
+    $moduleWarnings = @()
     
-    if ($PhaseResult.CriticalErrors.Count -eq 0 -and 
-        $PhaseResult.RecoverableErrors.Count -eq 0 -and 
-        $PhaseResult.Warnings.Count -eq 0) {
+    foreach ($moduleName in $PhaseResult.ModuleResults.Keys) {
+        $moduleResult = $PhaseResult.ModuleResults[$moduleName]
+        if ($moduleResult -and -not $moduleResult.Success) {
+            foreach ($error in $moduleResult.Errors) {
+                $moduleErrors += [PSCustomObject]@{
+                    Module = $moduleName
+                    Error = $error.Message
+                    Exception = $error.Exception
+                    Timestamp = $error.Timestamp
+                }
+            }
+        }
+        if ($moduleResult -and $moduleResult.Warnings.Count -gt 0) {
+            foreach ($warning in $moduleResult.Warnings) {
+                $moduleWarnings += [PSCustomObject]@{
+                    Module = $moduleName
+                    Warning = $warning.Message
+                    Timestamp = $warning.Timestamp
+                }
+            }
+        }
+    }
+    
+    # Combine with phase-level errors
+    $allErrors = $PhaseResult.CriticalErrors + $PhaseResult.RecoverableErrors + $moduleErrors
+    $allWarnings = $PhaseResult.Warnings + $moduleWarnings
+    
+    if ($allErrors.Count -eq 0 -and $allWarnings.Count -eq 0) {
         Write-OrchestratorLog -Message "No errors or warnings to report" -Level "SUCCESS"
         return
     }
+    
+    $actualModuleResults = $PhaseResult.ModuleResults.Values | Where-Object { $_ -ne $null }
+    $successfulModules = ($actualModuleResults | Where-Object { $_.Success -eq $true }).Count
     
     $errorReport = @{
         Timestamp = Get-Date
@@ -1407,6 +1534,9 @@ try {
     if (-not (Test-OrchestratorPrerequisites)) {
         throw "Prerequisites validation failed"
     }
+    
+    # Discovery prerequisites check
+    Test-DiscoveryPrerequisites
     
     # Module check
     Write-OrchestratorLog -Message "CHECKING MODULE PREREQUISITES" -Level "HEADER"
