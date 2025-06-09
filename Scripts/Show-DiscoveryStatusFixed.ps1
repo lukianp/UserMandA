@@ -1,4 +1,4 @@
-# Enhanced Discovery Status Monitor with Fixed Status Detection
+﻿# Enhanced Discovery Status Monitor with Fixed Status Detection
 # This script provides real-time monitoring of discovery module status
 
 param(
