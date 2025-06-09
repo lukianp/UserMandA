@@ -373,3 +373,75 @@ try {
         }
         
         if ($azureResult.Errors -and $azureResult.Errors.Count -gt 0) {
+            Write-Host "`nErrors ($($azureResult.Errors.Count)):" -ForegroundColor Red
+            foreach ($error in $azureResult.Errors) {
+                if ($error -is [hashtable] -or $error -is [PSCustomObject]) {
+                    Write-Host "  - $($error.Message)" -ForegroundColor Red
+                } else {
+                    Write-Host "  - $error" -ForegroundColor Red
+                }
+            }
+        }
+        
+        if ($azureResult.Warnings -and $azureResult.Warnings.Count -gt 0) {
+            Write-Host "`nWarnings ($($azureResult.Warnings.Count)):" -ForegroundColor Yellow
+            foreach ($warning in $azureResult.Warnings) {
+                if ($warning -is [hashtable] -or $warning -is [PSCustomObject]) {
+                    Write-Host "  - $($warning.Message)" -ForegroundColor Yellow
+                } else {
+                    Write-Host "  - $warning" -ForegroundColor Yellow
+                }
+            }
+        }
+        
+        # Check for output files
+        $rawDataPath = $OrchestratorState.Context.Paths.RawDataOutput
+        if (Test-Path $rawDataPath) {
+            $outputFiles = Get-ChildItem $rawDataPath -Filter "Azure*.csv" -ErrorAction SilentlyContinue
+            if ($outputFiles) {
+                Write-Host "`nOutput Files:" -ForegroundColor Green
+                foreach ($file in $outputFiles) {
+                    $lineCount = (Get-Content $file.FullName | Measure-Object -Line).Lines - 1  # Subtract header
+                    Write-Host "  - $($file.Name): $lineCount records" -ForegroundColor Green
+                }
+            }
+        }
+        
+    } else {
+        Write-OrchestratorLog -Message "No result returned from Azure Discovery module" -Level "ERROR"
+        $OrchestratorState.Success = $false
+    }
+    
+} catch {
+    Write-OrchestratorLog -Message "Orchestrator execution failed: $($_.Exception.Message)" -Level "CRITICAL"
+    $OrchestratorState.Success = $false
+    $OrchestratorState.Errors.Add(@{
+        Message = $_.Exception.Message
+        Timestamp = Get-Date
+        Component = "Orchestrator"
+        Exception = $_.Exception.ToString()
+    }) | Out-Null
+} finally {
+    $OrchestratorState.EndTime = Get-Date
+    $duration = $OrchestratorState.EndTime - $OrchestratorState.StartTime
+    
+    Write-Host "`n=== ORCHESTRATOR SUMMARY ===" -ForegroundColor Cyan
+    Write-Host "Overall Success: $($OrchestratorState.Success)" -ForegroundColor $(if ($OrchestratorState.Success) { "Green" } else { "Red" })
+    Write-Host "Session ID: $($OrchestratorState.SessionId)"
+    Write-Host "Duration: $($duration.TotalSeconds) seconds"
+    Write-Host "Modules Executed: $($OrchestratorState.ModuleResults.Count)"
+    Write-Host "Total Errors: $($OrchestratorState.Errors.Count)"
+    Write-Host "Total Warnings: $($OrchestratorState.Warnings.Count)"
+    
+    # Export orchestrator state
+    try {
+        $stateFile = Join-Path $OutputPath "orchestrator_state_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
+        $OrchestratorState | ConvertTo-Json -Depth 10 | Out-File -FilePath $stateFile -Encoding UTF8
+        Write-OrchestratorLog -Message "Orchestrator state exported to: $stateFile" -Level "INFO"
+    } catch {
+        Write-OrchestratorLog -Message "Failed to export orchestrator state: $($_.Exception.Message)" -Level "WARN"
+    }
+}
+
+Write-Host "`nOrchestrator emulation completed." -ForegroundColor White
+return $OrchestratorState
