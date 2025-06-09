@@ -1,4 +1,4 @@
-﻿# Test script to verify the logging system is working correctly
+# Test script to verify the logging system is working correctly
 param(
     [string]$CompanyName = "TestCompany"
 )

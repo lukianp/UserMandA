@@ -1,4 +1,4 @@
-﻿# Simple Certificate Elimination Test
+# Simple Certificate Elimination Test
 # Tests that configuration has no certificate dependencies
 
 param(

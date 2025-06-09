@@ -1,4 +1,4 @@
-﻿# Test script to verify DiscoveryResult class scope fix
+# Test script to verify DiscoveryResult class scope fix
 # This script tests that discovery modules can now properly access and use the DiscoveryResult class
 
 param(

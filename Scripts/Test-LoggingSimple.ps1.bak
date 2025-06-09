@@ -1,4 +1,4 @@
-﻿# Simple test script to verify the logging system works
+# Simple test script to verify the logging system works
 param(
     [string]$CompanyName = "Zedra"
 )

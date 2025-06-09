@@ -1,4 +1,4 @@
-﻿param([string]$CompanyName)
+param([string]$CompanyName)
 
 # Set window title
 $Host.UI.RawUI.WindowTitle = "M&A Discovery Suite - Status Dashboard ($CompanyName)"
