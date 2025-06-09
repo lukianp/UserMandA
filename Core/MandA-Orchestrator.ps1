@@ -985,9 +985,10 @@ function Invoke-DiscoveryPhase {
         }
     }
 
-    # Now create the RunspacePool and PASS the session state to the constructor
+    # Create the RunspacePool with correct PowerShell 5.1 syntax
+    # Use the 4-parameter overload that accepts InitialSessionState
     Write-OrchestratorLog -Message "Creating runspace pool with pre-configured session state..." -Level "DEBUG"
-    $pool = [runspacefactory]::CreateRunspacePool($sessionState, 1, $maxConcurrentJobs)
+    $pool = [runspacefactory]::CreateRunspacePool(1, $maxConcurrentJobs, $sessionState, $Host)
     $pool.Open()
     Write-OrchestratorLog -Message "Runspace pool opened successfully." -Level "SUCCESS"
 

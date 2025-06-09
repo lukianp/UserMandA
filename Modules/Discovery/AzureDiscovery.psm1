@@ -1,152 +1,307 @@
 ﻿# -*- coding: utf-8-bom -*-
-#Requires -Modules Az.Accounts, Az.Resources, Az.Compute, Az.Network
-
-# Author: Lukian Poleschtschuk (Rewritten by Gemini for v7.0)
-# Version: 7.0.0
-# Last Modified: 2025-06-09
-# Change Log: Refactored for parallel execution, consistent design, and full functionality preservation.
+#Requires -Version 5.1
+#Requires -Modules Az.Accounts, Az.Resources
 
 <#
 .SYNOPSIS
-    Performs comprehensive discovery of Azure resources across all subscriptions.
+    Azure resource discovery module for M&A Discovery Suite
 .DESCRIPTION
-    This module collects detailed data about Azure Subscriptions, Resource Groups, VMs, AD Applications,
-    and Service Principals. It has been rewritten to align with the parallel execution engine of
-    the M&A Discovery Suite v7.0, ensuring resilient and context-aware operation.
+    Discovers Azure subscriptions, resource groups, and virtual machines
 .NOTES
-    This module is called by the MandA-Orchestrator and expects -Configuration and -Context parameters.
+    Author: M&A Discovery Team
+    Version: 7.1.0
+    Last Modified: 2025-06-09
 #>
 
-# --- Internal Helper Functions (Original Detailed Logic Preserved) ---
+# Module-scope context variable
+$script:ModuleContext = $null
 
-function Invoke-AzureOperationWithThrottling {
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
+
+function Write-AzureLog {
     param(
-        [scriptblock]$Operation,
-        [string]$OperationName,
-        [object]$Context,
-        [int]$MaxRetries = 3
+        [string]$Message,
+        [string]$Level = "INFO",
+        $Context
     )
-    # This helper manages API throttling and retries. Its full logic is preserved.
-    # ... full implementation of retry logic ...
-    return & $Operation
+    
+    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+        Write-MandALog -Message "[Azure] $Message" -Level $Level -Component "AzureDiscovery" -Context $Context
+    } else {
+        $color = switch ($Level) {
+            "ERROR" { "Red" }
+            "WARN" { "Yellow" }
+            "SUCCESS" { "Green" }
+            "DEBUG" { "Gray" }
+            default { "White" }
+        }
+        Write-Host "[Azure] $Message" -ForegroundColor $color
+    }
 }
 
-function Get-AzureSubscriptionsInternal {
-    param($Configuration, $Context)
-    Write-MandALog -Message "Getting all Azure Subscriptions..." -Level DEBUG -Context $Context
-    return Invoke-AzureOperationWithThrottling -Operation { Get-AzSubscription -ErrorAction Stop } -OperationName "GetSubscriptions" -Context $Context
+function Test-AzureConnection {
+    param($Context)
+    
+    try {
+        $azContext = Get-AzContext -ErrorAction Stop
+        if (-not $azContext) {
+            return $false
+        }
+        
+        # Test with simple subscription query
+        $null = Get-AzSubscription -ErrorAction Stop | Select-Object -First 1
+        return $true
+    } catch {
+        Write-AzureLog -Message "Azure connection test failed: $_" -Level "ERROR" -Context $Context
+        return $false
+    }
 }
 
-function Get-AzureResourceGroupsInternal {
-    param($Configuration, $SubscriptionContext, $Context)
-    Write-MandALog -Message "Getting Azure Resource Groups for sub: $($SubscriptionContext.Name)" -Level DEBUG -Context $Context
-    return Invoke-AzureOperationWithThrottling -Operation { Get-AzResourceGroup -ErrorAction Stop } -OperationName "GetRGs" -Context $Context
+function Get-AzureSubscriptionsData {
+    param(
+        [hashtable]$Configuration,
+        $Context
+    )
+    
+    $subscriptions = @()
+    
+    try {
+        Write-AzureLog -Message "Retrieving Azure subscriptions..." -Level "INFO" -Context $Context
+        
+        $azSubs = Get-AzSubscription -ErrorAction Stop
+        
+        foreach ($sub in $azSubs) {
+            $subscriptions += [PSCustomObject]@{
+                SubscriptionId = $sub.Id
+                Name = $sub.Name
+                State = $sub.State
+                TenantId = $sub.TenantId
+                _DiscoveryTimestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+                _DiscoveryModule = 'Azure'
+            }
+        }
+        
+        Write-AzureLog -Message "Retrieved $($subscriptions.Count) subscriptions" -Level "SUCCESS" -Context $Context
+    } catch {
+        Write-AzureLog -Message "Failed to retrieve subscriptions: $_" -Level "ERROR" -Context $Context
+        throw
+    }
+    
+    return $subscriptions
 }
 
-function Get-AzureVMsDataInternal {
-     param($Configuration, $SubscriptionContext, $Context)
-    Write-MandALog -Message "Getting Azure VMs for sub: $($SubscriptionContext.Name)" -Level DEBUG -Context $Context
-    return Invoke-AzureOperationWithThrottling -Operation { Get-AzVM -Status -ErrorAction Stop } -OperationName "GetVMs" -Context $Context
+function Get-AzureResourceGroupsData {
+    param(
+        [hashtable]$Configuration,
+        $Context,
+        $Subscriptions
+    )
+    
+    $resourceGroups = @()
+    
+    foreach ($sub in $Subscriptions) {
+        try {
+            Write-AzureLog -Message "Getting resource groups for subscription: $($sub.Name)" -Level "DEBUG" -Context $Context
+            
+            # Set context to subscription
+            $null = Set-AzContext -SubscriptionId $sub.SubscriptionId -ErrorAction Stop
+            
+            $rgs = Get-AzResourceGroup -ErrorAction Stop
+            
+            foreach ($rg in $rgs) {
+                $resourceGroups += [PSCustomObject]@{
+                    SubscriptionId = $sub.SubscriptionId
+                    SubscriptionName = $sub.Name
+                    ResourceGroupName = $rg.ResourceGroupName
+                    Location = $rg.Location
+                    ProvisioningState = $rg.ProvisioningState
+                    Tags = if ($rg.Tags) { ($rg.Tags.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ';' } else { $null }
+                    _DiscoveryTimestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+                    _DiscoveryModule = 'Azure'
+                }
+            }
+        } catch {
+            Write-AzureLog -Message "Error getting resource groups for $($sub.Name): $_" -Level "WARN" -Context $Context
+        }
+    }
+    
+    Write-AzureLog -Message "Retrieved $($resourceGroups.Count) resource groups" -Level "INFO" -Context $Context
+    return $resourceGroups
 }
 
-function Get-AzureADApplicationsInternal {
-    param($Configuration, $Context)
-    Write-MandALog -Message "Getting Azure AD Applications..." -Level DEBUG -Context $Context
-    return Invoke-AzureOperationWithThrottling -Operation { Get-AzADApplication -All $true } -OperationName "GetADApps" -Context $Context
+function Get-AzureVirtualMachinesData {
+    param(
+        [hashtable]$Configuration,
+        $Context,
+        $Subscriptions
+    )
+    
+    $virtualMachines = @()
+    
+    foreach ($sub in $Subscriptions) {
+        try {
+            Write-AzureLog -Message "Getting VMs for subscription: $($sub.Name)" -Level "DEBUG" -Context $Context
+            
+            # Set context to subscription
+            $null = Set-AzContext -SubscriptionId $sub.SubscriptionId -ErrorAction Stop
+            
+            $vms = Get-AzVM -Status -ErrorAction Stop
+            
+            foreach ($vm in $vms) {
+                $virtualMachines += [PSCustomObject]@{
+                    SubscriptionId = $sub.SubscriptionId
+                    SubscriptionName = $sub.Name
+                    ResourceGroupName = $vm.ResourceGroupName
+                    Name = $vm.Name
+                    Location = $vm.Location
+                    VmSize = $vm.HardwareProfile.VmSize
+                    ProvisioningState = $vm.ProvisioningState
+                    PowerState = ($vm.Statuses | Where-Object { $_.Code -like 'PowerState/*' } | Select-Object -First 1).DisplayStatus
+                    OsType = $vm.StorageProfile.OsDisk.OsType
+                    OsName = $vm.StorageProfile.ImageReference.Offer
+                    OsSku = $vm.StorageProfile.ImageReference.Sku
+                    Tags = if ($vm.Tags) { ($vm.Tags.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ';' } else { $null }
+                    _DiscoveryTimestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+                    _DiscoveryModule = 'Azure'
+                }
+            }
+        } catch {
+            Write-AzureLog -Message "Error getting VMs for $($sub.Name): $_" -Level "WARN" -Context $Context
+        }
+    }
+    
+    Write-AzureLog -Message "Retrieved $($virtualMachines.Count) virtual machines" -Level "INFO" -Context $Context
+    return $virtualMachines
 }
 
-# --- Main Exported Function ---
+function Export-AzureData {
+    param(
+        [string]$FilePath,
+        [array]$Data,
+        [string]$DataType,
+        $Context
+    )
+    
+    try {
+        if ($Data.Count -gt 0) {
+            $Data | Export-Csv -Path $FilePath -NoTypeInformation -Encoding UTF8
+            Write-AzureLog -Message "Exported $($Data.Count) $DataType records to $([System.IO.Path]::GetFileName($FilePath))" -Level "SUCCESS" -Context $Context
+        } else {
+            Write-AzureLog -Message "No $DataType data to export" -Level "WARN" -Context $Context
+        }
+    } catch {
+        Write-AzureLog -Message "Failed to export $DataType data: $_" -Level "ERROR" -Context $Context
+        throw
+    }
+}
 
+# Main discovery function - matches orchestrator expectations
 function Invoke-AzureDiscovery {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration,
-
+        
         [Parameter(Mandatory=$true)]
-        [object]$Context
+        $Context
     )
-
+    
+    # Initialize result using the globally defined DiscoveryResult class
     $result = [DiscoveryResult]::new('Azure')
-    Write-MandALog -Message "Starting Azure Discovery..." -Level INFO -Context $Context
-
+    
     try {
-        # --- Prerequisite Check ---
-        if (-not $Context.ConnectionStatus.Azure.Connected) {
-            $result.AddError("Azure is not connected. Cannot perform discovery.", "ConnectionFailure")
+        Write-AzureLog -Message "Starting Azure Discovery..." -Level "INFO" -Context $Context
+        
+        # Check prerequisites
+        if (-not (Test-AzureConnection -Context $Context)) {
+            $result.AddError("Azure connection not available", $null, @{
+                Component = "AzureConnection"
+                Resolution = "Ensure Azure PowerShell is connected using Connect-AzAccount"
+            })
             return $result
         }
-
-        # --- Data Collection Orchestration ---
-        $azureData = @{
-            Subscriptions = [System.Collections.ArrayList]::new();
-            ResourceGroups = [System.Collections.ArrayList]::new();
-            VirtualMachines = [System.Collections.ArrayList]::new();
-            ADApplications = [System.Collections.ArrayList]::new()
-        }
-        $rawOutputPath = $Context.Paths.RawDataOutput
         
-        # 1. Discover Subscriptions
+        # Get output path
+        $outputPath = Join-Path $Context.Paths.RawDataOutput ""
+        if (-not (Test-Path $outputPath)) {
+            New-Item -Path $outputPath -ItemType Directory -Force | Out-Null
+        }
+        
+        # Discover subscriptions
         $subscriptions = @()
         try {
-            $subscriptions = Get-AzureSubscriptionsInternal -Configuration $Configuration -Context $Context
-            $null = $azureData.Subscriptions.AddRange($subscriptions)
+            $subscriptions = Get-AzureSubscriptionsData -Configuration $Configuration -Context $Context
             $result.Metadata['SubscriptionCount'] = $subscriptions.Count
-            $subscriptions | Export-Csv -Path (Join-Path $rawOutputPath "AzureSubscriptions.csv") -NoTypeInformation -Encoding UTF8
-            Write-MandALog -Message "Successfully discovered $($subscriptions.Count) Azure Subscriptions." -Level SUCCESS -Context $Context
-        }
-        catch {
-            $result.AddError("Failed to discover Azure Subscriptions. Halting module.", $_.Exception)
-            # If we can't get subs, we can't get anything else.
-            return $result
-        }
-
-        # 2. Discover Tenant-Level Resources (like AD Apps) once
-        try {
-            $adApps = Get-AzureADApplicationsInternal -Configuration $Configuration -Context $Context
-            $null = $azureData.ADApplications.AddRange($adApps)
-            $result.Metadata['ADApplicationCount'] = $adApps.Count
-            $adApps | Export-Csv -Path (Join-Path $rawOutputPath "AzureADApplications.csv") -NoTypeInformation -Encoding UTF8
-            Write-MandALog -Message "Successfully discovered $($adApps.Count) Azure AD Applications." -Level SUCCESS -Context $Context
-        }
-        catch {
-             $result.AddError("Failed to discover Azure AD Applications.", $_.Exception, @{ Operation = "ADApplications" })
-        }
-
-        # 3. Iterate through each subscription for its resources
-        foreach ($sub in $subscriptions) {
-            Write-MandALog -Message "Processing resources for subscription: $($sub.Name)" -Level INFO -Context $Context
-            Set-AzContext -SubscriptionObject $sub -ErrorAction SilentlyContinue | Out-Null
             
-            # Resource Groups
-            try {
-                $rgs = Get-AzureResourceGroupsInternal -Configuration $Configuration -SubscriptionContext $sub -Context $Context
-                $null = $azureData.ResourceGroups.AddRange($rgs)
-            } catch { $result.AddError("Failed to get Resource Groups for sub $($sub.Name)", $_.Exception) }
-            
-            # Virtual Machines
-            try {
-                $vms = Get-AzureVMsDataInternal -Configuration $Configuration -SubscriptionContext $sub -Context $Context
-                $null = $azureData.VirtualMachines.AddRange($vms)
-            } catch { $result.AddError("Failed to get VMs for sub $($sub.Name)", $_.Exception) }
+            if ($subscriptions.Count -gt 0) {
+                Export-AzureData -FilePath (Join-Path $outputPath "AzureSubscriptions.csv") `
+                    -Data $subscriptions -DataType "subscriptions" -Context $Context
+            }
+        } catch {
+            $result.AddError("Failed to discover Azure subscriptions", $_.Exception, @{
+                Operation = "GetSubscriptions"
+            })
         }
         
-        # Export aggregated subscription-level data
-        $azureData.ResourceGroups | Export-Csv -Path (Join-Path $rawOutputPath "AzureResources.csv") -NoTypeInformation -Encoding UTF8
-        $azureData.VirtualMachines | Export-Csv -Path (Join-Path $rawOutputPath "AzureVMs.csv") -NoTypeInformation -Encoding UTF8
-        $result.Metadata['ResourceGroupCount'] = $azureData.ResourceGroups.Count
-        $result.Metadata['VMCount'] = $azureData.VirtualMachines.Count
-
-        $result.Data = $azureData
-
+        # Only continue if we have subscriptions
+        if ($subscriptions.Count -gt 0) {
+            # Discover resource groups
+            try {
+                $resourceGroups = Get-AzureResourceGroupsData -Configuration $Configuration -Context $Context -Subscriptions $subscriptions
+                $result.Metadata['ResourceGroupCount'] = $resourceGroups.Count
+                
+                if ($resourceGroups.Count -gt 0) {
+                    Export-AzureData -FilePath (Join-Path $outputPath "AzureResourceGroups.csv") `
+                        -Data $resourceGroups -DataType "resource groups" -Context $Context
+                }
+            } catch {
+                $result.AddError("Failed to discover resource groups", $_.Exception, @{
+                    Operation = "GetResourceGroups"
+                })
+            }
+            
+            # Discover virtual machines
+            try {
+                $virtualMachines = Get-AzureVirtualMachinesData -Configuration $Configuration -Context $Context -Subscriptions $subscriptions
+                $result.Metadata['VirtualMachineCount'] = $virtualMachines.Count
+                
+                if ($virtualMachines.Count -gt 0) {
+                    Export-AzureData -FilePath (Join-Path $outputPath "AzureVirtualMachines.csv") `
+                        -Data $virtualMachines -DataType "virtual machines" -Context $Context
+                }
+            } catch {
+                $result.AddError("Failed to discover virtual machines", $_.Exception, @{
+                    Operation = "GetVirtualMachines"
+                })
+            }
+        } else {
+            $result.AddWarning("No Azure subscriptions found or accessible")
+        }
+        
+        # Set overall success based on critical data
+        $result.Success = ($subscriptions.Count -gt 0)
+        
     } catch {
-        $result.AddError("An unexpected error occurred in AzureDiscovery.", $_.Exception, @{ Operation = "MainBlock" })
+        $result.AddError("Unexpected error in Azure discovery", $_.Exception, @{
+            Operation = "AzureDiscovery"
+        })
     } finally {
         $result.Complete()
-        Write-MandALog -Message "Azure Discovery finished. Success: $($result.Success), Errors: $($result.Errors.Count)" -Level INFO -Context $Context
+        Write-AzureLog -Message "Azure Discovery completed. Success: $($result.Success), Errors: $($result.Errors.Count)" -Level "INFO" -Context $Context
     }
-
+    
     return $result
 }
 
+# Export the required function
 Export-ModuleMember -Function Invoke-AzureDiscovery
