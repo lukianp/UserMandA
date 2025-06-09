@@ -1252,48 +1252,51 @@ function Invoke-DiscoveryModule {
             $configJson = $Configuration | ConvertTo-Json -Depth 10 -Compress
             $contextJson = $global:MandA | ConvertTo-Json -Depth 10 -Compress
 
-            # Script to set up the runspace environment
-            $utilityModulesToInject = @(
-                "EnhancedLogging.psm1",
-                "ProgressDisplay.psm1",
-                "ErrorHandling.psm1",
-                "FileOperations.psm1",
-                "ValidationHelpers.psm1"
-            )
+# Script to set up the runspace environment
+$utilityModulesToInject = @(
+    "EnhancedLogging.psm1",
+    "ProgressDisplay.psm1",
+    "ErrorHandling.psm1",
+    "FileOperations.psm1",
+    "ValidationHelpers.psm1"
+)
 
-            $utilityImportStatements = $utilityModulesToInject | ForEach-Object {
-                # Ensure paths with spaces are quoted correctly for the script block
-                $utilityPath = Join-Path (Get-ModuleContext).Paths.Utilities $_
-                "Import-Module -Name '$utilityPath' -Force -Global"
+$utilityImportStatements = $utilityModulesToInject | ForEach-Object {
+    # Ensure paths with spaces are quoted correctly for the script block
+    $utilityPath = Join-Path (Get-ModuleContext).Paths.Utilities $_
+    "Import-Module -Name '$utilityPath' -Force -Global"
+}
+
+# The $discoveryResultClassDefinition variable should already exist in this function's scope.
+# This script block will be executed within the new runspace.
+$setupScript = @"
+    # Inject the DiscoveryResult Class definition
+    if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+        Add-Type -TypeDefinition '$($discoveryResultClassDefinition -replace "'", "''")' -Language CSharp
+    }
+
+    # Inject the Get-ModuleContext helper function
+    function Get-ModuleContext {
+        if (`$null -eq `$script:ModuleContext) {
+            if (`$null -ne `$global:MandA) {
+                `$script:ModuleContext = `$global:MandA
+            } else {
+                # This is a fallback for the isolated runspace, using the 'using' scope modifier
+                # This ensures the global context from the main thread is available here.
+                `$script:ModuleContext = `$using:global:MandA
             }
+        }
+        return `$script:ModuleContext
+    }
 
-            $setupScript = @"
-                # Inject the DiscoveryResult Class definition
-                if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
-                    Add-Type -TypeDefinition '$($discoveryResultClassDefinition -replace "'", "''")' -Language CSharp
-                }
+    # --- ADDED: INJECT UTILITY MODULES ---
+    # Load required utility functions into the isolated runspace
+    Write-Host "Runspace: Loading utility modules..."
+    $($utilityImportStatements -join "`n")
 
-                # Inject the Get-ModuleContext helper function
-                function Get-ModuleContext {
-                    if (`$null -eq `$script:ModuleContext) {
-                        if (`$null -ne `$global:MandA) {
-                            `$script:ModuleContext = `$global:MandA
-                        } else {
-                            # This is a fallback for the isolated runspace
-                            `$script:ModuleContext = `$using:global:MandA
-                        }
-                    }
-                    return `$script:ModuleContext
-                }
-
-                # --- ADDED: INJECT UTILITY MODULES ---
-                # Load required utility functions into the isolated runspace
-                Write-Host "Runspace: Loading utility modules..."
-                $($utilityImportStatements -join "`n")
-
-                # Load the main discovery module that will be executed
-                Write-Host "Runspace: Loading discovery module '$moduleFile'..."
-                Import-Module -Name '$moduleFile' -Force
+    # Load the main discovery module that will be executed
+    Write-Host "Runspace: Loading discovery module '$moduleFile'..."
+    Import-Module -Name '$moduleFile' -Force
 "@
             
             $null = $powershell.AddScript($setupScript)
