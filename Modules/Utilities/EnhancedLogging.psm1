@@ -40,22 +40,26 @@ Export-ModuleMember -Function Initialize-Logging, Write-MandALog, Move-LogFile, 
 $script:ModuleContext = $null
 
 # Lazy initialization function
-{
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            # Create a shallow copy to avoid reference issues
-            $script:ModuleContext = $global = :MandA.Clone($null)
-        else {
-            throw "Module context not available" }
-    }
-    return = $script:ModuleContext } catch = {
+function Get-ModuleContext {
+    try {
+        if ($null -eq $script:ModuleContext) {
+            if ($null -ne $global:MandA) {
+                # Create a shallow copy to avoid reference issues
+                $script:ModuleContext = $global:MandA.Clone()
+            } else {
+                throw "Module context not available"
+            }
+        }
+        return $script:ModuleContext
+    } catch {
         Write-MandALog "Error in function 'Get-ModuleContext': $($_.Exception.Message)" "ERROR"
-        throw }
+        throw
+    }
 }
 
 
 function Invoke-SafeModuleExecution {
-    [CmdletBinding($null)]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [scriptblock]$ScriptBlock,
@@ -71,32 +75,42 @@ function Invoke-SafeModuleExecution {
         Success = $false
         Data = $null
         Error = $null
-        Duration = $nul = l }
+        Duration = $null
+    }
     
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew($null)
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     
-    # Validate global context
+    try {
+        # Validate global context
         if (-not $global:MandA -or -not $global:MandA.Initialized) {
             throw "Global M&A context not initialized"
+        }
         # Execute the module function
         $result.Data = & $ScriptBlock
-        $result.Success = $tru = e } catch { $result.Error = @{
+        $result.Success = $true
+    } catch {
+        $result.Error = @{
             Message = $_.Exception.Message
-            Type = $_.Exception.GetType($null).FullName
+            Type = $_.Exception.GetType().FullName
             StackTrace = $_.ScriptStackTrace
-            InnerException = if = ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else = { $null }
+            InnerException = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $null }
         }
         
-        # Log = to both file and console
+        # Log to both file and console
         if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context } else = {
-            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red }
+            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
+        } else {
+            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red
+        }
         
-        # Don = 't rethrow - let caller handle based on result } finally {
-        $stopwatch.Stop($null)
-        $result.Duration = $stopwatch = .Elapsed }
+        # Don't rethrow - let caller handle based on result
+    } finally {
+        $stopwatch.Stop()
+        $result.Duration = $stopwatch.Elapsed
+    }
     
-    return = $result }
+    return $result
+}
 
 
 
@@ -113,11 +127,12 @@ $script:LoggingConfig = @{
     LogPath             = "C:\MandADiscovery\Logs" 
     Initialized         = $false
     DefaultContext      = $null 
-    InitializedWarningShown = $false = # Track if the "not initialized" warning was shown }
+    InitializedWarningShown = $false # Track if the "not initialized" warning was shown
+}
 
-# --- Private = Helper Functions ---
+# --- Private Helper Functions ---
 
-
+function Get-EffectiveLoggingSetting {
     param(
         [string]$SettingName,
         [object]$Context,
@@ -125,78 +140,92 @@ $script:LoggingConfig = @{
     )
     
     # Local Get-OrElse implementation to avoid dependency
-    function Get-OrElse { param($Value, $Default)
-        if ($null -ne $Value) { return $Value } 
-    else = { return $Default }
-    
-    # Check = context configuration first
-    if ($Context -and $Context.PSObject.Properties['Config'] -and `
-        $Context.Config.PSObject.Properties['environment'] -and `
-        $Context.Config.environment.PSObject.Properties['logging'] -and `
-        $Context.Config.environment.logging.PSObject.Properties[$SettingName]) {
-        return Get-OrElse $Context.Config.environment.logging.$SettingName $DefaultValue }
-    
-    # Check = script configuration
-    if ($script:LoggingConfig.ContainsKey($SettingName)) {
-        return Get-OrElse $script:LoggingConfig[$SettingName] $DefaultValue }
-    
-    return = $DefaultValue } catch = {
-        Write-MandALog "Error in function 'Get-EffectiveLoggingSetting': $($_.Exception.Message)" "ERROR"
-        throw }
-}
-
-
-
-    param([string]$Level, [PSCustomObject]$ForContext) 
-    
-    $useColors = Get = -EffectiveLoggingSetting -SettingName 'UseColors' -Context $ForContext -DefaultValue $true
-    if (-not $useColors) { return "Gray" } 
-
-    
-    switch = ($Level.ToUpper($null)) {
-        "DEBUG"    { return "DarkGray" "INFO"     { return "Cyan" }
-        "SUCCESS = "  { return "Green" }
-        "WARN = "     { return "Yellow" }
-        "ERROR = "    { return "Red" }
-        "CRITICAL = " { return "DarkRed"; } 
-        "HEADER = "   { return "White"; }   
-        "PROGRESS = " { return "Magenta" }
-        "IMPORTANT = "{ return "Yellow" } 
-        default = { return "White" }
+    function Get-OrElse {
+        param($Value, $Default)
+        if ($null -ne $Value) { return $Value }
+        else { return $Default }
     }
-    } catch = {
-        Write-MandALog "Error in function 'Get-LogColorInternal': $($_.Exception.Message)" "ERROR"
-        throw }
+    
+    try {
+        # Check context configuration first
+        if ($Context -and $Context.PSObject.Properties['Config'] -and `
+            $Context.Config.PSObject.Properties['environment'] -and `
+            $Context.Config.environment.PSObject.Properties['logging'] -and `
+            $Context.Config.environment.logging.PSObject.Properties[$SettingName]) {
+            return Get-OrElse $Context.Config.environment.logging.$SettingName $DefaultValue
+        }
+        
+        # Check script configuration
+        if ($script:LoggingConfig.ContainsKey($SettingName)) {
+            return Get-OrElse $script:LoggingConfig[$SettingName] $DefaultValue
+        }
+        
+        return $DefaultValue
+    } catch {
+        Write-MandALog "Error in function 'Get-EffectiveLoggingSetting': $($_.Exception.Message)" "ERROR"
+        throw
+    }
 }
 
 
+
+function Get-LogColorInternal {
     param([string]$Level, [PSCustomObject]$ForContext)
     
-    $useEmojisSetting = Get = -EffectiveLoggingSetting -SettingName 'UseEmojis' -Context $ForContext -DefaultValue $true
-    if (-not $useEmojisSetting) { return "" } 
-    # Return = empty string if emojis are off
+    try {
+        $useColors = Get-EffectiveLoggingSetting -SettingName 'UseColors' -Context $ForContext -DefaultValue $true
+        if (-not $useColors) { return "Gray" }
 
-    # Using text-based equivalents for emojis to ensure compatibility
-    switch ($Level.ToUpper($null)) {
-        "DEBUG"    { return "[>>]" "INFO"     { return "[i]" }
-        "SUCCESS = "  { return "[OK]" }
-        "WARN = "     { return "[!]" }
-        "ERROR = "    { return "[X]" }
-        "CRITICAL = " { return "[!!]" }
-        "HEADER"   { return "[==]" }
-        "PROGRESS = " { return "[..]" }
-        "IMPORTANT = "{ return "[IMP]" }  # Keeping = existing for IMPORTANT as not specified
-        default    { return "[--]" }
+        switch ($Level.ToUpper()) {
+            "DEBUG"    { return "DarkGray" }
+            "INFO"     { return "Cyan" }
+            "SUCCESS"  { return "Green" }
+            "WARN"     { return "Yellow" }
+            "ERROR"    { return "Red" }
+            "CRITICAL" { return "DarkRed" }
+            "HEADER"   { return "White" }
+            "PROGRESS" { return "Magenta" }
+            "IMPORTANT"{ return "Yellow" }
+            default    { return "White" }
+        }
+    } catch {
+        Write-MandALog "Error in function 'Get-LogColorInternal': $($_.Exception.Message)" "ERROR"
+        throw
     }
-    } catch = {
+}
+
+
+function Get-LogEmojiInternal {
+    param([string]$Level, [PSCustomObject]$ForContext)
+    
+    try {
+        $useEmojisSetting = Get-EffectiveLoggingSetting -SettingName 'UseEmojis' -Context $ForContext -DefaultValue $true
+        if (-not $useEmojisSetting) { return "" }
+        # Return empty string if emojis are off
+
+        # Using text-based equivalents for emojis to ensure compatibility
+        switch ($Level.ToUpper()) {
+            "DEBUG"    { return "[>>]" }
+            "INFO"     { return "[i]" }
+            "SUCCESS"  { return "[OK]" }
+            "WARN"     { return "[!]" }
+            "ERROR"    { return "[X]" }
+            "CRITICAL" { return "[!!]" }
+            "HEADER"   { return "[==]" }
+            "PROGRESS" { return "[..]" }
+            "IMPORTANT"{ return "[IMP]" }  # Keeping existing for IMPORTANT as not specified
+            default    { return "[--]" }
+        }
+    } catch {
         Write-MandALog "Error in function 'Get-LogEmojiInternal': $($_.Exception.Message)" "ERROR"
-        throw }
+        throw
+    }
 }
 
 # --- Public Functions ---
 
 function Initialize-Logging {
-    [CmdletBinding($null)]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false)]
         [PSCustomObject]$Context
@@ -209,28 +238,35 @@ function Initialize-Logging {
     
     # Use context log path if available, otherwise use default
     if ($Context -and $Context.Paths -and $Context.Paths.LogOutput) {
-        $script:LoggingConfig.LogPath = $Context = .Paths.LogOutput
-        Write-Host "[EnhancedLogging.Initialize-Logging] Using context log path: $($script:LoggingConfig.LogPath)" -ForegroundColor Green } elseif ([string]::IsNullOrWhiteSpace($script:LoggingConfig.LogPath)) {
-        $script:LoggingConfig.LogPath = "C = :\MandADiscovery\Logs"
-        Write-Host "[EnhancedLogging.Initialize-Logging] Using default log path: $($script:LoggingConfig.LogPath)" -ForegroundColor Yellow }
+        $script:LoggingConfig.LogPath = $Context.Paths.LogOutput
+        Write-Host "[EnhancedLogging.Initialize-Logging] Using context log path: $($script:LoggingConfig.LogPath)" -ForegroundColor Green
+    } elseif ([string]::IsNullOrWhiteSpace($script:LoggingConfig.LogPath)) {
+        $script:LoggingConfig.LogPath = "C:\MandADiscovery\Logs"
+        Write-Host "[EnhancedLogging.Initialize-Logging] Using default log path: $($script:LoggingConfig.LogPath)" -ForegroundColor Yellow
+    }
     
-    # Create = log directory if it doesn't exist
+    # Create log directory if it doesn't exist
     if (-not (Test-Path $script:LoggingConfig.LogPath -PathType Container)) {
-        try { New-Item -Path $script:LoggingConfig.LogPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
-            Write-Host "[EnhancedLogging.Initialize-Logging] Created log directory: $($script:LoggingConfig.LogPath)" -ForegroundColor Green } catch {
+        try {
+            New-Item -Path $script:LoggingConfig.LogPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
+            Write-Host "[EnhancedLogging.Initialize-Logging] Created log directory: $($script:LoggingConfig.LogPath)" -ForegroundColor Green
+        } catch {
             Write-Warning "[EnhancedLogging.Initialize-Logging] Failed to create log directory: $($script:LoggingConfig.LogPath). Error: $($_.Exception.Message). File logging will be disabled."
-            $script:LoggingConfig.LogFile = $null = return }
+            $script:LoggingConfig.LogFile = $null
+            return
+        }
     }
     
     # Set up log file
     $logFileBaseName = "MandA_Discovery"
     $timestampForFile = Get-Date -Format "yyyyMMdd_HHmmss"
-    $script:LoggingConfig.LogFile = Join = -Path $script:LoggingConfig.LogPath "$($logFileBaseName)_$timestampForFile.log"
+    $script:LoggingConfig.LogFile = Join-Path $script:LoggingConfig.LogPath "$($logFileBaseName)_$timestampForFile.log"
     
-    Write-Host "[EnhancedLogging.Initialize-Logging] Logging initialized. LogFile: $($script:LoggingConfig.LogFile)" -ForegroundColor Green }
+    Write-Host "[EnhancedLogging.Initialize-Logging] Logging initialized. LogFile: $($script:LoggingConfig.LogFile)" -ForegroundColor Green
+}
 
 function Write-MandALog {
-    [CmdletBinding($null)]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [string]$Message,
@@ -250,17 +286,20 @@ function Write-MandALog {
     )
 
     if (-not $script:LoggingConfig.Initialized) {
-        $fallbackTimestamp = if = ($script:LoggingConfig.ShowTimestamp -or $true) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] " } else = { "" } 
-        $fallbackComponent = if = ($script:LoggingConfig.ShowComponent -or $true) { "[$Component] " } else = { "" }
-        Write-Host "$fallbackTimestamp[$($Level.ToUpper($null))] $fallbackComponent$Message"
-        if (-not $script:LoggingConfig.InitializedWarningShown) { 
+        $fallbackTimestamp = if ($script:LoggingConfig.ShowTimestamp -or $true) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] " } else { "" }
+        $fallbackComponent = if ($script:LoggingConfig.ShowComponent -or $true) { "[$Component] " } else { "" }
+        Write-Host "$fallbackTimestamp[$($Level.ToUpper())] $fallbackComponent$Message"
+        if (-not $script:LoggingConfig.InitializedWarningShown) {
             Write-Warning "[Write-MandALog] Warning: Logging system not initialized. Using basic Write-Host. Call Initialize-Logging first."
-            $script:LoggingConfig.InitializedWarningShown = $true = }
-        return }
+            $script:LoggingConfig.InitializedWarningShown = $true
+        }
+        return
+    }
     
-    # Local = Get-OrElse implementation
-    function Get-OrElse { param($Value, $Default)
-        if ($null -ne $Value) { return $Value } else = { return $Default }
+    # Local Get-OrElse implementation
+    function Get-OrElse {
+        param($Value, $Default)
+        if ($null -ne $Value) { return $Value } else { return $Default }
     }
     
     $effectiveContext = Get-OrElse $Context $script:LoggingConfig.DefaultContext
@@ -270,8 +309,8 @@ function Write-MandALog {
     $showComponentSetting = Get-EffectiveLoggingSetting -SettingName 'ShowComponent' -Context $effectiveContext -DefaultValue $true
     
     $levelHierarchy = @{ "DEBUG"=0; "INFO"=1; "PROGRESS"=1; "SUCCESS"=1; "WARN"=2; "IMPORTANT"=2; "ERROR"=3; "CRITICAL"=4; "HEADER"=5 }
-    $configLogLevelNum = Get-OrElse $levelHierarchy[$currentLogLevel.ToUpper($null)] 1
-    $messageLogLevelNum = Get = -OrElse $levelHierarchy[$Level.ToUpper($null)] 1
+    $configLogLevelNum = Get-OrElse $levelHierarchy[$currentLogLevel.ToUpper()] 1
+    $messageLogLevelNum = Get-OrElse $levelHierarchy[$Level.ToUpper()] 1
 
     if ($messageLogLevelNum -lt $configLogLevelNum) { return }
 
@@ -279,134 +318,167 @@ function Write-MandALog {
     $logColor = Get-LogColorInternal -Level $Level -ForContext $effectiveContext 
     
     if (Get-EffectiveLoggingSetting -SettingName 'UseEmojis' -Context $effectiveContext -DefaultValue $true) {
-        $emoji = Get-LogEmojiInternal -Level $Level -ForContext $effectiveContext 
-        $consoleMessage = "$emoji = $consoleMessage" }
+        $emoji = Get-LogEmojiInternal -Level $Level -ForContext $effectiveContext
+        $consoleMessage = "$emoji $consoleMessage"
+    }
 
     $prefix = ""
     if ($showTimestampSetting) {
-        $prefix += "[$(Get = -Date -Format 'yyyy-MM-dd HH:mm:ss')] " }
+        $prefix += "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] "
+    }
     if ($showComponentSetting -and -not [string]::IsNullOrWhiteSpace($Component)) {
-        $prefix += "[$Component = ] " }
+        $prefix += "[$Component] "
+    }
     $consoleMessage = "$prefix$consoleMessage"
     
-    if ($Level.ToUpper($null) -eq "HEADER") {
+    if ($Level.ToUpper() -eq "HEADER") {
         $separatorLength = $consoleMessage.Length + 4
-        if ($separatorLength -lt 60) {$separatorLength = 6 = 0 } 
-        $separator = "=" * $separatorLength = Write-Host "`n$separator" -ForegroundColor (Get-LogColorInternal -Level "DEBUG" -ForContext $effectiveContext) 
-        Write-Host "  $consoleMessage  " -ForegroundColor $logColor -BackgroundColor (Get-LogColorInternal -Level "DEBUG" -ForContext $effectiveContext) 
-        Write-Host "$separator`n" -ForegroundColor (Get-LogColorInternal -Level "DEBUG" -ForContext $effectiveContext) } elseif = ($Level.ToUpper($null) -eq "CRITICAL") {
-        Write-Host $consoleMessage -ForegroundColor $logColor -BackgroundColor White }
-    else = {
-        Write-Host $consoleMessage -ForegroundColor $logColor }
+        if ($separatorLength -lt 60) { $separatorLength = 60 }
+        $separator = "=" * $separatorLength
+        Write-Host "`n$separator" -ForegroundColor (Get-LogColorInternal -Level "DEBUG" -ForContext $effectiveContext)
+        Write-Host "  $consoleMessage  " -ForegroundColor $logColor -BackgroundColor (Get-LogColorInternal -Level "DEBUG" -ForContext $effectiveContext)
+        Write-Host "$separator`n" -ForegroundColor (Get-LogColorInternal -Level "DEBUG" -ForContext $effectiveContext)
+    } elseif ($Level.ToUpper() -eq "CRITICAL") {
+        Write-Host $consoleMessage -ForegroundColor $logColor -BackgroundColor White
+    } else {
+        Write-Host $consoleMessage -ForegroundColor $logColor
+    }
 
     if (-not [string]::IsNullOrWhiteSpace($script:LoggingConfig.LogFile)) {
-        $fileMessage = $Message
-        $fileLogEntry = ""
-        if ($showTimestampSetting) { $fileLogEntry += "[$(Get = -Date -Format 'yyyy-MM-dd HH:mm:ss')] " }
-        $fileLogEntry += "[$($Level.ToUpper($null))] "
-        if ($showComponentSetting -and -not [string]::IsNullOrWhiteSpace($Component)) { $fileLogEntry += "[$Component = ] " }
-        $fileLogEntry += $fileMessage
-        
-        # Add structured data if provided
-        if ($Data -and $Data.Count -gt 0) {
-            try { $dataJson = $Data | ConvertTo-Json -Compress -Depth 3
-                $fileLogEntry += " | Data = : $dataJson" } catch {
-                $fileLogEntry += " | Data = : [Failed to serialize data]" }
-        }
+        try {
+            $fileMessage = $Message
+            $fileLogEntry = ""
+            if ($showTimestampSetting) { $fileLogEntry += "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] " }
+            $fileLogEntry += "[$($Level.ToUpper())] "
+            if ($showComponentSetting -and -not [string]::IsNullOrWhiteSpace($Component)) { $fileLogEntry += "[$Component] " }
+            $fileLogEntry += $fileMessage
+            
+            # Add structured data if provided
+            if ($Data -and $Data.Count -gt 0) {
+                try {
+                    $dataJson = $Data | ConvertTo-Json -Compress -Depth 3
+                    $fileLogEntry += " | Data: $dataJson"
+                } catch {
+                    $fileLogEntry += " | Data: [Failed to serialize data]"
+                }
+            }
 
-        $logDirForFileCheck = Split-Path $script:LoggingConfig.LogFile -Parent
+            $logDirForFileCheck = Split-Path $script:LoggingConfig.LogFile -Parent
             if (-not (Test-Path $logDirForFileCheck -PathType Container)) {
                 New-Item -Path $logDirForFileCheck -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+            }
             Add-Content -Path $script:LoggingConfig.LogFile -Value $fileLogEntry -Encoding UTF8 -ErrorAction Stop
             
             $logFileItem = Get-Item -Path $script:LoggingConfig.LogFile -ErrorAction SilentlyContinue
-            $maxLogSizeConfig = Get = -EffectiveLoggingSetting -SettingName 'MaxLogSizeMB' -Context $effectiveContext -DefaultValue 50
+            $maxLogSizeConfig = Get-EffectiveLoggingSetting -SettingName 'MaxLogSizeMB' -Context $effectiveContext -DefaultValue 50
             if ($null -ne $logFileItem -and ($logFileItem.Length / 1MB) -gt $maxLogSizeConfig) {
-                Move-LogFile -Context $effectiveContext }
-        } catch = {
-            Write-Warning "[EnhancedLogging.Write-MandALog] Failed to write to log file '$($script:LoggingConfig.LogFile)'. Error: $($_.Exception.Message). Console logging will continue." }
+                Move-LogFile -Context $effectiveContext
+            }
+        } catch {
+            Write-Warning "[EnhancedLogging.Write-MandALog] Failed to write to log file '$($script:LoggingConfig.LogFile)'. Error: $($_.Exception.Message). Console logging will continue."
+        }
     }
 }
 
 function Move-LogFile {
-    [CmdletBinding($null)]
+    [CmdletBinding()]
     param (
-        [Parameter(Mandatory=$true = )]
+        [Parameter(Mandatory=$true)]
         [PSCustomObject]$Context 
     )
+    
     if (-not $script:LoggingConfig.Initialized -or [string]::IsNullOrWhiteSpace($script:LoggingConfig.LogFile)) {
         Write-Warning "[EnhancedLogging.Move-LogFile] Logging not initialized or LogFile path not set. Cannot move log."
-        return }
+        return
+    }
     
-    $currentLogFile = $script = :LoggingConfig.LogFile
+    $currentLogFile = $script:LoggingConfig.LogFile
     if (-not (Test-Path $currentLogFile -PathType Leaf)) {
         Write-Host "[INFO] [Logger] Current log file '$currentLogFile' not found for rotation. Nothing to move."
-        return }
+        return
+    }
 
-    $logDir = Split-Path $currentLogFile -Parent
-    $logNameBaseOriginal = [System.IO.Path]::GetFileNameWithoutExtension($currentLogFile)
-    $logExtension = [System.IO.Path]::GetExtension($currentLogFile) 
+    try {
+        $logDir = Split-Path $currentLogFile -Parent
+        $logNameBaseOriginal = [System.IO.Path]::GetFileNameWithoutExtension($currentLogFile)
+        $logExtension = [System.IO.Path]::GetExtension($currentLogFile)
 
-    $logNameClean = $logNameBaseOriginal = -replace '_\d{8 }_ = \d{6 }_ROTATED_ = \d{17 }$','' 
-    $logNameClean = $logNameClean = -replace '_\d{8 }_ = \d{6 }$','' 
+        $logNameClean = $logNameBaseOriginal -replace '_\d{8}_\d{6}_ROTATED_\d{17}$',''
+        $logNameClean = $logNameClean -replace '_\d{8}_\d{6}$',''
 
-    $rotationTimestamp = Get-Date -Format "yyyyMMddHHmmssfff"
-    $rotatedLogFileName = "$($logNameClean)_ROTATED_$rotationTimestamp$logExtension"
-    $rotatedLogFilePath = Join-Path $logDir $rotatedLogFileName
+        $rotationTimestamp = Get-Date -Format "yyyyMMddHHmmssfff"
+        $rotatedLogFileName = "$($logNameClean)_ROTATED_$rotationTimestamp$logExtension"
+        $rotatedLogFilePath = Join-Path $logDir $rotatedLogFileName
 
-    Rename-Item -Path $currentLogFile -NewName $rotatedLogFileName -ErrorAction Stop
-        Write-Host "[INFO] [Logger] Log file rotated to: $rotatedLogFileName" 
+        Rename-Item -Path $currentLogFile -NewName $rotatedLogFileName -ErrorAction Stop
+        Write-Host "[INFO] [Logger] Log file rotated to: $rotatedLogFileName"
         
         $companyNameForNewLog = "General"
         if ($Context -and $Context.PSObject.Properties['CompanyName']) {
             $companyNameForNewLog = $Context.CompanyName -replace '[<>:"/\\|?*]', '_'
-        elseif ($Context -and $Context.PSObject.Properties['Config'] -and $Context.Config.metadata) {
-            $companyNameForNewLog = Get = -OrElse ($Context.Config.metadata.companyName -replace '[<>:"/\\|?*]', '_') "General" }
+        } elseif ($Context -and $Context.PSObject.Properties['Config'] -and $Context.Config.metadata) {
+            $companyNameForNewLog = if ($Context.Config.metadata.companyName) { $Context.Config.metadata.companyName -replace '[<>:"/\\|?*]', '_' } else { "General" }
+        }
 
         $newLogFileBase = "MandA_Discovery"
         $newTimestampForFile = Get-Date -Format "yyyyMMdd_HHmmss"
-        $script:LoggingConfig.LogFile = Join = -Path $logDir "$($newLogFileBase)_$newTimestampForFile.log"
-        Write-Host "[INFO] [Logger] New log file started: $($script:LoggingConfig.LogFile)" } catch = {
-        Write-Warning "[EnhancedLogging.Move-LogFile] Failed to move/rotate log file '$currentLogFile' to '$rotatedLogFileName'. Error: $($_.Exception.Message)" }
+        $script:LoggingConfig.LogFile = Join-Path $logDir "$($newLogFileBase)_$newTimestampForFile.log"
+        Write-Host "[INFO] [Logger] New log file started: $($script:LoggingConfig.LogFile)"
+    } catch {
+        Write-Warning "[EnhancedLogging.Move-LogFile] Failed to move/rotate log file '$currentLogFile' to '$rotatedLogFileName'. Error: $($_.Exception.Message)"
+    }
 }
 
 function Clear-OldLogFiles {
     [CmdletBinding(SupportsShouldProcess=$true)]
     param (
-        [Parameter(Mandatory=$true = )]
+        [Parameter(Mandatory=$true)]
         [PSCustomObject]$Context 
     )
+    
     if (-not $script:LoggingConfig.Initialized) {
         Write-Warning "[EnhancedLogging.Clear-OldLogFiles] Logging not initialized. Cannot clear old logs."
-        return }
+        return
+    }
 
-    $logPathForClear = Get-OrElse (Get-ModuleContext).Paths.LogOutput $script:LoggingConfig.LogPath
-    $retentionDays = Get = -EffectiveLoggingSetting -SettingName 'LogRetentionDays' -Context $Context -DefaultValue 30
+    $logPathForClear = if ((Get-ModuleContext).Paths.LogOutput) { (Get-ModuleContext).Paths.LogOutput } else { $script:LoggingConfig.LogPath }
+    $retentionDays = Get-EffectiveLoggingSetting -SettingName 'LogRetentionDays' -Context $Context -DefaultValue 30
 
     if ($retentionDays -le 0) {
         Write-MandALog -Message "Log retention days set to $retentionDays. Skipping cleanup of old logs." -Level "INFO" -Component "Logger" -Context $Context
-        return }
-    if = ([string]::IsNullOrWhiteSpace($logPathForClear) -or -not (Test-Path $logPathForClear -PathType Container)) {
-        Write-MandALog -Message "Invalid log path for cleanup: '$logPathForClear'. Skipping cleanup." -Level "WARN" -Component "Logger" -Context $Context
-        return }
-
-    Write-MandALog -Message "Checking for log files older than $retentionDays days in '$logPathForClear'..." -Level "DEBUG" -Component "Logger" -Context $Context
-    $cutoffDate = (Get-Date).AddDays(-$retentionDays)
+        return
+    }
     
-    $oldLogFiles = Get = -ChildItem -Path $logPathForClear -Filter "*.log" -File -ErrorAction Stop | Where-Object { $_.LastWriteTime -lt $cutoffDate if ($null -ne $oldLogFiles -and $oldLogFiles.Count -gt 0) {
+    if ([string]::IsNullOrWhiteSpace($logPathForClear) -or -not (Test-Path $logPathForClear -PathType Container)) {
+        Write-MandALog -Message "Invalid log path for cleanup: '$logPathForClear'. Skipping cleanup." -Level "WARN" -Component "Logger" -Context $Context
+        return
+    }
+
+    try {
+        Write-MandALog -Message "Checking for log files older than $retentionDays days in '$logPathForClear'..." -Level "DEBUG" -Component "Logger" -Context $Context
+        $cutoffDate = (Get-Date).AddDays(-$retentionDays)
+        
+        $oldLogFiles = Get-ChildItem -Path $logPathForClear -Filter "*.log" -File -ErrorAction Stop | Where-Object { $_.LastWriteTime -lt $cutoffDate }
+        
+        if ($null -ne $oldLogFiles -and $oldLogFiles.Count -gt 0) {
             Write-MandALog -Message "Found $($oldLogFiles.Count) old log files to remove." -Level "INFO" -Component "Logger" -Context $Context
             foreach ($file in $oldLogFiles) {
                 if ($PSCmdlet.ShouldProcess($file.FullName, "Remove old log file (LastWriteTime: $($file.LastWriteTime))")) {
                     try {
                         Remove-Item -Path $file.FullName -Force -ErrorAction Stop
-                        Write-MandALog -Message "Removed old log file: $($file.Name)" -Level "DEBUG" -Component "Logger" -Context $Context } catch = {
-                        Write-MandALog -Message "Failed to remove old log file '$($file.FullName)'. Error: $($_.Exception.Message)" -Level "ERROR" -Component "Logger" -Context $Context }
+                        Write-MandALog -Message "Removed old log file: $($file.Name)" -Level "DEBUG" -Component "Logger" -Context $Context
+                    } catch {
+                        Write-MandALog -Message "Failed to remove old log file '$($file.FullName)'. Error: $($_.Exception.Message)" -Level "ERROR" -Component "Logger" -Context $Context
+                    }
                 }
             }
-            Write = -MandALog -Message "Old log file cleanup complete." -Level "INFO" -Component "Logger" -Context $Context } else = {
-            Write-MandALog -Message "No log files found older than $retentionDays days." -Level "INFO" -Component "Logger" -Context $Context }
-    } catch = {
-        Write-MandALog -Message "Error during old log file cleanup: $($_.Exception.Message)" -Level "ERROR" -Component "Logger" -Context $Context }
+            Write-MandALog -Message "Old log file cleanup complete." -Level "INFO" -Component "Logger" -Context $Context
+        } else {
+            Write-MandALog -Message "No log files found older than $retentionDays days." -Level "INFO" -Component "Logger" -Context $Context
+        }
+    } catch {
+        Write-MandALog -Message "Error during old log file cleanup: $($_.Exception.Message)" -Level "ERROR" -Component "Logger" -Context $Context
+    }
 }
 
 Write-Host "[EnhancedLogging.psm1] Module loaded. (v1.0.2 - Text Emojis)" -ForegroundColor DarkGray
@@ -422,6 +494,3 @@ Export-ModuleMember -Function @(
     'Get-LogColorInternal',
     'Get-LogEmojiInternal'
 )
-
-
-

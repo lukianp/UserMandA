@@ -1490,24 +1490,20 @@ function Invoke-Discovery {
     )
     
     try {
-        Write-MandALog "Starting ActiveDirectoryDiscovery discovery" "INFO"
+        Write-MandALog "Starting ActiveDirectory discovery via Invoke-Discovery interface" "INFO"
         
-        $discoveryResult = @{
-            ModuleName = "ActiveDirectoryDiscovery"
-            StartTime = Get-Date
-            Status = "Completed"
-            Data = @()
-            Errors = @()
-            Summary = @{ ItemsDiscovered = 0; ErrorCount = 0 }
-        }
+        # Extract configuration from context
+        $Configuration = if ($Context.Config) { $Context.Config } else { $Context }
         
-        # TODO: Implement actual discovery logic for ActiveDirectoryDiscovery
-        Write-MandALog "Completed ActiveDirectoryDiscovery discovery" "SUCCESS"
+        # Call the main discovery function
+        $result = Invoke-ActiveDirectoryDiscovery -Configuration $Configuration -Context $Context
         
-        return $discoveryResult
+        Write-MandALog "Completed ActiveDirectory discovery via Invoke-Discovery interface" "SUCCESS"
+        
+        return $result
         
     } catch {
-        Write-MandALog "Error in ActiveDirectoryDiscovery discovery: $($_.Exception.Message)" "ERROR"
+        Write-MandALog "Error in ActiveDirectory discovery: $($_.Exception.Message)" "ERROR"
         throw
     }
 }

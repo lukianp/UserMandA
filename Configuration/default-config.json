@@ -9,7 +9,7 @@
     "$schema":  "./config.schema.json",
     "metadata":  {
                      "version":  "4.1.0",
-                     "companyName":  "XXX",
+                     "companyName":  "Zedra",
                      "projectName":  "M\u0026A Discovery Suite",
                      "description":  "Automated discovery and migration planning for M\u0026A activities",
                      "author":  "IT Migration Team",
@@ -199,7 +199,7 @@
                                          "skipShareSizeCalculationForPathDepthExceeding":  1000000
                                      },
                       "sharepoint": {
-                          "tenantName": "your-tenant-name-here"
+                          "tenantName": "zedra"
                       }
                   },
     "processing":  {

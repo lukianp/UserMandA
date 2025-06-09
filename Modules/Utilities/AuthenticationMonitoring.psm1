@@ -153,6 +153,7 @@ function Test-GraphAuthentication { <#
                 # Check token expiration if available
                 if ($mgContext.TokenCredential) {
                     Write-Host "  - Token Status: Active" -ForegroundColor Gray
+                }
                 Write-MandALog -Message "Microsoft Graph authentication verified successfully" -Level "SUCCESS" -Component "AuthMonitoring"
             } else {
                 Write-Host "[!!] Microsoft Graph NOT Connected" -ForegroundColor Red
@@ -266,7 +267,8 @@ function Test-OnPremisesADAuthentication {
             
             # Test AD module and commands
             if (Get-Command Get-ADDomain -ErrorAction SilentlyContinue) {
-                $domain = Get-ADDomain -Server $dc -ErrorAction SilentlyContinue
+                try {
+                    $domain = Get-ADDomain -Server $dc -ErrorAction SilentlyContinue
                     if ($domain) {
                         Write-Host "  - Domain: $($domain.Name)" -ForegroundColor Gray
                         Write-Host "  - Forest: $($domain.Forest)" -ForegroundColor Gray
