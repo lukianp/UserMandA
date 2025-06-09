@@ -888,456 +888,109 @@ function Export-ErrorReport {
 #===============================================================================
 
 function Invoke-DiscoveryPhase {
-    Write-OrchestratorLog -Message "STARTING DISCOVERY PHASE" -Level "HEADER"
-    
-    Show-AuthenticationStatus -Context $global:MandA
+    [CmdletBinding()]
+    param()
 
-    Write-OrchestratorLog -Message "Authentication Context Details:" -Level "INFO"
-    $authContext = Get-AuthenticationContext
-    if ($authContext) {
-        Write-OrchestratorLog -Message "  ClientId: $($authContext.ClientId.Substring(0,8))..." -Level "DEBUG"
-        Write-OrchestratorLog -Message "  TenantId: $($authContext.TenantId)" -Level "DEBUG"
-        Write-OrchestratorLog -Message "  Method: $($authContext.AuthenticationMethod)" -Level "DEBUG"
-        Write-OrchestratorLog -Message "  Token Valid Until: $($authContext.TokenExpiry)" -Level "DEBUG"
-    }
+    Write-OrchestratorLog -Message "STARTING DISCOVERY PHASE (Parallel Execution Engine v3.0 FINAL)" -Level "HEADER"
     
-    $phaseResult = @{
-        Success = $true
-        ModuleResults = @{}
-        CriticalErrors = [System.Collections.ArrayList]::new()
-        RecoverableErrors = [System.Collections.ArrayList]::new()
-        Warnings = [System.Collections.ArrayList]::new()
-    }
-    
+    # --- 1. Authentication and Connection (No changes needed here) ---
     try {
-        if (Get-Command Show-AuthenticationStatus -ErrorAction SilentlyContinue) {
-            Write-OrchestratorLog -Message "Checking authentication status..." -Level "INFO"
-            try {
-                Show-AuthenticationStatus -Context $global:MandA
-            } catch {
-                Write-OrchestratorLog -Message "Error displaying authentication status: $_" -Level "WARN"
-            }
-        }
-        
-        Write-OrchestratorLog -Message "Initializing authentication..." -Level "INFO"
-
-        try {
-            if (-not (Get-Command Initialize-MandAAuthentication -ErrorAction SilentlyContinue)) {
-                Write-OrchestratorLog -Message "Authentication module not loaded, attempting to load..." -Level "WARN"
-                Load-AuthenticationModules
-            }
-            
-            $authResult = Initialize-MandAAuthentication -Configuration $global:MandA.Config
-            
-            if (-not $authResult -or -not $authResult.Authenticated) {
-                $errorMsg = if ($authResult.Error) { $authResult.Error } else { "Unknown authentication error" }
-                throw "Authentication failed: $errorMsg"
-            }
-            
-            Write-OrchestratorLog -Message "Authentication successful" -Level "SUCCESS"
-            
-            $authContext = Get-AuthenticationContext
-            if ($authContext) {
-                Write-OrchestratorLog -Message "Authentication method: $($authContext.AuthenticationMethod)" -Level "INFO"
-                Write-OrchestratorLog -Message "Tenant ID: $($authContext.TenantId)" -Level "INFO"
-            }
-            
-            Write-OrchestratorLog -Message "Loading connection manager..." -Level "INFO"
-            
-            if (-not (Get-Module -Name "EnhancedConnectionManager")) {
-                $connMgrPath = Join-Path (Get-ModuleContext).Paths.Connectivity "EnhancedConnectionManager.psm1"
-                if (Test-Path $connMgrPath) {
-                    try {
-                        Import-Module $connMgrPath -Force -Global -ErrorAction Stop
-                        Write-OrchestratorLog -Message "Loaded EnhancedConnectionManager module" -Level "SUCCESS"
-                    } catch {
-                        Write-OrchestratorLog -Message "Failed to load EnhancedConnectionManager: $_" -Level "ERROR"
-                    }
-                } else {
-                    Write-OrchestratorLog -Message "EnhancedConnectionManager module not found at: $connMgrPath" -Level "WARN"
-                }
-            }
-            
-            if (Get-Command Initialize-AllConnections -ErrorAction SilentlyContinue) {
-                Write-OrchestratorLog -Message "Initializing service connections..." -Level "INFO"
-                
-                try {
-                    $connections = Initialize-AllConnections -Configuration $global:MandA.Config -AuthContext $authContext
-                    
-                    foreach ($service in $connections.Keys) {
-                        $status = $connections[$service]
-                        $connected = if ($status -is [bool]) { $status } else { $status.Connected }
-                        
-                        Write-OrchestratorLog -Message "Connection to ${service}: $connected" `
-                            -Level $(if ($connected) { "SUCCESS" } else { "WARN" })
-                            
-                        if (-not $connected -and $status.Error) {
-                            Write-OrchestratorLog -Message "  Error: $($status.Error)" -Level "ERROR"
-                        }
-                    }
-                } catch {
-                    Write-OrchestratorLog -Message "Error initializing connections: $_" -Level "ERROR"
-                }
-            } else {
-                Write-OrchestratorLog -Message "Initialize-AllConnections function not found after loading module!" -Level "ERROR"
-                Write-OrchestratorLog -Message "Available connection functions: $(Get-Command -Name '*Connection*' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)" -Level "DEBUG"
-            }
-        } catch {
-            Write-OrchestratorLog -Message "Authentication initialization failed: $_" -Level "ERROR"
-            Add-OrchestratorError -Source "Authentication" `
-                -Message "Failed to initialize authentication" `
-                -Exception $_.Exception `
-                -Severity "Critical"
-            
-            $phaseResult.Success = $false
-            return $phaseResult
-        }
-        
-        $enabledSources = (Get-ModuleContext).Config.discovery.enabledSources
-        $criticalSources = @('ActiveDirectory', 'Graph')
-        
-        if ($null -eq $enabledSources) {
-            Write-OrchestratorLog -Message "enabledSources is null, using empty array" -Level "WARN"
-            $enabledSources = @()
-        }
-        
-        $validSources = @($enabledSources | Where-Object { $_ -is [string] })
-        Write-OrchestratorLog -Message "Valid discovery sources: $($validSources.Count) of $($enabledSources.Count)" -Level "INFO"
-        
-        Write-OrchestratorLog -Message "Smart completion checking: Analyzing module completion status..." -Level "INFO"
-        $sourcesToRun = @()
-        
-        foreach ($source in $validSources) {
-            $moduleStatus = Test-ModuleCompletionStatus -ModuleName $source -Context $global:MandA
-            
-            if ($Force -and $global:MandA.Config.discovery.forceMode) {
-                Write-OrchestratorLog -Message "Force mode: Will run $source regardless of completion status" -Level "WARN"
-                $sourcesToRun += $source
-            } elseif ($moduleStatus.ShouldRun) {
-                $sourcesToRun += $source
-                Write-OrchestratorLog -Message "Will run $source`: $($moduleStatus.Reason)" -Level "INFO"
-            } else {
-                Write-OrchestratorLog -Message "Skipping $source`: $($moduleStatus.Reason)" -Level "SUCCESS"
-            }
-        }
-        
-        $validSources = $sourcesToRun
-        Write-OrchestratorLog -Message "Completion check filtered sources: $($validSources.Count) modules to run" -Level "INFO"
-        
-        foreach ($source in $validSources) {
-            Write-OrchestratorLog -Message "Executing $source discovery..." -Level "INFO"
-            
-            try {
-                $moduleResult = Invoke-DiscoveryModule -ModuleName $source -Configuration $global:MandA.Config
-                $phaseResult.ModuleResults[$source] = $moduleResult
-                
-                if (-not $moduleResult.Success) {
-                    if ($source -in $criticalSources) {
-                        $null = $phaseResult.CriticalErrors.Add(@{
-                            Source = $source
-                            Errors = $moduleResult.Errors
-                            Impact = "Critical - Suite cannot continue without $source data"
-                        })
-                        $phaseResult.Success = $false
-                    }
-                    else {
-                        $null = $phaseResult.RecoverableErrors.Add(@{
-                            Source = $source
-                            Errors = $moduleResult.Errors
-                            Impact = "Non-critical - Suite can continue but data will be incomplete"
-                        })
-                    }
-                }
-                
-                if ($moduleResult.Warnings.Count -gt 0) {
-                    $null = $phaseResult.Warnings.Add(@{
-                        Source = $source
-                        Warnings = $moduleResult.Warnings
-                    })
-                }
-            }
-            catch {
-                if ($_.Exception.Message -like "*parameter cannot be found that matches parameter name 'Force'*" -or
-                    $_.Exception.Message -like "*Cannot bind parameter*Force*" -or
-                    $_.Exception.Message -like "*A parameter cannot be found that matches parameter name*Force*") {
-                    
-                    Write-OrchestratorLog -Message "Force parameter inheritance issue in $source module (module may have completed successfully)" -Level "WARN"
-                    
-                    $moduleStatus = Test-ModuleCompletionStatus -ModuleName $source -Context $global:MandA
-                    if ($moduleStatus.CompletionStatus -eq "Complete") {
-                        Write-OrchestratorLog -Message "$source module completed successfully despite Force parameter issue" -Level "SUCCESS"
-                        
-                        $phaseResult.ModuleResults[$source] = @{
-                            Success = $true
-                            ModuleName = $source
-                            Errors = @()
-                            Warnings = @(@{
-                                Message = "Force parameter inheritance issue (non-critical)"
-                                Timestamp = Get-Date
-                            })
-                            Metadata = @{
-                                CompletionStatus = $moduleStatus.CompletionStatus
-                                RecordCount = $moduleStatus.RecordCount
-                                DataFiles = $moduleStatus.DataFiles
-                            }
-                        }
-                    } else {
-                        Write-OrchestratorLog -Message "Attempting to retry $source module without Force parameter..." -Level "INFO"
-                        
-                        try {
-                            $moduleFunction = "Invoke-${source}Discovery"
-                            $functionInfo = Get-Command $moduleFunction -ErrorAction SilentlyContinue
-                            
-                            if ($functionInfo) {
-                                $cleanParams = @{}
-                                if ($functionInfo.Parameters.ContainsKey('Configuration')) {
-                                    $cleanParams['Configuration'] = $global:MandA.Config
-                                }
-                                if ($functionInfo.Parameters.ContainsKey('Context')) {
-                                    $cleanParams['Context'] = $global:MandA
-                                }
-                                
-                                Write-OrchestratorLog -Message "Retrying $source with clean parameters: $($cleanParams.Keys -join ', ')" -Level "DEBUG"
-                                $retryResult = & $moduleFunction @cleanParams
-                                
-                                if ($retryResult -and $retryResult.Success) {
-                                    Write-OrchestratorLog -Message "$source module succeeded on retry" -Level "SUCCESS"
-                                    $phaseResult.ModuleResults[$source] = $retryResult
-                                } else {
-                                    Write-OrchestratorLog -Message "$source module failed on retry as well" -Level "ERROR"
-                                    $null = $phaseResult.Warnings.Add(@{
-                                        Source = $source
-                                        Warnings = @(@{
-                                            Message = "Force parameter inheritance issue and retry failed"
-                                            Exception = $_.Exception.ToString()
-                                        })
-                                    })
-                                }
-                            }
-                        } catch {
-                            Write-OrchestratorLog -Message "Retry of $source module also failed: $_" -Level "ERROR"
-                            $null = $phaseResult.Warnings.Add(@{
-                                Source = $source
-                                Warnings = @(@{
-                                    Message = "Force parameter inheritance issue - module completion uncertain"
-                                    Exception = $_.Exception.ToString()
-                                })
-                            })
-                        }
-                    }
-                } else {
-                    Write-OrchestratorLog -Message "Catastrophic failure in $source module: $_" -Level "CRITICAL"
-                    
-                    $null = $phaseResult.CriticalErrors.Add(@{
-                        Source = $source
-                        Errors = @(@{
-                            Message = "Module execution failed completely"
-                            Exception = $_.Exception.ToString()
-                            StackTrace = $_.ScriptStackTrace
-                        })
-                        Impact = "Module could not be executed"
-                    })
-                    
-                    if ($source -in $criticalSources) {
-                        $phaseResult.Success = $false
-                    }
-                }
-            }
-        }
-        
-        Export-ErrorReport -PhaseResult $phaseResult
-        
-        $actualModuleResults = $phaseResult.ModuleResults.Values | Where-Object { $_ -ne $null }
-        $successCount = ($actualModuleResults | Where-Object { $_.Success -eq $true }).Count
-        $totalModulesRun = $actualModuleResults.Count
-        $failCount = $totalModulesRun - $successCount
-        
-        $skippedCount = $validSources.Count - $sourcesToRun.Count
-        
-        Write-OrchestratorLog -Message "Discovery completed: $successCount successful, $failCount failed, $skippedCount skipped (already complete)" `
-            -Level $(if ($failCount -eq 0) { "SUCCESS" } else { "WARN" })
-        Write-OrchestratorLog -Message "Total modules processed: $totalModulesRun of $($validSources.Count) enabled sources" -Level "INFO"
-        Write-OrchestratorLog -Message "Critical errors: $($phaseResult.CriticalErrors.Count), Recoverable errors: $($phaseResult.RecoverableErrors.Count), Warnings: $($phaseResult.Warnings.Count)" -Level "INFO"
-        
+        Write-OrchestratorLog -Message "Initializing authentication and connections..." -Level "INFO"
+        $authResult = Initialize-MandAAuthentication -Configuration $global:MandA.Config
+        if (-not $authResult.Authenticated) { throw "Authentication failed: $($authResult.Error)" }
+        $authContext = Get-AuthenticationContext
+        $connections = Initialize-AllConnections -Configuration $global:MandA.Config -AuthContext $authContext
+        Write-OrchestratorLog -Message "Authentication and connections successful." -Level "SUCCESS"
     } catch {
-        $phaseResult.Success = $false
-        Add-OrchestratorError -Source "DiscoveryPhase" `
-            -Message "Discovery phase failed: $_" `
-            -Exception $_.Exception `
-            -Severity "Critical"
+        Add-OrchestratorError -Source "DiscoveryPhase-Setup" -Message "Critical setup failure" -Exception $_.Exception -Severity "Critical"
+        return @{ Success = $false; ModuleResults = @{}; CriticalErrors = @(($_)); RecoverableErrors = @(); Warnings = @() }
+    }
+
+    # --- 2. Determine which modules to run (No changes needed here) ---
+    $phaseResult = @{
+        Success = $true; ModuleResults = [System.Collections.Concurrent.ConcurrentDictionary[string,object]]::new()
+        CriticalErrors = [System.Collections.ArrayList]::new(); RecoverableErrors = [System.Collections.ArrayList]::new(); Warnings = [System.Collections.ArrayList]::new()
+    }
+    $enabledSources = (Get-ModuleContext).Config.discovery.enabledSources
+    $sourcesToRun = @($enabledSources | Where-Object {
+        if ($Force) { return $true }
+        $status = Test-ModuleCompletionStatus -ModuleName $_ -Context $global:MandA
+        if ($status.ShouldRun) { Write-OrchestratorLog -Message "Queuing module [$_]: $($status.Reason)" -Level "INFO"; return $true }
+        else { Write-OrchestratorLog -Message "Skipping module [$_]: $($status.Reason)" -Level "SUCCESS"; return $false }
+    })
+    
+    if ($sourcesToRun.Count -eq 0) { Write-OrchestratorLog -Message "No modules to run (all tasks completed)." -Level "SUCCESS"; return $phaseResult }
+    Write-OrchestratorLog -Message "Queuing $($sourcesToRun.Count) modules for parallel execution." -Level "INFO"
+
+    # --- 3. Setup the Runspace Pool (CORRECTED LOGIC) ---
+    $maxConcurrentJobs = (Get-ModuleContext).Config.discovery.maxConcurrentJobs
+    
+    # Create the session state configuration FIRST.
+    $sessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
+    $sessionState.Types.Add([System.Management.Automation.Runspaces.SessionStateTypeEntry]::new([DiscoveryResult]))
+    
+    $utilityModules = @(
+        (Join-Path $global:MandA.Paths.Utilities "EnhancedLogging.psm1"),
+        (Join-Path $global:MandA.Paths.Utilities "ProgressDisplay.psm1"),
+        (Join-Path $global:MandA.Paths.Utilities "ErrorHandling.psm1")
+    )
+    $sessionState.ImportPSModule($utilityModules)
+
+    # Now, create the RunspacePool and PASS the session state to the constructor.
+    $pool = [runspacefactory]::CreateRunspacePool($sessionState, 1, $maxConcurrentJobs)
+    $pool.Open()
+
+    # --- 4. Create and Run Jobs in Parallel (No changes needed here) ---
+    $jobs = @()
+    foreach ($moduleName in $sourcesToRun) {
+        $powershell = [powershell]::Create()
+        $powershell.RunspacePool = $pool
+        
+        $scriptBlock = {
+            param($modName, $modConfig, $globalContext)
+            $global:MandA = $globalContext
+            $discoveryModulePath = Join-Path $global:MandA.Paths.Discovery "${modName}Discovery.psm1"
+            Import-Module -Name $discoveryModulePath -Force
+            Invoke-Command -ScriptBlock (Get-Command "Invoke-${modName}Discovery") -ArgumentList @($modConfig, $global:MandA)
+        }
+        
+        $null = $powershell.AddScript($scriptBlock).AddArgument($moduleName).AddArgument($global:MandA.Config).AddArgument($global:MandA)
+        $jobs += @{ ModuleName = $moduleName; Instance = $powershell; Handle = $powershell.BeginInvoke() }
+    }
+
+    # --- 5. Collect Results Asynchronously (No changes needed here) ---
+    Write-OrchestratorLog -Message "All jobs submitted ($($jobs.Count) total). Waiting for completion..." -Level "INFO"
+    while ($jobs.Count -gt 0) {
+        $completedHandle = [System.Management.Automation.Runspaces.AsyncResult]::WaitAny($jobs.Handle, 60000)
+        if ($completedHandle -eq -1) { continue }
+
+        $completedJob = $jobs[$completedHandle]
+        $moduleName = $completedJob.ModuleName
+        
+        try {
+            $moduleResult = $completedJob.Instance.EndInvoke($completedJob.Handle)[0]
+            if ($moduleResult -is [DiscoveryResult]) {
+                $phaseResult.ModuleResults[$moduleName] = $moduleResult
+                $logLevel = if ($moduleResult.Success) { "SUCCESS" } else { "WARN" }
+                Write-OrchestratorLog -Message "Completed discovery for $moduleName. Success: $($moduleResult.Success)" -Level $logLevel
+            } else { throw "Module returned an invalid result object. Type: $($moduleResult.GetType().Name)" }
+        } catch {
+            $errorMessage = $_.Exception.Message
+            Write-OrchestratorLog -Message "Catastrophic failure in $moduleName discovery: $errorMessage" -Level "ERROR"
+            $failedResult = [DiscoveryResult]::new($moduleName); $failedResult.AddError($_.Exception, "Runspace Failure"); $failedResult.Complete()
+            $phaseResult.ModuleResults[$moduleName] = $failedResult
+        } finally {
+            $completedJob.Instance.Dispose()
+            $jobs = $jobs | Where-Object { $_.Handle -ne $completedJob.Handle }
+        }
     }
     
+    # --- 6. Cleanup and Final Report (No changes needed here) ---
+    $pool.Close(); $pool.Dispose()
+    Export-ErrorReport -PhaseResult $phaseResult
     return $phaseResult
 }
 
-function Invoke-DiscoveryModule {
-    param(
-        [string]$ModuleName,
-        [hashtable]$Configuration
-    )
-    
-    $moduleFunction = "Invoke-${ModuleName}Discovery"
-    
-    Write-Host "`n>>> Starting $ModuleName Discovery..." -ForegroundColor Cyan
-    Write-Progress -Activity "Discovery Phase" -Status "Running $ModuleName Discovery" -PercentComplete -1
-    
-    # Corrected DiscoveryResult Class Definition
-    $discoveryResultClassDefinition = @'
-    # The full and corrected class definition of DiscoveryResult
-    public class DiscoveryResult {
-        public bool Success { get; set; }
-        public string ModuleName { get; set; }
-        public object Data { get; set; }
-        public System.Collections.ArrayList Errors { get; set; }
-        public System.Collections.ArrayList Warnings { get; set; }
-        public System.Collections.Hashtable Metadata { get; set; }
-        public System.DateTime StartTime { get; set; }
-        public System.DateTime EndTime { get; set; }
-        public string ExecutionId { get; set; }
-        
-        public DiscoveryResult(string moduleName) {
-            this.ModuleName = moduleName;
-            this.Errors = new System.Collections.ArrayList();
-            this.Warnings = new System.Collections.ArrayList();
-            this.Metadata = new System.Collections.Hashtable();
-            this.StartTime = System.DateTime.Now;
-            this.ExecutionId = System.Guid.NewGuid().ToString();
-            this.Success = true;
-        }
-        
-        public void AddError(string message, System.Exception exception, System.Collections.Hashtable context) {
-            var errorEntry = new System.Collections.Hashtable();
-            errorEntry["Timestamp"] = System.DateTime.Now;
-            errorEntry["Message"] = message;
-            # FIX: Access the correct Exception property
-            errorEntry["Exception"] = exception != null ? exception.ToString() : null;
-            errorEntry["ExceptionType"] = exception != null ? exception.GetType().FullName : null;
-            errorEntry["Context"] = context;
-            errorEntry["StackTrace"] = exception != null ? exception.StackTrace : System.Environment.StackTrace;
-            this.Errors.Add(errorEntry);
-            this.Success = false;
-        }
-        
-        public void AddWarning(string message, System.Collections.Hashtable context) {
-            var warningEntry = new System.Collections.Hashtable();
-            warningEntry["Timestamp"] = System.DateTime.Now;
-            warningEntry["Message"] = message;
-            warningEntry["Context"] = context;
-            this.Warnings.Add(warningEntry);
-        }
-        
-        public void Complete() {
-            this.EndTime = System.DateTime.Now;
-            if (this.StartTime != null && this.EndTime != null) {
-                var duration = this.EndTime - this.StartTime;
-                this.Metadata["Duration"] = duration;
-                this.Metadata["DurationSeconds"] = duration.TotalSeconds;
-            }
-        }
-    }
-'@
-
-    try {
-        $startTime = Get-Date
-        
-        # Create a runspace with the necessary context
-        $runspace = [runspacefactory]::CreateRunspace()
-        $runspace.Open()
-        
-        try {
-            $powershell = [powershell]::Create()
-            $powershell.Runspace = $runspace
-            
-            $moduleFile = Join-Path (Get-ModuleContext).Paths.Discovery "${ModuleName}Discovery.psm1"
-            $configJson = $Configuration | ConvertTo-Json -Depth 10 -Compress
-            $contextJson = $global:MandA | ConvertTo-Json -Depth 10 -Compress
-
-# Script to set up the runspace environment
-$utilityModulesToInject = @(
-    "EnhancedLogging.psm1",
-    "ProgressDisplay.psm1",
-    "ErrorHandling.psm1",
-    "FileOperations.psm1",
-    "ValidationHelpers.psm1"
-)
-
-$utilityImportStatements = $utilityModulesToInject | ForEach-Object {
-    # Ensure paths with spaces are quoted correctly for the script block
-    $utilityPath = Join-Path (Get-ModuleContext).Paths.Utilities $_
-    "Import-Module -Name '$utilityPath' -Force -Global"
-}
-
-# The $discoveryResultClassDefinition variable should already exist in this function's scope.
-# This script block will be executed within the new runspace.
-$setupScript = @"
-    # Inject the DiscoveryResult Class definition
-    if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
-        Add-Type -TypeDefinition '$($discoveryResultClassDefinition -replace "'", "''")' -Language CSharp
-    }
-
-    # Inject the Get-ModuleContext helper function
-    function Get-ModuleContext {
-        if (`$null -eq `$script:ModuleContext) {
-            if (`$null -ne `$global:MandA) {
-                `$script:ModuleContext = `$global:MandA
-            } else {
-                # This is a fallback for the isolated runspace, using the 'using' scope modifier
-                # This ensures the global context from the main thread is available here.
-                `$script:ModuleContext = `$using:global:MandA
-            }
-        }
-        return `$script:ModuleContext
-    }
-
-    # --- ADDED: INJECT UTILITY MODULES ---
-    # Load required utility functions into the isolated runspace
-    Write-Host "Runspace: Loading utility modules..."
-    $($utilityImportStatements -join "`n")
-
-    # Load the main discovery module that will be executed
-    Write-Host "Runspace: Loading discovery module '$moduleFile'..."
-    Import-Module -Name '$moduleFile' -Force
-"@
-            
-            $null = $powershell.AddScript($setupScript)
-            $powershell.Invoke()
-            
-            if ($powershell.HadErrors) {
-                $setupErrors = $powershell.Streams.Error | ForEach-Object { $_.ToString() }
-                throw "Runspace setup failed: $($setupErrors -join '; ')"
-            }
-            
-            # Now execute the main discovery function
-            $powershell.Commands.Clear()
-            $powershell.AddCommand($moduleFunction).AddParameter("Configuration", $Configuration).AddParameter("Context", $global:MandA)
-            
-            $result = $powershell.Invoke()[0]
-
-            if ($powershell.HadErrors) {
-                $runspaceErrors = $powershell.Streams.Error | ForEach-Object { $_.ToString() }
-                throw "Error during $moduleFunction execution: $($runspaceErrors -join '; ')"
-            }
-            
-        } finally {
-            if ($powershell) { $powershell.Dispose() }
-            if ($runspace) { $runspace.Close(); $runspace.Dispose() }
-        }
-
-        $duration = (Get-Date) - $startTime
-        Write-Progress -Activity "Discovery Phase" -Completed
-        Write-Host "<<< Completed $ModuleName Discovery in $($duration.TotalSeconds) seconds" -ForegroundColor Green
-        return $result
-        
-    } catch {
-        Write-Progress -Activity "Discovery Phase" -Completed
-        Write-Host "<<< Failed $ModuleName Discovery: $_" -ForegroundColor Red
-        # Create a failed result object to ensure consistent output
-        $failedResult = New-Object DiscoveryResult -ArgumentList $ModuleName
-        $failedResult.AddError("Catastrophic failure in module execution.", $_.Exception, @{})
-        $failedResult.Complete()
-        return $failedResult
-    }
-}
 
 function Invoke-ProcessingPhase {
     Write-OrchestratorLog -Message "STARTING PROCESSING PHASE" -Level "HEADER"
