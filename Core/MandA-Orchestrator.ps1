@@ -446,6 +446,8 @@ function Test-OrchestratorPrerequisites {
     }
     
     return $prereqMet
+}
+
 function Test-DiscoveryPrerequisites {
     Write-OrchestratorLog -Message "Validating discovery prerequisites..." -Level "INFO"
     
@@ -500,7 +502,6 @@ function Test-ExchangeOnlineAvailable {
         Write-OrchestratorLog -Message "Failed to import ExchangeOnlineManagement: $_" -Level "WARN"
         return $false
     }
-}
 }
 
 function Initialize-OrchestratorModules {
@@ -840,13 +841,44 @@ function Invoke-DiscoveryPhase {
 
     # Pre-load critical modules from Authentication folder
     $criticalModules = @(
-        (Join-Path $global:MandA.Paths.Authentication "Authentication.psm1")
+        (Join-Path $global:MandA.Paths.Authentication "Authentication.psm1"),
+        (Join-Path $global:MandA.Paths.Authentication "CredentialManagement.psm1")
     )
     
     foreach ($moduleFile in $criticalModules) {
         if (Test-Path $moduleFile) {
             $sessionState.ImportPSModule($moduleFile)
             Write-OrchestratorLog -Message "Added authentication module to runspace session state." -Level "DEBUG"
+        }
+    }
+    
+    # Pre-load PowerShell modules that were missing from discovery session
+    $powerShellModulesToLoad = @(
+        "Microsoft.Graph.Authentication",
+        "Microsoft.Graph.Users",
+        "Microsoft.Graph.Groups",
+        "Microsoft.Graph.Applications",
+        "Microsoft.Graph.Identity.DirectoryManagement",
+        "Microsoft.Graph.Identity.SignIns",
+        "Microsoft.Graph.Reports",
+        "Microsoft.Graph.DeviceManagement",
+        "ExchangeOnlineManagement",
+        "ActiveDirectory",
+        "Az.Accounts",
+        "Az.Resources"
+    )
+    
+    foreach ($psModule in $powerShellModulesToLoad) {
+        try {
+            # Check if module is available before trying to import
+            if (Get-Module -Name $psModule -ListAvailable -ErrorAction SilentlyContinue) {
+                $sessionState.ImportPSModule($psModule)
+                Write-OrchestratorLog -Message "Added PowerShell module '$psModule' to runspace session state." -Level "DEBUG"
+            } else {
+                Write-OrchestratorLog -Message "PowerShell module '$psModule' not available - will be loaded on demand." -Level "DEBUG"
+            }
+        } catch {
+            Write-OrchestratorLog -Message "Failed to add PowerShell module '$psModule' to session state: $_" -Level "WARN"
         }
     }
     
@@ -1037,7 +1069,7 @@ function Write-ProgressStep {
     
     $healthCheckInterval = 30
     $lastHealthCheck = Get-Date
-    $stuckJobThreshold = 300 # 5 minutes
+    $stuckJobThreshold = 3600 # 1 hour (3600 seconds) - increased from 5 minutes to prevent premature timeouts
     $lastMemorySnapshot = Get-Date
     
     while ($jobs | Where-Object { -not $_.Completed }) {
@@ -1047,6 +1079,19 @@ function Write-ProgressStep {
                 try {
                     # Collect result
                     $jobResult = $job.PowerShell.EndInvoke($job.Handle)
+                    
+                    # =================== START: INSERT THIS BLOCK FOR DEBUGGING ===================
+                    if ($job.PowerShell.Streams.Error) {
+                        Write-OrchestratorLog -Level "ERROR" -Component "RunspaceJob" -Message "Job for module ($($job.ModuleName)) completed with errors."
+                        foreach ($err in $job.PowerShell.Streams.Error) {
+                            Write-OrchestratorLog -Level "ERROR" -Component "RunspaceJob" -Message "--> $($err.ToString())"
+                            if ($err.Exception) {
+                                Write-OrchestratorLog -Level "DEBUG" -Component "RunspaceJob" -Message "--> Exception: $($err.Exception.ToString())"
+                            }
+                        }
+                    }
+                    # =================== END: INSERT THIS BLOCK FOR DEBUGGING =====================
+                    
                     $job.Completed = $true
                     $jobMonitor.CompletedJobs++
                     

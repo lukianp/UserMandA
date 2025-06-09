@@ -981,23 +981,51 @@ function Start-DataAggregation {
             throw "Context is null after initialization attempt"
         }
         
-        # Check if Context has Paths property
+        # Check if Context has Paths property - enhanced validation
         if (-not ($Context.PSObject.Properties.Name -contains 'Paths')) {
-            throw "Context does not contain 'Paths' property"
+            # Try to access Paths directly in case it's a hashtable
+            if ($Context -is [hashtable] -and $Context.ContainsKey('Paths')) {
+                Write-Host "[INFO] Context is hashtable with Paths key" -ForegroundColor Gray
+            } else {
+                # Log available properties for debugging
+                $availableProps = if ($Context.PSObject.Properties) {
+                    $Context.PSObject.Properties.Name -join ', '
+                } elseif ($Context -is [hashtable]) {
+                    $Context.Keys -join ', '
+                } else {
+                    "Unknown context type: $($Context.GetType().FullName)"
+                }
+                Write-Host "[DEBUG] Available context properties: $availableProps" -ForegroundColor Gray
+                throw "Context does not contain 'Paths' property. Available: $availableProps"
+            }
         }
         
-        if ($null -eq $Context.Paths) {
+        # Access Paths with fallback for hashtable vs PSObject
+        $contextPaths = if ($Context -is [hashtable]) { $Context['Paths'] } else { $Context.Paths }
+        
+        if ($null -eq $contextPaths) {
             throw "Context.Paths is null"
         }
         
-        # Check for required path properties
+        # Check for required path properties - handle both hashtable and PSObject
         $requiredPaths = @('RawDataOutput', 'ProcessedDataOutput')
         $missingPaths = @()
         
         foreach ($pathName in $requiredPaths) {
-            if (-not ($Context.Paths.PSObject.Properties.Name -contains $pathName)) {
+            $pathExists = $false
+            $pathValue = $null
+            
+            if ($contextPaths -is [hashtable]) {
+                $pathExists = $contextPaths.ContainsKey($pathName)
+                $pathValue = if ($pathExists) { $contextPaths[$pathName] } else { $null }
+            } else {
+                $pathExists = $contextPaths.PSObject.Properties.Name -contains $pathName
+                $pathValue = if ($pathExists) { $contextPaths.$pathName } else { $null }
+            }
+            
+            if (-not $pathExists) {
                 $missingPaths += $pathName
-            } elseif ([string]::IsNullOrWhiteSpace($Context.Paths.$pathName)) {
+            } elseif ([string]::IsNullOrWhiteSpace($pathValue)) {
                 $missingPaths += "$pathName (empty)"
             }
         }
@@ -1006,9 +1034,9 @@ function Start-DataAggregation {
             throw "Context.Paths is missing required properties: $($missingPaths -join ', ')"
         }
         
-        # Validate paths exist
-        $rawDataPath = $Context.Paths.RawDataOutput
-        $processedDataPath = $Context.Paths.ProcessedDataOutput
+        # Validate paths exist - handle both hashtable and PSObject
+        $rawDataPath = if ($contextPaths -is [hashtable]) { $contextPaths['RawDataOutput'] } else { $contextPaths.RawDataOutput }
+        $processedDataPath = if ($contextPaths -is [hashtable]) { $contextPaths['ProcessedDataOutput'] } else { $contextPaths.ProcessedDataOutput }
         
         if (-not (Test-Path $rawDataPath -PathType Container)) {
             throw "Raw data path does not exist: $rawDataPath"

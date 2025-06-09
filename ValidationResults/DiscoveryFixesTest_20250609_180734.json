@@ -1,0 +1,227 @@
+﻿{
+    "TestsPassed":  20,
+    "TestsFailed":  0,
+    "TestsRun":  20,
+    "Details":  [
+                    {
+                        "TestName":  "Orchestrator Timeout",
+                        "Status":  "PASS",
+                        "Message":  "Timeout increased to 1 hour (3600 seconds)",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852026)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Config Timeouts",
+                        "Status":  "PASS",
+                        "Message":  "Configuration timeouts updated to 1 hour",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852038)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Module Preloading Section",
+                        "Status":  "PASS",
+                        "Message":  "PowerShell module preloading section found",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852072)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Module: Microsoft.Graph.Authentication",
+                        "Status":  "PASS",
+                        "Message":  "Microsoft.Graph.Authentication found in preload list",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852077)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Module: ExchangeOnlineManagement",
+                        "Status":  "PASS",
+                        "Message":  "ExchangeOnlineManagement found in preload list",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852080)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Module: ActiveDirectory",
+                        "Status":  "PASS",
+                        "Message":  "ActiveDirectory found in preload list",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852082)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Module: Az.Accounts",
+                        "Status":  "PASS",
+                        "Message":  "Az.Accounts found in preload list",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852083)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Context Validation",
+                        "Status":  "PASS",
+                        "Message":  "Enhanced context validation found",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852105)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Hashtable Support",
+                        "Status":  "PASS",
+                        "Message":  "Hashtable context support found",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852108)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Debug Logging",
+                        "Status":  "PASS",
+                        "Message":  "Enhanced debug logging found",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852137)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Graph Function",
+                        "Status":  "PASS",
+                        "Message":  "Invoke-GraphDiscovery function found",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852143)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Graph Connection Test",
+                        "Status":  "PASS",
+                        "Message":  "Graph connection testing found",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852145)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Graph Error Handling",
+                        "Status":  "PASS",
+                        "Message":  "Proper DiscoveryResult usage found",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488852146)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:32 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Module Available: Microsoft.Graph.Authentication",
+                        "Status":  "PASS",
+                        "Message":  "Microsoft.Graph.Authentication is available (Version: 2.28.0)",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488853034)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:33 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Module Available: Microsoft.Graph.Users",
+                        "Status":  "PASS",
+                        "Message":  "Microsoft.Graph.Users is available (Version: 2.28.0)",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488853327)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:33 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Module Available: ExchangeOnlineManagement",
+                        "Status":  "PASS",
+                        "Message":  "ExchangeOnlineManagement is available (Version: 3.8.0)",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488853751)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:33 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Module Available: ActiveDirectory",
+                        "Status":  "PASS",
+                        "Message":  "ActiveDirectory is available (Version: 1.0.1.0)",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488854008)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:34 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Module Available: Az.Accounts",
+                        "Status":  "PASS",
+                        "Message":  "Az.Accounts is available (Version: 5.0.1)",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488854487)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:34 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "SharePoint Config",
+                        "Status":  "PASS",
+                        "Message":  "SharePoint tenant name configured as \u0027zedra\u0027",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488854501)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:34 PM"
+                                      }
+                    },
+                    {
+                        "TestName":  "Enabled Sources",
+                        "Status":  "PASS",
+                        "Message":  "All expected sources are enabled",
+                        "Details":  "",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749488854507)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 6:07:34 PM"
+                                      }
+                    }
+                ]
+}
