@@ -1,4 +1,4 @@
-﻿# Simple verification script for error handling wrapper
+# Simple verification script for error handling wrapper
 param([string]$ModulesPath = ".\Modules")
 
 Write-Host "Verifying Error Handling Wrapper Implementation" -ForegroundColor Green
@@ -17,10 +17,10 @@ foreach ($file in $moduleFiles) {
     
     $moduleName = $file.BaseName
     if ($hasWrapper) {
-        Write-Host "[+] $moduleName" -ForegroundColor Green
+        Write-Host "✓ $moduleName" -ForegroundColor Green
         $successCount++
     } else {
-        Write-Host "[-] $moduleName" -ForegroundColor Red
+        Write-Host "✗ $moduleName" -ForegroundColor Red
     }
 }
 

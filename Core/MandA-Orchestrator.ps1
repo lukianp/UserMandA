@@ -711,16 +711,59 @@ function Invoke-DiscoveryPhase {
     # Add DiscoveryResult type
     $sessionState.Types.Add([System.Management.Automation.Runspaces.SessionStateTypeEntry]::new([DiscoveryResult]))
     
-    # Pre-load critical modules
+    # Fix for Write-ProgressStep not found error
+    $progressStepDefinition = {
+        function global:Write-ProgressStep {
+            param(
+                [string]$Message,
+                [string]$Status = "Info"
+            )
+            $color = switch ($Status) {
+                "Progress" { "Yellow" }
+                "Success" { "Green" }
+                "Warning" { "Yellow" }
+                "Error" { "Red" }
+                default { "White" }
+            }
+            Write-Host "  $Message" -ForegroundColor $color
+        }
+    }.ToString()
+
+    # Add the function definition to session state
+    $sessionState.Commands.Add(
+        (New-Object System.Management.Automation.Runspaces.SessionStateFunctionEntry(
+            'Write-ProgressStep',
+            $progressStepDefinition
+        ))
+    )
+    
+    # Pre-load shared utility modules into every runspace thread.
+    # This ensures helper functions are always available.
+    $utilityModulesToLoad = @(
+        "EnhancedLogging.psm1",
+        "ErrorHandling.psm1",
+        "ProgressDisplay.psm1"
+    )
+
+    foreach ($utilModule in $utilityModulesToLoad) {
+        $utilModulePath = Join-Path $global:MandA.Paths.Utilities $utilModule
+        if (Test-Path $utilModulePath) {
+            $sessionState.ImportPSModule($utilModulePath)
+            Write-OrchestratorLog -Message "Added '$utilModule' to runspace session state." -Level "DEBUG"
+        } else {
+            Write-OrchestratorLog -Message "Utility module for runspace session state not found: $utilModule" -Level "WARN"
+        }
+    }
+
+    # Pre-load critical modules from Authentication folder
     $criticalModules = @(
-        (Join-Path $global:MandA.Paths.Utilities "EnhancedLogging.psm1"),
-        (Join-Path $global:MandA.Paths.Utilities "ErrorHandling.psm1"),
         (Join-Path $global:MandA.Paths.Authentication "Authentication.psm1")
     )
     
     foreach ($moduleFile in $criticalModules) {
         if (Test-Path $moduleFile) {
             $sessionState.ImportPSModule($moduleFile)
+            Write-OrchestratorLog -Message "Added authentication module to runspace session state." -Level "DEBUG"
         }
     }
     
@@ -784,7 +827,14 @@ function Invoke-DiscoveryPhase {
                     throw "Discovery function not found: $functionName"
                 }
                 
-                $result = & $functionName -Configuration $modConfig -Context $globalContext
+                # Check if function accepts Context parameter
+                $functionParams = (Get-Command $functionName).Parameters
+                if ($functionParams.ContainsKey('Context')) {
+                    $result = & $functionName -Configuration $modConfig -Context $globalContext
+                } else {
+                    # Call without Context for modules that don't support it
+                    $result = & $functionName -Configuration $modConfig
+                }
                 
                 if ($result -and $result -is [DiscoveryResult]) {
                     $resultsCollection.Add($result)

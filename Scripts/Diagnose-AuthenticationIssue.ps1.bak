@@ -53,10 +53,10 @@ function Test-AzureEndpoint {
     Write-Host "Testing connectivity to $Description..." -ForegroundColor Yellow
     try {
         $response = Invoke-WebRequest -Uri $Endpoint -Method Head -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
-        Write-Host "  [+] $Description is reachable (Status: $($response.StatusCode))" -ForegroundColor Green
+        Write-Host "  ✓ $Description is reachable (Status: $($response.StatusCode))" -ForegroundColor Green
         return $true
     } catch {
-        Write-Host "  [-] $Description is NOT reachable: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  ✗ $Description is NOT reachable: $($_.Exception.Message)" -ForegroundColor Red
         return $false
     }
 }
@@ -80,12 +80,12 @@ $credentialPath = Join-Path $profilesBasePath "$CompanyName\credentials.config"
 Write-Host "Expected credential file path: $credentialPath" -ForegroundColor White
 
 if (-not (Test-Path $credentialPath)) {
-    Write-Host "  [-] Credential file NOT FOUND!" -ForegroundColor Red
+    Write-Host "  ✗ Credential file NOT FOUND!" -ForegroundColor Red
     Write-Host "  This means no credentials have been saved yet." -ForegroundColor Yellow
     Write-Host "  The system should prompt for credentials during authentication." -ForegroundColor Yellow
     $credentialFileExists = $false
 } else {
-    Write-Host "  [+] Credential file exists" -ForegroundColor Green
+    Write-Host "  ✓ Credential file exists" -ForegroundColor Green
     $credentialFileExists = $true
     
     # Try to read credential file
@@ -110,37 +110,37 @@ if (-not (Test-Path $credentialPath)) {
                 Write-Host "  Validating credential formats..." -ForegroundColor Yellow
                 
                 if (Test-GuidFormat $credData.ClientId) {
-                    Write-Host "    [+] ClientId format is valid" -ForegroundColor Green
+                    Write-Host "    ✓ ClientId format is valid" -ForegroundColor Green
                 } else {
-                    Write-Host "    [-] ClientId format is INVALID" -ForegroundColor Red
+                    Write-Host "    ✗ ClientId format is INVALID" -ForegroundColor Red
                 }
                 
                 if (Test-GuidFormat $credData.TenantId) {
-                    Write-Host "    [+] TenantId format is valid" -ForegroundColor Green
+                    Write-Host "    ✓ TenantId format is valid" -ForegroundColor Green
                 } else {
-                    Write-Host "    [-] TenantId format is INVALID" -ForegroundColor Red
+                    Write-Host "    ✗ TenantId format is INVALID" -ForegroundColor Red
                 }
                 
                 if (-not [string]::IsNullOrEmpty($credData.ClientSecret)) {
-                    Write-Host "    [+] ClientSecret is present" -ForegroundColor Green
+                    Write-Host "    ✓ ClientSecret is present" -ForegroundColor Green
                 } else {
-                    Write-Host "    [-] ClientSecret is MISSING" -ForegroundColor Red
+                    Write-Host "    ✗ ClientSecret is MISSING" -ForegroundColor Red
                 }
                 
                 # Check for credential field mixup
                 Write-Host "  Checking for credential field mixup..." -ForegroundColor Yellow
                 
                 if ($credData.ClientId -eq $correctTenantId -and $credData.TenantId -eq $correctClientId) {
-                    Write-Host "    ?? FIELD MIXUP DETECTED!" -ForegroundColor Red
+                    Write-Host "    🔍 FIELD MIXUP DETECTED!" -ForegroundColor Red
                     Write-Host "    ClientId and TenantId fields are SWAPPED!" -ForegroundColor Red
                     Write-Host "    Current ClientId ($($credData.ClientId)) should be TenantId" -ForegroundColor Yellow
                     Write-Host "    Current TenantId ($($credData.TenantId)) should be ClientId" -ForegroundColor Yellow
                     $global:FieldMixupDetected = $true
                 } elseif ($credData.TenantId -eq $correctTenantId -and $credData.ClientId -eq $correctClientId) {
-                    Write-Host "    [+] Credential fields appear to be correctly mapped" -ForegroundColor Green
+                    Write-Host "    ✓ Credential fields appear to be correctly mapped" -ForegroundColor Green
                     $global:FieldMixupDetected = $false
                 } else {
-                    Write-Host "    [!]?  Credentials don't match expected values" -ForegroundColor Yellow
+                    Write-Host "    ⚠️  Credentials don't match expected values" -ForegroundColor Yellow
                     Write-Host "    Neither field contains the expected correct values" -ForegroundColor Yellow
                     $global:FieldMixupDetected = $null
                 }
@@ -149,13 +149,13 @@ if (-not (Test-Path $credentialPath)) {
                 $global:DiagnosticCredentials = $credData
                 
             } else {
-                Write-Host "  [-] Read-CredentialFile function not available" -ForegroundColor Red
+                Write-Host "  ✗ Read-CredentialFile function not available" -ForegroundColor Red
             }
         } else {
-            Write-Host "  [-] CredentialFormatHandler module not found" -ForegroundColor Red
+            Write-Host "  ✗ CredentialFormatHandler module not found" -ForegroundColor Red
         }
     } catch {
-        Write-Host "  [-] Failed to read credential file: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  ✗ Failed to read credential file: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
@@ -193,11 +193,11 @@ if ($credentialFileExists -and $global:DiagnosticCredentials) {
     
     try {
         $response = Invoke-RestMethod -Uri $tenantDiscoveryUrl -Method Get -TimeoutSec 10 -ErrorAction Stop
-        Write-Host "  [+] Tenant ID is VALID and discoverable" -ForegroundColor Green
+        Write-Host "  ✓ Tenant ID is VALID and discoverable" -ForegroundColor Green
         Write-Host "    Issuer: $($response.issuer)" -ForegroundColor Gray
         Write-Host "    Authorization endpoint: $($response.authorization_endpoint)" -ForegroundColor Gray
     } catch {
-        Write-Host "  [-] Tenant ID is INVALID or not discoverable" -ForegroundColor Red
+        Write-Host "  ✗ Tenant ID is INVALID or not discoverable" -ForegroundColor Red
         Write-Host "    Error: $($_.Exception.Message)" -ForegroundColor Red
         
         if ($_.Exception.Message -like "*AADSTS90002*" -or $_.Exception.Message -like "*not found*") {
@@ -218,37 +218,37 @@ Write-Host "Based on the diagnostic results:" -ForegroundColor White
 Write-Host ""
 
 if (-not $credentialFileExists) {
-    Write-Host "* No credential file found - this is normal for first run" -ForegroundColor Yellow
-    Write-Host "* The system will prompt for credentials during authentication" -ForegroundColor Yellow
-    Write-Host "* Ensure you have the correct Azure AD application credentials" -ForegroundColor Yellow
-    Write-Host "* Use these correct values when prompted:" -ForegroundColor Green
+    Write-Host "• No credential file found - this is normal for first run" -ForegroundColor Yellow
+    Write-Host "• The system will prompt for credentials during authentication" -ForegroundColor Yellow
+    Write-Host "• Ensure you have the correct Azure AD application credentials" -ForegroundColor Yellow
+    Write-Host "• Use these correct values when prompted:" -ForegroundColor Green
     Write-Host "  - TenantId: $correctTenantId" -ForegroundColor Gray
     Write-Host "  - ClientId: $correctClientId" -ForegroundColor Gray
 } elseif ($global:DiagnosticCredentials) {
     
     # Check for field mixup first
     if ($global:FieldMixupDetected -eq $true) {
-        Write-Host "* CRITICAL ISSUE IDENTIFIED: Credential field mixup detected!" -ForegroundColor Red
-        Write-Host "* The ClientId and TenantId fields are swapped in the stored credentials" -ForegroundColor Red
-        Write-Host "* This explains the authentication failures in the logs" -ForegroundColor Red
+        Write-Host "• CRITICAL ISSUE IDENTIFIED: Credential field mixup detected!" -ForegroundColor Red
+        Write-Host "• The ClientId and TenantId fields are swapped in the stored credentials" -ForegroundColor Red
+        Write-Host "• This explains the authentication failures in the logs" -ForegroundColor Red
         Write-Host ""
-        Write-Host "* SOLUTION: Run the field mixup fix script:" -ForegroundColor Green
+        Write-Host "• SOLUTION: Run the field mixup fix script:" -ForegroundColor Green
         Write-Host "  .\Scripts\Fix-CredentialFieldMixup.ps1 -CompanyName '$CompanyName'" -ForegroundColor White
         Write-Host ""
-        Write-Host "* This will automatically swap the fields to the correct positions" -ForegroundColor Green
+        Write-Host "• This will automatically swap the fields to the correct positions" -ForegroundColor Green
         
     } elseif ($global:FieldMixupDetected -eq $false) {
-        Write-Host "* Credential fields appear to be correctly mapped" -ForegroundColor Green
-        Write-Host "* The issue may be elsewhere in the authentication process" -ForegroundColor Yellow
+        Write-Host "• Credential fields appear to be correctly mapped" -ForegroundColor Green
+        Write-Host "• The issue may be elsewhere in the authentication process" -ForegroundColor Yellow
         
     } else {
         $tenantId = $global:DiagnosticCredentials.TenantId
         
         # Check if this is the problematic tenant ID from the logs
         if ($tenantId -eq "1d5c5c4a-2ff1-4e50-83a3-008ffb30b1da") {
-            Write-Host "* ISSUE IDENTIFIED: The tenant ID in credentials matches the failing one from logs" -ForegroundColor Red
-            Write-Host "* This tenant ID appears to be invalid or the tenant doesn't exist" -ForegroundColor Red
-            Write-Host "* SOLUTION: You need to update the credentials with the correct tenant ID" -ForegroundColor Green
+            Write-Host "• ISSUE IDENTIFIED: The tenant ID in credentials matches the failing one from logs" -ForegroundColor Red
+            Write-Host "• This tenant ID appears to be invalid or the tenant doesn't exist" -ForegroundColor Red
+            Write-Host "• SOLUTION: You need to update the credentials with the correct tenant ID" -ForegroundColor Green
             Write-Host ""
             Write-Host "To fix this issue:" -ForegroundColor Green
             Write-Host "1. Delete the current credential file: $credentialPath" -ForegroundColor White
@@ -263,16 +263,16 @@ if (-not $credentialFileExists) {
             if ($deleteChoice -eq 'y' -or $deleteChoice -eq 'Y') {
                 try {
                     Remove-Item $credentialPath -Force
-                    Write-Host "[+] Credential file deleted successfully" -ForegroundColor Green
+                    Write-Host "✓ Credential file deleted successfully" -ForegroundColor Green
                     Write-Host "  The system will prompt for new credentials on next run" -ForegroundColor Yellow
                 } catch {
-                    Write-Host "[-] Failed to delete credential file: $($_.Exception.Message)" -ForegroundColor Red
+                    Write-Host "✗ Failed to delete credential file: $($_.Exception.Message)" -ForegroundColor Red
                 }
             }
         } else {
-            Write-Host "* Credentials don't match expected values" -ForegroundColor Yellow
-            Write-Host "* Neither field contains the expected correct values" -ForegroundColor Yellow
-            Write-Host "* SOLUTION: Replace with correct credentials" -ForegroundColor Green
+            Write-Host "• Credentials don't match expected values" -ForegroundColor Yellow
+            Write-Host "• Neither field contains the expected correct values" -ForegroundColor Yellow
+            Write-Host "• SOLUTION: Replace with correct credentials" -ForegroundColor Green
             Write-Host "  .\Scripts\Fix-CredentialFieldMixup.ps1 -CompanyName '$CompanyName'" -ForegroundColor White
         }
     }
@@ -281,11 +281,11 @@ if (-not $credentialFileExists) {
 # Connectivity issues
 $failedConnections = $connectivityResults.Keys | Where-Object { -not $connectivityResults[$_] }
 if ($failedConnections.Count -gt 0) {
-    Write-Host "* Network connectivity issues detected:" -ForegroundColor Red
+    Write-Host "• Network connectivity issues detected:" -ForegroundColor Red
     foreach ($failed in $failedConnections) {
         Write-Host "  - $failed ($($azureEndpoints[$failed]))" -ForegroundColor Red
     }
-    Write-Host "* Check firewall, proxy, or network restrictions" -ForegroundColor Yellow
+    Write-Host "• Check firewall, proxy, or network restrictions" -ForegroundColor Yellow
 }
 
 Write-Host ""

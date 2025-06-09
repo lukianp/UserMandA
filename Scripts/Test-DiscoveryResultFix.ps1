@@ -12,15 +12,15 @@ try {
     # Import the ErrorHandling module
     Write-Host "1. Importing ErrorHandling module..." -ForegroundColor Yellow
     Import-Module ".\Modules\Utilities\ErrorHandling.psm1" -Force
-    Write-Host "   ✓ Module imported successfully" -ForegroundColor Green
+    Write-Host "   [+] Module imported successfully" -ForegroundColor Green
 
     # Test 1: Create DiscoveryResult using New-DiscoveryResult function
     Write-Host "2. Testing New-DiscoveryResult function..." -ForegroundColor Yellow
     $result1 = New-DiscoveryResult -ModuleName "TestModule1"
     if ($result1 -and $result1.ModuleName -eq "TestModule1" -and $result1.Success -eq $true) {
-        Write-Host "   ✓ New-DiscoveryResult function works correctly" -ForegroundColor Green
+        Write-Host "   [+] New-DiscoveryResult function works correctly" -ForegroundColor Green
     } else {
-        Write-Host "   ✗ New-DiscoveryResult function failed" -ForegroundColor Red
+        Write-Host "   [-] New-DiscoveryResult function failed" -ForegroundColor Red
         throw "New-DiscoveryResult function test failed"
     }
 
@@ -28,9 +28,9 @@ try {
     Write-Host "3. Testing error handling..." -ForegroundColor Yellow
     $result1.AddError("Test error message", $null, @{TestContext = "Value"})
     if ($result1.Success -eq $false -and $result1.Errors.Count -eq 1) {
-        Write-Host "   ✓ Error handling works correctly" -ForegroundColor Green
+        Write-Host "   [+] Error handling works correctly" -ForegroundColor Green
     } else {
-        Write-Host "   ✗ Error handling failed" -ForegroundColor Red
+        Write-Host "   [-] Error handling failed" -ForegroundColor Red
         throw "Error handling test failed"
     }
 
@@ -38,9 +38,9 @@ try {
     Write-Host "4. Testing warning handling..." -ForegroundColor Yellow
     $result1.AddWarning("Test warning message", @{WarningContext = "TestValue"})
     if ($result1.Warnings.Count -eq 1) {
-        Write-Host "   ✓ Warning handling works correctly" -ForegroundColor Green
+        Write-Host "   [+] Warning handling works correctly" -ForegroundColor Green
     } else {
-        Write-Host "   ✗ Warning handling failed" -ForegroundColor Red
+        Write-Host "   [-] Warning handling failed" -ForegroundColor Red
         throw "Warning handling test failed"
     }
 
@@ -48,9 +48,9 @@ try {
     Write-Host "5. Testing completion..." -ForegroundColor Yellow
     $result1.Complete()
     if ($result1.EndTime -and $result1.Metadata.ContainsKey('Duration')) {
-        Write-Host "   ✓ Completion works correctly" -ForegroundColor Green
+        Write-Host "   [+] Completion works correctly" -ForegroundColor Green
     } else {
-        Write-Host "   ✗ Completion failed" -ForegroundColor Red
+        Write-Host "   [-] Completion failed" -ForegroundColor Red
         throw "Completion test failed"
     }
 
@@ -66,9 +66,9 @@ try {
     $discoveryResult.Complete()
     
     if ($discoveryResult.Success -eq $true -and $discoveryResult.Data.Users.Count -eq 2) {
-        Write-Host "   ✓ Discovery module simulation successful" -ForegroundColor Green
+        Write-Host "   [+] Discovery module simulation successful" -ForegroundColor Green
     } else {
-        Write-Host "   ✗ Discovery module simulation failed" -ForegroundColor Red
+        Write-Host "   [-] Discovery module simulation failed" -ForegroundColor Red
         throw "Discovery module simulation test failed"
     }
 

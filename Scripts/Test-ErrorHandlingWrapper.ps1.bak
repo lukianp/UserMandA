@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 <#
@@ -122,27 +122,27 @@ function Test-WrapperFunctionality {
         
         # Validate successful execution
         if ($testResults.SuccessTest.Success -and $testResults.SuccessTest.Data -eq "Test successful") {
-            Write-Host "  [+] Success case: PASSED" -ForegroundColor Green
+            Write-Host "  ✓ Success case: PASSED" -ForegroundColor Green
         } else {
-            Write-Host "  [-] Success case: FAILED" -ForegroundColor Red
+            Write-Host "  ✗ Success case: FAILED" -ForegroundColor Red
         }
         
         # Validate error handling
         if (-not $testResults.ErrorTest.Success -and $testResults.ErrorTest.Error.Message -eq "Test error") {
-            Write-Host "  [+] Error handling: PASSED" -ForegroundColor Green
+            Write-Host "  ✓ Error handling: PASSED" -ForegroundColor Green
         } else {
-            Write-Host "  [-] Error handling: FAILED" -ForegroundColor Red
+            Write-Host "  ✗ Error handling: FAILED" -ForegroundColor Red
         }
         
         # Validate timing
         if ($testResults.SuccessTest.Duration -and $testResults.ErrorTest.Duration) {
-            Write-Host "  [+] Duration tracking: PASSED" -ForegroundColor Green
+            Write-Host "  ✓ Duration tracking: PASSED" -ForegroundColor Green
         } else {
-            Write-Host "  [-] Duration tracking: FAILED" -ForegroundColor Red
+            Write-Host "  ✗ Duration tracking: FAILED" -ForegroundColor Red
         }
         
     } catch {
-        Write-Host "  [-] Functionality test failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  ✗ Functionality test failed: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
@@ -178,14 +178,14 @@ foreach ($moduleFile in $moduleFiles) {
     if ($result.HasWrapper) {
         $successCount++
         if ($Detailed) {
-            Write-Host "  [+] $($result.ModuleName)" -ForegroundColor Green
+            Write-Host "  ✓ $($result.ModuleName)" -ForegroundColor Green
         }
     } else {
         $failureCount++
         if ($result.Error) {
-            Write-Host "  [-] $($result.ModuleName) - Error: $($result.Error)" -ForegroundColor Red
+            Write-Host "  ✗ $($result.ModuleName) - Error: $($result.Error)" -ForegroundColor Red
         } else {
-            Write-Host "  [-] $($result.ModuleName) - Wrapper function not found" -ForegroundColor Red
+            Write-Host "  ✗ $($result.ModuleName) - Wrapper function not found" -ForegroundColor Red
         }
     }
 }

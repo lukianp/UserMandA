@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 <#
@@ -51,17 +51,17 @@ foreach ($moduleFile in $moduleFiles) {
         
         if ($hasWrapper) {
             $successCount++
-            Write-Host "  [+] $moduleName" -ForegroundColor Green
+            Write-Host "  ✓ $moduleName" -ForegroundColor Green
         } else {
             $failureCount++
             $failedModules += $moduleName
-            Write-Host "  [-] $moduleName - Wrapper function not found" -ForegroundColor Red
+            Write-Host "  ✗ $moduleName - Wrapper function not found" -ForegroundColor Red
         }
     } catch {
         $failureCount++
         $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($moduleFile.FullName)
         $failedModules += $moduleName
-        Write-Host "  [-] $moduleName - Error reading file: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  ✗ $moduleName - Error reading file: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
@@ -145,27 +145,27 @@ try {
     
     # Validate successful execution
     if ($testResults.SuccessTest.Success -and $testResults.SuccessTest.Data -eq "Test successful") {
-        Write-Host "  [+] Success case: PASSED" -ForegroundColor Green
+        Write-Host "  ✓ Success case: PASSED" -ForegroundColor Green
     } else {
-        Write-Host "  [-] Success case: FAILED" -ForegroundColor Red
+        Write-Host "  ✗ Success case: FAILED" -ForegroundColor Red
     }
     
     # Validate error handling
     if (-not $testResults.ErrorTest.Success -and $testResults.ErrorTest.Error.Message -eq "Test error") {
-        Write-Host "  [+] Error handling: PASSED" -ForegroundColor Green
+        Write-Host "  ✓ Error handling: PASSED" -ForegroundColor Green
     } else {
-        Write-Host "  [-] Error handling: FAILED" -ForegroundColor Red
+        Write-Host "  ✗ Error handling: FAILED" -ForegroundColor Red
     }
     
     # Validate timing
     if ($testResults.SuccessTest.Duration -and $testResults.ErrorTest.Duration) {
-        Write-Host "  [+] Duration tracking: PASSED" -ForegroundColor Green
+        Write-Host "  ✓ Duration tracking: PASSED" -ForegroundColor Green
     } else {
-        Write-Host "  [-] Duration tracking: FAILED" -ForegroundColor Red
+        Write-Host "  ✗ Duration tracking: FAILED" -ForegroundColor Red
     }
     
 } catch {
-    Write-Host "  [-] Functionality test failed: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  ✗ Functionality test failed: $($_.Exception.Message)" -ForegroundColor Red
 }
 
 # Overall result

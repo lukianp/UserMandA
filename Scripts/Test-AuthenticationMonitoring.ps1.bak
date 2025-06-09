@@ -120,9 +120,9 @@ try {
                 $version = $installed | Sort-Object Version -Descending | Select-Object -First 1 | ForEach-Object { $_.Version }
                 $status = if ($loaded) { "LOADED" } else { "INSTALLED" }
                 $color = if ($loaded) { "Green" } else { "Yellow" }
-                Write-Host "  [+] $($module.Name) ($status - v$version)" -ForegroundColor $color
+                Write-Host "  ✓ $($module.Name) ($status - v$version)" -ForegroundColor $color
             } else {
-                Write-Host "  [-] $($module.Name) (NOT INSTALLED)" -ForegroundColor Red
+                Write-Host "  ✗ $($module.Name) (NOT INSTALLED)" -ForegroundColor Red
             }
             Write-Host "    $($module.Description)" -ForegroundColor Gray
         }

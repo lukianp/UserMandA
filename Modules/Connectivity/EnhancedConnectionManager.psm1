@@ -173,11 +173,11 @@ function Show-ConnectionStatus {
     }
     
     $statusIcon = switch ($Status) {
-        "Connecting" { "⏳" }
-        "Connected" { "✅" }
-        "Failed" { "❌" }
-        "Skipped" { "⏭️" }
-        default { "ℹ️" }
+        "Connecting" { "[...]" }
+        "Connected" { "[OK]" }
+        "Failed" { "[X]" }
+        "Skipped" { "??" }
+        default { "[i]?" }
     }
     
     $message = "  $statusIcon $Service : $Status"
@@ -1061,7 +1061,7 @@ function Test-AllConnections {
             foreach ($service in $results.Keys) {
                 if ($results[$service].Connected) {
                     $responseTime = if ($results[$service].ResponseTime) { " ($([Math]::Round($results[$service].ResponseTime, 1))ms)" } else { "" }
-                    Write-MandALog "  ✓ $service$responseTime" -Level "SUCCESS"
+                    Write-MandALog "  [+] $service$responseTime" -Level "SUCCESS"
                 }
             }
         }
@@ -1072,7 +1072,7 @@ function Test-AllConnections {
             Write-MandALog "Failed Services:" -Level "ERROR"
             foreach ($service in $results.Keys) {
                 if (-not $results[$service].Connected) {
-                    Write-MandALog "  ✗ $service : $($results[$service].Error)" -Level "ERROR"
+                    Write-MandALog "  [-] $service : $($results[$service].Error)" -Level "ERROR"
                 }
             }
         }

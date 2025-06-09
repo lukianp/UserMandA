@@ -344,9 +344,9 @@ function Write-ProgressStep {
     $indicator = switch ($Status) {
         "Progress" { "[...]" }
         "Info" { "[i]" }
-        "Success" { "[✓]" }
+        "Success" { "[[+]]" }
         "Warning" { "[!]" }
-        "Error" { "[✗]" }
+        "Error" { "[[-]]" }
         default { "[i]" }
     }
     
@@ -483,7 +483,7 @@ function Show-ProgressBar {
     $filledLength = [math]::Floor(($Current / $Total) * $barLength)
     $emptyLength = $barLength - $filledLength
     
-    $progressBar = "[" + ("█" * $filledLength) + ("░" * $emptyLength) + "]"
+    $progressBar = "[" + ("#" * $filledLength) + ("." * $emptyLength) + "]"
     $progressText = "$progressBar $percentage% ($Current/$Total)"
     
     # Write to console without newline (overwrite previous line)

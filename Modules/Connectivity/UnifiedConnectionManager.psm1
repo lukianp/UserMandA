@@ -446,7 +446,7 @@ function Connect-AllUnifiedServices {
         Write-MandALog "Unified connection summary: $successCount/$totalCount services connected successfully" -Level "INFO" -Component "UnifiedConnection" -Context $Context
         
         foreach ($service in $connectionResults.GetEnumerator()) {
-            $status = if ($service.Value) { "✅ Connected" } else { "❌ Failed" }
+            $status = if ($service.Value) { "[OK] Connected" } else { "[X] Failed" }
             Write-MandALog "  $($service.Key): $status" -Level $(if ($service.Value) { "SUCCESS" } else { "ERROR" }) -Component "UnifiedConnection" -Context $Context
         }
         

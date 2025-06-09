@@ -211,15 +211,15 @@ function Write-EnhancedLog {
     
     # Add icons for better visibility
     $icon = switch ($Level) {
-        "SUCCESS" { "✅" }
-        "ERROR" { "❌" }
-        "WARN" { "⚠️" }
-        "CRITICAL" { "🚨" }
-        "IMPORTANT" { "📌" }
-        "PROGRESS" { "🔄" }
-        "DEBUG" { "🔍" }
-        "HEADER" { "📋" }
-        default { "ℹ️" }
+        "SUCCESS" { "[OK]" }
+        "ERROR" { "[X]" }
+        "WARN" { "[!]?" }
+        "CRITICAL" { "??" }
+        "IMPORTANT" { "??" }
+        "PROGRESS" { "??" }
+        "DEBUG" { "??" }
+        "HEADER" { "??" }
+        default { "[i]?" }
     }
     
     $displayMessage = "$icon $logMessage"
@@ -248,11 +248,11 @@ function Write-ProgressHeader {
         [string]$Subtitle = ""
     )
     
-    $separator = "═" * 90
+    $separator = "?" * 90
     Write-Host "`n$separator" @($script:ColorScheme.Separator)
-    Write-Host "  🎯 $Title" @($script:ColorScheme.Header)
+    Write-Host "  ?? $Title" @($script:ColorScheme.Header)
     if ($Subtitle) {
-        Write-Host "  📝 $Subtitle" @($script:ColorScheme.Info)
+        Write-Host "  ?? $Subtitle" @($script:ColorScheme.Info)
     }
     Write-Host "$separator`n" @($script:ColorScheme.Separator)
 }
@@ -269,9 +269,9 @@ function Write-OperationResult {
         [timespan]$Duration
     )
     
-    $icon = if ($Success) { "✅" } else { "❌" }
+    $icon = if ($Success) { "[OK]" } else { "[X]" }
     $level = if ($Success) { "SUCCESS" } else { "ERROR" }
-    $durationText = if ($Duration) { " (⏱️ $('{0:F2}' -f $Duration.TotalSeconds)s)" } else { "" }
+    $durationText = if ($Duration) { " (?? $('{0:F2}' -f $Duration.TotalSeconds)s)" } else { "" }
     
     $message = "$Operation$durationText"
     if ($Details) {
@@ -285,7 +285,7 @@ function Start-OperationTimer {
     param([string]$OperationName)
     
     $script:Metrics.Operations[$OperationName].StartTime = Get-Date
-    Write-EnhancedLog "🚀 Starting: $OperationName" -Level PROGRESS
+    Write-EnhancedLog "?? Starting: $OperationName" -Level PROGRESS
 }
 
 function Stop-OperationTimer {
@@ -501,7 +501,7 @@ function Ensure-RequiredModules {
                         $latestVersion = $latestModule.Version.ToString()
                         
                         if ([version]$installedVersion -lt [version]$latestVersion) {
-                            Write-EnhancedLog "Update available for $moduleName v$installedVersion → v$latestVersion" -Level INFO
+                            Write-EnhancedLog "Update available for $moduleName v$installedVersion ? v$latestVersion" -Level INFO
                             Write-EnhancedLog "Installing latest version..." -Level PROGRESS
                             Install-Module -Name $moduleName -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
                             Write-EnhancedLog "Successfully updated $moduleName to v$latestVersion" -Level SUCCESS
@@ -705,7 +705,7 @@ function Connect-EnhancedAzure {
             
             # List subscription details (first 3 active)
             $activeSubscriptions | Select-Object -First 3 | ForEach-Object {
-                Write-EnhancedLog "    • $($_.Name) ($($_.State))" -Level INFO
+                Write-EnhancedLog "    * $($_.Name) ($($_.State))" -Level INFO
             }
             if ($activeSubscriptions.Count -gt 3) {
                 Write-EnhancedLog "    ... and $($activeSubscriptions.Count - 3) more active subscriptions" -Level INFO
@@ -1251,10 +1251,10 @@ function New-EnhancedClientSecret {
         # Enhanced security reminder with expiry calculation
         $daysUntilExpiry = ($secretEndDate - (Get-Date)).Days
         Write-EnhancedLog "SECRET SECURITY NOTICE:" -Level CRITICAL
-        Write-EnhancedLog "  • Secret value will be encrypted and stored securely" -Level IMPORTANT
-        Write-EnhancedLog "  • Secret cannot be retrieved after this session" -Level IMPORTANT
-        Write-EnhancedLog "  • Secret expires in $daysUntilExpiry days" -Level IMPORTANT
-        Write-EnhancedLog "  • Set calendar reminder for renewal before expiry" -Level IMPORTANT
+        Write-EnhancedLog "  * Secret value will be encrypted and stored securely" -Level IMPORTANT
+        Write-EnhancedLog "  * Secret cannot be retrieved after this session" -Level IMPORTANT
+        Write-EnhancedLog "  * Secret expires in $daysUntilExpiry days" -Level IMPORTANT
+        Write-EnhancedLog "  * Set calendar reminder for renewal before expiry" -Level IMPORTANT
         
         Stop-OperationTimer "SecretCreation" $true
         return $clientSecret
@@ -1557,11 +1557,11 @@ PowerShell: $($PSVersionTable.PSVersion)
     }
     
     Write-EnhancedLog "IMPORTANT SECURITY REMINDERS:" -Level CRITICAL -NoTimestamp
-    Write-EnhancedLog "  • Client secret expires: $($clientSecret.EndDateTime.ToString('yyyy-MM-dd'))" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  • Set calendar reminder for credential renewal" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  • Credentials are user-encrypted (current user only)" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  • Backup credentials file is stored securely" -Level IMPORTANT -NoTimestamp
-    Write-EnhancedLog "  • Review and audit permissions regularly" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  * Client secret expires: $($clientSecret.EndDateTime.ToString('yyyy-MM-dd'))" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  * Set calendar reminder for credential renewal" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  * Credentials are user-encrypted (current user only)" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  * Backup credentials file is stored securely" -Level IMPORTANT -NoTimestamp
+    Write-EnhancedLog "  * Review and audit permissions regularly" -Level IMPORTANT -NoTimestamp
     
     Write-EnhancedLog "Azure AD App Registration completed successfully!" -Level SUCCESS
     Write-EnhancedLog "Ready to proceed with environment discovery using script 2" -Level SUCCESS

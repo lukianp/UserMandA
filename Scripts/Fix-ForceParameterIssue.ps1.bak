@@ -99,10 +99,10 @@ if ($orchestratorContent -match 'function Invoke-DiscoveryModule') {
 
 Write-Host ""
 Write-Host "=== Fix Summary ===" -ForegroundColor Cyan
-Write-Host "[+] Issue: Discovery modules failing with 'Force parameter not found' error" -ForegroundColor White
-Write-Host "[+] Cause: Orchestrator's -Force parameter being passed to discovery functions" -ForegroundColor White
-Write-Host "[+] Solution: Modified Invoke-DiscoveryModule to use explicit parameter control" -ForegroundColor White
-Write-Host "[+] Result: Discovery modules will only receive Configuration and Context parameters" -ForegroundColor White
+Write-Host "✓ Issue: Discovery modules failing with 'Force parameter not found' error" -ForegroundColor White
+Write-Host "✓ Cause: Orchestrator's -Force parameter being passed to discovery functions" -ForegroundColor White
+Write-Host "✓ Solution: Modified Invoke-DiscoveryModule to use explicit parameter control" -ForegroundColor White
+Write-Host "✓ Result: Discovery modules will only receive Configuration and Context parameters" -ForegroundColor White
 Write-Host ""
 Write-Host "The Force parameter issue has been fixed." -ForegroundColor Green
 Write-Host "You can now run the discovery suite without the Force parameter errors." -ForegroundColor Green
