@@ -480,75 +480,109 @@ function Initialize-OrchestratorModules {
         Write-OrchestratorLog -Message "DiscoveryResult class verified and available" -Level "DEBUG"
     }
     
-    $utilityModules = @(
-        "ErrorHandling",
-        "EnhancedLogging",
-        "PerformanceMetrics",
-        "FileOperations",
-        "ValidationHelpers",
-        "ProgressDisplay",
-        "AuthenticationMonitoring"
-    )
+    # Define module paths to load using hashtable approach
+    $modulePathsToLoad = @{
+        "Utilities" = @(
+            "ErrorHandling",
+            "EnhancedLogging",
+            "PerformanceMetrics",
+            "FileOperations",
+            "ValidationHelpers",
+            "ProgressDisplay",
+            "AuthenticationMonitoring"
+        )
+        "Connectivity" = @(
+            "EnhancedConnectionManager"
+        )
+    }
     
-    Write-OrchestratorLog -Message "Loading utility modules..." -Level "INFO"
-    $loadedUtilities = 0
-    $failedUtilities = @()
+    $totalLoaded = 0
+    $totalFailed = @()
     
-    foreach ($module in $utilityModules) {
-        $modulePath = Join-Path (Get-ModuleContext).Paths.Utilities "$module.psm1"
-        Write-OrchestratorLog -Message "Loading utility module: $module from $modulePath" -Level "DEBUG"
+    # Load modules from each path category
+    foreach ($pathCategory in $modulePathsToLoad.Keys) {
+        $modules = $modulePathsToLoad[$pathCategory]
+        $categoryPath = (Get-ModuleContext).Paths[$pathCategory]
         
-        if (Test-Path $modulePath) {
-            try {
-                Import-Module $modulePath -Force -Global -ErrorAction Stop
-                $loadedUtilities++
-                Write-OrchestratorLog -Message "Successfully loaded utility module: $module" -Level "SUCCESS"
-                
-                if ($module -eq "EnhancedLogging") {
-                    if (Get-Command "Initialize-Logging" -ErrorAction SilentlyContinue) {
-                        Write-OrchestratorLog -Message "Initializing logging system..." -Level "INFO"
-                        try {
-                            Initialize-Logging -Context $global:MandA
-                            Write-OrchestratorLog -Message "Logging system initialized successfully" -Level "SUCCESS"
-                        } catch {
-                            Write-OrchestratorLog -Message "Failed to initialize logging system: $_" -Level "ERROR"
+        Write-OrchestratorLog -Message "Loading $pathCategory modules..." -Level "INFO"
+        $loadedCount = 0
+        $failedModules = @()
+        
+        foreach ($module in $modules) {
+            $modulePath = Join-Path $categoryPath "$module.psm1"
+            Write-OrchestratorLog -Message "Loading $pathCategory module: $module from $modulePath" -Level "DEBUG"
+            
+            if (Test-Path $modulePath) {
+                try {
+                    Import-Module $modulePath -Force -Global -ErrorAction Stop
+                    $loadedCount++
+                    $totalLoaded++
+                    Write-OrchestratorLog -Message "Successfully loaded $pathCategory module: $module" -Level "SUCCESS"
+                    
+                    # Special handling for specific modules
+                    if ($module -eq "EnhancedLogging") {
+                        if (Get-Command "Initialize-Logging" -ErrorAction SilentlyContinue) {
+                            Write-OrchestratorLog -Message "Initializing logging system..." -Level "INFO"
+                            try {
+                                Initialize-Logging -Context $global:MandA
+                                Write-OrchestratorLog -Message "Logging system initialized successfully" -Level "SUCCESS"
+                            } catch {
+                                Write-OrchestratorLog -Message "Failed to initialize logging system: $_" -Level "ERROR"
+                            }
+                        } else {
+                            Write-OrchestratorLog -Message "WARNING: Initialize-Logging function not found after loading EnhancedLogging module" -Level "ERROR"
                         }
-                    } else {
-                        Write-OrchestratorLog -Message "WARNING: Initialize-Logging function not found after loading EnhancedLogging module" -Level "ERROR"
                     }
-                }
-                
-                if ($module -eq "ErrorHandling") {
-                    if (Get-Command "Invoke-WithTimeout" -ErrorAction SilentlyContinue) {
-                        Write-OrchestratorLog -Message "Verified Invoke-WithTimeout function is available" -Level "SUCCESS"
-                    } else {
-                        Write-OrchestratorLog -Message "WARNING: Invoke-WithTimeout function not found after loading ErrorHandling module" -Level "ERROR"
+                    
+                    if ($module -eq "ErrorHandling") {
+                        if (Get-Command "Invoke-WithTimeout" -ErrorAction SilentlyContinue) {
+                            Write-OrchestratorLog -Message "Verified Invoke-WithTimeout function is available" -Level "SUCCESS"
+                        } else {
+                            Write-OrchestratorLog -Message "WARNING: Invoke-WithTimeout function not found after loading ErrorHandling module" -Level "ERROR"
+                        }
                     }
+                    
+                    if ($module -eq "EnhancedConnectionManager") {
+                        if (Get-Command "Initialize-AllConnections" -ErrorAction SilentlyContinue) {
+                            Write-OrchestratorLog -Message "Verified Initialize-AllConnections function is available" -Level "SUCCESS"
+                        } else {
+                            Write-OrchestratorLog -Message "WARNING: Initialize-AllConnections function not found after loading EnhancedConnectionManager module" -Level "ERROR"
+                        }
+                    }
+                } catch {
+                    $failedModules += $module
+                    $totalFailed += "$pathCategory\$module"
+                    Add-OrchestratorError -Source "ModuleLoader" `
+                        -Message "Failed to load $pathCategory module $module`: $_" `
+                        -Exception $_.Exception `
+                        -Severity "Critical"
+                    Write-OrchestratorLog -Message "FAILED to load $pathCategory module: $module - $_" -Level "ERROR"
                 }
-            } catch {
-                $failedUtilities += $module
+            } else {
+                $failedModules += $module
+                $totalFailed += "$pathCategory\$module"
+                Write-OrchestratorLog -Message "$pathCategory module not found: $modulePath" -Level "ERROR"
                 Add-OrchestratorError -Source "ModuleLoader" `
-                    -Message "Failed to load utility module $module`: $_" `
-                    -Exception $_.Exception `
+                    -Message "$pathCategory module file not found: $modulePath" `
                     -Severity "Critical"
-                Write-OrchestratorLog -Message "FAILED to load utility module: $module - $_" -Level "ERROR"
             }
-        } else {
-            $failedUtilities += $module
-            Write-OrchestratorLog -Message "Utility module not found: $modulePath" -Level "ERROR"
-            Add-OrchestratorError -Source "ModuleLoader" `
-                -Message "Utility module file not found: $modulePath" `
-                -Severity "Critical"
+        }
+        
+        Write-OrchestratorLog -Message "$pathCategory module loading complete: $loadedCount/$($modules.Count) loaded successfully" -Level "INFO"
+        if ($failedModules.Count -gt 0) {
+            Write-OrchestratorLog -Message "Failed $pathCategory modules: $($failedModules -join ', ')" -Level "ERROR"
         }
     }
     
-    Write-OrchestratorLog -Message "Utility module loading complete: $loadedUtilities/$($utilityModules.Count) loaded successfully" -Level "INFO"
-    if ($failedUtilities.Count -gt 0) {
-        Write-OrchestratorLog -Message "Failed utility modules: $($failedUtilities -join ', ')" -Level "ERROR"
-        if ("ErrorHandling" -in $failedUtilities) {
-            throw "Critical utility module 'ErrorHandling' failed to load. Cannot continue without Invoke-WithTimeout function."
-        }
+    # Check for critical module failures
+    if ("Utilities\ErrorHandling" -in $totalFailed) {
+        throw "Critical utility module 'ErrorHandling' failed to load. Cannot continue without Invoke-WithTimeout function."
     }
+    if ("Connectivity\EnhancedConnectionManager" -in $totalFailed) {
+        Write-OrchestratorLog -Message "WARNING: EnhancedConnectionManager failed to load. Initialize-AllConnections function will not be available." -Level "ERROR"
+    }
+    
+    Write-OrchestratorLog -Message "Total module loading complete: $totalLoaded modules loaded, $($totalFailed.Count) failed" -Level "INFO"
     
     switch ($Phase) {
         { $_ -in "Discovery", "Full", "AzureOnly" } {
@@ -891,9 +925,9 @@ function Invoke-DiscoveryPhase {
     [CmdletBinding()]
     param()
 
-    Write-OrchestratorLog -Message "STARTING DISCOVERY PHASE (Parallel Execution Engine v3.0 FINAL)" -Level "HEADER"
+    Write-OrchestratorLog -Message "STARTING DISCOVERY PHASE (Parallel Execution Engine v4.0 CORRECTED)" -Level "HEADER"
     
-    # --- 1. Authentication and Connection (No changes needed here) ---
+    # --- 1. Authentication and Connection ---
     try {
         Write-OrchestratorLog -Message "Initializing authentication and connections..." -Level "INFO"
         $authResult = Initialize-MandAAuthentication -Configuration $global:MandA.Config
@@ -906,7 +940,7 @@ function Invoke-DiscoveryPhase {
         return @{ Success = $false; ModuleResults = @{}; CriticalErrors = @(($_)); RecoverableErrors = @(); Warnings = @() }
     }
 
-    # --- 2. Determine which modules to run (No changes needed here) ---
+    # --- 2. Determine which modules to run ---
     $phaseResult = @{
         Success = $true; ModuleResults = [System.Collections.Concurrent.ConcurrentDictionary[string,object]]::new()
         CriticalErrors = [System.Collections.ArrayList]::new(); RecoverableErrors = [System.Collections.ArrayList]::new(); Warnings = [System.Collections.ArrayList]::new()
@@ -924,69 +958,159 @@ function Invoke-DiscoveryPhase {
 
     # --- 3. Setup the Runspace Pool (CORRECTED LOGIC) ---
     $maxConcurrentJobs = (Get-ModuleContext).Config.discovery.maxConcurrentJobs
+    Write-OrchestratorLog -Message "Creating runspace pool with $maxConcurrentJobs concurrent jobs..." -Level "INFO"
     
-    # Create the session state configuration FIRST.
+    # Create the session state configuration FIRST - this is the key fix
+    Write-OrchestratorLog -Message "Creating initial session state..." -Level "DEBUG"
     $sessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
+    
+    # Add the DiscoveryResult type to the session state
+    Write-OrchestratorLog -Message "Adding DiscoveryResult type to session state..." -Level "DEBUG"
     $sessionState.Types.Add([System.Management.Automation.Runspaces.SessionStateTypeEntry]::new([DiscoveryResult]))
     
+    # Pre-load utility modules into the session state
+    Write-OrchestratorLog -Message "Pre-loading utility modules into session state..." -Level "DEBUG"
     $utilityModules = @(
         (Join-Path $global:MandA.Paths.Utilities "EnhancedLogging.psm1"),
         (Join-Path $global:MandA.Paths.Utilities "ProgressDisplay.psm1"),
         (Join-Path $global:MandA.Paths.Utilities "ErrorHandling.psm1")
     )
-    $sessionState.ImportPSModule($utilityModules)
+    
+    foreach ($moduleFile in $utilityModules) {
+        if (Test-Path $moduleFile) {
+            Write-OrchestratorLog -Message "Adding module to session state: $moduleFile" -Level "DEBUG"
+            $sessionState.ImportPSModule($moduleFile)
+        } else {
+            Write-OrchestratorLog -Message "WARNING: Utility module not found for session state: $moduleFile" -Level "WARN"
+        }
+    }
 
-    # Now, create the RunspacePool and PASS the session state to the constructor.
+    # Now create the RunspacePool and PASS the session state to the constructor
+    Write-OrchestratorLog -Message "Creating runspace pool with pre-configured session state..." -Level "DEBUG"
     $pool = [runspacefactory]::CreateRunspacePool($sessionState, 1, $maxConcurrentJobs)
     $pool.Open()
+    Write-OrchestratorLog -Message "Runspace pool opened successfully." -Level "SUCCESS"
 
-    # --- 4. Create and Run Jobs in Parallel (No changes needed here) ---
+    # --- 4. Create and Run Jobs in Parallel ---
+    Write-OrchestratorLog -Message "Creating parallel jobs for discovery modules..." -Level "INFO"
     $jobs = @()
     foreach ($moduleName in $sourcesToRun) {
+        Write-OrchestratorLog -Message "Creating job for module: $moduleName" -Level "DEBUG"
         $powershell = [powershell]::Create()
         $powershell.RunspacePool = $pool
         
         $scriptBlock = {
             param($modName, $modConfig, $globalContext)
-            $global:MandA = $globalContext
-            $discoveryModulePath = Join-Path $global:MandA.Paths.Discovery "${modName}Discovery.psm1"
-            Import-Module -Name $discoveryModulePath -Force
-            Invoke-Command -ScriptBlock (Get-Command "Invoke-${modName}Discovery") -ArgumentList @($modConfig, $global:MandA)
+            try {
+                # Set up the global context in the runspace
+                $global:MandA = $globalContext
+                
+                # Load the discovery module
+                $discoveryModulePath = Join-Path $global:MandA.Paths.Discovery "${modName}Discovery.psm1"
+                if (-not (Test-Path $discoveryModulePath)) {
+                    throw "Discovery module not found: $discoveryModulePath"
+                }
+                
+                Import-Module -Name $discoveryModulePath -Force
+                
+                # Execute the discovery function
+                $functionName = "Invoke-${modName}Discovery"
+                if (-not (Get-Command $functionName -ErrorAction SilentlyContinue)) {
+                    throw "Discovery function not found: $functionName"
+                }
+                
+                # Call the discovery function with proper parameters
+                $result = & $functionName -Configuration $modConfig -Context $globalContext
+                return $result
+            } catch {
+                # Create a failed result if something goes wrong
+                $failedResult = [DiscoveryResult]::new($modName)
+                $failedResult.AddError("Runspace execution failed: $($_.Exception.Message)", $_.Exception)
+                $failedResult.Complete()
+                return $failedResult
+            }
         }
         
         $null = $powershell.AddScript($scriptBlock).AddArgument($moduleName).AddArgument($global:MandA.Config).AddArgument($global:MandA)
         $jobs += @{ ModuleName = $moduleName; Instance = $powershell; Handle = $powershell.BeginInvoke() }
+        Write-OrchestratorLog -Message "Job created for module: $moduleName" -Level "DEBUG"
     }
 
-    # --- 5. Collect Results Asynchronously (No changes needed here) ---
+    # --- 5. Collect Results Asynchronously ---
     Write-OrchestratorLog -Message "All jobs submitted ($($jobs.Count) total). Waiting for completion..." -Level "INFO"
+    $completedJobs = 0
+    
     while ($jobs.Count -gt 0) {
+        # Wait for any job to complete (60 second timeout)
         $completedHandle = [System.Management.Automation.Runspaces.AsyncResult]::WaitAny($jobs.Handle, 60000)
-        if ($completedHandle -eq -1) { continue }
+        
+        if ($completedHandle -eq -1) {
+            Write-OrchestratorLog -Message "Timeout waiting for jobs, checking status..." -Level "DEBUG"
+            continue
+        }
 
         $completedJob = $jobs[$completedHandle]
         $moduleName = $completedJob.ModuleName
+        $completedJobs++
+        
+        Write-OrchestratorLog -Message "Processing completed job for module: $moduleName ($completedJobs/$($jobs.Count + $completedJobs))" -Level "INFO"
         
         try {
-            $moduleResult = $completedJob.Instance.EndInvoke($completedJob.Handle)[0]
-            if ($moduleResult -is [DiscoveryResult]) {
-                $phaseResult.ModuleResults[$moduleName] = $moduleResult
-                $logLevel = if ($moduleResult.Success) { "SUCCESS" } else { "WARN" }
-                Write-OrchestratorLog -Message "Completed discovery for $moduleName. Success: $($moduleResult.Success)" -Level $logLevel
-            } else { throw "Module returned an invalid result object. Type: $($moduleResult.GetType().Name)" }
+            # Get the result from the completed job
+            $moduleResult = $completedJob.Instance.EndInvoke($completedJob.Handle)
+            
+            # Handle the result
+            if ($moduleResult -and $moduleResult.Count -gt 0 -and $moduleResult[0] -is [DiscoveryResult]) {
+                $result = $moduleResult[0]
+                $phaseResult.ModuleResults[$moduleName] = $result
+                $logLevel = if ($result.Success) { "SUCCESS" } else { "WARN" }
+                Write-OrchestratorLog -Message "Completed discovery for $moduleName. Success: $($result.Success)" -Level $logLevel
+                
+                if (-not $result.Success -and $result.Errors.Count -gt 0) {
+                    Write-OrchestratorLog -Message "Module $moduleName had $($result.Errors.Count) errors" -Level "WARN"
+                }
+            } else {
+                throw "Module returned an invalid or empty result. Type: $($moduleResult.GetType().Name), Count: $($moduleResult.Count)"
+            }
         } catch {
             $errorMessage = $_.Exception.Message
             Write-OrchestratorLog -Message "Catastrophic failure in $moduleName discovery: $errorMessage" -Level "ERROR"
-            $failedResult = [DiscoveryResult]::new($moduleName); $failedResult.AddError($_.Exception, "Runspace Failure"); $failedResult.Complete()
+            
+            # Create a failed result
+            $failedResult = [DiscoveryResult]::new($moduleName)
+            $failedResult.AddError("Runspace collection failure: $errorMessage", $_.Exception)
+            $failedResult.Complete()
             $phaseResult.ModuleResults[$moduleName] = $failedResult
         } finally {
-            $completedJob.Instance.Dispose()
+            # Clean up the completed job
+            try {
+                $completedJob.Instance.Dispose()
+            } catch {
+                Write-OrchestratorLog -Message "Error disposing PowerShell instance for $moduleName`: $_" -Level "WARN"
+            }
+            
+            # Remove the completed job from the list
             $jobs = $jobs | Where-Object { $_.Handle -ne $completedJob.Handle }
         }
     }
     
-    # --- 6. Cleanup and Final Report (No changes needed here) ---
-    $pool.Close(); $pool.Dispose()
+    # --- 6. Cleanup and Final Report ---
+    Write-OrchestratorLog -Message "All discovery jobs completed. Cleaning up runspace pool..." -Level "INFO"
+    try {
+        $pool.Close()
+        $pool.Dispose()
+        Write-OrchestratorLog -Message "Runspace pool cleaned up successfully." -Level "SUCCESS"
+    } catch {
+        Write-OrchestratorLog -Message "Error cleaning up runspace pool: $_" -Level "WARN"
+    }
+    
+    # Generate final report
+    $totalModules = $phaseResult.ModuleResults.Count
+    $successfulModules = ($phaseResult.ModuleResults.Values | Where-Object { $_.Success -eq $true }).Count
+    $failedModules = $totalModules - $successfulModules
+    
+    Write-OrchestratorLog -Message "Discovery phase summary: $successfulModules/$totalModules modules successful, $failedModules failed" -Level "INFO"
+    
     Export-ErrorReport -PhaseResult $phaseResult
     return $phaseResult
 }
