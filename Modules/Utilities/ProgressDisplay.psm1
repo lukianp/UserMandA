@@ -9,21 +9,6 @@
 
 <#
 .SYNOPSIS
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
-}
     Provides utility functions for displaying progress and status information in the M&A Discovery Suite.
 .DESCRIPTION
     This module contains functions to render visual progress indicators, status tables,
@@ -44,7 +29,22 @@ function Get-ModuleContext {
     - PowerShell 5.1 compatible, UTF-8 considerations are for text output handled by Write-MandALog.
 #>
 
-Export-ModuleMember -Function Show-SectionHeader, Show-StatusTable, Update-TaskProgress, Complete-TaskProgress
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
+
+Export-ModuleMember -Function Show-SectionHeader, Show-StatusTable, Update-TaskProgress, Complete-TaskProgress, Write-ProgressStep, Show-DiscoveryProgress, Show-ProgressBar
 
 # --- Public Functions ---
 
@@ -245,6 +245,195 @@ function Complete-TaskProgress {
         # Fallback if Write-MandALog isn't available
         Write-Host "[ProgressDisplay.Complete-TaskProgress] Task progress completed for: $Activity"
         Write-Warning "[ProgressDisplay.Complete-TaskProgress] Write-MandALog not found. Ensure EnhancedLogging.psm1 is loaded."
+    }
+}
+
+function Write-ProgressStep {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Message,
+        
+        [Parameter(Mandatory=$false)]
+        [ValidateSet("Progress", "Info", "Success", "Warning", "Error")]
+        [string]$Status = "Info",
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context
+    )
+    
+    # Map status to appropriate log level and color
+    $logLevel = switch ($Status) {
+        "Progress" { "INFO" }
+        "Info" { "INFO" }
+        "Success" { "SUCCESS" }
+        "Warning" { "WARN" }
+        "Error" { "ERROR" }
+        default { "INFO" }
+    }
+    
+    $color = switch ($Status) {
+        "Progress" { "Cyan" }
+        "Info" { "White" }
+        "Success" { "Green" }
+        "Warning" { "Yellow" }
+        "Error" { "Red" }
+        default { "White" }
+    }
+    
+    # Add status indicator
+    $indicator = switch ($Status) {
+        "Progress" { "[...]" }
+        "Info" { "[i]" }
+        "Success" { "[✓]" }
+        "Warning" { "[!]" }
+        "Error" { "[✗]" }
+        default { "[i]" }
+    }
+    
+    # Try to use Write-MandALog if available, otherwise fallback to Write-Host
+    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+        Write-MandALog -Message "$indicator $Message" -Level $logLevel -Component "ProgressStep" -Context $Context
+    } else {
+        # Fallback to Write-Host with timestamp
+        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        Write-Host "[$timestamp] $indicator $Message" -ForegroundColor $color
+    }
+}
+
+function Show-DiscoveryProgress {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Module,
+        
+        [Parameter(Mandatory=$false)]
+        [ValidateSet("Starting", "Running", "Completed", "Failed")]
+        [string]$Status = "Running",
+        
+        [Parameter(Mandatory=$false)]
+        [string]$CurrentItem = "",
+        
+        [Parameter(Mandatory=$false)]
+        [int]$ItemsProcessed = 0,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$TotalItems = 0,
+        
+        [Parameter(Mandatory=$false)]
+        [hashtable]$Stats = @{},
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context
+    )
+    
+    # Build progress message
+    $progressMessage = "[$Module]"
+    
+    if ($CurrentItem) {
+        $progressMessage += " $CurrentItem"
+    }
+    
+    if ($TotalItems -gt 0 -and $ItemsProcessed -ge 0) {
+        $percentage = [math]::Round(($ItemsProcessed / $TotalItems) * 100, 1)
+        $progressMessage += " ($ItemsProcessed/$TotalItems - $percentage%)"
+    }
+    
+    # Add stats if provided
+    if ($Stats.Count -gt 0) {
+        $statsText = ($Stats.GetEnumerator() | ForEach-Object { "$($_.Key): $($_.Value)" }) -join ", "
+        $progressMessage += " [$statsText]"
+    }
+    
+    # Map status to appropriate log level and Write-ProgressStep status
+    $logLevel = switch ($Status) {
+        "Starting" { "INFO" }
+        "Running" { "INFO" }
+        "Completed" { "SUCCESS" }
+        "Failed" { "ERROR" }
+        default { "INFO" }
+    }
+    
+    $progressStatus = switch ($Status) {
+        "Starting" { "Progress" }
+        "Running" { "Progress" }
+        "Completed" { "Success" }
+        "Failed" { "Error" }
+        default { "Info" }
+    }
+    
+    # Use Write-ProgressStep for consistent formatting
+    Write-ProgressStep -Message $progressMessage -Status $progressStatus -Context $Context
+    
+    # Also use native Write-Progress if we have numeric progress
+    if ($TotalItems -gt 0 -and $ItemsProcessed -ge 0) {
+        $percentage = [math]::Round(($ItemsProcessed / $TotalItems) * 100, 0)
+        $activity = "$Module Discovery"
+        $statusText = if ($CurrentItem) { $CurrentItem } else { "Processing..." }
+        
+        if ($Status -eq "Completed") {
+            Write-Progress -Activity $activity -Completed
+        } elseif ($Status -eq "Failed") {
+            Write-Progress -Activity $activity -Completed
+        } else {
+            Write-Progress -Activity $activity -Status $statusText -PercentComplete $percentage -CurrentOperation "Item $ItemsProcessed of $TotalItems"
+        }
+    }
+}
+
+function Show-ProgressBar {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [int]$Current,
+        
+        [Parameter(Mandatory=$true)]
+        [int]$Total,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$Activity = "Processing",
+        
+        [Parameter(Mandatory=$false)]
+        [string]$Status = "",
+        
+        [Parameter(Mandatory=$false)]
+        [int]$Id = 1,
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context
+    )
+    
+    if ($Total -le 0) {
+        return
+    }
+    
+    $percentage = [math]::Round(($Current / $Total) * 100, 0)
+    
+    # Build status text
+    $statusText = if ($Status) {
+        "$Status ($Current of $Total)"
+    } else {
+        "Processing $Current of $Total"
+    }
+    
+    # Use native PowerShell progress bar
+    Write-Progress -Activity $Activity -Id $Id -Status $statusText -PercentComplete $percentage -CurrentOperation "Item $Current of $Total"
+    
+    # Also show a simple text progress bar for console output
+    $barLength = 40
+    $filledLength = [math]::Floor(($Current / $Total) * $barLength)
+    $emptyLength = $barLength - $filledLength
+    
+    $progressBar = "[" + ("█" * $filledLength) + ("░" * $emptyLength) + "]"
+    $progressText = "$progressBar $percentage% ($Current/$Total)"
+    
+    # Write to console without newline (overwrite previous line)
+    Write-Host "`r$progressText" -NoNewline -ForegroundColor Cyan
+    
+    # If completed, add a newline
+    if ($Current -eq $Total) {
+        Write-Host ""
+        Write-Progress -Activity $Activity -Id $Id -Completed
     }
 }
 
