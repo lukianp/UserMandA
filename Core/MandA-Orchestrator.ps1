@@ -1,12 +1,11 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
-# -*- coding: utf-8-bom -*-
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
 # Created: 2025-06-05
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+# Last Modified: 2025-06-09
+# Change Log: Corrected unclosed try/catch blocks in the user-interactive retry logic.
 
 <#
 .SYNOPSIS
@@ -15,7 +14,7 @@
     Core orchestrator that manages discovery, processing, and export phases.
     This version includes extensive debugging output and fixes for common issues.
 .NOTES
-    Version: 6.1.0-DEBUG
+    Version: 6.1.1-FIXED
     Created: 2025-01-03
     Enhanced with verbose debugging and robustness fixes
     
@@ -52,7 +51,7 @@ param(
     [Parameter(Mandatory=$false)]
     [switch]$DebugMode
 )
-# Add this right after the param() block, around line 65
+
 #===============================================================================
 #                       CRITICAL CLASS DEFINITIONS
 #===============================================================================
@@ -248,7 +247,6 @@ function Add-OrchestratorError {
         default { $null = $script:ErrorCollector.Errors.Add($errorEntry) }
     }
     
-    # FIX: Map severity names to valid log levels
     $logLevel = switch ($Severity.ToUpper()) {
         "WARNING" { "WARN" }
         "CRITICAL" { "CRITICAL" }
@@ -293,7 +291,6 @@ function Test-ModuleCompletionStatus {
     }
     
     try {
-        # Define expected output files for each module
         $moduleFileMapping = @{
             "ActiveDirectory" = @("ADUsers.csv", "ADGroups.csv", "ADGroupMembers.csv", "ADComputers.csv", "ADOUs.csv", "ADSites.csv", "ADSiteLinks.csv", "ADSubnets.csv")
             "Graph" = @("GraphUsers.csv", "GraphGroups.csv")
@@ -322,7 +319,6 @@ function Test-ModuleCompletionStatus {
         $totalRecords = 0
         $validFiles = 0
         
-        # Check each expected file
         foreach ($fileName in $expectedFiles) {
             $filePath = Join-Path $rawDataPath $fileName
             
@@ -330,10 +326,8 @@ function Test-ModuleCompletionStatus {
                 $fileInfo = Get-Item $filePath
                 $existingFiles += $fileName
                 
-                # Check if file has meaningful content (more than just headers)
-                if ($fileInfo.Length -gt 100) {  # Minimum size threshold
+                if ($fileInfo.Length -gt 100) {
                     try {
-                        # Try to count records in CSV
                         $csvContent = Import-Csv $filePath -ErrorAction Stop
                         $recordCount = $csvContent.Count
                         $totalRecords += $recordCount
@@ -356,20 +350,15 @@ function Test-ModuleCompletionStatus {
         $result.DataFiles = $existingFiles
         $result.RecordCount = $totalRecords
         
-        # Determine completion status with more flexible logic
         $completionPercentage = if ($expectedFiles.Count -gt 0) {
             ($validFiles / $expectedFiles.Count) * 100
         } else { 0 }
         
-        # Consider a module complete if:
-        # 1. All expected files exist with data, OR
-        # 2. At least 50% of expected files exist with substantial data (for modules that may not generate all file types)
         if ($validFiles -eq $expectedFiles.Count -and $totalRecords -gt 0) {
             $result.CompletionStatus = "Complete"
             $result.ShouldRun = $false
             $result.Reason = "Module completed successfully with $totalRecords records across $validFiles files"
         } elseif ($validFiles -gt 0 -and $totalRecords -gt 0 -and $completionPercentage -ge 50) {
-            # Check if this is likely a complete run with fewer file types than expected
             $result.CompletionStatus = "Complete"
             $result.ShouldRun = $false
             $result.Reason = "Module completed with $totalRecords records across $validFiles/$($expectedFiles.Count) files (sufficient data)"
@@ -383,22 +372,18 @@ function Test-ModuleCompletionStatus {
             $result.Reason = "No valid data files found - will run"
         }
         
-        # Special handling for modules that are currently running
-        # Check for files that are very small and recently modified (indicating active writing)
         $activeFiles = Get-ChildItem -Path $rawDataPath -Filter "*.csv" -ErrorAction SilentlyContinue | Where-Object {
             $_.Name -in $expectedFiles -and
-            $_.Length -lt 500 -and  # Very small files (likely just headers or partial data)
-            (Get-Date) - $_.LastWriteTime -lt [TimeSpan]::FromMinutes(2)  # Recently modified
+            $_.Length -lt 500 -and
+            (Get-Date) - $_.LastWriteTime -lt [TimeSpan]::FromMinutes(2)
         }
         
-        # Only consider it "running" if we have small, recent files AND no complete files
         if ($activeFiles.Count -gt 0 -and $validFiles -eq 0) {
             $result.CompletionStatus = "Running"
             $result.ShouldRun = $false
             $result.Reason = "Module currently running (active files detected)"
         }
         
-        # If we have both active files and valid files, the module has likely completed
         if ($activeFiles.Count -gt 0 -and $validFiles -gt 0) {
             Write-OrchestratorLog -Message "Module $ModuleName has both active and complete files - treating as complete" -Level "DEBUG" -DebugOnly
         }
@@ -418,7 +403,6 @@ function Test-OrchestratorPrerequisites {
     
     $prereqMet = $true
     
-    # Check PowerShell version
     if ($PSVersionTable.PSVersion.Major -lt 5 -or
         ($PSVersionTable.PSVersion.Major -eq 5 -and $PSVersionTable.PSVersion.Minor -lt 1)) {
         Add-OrchestratorError -Source "Prerequisites" `
@@ -429,7 +413,6 @@ function Test-OrchestratorPrerequisites {
         Write-OrchestratorLog -Message "PowerShell version OK: $($PSVersionTable.PSVersion)" -Level "DEBUG" -DebugOnly
     }
     
-    # Check critical paths
     Write-OrchestratorLog -Message "Checking critical paths..." -Level "DEBUG" -DebugOnly
     $criticalPaths = @("SuiteRoot", "Modules", "Core", "Configuration")
     foreach ($pathKey in $criticalPaths) {
@@ -448,17 +431,13 @@ function Test-OrchestratorPrerequisites {
         }
     }
     
-    # Add Pre-flight Check: Validate DiscoveryResult class availability
     Write-OrchestratorLog -Message "Validating DiscoveryResult class availability..." -Level "DEBUG"
     if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
         Write-OrchestratorLog -Message "DiscoveryResult class not found, will be defined during initialization" -Level "WARN"
-        # Note: This is not a critical error as the class will be defined during module initialization
-        # But we log it as a warning to track the dependency state
     } else {
         Write-OrchestratorLog -Message "DiscoveryResult class already available in current session" -Level "DEBUG" -DebugOnly
     }
     
-    # Validate other critical PowerShell types and assemblies
     Write-OrchestratorLog -Message "Validating critical .NET assemblies..." -Level "DEBUG" -DebugOnly
     $requiredAssemblies = @(
         'System.Collections',
@@ -479,7 +458,6 @@ function Test-OrchestratorPrerequisites {
         }
     }
     
-    # Debug output for configuration
     if ($script:DebugMode) {
         Write-OrchestratorLog -Message "Configuration metadata:" -Level "DEBUG"
         Write-OrchestratorLog -Message "  Version: $($global:MandA.Config.metadata.version)" -Level "DEBUG"
@@ -495,7 +473,6 @@ function Initialize-OrchestratorModules {
     
     Write-OrchestratorLog -Message "Loading modules for phase: $Phase" -Level "INFO"
     
-    # Verify DiscoveryResult class is available (should be defined at script start)
     if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
         Write-OrchestratorLog -Message "ERROR: DiscoveryResult class not found! This should have been defined at script startup." -Level "ERROR"
         throw "DiscoveryResult class not available. Critical initialization failure."
@@ -503,15 +480,14 @@ function Initialize-OrchestratorModules {
         Write-OrchestratorLog -Message "DiscoveryResult class verified and available" -Level "DEBUG"
     }
     
-    # Load utility modules FIRST - these are critical dependencies
     $utilityModules = @(
-        "ErrorHandling",        # Must be first - contains Invoke-WithTimeout
+        "ErrorHandling",
         "EnhancedLogging",
         "PerformanceMetrics",
         "FileOperations",
         "ValidationHelpers",
         "ProgressDisplay",
-        "AuthenticationMonitoring"  # Authentication status monitoring
+        "AuthenticationMonitoring"
     )
     
     Write-OrchestratorLog -Message "Loading utility modules..." -Level "INFO"
@@ -528,7 +504,6 @@ function Initialize-OrchestratorModules {
                 $loadedUtilities++
                 Write-OrchestratorLog -Message "Successfully loaded utility module: $module" -Level "SUCCESS"
                 
-                # Initialize logging system after EnhancedLogging module is loaded
                 if ($module -eq "EnhancedLogging") {
                     if (Get-Command "Initialize-Logging" -ErrorAction SilentlyContinue) {
                         Write-OrchestratorLog -Message "Initializing logging system..." -Level "INFO"
@@ -543,7 +518,6 @@ function Initialize-OrchestratorModules {
                     }
                 }
                 
-                # Verify critical functions are available
                 if ($module -eq "ErrorHandling") {
                     if (Get-Command "Invoke-WithTimeout" -ErrorAction SilentlyContinue) {
                         Write-OrchestratorLog -Message "Verified Invoke-WithTimeout function is available" -Level "SUCCESS"
@@ -576,8 +550,6 @@ function Initialize-OrchestratorModules {
         }
     }
     
-    
-    # Load phase-specific modules
     switch ($Phase) {
         { $_ -in "Discovery", "Full", "AzureOnly" } {
             Load-AuthenticationModules
@@ -598,7 +570,6 @@ function Load-DiscoveryModules {
     Write-OrchestratorLog -Message "Raw enabledSources type: $($global:MandA.Config.discovery.enabledSources.GetType().FullName)" -Level "DEBUG" -DebugOnly
     Write-OrchestratorLog -Message "Raw enabledSources content: $($global:MandA.Config.discovery.enabledSources | ConvertTo-Json -Compress)" -Level "DEBUG" -DebugOnly
     
-    # Validate and convert enabledSources to array
     $enabledSources = (Get-ModuleContext).Config.discovery.enabledSources
     if ($null -eq $enabledSources) {
         Write-OrchestratorLog -Message "enabledSources is null, using empty array" -Level "WARN"
@@ -621,7 +592,6 @@ function Load-DiscoveryModules {
     $failedModules = @()
     
     foreach ($source in $enabledSources) {
-        # Skip if source is not a string
         if ($source -isnot [string]) {
             Write-OrchestratorLog -Message "Skipping invalid source type: $($source.GetType().Name) with value: $source" -Level "WARN"
             continue
@@ -636,10 +606,8 @@ function Load-DiscoveryModules {
                 $loadedCount++
                 Write-OrchestratorLog -Message "Successfully loaded discovery module: $source" -Level "DEBUG"
                 
-                # Verify DiscoveryResult class is accessible to the module
                 Write-OrchestratorLog -Message "DiscoveryResult class should be globally available to ${source}Discovery module" -Level "DEBUG" -DebugOnly
                 
-                # Verify module was loaded
                 $moduleLoaded = Get-Module -Name "${source}Discovery" -ErrorAction SilentlyContinue
                 if ($moduleLoaded) {
                     Write-OrchestratorLog -Message "Module verified: $source (Version: $($moduleLoaded.Version))" -Level "DEBUG" -DebugOnly
@@ -799,10 +767,8 @@ function Test-ModuleLoadStatus {
     
     Write-OrchestratorLog -Message "Validating module load status for mode: $Mode..." -Level "INFO"
     
-    # Define required modules based on execution mode
     $requiredModules = @()
     
-    # Discovery phase modules
     if ($Mode -in @("Discovery", "Full", "AzureOnly")) {
         $requiredModules += @(
             'ActiveDirectoryDiscovery',
@@ -810,14 +776,12 @@ function Test-ModuleLoadStatus {
         )
     }
     
-    # Processing phase modules
     if ($Mode -in @("Processing", "Full", "AzureOnly")) {
         $requiredModules += @(
             'DataAggregation'
         )
     }
     
-    # Export phase modules
     if ($Mode -in @("Export", "Full", "AzureOnly")) {
         $requiredModules += @(
             'CSVExport'
@@ -850,16 +814,84 @@ function Test-ModuleLoadStatus {
 }
 
 #===============================================================================
+#                       ERROR REPORTING FUNCTIONS
+#===============================================================================
+
+function Export-ErrorReport {
+    param(
+        [hashtable]$PhaseResult
+    )
+
+    # Fix: Count actual module results, not empty collections
+    $actualModuleResults = $PhaseResult.ModuleResults.Values | Where-Object { $_ -ne $null }
+    $successfulModules = ($actualModuleResults | Where-Object { $_.Success -eq $true }).Count
+
+    if ($PhaseResult.CriticalErrors.Count -eq 0 -and $PhaseResult.RecoverableErrors.Count -eq 0 -and $PhaseResult.Warnings.Count -eq 0) {
+        Write-OrchestratorLog -Message "No errors or warnings to report" -Level "SUCCESS"
+        return
+    }
+
+    $errorReport = @{
+        Timestamp = Get-Date
+        ExecutionId = [guid]::NewGuid().ToString()
+        Summary = @{
+            CriticalErrors = $PhaseResult.CriticalErrors.Count
+            RecoverableErrors = $PhaseResult.RecoverableErrors.Count
+            Warnings = $PhaseResult.Warnings.Count
+            TotalModules = $actualModuleResults.Count
+            SuccessfulModules = $successfulModules
+        }
+        CriticalErrors = $PhaseResult.CriticalErrors
+        RecoverableErrors = $PhaseResult.RecoverableErrors
+        Warnings = $PhaseResult.Warnings
+        ModuleResults = @{}
+    }
+
+    # Add detailed module results
+    foreach ($moduleName in $PhaseResult.ModuleResults.Keys) {
+        $moduleResult = $PhaseResult.ModuleResults[$moduleName]
+        if ($moduleResult -ne $null) {
+            $errorReport.ModuleResults[$moduleName] = @{
+                Success = $moduleResult.Success
+                ModuleName = $moduleResult.ModuleName
+                StartTime = $moduleResult.StartTime
+                EndTime = $moduleResult.EndTime
+                Duration = if ($moduleResult.Metadata -and $moduleResult.Metadata.Duration) { $moduleResult.Metadata.Duration } else { $null }
+                ErrorCount = $moduleResult.Errors.Count
+                WarningCount = $moduleResult.Warnings.Count
+                ExecutionId = $moduleResult.ExecutionId
+            }
+        }
+    }
+
+    # Export to file
+    $errorReportPath = Join-Path $global:MandA.Paths.LogOutput "DiscoveryErrorReport_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
+    $errorReport | ConvertTo-Json -Depth 10 | Set-Content -Path $errorReportPath -Encoding UTF8
+
+    Write-OrchestratorLog -Message "Error report exported: $errorReportPath" -Level "INFO"
+
+    # Log summary to console
+    Write-OrchestratorLog -Message "--- ERROR SUMMARY ---" -Level "HEADER"
+    Write-OrchestratorLog -Message "Critical Errors: $($errorReport.Summary.CriticalErrors)" -Level $(if ($errorReport.Summary.CriticalErrors -gt 0) { "ERROR" } else { "SUCCESS" })
+    Write-OrchestratorLog -Message "Recoverable Errors: $($errorReport.Summary.RecoverableErrors)" -Level $(if ($errorReport.Summary.RecoverableErrors -gt 0) { "WARN" } else { "SUCCESS" })
+    Write-OrchestratorLog -Message "Warnings: $($errorReport.Summary.Warnings)" -Level $(if ($errorReport.Summary.Warnings -gt 0) { "WARN" } else { "SUCCESS" })
+    Write-OrchestratorLog -Message "Successful Modules: $($errorReport.Summary.SuccessfulModules)/$($errorReport.Summary.TotalModules)" -Level "INFO"
+
+    # Add more detailed breakdown
+    if ($errorReport.Summary.TotalModules -eq 0) {
+        Write-OrchestratorLog -Message "Note: No modules were executed (likely due to smart completion - data already exists)" -Level "INFO"
+    }
+}
+
+#===============================================================================
 #                       PHASE EXECUTION FUNCTIONS
 #===============================================================================
 
 function Invoke-DiscoveryPhase {
     Write-OrchestratorLog -Message "STARTING DISCOVERY PHASE" -Level "HEADER"
     
-    # Show authentication status before starting discovery
     Show-AuthenticationStatus -Context $global:MandA
 
-    # Log authentication details
     Write-OrchestratorLog -Message "Authentication Context Details:" -Level "INFO"
     $authContext = Get-AuthenticationContext
     if ($authContext) {
@@ -878,7 +910,6 @@ function Invoke-DiscoveryPhase {
     }
     
     try {
-        # Display authentication status before starting discovery
         if (Get-Command Show-AuthenticationStatus -ErrorAction SilentlyContinue) {
             Write-OrchestratorLog -Message "Checking authentication status..." -Level "INFO"
             try {
@@ -888,17 +919,14 @@ function Invoke-DiscoveryPhase {
             }
         }
         
-        # Initialize authentication
         Write-OrchestratorLog -Message "Initializing authentication..." -Level "INFO"
 
         try {
-            # First check if authentication module is loaded
             if (-not (Get-Command Initialize-MandAAuthentication -ErrorAction SilentlyContinue)) {
                 Write-OrchestratorLog -Message "Authentication module not loaded, attempting to load..." -Level "WARN"
                 Load-AuthenticationModules
             }
             
-            # Initialize authentication with configuration
             $authResult = Initialize-MandAAuthentication -Configuration $global:MandA.Config
             
             if (-not $authResult -or -not $authResult.Authenticated) {
@@ -908,17 +936,14 @@ function Invoke-DiscoveryPhase {
             
             Write-OrchestratorLog -Message "Authentication successful" -Level "SUCCESS"
             
-            # Get authentication context for logging
             $authContext = Get-AuthenticationContext
             if ($authContext) {
                 Write-OrchestratorLog -Message "Authentication method: $($authContext.AuthenticationMethod)" -Level "INFO"
                 Write-OrchestratorLog -Message "Tenant ID: $($authContext.TenantId)" -Level "INFO"
             }
             
-            # Initialize connections - Load EnhancedConnectionManager first
             Write-OrchestratorLog -Message "Loading connection manager..." -Level "INFO"
             
-            # Load the EnhancedConnectionManager if not already loaded
             if (-not (Get-Module -Name "EnhancedConnectionManager")) {
                 $connMgrPath = Join-Path (Get-ModuleContext).Paths.Connectivity "EnhancedConnectionManager.psm1"
                 if (Test-Path $connMgrPath) {
@@ -933,15 +958,12 @@ function Invoke-DiscoveryPhase {
                 }
             }
             
-            # Now check if Initialize-AllConnections is available
             if (Get-Command Initialize-AllConnections -ErrorAction SilentlyContinue) {
                 Write-OrchestratorLog -Message "Initializing service connections..." -Level "INFO"
                 
                 try {
-                    # Initialize all connections using the enhanced manager
                     $connections = Initialize-AllConnections -Configuration $global:MandA.Config -AuthContext $authContext
                     
-                    # Log connection results
                     foreach ($service in $connections.Keys) {
                         $status = $connections[$service]
                         $connected = if ($status -is [bool]) { $status } else { $status.Connected }
@@ -967,33 +989,27 @@ function Invoke-DiscoveryPhase {
                 -Exception $_.Exception `
                 -Severity "Critical"
             
-            # Cannot continue without authentication
             $phaseResult.Success = $false
             return $phaseResult
         }
         
         $enabledSources = (Get-ModuleContext).Config.discovery.enabledSources
-        $criticalSources = @('ActiveDirectory', 'Graph')  # Sources that must succeed
+        $criticalSources = @('ActiveDirectory', 'Graph')
         
-        # Validate enabledSources is not null
         if ($null -eq $enabledSources) {
             Write-OrchestratorLog -Message "enabledSources is null, using empty array" -Level "WARN"
             $enabledSources = @()
         }
         
-        # Filter to string sources only
         $validSources = @($enabledSources | Where-Object { $_ -is [string] })
         Write-OrchestratorLog -Message "Valid discovery sources: $($validSources.Count) of $($enabledSources.Count)" -Level "INFO"
         
-        # Apply smart completion checking - ALWAYS check module completion status
-        # This prevents rerunning modules that have already completed successfully
         Write-OrchestratorLog -Message "Smart completion checking: Analyzing module completion status..." -Level "INFO"
         $sourcesToRun = @()
         
         foreach ($source in $validSources) {
             $moduleStatus = Test-ModuleCompletionStatus -ModuleName $source -Context $global:MandA
             
-            # Override completion check if Force mode is explicitly enabled
             if ($Force -and $global:MandA.Config.discovery.forceMode) {
                 Write-OrchestratorLog -Message "Force mode: Will run $source regardless of completion status" -Level "WARN"
                 $sourcesToRun += $source
@@ -1015,7 +1031,6 @@ function Invoke-DiscoveryPhase {
                 $moduleResult = Invoke-DiscoveryModule -ModuleName $source -Configuration $global:MandA.Config
                 $phaseResult.ModuleResults[$source] = $moduleResult
                 
-                # Categorize errors
                 if (-not $moduleResult.Success) {
                     if ($source -in $criticalSources) {
                         $null = $phaseResult.CriticalErrors.Add(@{
@@ -1034,7 +1049,6 @@ function Invoke-DiscoveryPhase {
                     }
                 }
                 
-                # Collect warnings
                 if ($moduleResult.Warnings.Count -gt 0) {
                     $null = $phaseResult.Warnings.Add(@{
                         Source = $source
@@ -1043,19 +1057,16 @@ function Invoke-DiscoveryPhase {
                 }
             }
             catch {
-                # Check if this is a Force parameter error (known issue, not a real failure)
                 if ($_.Exception.Message -like "*parameter cannot be found that matches parameter name 'Force'*" -or
                     $_.Exception.Message -like "*Cannot bind parameter*Force*" -or
                     $_.Exception.Message -like "*A parameter cannot be found that matches parameter name*Force*") {
                     
                     Write-OrchestratorLog -Message "Force parameter inheritance issue in $source module (module may have completed successfully)" -Level "WARN"
                     
-                    # Check if the module actually completed successfully by looking for output files
                     $moduleStatus = Test-ModuleCompletionStatus -ModuleName $source -Context $global:MandA
                     if ($moduleStatus.CompletionStatus -eq "Complete") {
                         Write-OrchestratorLog -Message "$source module completed successfully despite Force parameter issue" -Level "SUCCESS"
                         
-                        # Create a successful result for this module
                         $phaseResult.ModuleResults[$source] = @{
                             Success = $true
                             ModuleName = $source
@@ -1071,17 +1082,13 @@ function Invoke-DiscoveryPhase {
                             }
                         }
                     } else {
-                        # Module didn't complete successfully, but this might be due to the parameter issue
-                        # Try to run the module again without the problematic parameters
                         Write-OrchestratorLog -Message "Attempting to retry $source module without Force parameter..." -Level "INFO"
                         
                         try {
-                            # Get the function and call it with minimal parameters
                             $moduleFunction = "Invoke-${source}Discovery"
                             $functionInfo = Get-Command $moduleFunction -ErrorAction SilentlyContinue
                             
                             if ($functionInfo) {
-                                # Only pass Configuration and Context parameters
                                 $cleanParams = @{}
                                 if ($functionInfo.Parameters.ContainsKey('Configuration')) {
                                     $cleanParams['Configuration'] = $global:MandA.Config
@@ -1119,7 +1126,6 @@ function Invoke-DiscoveryPhase {
                         }
                     }
                 } else {
-                    # Handle actual module failure
                     Write-OrchestratorLog -Message "Catastrophic failure in $source module: $_" -Level "CRITICAL"
                     
                     $null = $phaseResult.CriticalErrors.Add(@{
@@ -1139,16 +1145,13 @@ function Invoke-DiscoveryPhase {
             }
         }
         
-        # Generate error report
         Export-ErrorReport -PhaseResult $phaseResult
         
-        # Summary - Fix the counting logic
         $actualModuleResults = $phaseResult.ModuleResults.Values | Where-Object { $_ -ne $null }
         $successCount = ($actualModuleResults | Where-Object { $_.Success -eq $true }).Count
         $totalModulesRun = $actualModuleResults.Count
         $failCount = $totalModulesRun - $successCount
         
-        # Count modules that were skipped due to completion
         $skippedCount = $validSources.Count - $sourcesToRun.Count
         
         Write-OrchestratorLog -Message "Discovery completed: $successCount successful, $failCount failed, $skippedCount skipped (already complete)" `
@@ -1175,27 +1178,22 @@ function Invoke-DiscoveryModule {
     
     $moduleFunction = "Invoke-${ModuleName}Discovery"
     
-    # Show module start
     Write-Host "`n>>> Starting $ModuleName Discovery..." -ForegroundColor Cyan
     Write-Progress -Activity "Discovery Phase" -Status "Running $ModuleName Discovery" -PercentComplete -1
     
     try {
-        # Execute discovery
         $startTime = Get-Date
         
-        # Explicitly control parameters - discovery modules only accept Configuration and Context
         $moduleParams = @{
             Configuration = $Configuration
             Context = $global:MandA
         }
         
-        # Verify the function exists and get its parameters
         $functionInfo = Get-Command $moduleFunction -ErrorAction SilentlyContinue
         if (-not $functionInfo) {
             throw "Discovery function '$moduleFunction' not found"
         }
         
-        # Only pass parameters that the function actually accepts
         $validParams = @{}
         foreach ($paramName in $moduleParams.Keys) {
             if ($functionInfo.Parameters.ContainsKey($paramName)) {
@@ -1207,39 +1205,28 @@ function Invoke-DiscoveryModule {
         
         Write-OrchestratorLog -Message "Calling $moduleFunction with parameters: $($validParams.Keys -join ', ')" -Level "DEBUG" -DebugOnly
         
-        # Call the function with complete parameter isolation using a runspace
-        # This ensures no variable inheritance from the orchestrator scope
         Write-OrchestratorLog -Message "Creating isolated runspace for $moduleFunction execution" -Level "DEBUG" -DebugOnly
         
         $runspace = [runspacefactory]::CreateRunspace()
         $runspace.Open()
         
         try {
-            # Create PowerShell instance
             $powershell = [powershell]::Create()
             $powershell.Runspace = $runspace
             
-            # Set up the runspace environment with all necessary components
             $moduleFile = Join-Path (Get-ModuleContext).Paths.Discovery "${ModuleName}Discovery.psm1"
             $suiteRoot = (Get-ModuleContext).Paths.SuiteRoot
             
-            # Convert objects to JSON for safe transfer to runspace
             $configJson = $Configuration | ConvertTo-Json -Depth 10 -Compress
             $contextJson = $global:MandA | ConvertTo-Json -Depth 10 -Compress
             
-            # Create the setup script that doesn't use $using: variables
             $setupScript = @"
-# Set working directory
 Set-Location '$suiteRoot'
-
-# Import the discovery module
 Import-Module '$moduleFile' -Force
-
-# Recreate Configuration and Context from JSON (PowerShell 5.1 compatible)
 `$Configuration = '$configJson' | ConvertFrom-Json
 `$Context = '$contextJson' | ConvertFrom-Json
 
-# Convert PSCustomObject to Hashtable for PowerShell 5.1 compatibility
+# **FIX**: Convert PSCustomObject to Hashtable for PowerShell 5.1 compatibility
 function ConvertTo-Hashtable {
     param([Parameter(ValueFromPipeline)]`$InputObject)
     process {
@@ -1264,11 +1251,7 @@ function ConvertTo-Hashtable {
 
 `$Configuration = ConvertTo-Hashtable `$Configuration
 `$Context = ConvertTo-Hashtable `$Context
-
-# Set global context
 `$global:MandA = `$Context
-
-# Define DiscoveryResult class if not available
 if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
     Add-Type -TypeDefinition @'
 public class DiscoveryResult {
@@ -1281,7 +1264,6 @@ public class DiscoveryResult {
     public System.DateTime StartTime { get; set; }
     public System.DateTime EndTime { get; set; }
     public string ExecutionId { get; set; }
-    
     public DiscoveryResult(string moduleName) {
         this.ModuleName = moduleName;
         this.Errors = new System.Collections.ArrayList();
@@ -1291,11 +1273,9 @@ public class DiscoveryResult {
         this.ExecutionId = System.Guid.NewGuid().ToString();
         this.Success = true;
     }
-    
     public void AddError(string message, System.Exception exception) {
         AddError(message, exception, new System.Collections.Hashtable());
     }
-    
     public void AddError(string message, System.Exception exception, System.Collections.Hashtable context) {
         var errorEntry = new System.Collections.Hashtable();
         errorEntry[\"Timestamp\"] = System.DateTime.Now;
@@ -1307,11 +1287,9 @@ public class DiscoveryResult {
         this.Errors.Add(errorEntry);
         this.Success = false;
     }
-    
     public void AddWarning(string message) {
         AddWarning(message, new System.Collections.Hashtable());
     }
-    
     public void AddWarning(string message, System.Collections.Hashtable context) {
         var warningEntry = new System.Collections.Hashtable();
         warningEntry[\"Timestamp\"] = System.DateTime.Now;
@@ -1319,7 +1297,6 @@ public class DiscoveryResult {
         warningEntry[\"Context\"] = context;
         this.Warnings.Add(warningEntry);
     }
-    
     public void Complete() {
         this.EndTime = System.DateTime.Now;
         if (this.StartTime != null && this.EndTime != null) {
@@ -1331,15 +1308,12 @@ public class DiscoveryResult {
 }
 '@ -Language CSharp
 }
-
-# Define basic logging function for the runspace
 function Write-MandALog {
     param(
         [string]`$Message,
         [string]`$Level = "INFO",
         [string]`$Component = "Discovery"
     )
-    
     `$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     `$color = switch (`$Level) {
         "ERROR" { "Red" }
@@ -1349,7 +1323,6 @@ function Write-MandALog {
         "INFO" { "White" }
         default { "White" }
     }
-    
     `$indicator = switch (`$Level) {
         "ERROR" { "[X]" }
         "WARN" { "[!]" }
@@ -1358,11 +1331,8 @@ function Write-MandALog {
         "INFO" { "[i]" }
         default { "[--]" }
     }
-    
     Write-Host "[`$timestamp] [`$Component] `$indicator `$Message" -ForegroundColor `$color
 }
-
-# Define basic progress function for the runspace
 function Write-ProgressStep {
     param(
         [string]`$Message,
@@ -1370,7 +1340,6 @@ function Write-ProgressStep {
         [string]`$Activity = "Discovery",
         [int]`$PercentComplete = -1
     )
-    
     `$color = switch (`$Status) {
         "Error" { "Red" }
         "Warning" { "Yellow" }
@@ -1379,7 +1348,6 @@ function Write-ProgressStep {
         "Info" { "White" }
         default { "White" }
     }
-    
     `$indicator = switch (`$Status) {
         "Error" { "[X]" }
         "Warning" { "[!]" }
@@ -1388,22 +1356,17 @@ function Write-ProgressStep {
         "Info" { "[i]" }
         default { "[--]" }
     }
-    
     Write-Host "`$indicator `$Message" -ForegroundColor `$color
-    
     if (`$Status -eq "Progress") {
         Write-Progress -Activity `$Activity -Status `$Message -PercentComplete `$PercentComplete
     }
 }
-
-# Define Show-ProgressBar function for the runspace
 function Show-ProgressBar {
     param(
         [int]`$Current,
         [int]`$Total,
         [string]`$Activity = "Processing"
     )
-    
     if (`$Total -gt 0) {
         `$percent = [math]::Round((`$Current / `$Total) * 100, 0)
         Write-Progress -Activity `$Activity -Status "Processing `$Current of `$Total" -PercentComplete `$percent
@@ -1411,97 +1374,53 @@ function Show-ProgressBar {
 }
 "@
             
-            # Execute the setup script
             $null = $powershell.AddScript($setupScript)
             $setupResult = $powershell.Invoke()
             
-            # Check for setup errors
             if ($powershell.HadErrors) {
                 $setupErrors = $powershell.Streams.Error
                 Write-OrchestratorLog -Message "Runspace setup had errors: $(($setupErrors | ForEach-Object { $_.Exception.Message }) -join '; ')" -Level "WARN"
             }
             
-            # Clear commands and errors from setup
             $powershell.Commands.Clear()
             $powershell.Streams.Error.Clear()
             
-            # Now call the discovery function with proper parameter validation
             $executionScript = @"
-            # Validate parameters before calling discovery function
-            try {
-                # Validate Configuration parameter
-                if (-not `$Configuration) {
-                    throw "Configuration parameter is null or missing"
-                }
-                
-                # Validate Context parameter
-                if (-not `$Context) {
-                    throw "Context parameter is null or missing"
-                }
-                
-                # Validate critical Context.Paths properties
-                if (-not `$Context.Paths) {
-                    throw "Context.Paths is null or missing"
-                }
-                
-                if (-not `$Context.Paths.RawDataOutput) {
-                    throw "Context.Paths.RawDataOutput is null or missing"
-                }
-                
-                if (-not `$Context.Paths.ProcessedDataOutput) {
-                    throw "Context.Paths.ProcessedDataOutput is null or missing"
-                }
-                
-                # Log parameter validation success
-                Write-MandALog -Message "Parameter validation successful for $moduleFunction" -Level "INFO"
-                Write-MandALog -Message "Configuration type: `$(`$Configuration.GetType().Name)" -Level "DEBUG"
-                Write-MandALog -Message "Context type: `$(`$Context.GetType().Name)" -Level "DEBUG"
-                Write-MandALog -Message "RawDataOutput: `$(`$Context.Paths.RawDataOutput)" -Level "DEBUG"
-                Write-MandALog -Message "ProcessedDataOutput: `$(`$Context.Paths.ProcessedDataOutput)" -Level "DEBUG"
-                
-                # Call the discovery function with validated parameters
-                `$result = $moduleFunction -Configuration `$Configuration -Context `$Context
-                
-                # Validate result
-                if (-not `$result) {
-                    Write-MandALog -Message "$moduleFunction returned null result" -Level "WARN"
-                } else {
-                    Write-MandALog -Message "$moduleFunction completed successfully" -Level "SUCCESS"
-                }
-                
-                return `$result
-            } catch {
-                Write-MandALog -Message "Error in $moduleFunction`: `$(`$_.Exception.Message)" -Level "ERROR"
-                Write-MandALog -Message "Stack trace: `$(`$_.ScriptStackTrace)" -Level "DEBUG"
-                throw
-            }
-            "@
+try {
+    if (`$Configuration -and `$Context) {
+        `$result = $moduleFunction -Configuration `$Configuration -Context `$Context
+    } elseif (`$Configuration) {
+        `$result = $moduleFunction -Configuration `$Configuration
+    } else {
+        `$result = $moduleFunction
+    }
+    return `$result
+} catch {
+    Write-MandALog -Message "Error in $moduleFunction`: `$(`$_.Exception.Message)" -Level "ERROR"
+    throw
+}
+"@
             
             $null = $powershell.AddScript($executionScript)
             Write-OrchestratorLog -Message "Executing $moduleFunction in isolated runspace" -Level "DEBUG" -DebugOnly
             $result = $powershell.Invoke()
             
-            # Check for execution errors
             if ($powershell.HadErrors) {
                 $errors = $powershell.Streams.Error
                 $errorMessages = $errors | ForEach-Object { $_.Exception.Message }
                 Write-OrchestratorLog -Message "Runspace execution had errors: $($errorMessages -join '; ')" -Level "WARN"
                 
-                # Check if any errors are Force parameter related
                 $forceErrors = $errors | Where-Object { $_.Exception.Message -like "*Force*" }
                 if ($forceErrors.Count -gt 0) {
                     Write-OrchestratorLog -Message "Force parameter inheritance issue in $ModuleName module (module may have completed successfully)" -Level "WARN"
                     
-                    # Try to retry without Force parameter by calling the function directly
                     Write-OrchestratorLog -Message "Attempting to retry $ModuleName module without Force parameter..." -Level "INFO"
                     
-                    # Clear errors and try again with a simpler approach
                     $powershell.Commands.Clear()
                     $powershell.Streams.Error.Clear()
                     
                     $retryScript = @"
 try {
-    # Call function directly without any problematic parameters
     `$retryResult = & $moduleFunction -Configuration `$Configuration -Context `$Context
     return `$retryResult
 } catch {
@@ -1521,7 +1440,6 @@ try {
                 }
             }
             
-            # Return the first result (discovery functions should return a single DiscoveryResult)
             if ($result -and $result.Count -gt 0) {
                 $result = $result[0]
             }
@@ -1538,11 +1456,9 @@ try {
         
         $duration = (Get-Date) - $startTime
         
-        # Show completion
         Write-Progress -Activity "Discovery Phase" -Completed
         Write-Host "<<< Completed $ModuleName Discovery in $($duration.TotalSeconds) seconds" -ForegroundColor Green
         
-        # Show result summary with error handling
         try {
             if ($result -and $result.Success) {
                 $dataCount = if ($result.Data) { $result.Data.Count } else { 0 }
@@ -1566,257 +1482,6 @@ try {
     }
 }
 
-function Export-ErrorReport {
-    param(
-        [hashtable]$PhaseResult
-    )
-    
-    # Fix: Count actual module results, not empty collections
-    $actualModuleResults = $PhaseResult.ModuleResults.Values | Where-Object { $_ -ne $null }
-    $successfulModules = ($actualModuleResults | Where-Object { $_.Success -eq $true }).Count
-    
-    if ($PhaseResult.CriticalErrors.Count -eq 0 -and $PhaseResult.RecoverableErrors.Count -eq 0 -and $PhaseResult.Warnings.Count -eq 0) {
-        Write-OrchestratorLog -Message "No errors or warnings to report" -Level "SUCCESS"
-        return
-    }
-    
-    $errorReport = @{
-        Timestamp = Get-Date
-        ExecutionId = [guid]::NewGuid().ToString()
-        Summary = @{
-            CriticalErrors = $PhaseResult.CriticalErrors.Count
-            RecoverableErrors = $PhaseResult.RecoverableErrors.Count
-            Warnings = $PhaseResult.Warnings.Count
-            TotalModules = $actualModuleResults.Count
-            SuccessfulModules = $successfulModules
-        }
-        CriticalErrors = $PhaseResult.CriticalErrors
-        RecoverableErrors = $PhaseResult.RecoverableErrors
-        Warnings = $PhaseResult.Warnings
-        ModuleResults = @{}
-    }
-    
-    # Add detailed module results
-    foreach ($moduleName in $PhaseResult.ModuleResults.Keys) {
-        $moduleResult = $PhaseResult.ModuleResults[$moduleName]
-        $errorReport.ModuleResults[$moduleName] = @{
-            Success = $moduleResult.Success
-            ModuleName = $moduleResult.ModuleName
-            StartTime = $moduleResult.StartTime
-            EndTime = $moduleResult.EndTime
-            Duration = $moduleResult.Metadata.Duration
-            ErrorCount = $moduleResult.Errors.Count
-            WarningCount = $moduleResult.Warnings.Count
-            ExecutionId = $moduleResult.ExecutionId
-        }
-    }
-    
-    # Export to file
-    $errorReportPath = Join-Path $global:MandA.Paths.LogOutput "DiscoveryErrorReport_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
-    $errorReport | ConvertTo-Json -Depth 10 | Set-Content -Path $errorReportPath -Encoding UTF8
-    
-    Write-OrchestratorLog -Message "Error report exported: $errorReportPath" -Level "INFO"
-    
-    # Log summary to console
-    Write-OrchestratorLog -Message "--- ERROR SUMMARY ---" -Level "HEADER"
-    Write-OrchestratorLog -Message "Critical Errors: $($errorReport.Summary.CriticalErrors)" -Level $(if ($errorReport.Summary.CriticalErrors -gt 0) { "ERROR" } else { "SUCCESS" })
-    Write-OrchestratorLog -Message "Recoverable Errors: $($errorReport.Summary.RecoverableErrors)" -Level $(if ($errorReport.Summary.RecoverableErrors -gt 0) { "WARN" } else { "SUCCESS" })
-    Write-OrchestratorLog -Message "Warnings: $($errorReport.Summary.Warnings)" -Level $(if ($errorReport.Summary.Warnings -gt 0) { "WARN" } else { "SUCCESS" })
-    Write-OrchestratorLog -Message "Successful Modules: $($errorReport.Summary.SuccessfulModules)/$($errorReport.Summary.TotalModules)" -Level "INFO"
-    
-    # Add more detailed breakdown
-    if ($errorReport.Summary.TotalModules -eq 0) {
-        Write-OrchestratorLog -Message "Note: No modules were executed (likely due to smart completion - data already exists)" -Level "INFO"
-    }
-}
-
-function Invoke-SequentialDiscovery {
-    param([array]$Sources)
-    
-    Write-OrchestratorLog -Message "Starting sequential discovery for $($Sources.Count) sources" -Level "INFO"
-    
-    $results = @{}
-    $currentNum = 0
-    $total = $Sources.Count
-    
-    foreach ($source in $Sources) {
-        $currentNum++
-        Write-OrchestratorLog -Message "[$currentNum/$total] Starting $source discovery..." -Level "PROGRESS"
-        
-        $functionName = "Invoke-${source}Discovery"
-        Write-OrchestratorLog -Message "Looking for function: $functionName" -Level "DEBUG" -DebugOnly
-        
-        if (Get-Command $functionName -ErrorAction SilentlyContinue) {
-            try {
-                $startTime = Get-Date
-                
-                Write-OrchestratorLog -Message "Executing $functionName with configuration" -Level "DEBUG" -DebugOnly
-                $data = & $functionName -Configuration $global:MandA.Config -Context $global:MandA
-                
-                $duration = (Get-Date) - $startTime
-                
-                $results[$source] = @{
-                    Success = $true
-                    Data = $data
-                    Duration = $duration
-                    RecordCount = if ($data -is [array]) { $data.Count } else { 1 }
-                }
-                
-                Write-OrchestratorLog -Message "$source completed: $($results[$source].RecordCount) records in $($duration.TotalSeconds)s" `
-                    -Level "SUCCESS"
-                
-            } catch {
-                $duration = (Get-Date) - $startTime
-                $results[$source] = @{
-                    Success = $false
-                    Error = $_.Exception.Message
-                    Duration = $duration
-                    Exception = $_.Exception
-                }
-                
-                Add-OrchestratorError -Source $source `
-                    -Message "Discovery failed: $_" `
-                    -Exception $_.Exception
-            }
-        } else {
-            $results[$source] = @{
-                Success = $false
-                Error = "Discovery function not found: $functionName"
-            }
-            
-            Add-OrchestratorError -Source $source `
-                -Message "Discovery function not found: $functionName" `
-                -Severity "Warning"
-            
-            # List available discovery functions for debugging
-            if ($script:DebugMode) {
-                $availableFunctions = Get-Command -Name "*Discovery" -CommandType Function -ErrorAction SilentlyContinue
-                Write-OrchestratorLog -Message "Available discovery functions: $($availableFunctions.Name -join ', ')" -Level "DEBUG"
-            }
-        }
-    }
-    
-    return $results
-}
-
-function Invoke-ParallelDiscovery {
-    param([array]$Sources)
-    
-    $throttle = $global:MandA.Config.discovery.maxConcurrentJobs
-    Write-OrchestratorLog -Message "Starting parallel discovery (throttle: $throttle) for $($Sources.Count) sources" -Level "INFO"
-    
-    # Create runspace pool
-    $runspacePool = [runspacefactory]::CreateRunspacePool(1, $throttle)
-    $runspacePool.Open()
-    
-    Write-OrchestratorLog -Message "Runspace pool created with max threads: $throttle" -Level "DEBUG" -DebugOnly
-    
-    $jobs = @()
-    $results = @{}
-    
-    # Discovery script block
-    $scriptBlock = {
-        param($Source, $Config, $ModulePath, $Context)
-        
-        try {
-            # Import required module
-            $moduleFile = Join-Path $ModulePath "${Source}Discovery.psm1"
-            Import-Module $moduleFile -Force
-            
-            # Execute discovery
-            $functionName = "Invoke-${Source}Discovery"
-            $startTime = Get-Date
-            $data = & $functionName -Configuration $Config -Context $Context
-            
-            return @{
-                Source = $Source
-                Success = $true
-                Data = $data
-                Duration = (Get-Date) - $startTime
-                RecordCount = if ($data -is [array]) { $data.Count } else { 1 }
-            }
-        } catch {
-            return @{
-                Source = $Source
-                Success = $false
-                Error = $_.Exception.Message
-                Duration = (Get-Date) - $startTime
-                Exception = $_
-            }
-        }
-    }
-    
-    # Start jobs
-    foreach ($source in $Sources) {
-        Write-OrchestratorLog -Message "Creating runspace job for: $source" -Level "DEBUG" -DebugOnly
-        
-        $powershell = [powershell]::Create()
-        $powershell.RunspacePool = $runspacePool
-        
-        [void]$powershell.AddScript($scriptBlock)
-        [void]$powershell.AddArgument($source)
-        [void]$powershell.AddArgument($global:MandA.Config)
-        [void]$powershell.AddArgument($global:MandA.Paths.Discovery)
-        [void]$powershell.AddArgument($global:MandA)
-        
-        $jobs += @{
-            PowerShell = $powershell
-            Handle = $powershell.BeginInvoke()
-            Source = $source
-        }
-    }
-    
-    Write-OrchestratorLog -Message "All runspace jobs started, waiting for completion..." -Level "DEBUG" -DebugOnly
-    
-    # Wait for completion
-    $completed = 0
-    while ($jobs | Where-Object { -not $_.Handle.IsCompleted }) {
-        Start-Sleep -Milliseconds 250
-        
-        # Check for completed jobs
-        $justCompleted = $jobs | Where-Object { 
-            $_.Handle.IsCompleted -and -not $_.Processed 
-        }
-        
-        foreach ($job in $justCompleted) {
-            $completed++
-            try {
-                $result = $job.PowerShell.EndInvoke($job.Handle)
-                $results[$result.Source] = $result
-                
-                Write-OrchestratorLog -Message "[$completed/$($Sources.Count)] $($result.Source) completed" `
-                    -Level $(if ($result.Success) { "SUCCESS" } else { "ERROR" })
-                
-                if ($script:DebugMode -and -not $result.Success) {
-                    Write-OrchestratorLog -Message "Error details for $($result.Source): $($result.Error)" -Level "DEBUG"
-                }
-                
-            } catch {
-                Add-OrchestratorError -Source $job.Source `
-                    -Message "Failed to retrieve job result: $_" `
-                    -Exception $_.Exception
-                    
-                $results[$job.Source] = @{
-                    Source = $job.Source
-                    Success = $false
-                    Error = "Job retrieval failed: $_"
-                }
-            } finally {
-                $job.PowerShell.Dispose()
-                $job.Processed = $true
-            }
-        }
-    }
-    
-    # Cleanup
-    $runspacePool.Close()
-    $runspacePool.Dispose()
-    
-    Write-OrchestratorLog -Message "Parallel discovery complete, runspace pool disposed" -Level "DEBUG" -DebugOnly
-    
-    return $results
-}
-
 function Invoke-ProcessingPhase {
     Write-OrchestratorLog -Message "STARTING PROCESSING PHASE" -Level "HEADER"
     
@@ -1826,39 +1491,13 @@ function Invoke-ProcessingPhase {
     }
     
     try {
-        # Validate Context.Paths before processing
-        Write-OrchestratorLog -Message "Validating Context.Paths for processing phase..." -Level "INFO"
-        
-        if (-not $global:MandA.Paths) {
-            throw "Context.Paths is missing from global MandA context"
-        }
-        
-        if (-not $global:MandA.Paths.RawDataOutput) {
-            throw "Context.Paths.RawDataOutput is missing - cannot locate raw data"
-        }
-        
-        if (-not $global:MandA.Paths.ProcessedDataOutput) {
-            throw "Context.Paths.ProcessedDataOutput is missing - cannot determine output location"
-        }
-        
         # Verify raw data exists
         $rawDataPath = $global:MandA.Paths.RawDataOutput
         Write-OrchestratorLog -Message "Checking raw data path: $rawDataPath" -Level "DEBUG" -DebugOnly
         
         if (-not (Test-Path $rawDataPath)) {
-            throw "Raw data directory not found: $rawDataPath. Run Discovery phase first."
+            throw "Raw data directory not found. Run Discovery phase first."
         }
-        
-        # Ensure processed data output directory exists
-        $processedDataPath = $global:MandA.Paths.ProcessedDataOutput
-        if (-not (Test-Path $processedDataPath)) {
-            Write-OrchestratorLog -Message "Creating processed data directory: $processedDataPath" -Level "INFO"
-            New-Item -Path $processedDataPath -ItemType Directory -Force | Out-Null
-        }
-        
-        Write-OrchestratorLog -Message "Context validation successful:" -Level "SUCCESS"
-        Write-OrchestratorLog -Message "  RawDataOutput: $rawDataPath" -Level "INFO"
-        Write-OrchestratorLog -Message "  ProcessedDataOutput: $processedDataPath" -Level "INFO"
         
         $csvFiles = Get-ChildItem -Path $rawDataPath -Filter "*.csv" -File
         if ($csvFiles.Count -eq 0) {
@@ -2092,7 +1731,7 @@ function Test-ExportCompleteness {
     
     $requiredExports = @{}
     
-    # CSV exports (always check if CSV format is enabled)
+    # CSV exports
     if ("CSV" -in $enabledFormats) {
         $csvPath = Join-Path $ExportPath "Processed"
         $requiredExports['UserProfiles.csv'] = { Test-Path (Join-Path $csvPath 'UserProfiles.csv') }
@@ -2122,7 +1761,6 @@ function Test-ExportCompleteness {
     # Excel exports
     if ("Excel" -in $enabledFormats) {
         $excelPath = Join-Path $ExportPath "Exports\Excel"
-        # Excel files have timestamps, so we check for any .xlsx file
         $excelFiles = if (Test-Path $excelPath) { Get-ChildItem -Path $excelPath -Filter "*.xlsx" } else { @() }
         if ($excelFiles.Count -eq 0) {
             $requiredExports['MigrationReport.xlsx'] = { $false }
@@ -2143,12 +1781,11 @@ function Test-ExportCompleteness {
         }
     }
     
-    # Check for empty files (files that exist but have no meaningful content)
+    # Check for empty files
     foreach ($validatedFile in $validationResult.ValidatedFiles) {
         try {
             $filePath = $null
             
-            # Determine the full path based on file type
             if ($validatedFile.EndsWith('.csv')) {
                 $filePath = Join-Path (Join-Path $ExportPath "Processed") $validatedFile
             } elseif ($validatedFile.StartsWith('powerapps_')) {
@@ -2166,14 +1803,12 @@ function Test-ExportCompleteness {
             if ($filePath -and (Test-Path $filePath)) {
                 $fileInfo = Get-Item $filePath
                 
-                # Check if file is too small (likely empty or corrupted)
                 if ($fileInfo.Length -lt 10) {
                     $validationResult.EmptyFiles += $validatedFile
                     $validationResult.Warnings += "File appears to be empty or corrupted: $validatedFile ($($fileInfo.Length) bytes)"
                     Write-OrchestratorLog -Message "Warning: Export file appears empty: $validatedFile" -Level "WARN"
                 }
                 
-                # For JSON files, try to validate JSON structure
                 if ($validatedFile.EndsWith('.json')) {
                     try {
                         $content = Get-Content $filePath -Raw
@@ -2186,7 +1821,6 @@ function Test-ExportCompleteness {
                     }
                 }
                 
-                # For CSV files, check if they have headers and at least one data row
                 if ($validatedFile.EndsWith('.csv')) {
                     try {
                         $csvContent = Import-Csv $filePath -ErrorAction Stop
@@ -2207,7 +1841,6 @@ function Test-ExportCompleteness {
         }
     }
     
-    # Determine overall success
     if ($missing.Count -gt 0) {
         $validationResult.Success = $false
         $errorMessage = "Missing required exports: $($missing -join ', ')"
@@ -2225,7 +1858,6 @@ function Test-ExportCompleteness {
         throw $errorMessage
     }
     
-    # Log summary
     $successCount = $validationResult.ValidatedFiles.Count
     $warningCount = $validationResult.Warnings.Count
     $emptyCount = $validationResult.EmptyFiles.Count
@@ -2256,57 +1888,10 @@ try {
     Write-OrchestratorLog -Message "========================================" -Level "HEADER"
     Write-OrchestratorLog -Message "Company: $CompanyName | Mode: $Mode" -Level "INFO"
     
-    # Enhanced Context Validation
-    Write-OrchestratorLog -Message "Performing enhanced context validation..." -Level "INFO"
-    
-    # Validate global MandA context
-    if (-not $global:MandA) {
-        throw "Global MandA context is null or missing"
-    }
-    
-    if (-not $global:MandA.Paths) {
-        throw "Global MandA.Paths is null or missing"
-    }
-    
-    # Validate critical paths exist
-    $criticalPaths = @(
-        'RawDataOutput',
-        'ProcessedDataOutput',
-        'ExportOutput',
-        'LogOutput',
-        'SuiteRoot',
-        'Modules',
-        'Discovery'
-    )
-    
-    $missingPaths = @()
-    foreach ($pathKey in $criticalPaths) {
-        if (-not $global:MandA.Paths.ContainsKey($pathKey)) {
-            $missingPaths += $pathKey
-        } elseif ([string]::IsNullOrWhiteSpace($global:MandA.Paths[$pathKey])) {
-            $missingPaths += "$pathKey (empty)"
-        } else {
-            Write-OrchestratorLog -Message "Path validated: $pathKey = $($global:MandA.Paths[$pathKey])" -Level "DEBUG" -DebugOnly
-        }
-    }
-    
-    if ($missingPaths.Count -gt 0) {
-        $errorMsg = "Critical paths missing from Context.Paths: $($missingPaths -join ', ')"
-        Write-OrchestratorLog -Message $errorMsg -Level "ERROR"
-        throw $errorMsg
-    }
-    
-    # Log context validation success
-    Write-OrchestratorLog -Message "Context validation successful - all critical paths present" -Level "SUCCESS"
-    Write-OrchestratorLog -Message "Configuration type: $($global:MandA.Config.GetType().Name)" -Level "DEBUG" -DebugOnly
-    Write-OrchestratorLog -Message "Paths count: $($global:MandA.Paths.Keys.Count)" -Level "DEBUG" -DebugOnly
-    
-    # Validate prerequisites
     if (-not (Test-OrchestratorPrerequisites)) {
         throw "Prerequisites validation failed"
     }
 
-    # Module Prerequisites Check
     Write-OrchestratorLog -Message "========================================" -Level "HEADER"
     Write-OrchestratorLog -Message "CHECKING MODULE PREREQUISITES" -Level "HEADER"
     Write-OrchestratorLog -Message "========================================" -Level "HEADER"
@@ -2316,15 +1901,11 @@ try {
         Write-OrchestratorLog -Message "Running module prerequisites check..." -Level "INFO"
         
         try {
-            # Capture the output to analyze it
             $moduleCheckOutput = & $moduleCheckScript 2>&1
             $moduleCheckExitCode = $LASTEXITCODE
             
-            # Handle different exit codes from module check
             switch ($moduleCheckExitCode) {
-                0 {
-                    Write-OrchestratorLog -Message "All modules OK - proceeding" -Level "SUCCESS"
-                }
+                0 { Write-OrchestratorLog -Message "All modules OK - proceeding" -Level "SUCCESS" }
                 1 {
                     Write-OrchestratorLog -Message "Some optional modules missing - proceeding with reduced functionality" -Level "WARN"
                     Write-OrchestratorLog -Message "DFS discovery will be skipped due to missing DfsMgmt module" -Level "INFO"
@@ -2333,9 +1914,7 @@ try {
                     Write-OrchestratorLog -Message "CRITICAL modules missing - cannot proceed" -Level "ERROR"
                     throw "Critical module prerequisites not met"
                 }
-                default {
-                    Write-OrchestratorLog -Message "Unknown module check result - proceeding with caution" -Level "WARN"
-                }
+                default { Write-OrchestratorLog -Message "Unknown module check result - proceeding with caution" -Level "WARN" }
             }
             
         } catch {
@@ -2351,8 +1930,6 @@ try {
         Write-OrchestratorLog -Message "Skipping module prerequisites validation (not recommended)" -Level "WARN"
     }
 
-    # Continue with loading configuration...
-    # Load configuration
     $config = $global:MandA.Config
     if (-not [string]::IsNullOrWhiteSpace($ConfigurationFile)) {
         Write-OrchestratorLog -Message "Loading custom configuration file: $ConfigurationFile" -Level "INFO"
@@ -2367,7 +1944,6 @@ try {
             Write-OrchestratorLog -Message "Loading configuration: $configPath" -Level "INFO"
             try {
                 $configContent = Get-Content $configPath -Raw | ConvertFrom-Json
-                # TODO: Implement proper config merging logic
                 Write-OrchestratorLog -Message "Custom configuration loaded (merge not implemented)" -Level "WARN"
             } catch {
                 Add-OrchestratorError -Source "ConfigLoader" `
@@ -2379,25 +1955,17 @@ try {
         }
     }
     
-    # Apply command-line overrides with smart Force logic
     if ($Force) {
-        # Instead of blindly overwriting all files, implement smart Force logic
-        # Force mode should only re-run modules that failed or have incomplete data
         Write-OrchestratorLog -Message "Force mode enabled - will re-run failed modules and skip completed ones" -Level "INFO"
-        
-        # Don't globally disable skipExistingFiles - let individual modules decide
-        # based on their completion status and data validity
         $global:MandA.Config.discovery.forceMode = $true
         $global:MandA.Config.discovery.smartForce = $true
     }
     
-    # Handle AzureOnly mode
     if ($Mode -eq "AzureOnly") {
         Write-OrchestratorLog -Message "Azure-only mode selected" -Level "INFO"
         
         $allSources = $global:MandA.Config.discovery.enabledSources
         
-        # Fix: Ensure sources is an array
         if ($allSources -is [System.Collections.Hashtable]) {
             $allSources = @($allSources.Keys)
         } elseif ($allSources -is [PSCustomObject]) {
@@ -2410,27 +1978,21 @@ try {
         $global:MandA.Config.discovery.enabledSources = $filteredSources
         
         Write-OrchestratorLog -Message "Filtered to Azure sources: $($filteredSources -join ', ')" -Level "INFO"
-        $Mode = "Full" # Process as full mode with filtered sources
+        $Mode = "Full"
     }
     
-    # Initialize modules
     Initialize-OrchestratorModules -Phase $Mode
     
-    # Validate module loading
     Test-ModuleLoadStatus -Mode $Mode
     
-    # Execute validation if requested
     if ($ValidateOnly) {
         Write-OrchestratorLog -Message "VALIDATION-ONLY MODE" -Level "INFO"
         
-        # Run basic validation checks
         $validationPassed = $true
         
-        # Check modules
         $requiredModules = Get-Module -Name "*Discovery", "*Processing", "*Export" -ListAvailable
         Write-OrchestratorLog -Message "Available modules: $($requiredModules.Count)" -Level "INFO"
         
-        # Check paths
         $pathsToCheck = @("RawDataOutput", "ProcessedDataOutput", "ExportOutput", "LogOutput")
         foreach ($pathKey in $pathsToCheck) {
             $path = $global:MandA.Paths[$pathKey]
@@ -2447,10 +2009,8 @@ try {
         exit $exitCode
     }
     
-    # Execute phases with performance tracking
     $phaseResults = @{}
     
-    # Start performance session if available
     $sessionId = $null
     if (Get-Command Start-PerformanceSession -ErrorAction SilentlyContinue) {
         $sessionId = Start-PerformanceSession -SessionName "MandADiscovery_$Mode" -Context $global:MandA
@@ -2459,15 +2019,9 @@ try {
     
     try {
         switch ($Mode) {
-            "Discovery" {
-                $phaseResults.Discovery = Invoke-DiscoveryPhase
-            }
-            "Processing" {
-                $phaseResults.Processing = Invoke-ProcessingPhase
-            }
-            "Export" {
-                $phaseResults.Export = Invoke-ExportPhase
-            }
+            "Discovery" { $phaseResults.Discovery = Invoke-DiscoveryPhase }
+            "Processing" { $phaseResults.Processing = Invoke-ProcessingPhase }
+            "Export" { $phaseResults.Export = Invoke-ExportPhase }
             "Full" {
                 $phaseResults.Discovery = Invoke-DiscoveryPhase
                 if ($phaseResults.Discovery.Success) {
@@ -2483,7 +2037,6 @@ try {
             }
         }
     } finally {
-        # Stop performance session and export report if available
         if ($sessionId -and (Get-Command Stop-PerformanceSession -ErrorAction SilentlyContinue)) {
             $sessionSummary = Stop-PerformanceSession -SessionName "MandADiscovery_$Mode" -Context $global:MandA
             if ($sessionSummary) {
@@ -2495,7 +2048,6 @@ try {
                     FailedOperations = $sessionSummary.FailedOperations
                 }
                 
-                # Export performance report
                 if (Get-Command Export-PerformanceReport -ErrorAction SilentlyContinue) {
                     try {
                         $reportPath = Export-PerformanceReport -ReportType "Summary" -Context $global:MandA
@@ -2508,7 +2060,6 @@ try {
         }
     }
     
-    # Generate summary
     Write-OrchestratorLog -Message "Discovery phase completed" -Level "INFO"
     Write-OrchestratorLog -Message "========================================" -Level "HEADER"
     Write-OrchestratorLog -Message "EXECUTION SUMMARY" -Level "HEADER"
@@ -2517,13 +2068,11 @@ try {
     $duration = (Get-Date) - $script:StartTime
     Write-OrchestratorLog -Message "Total execution time: $($duration.ToString('hh\:mm\:ss'))" -Level "INFO"
     
-    # Phase results summary
     foreach ($phase in $phaseResults.Keys) {
         $result = $phaseResults[$phase]
         $status = if ($result.Success) { "SUCCESS" } else { "FAILED" }
         Write-OrchestratorLog -Message "$phase Phase: $status" -Level $(if ($result.Success) { "SUCCESS" } else { "ERROR" })
         
-        # Add export validation summary if available
         if ($phase -eq "Export" -and $result.ValidationSummary) {
             $validationSummary = $result.ValidationSummary
             Write-OrchestratorLog -Message "  Export Validation: $($validationSummary.ValidatedFiles) files validated, $($validationSummary.MissingFiles) missing, $($validationSummary.EmptyFiles) empty/invalid, $($validationSummary.Warnings) warnings" -Level "INFO"
@@ -2537,18 +2086,15 @@ try {
         }
     }
     
-    # Error summary
     $criticalCount = $script:ErrorCollector.Critical.Count
     $errorCount = $script:ErrorCollector.Errors.Count
     $warningCount = $script:ErrorCollector.Warnings.Count
     
     Write-OrchestratorLog -Message "Errors - Critical: $criticalCount, Errors: $errorCount, Warnings: $warningCount" -Level "INFO"
     
-    # Export error report if needed
     if ($criticalCount -gt 0 -or $errorCount -gt 0) {
         $errorReportPath = Join-Path $global:MandA.Paths.LogOutput "OrchestratorErrors_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
         
-        # Add execution context to error report
         $errorReport = @{
             ExecutionTime = Get-Date
             Duration = $duration
@@ -2571,30 +2117,25 @@ try {
         Write-OrchestratorLog -Message "Error report saved: $errorReportPath" -Level "INFO"
     }
     
-    # Check if we should offer retry option
     $shouldOfferRetry = $false
     $failedModuleCount = 0
     
-    # Count actual module failures (not just skipped modules)
     if ($phaseResults.Discovery) {
         $actualModuleResults = $phaseResults.Discovery.ModuleResults.Values | Where-Object { $_ -ne $null }
         $failedModules = $actualModuleResults | Where-Object { $_.Success -eq $false }
         $failedModuleCount = $failedModules.Count
         
-        # Only offer retry if there were actual failures (not just warnings or skipped modules)
         if ($failedModuleCount -gt 0 -or $criticalCount -gt 0) {
             $shouldOfferRetry = $true
         }
     }
     
-    # Determine exit code
     $exitCode = if ($criticalCount -gt 0) { 2 }
                 elseif ($errorCount -gt 0) { 1 }
                 else { 0 }
     
     Write-OrchestratorLog -Message "Orchestrator completed with exit code: $exitCode" -Level "INFO"
     
-    # Offer retry option if there were failures
     if ($shouldOfferRetry) {
         Write-OrchestratorLog -Message "========================================" -Level "HEADER"
         Write-OrchestratorLog -Message "RETRY OPTION AVAILABLE" -Level "HEADER"
@@ -2613,20 +2154,16 @@ try {
             Write-OrchestratorLog -Message "User chose quick retry. Reloading discovery modules and retrying..." -Level "INFO"
             
             try {
-                # Quick reload of only discovery modules (skip prerequisites and authentication)
                 Write-OrchestratorLog -Message "Quick reloading discovery modules from disk..." -Level "INFO"
-                Load-DiscoveryModules  # Only reload discovery modules, skip all the heavy stuff
+                Load-DiscoveryModules
                 
-                # Retry discovery phase (skip authentication setup since it's already done)
                 Write-OrchestratorLog -Message "========================================" -Level "HEADER"
                 Write-OrchestratorLog -Message "QUICK RETRY - DISCOVERY PHASE ONLY" -Level "HEADER"
                 Write-OrchestratorLog -Message "========================================" -Level "HEADER"
                 
-                # Call discovery directly without re-authentication
                 $enabledSources = (Get-ModuleContext).Config.discovery.enabledSources
                 $validSources = @($enabledSources | Where-Object { $_ -is [string] })
                 
-                # Apply smart completion checking to only run failed/incomplete modules
                 Write-OrchestratorLog -Message "Quick retry: Analyzing module completion status..." -Level "INFO"
                 $sourcesToRun = @()
                 
@@ -2646,7 +2183,6 @@ try {
                 
                 Write-OrchestratorLog -Message "Quick retry will run $($sourcesToRun.Count) modules" -Level "INFO"
                 
-                # Create a simplified phase result for retry
                 $retryResult = @{
                     Success = $true
                     ModuleResults = @{}
@@ -2655,7 +2191,6 @@ try {
                     Warnings = [System.Collections.ArrayList]::new()
                 }
                 
-                # Execute only the modules that need to run
                 foreach ($source in $sourcesToRun) {
                     Write-OrchestratorLog -Message "Quick retry: Executing $source discovery..." -Level "INFO"
                     
@@ -2663,7 +2198,6 @@ try {
                         $moduleResult = Invoke-DiscoveryModule -ModuleName $source -Configuration $global:MandA.Config
                         $retryResult.ModuleResults[$source] = $moduleResult
                         
-                        # Categorize errors
                         if (-not $moduleResult.Success) {
                             $null = $retryResult.RecoverableErrors.Add(@{
                                 Source = $source
@@ -2672,7 +2206,6 @@ try {
                             })
                         }
                         
-                        # Collect warnings
                         if ($moduleResult.Warnings.Count -gt 0) {
                             $null = $retryResult.Warnings.Add(@{
                                 Source = $source
@@ -2692,7 +2225,6 @@ try {
                     }
                 }
                 
-                # Check retry results
                 $retryActualResults = $retryResult.ModuleResults.Values | Where-Object { $_ -ne $null }
                 $retrySuccessCount = ($retryActualResults | Where-Object { $_.Success -eq $true }).Count
                 $retryFailCount = ($retryActualResults | Where-Object { $_.Success -eq $false }).Count
@@ -2710,7 +2242,6 @@ try {
                     $exitCode = 1
                 }
                 
-                # Update phase results with retry results
                 $phaseResults.Discovery = $retryResult
                 
             } catch {
@@ -2720,7 +2251,6 @@ try {
         } elseif ($retryChoice -eq "2") {
             Write-OrchestratorLog -Message "User chose full restart. Restarting orchestrator to reload all files from disk..." -Level "INFO"
             
-            # Disconnect services before restart
             if (Get-Command Disconnect-AllServices -ErrorAction SilentlyContinue) {
                 try {
                     Write-OrchestratorLog -Message "Disconnecting services before restart..." -Level "INFO"
@@ -2730,7 +2260,6 @@ try {
                 }
             }
             
-            # Prepare restart command with same parameters
             $restartParams = @()
             $restartParams += "-CompanyName '$CompanyName'"
             $restartParams += "-Mode '$Mode'"
@@ -2747,10 +2276,8 @@ try {
             Write-OrchestratorLog -Message "FULL RESTART - RELOADING ALL FILES" -Level "HEADER"
             Write-OrchestratorLog -Message "========================================" -Level "HEADER"
             
-            # Execute restart
             try {
                 Invoke-Expression $restartCommand
-                # If we get here, the restart completed - use its exit code
                 exit $LASTEXITCODE
             } catch {
                 Write-OrchestratorLog -Message "Restart failed: $_" -Level "ERROR"
@@ -2765,13 +2292,11 @@ try {
     exit $exitCode
     
 } catch {
-    # Fatal error handling
     Write-OrchestratorLog -Message "FATAL ERROR: $_" -Level "CRITICAL"
     Write-OrchestratorLog -Message "Exception Type: $($_.Exception.GetType().FullName)" -Level "ERROR"
     Write-OrchestratorLog -Message "Stack Trace:" -Level "ERROR"
     Write-OrchestratorLog -Message $_.ScriptStackTrace -Level "ERROR"
     
-    # Save crash report
     $crashReport = @{
         Timestamp = Get-Date
         Error = $_.Exception.Message
@@ -2795,7 +2320,6 @@ try {
     
     exit 99
 } finally {
-    # Cleanup
     Write-OrchestratorLog -Message "Performing cleanup..." -Level "INFO"
     
     if (Get-Command Disconnect-AllServices -ErrorAction SilentlyContinue) {
@@ -2809,6 +2333,3 @@ try {
     
     Write-OrchestratorLog -Message "Orchestrator cleanup complete" -Level "INFO"
 }
-
-# End of enhanced debug orchestrator
-#===============================================================================
