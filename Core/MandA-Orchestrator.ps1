@@ -817,74 +817,56 @@ function Invoke-DiscoveryPhase {
             param($modName, $modConfig, $globalContext, $resultsCollection, $errorCollection)
             
             $jobStartTime = Get-Date
-            
+            $discoveryResult = [DiscoveryResult]::new($modName) # Create result object immediately
+
             try {
-                # Set up context
+                # Set up context for this thread
                 $global:MandA = $globalContext
                 
-                # Load discovery module
+                # Load the specific discovery module for this job
                 $discoveryModulePath = Join-Path $global:MandA.Paths.Discovery "${modName}Discovery.psm1"
                 if (-not (Test-Path $discoveryModulePath)) {
-                    throw "Discovery module not found: $discoveryModulePath"
+                    throw "Discovery module file not found: $discoveryModulePath"
                 }
                 
-                Import-Module -Name $discoveryModulePath -Force
-                
-                # Execute discovery with timeout handling
+                # This is a critical step, wrap it in its own try/catch
+                try {
+                    Import-Module -Name $discoveryModulePath -Force -Global
+                } catch {
+                    throw "Failed to import module '$discoveryModulePath'. Error: $($_.Exception.Message)"
+                }
+
+                # Check for the discovery function
                 $functionName = "Invoke-${modName}Discovery"
                 if (-not (Get-Command $functionName -ErrorAction SilentlyContinue)) {
-                    throw "Discovery function not found: $functionName"
+                    throw "Discovery function '$functionName' not found after importing module."
                 }
                 
-                # Add timeout to the discovery execution
-                $result = $null
-                $timeoutSeconds = 900 # 4 minutes max per module
-
-                $job = Start-Job -ScriptBlock {
-                    param($funcName, $config, $context)
-                    
-                    # Check if function accepts Context parameter
-                    $functionParams = (Get-Command $funcName).Parameters
-                    if ($functionParams.ContainsKey('Context')) {
-                        & $funcName -Configuration $config -Context $context
-                    } else {
-                        & $funcName -Configuration $config
-                    }
-                } -ArgumentList $functionName, $modConfig, $globalContext
-
-                # Wait for job with timeout
-                $completed = Wait-Job -Job $job -Timeout $timeoutSeconds
-                if ($completed) {
-                    $result = Receive-Job -Job $job
-                    Remove-Job -Job $job
+                # Execute discovery
+                $params = @{
+                    Configuration = $modConfig
+                    Context = $globalContext
+                }
+                
+                # Get the result from the module's execution
+                $moduleOutput = & $functionName @params
+                
+                # Check if the module returned the correct object type
+                if ($moduleOutput -is [DiscoveryResult]) {
+                    $discoveryResult = $moduleOutput
                 } else {
-                    Stop-Job -Job $job
-                    Remove-Job -Job $job
-                    throw "Module execution timed out after $timeoutSeconds seconds"
+                    # If it didn't, the module is not compliant. Log this but don't lose the data.
+                    $discoveryResult.AddWarning("Module did not return a compliant DiscoveryResult object. Data may be incomplete.")
+                    $discoveryResult.Data = $moduleOutput
+                    $discoveryResult.Success = $true # Assume success if it returned something
                 }
-                
-                if ($result -and $result -is [DiscoveryResult]) {
-                    $resultsCollection.Add($result)
-                    return @{
-                        Success = $true
-                        ModuleName = $modName
-                        Duration = (Get-Date) - $jobStartTime
-                        RecordCount = if ($result.Metadata -and $result.Metadata['RecordCount']) { 
-                            $result.Metadata['RecordCount'] 
-                        } else { 0 }
-                    }
-                } else {
-                    throw "Module returned invalid result"
-                }
-                
+
             } catch {
-                # Create failed result
-                $failedResult = [DiscoveryResult]::new($modName)
-                $failedResult.AddError("Execution failed: $($_.Exception.Message)", $_.Exception)
-                $failedResult.Complete()
-                $resultsCollection.Add($failedResult)
+                # This is the master catch block for any failure within the runspace
+                $discoveryResult.Success = $false
+                $discoveryResult.AddError("Runspace execution failed: $($_.Exception.Message)", $_.Exception, @{ Module = $modName })
                 
-                # Log error
+                # Also add to the orchestrator's central error collection for immediate logging
                 $errorCollection.Add([PSCustomObject]@{
                     Module = $modName
                     Error = $_.Exception.Message
@@ -892,13 +874,22 @@ function Invoke-DiscoveryPhase {
                     Timestamp = Get-Date
                     Duration = (Get-Date) - $jobStartTime
                 })
-                
-                return @{
-                    Success = $false
-                    ModuleName = $modName
-                    Error = $_.Exception.Message
-                    Duration = (Get-Date) - $jobStartTime
-                }
+            } finally {
+                $discoveryResult.Complete()
+                $resultsCollection.Add($discoveryResult)
+            }
+            
+            # Return job status for monitoring
+            return @{
+                Success = $discoveryResult.Success
+                ModuleName = $modName
+                Duration = (Get-Date) - $jobStartTime
+                RecordCount = if ($discoveryResult.Metadata -and $discoveryResult.Metadata['RecordCount']) {
+                    $discoveryResult.Metadata['RecordCount']
+                } else { 0 }
+                Error = if (-not $discoveryResult.Success -and $discoveryResult.Errors.Count -gt 0) {
+                    $discoveryResult.Errors[0].Message
+                } else { $null }
             }
         }
         

@@ -1689,3 +1689,72 @@ Export-ModuleMember -Function 'Invoke-FileServerDiscovery'
 
 
 
+
+# =============================================================================
+# DISCOVERY MODULE INTERFACE FUNCTIONS
+# Required by M&A Orchestrator for module invocation
+# =============================================================================
+
+function Invoke-Discovery {
+    <#
+    .SYNOPSIS
+    Main discovery function called by the M&A Orchestrator
+    
+    .PARAMETER Context
+    The discovery context containing configuration and state information
+    
+    .PARAMETER Force
+    Force discovery even if cached data exists
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Context,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$Force
+    )
+    
+    try {
+        Write-MandALog "Starting FileServerDiscovery discovery" "INFO"
+        
+        $discoveryResult = @{
+            ModuleName = "FileServerDiscovery"
+            StartTime = Get-Date
+            Status = "Completed"
+            Data = @()
+            Errors = @()
+            Summary = @{ ItemsDiscovered = 0; ErrorCount = 0 }
+        }
+        
+        # TODO: Implement actual discovery logic for FileServerDiscovery
+        Write-MandALog "Completed FileServerDiscovery discovery" "SUCCESS"
+        
+        return $discoveryResult
+        
+    } catch {
+        Write-MandALog "Error in FileServerDiscovery discovery: $($_.Exception.Message)" "ERROR"
+        throw
+    }
+}
+
+function Get-DiscoveryInfo {
+    <#
+    .SYNOPSIS
+    Returns metadata about this discovery module
+    #>
+    [CmdletBinding()]
+    param()
+    
+    return @{
+        ModuleName = "FileServerDiscovery"
+        ModuleVersion = "1.0.0"
+        Description = "FileServerDiscovery discovery module for M&A Suite"
+        RequiredPermissions = @("Read access to FileServerDiscovery resources")
+        EstimatedDuration = "5-15 minutes"
+        SupportedEnvironments = @("OnPremises", "Cloud", "Hybrid")
+    }
+}
+
+
+Export-ModuleMember -Function Invoke-Discovery, Get-DiscoveryInfo

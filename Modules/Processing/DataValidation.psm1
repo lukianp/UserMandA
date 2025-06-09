@@ -9,22 +9,32 @@
 
 <#
 .SYNOPSIS
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
-}
+    M&A Discovery Suite - Data Validation Module
+.DESCRIPTION
+    This module is responsible for validating the quality and completeness of
+    processed data (e.g., user profiles) and generating quality reports.
+.NOTES
+    Version: 1.2.1 (Corrected context access at module scope)
+    Author: Gemini
+#>
 
+[CmdletBinding()]
+param()
+
+# Module-scope context variable
+$script:ModuleContext = $null
+
+# Lazy initialization function
+function Get-ModuleContext {
+    if ($null -eq $script:ModuleContext) {
+        if ($null -ne $global:MandA) {
+            $script:ModuleContext = $global:MandA
+        } else {
+            throw "Module context not available"
+        }
+    }
+    return $script:ModuleContext
+}
 
 function Invoke-SafeModuleExecution {
     [CmdletBinding()]
@@ -42,7 +52,7 @@ function Invoke-SafeModuleExecution {
     $result = @{
         Success = $false
         Data = $null
-        Error = $null
+        ErrorInfo = $null
         Duration = $null
     }
     
@@ -59,7 +69,7 @@ function Invoke-SafeModuleExecution {
         $result.Success = $true
         
     } catch {
-        $result.Error = @{
+        $result.ErrorInfo = @{
             Message = $_.Exception.Message
             Type = $_.Exception.GetType().FullName
             StackTrace = $_.ScriptStackTrace
@@ -81,19 +91,6 @@ function Invoke-SafeModuleExecution {
     
     return $result
 }
-
-
-    M&A Discovery Suite - Data Validation Module
-.DESCRIPTION
-    This module is responsible for validating the quality and completeness of
-    processed data (e.g., user profiles) and generating quality reports.
-.NOTES
-    Version: 1.2.1 (Corrected context access at module scope)
-    Author: Gemini
-#>
-
-[CmdletBinding()]
-param()
 
 # NOTE: Context access has been moved to function scope to avoid module loading issues.
 # The global context ($global:MandA) will be accessed by functions when they are called,
@@ -260,7 +257,7 @@ function New-QualityReport {
     
     $reportFilePath = Join-Path $OutputPath $ReportFileName
 
-    $outputDirToEnsure = Split-Path $reportFilePath -Resolve # Renamed $outputDir
+    $outputDirToEnsure = Split-Path $reportFilePath -Parent # Renamed $outputDir
     if (-not (Test-Path $outputDirToEnsure)) {
         try {
             New-Item -Path $outputDirToEnsure -ItemType Directory -Force | Out-Null
@@ -295,12 +292,14 @@ Detailed Issues Found ($($ValidationResults.Issues.Count)):
             $reportContent += ("-" * ($group.Name.Length + 23)) + "`n" 
             $group.Group | Sort-Object Severity, Identifier | ForEach-Object { 
                 $reportContent += @"
+
   Identifier:     $($_.Identifier)
   Field:          $($_.Field)
   Severity:       $($_.Severity)
   Description:    $($_.Description)
   Recommendation: $($_.Recommendation)
   ----------
+
 "@
             }
         }

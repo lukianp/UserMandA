@@ -30,8 +30,9 @@
 $script:ModuleContext = $null
 
 # Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
+{
+    try {
+        if ($null -eq $script:ModuleContext) {
         if ($null -ne $global:MandA) {
             $script:ModuleContext = $global:MandA
         } else {
@@ -39,6 +40,10 @@ function Get-ModuleContext {
         }
     }
     return $script:ModuleContext
+    } catch {
+        Write-MandALog "Error in function 'Get-ModuleContext': $($_.Exception.Message)" "ERROR"
+        throw
+    }
 }
 
 
@@ -406,5 +411,6 @@ function Get-RandomInt {
 Export-ModuleMember -Function Import-DataFromCSV, Export-DataToCSV, Test-FileWriteAccess, Backup-File, Ensure-DirectoryExists, Clear-OldFiles, Get-DirectorySizeFormatted
 
 Write-Host "[FileOperations.psm1] Module loaded." -ForegroundColor DarkGray
+
 
 

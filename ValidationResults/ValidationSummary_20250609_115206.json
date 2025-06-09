@@ -1,0 +1,47 @@
+{
+    "ValidationDuration":  {
+                               "Ticks":  62210984,
+                               "Days":  0,
+                               "Hours":  0,
+                               "Milliseconds":  221,
+                               "Minutes":  0,
+                               "Seconds":  6,
+                               "TotalDays":  7.20034537037037E-05,
+                               "TotalHours":  0.0017280828888888889,
+                               "TotalMilliseconds":  6221.0984,
+                               "TotalMinutes":  0.10368497333333333,
+                               "TotalSeconds":  6.2210984
+                           },
+    "Timestamp":  {
+                      "value":  "\/Date(1749466326237)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "Monday, June 9, 2025 11:52:06 AM"
+                  },
+    "ModulesAnalyzed":  0,
+    "IssuesByCategory":  [
+                             {
+                                 "ErrorHandling":  65
+                             },
+                             {
+                                 "General":  47
+                             },
+                             {
+                                 "Orchestrator":  2
+                             },
+                             {
+                                 "Lifecycle":  1
+                             }
+                         ],
+    "IssuesBySeverity":  [
+                             {
+                                 "WARN":  67
+                             },
+                             {
+                                 "ERROR":  47
+                             },
+                             {
+                                 "INFO":  1
+                             }
+                         ],
+    "TotalIssues":  115
+}

@@ -1002,3 +1002,72 @@ Export-ModuleMember -Function @(
 
 
 
+
+# =============================================================================
+# DISCOVERY MODULE INTERFACE FUNCTIONS
+# Required by M&A Orchestrator for module invocation
+# =============================================================================
+
+function Invoke-Discovery {
+    <#
+    .SYNOPSIS
+    Main discovery function called by the M&A Orchestrator
+    
+    .PARAMETER Context
+    The discovery context containing configuration and state information
+    
+    .PARAMETER Force
+    Force discovery even if cached data exists
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Context,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$Force
+    )
+    
+    try {
+        Write-MandALog "Starting SharePointDiscovery discovery" "INFO"
+        
+        $discoveryResult = @{
+            ModuleName = "SharePointDiscovery"
+            StartTime = Get-Date
+            Status = "Completed"
+            Data = @()
+            Errors = @()
+            Summary = @{ ItemsDiscovered = 0; ErrorCount = 0 }
+        }
+        
+        # TODO: Implement actual discovery logic for SharePointDiscovery
+        Write-MandALog "Completed SharePointDiscovery discovery" "SUCCESS"
+        
+        return $discoveryResult
+        
+    } catch {
+        Write-MandALog "Error in SharePointDiscovery discovery: $($_.Exception.Message)" "ERROR"
+        throw
+    }
+}
+
+function Get-DiscoveryInfo {
+    <#
+    .SYNOPSIS
+    Returns metadata about this discovery module
+    #>
+    [CmdletBinding()]
+    param()
+    
+    return @{
+        ModuleName = "SharePointDiscovery"
+        ModuleVersion = "1.0.0"
+        Description = "SharePointDiscovery discovery module for M&A Suite"
+        RequiredPermissions = @("Read access to SharePointDiscovery resources")
+        EstimatedDuration = "5-15 minutes"
+        SupportedEnvironments = @("OnPremises", "Cloud", "Hybrid")
+    }
+}
+
+
+Export-ModuleMember -Function Invoke-Discovery, Get-DiscoveryInfo

@@ -32,13 +32,13 @@
 # Module-scope context variable
 $script:ModuleContext = $null
 
-# Lazy initialization function
+# Lazy initialization function to ensure context is always available
 function Get-ModuleContext {
     if ($null -eq $script:ModuleContext) {
         if ($null -ne $global:MandA) {
             $script:ModuleContext = $global:MandA
         } else {
-            throw "Module context not available"
+            throw "Global M&A context ($global:MandA) is not available. The script must be run via the orchestrator."
         }
     }
     return $script:ModuleContext
@@ -61,7 +61,7 @@ function Invoke-SafeModuleExecution {
     $result = @{
         Success = $false
         Data = $null
-        Error = $null
+        ErrorInfo = $null
         Duration = $null
     }
     
@@ -78,7 +78,7 @@ function Invoke-SafeModuleExecution {
         $result.Success = $true
         
     } catch {
-        $result.Error = @{
+        $result.ErrorInfo = @{
             Message = $_.Exception.Message
             Type = $_.Exception.GetType().FullName
             StackTrace = $_.ScriptStackTrace

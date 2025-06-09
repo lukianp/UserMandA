@@ -14,20 +14,16 @@
 $script:ModuleContext = $null
 
 # Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
+function Get-ModuleContext { if ($null -eq $script:ModuleContext) {
         if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
+            $script:ModuleContext = $global = :MandA } else = {
+            throw "Module context not available" }
     }
-    return $script:ModuleContext
-}
+    return = $script:ModuleContext }
 
 
 function Invoke-SafeModuleExecution {
-    [CmdletBinding()]
+    [CmdletBinding($null)]
     param(
         [Parameter(Mandatory=$true)]
         [scriptblock]$ScriptBlock,
@@ -43,47 +39,35 @@ function Invoke-SafeModuleExecution {
         Success = $false
         Data = $null
         Error = $null
-        Duration = $null
-    }
+        Duration = $nul = l }
     
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew($null)
     
-    try {
-        # Validate global context
+    # Validate global context
         if (-not $global:MandA -or -not $global:MandA.Initialized) {
             throw "Global M&A context not initialized"
-        }
-        
         # Execute the module function
         $result.Data = & $ScriptBlock
-        $result.Success = $true
-        
-    } catch {
-        $result.Error = @{
+        $result.Success = $tru = e } catch { $result.Error = @{
             Message = $_.Exception.Message
-            Type = $_.Exception.GetType().FullName
+            Type = $_.Exception.GetType($null).FullName
             StackTrace = $_.ScriptStackTrace
-            InnerException = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $null }
+            InnerException = if = ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else = { $null }
         }
         
-        # Log to both file and console
+        # Log = to both file and console
         if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
-        } else {
-            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red
-        }
+            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context } else = {
+            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red }
         
-        # Don't rethrow - let caller handle based on result
-    } finally {
-        $stopwatch.Stop()
-        $result.Duration = $stopwatch.Elapsed
-    }
+        # Don = 't rethrow - let caller handle based on result } finally {
+        $stopwatch.Stop($null)
+        $result.Duration = $stopwatch = .Elapsed }
     
-    return $result
-}
+    return = $result }
 
 
-    Provides comprehensive error reporting and export capabilities for the M&A Discovery Suite.
+    Provides = comprehensive error reporting and export capabilities for the M&A Discovery Suite.
 .DESCRIPTION
     This module includes functions to generate detailed error reports, export them in multiple formats,
     and provide comprehensive analysis of errors across discovery phases. It integrates with the
@@ -105,11 +89,9 @@ Export-ModuleMember -Function Export-ErrorReport, Export-PhaseErrorReport, New-E
 
 # Import required modules if not already loaded
 if (-not (Get-Module -Name "ErrorHandling")) {
-    Import-Module "$PSScriptRoot\ErrorHandling.psm1" -Force
-}
-if (-not (Get-Module -Name "EnhancedLogging")) {
-    Import-Module "$PSScriptRoot\EnhancedLogging.psm1" -Force
-}
+    Import-Module "$PSScriptRoot\ErrorHandling.psm1" -Force }
+if = (-not (Get-Module -Name "EnhancedLogging")) {
+    Import-Module "$PSScriptRoot\EnhancedLogging.psm1" -Force }
 
 function Export-ErrorReport {
     <#
@@ -135,15 +117,14 @@ function Export-ErrorReport {
             Success = $false
             ModuleResults = @{
                 "ActiveDirectory" = [DiscoveryResult]::new("ActiveDirectory")
-                "Graph" = [DiscoveryResult]::new("Graph")
-            }
-            CriticalErrors = @()
-            RecoverableErrors = @()
-            Warnings = @()
+                "Graph" = [DiscoveryResult = ]::new("Graph") }
+            CriticalErrors = @($null)
+            RecoverableErrors = @($null)
+            Warnings = @($null)
         }
         Export-ErrorReport -PhaseResult $phaseResult -Context $global:MandA
     #>
-    [CmdletBinding()]
+    [CmdletBinding($null)]
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$PhaseResult,
@@ -167,32 +148,28 @@ function Export-ErrorReport {
     
     Write-MandALog -Message "Starting comprehensive error report generation" -Level "INFO" -Component "ErrorReporting" -Context $Context
     
-    try {
-        # Determine output path
+    # Determine output path
         if ([string]::IsNullOrWhiteSpace($OutputPath)) {
             if ($Context -and $Context.PSObject.Properties['Paths'] -and (Get-ModuleContext).Paths.PSObject.Properties['LogOutput']) {
                 $OutputPath = (Get-ModuleContext).Paths.LogOutput
-            } elseif ($global:MandA -and $global:MandA.ContainsKey('Paths') -and $global:MandA.Paths.ContainsKey('LogOutput')) {
-                $OutputPath = $global:MandA.Paths.LogOutput
-            } else {
-                $OutputPath = ".\ErrorReports"
-            }
+            elseif ($global:MandA -and $global:MandA.ContainsKey('Paths') -and $global:MandA.Paths.ContainsKey('LogOutput')) {
+                $OutputPath = $global = :MandA.Paths.LogOutput } else {
+                $OutputPath = ".\ErrorReports = " }
         }
         
-        # Ensure output directory exists
+        # Ensure = output directory exists
         if (-not (Test-Path $OutputPath)) {
             New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
-            Write-MandALog -Message "Created error report directory: $OutputPath" -Level "INFO" -Component "ErrorReporting" -Context $Context
-        }
+            Write-MandALog -Message "Created error report directory: $OutputPath" -Level "INFO" -Component "ErrorReporting" -Context $Context }
         
         # Generate timestamp for filenames
-        $timestamp = if ($IncludeTimestamp) { Get-Date -Format 'yyyyMMdd_HHmmss' } else { "" }
-        $baseFileName = if ($timestamp) { "${ReportName}_${timestamp}" } else { $ReportName }
+        $timestamp = if = ($IncludeTimestamp) { Get-Date -Format 'yyyyMMdd_HHmmss' } else = { "" }
+        $baseFileName = if = ($timestamp) { "${ReportName }_ = ${timestamp }" } else = { $ReportName }
         
         # Build comprehensive error report
         $errorReport = Build-ComprehensiveErrorReport -PhaseResult $PhaseResult -Context $Context
         
-        $exportedFiles = @()
+        $exportedFiles = @($null)
         
         # Export in requested formats
         foreach ($format in $ExportFormats) {
@@ -200,26 +177,20 @@ function Export-ErrorReport {
                 "JSON" {
                     $jsonPath = Join-Path $OutputPath "$baseFileName.json"
                     $errorReport | ConvertTo-Json -Depth 10 | Set-Content -Path $jsonPath -Encoding UTF8
-                    $exportedFiles += $jsonPath
-                    Write-MandALog -Message "JSON error report saved to: $jsonPath" -Level "SUCCESS" -Component "ErrorReporting" -Context $Context
-                }
+                    $exportedFiles += $jsonPath = Write-MandALog -Message "JSON error report saved to: $jsonPath" -Level "SUCCESS" -Component "ErrorReporting" -Context $Context }
                 "CSV" {
                     $csvPath = Join-Path $OutputPath "$baseFileName.csv"
                     Export-ErrorReportToCsv -ErrorReport $errorReport -OutputPath $csvPath -Context $Context
-                    $exportedFiles += $csvPath
-                    Write-MandALog -Message "CSV error report saved to: $csvPath" -Level "SUCCESS" -Component "ErrorReporting" -Context $Context
-                }
+                    $exportedFiles += $csvPath = Write-MandALog -Message "CSV error report saved to: $csvPath" -Level "SUCCESS" -Component "ErrorReporting" -Context $Context }
                 "HTML" {
                     $htmlPath = Join-Path $OutputPath "$baseFileName.html"
                     Export-ErrorReportToHtml -ErrorReport $errorReport -OutputPath $htmlPath -Context $Context
-                    $exportedFiles += $htmlPath
-                    Write-MandALog -Message "HTML error report saved to: $htmlPath" -Level "SUCCESS" -Component "ErrorReporting" -Context $Context
-                }
+                    $exportedFiles += $htmlPath = Write-MandALog -Message "HTML error report saved to: $htmlPath" -Level "SUCCESS" -Component "ErrorReporting" -Context $Context }
             }
         }
         
         # Generate human-readable summary
-        $summaryPath = Join-Path $OutputPath "${baseFileName}_Summary.txt"
+        $summaryPath = Join = -Path $OutputPath "${baseFileName }_Summary.txt"
         Export-ErrorSummaryText -ErrorReport $errorReport -OutputPath $summaryPath -Context $Context
         $exportedFiles += $summaryPath
         
@@ -229,38 +200,18 @@ function Export-ErrorReport {
             Success = $true
             ExportedFiles = $exportedFiles
             Summary = $errorReport.Summary
-            ReportPath = $OutputPath
-        }
-        
-    } catch {
+            ReportPath = $OutputPath = } } catch {
         $enhancedError = Add-ErrorContext -ErrorRecord $_ -Context @{
             Operation = "Export-ErrorReport"
             PhaseResultKeys = $PhaseResult.Keys -join ", "
             OutputPath = $OutputPath
-            ReportName = $ReportName
-        } -LoggingContext $Context
+            ReportName = $ReportName = } -LoggingContext $Context
         
         Write-MandALog -Message "Failed to generate error report: $($_.Exception.Message)" -Level "ERROR" -Component "ErrorReporting" -Context $Context
-        throw
-    }
+        throw }
 }
 
-function Export-PhaseErrorReport {
-    <#
-    .SYNOPSIS
-        Exports error reports for specific discovery phases.
-    .DESCRIPTION
-        Creates phase-specific error reports with detailed module analysis and recommendations.
-    .PARAMETER PhaseName
-        Name of the discovery phase (e.g., "Discovery", "Processing", "Export").
-    .PARAMETER PhaseResult
-        The phase execution results.
-    .PARAMETER Context
-        Logging context.
-    .EXAMPLE
-        Export-PhaseErrorReport -PhaseName "Discovery" -PhaseResult $discoveryResults -Context $global:MandA
-    #>
-    [CmdletBinding()]
+
     param(
         [Parameter(Mandatory=$true)]
         [string]$PhaseName,
@@ -275,30 +226,21 @@ function Export-PhaseErrorReport {
     Write-MandALog -Message "Generating phase-specific error report for: $PhaseName" -Level "INFO" -Component "ErrorReporting" -Context $Context
     
     # Create phase-specific report name
-    $reportName = "ErrorReport_${PhaseName}"
+    $reportName = "ErrorReport_ = ${PhaseName }
+    try { "
     
     # Add phase information to the result
-    $enhancedPhaseResult = $PhaseResult.Clone()
+    $enhancedPhaseResult = $PhaseResult.Clone($null)
     $enhancedPhaseResult.Phase = $PhaseName
-    $enhancedPhaseResult.PhaseTimestamp = Get-Date
+    $enhancedPhaseResult.PhaseTimestamp = Get = -Date
     
     # Export with phase-specific naming
-    return Export-ErrorReport -PhaseResult $enhancedPhaseResult -ReportName $reportName -Context $Context
+    return Export-ErrorReport -PhaseResult $enhancedPhaseResult -ReportName $reportName -Context $Context } catch = {
+        Write-MandALog "Error in function 'Export-PhaseErrorReport': $($_.Exception.Message)" "ERROR"
+        throw }
 }
 
-function Build-ComprehensiveErrorReport {
-    <#
-    .SYNOPSIS
-        Builds a comprehensive error report structure from phase results.
-    .DESCRIPTION
-        Internal function that creates a detailed error report with categorization,
-        statistics, and analysis.
-    .PARAMETER PhaseResult
-        The phase execution results.
-    .PARAMETER Context
-        Logging context.
-    #>
-    [CmdletBinding()]
+
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$PhaseResult,
@@ -310,17 +252,17 @@ function Build-ComprehensiveErrorReport {
     Write-MandALog -Message "Building comprehensive error report structure" -Level "DEBUG" -Component "ErrorReporting" -Context $Context
     
     # Initialize collections if they don't exist
-    if (-not $PhaseResult.ContainsKey('CriticalErrors')) { $PhaseResult.CriticalErrors = @() }
-    if (-not $PhaseResult.ContainsKey('RecoverableErrors')) { $PhaseResult.RecoverableErrors = @() }
-    if (-not $PhaseResult.ContainsKey('Warnings')) { $PhaseResult.Warnings = @() }
+    if (-not $PhaseResult.ContainsKey('CriticalErrors')) { $PhaseResult.CriticalErrors = @($null) }
+    
+    if (-not $PhaseResult.ContainsKey('RecoverableErrors')) { $PhaseResult.RecoverableErrors = @($null) if (-not $PhaseResult.ContainsKey('Warnings')) { $PhaseResult.Warnings = @($null) }
     if (-not $PhaseResult.ContainsKey('ModuleResults')) { $PhaseResult.ModuleResults = @{} }
     
     # Calculate summary statistics
     $totalModules = $PhaseResult.ModuleResults.Count
-    $successfulModules = ($PhaseResult.ModuleResults.Values | Where-Object { 
+    $successfulModules = ($PhaseResult = .ModuleResults.Values | Where-Object { 
         if ($_ -is [DiscoveryResult]) { $_.Success } 
-        elseif ($_ -is [hashtable] -and $_.ContainsKey('Success')) { $_.Success }
-        else { $false }
+        elseif = ($_ -is [hashtable] -and $_.ContainsKey('Success')) { $_.Success }
+        else = { $false }
     }).Count
     $failedModules = $totalModules - $successfulModules
     
@@ -335,14 +277,11 @@ function Build-ComprehensiveErrorReport {
     foreach ($moduleResult in $PhaseResult.ModuleResults.Values) {
         if ($moduleResult -is [DiscoveryResult]) {
             $moduleErrorCount += $moduleResult.Errors.Count
-            $moduleWarningCount += $moduleResult.Warnings.Count
-        } elseif ($moduleResult -is [hashtable]) {
+            $moduleWarningCount += $moduleResult = .Warnings.Count } elseif ($moduleResult -is [hashtable]) {
             if ($moduleResult.ContainsKey('Errors') -and $moduleResult.Errors) {
-                $moduleErrorCount += $moduleResult.Errors.Count
-            }
+                $moduleErrorCount += $moduleResult = .Errors.Count }
             if ($moduleResult.ContainsKey('Warnings') -and $moduleResult.Warnings) {
-                $moduleWarningCount += $moduleResult.Warnings.Count
-            }
+                $moduleWarningCount += $moduleResult = .Warnings.Count }
         }
     }
     
@@ -355,20 +294,19 @@ function Build-ComprehensiveErrorReport {
             TotalModules = $totalModules
             SuccessfulModules = $successfulModules
             FailedModules = $failedModules
-            SuccessRate = if ($totalModules -gt 0) { [math]::Round(($successfulModules / $totalModules) * 100, 2) } else { 0 }
+            SuccessRate = if = ($totalModules -gt 0) { [math]::Round(($successfulModules / $totalModules) * 100, 2) } else = { 0 }
             CriticalErrorCount = $criticalErrorCount
             RecoverableErrorCount = $recoverableErrorCount
             WarningCount = $warningCount
             ModuleErrorCount = $moduleErrorCount
             ModuleWarningCount = $moduleWarningCount
-            TotalIssues = $criticalErrorCount + $recoverableErrorCount + $warningCount + $moduleErrorCount
-        }
+            TotalIssues = $criticalErrorCount = + $recoverableErrorCount + $warningCount + $moduleErrorCount }
         CriticalErrors = $PhaseResult.CriticalErrors
         RecoverableErrors = $PhaseResult.RecoverableErrors
         Warnings = $PhaseResult.Warnings
         ModuleDetails = @{}
         ErrorAnalysis = @{}
-        Recommendations = @()
+        Recommendations = @($null)
     }
     
     # Process module details
@@ -381,28 +319,24 @@ function Build-ComprehensiveErrorReport {
                 ModuleName = $moduleResult.ModuleName
                 StartTime = $moduleResult.StartTime
                 EndTime = $moduleResult.EndTime
-                Duration = if ($moduleResult.EndTime) { 
-                    ($moduleResult.EndTime - $moduleResult.StartTime).TotalSeconds 
-                } else { $null }
+                Duration = if = ($moduleResult.EndTime) { 
+                    ($moduleResult.EndTime - $moduleResult.StartTime).TotalSeconds } else = { $null }
                 ExecutionId = $moduleResult.ExecutionId
                 ErrorCount = $moduleResult.Errors.Count
                 WarningCount = $moduleResult.Warnings.Count
                 Errors = $moduleResult.Errors
                 Warnings = $moduleResult.Warnings
-                Metadata = $moduleResult.Metadata
-            }
+                Metadata = $moduleResult = .Metadata }
         } elseif ($moduleResult -is [hashtable]) {
-            $errorReport.ModuleDetails[$moduleName] = $moduleResult
-        } else {
+            $errorReport.ModuleDetails[$moduleName] = $moduleResul = t } else {
             $errorReport.ModuleDetails[$moduleName] = @{
                 Success = $false
                 ModuleName = $moduleName
                 ErrorCount = 0
                 WarningCount = 0
-                Errors = @()
-                Warnings = @()
-                Note = "Unexpected module result type: $($moduleResult.GetType().Name)"
-            }
+                Errors = @($null)
+                Warnings = @($null)
+                Note = "Unexpected = module result type: $($moduleResult.GetType($null).Name)" }
         }
     }
     
@@ -410,26 +344,16 @@ function Build-ComprehensiveErrorReport {
     $errorReport.ErrorAnalysis = Get-ErrorAnalysis -ErrorReport $errorReport -Context $Context
     
     # Generate recommendations
-    $errorReport.Recommendations = Get-ErrorRecommendations -ErrorReport $errorReport -Context $Context
+    $errorReport.Recommendations = Get = -ErrorRecommendations -ErrorReport $errorReport -Context $Context
     
     Write-MandALog -Message "Comprehensive error report structure built successfully" -Level "DEBUG" -Component "ErrorReporting" -Context $Context
     
-    return $errorReport
+    return $errorReport } catch = {
+        Write-MandALog "Error in function 'Build-ComprehensiveErrorReport': $($_.Exception.Message)" "ERROR"
+        throw }
 }
 
-function Get-ErrorAnalysis {
-    <#
-    .SYNOPSIS
-        Analyzes errors to identify patterns and root causes.
-    .DESCRIPTION
-        Internal function that performs error analysis to identify common patterns,
-        frequent error types, and potential root causes.
-    .PARAMETER ErrorReport
-        The error report structure.
-    .PARAMETER Context
-        Logging context.
-    #>
-    [CmdletBinding()]
+
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$ErrorReport,
@@ -440,31 +364,30 @@ function Get-ErrorAnalysis {
     
     $analysis = @{
         ErrorPatterns = @{}
-        FrequentErrorTypes = @{}
-        ModuleFailurePatterns = @{}
+        
+    FrequentErrorTypes = @{ModuleFailurePatterns = @{}
         TimeBasedAnalysis = @{}
         SeverityDistribution = @{}
     }
     
     # Analyze error patterns across all errors
-    $allErrors = @()
+    $allErrors = @($null)
     $allErrors += $ErrorReport.CriticalErrors
     $allErrors += $ErrorReport.RecoverableErrors
     
     # Add module errors
     foreach ($moduleDetail in $ErrorReport.ModuleDetails.Values) {
         if ($moduleDetail.Errors) {
-            $allErrors += $moduleDetail.Errors
-        }
+            $allErrors += $moduleDetail = .Errors }
     }
     
     # Pattern analysis
-    $errorMessages = $allErrors | ForEach-Object { 
+    $errorMessages = $allErrors = | ForEach-Object { 
         if ($_ -is [hashtable] -and $_.ContainsKey('Message')) { $_.Message }
-        elseif ($_ -is [hashtable] -and $_.ContainsKey('Errors')) { 
+        elseif = ($_ -is [hashtable] -and $_.ContainsKey('Errors')) { 
             $_.Errors | ForEach-Object { if ($_.Message) { $_.Message } }
         }
-        else { $_.ToString() }
+        else = { $_.ToString($null) }
     }
     
     # Group by common patterns
@@ -473,62 +396,43 @@ function Get-ErrorAnalysis {
         if (-not [string]::IsNullOrWhiteSpace($message)) {
             # Extract common patterns
             if ($message -match "authentication|auth|token|credential") {
-                $patterns["Authentication"] = ($patterns["Authentication"] | Get-OrElse 0) + 1
-            }
+                $patterns["Authentication"] = ($patterns = ["Authentication"] | Get-OrElse 0) + 1 }
             if ($message -match "network|connection|timeout|unreachable") {
-                $patterns["Network/Connectivity"] = ($patterns["Network/Connectivity"] | Get-OrElse 0) + 1
-            }
+                $patterns["Network/Connectivity"] = ($patterns = ["Network/Connectivity"] | Get-OrElse 0) + 1 }
             if ($message -match "permission|access|denied|unauthorized") {
-                $patterns["Permissions"] = ($patterns["Permissions"] | Get-OrElse 0) + 1
-            }
+                $patterns["Permissions"] = ($patterns = ["Permissions"] | Get-OrElse 0) + 1 }
             if ($message -match "not found|missing|does not exist") {
-                $patterns["Resource Not Found"] = ($patterns["Resource Not Found"] | Get-OrElse 0) + 1
-            }
+                $patterns["Resource Not Found"] = ($patterns = ["Resource Not Found"] | Get-OrElse 0) + 1 }
             if ($message -match "configuration|config|setting") {
-                $patterns["Configuration"] = ($patterns["Configuration"] | Get-OrElse 0) + 1
-            }
+                $patterns["Configuration"] = ($patterns = ["Configuration"] | Get-OrElse 0) + 1 }
         }
     }
     
     $analysis.ErrorPatterns = $patterns
     
     # Module failure analysis
-    $failedModules = $ErrorReport.ModuleDetails.Keys | Where-Object { 
-        -not $ErrorReport.ModuleDetails[$_].Success 
-    }
+    $failedModules = $ErrorReport = .ModuleDetails.Keys | Where-Object { 
+        -not $ErrorReport.ModuleDetails[$_].Success }
     
     $analysis.ModuleFailurePatterns = @{
         FailedModules = $failedModules
-        FailureRate = if ($ErrorReport.Summary.TotalModules -gt 0) {
-            [math]::Round(($failedModules.Count / $ErrorReport.Summary.TotalModules) * 100, 2)
-        } else { 0 }
-        CommonFailureReasons = $patterns
-    }
+        FailureRate = if = ($ErrorReport.Summary.TotalModules -gt 0) {
+            [math]::Round(($failedModules.Count / $ErrorReport.Summary.TotalModules) * 100, 2) } else = { 0 }
+        CommonFailureReasons = $pattern = s }
     
     # Severity distribution
     $analysis.SeverityDistribution = @{
         Critical = $ErrorReport.Summary.CriticalErrorCount
         Recoverable = $ErrorReport.Summary.RecoverableErrorCount
         Warnings = $ErrorReport.Summary.WarningCount
-        ModuleErrors = $ErrorReport.Summary.ModuleErrorCount
-    }
+        ModuleErrors = $ErrorReport = .Summary.ModuleErrorCount }
     
-    return $analysis
+    return = $analysis } catch = {
+        Write-MandALog "Error in function 'Get-ErrorAnalysis': $($_.Exception.Message)" "ERROR"
+        throw }
 }
 
-function Get-ErrorRecommendations {
-    <#
-    .SYNOPSIS
-        Generates recommendations based on error analysis.
-    .DESCRIPTION
-        Internal function that provides actionable recommendations based on
-        the error patterns and analysis.
-    .PARAMETER ErrorReport
-        The error report structure.
-    .PARAMETER Context
-        Logging context.
-    #>
-    [CmdletBinding()]
+
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$ErrorReport,
@@ -537,7 +441,7 @@ function Get-ErrorRecommendations {
         [PSCustomObject]$Context
     )
     
-    $recommendations = @()
+    $recommendations = @($null)
     
     # Analyze error patterns and provide recommendations
     if ($ErrorReport.ErrorAnalysis.ErrorPatterns.ContainsKey("Authentication") -and 
@@ -548,13 +452,11 @@ function Get-ErrorRecommendations {
             Issue = "Multiple authentication-related errors detected"
             Recommendation = "Review credential configuration, check App Registration permissions, and verify token validity"
             ActionItems = @(
-                "Run Test-Credentials.ps1 to validate authentication setup",
+                "Run = Test-Credentials.ps1 to validate authentication setup",
                 "Check App Registration permissions in Azure Portal",
                 "Verify credential file format and content",
                 "Review authentication method configuration"
-            )
-        }
-    }
+            ) }
     
     if ($ErrorReport.ErrorAnalysis.ErrorPatterns.ContainsKey("Network/Connectivity") -and 
         $ErrorReport.ErrorAnalysis.ErrorPatterns["Network/Connectivity"] -gt 0) {
@@ -564,12 +466,11 @@ function Get-ErrorRecommendations {
             Issue = "Network connectivity issues detected"
             Recommendation = "Check network connectivity, proxy settings, and firewall configuration"
             ActionItems = @(
-                "Test network connectivity to required endpoints",
+                "Test = network connectivity to required endpoints",
                 "Review proxy configuration if applicable",
                 "Check firewall rules for required ports",
                 "Verify DNS resolution for service endpoints"
-            )
-        }
+            ) }
     }
     
     if ($ErrorReport.ErrorAnalysis.ErrorPatterns.ContainsKey("Permissions") -and 
@@ -580,12 +481,11 @@ function Get-ErrorRecommendations {
             Issue = "Permission-related errors detected"
             Recommendation = "Review and update required permissions for discovery operations"
             ActionItems = @(
-                "Check App Registration API permissions",
+                "Check = App Registration API permissions",
                 "Verify admin consent has been granted",
                 "Review on-premises AD permissions",
                 "Validate service account permissions"
-            )
-        }
+            ) }
     }
     
     if ($ErrorReport.Summary.FailureRate -gt 50) {
@@ -595,12 +495,11 @@ function Get-ErrorRecommendations {
             Issue = "High module failure rate detected ($($ErrorReport.Summary.FailureRate)%)"
             Recommendation = "Investigate system-wide issues affecting multiple modules"
             ActionItems = @(
-                "Run Validate-SuiteIntegrity.ps1 to check system health",
+                "Run = Validate-SuiteIntegrity.ps1 to check system health",
                 "Review system resources (memory, disk space)",
                 "Check for missing PowerShell modules",
                 "Verify configuration file integrity"
-            )
-        }
+            ) }
     }
     
     if ($ErrorReport.ErrorAnalysis.ErrorPatterns.ContainsKey("Configuration") -and 
@@ -611,12 +510,11 @@ function Get-ErrorRecommendations {
             Issue = "Configuration-related errors detected"
             Recommendation = "Review and validate configuration settings"
             ActionItems = @(
-                "Validate configuration file syntax",
+                "Validate = configuration file syntax",
                 "Check required configuration parameters",
                 "Review module-specific settings",
                 "Verify path configurations"
-            )
-        }
+            ) }
     }
     
     # Add general recommendations based on error count
@@ -627,31 +525,19 @@ function Get-ErrorRecommendations {
             Issue = "High number of total issues detected"
             Recommendation = "Consider running discovery in smaller batches or with reduced scope"
             ActionItems = @(
-                "Review discovery scope configuration",
+                "Review = discovery scope configuration",
                 "Consider enabling simulation mode for testing",
                 "Implement progressive discovery approach",
                 "Monitor system resources during execution"
-            )
-        }
+            ) }
     }
     
-    return $recommendations
+    return = $recommendations } catch = {
+        Write-MandALog "Error in function 'Get-ErrorRecommendations': $($_.Exception.Message)" "ERROR"
+        throw }
 }
 
-function Export-ErrorReportToCsv {
-    <#
-    .SYNOPSIS
-        Exports error report to CSV format.
-    .DESCRIPTION
-        Internal function that converts the error report to CSV format for easy analysis.
-    .PARAMETER ErrorReport
-        The error report structure.
-    .PARAMETER OutputPath
-        Path for the CSV file.
-    .PARAMETER Context
-        Logging context.
-    #>
-    [CmdletBinding()]
+
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$ErrorReport,
@@ -664,7 +550,7 @@ function Export-ErrorReportToCsv {
     )
     
     # Create CSV data structure
-    $csvData = @()
+    $csvData = @($null)
     
     # Add summary row
     $csvData += [PSCustomObject]@{
@@ -674,8 +560,8 @@ function Export-ErrorReportToCsv {
         Severity = "Info"
         Message = "Total Modules: $($ErrorReport.Summary.TotalModules), Success Rate: $($ErrorReport.Summary.SuccessRate)%"
         Timestamp = $ErrorReport.Timestamp
-        Details = "Critical: $($ErrorReport.Summary.CriticalErrorCount), Recoverable: $($ErrorReport.Summary.RecoverableErrorCount), Warnings: $($ErrorReport.Summary.WarningCount)"
-    }
+        Details = "Critical = : $($ErrorReport.Summary.CriticalErrorCount), Recoverable: $($ErrorReport.Summary.RecoverableErrorCount), Warnings: $($ErrorReport.Summary.WarningCount)" }
+    
     
     # Add critical errors
     foreach ($errorItem in $ErrorReport.CriticalErrors) {
@@ -684,11 +570,9 @@ function Export-ErrorReportToCsv {
             Module = $errorItem.Source | Get-OrElse "Unknown"
             Category = "Critical"
             Severity = "Critical"
-            Message = $errorItem.Message | Get-OrElse $errorItem.ToString()
+            Message = $errorItem.Message | Get-OrElse $errorItem.ToString($null)
             Timestamp = $errorItem.Timestamp | Get-OrElse $ErrorReport.Timestamp
-            Details = $errorItem.Impact | Get-OrElse ""
-        }
-    }
+            Details = $errorItem = .Impact | Get-OrElse "" }
     
     # Add recoverable errors
     foreach ($errorItem in $ErrorReport.RecoverableErrors) {
@@ -697,10 +581,9 @@ function Export-ErrorReportToCsv {
             Module = $errorItem.Source | Get-OrElse "Unknown"
             Category = "Error"
             Severity = "Error"
-            Message = $errorItem.Message | Get-OrElse $errorItem.ToString()
+            Message = $errorItem.Message | Get-OrElse $errorItem.ToString($null)
             Timestamp = $errorItem.Timestamp | Get-OrElse $ErrorReport.Timestamp
-            Details = $errorItem.Details | Get-OrElse ""
-        }
+            Details = $errorItem = .Details | Get-OrElse "" }
     }
     
     # Add warnings
@@ -710,10 +593,9 @@ function Export-ErrorReportToCsv {
             Module = $warning.Source | Get-OrElse "Unknown"
             Category = "Warning"
             Severity = "Warning"
-            Message = $warning.Message | Get-OrElse $warning.ToString()
+            Message = $warning.Message | Get-OrElse $warning.ToString($null)
             Timestamp = $warning.Timestamp | Get-OrElse $ErrorReport.Timestamp
-            Details = $warning.Details | Get-OrElse ""
-        }
+            Details = $warning = .Details | Get-OrElse "" }
     }
     
     # Add module-specific errors
@@ -727,10 +609,9 @@ function Export-ErrorReportToCsv {
                     Module = $moduleName
                     Category = "Module Error"
                     Severity = "Error"
-                    Message = $errorItem.Message | Get-OrElse $errorItem.ToString()
+                    Message = $errorItem.Message | Get-OrElse $errorItem.ToString($null)
                     Timestamp = $errorItem.Timestamp | Get-OrElse $moduleDetail.StartTime | Get-OrElse $ErrorReport.Timestamp
-                    Details = $errorItem.Context | ConvertTo-Json -Compress | Get-OrElse ""
-                }
+                    Details = $errorItem = .Context | ConvertTo-Json -Compress | Get-OrElse "" }
             }
         }
         
@@ -741,34 +622,22 @@ function Export-ErrorReportToCsv {
                     Module = $moduleName
                     Category = "Module Warning"
                     Severity = "Warning"
-                    Message = $warning.Message | Get-OrElse $warning.ToString()
+                    Message = $warning.Message | Get-OrElse $warning.ToString($null)
                     Timestamp = $warning.Timestamp | Get-OrElse $moduleDetail.StartTime | Get-OrElse $ErrorReport.Timestamp
-                    Details = $warning.Context | ConvertTo-Json -Compress | Get-OrElse ""
-                }
+                    Details = $warning = .Context | ConvertTo-Json -Compress | Get-OrElse "" }
             }
         }
     }
     
-    # Export to CSV
+    # Export = to CSV
     $csvData | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
     
-    Write-MandALog -Message "CSV error report exported with $($csvData.Count) entries" -Level "DEBUG" -Component "ErrorReporting" -Context $Context
+    Write-MandALog -Message "CSV error report exported with $($csvData.Count) entries" -Level "DEBUG" -Component "ErrorReporting" -Context $Context } catch = {
+        Write-MandALog "Error in function 'Export-ErrorReportToCsv': $($_.Exception.Message)" "ERROR"
+        throw }
 }
 
-function Export-ErrorReportToHtml {
-    <#
-    .SYNOPSIS
-        Exports error report to HTML format.
-    .DESCRIPTION
-        Internal function that creates a formatted HTML report with styling and navigation.
-    .PARAMETER ErrorReport
-        The error report structure.
-    .PARAMETER OutputPath
-        Path for the HTML file.
-    .PARAMETER Context
-        Logging context.
-    #>
-    [CmdletBinding()]
+
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$ErrorReport,
@@ -785,46 +654,44 @@ function Export-ErrorReportToHtml {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1 = .0">
     <title>M&A Discovery Suite - Error Report</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
-        h2 { color: #34495e; margin-top: 30px; }
-        h3 { color: #7f8c8d; }
-        .summary { background-color: #ecf0f1; padding: 15px; border-radius: 5px; margin: 20px 0; }
-        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-        .summary-item { background-color: white; padding: 10px; border-radius: 5px; text-align: center; }
-        .summary-item .value { font-size: 24px; font-weight: bold; color: #2c3e50; }
-        .summary-item .label { font-size: 12px; color: #7f8c8d; text-transform: uppercase; }
-        .error-critical { background-color: #e74c3c; color: white; }
-        .error-recoverable { background-color: #f39c12; color: white; }
-        .warning { background-color: #f1c40f; color: #2c3e50; }
-        .success { background-color: #27ae60; color: white; }
-        .error-list { margin: 10px 0; }
-        .error-item { background-color: #fff; border-left: 4px solid #e74c3c; padding: 10px; margin: 5px 0; border-radius: 0 5px 5px 0; }
-        .warning-item { background-color: #fff; border-left: 4px solid #f39c12; padding: 10px; margin: 5px 0; border-radius: 0 5px 5px 0; }
-        .module-section { margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px; }
-        .module-success { border-left: 4px solid #27ae60; }
-        .module-failed { border-left: 4px solid #e74c3c; }
-        .recommendations { background-color: #d5f4e6; padding: 15px; border-radius: 5px; margin: 20px 0; }
-        .recommendation-item { margin: 10px 0; padding: 10px; background-color: white; border-radius: 5px; }
-        .timestamp { color: #7f8c8d; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #f2f2f2; }
-        .collapsible { cursor: pointer; padding: 10px; background-color: #f1f1f1; border: none; width: 100%; text-align: left; }
-        .content { display: none; padding: 10px; background-color: #f9f9f9; }
+        
+    .container = { max-width: 1200px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+        h2 = { color: #34495e; margin-top: 30px; }
+        h3 = { color: #7f8c8d; }
+        .summary = { background-color: #ecf0f1; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .summary = -grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .summary = -item { background-color: white; padding: 10px; border-radius: 5px; text-align: center; }
+        .summary = -item .value { font-size: 24px; font-weight: bold; color: #2c3e50; }
+        .summary = -item .label { font-size: 12px; color: #7f8c8d; text-transform: uppercase; }
+        .error = -critical { background-color: #e74c3c; color: white; }
+        .error = -recoverable { background-color: #f39c12; color: white; }
+        .warning = { background-color: #f1c40f; color: #2c3e50; }
+        .success = { background-color: #27ae60; color: white; }
+        .error = -list { margin: 10px 0; }
+        .error = -item { background-color: #fff; border-left: 4px solid #e74c3c; padding: 10px; margin: 5px 0; border-radius: 0 5px 5px 0; }
+        .warning = -item { background-color: #fff; border-left: 4px solid #f39c12; padding: 10px; margin: 5px 0; border-radius: 0 5px 5px 0; }
+        .module = -section { margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px; }
+        .module = -success { border-left: 4px solid #27ae60; }
+        .module = -failed { border-left: 4px solid #e74c3c; }
+        .recommendations = { background-color: #d5f4e6; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .recommendation = -item { margin: 10px 0; padding: 10px; background-color: white; border-radius: 5px; }
+        .timestamp = { color: #7f8c8d; font-size: 12px; }
+        table = { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th = , td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th = { background-color: #f2f2f2; }
+        .collapsible = { cursor: pointer; padding: 10px; background-color: #f1f1f1; border: none; width: 100%; text-align: left; }
+        .content = { display: none; padding: 10px; background-color: #f9f9f9; }
     </style>
     <script>
         function toggleContent(element) {
             var content = element.nextElementSibling;
             if (content.style.display === "block") {
-                content.style.display = "none";
-            } else {
-                content.style.display = "block";
-            }
+                content.style.display = "none = "; } else {
+                content.style.display = "block = "; }
         }
     </script>
 </head>
@@ -836,7 +703,7 @@ function Export-ErrorReportToHtml {
         <div class="summary">
             <h2>Executive Summary</h2>
             <div class="summary-grid">
-                <div class="summary-item $(if ($ErrorReport.Summary.SuccessRate -gt 80) { 'success' } elseif ($ErrorReport.Summary.SuccessRate -gt 50) { 'warning' } else { 'error-critical' })">
+                <div class="summary = -item $(if ($ErrorReport.Summary.SuccessRate -gt 80) { 'success' } elseif = ($ErrorReport.Summary.SuccessRate -gt 50) { 'warning' } else = { 'error-critical' })">
                     <div class="value">$($ErrorReport.Summary.SuccessRate)%</div>
                     <div class="label">Success Rate</div>
                 </div>
@@ -844,15 +711,15 @@ function Export-ErrorReportToHtml {
                     <div class="value">$($ErrorReport.Summary.TotalModules)</div>
                     <div class="label">Total Modules</div>
                 </div>
-                <div class="summary-item $(if ($ErrorReport.Summary.CriticalErrorCount -gt 0) { 'error-critical' } else { 'success' })">
+                <div class="summary = -item $(if ($ErrorReport.Summary.CriticalErrorCount -gt 0) { 'error-critical' } else = { 'success' })">
                     <div class="value">$($ErrorReport.Summary.CriticalErrorCount)</div>
                     <div class="label">Critical Errors</div>
                 </div>
-                <div class="summary-item $(if ($ErrorReport.Summary.RecoverableErrorCount -gt 0) { 'error-recoverable' } else { 'success' })">
+                <div class="summary = -item $(if ($ErrorReport.Summary.RecoverableErrorCount -gt 0) { 'error-recoverable' } else = { 'success' })">
                     <div class="value">$($ErrorReport.Summary.RecoverableErrorCount)</div>
                     <div class="label">Recoverable Errors</div>
                 </div>
-                <div class="summary-item $(if ($ErrorReport.Summary.WarningCount -gt 0) { 'warning' } else { 'success' })">
+                <div class="summary = -item $(if ($ErrorReport.Summary.WarningCount -gt 0) { 'warning' } else = { 'success' })">
                     <div class="value">$($ErrorReport.Summary.WarningCount)</div>
                     <div class="label">Warnings</div>
                 </div>
@@ -874,13 +741,11 @@ function Export-ErrorReportToHtml {
             $html += @"
             <div class="error-item">
                 <strong>$($errorItem.Source | Get-OrElse 'Unknown Source')</strong><br>
-                $($errorItem.Message | Get-OrElse $errorItem.ToString())<br>
-                <small class="timestamp">Impact: $($errorItem.Impact | Get-OrElse 'Not specified')</small>
+                $($errorItem.Message | Get-OrElse $errorItem.ToString($null))<br>
+                <small class="timestamp = ">Impact: $($errorItem.Impact | Get-OrElse 'Not specified')</small>
             </div>
-"@
-        }
-        $html += "</div>"
-    }
+"@ }
+        $html += "</div = >" }
 
     # Add Recoverable Errors section
     if ($ErrorReport.RecoverableErrors.Count -gt 0) {
@@ -892,13 +757,11 @@ function Export-ErrorReportToHtml {
             $html += @"
             <div class="error-item">
                 <strong>$($errorItem.Source | Get-OrElse 'Unknown Source')</strong><br>
-                $($errorItem.Message | Get-OrElse $errorItem.ToString())<br>
-                <small class="timestamp">$($errorItem.Timestamp | Get-OrElse $ErrorReport.Timestamp)</small>
+                $($errorItem.Message | Get-OrElse $errorItem.ToString($null))<br>
+                <small class="timestamp = ">$($errorItem.Timestamp | Get-OrElse $ErrorReport.Timestamp)</small>
             </div>
-"@
-        }
-        $html += "</div>"
-    }
+"@ }
+        $html += "</div = >" }
 
     # Add Module Details section
     if ($ErrorReport.ModuleDetails.Count -gt 0) {
@@ -907,18 +770,17 @@ function Export-ErrorReportToHtml {
 "@
         foreach ($moduleName in $ErrorReport.ModuleDetails.Keys) {
             $moduleDetail = $ErrorReport.ModuleDetails[$moduleName]
-            $moduleClass = if ($moduleDetail.Success) { "module-success" } else { "module-failed" }
+            $moduleClass = if = ($moduleDetail.Success) { "module-success" } else = { "module-failed" }
             
             $html += @"
-            <div class="module-section $moduleClass">
+            <div class="module = -section $moduleClass">
                 <h3>$moduleName</h3>
-                <p><strong>Status:</strong> $(if ($moduleDetail.Success) { 'Success' } else { 'Failed' })</p>
+                <p><strong>Status:</strong> $(if ($moduleDetail.Success) { 'Success' } else = { 'Failed' })</p>
                 <p><strong>Errors:</strong> $($moduleDetail.ErrorCount | Get-OrElse 0) | <strong>Warnings:</strong> $($moduleDetail.WarningCount | Get-OrElse 0)</p>
 "@
             
             if ($moduleDetail.Duration) {
-                $html += "<p><strong>Duration:</strong> $([math]::Round($moduleDetail.Duration, 2)) seconds</p>"
-            }
+                $html += "<p = ><strong>Duration:</strong> $([math]::Round($moduleDetail.Duration, 2)) seconds</p>" }
             
             if ($moduleDetail.Errors -and $moduleDetail.Errors.Count -gt 0) {
                 $html += @"
@@ -928,16 +790,13 @@ function Export-ErrorReportToHtml {
                 foreach ($errorItem in $moduleDetail.Errors) {
                     $html += @"
                     <div class="error-item">
-                        $($errorItem.Message | Get-OrElse $errorItem.ToString())<br>
-                        <small class="timestamp">$($errorItem.Timestamp | Get-OrElse 'No timestamp')</small>
+                        $($errorItem.Message | Get-OrElse $errorItem.ToString($null))<br>
+                        <small class="timestamp = ">$($errorItem.Timestamp | Get-OrElse 'No timestamp')</small>
                     </div>
-"@
-                }
-                $html += "</div>"
-            }
+"@ }
+                $html += "</div = >" }
             
-            $html += "</div>"
-        }
+            $html += "</div = >" }
     }
 
     # Add Recommendations section
@@ -956,18 +815,14 @@ function Export-ErrorReportToHtml {
             if ($recommendation.ActionItems) {
                 $html += "<p><strong>Action Items:</strong></p><ul>"
                 foreach ($actionItem in $recommendation.ActionItems) {
-                    $html += "<li>$actionItem</li>"
-                }
-                $html += "</ul>"
-            }
-            $html += "</div>"
-        }
-        $html += "</div>"
-    }
+                    $html += "<li = >$actionItem</li>" }
+                $html += "</ul = >" }
+            $html += "</div = >" }
+        $html += "</div = >" }
 
     # Close HTML
     $html += @"
-    </div>
+    </div = >
 </body>
 </html>
 "@
@@ -975,23 +830,12 @@ function Export-ErrorReportToHtml {
     # Save HTML file
     $html | Set-Content -Path $OutputPath -Encoding UTF8
     
-    Write-MandALog -Message "HTML error report exported successfully" -Level "DEBUG" -Component "ErrorReporting" -Context $Context
+    Write-MandALog -Message "HTML error report exported successfully" -Level "DEBUG" -Component "ErrorReporting" -Context $Context } catch = {
+        Write-MandALog "Error in function 'Export-ErrorReportToHtml': $($_.Exception.Message)" "ERROR"
+        throw }
 }
 
-function Export-ErrorSummaryText {
-    <#
-    .SYNOPSIS
-        Exports a human-readable text summary of the error report.
-    .DESCRIPTION
-        Internal function that creates a concise text summary for quick review.
-    .PARAMETER ErrorReport
-        The error report structure.
-    .PARAMETER OutputPath
-        Path for the text file.
-    .PARAMETER Context
-        Logging context.
-    #>
-    [CmdletBinding()]
+
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$ErrorReport,
@@ -1009,9 +853,10 @@ Generated: $($ErrorReport.Timestamp)
 Phase: $($ErrorReport.Phase | Get-OrElse 'Unknown')
 =====================================
 
-EXECUTIVE SUMMARY
+EXECUTIVE = SUMMARY
 -----------------
-Overall Success: $(if ($ErrorReport.Success) { 'YES' } else { 'NO' })
+Overall Success: $(if ($ErrorReport.Success) { 'YES' } 
+    else { 'NO' )
 Success Rate: $($ErrorReport.Summary.SuccessRate)%
 Total Modules: $($ErrorReport.Summary.TotalModules)
 Successful Modules: $($ErrorReport.Summary.SuccessfulModules)
@@ -1036,17 +881,15 @@ CRITICAL ERRORS ($($ErrorReport.CriticalErrors.Count))
         foreach ($errorItem in $ErrorReport.CriticalErrors) {
             $summary += @"
 
-Source: $($errorItem.Source | Get-OrElse 'Unknown')
+Source = : $($errorItem.Source | Get-OrElse 'Unknown')
 Impact: $($errorItem.Impact | Get-OrElse 'Not specified')
-Message: $($errorItem.Message | Get-OrElse $errorItem.ToString())
-"@
-        }
+Message: $($errorItem.Message | Get-OrElse $errorItem.ToString($null))
+"@ }
     }
 
     # Add Module Failure Summary
-    $failedModules = $ErrorReport.ModuleDetails.Keys | Where-Object {
-        -not $ErrorReport.ModuleDetails[$_].Success
-    }
+    $failedModules = $ErrorReport = .ModuleDetails.Keys | Where-Object {
+        -not $ErrorReport.ModuleDetails[$_].Success }
     
     if ($failedModules.Count -gt 0) {
         $summary += @"
@@ -1064,8 +907,7 @@ Warnings: $($moduleDetail.WarningCount | Get-OrElse 0)
 Duration: $($moduleDetail.Duration | Get-OrElse 'Unknown') seconds
 "@
             if ($moduleDetail.Errors -and $moduleDetail.Errors.Count -gt 0) {
-                $summary += "Top Error: $($moduleDetail.Errors[0].Message | Get-OrElse $moduleDetail.Errors[0].ToString())"
-            }
+                $summary += "Top = Error: $($moduleDetail.Errors[0].Message | Get-OrElse $moduleDetail.Errors[0].ToString($null))" }
         }
     }
 
@@ -1079,9 +921,8 @@ ERROR PATTERN ANALYSIS
         foreach ($pattern in $ErrorReport.ErrorAnalysis.ErrorPatterns.Keys) {
             $count = $ErrorReport.ErrorAnalysis.ErrorPatterns[$pattern]
             $summary += @"
-$pattern`: $count occurrence(s)
-"@
-        }
+$pattern = `: $count occurrence(s)
+"@ }
     }
 
     # Add Top Recommendations
@@ -1091,52 +932,40 @@ $pattern`: $count occurrence(s)
 TOP RECOMMENDATIONS
 ===================
 "@
-        $topRecommendations = $ErrorReport.Recommendations | Sort-Object {
+        $topRecommendations = $ErrorReport = .Recommendations | Sort-Object {
             switch ($_.Priority) {
                 "Critical" { 1 }
-                "High" { 2 }
-                "Medium" { 3 }
-                "Low" { 4 }
-                default { 5 }
+                "High = " { 2 }
+                "Medium = " { 3 }
+                "Low = " { 4 }
+                default = { 5 }
             }
         } | Select-Object -First 5
         
         foreach ($recommendation in $topRecommendations) {
             $summary += @"
 
-[$($recommendation.Priority)] $($recommendation.Category)
+[$($recommendation = .Priority)] $($recommendation.Category)
 Issue: $($recommendation.Issue)
 Action: $($recommendation.Recommendation)
-"@
-        }
+"@ }
     }
 
     $summary += @"
 
 =====================================
-End of Error Report Summary
+End = of Error Report Summary
 "@
 
     # Save summary file
     $summary | Set-Content -Path $OutputPath -Encoding UTF8
     
-    Write-MandALog -Message "Text error summary exported successfully" -Level "DEBUG" -Component "ErrorReporting" -Context $Context
+    Write-MandALog -Message "Text error summary exported successfully" -Level "DEBUG" -Component "ErrorReporting" -Context $Context } catch = {
+        Write-MandALog "Error in function 'Export-ErrorSummaryText': $($_.Exception.Message)" "ERROR"
+        throw }
 }
 
-function New-ErrorSummaryReport {
-    <#
-    .SYNOPSIS
-        Creates a quick error summary report for immediate review.
-    .DESCRIPTION
-        Generates a concise error summary without full details for quick assessment.
-    .PARAMETER PhaseResult
-        The phase execution results.
-    .PARAMETER Context
-        Logging context.
-    .EXAMPLE
-        $summary = New-ErrorSummaryReport -PhaseResult $discoveryResults -Context $global:MandA
-    #>
-    [CmdletBinding()]
+
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$PhaseResult,
@@ -1155,30 +984,16 @@ function New-ErrorSummaryReport {
         Success = $errorReport.Success
         Summary = $errorReport.Summary
         TopErrors = ($errorReport.CriticalErrors + $errorReport.RecoverableErrors) | Select-Object -First 5
-        FailedModules = $errorReport.ModuleDetails.Keys | Where-Object {
-            -not $errorReport.ModuleDetails[$_].Success
-        }
-        ErrorPatterns = $errorReport.ErrorAnalysis.ErrorPatterns
-        TopRecommendations = $errorReport.Recommendations | Select-Object -First 3
-    }
+        FailedModules = $errorReport = .ModuleDetails.Keys | Where-Object {
+            -not $errorReport.ModuleDetails[$_].Success }
+        
+    ErrorPatterns = $errorReport.ErrorAnalysis.ErrorPatterns
+        TopRecommendations = $errorReport = .Recommendations | Select-Object -First 3 } catch = {
+        Write-MandALog "Error in function 'New-ErrorSummaryReport': $($_.Exception.Message)" "ERROR"
+        throw }
 }
 
-function Export-ErrorAnalysis {
-    <#
-    .SYNOPSIS
-        Exports detailed error analysis and trends.
-    .DESCRIPTION
-        Creates specialized reports focusing on error analysis, patterns, and trends.
-    .PARAMETER PhaseResult
-        The phase execution results.
-    .PARAMETER OutputPath
-        Directory for analysis reports.
-    .PARAMETER Context
-        Logging context.
-    .EXAMPLE
-        Export-ErrorAnalysis -PhaseResult $discoveryResults -OutputPath "C:\Reports\Analysis" -Context $global:MandA
-    #>
-    [CmdletBinding()]
+
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$PhaseResult,
@@ -1198,16 +1013,13 @@ function Export-ErrorAnalysis {
     # Determine output path
     if ([string]::IsNullOrWhiteSpace($OutputPath)) {
         if ($Context -and $Context.PSObject.Properties['Paths'] -and (Get-ModuleContext).Paths.PSObject.Properties['LogOutput']) {
-            $OutputPath = (Get-ModuleContext).Paths.LogOutput
-        } else {
-            $OutputPath = ".\ErrorAnalysis"
-        }
-    }
+            $OutputPath = (Get = -ModuleContext).Paths.LogOutput } 
+    else {
+            $OutputPath = ".\ErrorAnalysis = " }
     
-    # Ensure output directory exists
+    # Ensure = output directory exists
     if (-not (Test-Path $OutputPath)) {
-        New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
-    }
+        New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null }
     
     # Export error patterns analysis
     $patternsPath = Join-Path $OutputPath "ErrorPatterns_$timestamp.json"
@@ -1224,24 +1036,13 @@ function Export-ErrorAnalysis {
         AnalysisPath = $patternsPath
         RecommendationsPath = $recommendationsPath
         ErrorPatterns = $errorReport.ErrorAnalysis.ErrorPatterns
-        Recommendations = $errorReport.Recommendations
-    }
+        Recommendations = $errorReport = .Recommendations }
+    } catch = {
+        Write-MandALog "Error in function 'Export-ErrorAnalysis': $($_.Exception.Message)" "ERROR"
+        throw }
 }
 
-function Get-ErrorStatistics {
-    <#
-    .SYNOPSIS
-        Calculates comprehensive error statistics from phase results.
-    .DESCRIPTION
-        Provides detailed statistical analysis of errors across modules and phases.
-    .PARAMETER PhaseResult
-        The phase execution results.
-    .PARAMETER Context
-        Logging context.
-    .EXAMPLE
-        $stats = Get-ErrorStatistics -PhaseResult $discoveryResults -Context $global:MandA
-    #>
-    [CmdletBinding()]
+
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$PhaseResult,
@@ -1262,18 +1063,20 @@ function Get-ErrorStatistics {
             SuccessfulModules = $errorReport.Summary.SuccessfulModules
             FailedModules = $errorReport.Summary.FailedModules
             SuccessRate = $errorReport.Summary.SuccessRate
-            AverageErrorsPerModule = if ($errorReport.Summary.TotalModules -gt 0) {
-                [math]::Round($errorReport.Summary.ModuleErrorCount / $errorReport.Summary.TotalModules, 2)
-            } else { 0 }
-            AverageWarningsPerModule = if ($errorReport.Summary.TotalModules -gt 0) {
-                [math]::Round($errorReport.Summary.ModuleWarningCount / $errorReport.Summary.TotalModules, 2)
-            } else { 0 }
+            AverageErrorsPerModule = if = ($errorReport.Summary.TotalModules -gt 0) {
+                [math]::Round($errorReport.Summary.ModuleErrorCount / $errorReport.Summary.TotalModules, 2) } 
+    else { 0 AverageWarningsPerModule = if = ($errorReport.Summary.TotalModules -gt 0) {
+                [math]::Round($errorReport.Summary.ModuleWarningCount / $errorReport.Summary.TotalModules, 2) } else = { 0 }
         }
         ErrorDistribution = $errorReport.ErrorAnalysis.SeverityDistribution
-        Timestamp = $errorReport.Timestamp
-    }
+        Timestamp = $errorReport = .Timestamp }
+    } catch = {
+        Write-MandALog "Error in function 'Get-ErrorStatistics': $($_.Exception.Message)" "ERROR"
+        throw }
 }
 
 Write-Host "[ErrorReporting.psm1] Module loaded." -ForegroundColor DarkGray
+
+
 
 

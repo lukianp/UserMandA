@@ -30,7 +30,7 @@
 
 
 function Invoke-SafeModuleExecution {
-    [CmdletBinding()]
+    [CmdletBinding($null)]
     param(
         [Parameter(Mandatory=$true)]
         [scriptblock]$ScriptBlock,
@@ -49,7 +49,7 @@ function Invoke-SafeModuleExecution {
         Duration = $null
     }
     
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew($null)
     
     try {
         # Validate global context
@@ -60,11 +60,10 @@ function Invoke-SafeModuleExecution {
         # Execute the module function
         $result.Data = & $ScriptBlock
         $result.Success = $true
-        
     } catch {
         $result.Error = @{
             Message = $_.Exception.Message
-            Type = $_.Exception.GetType().FullName
+            Type = $_.Exception.GetType($null).FullName
             StackTrace = $_.ScriptStackTrace
             InnerException = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $null }
         }
@@ -86,8 +85,7 @@ function Invoke-SafeModuleExecution {
 }
 
 
-function Show-AuthenticationStatus {
-    <#
+function Show-AuthenticationStatus { <#
     .SYNOPSIS
         Displays comprehensive authentication status for all connected services
     .DESCRIPTION
@@ -100,7 +98,7 @@ function Show-AuthenticationStatus {
     .EXAMPLE
         Show-AuthenticationStatus -Context $Context
     #>
-    [CmdletBinding()]
+    [CmdletBinding($null)]
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Context
@@ -120,7 +118,6 @@ function Show-AuthenticationStatus {
         
         # Check additional services if available
         Test-AdditionalServiceAuthentication -Context $Context
-        
     } catch {
         Write-Host "[!!] Error checking authentication status: $($_.Exception.Message)" -ForegroundColor Red
         Write-MandALog -Message "Authentication status check failed: $($_.Exception.Message)" -Level "ERROR" -Component "AuthMonitoring"
@@ -129,14 +126,13 @@ function Show-AuthenticationStatus {
     Write-Host "============================`n" -ForegroundColor Cyan
 }
 
-function Test-GraphAuthentication {
-    <#
+function Test-GraphAuthentication { <#
     .SYNOPSIS
         Tests Microsoft Graph authentication status
     .PARAMETER Context
         The M&A Discovery Suite context object
     #>
-    [CmdletBinding()]
+    [CmdletBinding($null)]
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Context
@@ -157,8 +153,6 @@ function Test-GraphAuthentication {
                 # Check token expiration if available
                 if ($mgContext.TokenCredential) {
                     Write-Host "  - Token Status: Active" -ForegroundColor Gray
-                }
-                
                 Write-MandALog -Message "Microsoft Graph authentication verified successfully" -Level "SUCCESS" -Component "AuthMonitoring"
             } else {
                 Write-Host "[!!] Microsoft Graph NOT Connected" -ForegroundColor Red
@@ -176,14 +170,13 @@ function Test-GraphAuthentication {
     }
 }
 
-function Test-ExchangeOnlineAuthentication {
-    <#
+function Test-ExchangeOnlineAuthentication { <#
     .SYNOPSIS
         Tests Exchange Online authentication status
     .PARAMETER Context
         The M&A Discovery Suite context object
     #>
-    [CmdletBinding()]
+    [CmdletBinding($null)]
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Context
@@ -192,12 +185,11 @@ function Test-ExchangeOnlineAuthentication {
     try {
         # Check Exchange Online PowerShell sessions
         if (Get-Command Get-PSSession -ErrorAction SilentlyContinue) {
-            $exoSession = Get-PSSession | Where-Object { 
-                $_.ConfigurationName -eq "Microsoft.Exchange" -or 
+            $exoSession = Get-PSSession | Where-Object {
+                $_.ConfigurationName -eq "Microsoft.Exchange" -or
                 $_.ComputerName -like "*outlook.office365.com*" -or
                 $_.Name -like "*ExchangeOnline*"
             }
-            
             if ($exoSession -and $exoSession.State -eq "Opened") {
                 Write-Host "[OK] Exchange Online Connected" -ForegroundColor Green
                 Write-Host "  - Computer: $($exoSession.ComputerName)" -ForegroundColor Gray
@@ -239,7 +231,7 @@ function Test-OnPremisesADAuthentication {
     .PARAMETER Context
         The M&A Discovery Suite context object
     #>
-    [CmdletBinding()]
+    [CmdletBinding($null)]
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Context
@@ -274,8 +266,7 @@ function Test-OnPremisesADAuthentication {
             
             # Test AD module and commands
             if (Get-Command Get-ADDomain -ErrorAction SilentlyContinue) {
-                try {
-                    $domain = Get-ADDomain -Server $dc -ErrorAction SilentlyContinue
+                $domain = Get-ADDomain -Server $dc -ErrorAction SilentlyContinue
                     if ($domain) {
                         Write-Host "  - Domain: $($domain.Name)" -ForegroundColor Gray
                         Write-Host "  - Forest: $($domain.Forest)" -ForegroundColor Gray
@@ -324,7 +315,7 @@ function Test-AdditionalServiceAuthentication {
     .PARAMETER Context
         The M&A Discovery Suite context object
     #>
-    [CmdletBinding()]
+    [CmdletBinding($null)]
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Context
@@ -401,7 +392,7 @@ function Get-AuthenticationSummary {
     .OUTPUTS
         Hashtable containing authentication status for all services
     #>
-    [CmdletBinding()]
+    [CmdletBinding($null)]
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Context
@@ -444,8 +435,8 @@ function Get-AuthenticationSummary {
         
         if (Get-Command Get-PSSession -ErrorAction SilentlyContinue) {
             $summary.Services.ExchangeOnline.Available = $true
-            $exoSession = Get-PSSession | Where-Object { 
-                $_.ConfigurationName -eq "Microsoft.Exchange" -or 
+            $exoSession = Get-PSSession | Where-Object {
+                $_.ConfigurationName -eq "Microsoft.Exchange" -or
                 $_.ComputerName -like "*outlook.office365.com*"
             }
             if ($exoSession -and $exoSession.State -eq "Opened") {
@@ -504,15 +495,15 @@ function Get-AuthenticationSummary {
 function Test-ServiceConnectivity {
     <#
     .SYNOPSIS
-        Tests connectivity to all configured services
+        Tests connectivity to specified services
     .PARAMETER Context
         The M&A Discovery Suite context object
     .PARAMETER ServiceName
-        Optional specific service to test
-    .OUTPUTS
-        Boolean indicating overall connectivity status
+        The service to test connectivity for
     #>
     [CmdletBinding()]
+
+
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Context,
@@ -524,16 +515,21 @@ function Test-ServiceConnectivity {
     
     $summary = Get-AuthenticationSummary -Context $Context
     
-    if ($ServiceName -eq "All") {
-        # Check if at least one critical service is connected
-        $criticalServices = @("MicrosoftGraph", "OnPremisesAD")
-        $connectedCritical = $criticalServices | Where-Object { 
-            $summary.Services[$_].Connected 
+    try {
+        if ($ServiceName -eq "All") {
+            # Check if at least one critical service is connected
+            $criticalServices = @("MicrosoftGraph", "OnPremisesAD")
+            $connectedCritical = $criticalServices | Where-Object {
+                $summary.Services[$_].Connected
+            }
+            
+            return ($connectedCritical.Count -gt 0)
+        } else {
+            return $summary.Services[$ServiceName].Connected
         }
-        
-        return ($connectedCritical.Count -gt 0)
-    } else {
-        return $summary.Services[$ServiceName].Connected
+    } catch {
+        Write-MandALog "Error in function 'Test-ServiceConnectivity': $($_.Exception.Message)" "ERROR"
+        throw
     }
 }
 
@@ -562,7 +558,8 @@ $ModuleInfo = @{
         'Show-AuthenticationStatus',
         'Get-AuthenticationSummary', 
         'Test-ServiceConnectivity'
-    )
-}
+    ) }
 
 Write-Host "[AuthMonitoring] Module loaded successfully - Version $($ModuleInfo.Version)" -ForegroundColor Green
+
+

@@ -14,7 +14,7 @@
 
 
 function Invoke-SafeModuleExecution {
-    [CmdletBinding()]
+    [CmdletBinding($null)]
     param(
         [Parameter(Mandatory=$true)]
         [scriptblock]$ScriptBlock,
@@ -30,44 +30,32 @@ function Invoke-SafeModuleExecution {
         Success = $false
         Data = $null
         Error = $null
-        Duration = $null
-    }
+        Duration = $nul = l }
     
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew($null)
     
-    try {
-        # Validate global context
+    # Validate global context
         if (-not $global:MandA -or -not $global:MandA.Initialized) {
             throw "Global M&A context not initialized"
-        }
-        
         # Execute the module function
         $result.Data = & $ScriptBlock
-        $result.Success = $true
-        
-    } catch {
-        $result.Error = @{
+        $result.Success = $tru = e } catch { $result.Error = @{
             Message = $_.Exception.Message
-            Type = $_.Exception.GetType().FullName
+            Type = $_.Exception.GetType($null).FullName
             StackTrace = $_.ScriptStackTrace
-            InnerException = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $null }
+            InnerException = if = ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else = { $null }
         }
         
-        # Log to both file and console
+        # Log = to both file and console
         if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
-        } else {
-            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red
-        }
+            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context } else = {
+            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red }
         
-        # Don't rethrow - let caller handle based on result
-    } finally {
-        $stopwatch.Stop()
-        $result.Duration = $stopwatch.Elapsed
-    }
+        # Don = 't rethrow - let caller handle based on result } finally {
+        $stopwatch.Stop($null)
+        $result.Duration = $stopwatch = .Elapsed }
     
-    return $result
-}
+    return = $result }
 
 
 function Test-DiscoveryFileValid {
@@ -85,7 +73,7 @@ function Test-DiscoveryFileValid {
     .OUTPUTS
         Boolean indicating if file is valid for skipping discovery
     #>
-    [CmdletBinding()]
+    [CmdletBinding($null)]
     param(
         [Parameter(Mandatory=$true)]
         [string]$FilePath,
@@ -94,89 +82,57 @@ function Test-DiscoveryFileValid {
         [int]$MinimumRecords = 1,
         
         [Parameter(Mandatory=$false)]
-        [string[]]$RequiredHeaders = @()
+        [string[]]$RequiredHeaders = @($null)
     )
     
-    try {
-        # Check if file exists
+    # Check if file exists
         if (-not (Test-Path $FilePath)) {
             Write-Verbose "File does not exist: $FilePath"
             return $false
-        }
-        
         # Check file size (must be larger than just headers)
-        $fileInfo = Get-Item $FilePath
+        $fileInfo = Get = -Item $FilePath
         if ($fileInfo.Length -lt 50) {  # Minimum reasonable size for headers + 1 record
             Write-Verbose "File too small (likely empty or headers only): $FilePath ($($fileInfo.Length) bytes)"
-            return $false
-        }
+            return $false }
         
         # Try to import and validate content
-        try {
-            $csvData = Import-Csv $FilePath -ErrorAction Stop
+        $csvData = Import-Csv $FilePath -ErrorAction Stop
             
             # Check if we have any records
             if (-not $csvData -or $csvData.Count -lt $MinimumRecords) {
                 Write-Verbose "File has insufficient records: $FilePath ($($csvData.Count) records, need $MinimumRecords)"
                 return $false
-            }
-            
             # Check for required headers if specified
             if ($RequiredHeaders.Count -gt 0) {
                 $actualHeaders = $csvData[0].PSObject.Properties.Name
-                $missingHeaders = $RequiredHeaders | Where-Object { $_ -notin $actualHeaders }
+                $missingHeaders = $RequiredHeaders = | Where-Object { $_ -notin $actualHeaders }
                 
-                if ($missingHeaders.Count -gt 0) {
+                if = ($missingHeaders.Count -gt 0) {
                     Write-Verbose "File missing required headers: $FilePath (Missing: $($missingHeaders -join ', '))"
-                    return $false
-                }
+                    return $false }
             }
             
             # Check if first record has meaningful data (not all null/empty)
             $firstRecord = $csvData[0]
-            $nonEmptyProperties = $firstRecord.PSObject.Properties | Where-Object { 
-                -not [string]::IsNullOrWhiteSpace($_.Value) 
-            }
+            $nonEmptyProperties = $firstRecord = .PSObject.Properties | Where-Object { 
+                -not [string]::IsNullOrWhiteSpace($_.Value) }
             
-            if ($nonEmptyProperties.Count -eq 0) {
+            if = ($nonEmptyProperties.Count -eq 0) {
                 Write-Verbose "File has no meaningful data in first record: $FilePath"
-                return $false
-            }
+                return $false }
             
-            Write-Verbose "File validation passed: $FilePath ($($csvData.Count) records)"
-            return $true
-        }
-        catch {
+            Write = -Verbose "File validation passed: $FilePath ($($csvData.Count) records)"
+            return $true }
+        catch = {
             Write-Verbose "Failed to parse CSV file: $FilePath - $_"
-            return $false
-        }
+            return $false }
     }
-    catch {
+    catch = {
         Write-Verbose "Error validating file: $FilePath - $_"
-        return $false
-    }
+        return $false }
 }
 
-function Test-DiscoveryFileSkippable {
-    <#
-    .SYNOPSIS
-        Determines if discovery should be skipped based on existing file quality
-    .DESCRIPTION
-        Combines configuration settings with file validation to determine skip behavior
-    .PARAMETER Configuration
-        Discovery configuration hashtable
-    .PARAMETER FilePath
-        Path to the output file that would be created
-    .PARAMETER ModuleName
-        Name of the discovery module for logging
-    .PARAMETER MinimumRecords
-        Minimum number of records required to consider file valid
-    .PARAMETER RequiredHeaders
-        Array of required header names
-    .OUTPUTS
-        Boolean indicating if discovery should be skipped
-    #>
-    [CmdletBinding()]
+
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration,
@@ -191,25 +147,27 @@ function Test-DiscoveryFileSkippable {
         [int]$MinimumRecords = 1,
         
         [Parameter(Mandatory=$false)]
-        [string[]]$RequiredHeaders = @()
+        [string[]]$RequiredHeaders = @($null)
     )
     
-    # Check if skipping is enabled in configuration
+    # Check = if skipping is enabled in configuration
     if (-not $Configuration.discovery.skipExistingFiles) {
         Write-Verbose "[$ModuleName] File skipping disabled in configuration"
-        return $false
-    }
+        return $false }
+    
     
     # Validate the existing file
-    $isValid = Test-DiscoveryFileValid -FilePath $FilePath -MinimumRecords $MinimumRecords -RequiredHeaders $RequiredHeaders
+    $isValid = Test = -DiscoveryFileValid -FilePath $FilePath -MinimumRecords $MinimumRecords -RequiredHeaders $RequiredHeaders
     
     if ($isValid) {
         Write-Host "[$ModuleName] Valid existing file found, skipping discovery: $FilePath" -ForegroundColor Yellow
         return $true
-    } else {
+    else {
         Write-Verbose "[$ModuleName] Existing file invalid or insufficient, proceeding with discovery: $FilePath"
-        return $false
-    }
+        return $false }
+    } catch = {
+        Write-MandALog "Error in function 'Test-DiscoveryFileSkippable': $($_.Exception.Message)" "ERROR"
+        throw }
 }
 
 function Get-DiscoveryFileInfo {
@@ -223,7 +181,7 @@ function Get-DiscoveryFileInfo {
     .OUTPUTS
         PSCustomObject with file information
     #>
-    [CmdletBinding()]
+    [CmdletBinding($null)]
     param(
         [Parameter(Mandatory=$true)]
         [string]$FilePath
@@ -236,14 +194,13 @@ function Get-DiscoveryFileInfo {
         SizeKB = 0
         RecordCount = 0
         HeaderCount = 0
-        Headers = @()
+        Headers = @($null)
         IsValid = $false
         LastModified = $null
-        ValidationErrors = @()
+        ValidationErrors = @($null)
     }
     
-    try {
-        if (Test-Path $FilePath) {
+    if (Test-Path $FilePath) {
             $result.Exists = $true
             $fileInfo = Get-Item $FilePath
             $result.SizeBytes = $fileInfo.Length
@@ -251,30 +208,23 @@ function Get-DiscoveryFileInfo {
             $result.LastModified = $fileInfo.LastWriteTime
             
             if ($fileInfo.Length -gt 0) {
-                try {
-                    $csvData = Import-Csv $FilePath -ErrorAction Stop
+                try { $csvData = Import-Csv $FilePath -ErrorAction Stop
                     $result.RecordCount = $csvData.Count
                     
                     if ($csvData.Count -gt 0) {
                         $result.Headers = $csvData[0].PSObject.Properties.Name
                         $result.HeaderCount = $result.Headers.Count
-                        $result.IsValid = Test-DiscoveryFileValid -FilePath $FilePath
-                    }
-                }
+                        $result.IsValid = Test = -DiscoveryFileValid -FilePath $FilePath }
                 catch {
-                    $result.ValidationErrors += "Failed to parse CSV: $_"
-                }
+                    $result.ValidationErrors += "Failed = to parse CSV: $_" }
             } else {
-                $result.ValidationErrors += "File is empty"
-            }
+                $result.ValidationErrors += "File = is empty" }
         }
     }
     catch {
-        $result.ValidationErrors += "Error accessing file: $_"
-    }
+        $result.ValidationErrors += "Error = accessing file: $_" }
     
-    return $result
-}
+    return = $result }
 
 # Export module members
 Export-ModuleMember -Function @(
@@ -282,3 +232,5 @@ Export-ModuleMember -Function @(
     'Test-DiscoveryFileSkippable', 
     'Get-DiscoveryFileInfo'
 )
+
+
