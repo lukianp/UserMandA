@@ -1181,32 +1181,66 @@ function Invoke-DiscoveryModule {
     Write-Host "`n>>> Starting $ModuleName Discovery..." -ForegroundColor Cyan
     Write-Progress -Activity "Discovery Phase" -Status "Running $ModuleName Discovery" -PercentComplete -1
     
+    # Corrected DiscoveryResult Class Definition
+    $discoveryResultClassDefinition = @'
+    # The full and corrected class definition of DiscoveryResult
+    public class DiscoveryResult {
+        public bool Success { get; set; }
+        public string ModuleName { get; set; }
+        public object Data { get; set; }
+        public System.Collections.ArrayList Errors { get; set; }
+        public System.Collections.ArrayList Warnings { get; set; }
+        public System.Collections.Hashtable Metadata { get; set; }
+        public System.DateTime StartTime { get; set; }
+        public System.DateTime EndTime { get; set; }
+        public string ExecutionId { get; set; }
+        
+        public DiscoveryResult(string moduleName) {
+            this.ModuleName = moduleName;
+            this.Errors = new System.Collections.ArrayList();
+            this.Warnings = new System.Collections.ArrayList();
+            this.Metadata = new System.Collections.Hashtable();
+            this.StartTime = System.DateTime.Now;
+            this.ExecutionId = System.Guid.NewGuid().ToString();
+            this.Success = true;
+        }
+        
+        public void AddError(string message, System.Exception exception, System.Collections.Hashtable context) {
+            var errorEntry = new System.Collections.Hashtable();
+            errorEntry["Timestamp"] = System.DateTime.Now;
+            errorEntry["Message"] = message;
+            # FIX: Access the correct Exception property
+            errorEntry["Exception"] = exception != null ? exception.Exception.ToString() : null;
+            errorEntry["ExceptionType"] = exception != null ? exception.GetType().FullName : null;
+            errorEntry["Context"] = context;
+            errorEntry["StackTrace"] = exception != null ? exception.StackTrace : System.Environment.StackTrace;
+            this.Errors.Add(errorEntry);
+            this.Success = false;
+        }
+        
+        public void AddWarning(string message, System.Collections.Hashtable context) {
+            var warningEntry = new System.Collections.Hashtable();
+            warningEntry["Timestamp"] = System.DateTime.Now;
+            warningEntry["Message"] = message;
+            warningEntry["Context"] = context;
+            this.Warnings.Add(warningEntry);
+        }
+        
+        public void Complete() {
+            this.EndTime = System.DateTime.Now;
+            if (this.StartTime != null && this.EndTime != null) {
+                var duration = this.EndTime - this.StartTime;
+                this.Metadata["Duration"] = duration;
+                this.Metadata["DurationSeconds"] = duration.TotalSeconds;
+            }
+        }
+    }
+'@
+
     try {
         $startTime = Get-Date
         
-        $moduleParams = @{
-            Configuration = $Configuration
-            Context = $global:MandA
-        }
-        
-        $functionInfo = Get-Command $moduleFunction -ErrorAction SilentlyContinue
-        if (-not $functionInfo) {
-            throw "Discovery function '$moduleFunction' not found"
-        }
-        
-        $validParams = @{}
-        foreach ($paramName in $moduleParams.Keys) {
-            if ($functionInfo.Parameters.ContainsKey($paramName)) {
-                $validParams[$paramName] = $moduleParams[$paramName]
-            } else {
-                Write-OrchestratorLog -Message "Parameter '$paramName' not accepted by $moduleFunction, skipping" -Level "DEBUG" -DebugOnly
-            }
-        }
-        
-        Write-OrchestratorLog -Message "Calling $moduleFunction with parameters: $($validParams.Keys -join ', ')" -Level "DEBUG" -DebugOnly
-        
-        Write-OrchestratorLog -Message "Creating isolated runspace for $moduleFunction execution" -Level "DEBUG" -DebugOnly
-        
+        # Create a runspace with the necessary context
         $runspace = [runspacefactory]::CreateRunspace()
         $runspace.Open()
         
@@ -1215,270 +1249,69 @@ function Invoke-DiscoveryModule {
             $powershell.Runspace = $runspace
             
             $moduleFile = Join-Path (Get-ModuleContext).Paths.Discovery "${ModuleName}Discovery.psm1"
-            $suiteRoot = (Get-ModuleContext).Paths.SuiteRoot
-            
             $configJson = $Configuration | ConvertTo-Json -Depth 10 -Compress
             $contextJson = $global:MandA | ConvertTo-Json -Depth 10 -Compress
-            
+
+            # Script to set up the runspace environment
             $setupScript = @"
-Set-Location '$suiteRoot'
-Import-Module '$moduleFile' -Force
-`$Configuration = '$configJson' | ConvertFrom-Json
-`$Context = '$contextJson' | ConvertFrom-Json
-
-# **FIX**: Convert PSCustomObject to Hashtable for PowerShell 5.1 compatibility
-function ConvertTo-Hashtable {
-    param([Parameter(ValueFromPipeline)]`$InputObject)
-    process {
-        if (`$null -eq `$InputObject) { return `$null }
-        if (`$InputObject -is [System.Collections.IDictionary]) { return `$InputObject }
-        if (`$InputObject -is [PSCustomObject]) {
-            `$hash = @{}
-            `$InputObject.PSObject.Properties | ForEach-Object {
-                `$value = `$_.Value
-                if (`$value -is [PSCustomObject]) {
-                    `$value = ConvertTo-Hashtable `$value
-                } elseif (`$value -is [System.Collections.IEnumerable] -and `$value -isnot [string]) {
-                    `$value = @(`$value | ForEach-Object { if (`$_ -is [PSCustomObject]) { ConvertTo-Hashtable `$_ } else { `$_ } })
+                # Inject the DiscoveryResult Class definition
+                if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+                    Add-Type -TypeDefinition '$($discoveryResultClassDefinition -replace "'", "''")' -Language CSharp
                 }
-                `$hash[`$_.Name] = `$value
-            }
-            return `$hash
-        }
-        return `$InputObject
-    }
-}
 
-`$Configuration = ConvertTo-Hashtable `$Configuration
-`$Context = ConvertTo-Hashtable `$Context
-`$global:MandA = `$Context
-if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
-    Add-Type -TypeDefinition @'
-public class DiscoveryResult {
-    public bool Success { get; set; }
-    public string ModuleName { get; set; }
-    public object Data { get; set; }
-    public System.Collections.ArrayList Errors { get; set; }
-    public System.Collections.ArrayList Warnings { get; set; }
-    public System.Collections.Hashtable Metadata { get; set; }
-    public System.DateTime StartTime { get; set; }
-    public System.DateTime EndTime { get; set; }
-    public string ExecutionId { get; set; }
-    public DiscoveryResult(string moduleName) {
-        this.ModuleName = moduleName;
-        this.Errors = new System.Collections.ArrayList();
-        this.Warnings = new System.Collections.ArrayList();
-        this.Metadata = new System.Collections.Hashtable();
-        this.StartTime = System.DateTime.Now;
-        this.ExecutionId = System.Guid.NewGuid().ToString();
-        this.Success = true;
-    }
-    public void AddError(string message, System.Exception exception) {
-        AddError(message, exception, new System.Collections.Hashtable());
-    }
-    public void AddError(string message, System.Exception exception, System.Collections.Hashtable context) {
-        var errorEntry = new System.Collections.Hashtable();
-        errorEntry[\"Timestamp\"] = System.DateTime.Now;
-        errorEntry[\"Message\"] = message;
-        errorEntry[\"Exception\"] = exception != null ? exception.ToString() : null;
-        errorEntry[\"ExceptionType\"] = exception != null ? exception.GetType().FullName : null;
-        errorEntry[\"Context\"] = context;
-        errorEntry[\"StackTrace\"] = exception != null ? exception.StackTrace : System.Environment.StackTrace;
-        this.Errors.Add(errorEntry);
-        this.Success = false;
-    }
-    public void AddWarning(string message) {
-        AddWarning(message, new System.Collections.Hashtable());
-    }
-    public void AddWarning(string message, System.Collections.Hashtable context) {
-        var warningEntry = new System.Collections.Hashtable();
-        warningEntry[\"Timestamp\"] = System.DateTime.Now;
-        warningEntry[\"Message\"] = message;
-        warningEntry[\"Context\"] = context;
-        this.Warnings.Add(warningEntry);
-    }
-    public void Complete() {
-        this.EndTime = System.DateTime.Now;
-        if (this.StartTime != null && this.EndTime != null) {
-            var duration = this.EndTime - this.StartTime;
-            this.Metadata[\"Duration\"] = duration;
-            this.Metadata[\"DurationSeconds\"] = duration.TotalSeconds;
-        }
-    }
-}
-'@ -Language CSharp
-}
-function Write-MandALog {
-    param(
-        [string]`$Message,
-        [string]`$Level = "INFO",
-        [string]`$Component = "Discovery"
-    )
-    `$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    `$color = switch (`$Level) {
-        "ERROR" { "Red" }
-        "WARN" { "Yellow" }
-        "SUCCESS" { "Green" }
-        "DEBUG" { "Gray" }
-        "INFO" { "White" }
-        default { "White" }
-    }
-    `$indicator = switch (`$Level) {
-        "ERROR" { "[X]" }
-        "WARN" { "[!]" }
-        "SUCCESS" { "[OK]" }
-        "DEBUG" { "[..]" }
-        "INFO" { "[i]" }
-        default { "[--]" }
-    }
-    Write-Host "[`$timestamp] [`$Component] `$indicator `$Message" -ForegroundColor `$color
-}
-function Write-ProgressStep {
-    param(
-        [string]`$Message,
-        [string]`$Status = "Info",
-        [string]`$Activity = "Discovery",
-        [int]`$PercentComplete = -1
-    )
-    `$color = switch (`$Status) {
-        "Error" { "Red" }
-        "Warning" { "Yellow" }
-        "Success" { "Green" }
-        "Progress" { "Cyan" }
-        "Info" { "White" }
-        default { "White" }
-    }
-    `$indicator = switch (`$Status) {
-        "Error" { "[X]" }
-        "Warning" { "[!]" }
-        "Success" { "[OK]" }
-        "Progress" { "[..]" }
-        "Info" { "[i]" }
-        default { "[--]" }
-    }
-    Write-Host "`$indicator `$Message" -ForegroundColor `$color
-    if (`$Status -eq "Progress") {
-        Write-Progress -Activity `$Activity -Status `$Message -PercentComplete `$PercentComplete
-    }
-}
-function Show-ProgressBar {
-    param(
-        [int]`$Current,
-        [int]`$Total,
-        [string]`$Activity = "Processing"
-    )
-    if (`$Total -gt 0) {
-        `$percent = [math]::Round((`$Current / `$Total) * 100, 0)
-        Write-Progress -Activity `$Activity -Status "Processing `$Current of `$Total" -PercentComplete `$percent
-    }
-}
+                # Inject the Get-ModuleContext helper function
+                function Get-ModuleContext {
+                    if (`$null -eq `$script:ModuleContext) {
+                        if (`$null -ne `$global:MandA) {
+                            `$script:ModuleContext = `$global:MandA
+                        } else {
+                            throw "Global context not available in runspace."
+                        }
+                    }
+                    return `$script:ModuleContext
+                }
+
+                # Load the module that will be executed
+                Import-Module '$moduleFile' -Force
 "@
             
             $null = $powershell.AddScript($setupScript)
-            $setupResult = $powershell.Invoke()
+            $powershell.Invoke()
             
             if ($powershell.HadErrors) {
-                $setupErrors = $powershell.Streams.Error
-                Write-OrchestratorLog -Message "Runspace setup had errors: $(($setupErrors | ForEach-Object { $_.Exception.Message }) -join '; ')" -Level "WARN"
+                $setupErrors = $powershell.Streams.Error | ForEach-Object { $_.ToString() }
+                throw "Runspace setup failed: $($setupErrors -join '; ')"
             }
             
+            # Now execute the main discovery function
             $powershell.Commands.Clear()
-            $powershell.Streams.Error.Clear()
+            $powershell.AddCommand($moduleFunction).AddParameter("Configuration", $Configuration).AddParameter("Context", $global:MandA)
             
-            $executionScript = @"
-try {
-    if (`$Configuration -and `$Context) {
-        `$result = $moduleFunction -Configuration `$Configuration -Context `$Context
-    } elseif (`$Configuration) {
-        `$result = $moduleFunction -Configuration `$Configuration
-    } else {
-        `$result = $moduleFunction
-    }
-    return `$result
-} catch {
-    Write-MandALog -Message "Error in $moduleFunction`: `$(`$_.Exception.Message)" -Level "ERROR"
-    throw
-}
-"@
-            
-            $null = $powershell.AddScript($executionScript)
-            Write-OrchestratorLog -Message "Executing $moduleFunction in isolated runspace" -Level "DEBUG" -DebugOnly
-            $result = $powershell.Invoke()
-            
+            $result = $powershell.Invoke()[0]
+
             if ($powershell.HadErrors) {
-                $errors = $powershell.Streams.Error
-                $errorMessages = $errors | ForEach-Object { $_.Exception.Message }
-                Write-OrchestratorLog -Message "Runspace execution had errors: $($errorMessages -join '; ')" -Level "WARN"
-                
-                $forceErrors = $errors | Where-Object { $_.Exception.Message -like "*Force*" }
-                if ($forceErrors.Count -gt 0) {
-                    Write-OrchestratorLog -Message "Force parameter inheritance issue in $ModuleName module (module may have completed successfully)" -Level "WARN"
-                    
-                    Write-OrchestratorLog -Message "Attempting to retry $ModuleName module without Force parameter..." -Level "INFO"
-                    
-                    $powershell.Commands.Clear()
-                    $powershell.Streams.Error.Clear()
-                    
-                    $retryScript = @"
-try {
-    `$retryResult = & $moduleFunction -Configuration `$Configuration -Context `$Context
-    return `$retryResult
-} catch {
-    Write-MandALog -Message "Retry also failed: `$(`$_.Exception.Message)" -Level "ERROR"
-    return `$null
-}
-"@
-                    $null = $powershell.AddScript($retryScript)
-                    $retryResult = $powershell.Invoke()
-                    
-                    if ($retryResult -and $retryResult.Count -gt 0) {
-                        $result = $retryResult
-                        Write-OrchestratorLog -Message "$ModuleName module succeeded on retry" -Level "SUCCESS"
-                    } else {
-                        Write-OrchestratorLog -Message "Retry of $ModuleName module also failed: $(($powershell.Streams.Error | ForEach-Object { $_.Exception.Message }) -join '; ')" -Level "ERROR"
-                    }
-                }
-            }
-            
-            if ($result -and $result.Count -gt 0) {
-                $result = $result[0]
+                $runspaceErrors = $powershell.Streams.Error | ForEach-Object { $_.ToString() }
+                throw "Error during $moduleFunction execution: $($runspaceErrors -join '; ')"
             }
             
         } finally {
-            if ($powershell) {
-                $powershell.Dispose()
-            }
-            if ($runspace) {
-                $runspace.Close()
-                $runspace.Dispose()
-            }
+            if ($powershell) { $powershell.Dispose() }
+            if ($runspace) { $runspace.Close(); $runspace.Dispose() }
         }
-        
+
         $duration = (Get-Date) - $startTime
-        
         Write-Progress -Activity "Discovery Phase" -Completed
         Write-Host "<<< Completed $ModuleName Discovery in $($duration.TotalSeconds) seconds" -ForegroundColor Green
-        
-        try {
-            if ($result -and $result.Success) {
-                $dataCount = if ($result.Data) { $result.Data.Count } else { 0 }
-                Write-Host "    Records collected: $dataCount" -ForegroundColor Gray
-            } elseif ($result) {
-                $errorCount = if ($result.Errors) { $result.Errors.Count } else { 0 }
-                Write-Host "    Errors: $errorCount" -ForegroundColor Red
-            } else {
-                Write-Host "    No result returned" -ForegroundColor Yellow
-            }
-        } catch {
-            Write-Host "    Error accessing result properties: $_" -ForegroundColor Red
-        }
-        
         return $result
         
     } catch {
         Write-Progress -Activity "Discovery Phase" -Completed
         Write-Host "<<< Failed $ModuleName Discovery: $_" -ForegroundColor Red
-        throw
+        # Create a failed result object to ensure consistent output
+        $failedResult = New-Object DiscoveryResult -ArgumentList $ModuleName
+        $failedResult.AddError("Catastrophic failure in module execution.", $_.Exception, @{})
+        $failedResult.Complete()
+        return $failedResult
     }
 }
 
@@ -1517,7 +1350,8 @@ function Invoke-ProcessingPhase {
         if (Get-Command Start-DataAggregation -ErrorAction SilentlyContinue) {
             Write-OrchestratorLog -Message "Starting data aggregation..." -Level "INFO"
             
-            $aggregationResult = Start-DataAggregation -Configuration $global:MandA.Config
+            # FIX: Explicitly pass the full global context to the function.
+            $aggregationResult = Start-DataAggregation -Configuration $global:MandA.Config -Context $global:MandA
             
             if (-not $aggregationResult) {
                 throw "Data aggregation failed"

@@ -197,7 +197,10 @@
                                          "discoverShadowCopies":  true,
                                          "discoverClusters":  true,
                                          "skipShareSizeCalculationForPathDepthExceeding":  1000000
-                                     }
+                                     },
+                      "sharepoint": {
+                          "tenantName": "your-tenant-name-here"
+                      }
                   },
     "processing":  {
                        "chunkSize":  100,

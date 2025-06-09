@@ -300,12 +300,12 @@ function Connect-ToTeams {
         Write-MandALog "Microsoft Teams: Using Graph API (no separate connection required)" -Level "SUCCESS"
         
         # Test Graph connection for Teams data
-        if (Get-Command Get-MgTeam -ErrorAction SilentlyContinue) {
-            # Test with a simple teams query (limit to 1 to avoid large results)
-            $teams = Get-MgTeam -Top 1 -ErrorAction Stop
+        if (Get-Command Get-MgGroup -ErrorAction SilentlyContinue) {
+            # Test with groups that have Teams enabled
+            $teamsGroups = Get-MgGroup -Filter "resourceProvisioningOptions/Any(x:x eq 'Team')" -Top 1 -ErrorAction Stop
             Write-MandALog "[OK] Graph API available for Teams data" -Level "SUCCESS"
-            if ($teams) {
-                Write-MandALog "  - Found Teams data available" -Level "INFO"
+            if ($teamsGroups) {
+                Write-MandALog "  - Found Teams-enabled groups" -Level "INFO"
             }
             return $true
         } else {

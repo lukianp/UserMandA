@@ -196,7 +196,7 @@ function Get-LicenseSKUsWithErrorHandling {
                 throw "Graph API validation failed: $($_.Exception.Message)"
             }
             
-            $subscribedSkus = Get-MgSubscribedSku -All -ErrorAction Stop
+            $subscribedSkus = Get-MgSubscribedSku -ErrorAction Stop
             
             Write-MandALog "Retrieved $($subscribedSkus.Count) license SKUs" -Level "SUCCESS" -Context $Context
             
@@ -564,7 +564,7 @@ function Get-LicenseSKUsData {
     try {
         Write-MandALog "Retrieving license SKUs..." -Level "INFO"
         
-        $subscribedSkus = Get-MgSubscribedSku -All
+        $subscribedSkus = Get-MgSubscribedSku
         
         foreach ($sku in $subscribedSkus) {
             # Calculate usage percentages
@@ -917,7 +917,7 @@ function Get-ServicePlanUsageData {
         Write-MandALog "Checking service plan assignments for users..." -Level "INFO"
         
         # Get all SKUs and their service plans
-        $allSkus = Get-MgSubscribedSku -All
+        $allSkus = Get-MgSubscribedSku
         
         # Dictionary to track service plan usage
         $servicePlanUsage = @{}

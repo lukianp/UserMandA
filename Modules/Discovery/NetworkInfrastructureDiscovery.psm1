@@ -43,8 +43,8 @@ function Get-ModuleContext {
 
 #>
 
-$authModulePathFromGlobal = Join-Path $global:MandA.Paths.Authentication "DiscoveryModuleBase.psm1"
-Import-Module $authModulePathFromGlobal -Force
+# Import base module - moved to function scope to avoid module-load-time dependency on $global:MandA
+# This import will be handled by the Get-ModuleContext function when needed
 
 # Prerequisites validation function
 function Test-NetworkInfrastructureDiscoveryPrerequisites {
@@ -224,7 +224,7 @@ function Invoke-NetworkInfrastructureDiscovery {
         
     } catch {
         $result.Success = $false
-        $result.ErrorMessage = $_.Exception.Message
+        $result.Exception.Message = $_.Exception.Message
         $result.Metadata.EndTime = Get-Date
         $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
         

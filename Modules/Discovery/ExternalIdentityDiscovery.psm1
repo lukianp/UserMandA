@@ -43,21 +43,10 @@ function Get-ModuleContext {
 
 
 
-# Import base module
+# Import base module - moved to function scope to avoid module-load-time dependency on $global:MandA
+# These imports will be handled by the Get-ModuleContext function when needed
 
-$authModulePathFromGlobal = Join-Path $global:MandA.Paths.Authentication "DiscoveryModuleBase.psm1"
-Import-Module $authModulePathFromGlobal -Force
-
-
-# Add progress module import after other imports
-$progressModulePath = if ($global:MandA -and $global:MandA.Paths) {
-    Join-Path $global:MandA.Paths.Utilities "ProgressDisplay.psm1"
-} else {
-    Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) "Utilities\ProgressDisplay.psm1"
-}
-if (Test-Path $progressModulePath) {
-    Import-Module $progressModulePath -Force -Global
-}
+# Module imports are now handled within functions to avoid global context dependency at load time
 
 # Enhanced Get-B2BGuestUsersEnhanced
 function Get-B2BGuestUsersEnhanced {
@@ -351,7 +340,7 @@ function Invoke-ExternalIdentityDiscovery {
         
     } catch {
         $result.Success = $false
-        $result.ErrorMessage = $_.Exception.Message
+        $result.Exception.Message = $_.Exception.Message
         $result.Metadata.EndTime = Get-Date
         $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
         

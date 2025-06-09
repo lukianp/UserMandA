@@ -322,7 +322,7 @@ function Invoke-FileServerDiscovery {
         
     } catch {
         $result.Success = $false
-        $result.ErrorMessage = $_.Exception.Message
+        $result.Exception.Message = $_.Exception.Message
         $result.Metadata.EndTime = Get-Date
         $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
         
