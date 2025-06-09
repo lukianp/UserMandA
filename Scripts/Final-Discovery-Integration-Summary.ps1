@@ -1,4 +1,4 @@
-# Final Discovery Integration Summary
+﻿# Final Discovery Integration Summary
 Write-Host "=== DISCOVERY MODULE INTEGRATION SUMMARY ===" -ForegroundColor Cyan
 Write-Host ""
 

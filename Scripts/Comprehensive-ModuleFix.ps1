@@ -1,4 +1,4 @@
-# Comprehensive Module Fix Script
+﻿# Comprehensive Module Fix Script
 # Addresses all validation issues found in the M&A Discovery Suite modules
 
 param(

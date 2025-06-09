@@ -1,4 +1,4 @@
-# Final Integration Test - Discovery Modules with Orchestrator
+﻿# Final Integration Test - Discovery Modules with Orchestrator
 # This script validates the integration between discovery modules and the orchestrator
 
 Write-Host "========================================" -ForegroundColor Cyan

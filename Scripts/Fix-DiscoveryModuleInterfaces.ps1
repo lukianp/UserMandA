@@ -1,4 +1,4 @@
-# Fix Discovery Module Interfaces
+﻿# Fix Discovery Module Interfaces
 # Adds required Invoke-Discovery and Get-DiscoveryInfo functions to all discovery modules
 
 param(

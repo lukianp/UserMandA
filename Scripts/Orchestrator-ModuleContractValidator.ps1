@@ -1,4 +1,4 @@
-# Orchestrator-Module Contract Validation System
+﻿# Orchestrator-Module Contract Validation System
 # Analyzes orchestrator invocation patterns and validates module interface contracts
 
 param(

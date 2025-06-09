@@ -1,4 +1,4 @@
-# Simple Syntax Validation Script
+﻿# Simple Syntax Validation Script
 # Validates PowerShell files for basic syntax and compatibility issues
 
 param(

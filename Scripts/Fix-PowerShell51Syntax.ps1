@@ -1,4 +1,4 @@
-# Fix PowerShell 5.1 Syntax Issues in Processing Modules
+﻿# Fix PowerShell 5.1 Syntax Issues in Processing Modules
 # This script fixes .Where() method calls and Join-String cmdlet usage
 
 param(

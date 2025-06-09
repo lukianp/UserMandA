@@ -1,4 +1,4 @@
-# Simple Test Runner for Comprehensive Discovery Module Testing
+﻿# Simple Test Runner for Comprehensive Discovery Module Testing
 # Demonstrates various testing scenarios and configurations
 
 param(

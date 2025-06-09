@@ -1,4 +1,4 @@
-# Comprehensive Fix for Error Variable Conflicts
+﻿# Comprehensive Fix for Error Variable Conflicts
 # This script fixes all instances where modules try to overwrite the read-only $Error variable
 
 param(

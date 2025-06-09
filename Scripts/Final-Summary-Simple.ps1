@@ -1,4 +1,4 @@
-# Final Module Summary - Simple Version
+﻿# Final Module Summary - Simple Version
 # Provides final status report for M&A Discovery Suite
 
 param(

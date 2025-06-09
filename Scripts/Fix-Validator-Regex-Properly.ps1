@@ -1,4 +1,4 @@
-# Properly Fix Advanced Discovery Module Validator Regex Errors
+﻿# Properly Fix Advanced Discovery Module Validator Regex Errors
 # Targets specific lines with problematic regex patterns
 
 param(

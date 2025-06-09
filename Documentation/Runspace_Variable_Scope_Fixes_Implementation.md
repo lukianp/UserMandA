@@ -171,8 +171,8 @@ This document summarizes the implementation of fixes for runspace variable scope
 # Run all tests
 .\Scripts\Test-RunspaceVariableScopeFixes.ps1 -CompanyName "TestCompany"
 
-# Run tests with verbose output
-.\Scripts\Test-RunspaceVariableScopeFixes.ps1 -CompanyName "TestCompany" -Verbose
+# Run tests with detailed output
+.\Scripts\Test-RunspaceVariableScopeFixes.ps1 -CompanyName "TestCompany" -DetailedOutput
 
 # Skip discovery integration test
 .\Scripts\Test-RunspaceVariableScopeFixes.ps1 -CompanyName "TestCompany" -SkipDiscoveryTest

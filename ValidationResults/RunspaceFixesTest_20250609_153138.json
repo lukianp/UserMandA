@@ -1,0 +1,140 @@
+﻿{
+    "TestDetails":  [
+                        {
+                            "Duration":  {
+                                             "Ticks":  3620021,
+                                             "Days":  0,
+                                             "Hours":  0,
+                                             "Milliseconds":  362,
+                                             "Minutes":  0,
+                                             "Seconds":  0,
+                                             "TotalDays":  4.18983912037037E-06,
+                                             "TotalHours":  0.00010055613888888888,
+                                             "TotalMilliseconds":  362.00210000000004,
+                                             "TotalMinutes":  0.006033368333333333,
+                                             "TotalSeconds":  0.3620021
+                                         },
+                            "Status":  "PASSED",
+                            "Result":  true,
+                            "Name":  "Fix1_EmojiReplacements",
+                            "Description":  "Verify ASCII emoji replacements in logging"
+                        },
+                        {
+                            "Duration":  {
+                                             "Ticks":  11870233,
+                                             "Days":  0,
+                                             "Hours":  0,
+                                             "Milliseconds":  187,
+                                             "Minutes":  0,
+                                             "Seconds":  1,
+                                             "TotalDays":  1.3738695601851852E-05,
+                                             "TotalHours":  0.00032972869444444444,
+                                             "TotalMilliseconds":  1187.0233,
+                                             "TotalMinutes":  0.019783721666666667,
+                                             "TotalSeconds":  1.1870233
+                                         },
+                            "Status":  "PASSED",
+                            "Result":  true,
+                            "Name":  "Fix2_DiscoveryResultClass",
+                            "Description":  "Verify global DiscoveryResult class registration"
+                        },
+                        {
+                            "Duration":  {
+                                             "Ticks":  610108,
+                                             "Days":  0,
+                                             "Hours":  0,
+                                             "Milliseconds":  61,
+                                             "Minutes":  0,
+                                             "Seconds":  0,
+                                             "TotalDays":  7.0614351851851852E-07,
+                                             "TotalHours":  1.6947444444444445E-05,
+                                             "TotalMilliseconds":  61.0108,
+                                             "TotalMinutes":  0.0010168466666666666,
+                                             "TotalSeconds":  0.0610108
+                                         },
+                            "Status":  "FAILED",
+                            "Result":  "Enhanced module loading sequence not found in orchestrator",
+                            "Name":  "Fix3_ModuleLoadingSequence",
+                            "Description":  "Verify dependency-ordered module loading"
+                        },
+                        {
+                            "Duration":  {
+                                             "Ticks":  730002,
+                                             "Days":  0,
+                                             "Hours":  0,
+                                             "Milliseconds":  73,
+                                             "Minutes":  0,
+                                             "Seconds":  0,
+                                             "TotalDays":  8.4490972222222223E-07,
+                                             "TotalHours":  2.0277833333333331E-05,
+                                             "TotalMilliseconds":  73.0002,
+                                             "TotalMinutes":  0.00121667,
+                                             "TotalSeconds":  0.0730002
+                                         },
+                            "Status":  "FAILED",
+                            "Result":  "Pre-compiled functions not found in session state",
+                            "Name":  "Fix4_RunspaceSessionState",
+                            "Description":  "Verify enhanced runspace session state configuration"
+                        },
+                        {
+                            "Duration":  {
+                                             "Ticks":  230044,
+                                             "Days":  0,
+                                             "Hours":  0,
+                                             "Milliseconds":  23,
+                                             "Minutes":  0,
+                                             "Seconds":  0,
+                                             "TotalDays":  2.6625462962962961E-07,
+                                             "TotalHours":  6.3901111111111106E-06,
+                                             "TotalMilliseconds":  23.0044,
+                                             "TotalMinutes":  0.00038340666666666668,
+                                             "TotalSeconds":  0.023004399999999998
+                                         },
+                            "Status":  "PASSED",
+                            "Result":  true,
+                            "Name":  "Fix5_EnhancedErrorHandling",
+                            "Description":  "Verify fallback error handling in discovery modules"
+                        },
+                        {
+                            "Duration":  {
+                                             "Ticks":  109947,
+                                             "Days":  0,
+                                             "Hours":  0,
+                                             "Milliseconds":  10,
+                                             "Minutes":  0,
+                                             "Seconds":  0,
+                                             "TotalDays":  1.2725347222222222E-07,
+                                             "TotalHours":  3.0540833333333334E-06,
+                                             "TotalMilliseconds":  10.9947,
+                                             "TotalMinutes":  0.000183245,
+                                             "TotalSeconds":  0.0109947
+                                         },
+                            "Status":  "PASSED",
+                            "Result":  true,
+                            "Name":  "Fix6_StructuredLogging",
+                            "Description":  "Verify structured logging with correlation IDs"
+                        },
+                        {
+                            "Duration":  {
+                                             "Ticks":  1280030,
+                                             "Days":  0,
+                                             "Hours":  0,
+                                             "Milliseconds":  128,
+                                             "Minutes":  0,
+                                             "Seconds":  0,
+                                             "TotalDays":  1.4815162037037037E-06,
+                                             "TotalHours":  3.5556388888888888E-05,
+                                             "TotalMilliseconds":  128.00300000000001,
+                                             "TotalMinutes":  0.0021333833333333336,
+                                             "TotalSeconds":  0.128003
+                                         },
+                            "Status":  "PASSED",
+                            "Result":  true,
+                            "Name":  "Integration_DiscoveryTest",
+                            "Description":  "Integration test with enhanced runspace features"
+                        }
+                    ],
+    "TotalTests":  7,
+    "PassedTests":  5,
+    "FailedTests":  2
+}

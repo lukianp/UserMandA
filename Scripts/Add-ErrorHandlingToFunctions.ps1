@@ -1,4 +1,4 @@
-# Add Error Handling to Functions
+﻿# Add Error Handling to Functions
 # Adds try-catch blocks to functions that lack error handling
 
 param(

@@ -1,0 +1,169 @@
+﻿{
+    "TestsPassed":  3,
+    "Details":  [
+                    {
+                        "Message":  "Starting Runspace Error Handling Fixes Validation",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845472)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "INFO",
+                        "TestName":  ""
+                    },
+                    {
+                        "Message":  "Output Path: ValidationResults",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845476)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "INFO",
+                        "TestName":  ""
+                    },
+                    {
+                        "Message":  "Testing Fix 1: Runspace Error Handling",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845483)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "INFO",
+                        "TestName":  "Fix1"
+                    },
+                    {
+                        "Message":  "Enhanced error handling found in runspace scriptblock",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845745)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "PASS",
+                        "TestName":  "Fix1"
+                    },
+                    {
+                        "Message":  "Fallback error message handling found",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845755)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "PASS",
+                        "TestName":  "Fix1"
+                    },
+                    {
+                        "Message":  "Testing Fix 2: Context Parameter Standardization",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845758)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "INFO",
+                        "TestName":  "Fix2"
+                    },
+                    {
+                        "Message":  "Context parameter checking logic NOT found",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845760)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "FAIL",
+                        "TestName":  "Fix2"
+                    },
+                    {
+                        "Message":  "Context parameter addition logic found",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845763)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "PASS",
+                        "TestName":  "Fix2"
+                    },
+                    {
+                        "Message":  "Testing Fix 3: SharePoint Configuration",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845768)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "INFO",
+                        "TestName":  "Fix3"
+                    },
+                    {
+                        "Message":  "SharePoint configuration found with tenantName: zedra",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845810)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "PASS",
+                        "TestName":  "Fix3"
+                    },
+                    {
+                        "Message":  "Testing Fix 4: Processing Phase Context",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845816)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "INFO",
+                        "TestName":  "Fix4"
+                    },
+                    {
+                        "Message":  "Processing phase context checking found",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845822)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "PASS",
+                        "TestName":  "Fix4"
+                    },
+                    {
+                        "Message":  "Fallback Paths parameter logic found",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845825)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "PASS",
+                        "TestName":  "Fix4"
+                    },
+                    {
+                        "Message":  "Testing Fix 5: Memory Management and Timeout",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845829)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "INFO",
+                        "TestName":  "Fix5"
+                    },
+                    {
+                        "Message":  "Enhanced timeout handling NOT found",
+                        "Timestamp":  {
+                                          "value":  "\/Date(1749481845863)\/",
+                                          "DisplayHint":  2,
+                                          "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                                      },
+                        "Level":  "FAIL",
+                        "TestName":  "Fix5"
+                    }
+                ],
+    "Timestamp":  {
+                      "value":  "\/Date(1749481845441)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "Monday, June 9, 2025 4:10:45 PM"
+                  },
+    "TestsRun":  5,
+    "Fixes":  {
+                  "Fix5_MemoryManagementTimeout":  false,
+                  "Fix3_SharePointConfiguration":  true,
+                  "Fix2_ContextParameterStandardization":  false,
+                  "Fix4_ProcessingPhaseContext":  true,
+                  "Fix1_RunspaceErrorHandling":  true
+              },
+    "TestsFailed":  2
+}

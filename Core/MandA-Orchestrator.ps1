@@ -458,42 +458,44 @@ function Initialize-OrchestratorModules {
         throw "DiscoveryResult class not available. Critical initialization failure."
     }
     
-    # Load utility modules
-    $utilityModules = @{
-        "ErrorHandling" = "Utilities"
-        "EnhancedLogging" = "Utilities"
-        "PerformanceMetrics" = "Utilities"
-        "FileOperations" = "Utilities"
-        "ValidationHelpers" = "Utilities"
-        "ProgressDisplay" = "Utilities"
-    }
+    # Load in dependency order
+    $loadOrder = @(
+        @{Name="EnhancedLogging"; Path="Utilities\EnhancedLogging.psm1"}
+        @{Name="ErrorHandling"; Path="Utilities\ErrorHandling.psm1"}
+        @{Name="ValidationHelpers"; Path="Utilities\ValidationHelpers.psm1"}
+        @{Name="CredentialManagement"; Path="Authentication\CredentialManagement.psm1"}
+        @{Name="Authentication"; Path="Authentication\Authentication.psm1"}
+        @{Name="PerformanceMetrics"; Path="Utilities\PerformanceMetrics.psm1"}
+        @{Name="FileOperations"; Path="Utilities\FileOperations.psm1"}
+        @{Name="ProgressDisplay"; Path="Utilities\ProgressDisplay.psm1"}
+    )
     
     $totalLoaded = 0
     $totalFailed = @()
     
-    foreach ($module in $utilityModules.Keys) {
-        $modulePath = Join-Path $global:MandA.Paths[$utilityModules[$module]] "$module.psm1"
+    foreach ($module in $loadOrder) {
+        $modulePath = Join-Path $global:MandA.Paths.Modules $module.Path
         
         if (Test-Path $modulePath) {
             try {
                 Import-Module $modulePath -Force -Global -ErrorAction Stop
                 $totalLoaded++
-                Write-OrchestratorLog -Message "Loaded utility module: $module" -Level "SUCCESS"
+                Write-OrchestratorLog -Message "Loaded module: $($module.Name)" -Level "SUCCESS"
                 
                 # Initialize logging if just loaded
-                if ($module -eq "EnhancedLogging" -and (Get-Command "Initialize-Logging" -ErrorAction SilentlyContinue)) {
+                if ($module.Name -eq "EnhancedLogging" -and (Get-Command "Initialize-Logging" -ErrorAction SilentlyContinue)) {
                     Initialize-Logging -Context $global:MandA
                 }
             } catch {
-                $totalFailed += $module
+                $totalFailed += $module.Name
                 Add-OrchestratorError -Source "ModuleLoader" `
-                    -Message "Failed to load utility module $module" `
+                    -Message "Failed to load module $($module.Name)" `
                     -Exception $_.Exception `
                     -Severity "Critical"
             }
         } else {
-            $totalFailed += $module
-            Write-OrchestratorLog -Message "Utility module not found: $modulePath" -Level "ERROR"
+            $totalFailed += $module.Name
+            Write-OrchestratorLog -Message "Module not found: $modulePath" -Level "ERROR"
         }
     }
     
@@ -838,11 +840,26 @@ function Write-ProgressStep {
             param($modName, $modConfig, $globalContext, $resultsCollection, $errorCollection)
             
             $jobStartTime = Get-Date
-            $discoveryResult = [DiscoveryResult]::new($modName) # Create result object immediately
+            $discoveryResult = [DiscoveryResult]::new($modName)
 
             try {
                 # Set up context for this thread
                 $global:MandA = $globalContext
+                
+                # Add error handling wrapper
+                trap {
+                    $errorMessage = if ($_.Exception.Message) {
+                        $_.Exception.Message
+                    } elseif ($_.ToString) {
+                        $_.ToString()
+                    } else {
+                        "Unknown error occurred"
+                    }
+                    
+                    $discoveryResult.Success = $false
+                    $discoveryResult.AddError("Runspace execution failed: $errorMessage", $_.Exception, @{ Module = $modName })
+                    continue
+                }
                 
                 # Load the specific discovery module for this job
                 $discoveryModulePath = Join-Path $global:MandA.Paths.Discovery "${modName}Discovery.psm1"
@@ -866,10 +883,14 @@ function Write-ProgressStep {
                 # Execute discovery
                 $params = @{
                     Configuration = $modConfig
-                    Context = $globalContext
                 }
-                
-                # Get the result from the module's execution
+
+                # Check if the function accepts Context parameter
+                $functionInfo = Get-Command $functionName -ErrorAction SilentlyContinue
+                if ($functionInfo -and $functionInfo.Parameters.ContainsKey('Context')) {
+                    $params['Context'] = $globalContext
+                }
+
                 $moduleOutput = & $functionName @params
                 
                 # Check if the module returned the correct object type
@@ -996,14 +1017,26 @@ function Write-ProgressStep {
                     Write-OrchestratorLog -Message "Job $($job.ModuleName) stuck ($([Math]::Round($runtime.TotalMinutes, 1)) min)" -Level "WARN"
                     
                     try {
+                        # Force stop the runspace
                         $job.PowerShell.Stop()
                         $job.Completed = $true
                         $jobMonitor.FailedJobs++
                         
+                        # Create timeout result
                         $timeoutResult = [DiscoveryResult]::new($job.ModuleName)
                         $timeoutResult.AddError("Timeout after $([Math]::Round($runtime.TotalMinutes, 1)) minutes", $null)
                         $timeoutResult.Complete()
                         $ResultsCollection.Add($timeoutResult)
+                        
+                        # Dispose immediately to free memory
+                        $job.PowerShell.Dispose()
+                        $job.PowerShell = $null
+                        $job.Handle = $null
+                        
+                        # Force garbage collection
+                        [System.GC]::Collect()
+                        [System.GC]::WaitForPendingFinalizers()
+                        [System.GC]::Collect()
                     } catch {
                         Write-OrchestratorLog -Message "Failed to stop stuck job: $_" -Level "ERROR"
                     }
@@ -1120,7 +1153,19 @@ function Invoke-ProcessingPhase {
             Write-OrchestratorLog -Message "Starting data aggregation..." -Level "INFO"
             
             # Ensure we pass the full global context, not just Configuration
-            $aggregationResult = Start-DataAggregation -Configuration $global:MandA.Config -Context $global:MandA
+            $aggregationParams = @{
+                Configuration = $global:MandA.Config
+            }
+
+            # Check if Start-DataAggregation accepts Context parameter
+            if ((Get-Command Start-DataAggregation).Parameters.ContainsKey('Context')) {
+                $aggregationParams['Context'] = $global:MandA
+            } else {
+                # Fallback: ensure Paths are available
+                $aggregationParams['Paths'] = $global:MandA.Paths
+            }
+
+            $aggregationResult = Start-DataAggregation @aggregationParams
             
             if (-not $aggregationResult) {
                 throw "Data aggregation failed"

@@ -1,4 +1,4 @@
-# Test PowerShell 5.1 Compatibility for Processing Modules
+﻿# Test PowerShell 5.1 Compatibility for Processing Modules
 # This script tests that all processing modules can be loaded without syntax errors
 
 param(

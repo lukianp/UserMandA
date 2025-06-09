@@ -1,4 +1,4 @@
-# Fix Advanced Discovery Module Validator Regex Errors
+﻿# Fix Advanced Discovery Module Validator Regex Errors
 # Addresses the "parsing "\" - Illegal \ at end of pattern" errors
 
 param(

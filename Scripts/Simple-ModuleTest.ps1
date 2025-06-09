@@ -1,4 +1,4 @@
-# Simple Module Loading Test for PowerShell 5.1 Compatibility
+﻿# Simple Module Loading Test for PowerShell 5.1 Compatibility
 
 Write-Host "Testing module loading in PowerShell $($PSVersionTable.PSVersion)..." -ForegroundColor Green
 

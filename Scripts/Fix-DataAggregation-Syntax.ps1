@@ -1,4 +1,4 @@
-# Fix Critical Syntax Errors in DataAggregation.psm1
+﻿# Fix Critical Syntax Errors in DataAggregation.psm1
 # This script addresses the specific syntax issues found in the DataAggregation module
 
 param(

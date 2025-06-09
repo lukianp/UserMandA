@@ -1,4 +1,4 @@
-# Master Discovery Integration Test and Cleanup Script
+﻿# Master Discovery Integration Test and Cleanup Script
 # This script runs comprehensive discovery testing and organizes the Scripts directory
 
 Write-Host "=== MASTER DISCOVERY INTEGRATION TEST & CLEANUP ===" -ForegroundColor Cyan

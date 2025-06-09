@@ -1,4 +1,4 @@
-# Comprehensive Discovery Module Monitoring with Real-Time Output Tracking
+﻿# Comprehensive Discovery Module Monitoring with Real-Time Output Tracking
 # Systematic testing of each discovery module's integration with orchestrator
 
 param(

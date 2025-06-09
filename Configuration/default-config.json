@@ -69,7 +69,7 @@
                                          ],
                       "skipExistingFiles":  true,
                       "parallelProcessing":  true,
-                      "maxConcurrentJobs":  5,
+                      "maxConcurrentJobs":  2,
                       "batchSize":  1000,
                       "excludeDisabledUsers":  false,
                       "includeGuestUsers":  true,
@@ -243,7 +243,7 @@
                                      }
                },
     "performance":  {
-                        "memoryThresholdMB":  4096,
+                        "memoryThresholdMB":  12384,
                         "diskSpaceThresholdGB":  2,
                         "throttleLimit":  100,
                         "progressUpdateInterval":  100,

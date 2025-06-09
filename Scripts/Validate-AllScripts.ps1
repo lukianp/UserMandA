@@ -1,4 +1,4 @@
-# Validate All Recently Created Scripts
+﻿# Validate All Recently Created Scripts
 # This script validates the syntax of all scripts created during the validation process
 
 $scriptsToValidate = @(

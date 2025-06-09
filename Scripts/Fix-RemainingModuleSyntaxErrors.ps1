@@ -1,4 +1,4 @@
-# Fix Remaining Module Syntax Errors
+﻿# Fix Remaining Module Syntax Errors
 # Targets the 21 modules that still have syntax issues after comprehensive fix
 
 param(

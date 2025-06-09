@@ -1,4 +1,4 @@
-# Direct fix for DataAggregation.psm1 critical syntax errors
+﻿# Direct fix for DataAggregation.psm1 critical syntax errors
 
 $modulePath = "Modules/Processing/DataAggregation.psm1"
 

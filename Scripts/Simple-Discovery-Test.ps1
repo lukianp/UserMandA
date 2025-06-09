@@ -1,4 +1,4 @@
-# Simple Discovery Integration Test
+﻿# Simple Discovery Integration Test
 Write-Host "=== TESTING DISCOVERY MODULE INTEGRATION ===" -ForegroundColor Cyan
 
 # Define DiscoveryResult class

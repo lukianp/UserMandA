@@ -1,4 +1,4 @@
-# Fix Error Variable Conflicts in Processing Modules
+﻿# Fix Error Variable Conflicts in Processing Modules
 # This script replaces 'Error = $null' and '$result.Error =' with 'ErrorInfo' equivalents
 
 param(

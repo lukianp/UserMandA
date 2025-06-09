@@ -1,4 +1,4 @@
-# Final Module Test with Absolute Paths
+﻿# Final Module Test with Absolute Paths
 
 Write-Host "Testing PowerShell 5.1 module compatibility..." -ForegroundColor Green
 Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)" -ForegroundColor Cyan

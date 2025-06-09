@@ -1,4 +1,4 @@
-# Simple Discovery Integration Fix
+﻿# Simple Discovery Integration Fix
 Write-Host "=== FIXING DISCOVERY MODULE INTEGRATION ===" -ForegroundColor Cyan
 
 # Get discovery modules

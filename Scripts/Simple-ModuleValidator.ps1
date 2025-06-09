@@ -1,4 +1,4 @@
-# Simple Module Validator - Bypasses regex issues to identify actual module problems
+﻿# Simple Module Validator - Bypasses regex issues to identify actual module problems
 # Focuses on basic syntax validation and interface checking
 
 param(

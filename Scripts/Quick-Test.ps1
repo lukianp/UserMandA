@@ -1,4 +1,4 @@
-# Quick Discovery Integration Test
+﻿# Quick Discovery Integration Test
 Write-Host "=== DISCOVERY MODULE INTEGRATION TEST ===" -ForegroundColor Cyan
 
 $modules = Get-ChildItem "Modules\Discovery\*.psm1" | Where-Object { $_.Name -notlike "*backup*" }

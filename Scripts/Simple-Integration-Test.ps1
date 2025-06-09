@@ -1,4 +1,4 @@
-# Simple Integration Test - Discovery Modules with Orchestrator
+﻿# Simple Integration Test - Discovery Modules with Orchestrator
 
 Write-Host "M&A DISCOVERY SUITE INTEGRATION TEST" -ForegroundColor Cyan
 Write-Host "====================================" -ForegroundColor Cyan

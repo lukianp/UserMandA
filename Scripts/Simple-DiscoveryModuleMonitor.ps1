@@ -1,4 +1,4 @@
-# Simple Discovery Module Monitor with Real-Time Output
+﻿# Simple Discovery Module Monitor with Real-Time Output
 # Focused testing of discovery modules for orchestrator integration
 
 Write-Host "=== DISCOVERY MODULE ORCHESTRATOR INTEGRATION MONITOR ===" -ForegroundColor Cyan

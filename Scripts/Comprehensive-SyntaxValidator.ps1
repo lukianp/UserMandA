@@ -1,4 +1,4 @@
-# Comprehensive Syntax Validation and Error Checking Script
+﻿# Comprehensive Syntax Validation and Error Checking Script
 # This script performs thorough validation of all recently modified PowerShell files
 
 param(

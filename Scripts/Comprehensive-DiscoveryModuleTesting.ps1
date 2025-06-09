@@ -1,4 +1,4 @@
-# Comprehensive Discovery Module Testing Protocol
+﻿# Comprehensive Discovery Module Testing Protocol
 # Systematic validation of search functionality, data retrieval, performance, and integration
 
 param(

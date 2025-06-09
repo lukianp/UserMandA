@@ -1,4 +1,4 @@
-# Master Validation Suite for M&A Discovery System
+﻿# Master Validation Suite for M&A Discovery System
 # Comprehensive validation combining syntax, structure, contracts, and runtime analysis
 
 param(
