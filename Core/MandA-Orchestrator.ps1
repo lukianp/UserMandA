@@ -298,6 +298,32 @@ function Get-MemorySnapshot {
     }
 }
 
+function Convert-ObjectToHashtable {
+    param($InputObject)
+    
+    if ($null -eq $InputObject) { return $null }
+    
+    # Handle arrays and collections
+    if ($InputObject -is [System.Collections.IEnumerable] -and -not ($InputObject -is [string])) {
+        $collection = foreach ($item in $InputObject) {
+            Convert-ObjectToHashtable -InputObject $item
+        }
+        return $collection
+    }
+    
+    # Handle PSCustomObject
+    if ($InputObject -is [System.Management.Automation.PSCustomObject]) {
+        $hash = @{}
+        foreach ($property in $InputObject.PSObject.Properties) {
+            $hash[$property.Name] = Convert-ObjectToHashtable -InputObject $property.Value
+        }
+        return $hash
+    }
+    
+    # Return all other types as-is
+    return $InputObject
+}
+
 function Test-ModuleCompletionStatus {
     param(
         [Parameter(Mandatory=$true)]
@@ -1053,18 +1079,27 @@ function Write-ProgressStep {
         $null = $powershell.AddScript($scriptBlock)
         $null = $powershell.AddArgument($moduleName)
         
-        # --- START FIX: INJECT AUTH CONTEXT ---
-        # Create a deep, thread-safe copy of the main configuration
-        $threadSafeConfig = $global:MandA.Config | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
+        # ======================================================================
+        # --- START FIX: REPLACED Incompatible -AsHashtable parameter ---
+        # ======================================================================
+
+        # 1. Create a deep copy of the configuration by converting to and from JSON. This produces a PSCustomObject.
+        $configAsObject = $global:MandA.Config | ConvertTo-Json -Depth 10 | ConvertFrom-Json
         
-        # Inject the live authentication context using the key the modules expect
+        # 2. Recursively convert the PSCustomObject back into a real [hashtable] using our new helper function.
+        $threadSafeConfig = Convert-ObjectToHashtable -InputObject $configAsObject
+        
+        # 3. Inject the live authentication context into the newly copied config for this thread.
         if ($script:LiveAuthContext) {
             $threadSafeConfig['_AuthContext'] = $script:LiveAuthContext
-            Write-OrchestratorLog -Message "Injected authentication context into config for module: $moduleName" -Level "DEBUG"
+            Write-OrchestratorLog -Message "Injected auth context for module: $moduleName" -Level "DEBUG"
         } else {
-            Write-OrchestratorLog -Message "WARNING: No authentication context available for injection into module: $moduleName" -Level "WARN"
+            Write-OrchestratorLog -Message "WARNING: No live auth context to inject for module: $moduleName" -Level "WARN"
         }
+        
+        # ======================================================================
         # --- END FIX ---
+        # ======================================================================
         
         # Pass the MODIFIED config to the runspace (with auth context)
         $null = $powershell.AddArgument($threadSafeConfig)
