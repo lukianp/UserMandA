@@ -6,92 +6,59 @@
 .SYNOPSIS
     Azure resource discovery module for M&A Discovery Suite
 .DESCRIPTION
-    Discovers Azure subscriptions, resource groups, and virtual machines with proper
-    authentication integration and error handling
+    Discovers Azure subscriptions, resource groups, and virtual machines.
+    Designed to run in isolated runspaces with dependency injection.
 .NOTES
     Author: M&A Discovery Team
-    Version: 7.2.0
+    Version: 8.0.0
     Last Modified: 2025-06-10
     Changes:
-    - Fixed authentication flow to use suite credentials
-    - Removed duplicate function exports
-    - Added proper error handling and logging
-    - Integrated with suite's authentication context
+    - Complete rewrite for runspace isolation
+    - Authentication via Configuration parameter
+    - Self-contained with fallback functions
+    - Mandatory Context parameter
 #>
 
-# Module-scope context variable
-$script:ModuleContext = $null
+# Module-scope variables
 $script:AzureConnected = $false
 $script:LastConnectionAttempt = $null
 
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
+# Fallback logging function for runspace isolation
+if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
+    function Write-MandALog {
+        param(
+            [string]$Message,
+            [string]$Level = "INFO",
+            [string]$Component = "General",
+            $Context
+        )
+        
+        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        $color = switch ($Level.ToUpper()) {
+            "ERROR" { "Red" }
+            "WARN" { "Yellow" }
+            "SUCCESS" { "Green" }
+            "DEBUG" { "Gray" }
+            "CRITICAL" { "Magenta" }
+            default { "White" }
+        }
+        
+        Write-Host "$timestamp [$Level] [$Component] $Message" -ForegroundColor $color
+        
+        # Try to write to log file if context provides path
+        if ($Context -and $Context.Paths -and $Context.Paths.LogOutput) {
+            try {
+                $logFile = Join-Path $Context.Paths.LogOutput "discovery_$(Get-Date -Format 'yyyyMMdd').log"
+                $logEntry = "$timestamp [$Level] [$Component] $Message"
+                Add-Content -Path $logFile -Value $logEntry -Encoding UTF8 -ErrorAction SilentlyContinue
+            } catch {
+                # Silently ignore log file errors in isolated runspace
+            }
         }
     }
-    return $script:ModuleContext
 }
 
-function Invoke-SafeModuleExecution {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [scriptblock]$ScriptBlock,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$ModuleName,
-        
-        [Parameter(Mandatory=$false)]
-        $Context
-    )
-    
-    $result = @{
-        Success = $false
-        Data = $null
-        Error = $null
-        Duration = $null
-    }
-    
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    
-    try {
-        # Validate global context
-        if (-not $global:MandA -or -not $global:MandA.Initialized) {
-            throw "Global M&A context not initialized"
-        }
-        
-        # Execute the module function
-        $result.Data = & $ScriptBlock
-        $result.Success = $true
-        
-    } catch {
-        $result.Error = @{
-            Message = $_.Exception.Message
-            Type = $_.Exception.GetType().FullName
-            StackTrace = $_.ScriptStackTrace
-            InnerException = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $null }
-        }
-        
-        # Log to both file and console
-        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
-        } else {
-            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red
-        }
-        
-        # Don't rethrow - let caller handle based on result
-    } finally {
-        $stopwatch.Stop()
-        $result.Duration = $stopwatch.Elapsed
-    }
-    
-    return $result
-}
-
+# Wrapper for consistent Azure logging
 function Write-AzureLog {
     param(
         [string]$Message,
@@ -99,20 +66,10 @@ function Write-AzureLog {
         $Context
     )
     
-    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-        Write-MandALog -Message "[Azure] $Message" -Level $Level -Component "AzureDiscovery" -Context $Context
-    } else {
-        $color = switch ($Level) {
-            "ERROR" { "Red" }
-            "WARN" { "Yellow" }
-            "SUCCESS" { "Green" }
-            "DEBUG" { "Gray" }
-            default { "White" }
-        }
-        Write-Host "[Azure] $Message" -ForegroundColor $color
-    }
+    Write-MandALog -Message "[Azure] $Message" -Level $Level -Component "AzureDiscovery" -Context $Context
 }
 
+# Connect to Azure using credentials from Configuration
 function Connect-AzureWithServicePrincipal {
     param(
         [hashtable]$Configuration,
@@ -131,44 +88,68 @@ function Connect-AzureWithServicePrincipal {
         $script:LastConnectionAttempt = Get-Date
         
         # Check if already connected
-        $currentContext = Get-AzContext -ErrorAction SilentlyContinue
-        if ($currentContext) {
-            Write-AzureLog -Message "Already connected to Azure as $($currentContext.Account.Id)" -Level "INFO" -Context $Context
-            $script:AzureConnected = $true
-            return $true
+        try {
+            $currentContext = Get-AzContext -ErrorAction Stop
+            if ($currentContext) {
+                Write-AzureLog -Message "Already connected to Azure as $($currentContext.Account.Id)" -Level "INFO" -Context $Context
+                $script:AzureConnected = $true
+                return $true
+            }
+        } catch {
+            # No context, need to connect
         }
         
-        # Get authentication context from the suite
-        Write-AzureLog -Message "Getting authentication context..." -Level "DEBUG" -Context $Context
+        # Extract authentication information from Configuration
+        $authInfo = $null
         
-        # Try to get auth context from the Authentication module
-        $authContext = $null
-        if (Get-Command Get-AuthenticationContext -ErrorAction SilentlyContinue) {
-            $authContext = Get-AuthenticationContext
+        # Check multiple possible locations for auth info
+        if ($Configuration.ContainsKey('_AuthContext')) {
+            # Orchestrator might inject auth context directly
+            $authInfo = $Configuration._AuthContext
+            Write-AzureLog -Message "Found auth context in Configuration._AuthContext" -Level "DEBUG" -Context $Context
         }
-        
-        if (-not $authContext) {
-            Write-AzureLog -Message "No authentication context available from suite" -Level "ERROR" -Context $Context
+        elseif ($Configuration.ContainsKey('_Credentials')) {
+            # Or directly as credentials
+            $authInfo = $Configuration._Credentials
+            Write-AzureLog -Message "Found credentials in Configuration._Credentials" -Level "DEBUG" -Context $Context
+        }
+        elseif ($Configuration.authentication -and $Configuration.authentication.ContainsKey('_Credentials')) {
+            # Or nested in authentication section
+            $authInfo = $Configuration.authentication._Credentials
+            Write-AzureLog -Message "Found credentials in Configuration.authentication._Credentials" -Level "DEBUG" -Context $Context
+        }
+        elseif ($Configuration.ContainsKey('ClientId') -and $Configuration.ContainsKey('ClientSecret') -and $Configuration.ContainsKey('TenantId')) {
+            # Or directly in Configuration
+            $authInfo = @{
+                ClientId = $Configuration.ClientId
+                ClientSecret = $Configuration.ClientSecret
+                TenantId = $Configuration.TenantId
+            }
+            Write-AzureLog -Message "Found credentials directly in Configuration" -Level "DEBUG" -Context $Context
+        }
+        else {
+            Write-AzureLog -Message "No authentication information found in Configuration" -Level "ERROR" -Context $Context
+            Write-AzureLog -Message "Configuration keys: $($Configuration.Keys -join ', ')" -Level "DEBUG" -Context $Context
             return $false
         }
         
         # Validate required properties
-        if (-not $authContext.ClientId -or -not $authContext.ClientSecret -or -not $authContext.TenantId) {
-            Write-AzureLog -Message "Authentication context missing required properties" -Level "ERROR" -Context $Context
+        if (-not $authInfo.ClientId -or -not $authInfo.ClientSecret -or -not $authInfo.TenantId) {
+            Write-AzureLog -Message "Authentication info missing required properties (ClientId, ClientSecret, or TenantId)" -Level "ERROR" -Context $Context
             return $false
         }
         
         Write-AzureLog -Message "Connecting to Azure using service principal..." -Level "INFO" -Context $Context
         
         # Convert client secret to secure string
-        $securePassword = ConvertTo-SecureString $authContext.ClientSecret -AsPlainText -Force
-        $credential = New-Object System.Management.Automation.PSCredential($authContext.ClientId, $securePassword)
+        $securePassword = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
+        $credential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $securePassword)
         
         # Connect to Azure
         $connectionParams = @{
             ServicePrincipal = $true
             Credential = $credential
-            Tenant = $authContext.TenantId
+            Tenant = $authInfo.TenantId
             ErrorAction = 'Stop'
             WarningAction = 'SilentlyContinue'
         }
@@ -192,6 +173,7 @@ function Connect-AzureWithServicePrincipal {
     }
 }
 
+# Test Azure connection
 function Test-AzureConnection {
     param(
         [hashtable]$Configuration,
@@ -199,9 +181,10 @@ function Test-AzureConnection {
     )
     
     try {
+        # Try to get current context
         $azContext = Get-AzContext -ErrorAction SilentlyContinue
+        
         if (-not $azContext) {
-            # Try to connect
             Write-AzureLog -Message "No Azure context found, attempting to connect..." -Level "INFO" -Context $Context
             return Connect-AzureWithServicePrincipal -Configuration $Configuration -Context $Context
         }
@@ -226,6 +209,7 @@ function Test-AzureConnection {
     }
 }
 
+# Get Azure subscriptions
 function Get-AzureSubscriptionsData {
     param(
         [hashtable]$Configuration,
@@ -247,8 +231,9 @@ function Get-AzureSubscriptionsData {
         
         # Apply subscription filter if configured
         $subscriptionFilter = @()
-        if ($Configuration.azure -and $Configuration.azure.subscriptionFilter) {
+        if ($Configuration.azure -and $Configuration.azure.subscriptionFilter -and $Configuration.azure.subscriptionFilter.Count -gt 0) {
             $subscriptionFilter = $Configuration.azure.subscriptionFilter
+            Write-AzureLog -Message "Applying subscription filter: $($subscriptionFilter -join ', ')" -Level "DEBUG" -Context $Context
         }
         
         foreach ($sub in $azSubs) {
@@ -279,6 +264,7 @@ function Get-AzureSubscriptionsData {
     return $subscriptions
 }
 
+# Get Azure resource groups
 function Get-AzureResourceGroupsData {
     param(
         [hashtable]$Configuration,
@@ -296,12 +282,12 @@ function Get-AzureResourceGroupsData {
             # Set context to subscription
             $null = Set-AzContext -SubscriptionId $sub.SubscriptionId -ErrorAction Stop
             
-            # Get resource groups with filter support
+            # Get resource groups
             $rgs = Get-AzResourceGroup -ErrorAction Stop
             
             # Apply resource group filter if configured
             $rgFilter = @()
-            if ($Configuration.azure -and $Configuration.azure.resourceGroupFilter) {
+            if ($Configuration.azure -and $Configuration.azure.resourceGroupFilter -and $Configuration.azure.resourceGroupFilter.Count -gt 0) {
                 $rgFilter = $Configuration.azure.resourceGroupFilter
             }
             
@@ -338,6 +324,7 @@ function Get-AzureResourceGroupsData {
     return $resourceGroups
 }
 
+# Get Azure virtual machines
 function Get-AzureVirtualMachinesData {
     param(
         [hashtable]$Configuration,
@@ -402,6 +389,7 @@ function Get-AzureVirtualMachinesData {
     return $virtualMachines
 }
 
+# Export data to CSV
 function Export-AzureData {
     param(
         [string]$FilePath,
@@ -437,38 +425,101 @@ function Invoke-AzureDiscovery {
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration,
         
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory=$true)]  # Made mandatory as per fix
         $Context
     )
     
-    # Ensure DiscoveryResult is available
-    if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
-        # Fallback to hashtable-based result
-        Write-AzureLog -Message "DiscoveryResult class not available, using hashtable" -Level "WARN" -Context $Context
+    # Debug output for troubleshooting
+    Write-AzureLog -Message "Starting Azure Discovery (v8.0.0)" -Level "INFO" -Context $Context
+    Write-AzureLog -Message "Configuration keys: $($Configuration.Keys -join ', ')" -Level "DEBUG" -Context $Context
+    Write-AzureLog -Message "Context type: $($Context.GetType().Name)" -Level "DEBUG" -Context $Context
+    
+    # Initialize result - handle missing DiscoveryResult class
+    $result = $null
+    
+    try {
+        # Check if DiscoveryResult class is available
+        if ([System.Management.Automation.PSTypeName]'DiscoveryResult' -and 
+            ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+            $result = [DiscoveryResult]::new('Azure')
+            Write-AzureLog -Message "Using DiscoveryResult class" -Level "DEBUG" -Context $Context
+        } else {
+            # Fallback to hashtable that mimics DiscoveryResult
+            Write-AzureLog -Message "DiscoveryResult class not available, using hashtable fallback" -Level "WARN" -Context $Context
+            $result = @{
+                Success = $true
+                ModuleName = 'Azure'
+                Data = $null
+                Errors = [System.Collections.ArrayList]::new()
+                Warnings = [System.Collections.ArrayList]::new()
+                Metadata = @{}
+                StartTime = Get-Date
+                EndTime = $null
+                ExecutionId = [guid]::NewGuid().ToString()
+                RecordCount = 0
+                
+                # Methods
+                AddError = {
+                    param($Message, $Exception, $Context)
+                    $this.Errors.Add(@{
+                        Timestamp = Get-Date
+                        Message = $Message
+                        Exception = if ($Exception) { $Exception.ToString() } else { $null }
+                        ExceptionType = if ($Exception) { $Exception.GetType().FullName } else { $null }
+                        Context = $Context
+                    }) | Out-Null
+                    $this.Success = $false
+                }.GetNewClosure()
+                
+                AddWarning = {
+                    param($Message, $Context)
+                    $this.Warnings.Add(@{
+                        Timestamp = Get-Date
+                        Message = $Message
+                        Context = $Context
+                    }) | Out-Null
+                }.GetNewClosure()
+                
+                Complete = {
+                    $this.EndTime = Get-Date
+                    if ($this.StartTime -and $this.EndTime) {
+                        $duration = $this.EndTime - $this.StartTime
+                        $this.Metadata['Duration'] = $duration
+                        $this.Metadata['DurationSeconds'] = $duration.TotalSeconds
+                    }
+                }.GetNewClosure()
+            }
+        }
+    } catch {
+        Write-AzureLog -Message "Error initializing result object: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        # Create minimal result object
         return @{
             Success = $false
             ModuleName = 'Azure'
-            Error = "DiscoveryResult class not available"
+            Error = "Failed to initialize result object: $($_.Exception.Message)"
             Data = $null
-            Errors = @()
+            Errors = @(@{ Message = $_.Exception.Message; Timestamp = Get-Date })
             Warnings = @()
         }
     }
     
-    # Initialize result using the globally defined DiscoveryResult class
-    $result = [DiscoveryResult]::new('Azure')
-    
     try {
-        Write-AzureLog -Message "Starting Azure Discovery..." -Level "INFO" -Context $Context
-        
         # Validate required Az modules
         $requiredModules = @('Az.Accounts', 'Az.Resources')
         foreach ($module in $requiredModules) {
             if (-not (Get-Module -Name $module -ListAvailable)) {
-                $result.AddError("Required module '$module' not installed", $null, @{
-                    Component = "Prerequisites"
-                    Resolution = "Install-Module -Name $module -Force -AllowClobber"
-                })
+                if ($result.AddError) {
+                    $result.AddError("Required module '$module' not installed", $null, @{
+                        Component = "Prerequisites"
+                        Resolution = "Install-Module -Name $module -Force -AllowClobber"
+                    })
+                } else {
+                    $result.Errors.Add(@{
+                        Message = "Required module '$module' not installed"
+                        Component = "Prerequisites"
+                    }) | Out-Null
+                    $result.Success = $false
+                }
                 Write-AzureLog -Message "Required module '$module' not found" -Level "ERROR" -Context $Context
                 return $result
             }
@@ -482,18 +533,27 @@ function Invoke-AzureDiscovery {
         
         # Check/establish Azure connection
         if (-not (Test-AzureConnection -Configuration $Configuration -Context $Context)) {
-            $result.AddError("Failed to establish Azure connection", $null, @{
-                Component = "AzureConnection"
-                Resolution = "Verify service principal credentials and permissions"
-            })
+            if ($result.AddError) {
+                $result.AddError("Failed to establish Azure connection", $null, @{
+                    Component = "AzureConnection"
+                    Resolution = "Verify service principal credentials and permissions"
+                })
+            } else {
+                $result.Errors.Add(@{
+                    Message = "Failed to establish Azure connection"
+                    Component = "AzureConnection"
+                }) | Out-Null
+                $result.Success = $false
+            }
             Write-AzureLog -Message "Azure connection could not be established" -Level "ERROR" -Context $Context
             return $result
         }
         
-        # Get output path
-        $outputPath = if ($Context -and $Context.Paths -and $Context.Paths.RawDataOutput) {
+        # Get output path from Context
+        $outputPath = if ($Context.Paths -and $Context.Paths.RawDataOutput) {
             $Context.Paths.RawDataOutput
         } else {
+            Write-AzureLog -Message "Warning: Context.Paths.RawDataOutput not found, using fallback" -Level "WARN" -Context $Context
             ".\Output\RawData"
         }
         
@@ -516,16 +576,31 @@ function Invoke-AzureDiscovery {
                 Export-AzureData -FilePath (Join-Path $outputPath "AzureSubscriptions.csv") `
                     -Data $subscriptions -DataType "subscriptions" -Context $Context
             } else {
-                $result.AddWarning("No Azure subscriptions found or accessible", @{
-                    Component = "Subscriptions"
-                    PossibleCause = "Service principal may lack subscription read permissions"
-                })
+                if ($result.AddWarning) {
+                    $result.AddWarning("No Azure subscriptions found or accessible", @{
+                        Component = "Subscriptions"
+                        PossibleCause = "Service principal may lack subscription read permissions"
+                    })
+                } else {
+                    $result.Warnings.Add(@{
+                        Message = "No Azure subscriptions found or accessible"
+                        Component = "Subscriptions"
+                    }) | Out-Null
+                }
             }
         } catch {
-            $result.AddError("Failed to discover Azure subscriptions", $_.Exception, @{
-                Operation = "GetSubscriptions"
-                ErrorType = $_.Exception.GetType().FullName
-            })
+            if ($result.AddError) {
+                $result.AddError("Failed to discover Azure subscriptions", $_.Exception, @{
+                    Operation = "GetSubscriptions"
+                    ErrorType = $_.Exception.GetType().FullName
+                })
+            } else {
+                $result.Errors.Add(@{
+                    Message = "Failed to discover Azure subscriptions: $($_.Exception.Message)"
+                    Operation = "GetSubscriptions"
+                }) | Out-Null
+                $result.Success = $false
+            }
         }
         
         # Only continue if we have subscriptions
@@ -541,10 +616,17 @@ function Invoke-AzureDiscovery {
                         -Data $resourceGroups -DataType "resource groups" -Context $Context
                 }
             } catch {
-                $result.AddError("Failed to discover resource groups", $_.Exception, @{
-                    Operation = "GetResourceGroups"
-                    ErrorType = $_.Exception.GetType().FullName
-                })
+                if ($result.AddError) {
+                    $result.AddError("Failed to discover resource groups", $_.Exception, @{
+                        Operation = "GetResourceGroups"
+                        ErrorType = $_.Exception.GetType().FullName
+                    })
+                } else {
+                    $result.Errors.Add(@{
+                        Message = "Failed to discover resource groups: $($_.Exception.Message)"
+                        Operation = "GetResourceGroups"
+                    }) | Out-Null
+                }
             }
             
             # Discover virtual machines
@@ -558,13 +640,26 @@ function Invoke-AzureDiscovery {
                         -Data $virtualMachines -DataType "virtual machines" -Context $Context
                 }
             } catch {
-                $result.AddError("Failed to discover virtual machines", $_.Exception, @{
-                    Operation = "GetVirtualMachines"
-                    ErrorType = $_.Exception.GetType().FullName
-                })
+                if ($result.AddError) {
+                    $result.AddError("Failed to discover virtual machines", $_.Exception, @{
+                        Operation = "GetVirtualMachines"
+                        ErrorType = $_.Exception.GetType().FullName
+                    })
+                } else {
+                    $result.Errors.Add(@{
+                        Message = "Failed to discover virtual machines: $($_.Exception.Message)"
+                        Operation = "GetVirtualMachines"
+                    }) | Out-Null
+                }
             }
         } else {
-            $result.AddWarning("Skipping resource discovery due to no accessible subscriptions")
+            if ($result.AddWarning) {
+                $result.AddWarning("Skipping resource discovery due to no accessible subscriptions")
+            } else {
+                $result.Warnings.Add(@{
+                    Message = "Skipping resource discovery due to no accessible subscriptions"
+                }) | Out-Null
+            }
         }
         
         # Set metadata
@@ -572,22 +667,39 @@ function Invoke-AzureDiscovery {
         $result.Metadata['OutputPath'] = $outputPath
         
         # Set overall success based on critical data
-        $result.Success = ($subscriptions.Count -gt 0) -or ($result.Errors.Count -eq 0)
+        if ($result.Success -ne $false) {
+            $result.Success = ($subscriptions.Count -gt 0) -or ($result.Errors.Count -eq 0)
+        }
         
         # Set record count for orchestrator
         $result.RecordCount = $totalItems
         
     } catch {
-        $result.AddError("Unexpected error in Azure discovery", $_.Exception, @{
-            Operation = "AzureDiscovery"
-            ErrorType = $_.Exception.GetType().FullName
-        })
+        if ($result.AddError) {
+            $result.AddError("Unexpected error in Azure discovery", $_.Exception, @{
+                Operation = "AzureDiscovery"
+                ErrorType = $_.Exception.GetType().FullName
+            })
+        } else {
+            $result.Errors.Add(@{
+                Message = "Unexpected error in Azure discovery: $($_.Exception.Message)"
+                Operation = "AzureDiscovery"
+            }) | Out-Null
+        }
         $result.Success = $false
     } finally {
-        $result.Complete()
+        # Complete the result
+        if ($result.Complete) {
+            $result.Complete()
+        } else {
+            $result.EndTime = Get-Date
+        }
         
         # Log summary
-        $summary = "Azure Discovery completed. Success: $($result.Success), Items: $($result.RecordCount), Errors: $($result.Errors.Count), Warnings: $($result.Warnings.Count)"
+        $errorCount = if ($result.Errors -is [System.Collections.ArrayList]) { $result.Errors.Count } else { $result.Errors.Length }
+        $warningCount = if ($result.Warnings -is [System.Collections.ArrayList]) { $result.Warnings.Count } else { $result.Warnings.Length }
+        
+        $summary = "Azure Discovery completed. Success: $($result.Success), Items: $($result.RecordCount), Errors: $errorCount, Warnings: $warningCount"
         $logLevel = if ($result.Success) { "SUCCESS" } else { "ERROR" }
         Write-AzureLog -Message $summary -Level $logLevel -Context $Context
     }
@@ -595,5 +707,5 @@ function Invoke-AzureDiscovery {
     return $result
 }
 
-# Export only the main discovery function
+# Export only the main discovery function that the orchestrator expects
 Export-ModuleMember -Function Invoke-AzureDiscovery
