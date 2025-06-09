@@ -744,6 +744,11 @@ function Invoke-DiscoveryPhase {
         $authContext = Get-AuthenticationContext
         $connections = Initialize-AllConnections -Configuration $global:MandA.Config -AuthContext $authContext
         Write-OrchestratorLog -Message "Authentication and connections successful" -Level "SUCCESS"
+        
+        # Store the authentication context for injection into runspaces
+        Write-OrchestratorLog -Message "Capturing authentication context for runspace injection..." -Level "DEBUG"
+        $script:LiveAuthContext = $authContext
+        
     } catch {
         Add-OrchestratorError -Source "DiscoveryPhase-Auth" -Message "Authentication failure" -Exception $_.Exception -Severity "Critical"
         return @{ Success = $false; ModuleResults = @{}; CriticalErrors = @($_); RecoverableErrors = @(); Warnings = @() }
@@ -1047,7 +1052,22 @@ function Write-ProgressStep {
         
         $null = $powershell.AddScript($scriptBlock)
         $null = $powershell.AddArgument($moduleName)
-        $null = $powershell.AddArgument($global:MandA.Config)
+        
+        # --- START FIX: INJECT AUTH CONTEXT ---
+        # Create a deep, thread-safe copy of the main configuration
+        $threadSafeConfig = $global:MandA.Config | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
+        
+        # Inject the live authentication context using the key the modules expect
+        if ($script:LiveAuthContext) {
+            $threadSafeConfig['_AuthContext'] = $script:LiveAuthContext
+            Write-OrchestratorLog -Message "Injected authentication context into config for module: $moduleName" -Level "DEBUG"
+        } else {
+            Write-OrchestratorLog -Message "WARNING: No authentication context available for injection into module: $moduleName" -Level "WARN"
+        }
+        # --- END FIX ---
+        
+        # Pass the MODIFIED config to the runspace (with auth context)
+        $null = $powershell.AddArgument($threadSafeConfig)
         $null = $powershell.AddArgument($global:MandA)
         $null = $powershell.AddArgument($ResultsCollection)
         $null = $powershell.AddArgument($ErrorCollection)

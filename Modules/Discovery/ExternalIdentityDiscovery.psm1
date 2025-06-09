@@ -14,18 +14,46 @@ function Get-AuthInfoFromConfiguration {
         [hashtable]$Configuration
     )
 
-    # Standardized pattern to extract credentials passed by the orchestrator.
-    if ($Configuration._AuthContext) { return $Configuration._AuthContext }
-    if ($Configuration._Credentials) { return $Configuration._Credentials }
-    if ($Configuration.authentication -and $Configuration.authentication._Credentials) { return $Configuration.authentication._Credentials }
-    if ($Configuration.ClientId -and $Configuration.ClientSecret -and $Configuration.TenantId) {
+    # Check multiple possible locations where auth might be passed
+    
+    # 1. Direct auth context injection by orchestrator
+    if ($Configuration._AuthContext) { 
+        return $Configuration._AuthContext 
+    }
+    
+    # 2. Credentials property
+    if ($Configuration._Credentials) { 
+        return $Configuration._Credentials 
+    }
+    
+    # 3. Within authentication section
+    if ($Configuration.authentication) {
+        if ($Configuration.authentication._Credentials) { 
+            return $Configuration.authentication._Credentials 
+        }
+        if ($Configuration.authentication.ClientId -and 
+            $Configuration.authentication.ClientSecret -and 
+            $Configuration.authentication.TenantId) {
+            return @{
+                ClientId     = $Configuration.authentication.ClientId
+                ClientSecret = $Configuration.authentication.ClientSecret
+                TenantId     = $Configuration.authentication.TenantId
+            }
+        }
+    }
+    
+    # 4. Direct properties at root level
+    if ($Configuration.ClientId -and 
+        $Configuration.ClientSecret -and 
+        $Configuration.TenantId) {
         return @{
             ClientId     = $Configuration.ClientId
             ClientSecret = $Configuration.ClientSecret
             TenantId     = $Configuration.TenantId
         }
     }
-    # Return null if no credentials found
+    
+    # No credentials found
     return $null
 }
 
@@ -37,8 +65,6 @@ function Write-ExternalIdentityLog {
         [string]$Level = "INFO",
         [hashtable]$Context
     )
-    # Module-specific wrapper for consistent logging component name.
-    # The global Write-MandALog function is guaranteed to exist.
     Write-MandALog -Message "[ExternalIdentity] $Message" -Level $Level -Component "ExternalIdentityDiscovery" -Context $Context
 }
 
@@ -58,16 +84,17 @@ function Invoke-ExternalIdentityDiscovery {
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # 1. INITIALIZE RESULT OBJECT
-    # The DiscoveryResult class is loaded by the orchestrator.
-    # This fallback provides resilience in case the class definition fails to load.
     if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
         $result = [DiscoveryResult]::new('ExternalIdentity')
     } else {
-        # Fallback to a hashtable that mimics the class structure and methods.
+        # Fallback to hashtable
         $result = @{
             Success      = $true; ModuleName = 'ExternalIdentity'; RecordCount = 0;
-            Errors       = [System.Collections.ArrayList]::new(); Warnings = [System.Collections.ArrayList]::new(); Metadata = @{};
-            StartTime    = Get-Date; EndTime = $null; ExecutionId = [guid]::NewGuid().ToString();
+            Errors       = [System.Collections.ArrayList]::new(); 
+            Warnings     = [System.Collections.ArrayList]::new(); 
+            Metadata     = @{};
+            StartTime    = Get-Date; EndTime = $null; 
+            ExecutionId  = [guid]::NewGuid().ToString();
             AddError     = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
             AddWarning   = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
             Complete     = { $this.EndTime = Get-Date }.GetNewClosure()
@@ -76,84 +103,99 @@ function Invoke-ExternalIdentityDiscovery {
 
     try {
         # 2. VALIDATE PREREQUISITES & CONTEXT
+        Write-ExternalIdentityLog -Level "INFO" -Message "Validating prerequisites..." -Context $Context
+        
         if (-not $Context.Paths.RawDataOutput) {
             $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
             return $result
         }
         $outputPath = $Context.Paths.RawDataOutput
+        Write-ExternalIdentityLog -Level "DEBUG" -Message "Output path: $outputPath" -Context $Context
+        
         Ensure-Path -Path $outputPath
 
-        # 3. AUTHENTICATE & CONNECT
+        # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
+        # No specific configuration required for ExternalIdentity
+
+        # 4. AUTHENTICATE & CONNECT
+        Write-ExternalIdentityLog -Level "INFO" -Message "Extracting authentication information..." -Context $Context
+        Write-ExternalIdentityLog -Level "DEBUG" -Message "Configuration keys: $($Configuration.Keys -join ', ')" -Context $Context
+        
         $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
+        
         if (-not $authInfo) {
+            Write-ExternalIdentityLog -Level "ERROR" -Message "FATAL: No authentication found. Keys checked: _AuthContext, _Credentials, authentication.*, root level" -Context $Context
             $result.AddError("Authentication information could not be found in the provided configuration.", $null, $null)
             return $result
         }
+        
+        Write-ExternalIdentityLog -Level "DEBUG" -Message "Auth info found. ClientId: $($authInfo.ClientId.Substring(0,8))..." -Context $Context
 
         # Get Graph API token
+        Write-ExternalIdentityLog -Level "INFO" -Message "Acquiring Microsoft Graph token..." -Context $Context
         $authResponse = Get-GraphApiToken -AuthInfo $authInfo -Context $Context
         if (-not $authResponse -or -not $authResponse.access_token) {
             $result.AddError("Failed to acquire Microsoft Graph token.", $null, @{Component = "Authentication"})
             return $result
         }
-        Write-ExternalIdentityLog -Level "SUCCESS" -Message "Successfully acquired Graph API token." -Context $Context
+        Write-ExternalIdentityLog -Level "SUCCESS" -Message "Successfully acquired Graph API token" -Context $Context
 
-        # 4. PERFORM DISCOVERY
+        # 5. PERFORM DISCOVERY
+        Write-ExternalIdentityLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
         # Discover B2B Guest Users
+        $guestUsers = @()
         try {
             Write-ExternalIdentityLog -Level "INFO" -Message "Discovering B2B Guest Users..." -Context $Context
             $guestUsers = Get-B2BGuestUsers -AuthResponse $authResponse -Context $Context
-            $null = $allDiscoveredData.AddRange($guestUsers)
-            Write-ExternalIdentityLog -Level "INFO" -Message "Discovered $($guestUsers.Count) B2B guest users." -Context $Context
             
-            # 5. EXPORT DATA TO CSV
             if ($guestUsers.Count -gt 0) {
-                Export-DiscoveryData -Data $guestUsers -OutputPath $outputPath -FileName "ExternalIdentity_B2BGuests.csv" -ModuleName "ExternalIdentity"
-                Write-ExternalIdentityLog -Level "SUCCESS" -Message "Exported B2B guest users to CSV." -Context $Context
+                foreach ($user in $guestUsers) {
+                    $null = $allDiscoveredData.Add($user)
+                }
             }
-
+            
+            Write-ExternalIdentityLog -Level "SUCCESS" -Message "Discovered $($guestUsers.Count) B2B guest users" -Context $Context
             $result.Metadata["B2BGuestCount"] = $guestUsers.Count
 
         } catch {
-            $result.AddWarning("Failed to discover B2B Guest Users. Error: $($_.Exception.Message)", @{Operation = "GetB2BGuests"})
+            $result.AddWarning("Failed to discover B2B Guest Users: $($_.Exception.Message)", @{Operation = "GetB2BGuests"})
         }
         
         # Discover External Collaboration Settings
         try {
             Write-ExternalIdentityLog -Level "INFO" -Message "Discovering External Collaboration Settings..." -Context $Context
             $collabSettings = Get-ExternalCollaborationSettings -AuthResponse $authResponse -Context $Context
+            
             if ($collabSettings) {
                 $null = $allDiscoveredData.Add($collabSettings)
-                Write-ExternalIdentityLog -Level "INFO" -Message "Discovered external collaboration settings." -Context $Context
-                
-                Export-DiscoveryData -Data @($collabSettings) -OutputPath $outputPath -FileName "ExternalIdentity_CollaborationSettings.csv" -ModuleName "ExternalIdentity"
-                Write-ExternalIdentityLog -Level "SUCCESS" -Message "Exported collaboration settings to CSV." -Context $Context
-                
+                Write-ExternalIdentityLog -Level "SUCCESS" -Message "Discovered external collaboration settings" -Context $Context
                 $result.Metadata["CollaborationSettingsFound"] = $true
+            } else {
+                Write-ExternalIdentityLog -Level "WARN" -Message "No collaboration settings found" -Context $Context
             }
 
         } catch {
-            $result.AddWarning("Failed to discover Collaboration Settings. Error: $($_.Exception.Message)", @{Operation = "GetCollaborationSettings"})
+            $result.AddWarning("Failed to discover Collaboration Settings: $($_.Exception.Message)", @{Operation = "GetCollaborationSettings"})
         }
         
         # Discover Identity Providers
         try {
             Write-ExternalIdentityLog -Level "INFO" -Message "Discovering Identity Providers..." -Context $Context
             $identityProviders = Get-IdentityProviders -AuthResponse $authResponse -Context $Context
-            $null = $allDiscoveredData.AddRange($identityProviders)
-            Write-ExternalIdentityLog -Level "INFO" -Message "Discovered $($identityProviders.Count) identity providers." -Context $Context
             
             if ($identityProviders.Count -gt 0) {
-                Export-DiscoveryData -Data $identityProviders -OutputPath $outputPath -FileName "ExternalIdentity_IdentityProviders.csv" -ModuleName "ExternalIdentity"
-                Write-ExternalIdentityLog -Level "SUCCESS" -Message "Exported identity providers to CSV." -Context $Context
+                foreach ($provider in $identityProviders) {
+                    $null = $allDiscoveredData.Add($provider)
+                }
             }
-
+            
+            Write-ExternalIdentityLog -Level "SUCCESS" -Message "Discovered $($identityProviders.Count) identity providers" -Context $Context
             $result.Metadata["IdentityProviderCount"] = $identityProviders.Count
 
         } catch {
-            $result.AddWarning("Failed to discover Identity Providers. Error: $($_.Exception.Message)", @{Operation = "GetIdentityProviders"})
+            $result.AddWarning("Failed to discover Identity Providers: $($_.Exception.Message)", @{Operation = "GetIdentityProviders"})
         }
 
         # Discover Partner Organizations (from guest user domains)
@@ -161,42 +203,118 @@ function Invoke-ExternalIdentityDiscovery {
             if ($guestUsers.Count -gt 0) {
                 Write-ExternalIdentityLog -Level "INFO" -Message "Analyzing partner organizations from guest users..." -Context $Context
                 $partnerOrgs = Get-PartnerOrganizations -GuestUsers $guestUsers -Configuration $Configuration -Context $Context
-                $null = $allDiscoveredData.AddRange($partnerOrgs)
-                Write-ExternalIdentityLog -Level "INFO" -Message "Identified $($partnerOrgs.Count) partner organizations." -Context $Context
                 
                 if ($partnerOrgs.Count -gt 0) {
-                    Export-DiscoveryData -Data $partnerOrgs -OutputPath $outputPath -FileName "ExternalIdentity_PartnerOrganizations.csv" -ModuleName "ExternalIdentity"
-                    Write-ExternalIdentityLog -Level "SUCCESS" -Message "Exported partner organizations to CSV." -Context $Context
+                    foreach ($org in $partnerOrgs) {
+                        $null = $allDiscoveredData.Add($org)
+                    }
                 }
-
+                
+                Write-ExternalIdentityLog -Level "SUCCESS" -Message "Identified $($partnerOrgs.Count) partner organizations" -Context $Context
                 $result.Metadata["PartnerOrganizationCount"] = $partnerOrgs.Count
             }
 
         } catch {
-            $result.AddWarning("Failed to analyze partner organizations. Error: $($_.Exception.Message)", @{Operation = "GetPartnerOrganizations"})
+            $result.AddWarning("Failed to analyze partner organizations: $($_.Exception.Message)", @{Operation = "GetPartnerOrganizations"})
         }
 
-        # 6. FINALIZE & UPDATE METADATA
+        # 6. EXPORT DATA TO CSV
+        if ($allDiscoveredData.Count -gt 0) {
+            Write-ExternalIdentityLog -Level "INFO" -Message "Exporting $($allDiscoveredData.Count) records..." -Context $Context
+            
+            $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+            
+            # Export B2B Guest Users (MUST match orchestrator expectations)
+            $guestUsersToExport = $allDiscoveredData | Where-Object { $_.UserPrincipalName -and $_.UserType -eq 'Guest' }
+            if ($guestUsersToExport.Count -gt 0) {
+                $fileName = "B2BGuestUsers.csv" # EXACT name expected by orchestrator
+                $filePath = Join-Path $outputPath $fileName
+                
+                $guestUsersToExport | ForEach-Object {
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "ExternalIdentity" -Force
+                }
+                
+                $guestUsersToExport | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+                Write-ExternalIdentityLog -Level "SUCCESS" -Message "Exported $($guestUsersToExport.Count) B2B guest users to $fileName" -Context $Context
+            }
+            
+            # Export Collaboration Settings (MUST match orchestrator expectations)
+            $collabSettingsToExport = $allDiscoveredData | Where-Object { $_.PSObject.Properties.Name -contains 'AllowInvitesFrom' }
+            if ($collabSettingsToExport.Count -gt 0) {
+                $fileName = "ExternalCollaborationSettings.csv" # EXACT name expected by orchestrator
+                $filePath = Join-Path $outputPath $fileName
+                
+                $collabSettingsToExport | ForEach-Object {
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "ExternalIdentity" -Force
+                }
+                
+                $collabSettingsToExport | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+                Write-ExternalIdentityLog -Level "SUCCESS" -Message "Exported collaboration settings to $fileName" -Context $Context
+            }
+            
+            # Export Guest User Activity Analysis (combines partners and providers)
+            $activityAnalysis = @()
+            
+            # Add partner organizations to activity analysis
+            $partnerOrgsData = $allDiscoveredData | Where-Object { $_.PSObject.Properties.Name -contains 'PartnerDomain' }
+            foreach ($org in $partnerOrgsData) {
+                $activityAnalysis += [PSCustomObject]@{
+                    AnalysisType = "PartnerOrganization"
+                    Name = $org.PartnerDomain
+                    TotalGuestCount = $org.TotalGuestCount
+                    ActiveGuestCount = $org.ActiveGuestCount
+                    Details = "First: $($org.FirstGuestAdded), Last: $($org.LastGuestAdded)"
+                }
+            }
+            
+            # Add identity providers to activity analysis
+            $providersData = $allDiscoveredData | Where-Object { $_.PSObject.Properties.Name -contains 'Type' -and $_.Type }
+            foreach ($provider in $providersData) {
+                $activityAnalysis += [PSCustomObject]@{
+                    AnalysisType = "IdentityProvider"
+                    Name = $provider.DisplayName
+                    TotalGuestCount = 0
+                    ActiveGuestCount = 0
+                    Details = "Type: $($provider.Type), ID: $($provider.Id)"
+                }
+            }
+            
+            if ($activityAnalysis.Count -gt 0) {
+                $fileName = "GuestUserActivityAnalysis.csv" # EXACT name expected by orchestrator
+                $filePath = Join-Path $outputPath $fileName
+                
+                $activityAnalysis | ForEach-Object {
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "ExternalIdentity" -Force
+                }
+                
+                $activityAnalysis | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+                Write-ExternalIdentityLog -Level "SUCCESS" -Message "Exported $($activityAnalysis.Count) activity analysis records to $fileName" -Context $Context
+            }
+        } else {
+            Write-ExternalIdentityLog -Level "WARN" -Message "No data discovered to export" -Context $Context
+        }
+
+        # 7. FINALIZE METADATA
         $result.RecordCount = $allDiscoveredData.Count
         $result.Metadata["TotalRecords"] = $result.RecordCount
         $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
-        $result.Metadata["OutputPath"] = $outputPath
 
     } catch {
-        # This is the top-level catch for critical, unrecoverable errors.
-        $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, @{Operation = "ExternalIdentityDiscovery"})
+        # Top-level error handler
+        Write-ExternalIdentityLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
+        $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
-        # 7. CLEANUP & COMPLETE
-        # No persistent connections to clean up for Graph API
+        # 8. CLEANUP & COMPLETE
+        Write-ExternalIdentityLog -Level "INFO" -Message "Cleaning up..." -Context $Context
+        
+        # No persistent connections to clean up for Graph API (uses REST)
         
         $stopwatch.Stop()
-        $result.Complete() # Sets EndTime
-        
-        # Log summary
-        $errorCount = if ($result.Errors -is [System.Collections.ArrayList]) { $result.Errors.Count } else { 0 }
-        $warningCount = if ($result.Warnings -is [System.Collections.ArrayList]) { $result.Warnings.Count } else { 0 }
-        
-        Write-ExternalIdentityLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount), Errors: $errorCount, Warnings: $warningCount." -Context $Context
+        $result.Complete()
+        Write-ExternalIdentityLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 
     return $result
@@ -230,10 +348,17 @@ function Get-GraphApiToken {
         }
         $tokenUri = "https://login.microsoftonline.com/$($AuthInfo.TenantId)/oauth2/v2.0/token"
         
+        Write-ExternalIdentityLog -Level "DEBUG" -Message "Requesting token from: $tokenUri" -Context $Context
+        
         $authResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenBody -ErrorAction Stop
+        
+        if ($authResponse.access_token) {
+            Write-ExternalIdentityLog -Level "DEBUG" -Message "Token acquired successfully" -Context $Context
+        }
+        
         return $authResponse
     } catch {
-        Write-ExternalIdentityLog -Message "Failed to acquire Graph token: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-ExternalIdentityLog -Level "ERROR" -Message "Failed to acquire Graph token: $($_.Exception.Message)" -Context $Context
         return $null
     }
 }
@@ -242,30 +367,44 @@ function Get-GraphDataInBatches {
     param(
         [string]$Uri,
         [hashtable]$AuthResponse,
-        [hashtable]$Context
+        [hashtable]$Context,
+        [string]$ProgressMessage = "Fetching data"
     )
     
     $allData = [System.Collections.ArrayList]::new()
     $headers = @{ "Authorization" = "Bearer $($AuthResponse.access_token)" }
     $currentUri = $Uri
+    $pageCount = 0
 
     do {
         try {
+            $pageCount++
+            Write-ExternalIdentityLog -Level "DEBUG" -Message "$ProgressMessage - Page $pageCount" -Context $Context
+            
             $response = Invoke-RestMethod -Method Get -Uri $currentUri -Headers $headers -ContentType "application/json" -ErrorAction Stop
+            
             if ($response.value) {
                 $null = $allData.AddRange($response.value)
+                Write-ExternalIdentityLog -Level "DEBUG" -Message "Retrieved $($response.value.Count) items from page $pageCount" -Context $Context
             } elseif ($response -and -not $response.'@odata.context') {
                 # Single object response
                 $null = $allData.Add($response)
             }
+            
             $currentUri = $response.'@odata.nextLink'
-        }
-        catch {
-            Write-ExternalIdentityLog -Message "Graph API request failed for URI '$Uri': $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            
+            # Report progress every 5 pages
+            if ($pageCount % 5 -eq 0) {
+                Write-ExternalIdentityLog -Level "INFO" -Message "$ProgressMessage - Processed $pageCount pages, $($allData.Count) items so far..." -Context $Context
+            }
+            
+        } catch {
+            Write-ExternalIdentityLog -Level "ERROR" -Message "Graph API request failed for URI '$currentUri': $($_.Exception.Message)" -Context $Context
             break
         }
     } while ($currentUri)
     
+    Write-ExternalIdentityLog -Level "DEBUG" -Message "$ProgressMessage - Completed. Total items: $($allData.Count)" -Context $Context
     return $allData
 }
 
@@ -282,9 +421,14 @@ function Get-B2BGuestUsers {
     $select = "id,userPrincipalName,displayName,mail,userType,externalUserState,createdDateTime,accountEnabled,identities"
     $guestUsersUri = "https://graph.microsoft.com/v1.0/users?`$filter=$filter&`$select=$select"
     
-    $users = Get-GraphDataInBatches -Uri $guestUsersUri -AuthResponse $AuthResponse -Context $Context
+    Write-ExternalIdentityLog -Level "DEBUG" -Message "Query URI: $guestUsersUri" -Context $Context
     
+    $users = Get-GraphDataInBatches -Uri $guestUsersUri -AuthResponse $AuthResponse -Context $Context -ProgressMessage "Fetching B2B guest users"
+    
+    $processedCount = 0
     foreach ($user in $users) {
+        $processedCount++
+        
         # Extract external identity information
         $externalEmail = $null
         $externalDomain = $null
@@ -319,6 +463,11 @@ function Get-B2BGuestUsers {
             CreatedDateTime = $user.createdDateTime
             AccountEnabled = $user.accountEnabled
         }
+        
+        # Report progress every 100 users
+        if ($processedCount % 100 -eq 0) {
+            Write-ExternalIdentityLog -Level "DEBUG" -Message "Processed $processedCount guest users..." -Context $Context
+        }
     }
     
     return $guestUsers
@@ -334,6 +483,8 @@ function Get-ExternalCollaborationSettings {
     $headers = @{ "Authorization" = "Bearer $($AuthResponse.access_token)" }
     
     try {
+        Write-ExternalIdentityLog -Level "DEBUG" -Message "Fetching collaboration settings from: $collabSettingsUri" -Context $Context
+        
         $response = Invoke-RestMethod -Method Get -Uri $collabSettingsUri -Headers $headers -ContentType "application/json" -ErrorAction Stop
         
         # Extract relevant settings
@@ -352,7 +503,7 @@ function Get-ExternalCollaborationSettings {
         
         return $settings
     } catch {
-        Write-ExternalIdentityLog -Message "Failed to get collaboration settings: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-ExternalIdentityLog -Level "ERROR" -Message "Failed to get collaboration settings: $($_.Exception.Message)" -Context $Context
         return $null
     }
 }
@@ -366,7 +517,7 @@ function Get-IdentityProviders {
     $identityProviders = @()
     
     $idpUri = "https://graph.microsoft.com/v1.0/identity/identityProviders"
-    $providers = Get-GraphDataInBatches -Uri $idpUri -AuthResponse $AuthResponse -Context $Context
+    $providers = Get-GraphDataInBatches -Uri $idpUri -AuthResponse $AuthResponse -Context $Context -ProgressMessage "Fetching identity providers"
     
     foreach ($provider in $providers) {
         $identityProviders += [PSCustomObject]@{
@@ -390,8 +541,12 @@ function Get-PartnerOrganizations {
     
     $partnerOrgs = @()
     
+    Write-ExternalIdentityLog -Level "DEBUG" -Message "Analyzing partner organizations from $($GuestUsers.Count) guest users" -Context $Context
+    
     # Group guest users by external domain
     $domainGroups = $GuestUsers | Where-Object { $_.ExternalDomain } | Group-Object -Property ExternalDomain
+    
+    Write-ExternalIdentityLog -Level "DEBUG" -Message "Found $($domainGroups.Count) unique external domains" -Context $Context
     
     # Determine how many to analyze based on configuration
     $topCount = 10  # Default
@@ -419,30 +574,6 @@ function Get-PartnerOrganizations {
     }
     
     return $partnerOrgs
-}
-
-function Export-DiscoveryData {
-    param(
-        [array]$Data,
-        [string]$OutputPath,
-        [string]$FileName,
-        [string]$ModuleName
-    )
-    
-    if ($Data.Count -eq 0) {
-        return
-    }
-    
-    # Add metadata to each record
-    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    $Data | ForEach-Object {
-        $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
-        $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value $ModuleName -Force
-    }
-    
-    # Export to CSV
-    $filePath = Join-Path $OutputPath $FileName
-    $Data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
 }
 
 # --- Module Export ---

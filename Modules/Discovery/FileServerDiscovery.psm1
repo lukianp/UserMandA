@@ -1,555 +1,312 @@
 ﻿# -*- coding: utf-8-bom -*-
-#Requires -Modules ActiveDirectory, CimCmdlets, SmbShare
+#Requires -Version 5.1
 
-# Author: Lukian Poleschtschuk
-# Version: 1.0.0
-# Created: 2025-06-04
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+#================================================================================
+# M&A Discovery Module: FileServer
+# Description: Discovers file servers, shares, DFS namespaces, permissions, 
+#              storage information, shadow copies, and file server clusters.
+#================================================================================
 
-<#
-.SYNOPSIS
-    Enhanced File Server and Storage Discovery Module for M&A Discovery Suite
-.DESCRIPTION
-    Discovers file servers, shares, DFS namespaces, permissions, storage information,
-    shadow copies, and file server clusters with improved performance and reliability
-.NOTES
-    Author: M&A Discovery Suite
-    Version: 2.0.0
-    Last Modified: 2024-01-20
-#>
-
-# DiscoveryResult class definition
-# DiscoveryResult class is defined globally by the Orchestrator using Add-Type
-# No local definition needed - the global C# class will be used
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
-}
-
-
-function Invoke-SafeModuleExecution {
+function Get-AuthInfoFromConfiguration {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [scriptblock]$ScriptBlock,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$ModuleName,
-        
-        [Parameter(Mandatory=$false)]
-        $Context
+        [hashtable]$Configuration
     )
+
+    # Check multiple possible locations where auth might be passed
     
-    $result = @{
-        Success = $false
-        Data = $null
-        Error = $null
-        Duration = $null
+    # 1. Direct auth context injection by orchestrator
+    if ($Configuration._AuthContext) { 
+        return $Configuration._AuthContext 
     }
     
+    # 2. Credentials property
+    if ($Configuration._Credentials) { 
+        return $Configuration._Credentials 
+    }
+    
+    # 3. Within authentication section
+    if ($Configuration.authentication) {
+        if ($Configuration.authentication._Credentials) { 
+            return $Configuration.authentication._Credentials 
+        }
+        if ($Configuration.authentication.ClientId -and 
+            $Configuration.authentication.ClientSecret -and 
+            $Configuration.authentication.TenantId) {
+            return @{
+                ClientId     = $Configuration.authentication.ClientId
+                ClientSecret = $Configuration.authentication.ClientSecret
+                TenantId     = $Configuration.authentication.TenantId
+            }
+        }
+    }
+    
+    # 4. Direct properties at root level
+    if ($Configuration.ClientId -and 
+        $Configuration.ClientSecret -and 
+        $Configuration.TenantId) {
+        return @{
+            ClientId     = $Configuration.ClientId
+            ClientSecret = $Configuration.ClientSecret
+            TenantId     = $Configuration.TenantId
+        }
+    }
+    
+    # No credentials found
+    return $null
+}
+
+function Write-FileServerLog {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Message,
+        [string]$Level = "INFO",
+        [hashtable]$Context
+    )
+    Write-MandALog -Message "[FileServer] $Message" -Level $Level -Component "FileServerDiscovery" -Context $Context
+}
+
+# --- Main Discovery Function ---
+
+function Invoke-FileServerDiscovery {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context
+    )
+
+    Write-FileServerLog -Level "HEADER" -Message "Starting Discovery" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    
-    try {
-        # Validate global context
-        if (-not $global:MandA -or -not $global:MandA.Initialized) {
-            throw "Global M&A context not initialized"
+
+    # 1. INITIALIZE RESULT OBJECT
+    if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+        $result = [DiscoveryResult]::new('FileServer')
+    } else {
+        # Fallback to hashtable
+        $result = @{
+            Success      = $true; ModuleName = 'FileServer'; RecordCount = 0;
+            Errors       = [System.Collections.ArrayList]::new(); 
+            Warnings     = [System.Collections.ArrayList]::new(); 
+            Metadata     = @{};
+            StartTime    = Get-Date; EndTime = $null; 
+            ExecutionId  = [guid]::NewGuid().ToString();
+            AddError     = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
+            AddWarning   = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
+            Complete     = { $this.EndTime = Get-Date }.GetNewClosure()
         }
-        
-        # Execute the module function
-        $result.Data = & $ScriptBlock
-        $result.Success = $true
-        
-    } catch {
-        $result.Error = @{
-            Message = $_.Exception.Message
-            Type = $_.Exception.GetType().FullName
-            StackTrace = $_.ScriptStackTrace
-            InnerException = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $null }
-        }
-        
-        # Log to both file and console
-        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
-        } else {
-            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red
-        }
-        
-        # Don't rethrow - let caller handle based on result
-    } finally {
-        $stopwatch.Stop()
-        $result.Duration = $stopwatch.Elapsed
     }
-    
+
+    try {
+        # 2. VALIDATE PREREQUISITES & CONTEXT
+        Write-FileServerLog -Level "INFO" -Message "Validating prerequisites..." -Context $Context
+        
+        if (-not $Context.Paths.RawDataOutput) {
+            $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
+            return $result
+        }
+        $outputPath = $Context.Paths.RawDataOutput
+        Write-FileServerLog -Level "DEBUG" -Message "Output path: $outputPath" -Context $Context
+        
+        Ensure-Path -Path $outputPath
+
+        # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
+        # FileServer doesn't require cloud authentication or specific config like SharePoint
+
+        # 4. AUTHENTICATE & CONNECT
+        Write-FileServerLog -Level "INFO" -Message "FileServer discovery uses Windows integrated authentication" -Context $Context
+        
+        # For on-premises modules like FileServer, we don't need cloud authentication
+        # The module will use the current Windows credentials for accessing servers
+
+        # 5. PERFORM DISCOVERY
+        Write-FileServerLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
+        $allDiscoveredData = [System.Collections.ArrayList]::new()
+        
+        # 5.1 Get configuration
+        $config = Get-FileServerConfig -Configuration $Configuration
+        Write-FileServerLog -Message "Configuration loaded: Target servers=$($config.TargetServers.Count), DFS=$($config.DiscoverDFS)" -Level "INFO" -Context $Context
+
+        # 5.2 Discover File Servers
+        try {
+            Write-FileServerLog -Message "Discovering file servers..." -Level "INFO" -Context $Context
+            $fileServers = Get-FileServersEnhanced -Configuration $config -Context $Context
+            Write-FileServerLog -Message "Discovered $($fileServers.Count) file servers" -Level "SUCCESS" -Context $Context
+            
+            if ($fileServers.Count -gt 0) {
+                Export-DiscoveryData -Data $fileServers -OutputPath $outputPath -FileName "FileServers.csv" -Context $Context
+                $null = $allDiscoveredData.AddRange($fileServers)
+            }
+        } catch {
+            $result.AddWarning("Failed to discover file servers: $($_.Exception.Message)", @{Section="FileServers"})
+            Write-FileServerLog -Message "File server discovery failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        }
+        
+        # 5.3 Discover File Shares
+        if ($fileServers -and $fileServers.Count -gt 0) {
+            try {
+                Write-FileServerLog -Message "Discovering file shares..." -Level "INFO" -Context $Context
+                $fileShares = Get-FileSharesEnhanced -ServerList $fileServers -Configuration $config -Context $Context
+                Write-FileServerLog -Message "Discovered $($fileShares.Count) file shares" -Level "SUCCESS" -Context $Context
+                
+                if ($fileShares.Count -gt 0) {
+                    Export-DiscoveryData -Data $fileShares -OutputPath $outputPath -FileName "FileShares.csv" -Context $Context
+                    $null = $allDiscoveredData.AddRange($fileShares)
+                }
+            } catch {
+                $result.AddWarning("Failed to discover file shares: $($_.Exception.Message)", @{Section="FileShares"})
+                Write-FileServerLog -Message "File share discovery failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+        }
+
+        # 5.4 Discover DFS Namespaces
+        if ($config.DiscoverDFS) {
+            try {
+                Write-FileServerLog -Message "Discovering DFS namespaces..." -Level "INFO" -Context $Context
+                $dfsNamespaces = Get-DFSNamespacesEnhanced -Configuration $config -Context $Context
+                Write-FileServerLog -Message "Discovered $($dfsNamespaces.Count) DFS namespaces" -Level "SUCCESS" -Context $Context
+                
+                if ($dfsNamespaces.Count -gt 0) {
+                    Export-DiscoveryData -Data $dfsNamespaces -OutputPath $outputPath -FileName "DFSNamespaces.csv" -Context $Context
+                    $null = $allDiscoveredData.AddRange($dfsNamespaces)
+                    
+                    # 5.5 Discover DFS Folders
+                    try {
+                        Write-FileServerLog -Message "Discovering DFS folders..." -Level "INFO" -Context $Context
+                        $dfsFolders = Get-DFSFoldersEnhanced -DfsNamespaces $dfsNamespaces -Configuration $config -Context $Context
+                        Write-FileServerLog -Message "Discovered $($dfsFolders.Count) DFS folders" -Level "SUCCESS" -Context $Context
+                        
+                        if ($dfsFolders.Count -gt 0) {
+                            Export-DiscoveryData -Data $dfsFolders -OutputPath $outputPath -FileName "DFSFolders.csv" -Context $Context
+                            $null = $allDiscoveredData.AddRange($dfsFolders)
+                        }
+                    } catch {
+                        $result.AddWarning("Failed to discover DFS folders: $($_.Exception.Message)", @{Section="DFSFolders"})
+                        Write-FileServerLog -Message "DFS folder discovery failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+                    }
+                }
+            } catch {
+                $result.AddWarning("Failed to discover DFS namespaces: $($_.Exception.Message)", @{Section="DFSNamespaces"})
+                Write-FileServerLog -Message "DFS namespace discovery failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+        }
+
+        # 5.6 Storage Analysis
+        if ($config.DiscoverStorageAnalysis -and $fileServers -and $fileServers.Count -gt 0) {
+            try {
+                Write-FileServerLog -Message "Performing storage analysis..." -Level "INFO" -Context $Context
+                $storageAnalysis = Get-StorageAnalysisEnhanced -ServerList $fileServers -Configuration $config -Context $Context
+                Write-FileServerLog -Message "Analyzed storage for $($storageAnalysis.Count) volumes" -Level "SUCCESS" -Context $Context
+                
+                if ($storageAnalysis.Count -gt 0) {
+                    Export-DiscoveryData -Data $storageAnalysis -OutputPath $outputPath -FileName "StorageAnalysis.csv" -Context $Context
+                    $null = $allDiscoveredData.AddRange($storageAnalysis)
+                }
+            } catch {
+                $result.AddWarning("Failed to perform storage analysis: $($_.Exception.Message)", @{Section="StorageAnalysis"})
+                Write-FileServerLog -Message "Storage analysis failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+        }
+
+        # 5.7 Shadow Copy Discovery
+        if ($config.DiscoverShadowCopies -and $fileServers -and $fileServers.Count -gt 0) {
+            try {
+                Write-FileServerLog -Message "Discovering shadow copies..." -Level "INFO" -Context $Context
+                $shadowCopies = Get-ShadowCopyEnhanced -ServerList $fileServers -Configuration $config -Context $Context
+                Write-FileServerLog -Message "Discovered shadow copy configurations for $($shadowCopies.Count) volumes" -Level "SUCCESS" -Context $Context
+                
+                if ($shadowCopies.Count -gt 0) {
+                    Export-DiscoveryData -Data $shadowCopies -OutputPath $outputPath -FileName "ShadowCopies.csv" -Context $Context
+                    $null = $allDiscoveredData.AddRange($shadowCopies)
+                }
+            } catch {
+                $result.AddWarning("Failed to discover shadow copies: $($_.Exception.Message)", @{Section="ShadowCopies"})
+                Write-FileServerLog -Message "Shadow copy discovery failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+        }
+
+        # 5.8 File Server Clustering
+        if ($config.DiscoverClusters) {
+            try {
+                Write-FileServerLog -Message "Discovering file server clusters..." -Level "INFO" -Context $Context
+                $fileServerClusters = Get-FileServerClustersEnhanced -Configuration $config -Context $Context
+                Write-FileServerLog -Message "Discovered $($fileServerClusters.Count) file server clusters" -Level "SUCCESS" -Context $Context
+                
+                if ($fileServerClusters.Count -gt 0) {
+                    Export-DiscoveryData -Data $fileServerClusters -OutputPath $outputPath -FileName "FileServerClusters.csv" -Context $Context
+                    $null = $allDiscoveredData.AddRange($fileServerClusters)
+                }
+            } catch {
+                $result.AddWarning("Failed to discover file server clusters: $($_.Exception.Message)", @{Section="FileServerClusters"})
+                Write-FileServerLog -Message "File server cluster discovery failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+        }
+
+        # 6. FINALIZE METADATA
+        $result.RecordCount = $allDiscoveredData.Count
+        $result.Metadata["TotalRecords"] = $result.RecordCount
+        $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+        $result.Metadata["FileServersFound"] = if ($fileServers) { $fileServers.Count } else { 0 }
+        $result.Metadata["FileSharesFound"] = if ($fileShares) { $fileShares.Count } else { 0 }
+        $result.Metadata["DFSNamespacesFound"] = if ($dfsNamespaces) { $dfsNamespaces.Count } else { 0 }
+
+    } catch {
+        # Top-level error handler
+        Write-FileServerLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
+        $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
+    } finally {
+        # 8. CLEANUP & COMPLETE
+        Write-FileServerLog -Level "INFO" -Message "Cleaning up..." -Context $Context
+        
+        # No service connections to disconnect for FileServer
+        
+        $stopwatch.Stop()
+        $result.Complete()
+        Write-FileServerLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
+    }
+
     return $result
 }
 
+# --- Helper Functions ---
 
+function Ensure-Path {
+    param($Path)
+    if (-not (Test-Path -Path $Path -PathType Container)) {
+        try {
+            New-Item -Path $Path -ItemType Directory -Force -ErrorAction Stop | Out-Null
+        } catch {
+            throw "Failed to create output directory: $Path. Error: $($_.Exception.Message)"
+        }
+    }
+}
 
-# Safe logging wrapper
-function Write-SafeLog {
+function Export-DiscoveryData {
     param(
-        [string]$Message,
-        [string]$Level = "INFO",
-        [string]$Component = "FileServerDiscovery",
-        [PSCustomObject]$Context = $null
+        [array]$Data,
+        [string]$OutputPath,
+        [string]$FileName,
+        $Context
     )
     
-    if (Get-Command Write-SafeLog -ErrorAction SilentlyContinue) {
-        Write-SafeLog -Message $Message -Level $Level -Component $Component -Context $Context
-    } else {
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        $color = switch ($Level) {
-            "ERROR" { "Red" }
-            "WARN" { "Yellow" }
-            "SUCCESS" { "Green" }
-            "DEBUG" { "Gray" }
-            "CRITICAL" { "Magenta" }
-            default { "White" }
-        }
-        Write-Host "$timestamp [$Level] [$Component] $Message" -ForegroundColor $color
-    }
-}
-
-
-
-# Import authentication module if available
-if ($global:MandA -and $global:MandA.Paths -and $global:MandA.Paths.Authentication) {
-    $authModulePathFromGlobal = Join-Path $global:MandA.Paths.Authentication "DiscoveryModuleBase.psm1"
-    if (Test-Path $authModulePathFromGlobal) {
-        Import-Module $authModulePathFromGlobal -Force
-    }
-}
-
-# Module-specific variables
-$script:PerformanceTracker = $null
-$script:ServerCircuitBreakers = @{}
-$script:CimSessions = @{}
-$script:PSSessionPool = @{}
-
-# Prerequisites validation function
-function Test-FileServerDiscoveryPrerequisites {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration,
-        [Parameter(Mandatory=$false)]
-        $Context,
-        [Parameter(Mandatory=$false)]
-        [PSCredential]$Credential
-    )
-    
-    $prerequisites = @{
-        IsValid = $true
-        MissingRequirements = @()
-        Warnings = @()
+    if ($Data.Count -eq 0) {
+        return
     }
     
-    try {
-        Write-ProgressStep "Validating File Server Discovery prerequisites..." -Status Progress
-        
-        # Check for required modules
-        $requiredModules = @('ActiveDirectory', 'CimCmdlets', 'SmbShare')
-        $optionalModules = @('DfsMgmt', 'FailoverClusters')
-        
-        foreach ($module in $requiredModules) {
-            if (-not (Get-Module -ListAvailable -Name $module)) {
-                $prerequisites.IsValid = $false
-                $prerequisites.MissingRequirements += "Required module '$module' not available"
-            }
-        }
-        
-        foreach ($module in $optionalModules) {
-            if (-not (Get-Module -ListAvailable -Name $module)) {
-                $prerequisites.Warnings += "Optional module '$module' not available - some features will be limited"
-            }
-        }
-        
-        # Check Active Directory connectivity
-        try {
-            $null = Get-ADDomain -ErrorAction Stop
-        } catch {
-            $prerequisites.IsValid = $false
-            $prerequisites.MissingRequirements += "Cannot connect to Active Directory: $($_.Exception.Message)"
-        }
-        
-        # Validate credentials if provided
-        if ($Credential) {
-            $prerequisites.Warnings += "Using provided credentials for file server access"
-        } else {
-            $prerequisites.Warnings += "No credentials provided - using current user context"
-        }
-        
-        Write-ProgressStep "Prerequisites validation completed" -Status Success
-        
-    } catch {
-        $prerequisites.IsValid = $false
-        $prerequisites.MissingRequirements += "Prerequisites validation failed: $($_.Exception.Message)"
-        Write-ProgressStep "Prerequisites validation failed: $($_.Exception.Message)" -Status Error
+    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $Data | ForEach-Object {
+        $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+        $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "FileServer" -Force
     }
     
-    return $prerequisites
-}
-
-# Enhanced main function with comprehensive error handling
-function Invoke-FileServerDiscovery {
-    [CmdletBinding()]
-    [OutputType([hashtable])]
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration,
-        
-        [Parameter(Mandatory=$true)]
-        $Context,
-        
-        [Parameter(Mandatory=$false)]
-        [PSCredential]$Credential
-    )
+    $filePath = Join-Path $OutputPath $FileName
+    $Data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
     
-    # Initialize result object
-    $result = [DiscoveryResult]::new("FileServer")
-    
-    try {
-        Write-ProgressStep "Starting File Server Discovery" -Status Progress
-        
-        # Validate prerequisites
-        $prerequisites = Test-FileServerDiscoveryPrerequisites -Configuration $Configuration -Context $Context -Credential $Credential
-        if (-not $prerequisites.IsValid) {
-            throw "Prerequisites validation failed: $($prerequisites.MissingRequirements -join '; ')"
-        }
-        
-        # Log warnings
-        foreach ($warning in $prerequisites.Warnings) {
-            Write-ProgressStep $warning -Status Warning
-            $Context.ErrorCollector.AddWarning("FileServer", $warning)
-        }
-        
-        # Initialize performance tracking
-        $script:PerformanceTracker = [DiscoveryPerformanceTracker]::new()
-        $config = Get-FileServerConfig -Configuration $Configuration
-        $results = @{}
-        
-        # 1. Discover File Servers with error handling
-        try {
-            Write-ProgressStep "Discovering file servers..." -Status Progress
-            $script:PerformanceTracker.StartOperation("FileServers")
-            $results.FileServers = Get-FileServersWithErrorHandling -Configuration $config -Context $Context -Credential $Credential
-            $script:PerformanceTracker.EndOperation("FileServers", $results.FileServers.Count)
-            $result.Metadata.SectionsProcessed++
-            
-            if ($results.FileServers.Count -eq 0) {
-                Write-ProgressStep "No file servers found. Skipping dependent discoveries." -Status Warning
-                $Context.ErrorCollector.AddWarning("FileServer", "No file servers found")
-            }
-            
-        } catch {
-            $errorMsg = "Failed to discover file servers: $($_.Exception.Message)"
-            Write-ProgressStep $errorMsg -Status Error
-            $Context.ErrorCollector.AddError("FileServer", $errorMsg, $_.Exception)
-            $result.Metadata.SectionErrors++
-            $results.FileServers = @()
-        }
-        
-        # 2. Discover File Shares with error handling
-        if ($results.FileServers.Count -gt 0) {
-            try {
-                Write-ProgressStep "Discovering file shares..." -Status Progress
-                $script:PerformanceTracker.StartOperation("FileShares")
-                $results.FileShares = Get-FileSharesWithErrorHandling -ServerList $results.FileServers -Configuration $config -Context $Context -Credential $Credential
-                $script:PerformanceTracker.EndOperation("FileShares", $results.FileShares.Count)
-                $result.Metadata.SectionsProcessed++
-                
-            } catch {
-                $errorMsg = "Failed to discover file shares: $($_.Exception.Message)"
-                Write-ProgressStep $errorMsg -Status Error
-                $Context.ErrorCollector.AddError("FileServer", $errorMsg, $_.Exception)
-                $result.Metadata.SectionErrors++
-                $results.FileShares = @()
-            }
-        }
-        
-        # 3. Discover DFS Namespaces with error handling
-        if ($config.DiscoverDFS) {
-            try {
-                Write-ProgressStep "Discovering DFS namespaces..." -Status Progress
-                $script:PerformanceTracker.StartOperation("DFSNamespaces")
-                $results.DFSNamespaces = Get-DFSNamespacesWithErrorHandling -Configuration $config -Context $Context
-                $script:PerformanceTracker.EndOperation("DFSNamespaces", $results.DFSNamespaces.Count)
-                $result.Metadata.SectionsProcessed++
-                
-                # 4. Discover DFS Folders
-                if ($results.DFSNamespaces.Count -gt 0) {
-                    try {
-                        Write-ProgressStep "Discovering DFS folders..." -Status Progress
-                        $script:PerformanceTracker.StartOperation("DFSFolders")
-                        $results.DFSFolders = Get-DFSFoldersWithErrorHandling -DfsNamespaces $results.DFSNamespaces -Configuration $config -Context $Context
-                        $script:PerformanceTracker.EndOperation("DFSFolders", $results.DFSFolders.Count)
-                        $result.Metadata.SectionsProcessed++
-                        
-                    } catch {
-                        $errorMsg = "Failed to discover DFS folders: $($_.Exception.Message)"
-                        Write-ProgressStep $errorMsg -Status Error
-                        $Context.ErrorCollector.AddError("FileServer", $errorMsg, $_.Exception)
-                        $result.Metadata.SectionErrors++
-                        $results.DFSFolders = @()
-                    }
-                }
-                
-            } catch {
-                $errorMsg = "Failed to discover DFS namespaces: $($_.Exception.Message)"
-                Write-ProgressStep $errorMsg -Status Error
-                $Context.ErrorCollector.AddError("FileServer", $errorMsg, $_.Exception)
-                $result.Metadata.SectionErrors++
-                $results.DFSNamespaces = @()
-            }
-        }
-        
-        # 5. Storage Analysis with error handling
-        if ($config.DiscoverStorageAnalysis -and $results.FileServers.Count -gt 0) {
-            try {
-                Write-ProgressStep "Performing storage analysis..." -Status Progress
-                $script:PerformanceTracker.StartOperation("StorageAnalysis")
-                $results.StorageAnalysis = Get-StorageAnalysisWithErrorHandling -ServerList $results.FileServers -Configuration $config -Context $Context -Credential $Credential
-                $script:PerformanceTracker.EndOperation("StorageAnalysis", $results.StorageAnalysis.Count)
-                $result.Metadata.SectionsProcessed++
-                
-            } catch {
-                $errorMsg = "Failed to perform storage analysis: $($_.Exception.Message)"
-                Write-ProgressStep $errorMsg -Status Error
-                $Context.ErrorCollector.AddError("FileServer", $errorMsg, $_.Exception)
-                $result.Metadata.SectionErrors++
-                $results.StorageAnalysis = @()
-            }
-        }
-        
-        # 6. Shadow Copy Discovery with error handling
-        if ($config.DiscoverShadowCopies -and $results.FileServers.Count -gt 0) {
-            try {
-                Write-ProgressStep "Discovering shadow copies..." -Status Progress
-                $script:PerformanceTracker.StartOperation("ShadowCopies")
-                $results.ShadowCopies = Get-ShadowCopyWithErrorHandling -ServerList $results.FileServers -Configuration $config -Context $Context -Credential $Credential
-                $script:PerformanceTracker.EndOperation("ShadowCopies", $results.ShadowCopies.Count)
-                $result.Metadata.SectionsProcessed++
-                
-            } catch {
-                $errorMsg = "Failed to discover shadow copies: $($_.Exception.Message)"
-                Write-ProgressStep $errorMsg -Status Error
-                $Context.ErrorCollector.AddError("FileServer", $errorMsg, $_.Exception)
-                $result.Metadata.SectionErrors++
-                $results.ShadowCopies = @()
-            }
-        }
-        
-        # 7. File Server Clustering with error handling
-        if ($config.DiscoverClusters) {
-            try {
-                Write-ProgressStep "Discovering file server clusters..." -Status Progress
-                $script:PerformanceTracker.StartOperation("FileServerClusters")
-                $results.FileServerClusters = Get-FileServerClustersWithErrorHandling -Configuration $config -Context $Context
-                $script:PerformanceTracker.EndOperation("FileServerClusters", $results.FileServerClusters.Count)
-                $result.Metadata.SectionsProcessed++
-                
-            } catch {
-                $errorMsg = "Failed to discover file server clusters: $($_.Exception.Message)"
-                Write-ProgressStep $errorMsg -Status Error
-                $Context.ErrorCollector.AddError("FileServer", $errorMsg, $_.Exception)
-                $result.Metadata.SectionErrors++
-                $results.FileServerClusters = @()
-            }
-        }
-        
-        # Update result
-        $result.Data = Convert-ToFlattenedFileServerData -Results $results
-        $result.Success = $true
-        $result.Metadata.TotalSections = 7
-        $result.Metadata.EndTime = Get-Date
-        $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
-        
-        Write-ProgressStep "File Server Discovery completed" -Status Success
-        return $result
-        
-    } catch {
-        $result.Success = $false
-        $result.Exception.Message = $_.Exception.Message
-        $result.Metadata.EndTime = Get-Date
-        $result.Metadata.Duration = $result.Metadata.EndTime - $result.Metadata.StartTime
-        
-        Write-ProgressStep "File Server Discovery failed: $($_.Exception.Message)" -Status Error
-        $Context.ErrorCollector.AddError("FileServer", "Discovery failed", $_.Exception)
-        
-        return $result
-        
-    } finally {
-        # Cleanup resources
-        Clear-FileServerResources
-        Write-ProgressStep "File Server Discovery cleanup completed" -Status Info
-    }
-}
-
-# Enhanced wrapper functions with retry logic
-function Get-FileServersWithErrorHandling {
-    param($Configuration, $Context, $Credential)
-    
-    $maxRetries = 3
-    $retryCount = 0
-    
-    while ($retryCount -lt $maxRetries) {
-        try {
-            return Get-FileServersEnhanced -Configuration $Configuration -Context $Context -Credential $Credential
-        } catch {
-            $retryCount++
-            if ($retryCount -eq $maxRetries) {
-                throw
-            }
-            
-            $waitTime = [Math]::Pow(2, $retryCount)
-            Write-ProgressStep "File servers discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
-            Start-Sleep -Seconds $waitTime
-        }
-    }
-}
-
-function Get-FileSharesWithErrorHandling {
-    param($ServerList, $Configuration, $Context, $Credential)
-    
-    $maxRetries = 3
-    $retryCount = 0
-    
-    while ($retryCount -lt $maxRetries) {
-        try {
-            return Get-FileSharesEnhanced -ServerList $ServerList -Configuration $Configuration -Context $Context -Credential $Credential
-        } catch {
-            $retryCount++
-            if ($retryCount -eq $maxRetries) {
-                throw
-            }
-            
-            $waitTime = [Math]::Pow(2, $retryCount)
-            Write-ProgressStep "File shares discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
-            Start-Sleep -Seconds $waitTime
-        }
-    }
-}
-
-function Get-DFSNamespacesWithErrorHandling {
-    param($Configuration, $Context)
-    
-    $maxRetries = 3
-    $retryCount = 0
-    
-    while ($retryCount -lt $maxRetries) {
-        try {
-            return Get-DFSNamespacesEnhanced -Configuration $Configuration -Context $Context
-        } catch {
-            $retryCount++
-            if ($retryCount -eq $maxRetries) {
-                throw
-            }
-            
-            $waitTime = [Math]::Pow(2, $retryCount)
-            Write-ProgressStep "DFS namespaces discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
-            Start-Sleep -Seconds $waitTime
-        }
-    }
-}
-
-function Get-DFSFoldersWithErrorHandling {
-    param($DfsNamespaces, $Configuration, $Context)
-    
-    $maxRetries = 3
-    $retryCount = 0
-    
-    while ($retryCount -lt $maxRetries) {
-        try {
-            return Get-DFSFoldersEnhanced -DfsNamespaces $DfsNamespaces -Configuration $Configuration -Context $Context
-        } catch {
-            $retryCount++
-            if ($retryCount -eq $maxRetries) {
-                throw
-            }
-            
-            $waitTime = [Math]::Pow(2, $retryCount)
-            Write-ProgressStep "DFS folders discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
-            Start-Sleep -Seconds $waitTime
-        }
-    }
-}
-
-function Get-StorageAnalysisWithErrorHandling {
-    param($ServerList, $Configuration, $Context, $Credential)
-    
-    $maxRetries = 3
-    $retryCount = 0
-    
-    while ($retryCount -lt $maxRetries) {
-        try {
-            return Get-StorageAnalysisEnhanced -ServerList $ServerList -Configuration $Configuration -Context $Context -Credential $Credential
-        } catch {
-            $retryCount++
-            if ($retryCount -eq $maxRetries) {
-                throw
-            }
-            
-            $waitTime = [Math]::Pow(2, $retryCount)
-            Write-ProgressStep "Storage analysis failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
-            Start-Sleep -Seconds $waitTime
-        }
-    }
-}
-
-function Get-ShadowCopyWithErrorHandling {
-    param($ServerList, $Configuration, $Context, $Credential)
-    
-    $maxRetries = 3
-    $retryCount = 0
-    
-    while ($retryCount -lt $maxRetries) {
-        try {
-            return Get-ShadowCopyEnhanced -ServerList $ServerList -Configuration $Configuration -Context $Context -Credential $Credential
-        } catch {
-            $retryCount++
-            if ($retryCount -eq $maxRetries) {
-                throw
-            }
-            
-            $waitTime = [Math]::Pow(2, $retryCount)
-            Write-ProgressStep "Shadow copy discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
-            Start-Sleep -Seconds $waitTime
-        }
-    }
-}
-
-function Get-FileServerClustersWithErrorHandling {
-    param($Configuration, $Context)
-    
-    $maxRetries = 3
-    $retryCount = 0
-    
-    while ($retryCount -lt $maxRetries) {
-        try {
-            return Get-FileServerClustersEnhanced -Configuration $Configuration -Context $Context
-        } catch {
-            $retryCount++
-            if ($retryCount -eq $maxRetries) {
-                throw
-            }
-            
-            $waitTime = [Math]::Pow(2, $retryCount)
-            Write-ProgressStep "File server clusters discovery failed, retrying in $waitTime seconds... (attempt $retryCount/$maxRetries)" -Status Warning
-            Start-Sleep -Seconds $waitTime
-        }
-    }
+    Write-FileServerLog -Message "Exported $($Data.Count) records to $FileName" -Level "SUCCESS" -Context $Context
 }
 
 function Get-FileServerConfig {
@@ -577,7 +334,7 @@ function Get-FileServerConfig {
     }
     
     # Override with actual config if present
-    if ($Configuration.discovery.fileServer) {
+    if ($Configuration.discovery -and $Configuration.discovery.fileServer) {
         $fileConfig = $Configuration.discovery.fileServer
         foreach ($key in $config.Keys) {
             $configKey = $key.Substring(0,1).ToLower() + $key.Substring(1)
@@ -593,169 +350,110 @@ function Get-FileServerConfig {
 function Get-FileServersEnhanced {
     param(
         [hashtable]$Configuration,
-        $Context,
-        [PSCredential]$Credential
+        $Context
     )
     
-    $fileServers = [System.Collections.Generic.List[PSObject]]::new()
-    $processedServers = [System.Collections.Generic.HashSet[string]]::new()
+    $fileServers = [System.Collections.ArrayList]::new()
+    $progressCount = 0
     
     try {
-        Write-ProgressStep "Starting file server discovery..." -Status Progress
+        # Import required module
+        if (-not (Get-Module -Name ActiveDirectory -ListAvailable)) {
+            throw "ActiveDirectory module is required but not available"
+        }
+        Import-Module ActiveDirectory -ErrorAction Stop
         
         # Get target servers
-        $targetServers = @()
-        
         if ($Configuration.TargetServers -and $Configuration.TargetServers.Count -gt 0) {
-            Write-ProgressStep "Using configured target server list: $($Configuration.TargetServers.Count) servers" -Status Info
+            Write-FileServerLog -Message "Using configured target server list: $($Configuration.TargetServers.Count) servers" -Level "INFO" -Context $Context
             
             foreach ($serverName in $Configuration.TargetServers) {
+                $progressCount++
+                if ($progressCount % 10 -eq 0) {
+                    Write-Progress -Activity "Discovering File Servers" -Status "Processing server $progressCount of $($Configuration.TargetServers.Count)" -PercentComplete (($progressCount / $Configuration.TargetServers.Count) * 100)
+                }
+                
                 try {
                     $serverAD = Get-ADComputer -Identity $serverName -Properties OperatingSystem, Description, DNSHostName -ErrorAction Stop
-                    $targetServers += $serverAD
+                    $serverInfo = [PSCustomObject]@{
+                        ServerName = if ($serverAD.DNSHostName) { $serverAD.DNSHostName } else { $serverAD.Name }
+                        NetBIOSName = $serverAD.Name
+                        OperatingSystem = $serverAD.OperatingSystem
+                        Description = $serverAD.Description
+                        IsFileServer = $true
+                        ShareCount = 0
+                        Features = "Configured Target"
+                        DiscoveryStatus = "Configured"
+                        LastDiscovered = Get-Date
+                        _DataType = 'FileServers'
+                    }
+                    $null = $fileServers.Add($serverInfo)
                 } catch {
-                    Write-ProgressStep "Could not find server '$serverName' in AD" -Status Warning
+                    Write-FileServerLog -Message "Could not find server '$serverName' in AD: $($_.Exception.Message)" -Level "WARN" -Context $Context
                 }
             }
         } else {
-            Write-ProgressStep "Discovering servers from Active Directory..." -Status Progress
+            Write-FileServerLog -Message "Discovering servers from Active Directory..." -Level "INFO" -Context $Context
             
-            $targetServers = Get-ADComputer -Filter { 
+            $adServers = Get-ADComputer -Filter { 
                 OperatingSystem -like "*Server*" -and 
                 Enabled -eq $true 
             } -Properties OperatingSystem, Description, DNSHostName -ErrorAction Stop
-        }
-        
-        Write-ProgressStep "Found $($targetServers.Count) potential file servers" -Status Info
-        
-        # Filter excluded servers
-        $excludedServers = [System.Collections.Generic.HashSet[string]]::new($Configuration.ExcludedServers, [System.StringComparer]::OrdinalIgnoreCase)
-        
-        # Process servers in batches with progress
-        $serverBatches = Split-ArrayIntoBatches -Array $targetServers -BatchSize $Configuration.MaxConcurrentServers
-        $totalServers = $targetServers.Count
-        $processedCount = 0
-        
-        foreach ($batchIndex in 0..($serverBatches.Count - 1)) {
-            $batch = $serverBatches[$batchIndex]
             
-            Write-ProgressStep "Processing batch $($batchIndex + 1) of $($serverBatches.Count)" -Status Progress
+            Write-FileServerLog -Message "Found $($adServers.Count) potential file servers" -Level "INFO" -Context $Context
             
-            # Process batch in parallel
-            $batchResults = $batch | ForEach-Object -Parallel {
-                $server = $_
-                $config = $using:Configuration
-                $context = $using:Context
-                $cred = $using:Credential
-                $excluded = $using:excludedServers
+            # Filter and process servers in batches
+            $excludedServers = [System.Collections.Generic.HashSet[string]]::new($Configuration.ExcludedServers, [System.StringComparer]::OrdinalIgnoreCase)
+            $totalServers = $adServers.Count
+            $processedCount = 0
+            
+            foreach ($server in $adServers) {
+                $processedCount++
+                if ($processedCount % 50 -eq 0) {
+                    Write-Progress -Activity "Discovering File Servers" -Status "Processing server $processedCount of $totalServers" -PercentComplete (($processedCount / $totalServers) * 100)
+                    
+                    # Force garbage collection every 50 servers
+                    [System.GC]::Collect()
+                    [System.GC]::WaitForPendingFinalizers()
+                    [System.GC]::Collect()
+                }
                 
                 $serverName = if ($server.DNSHostName) { $server.DNSHostName } else { $server.Name }
                 
                 # Check if excluded
-                if ($excluded.Contains($serverName) -or $excluded.Contains($server.Name)) {
-                    return $null
+                if ($excludedServers.Contains($serverName) -or $excludedServers.Contains($server.Name)) {
+                    continue
                 }
                 
-                # Test connectivity
-                if (-not (Test-ServerConnectivity -ServerName $serverName -Timeout 5)) {
-                    return $null
+                # Test basic connectivity
+                if (-not (Test-Connection -ComputerName $serverName -Count 1 -Quiet -ErrorAction SilentlyContinue)) {
+                    continue
                 }
                 
-                # Create result object
-                $serverInfo = @{
+                $serverInfo = [PSCustomObject]@{
                     ServerName = $serverName
                     NetBIOSName = $server.Name
                     OperatingSystem = $server.OperatingSystem
                     Description = $server.Description
-                    IsFileServer = $false
+                    IsFileServer = $true
                     ShareCount = 0
-                    Features = @()
-                    TotalDiskSpaceGB = 0
-                    FreeDiskSpaceGB = 0
-                    UsedDiskSpaceGB = 0
-                    PercentUsed = 0
+                    Features = "Auto-discovered"
+                    DiscoveryStatus = "Success"
                     LastDiscovered = Get-Date
-                    DiscoveryStatus = "Unknown"
                     _DataType = 'FileServers'
                 }
                 
-                try {
-                    # Check for file server features
-                    $features = Invoke-Command -ComputerName $serverName -Credential $cred -ScriptBlock {
-                        Get-WindowsFeature -Name FS-FileServer, FS-DFS-Namespace, FS-DFS-Replication, FS-Resource-Manager |
-                        Where-Object { $_.InstallState -eq "Installed" } |
-                        Select-Object Name, DisplayName
-                    } -ErrorAction Stop
-                    
-                    if ($features) {
-                        $serverInfo.Features = ($features.Name -join '; ')
-                        $serverInfo.IsFileServer = $true
-                    }
-                    
-                    # Get share count
-                    $shares = $null
-                    if ($config.UseSmbShareForEnumeration) {
-                        $shares = Get-SmbShare -CimSession $serverName -ErrorAction SilentlyContinue |
-                                 Where-Object { $_.ShareType -eq 'FileSystemDirectory' -and $_.Name -notin $config.ExcludedShareNames }
-                    } else {
-                        $shares = Get-CimInstance -ClassName Win32_Share -ComputerName $serverName -ErrorAction SilentlyContinue |
-                                 Where-Object { $_.Type -eq 0 -and $_.Name -notin $config.ExcludedShareNames }
-                    }
-                    
-                    if ($shares) {
-                        $serverInfo.ShareCount = @($shares).Count
-                        $serverInfo.IsFileServer = $true
-                    }
-                    
-                    # Get disk information
-                    $disks = Get-CimInstance -ClassName Win32_LogicalDisk -ComputerName $serverName -Filter "DriveType = 3" -ErrorAction SilentlyContinue
-                    if ($disks) {
-                        $totalSize = ($disks | Measure-Object -Property Size -Sum).Sum
-                        $freeSpace = ($disks | Measure-Object -Property FreeSpace -Sum).Sum
-                        
-                        if ($totalSize -gt 0) {
-                            $serverInfo.TotalDiskSpaceGB = [Math]::Round($totalSize / 1GB, 2)
-                            $serverInfo.FreeDiskSpaceGB = [Math]::Round($freeSpace / 1GB, 2)
-                            $serverInfo.UsedDiskSpaceGB = [Math]::Round(($totalSize - $freeSpace) / 1GB, 2)
-                            $serverInfo.PercentUsed = [Math]::Round((($totalSize - $freeSpace) / $totalSize) * 100, 1)
-                        }
-                    }
-                    
-                    $serverInfo.DiscoveryStatus = "Success"
-                    
-                } catch {
-                    $serverInfo.DiscoveryStatus = "Failed: $($_.Exception.Message)"
-                }
-                
-                # Only return if it's likely a file server
-                if ($serverInfo.IsFileServer -or $serverInfo.ShareCount -gt 0) {
-                    return [PSCustomObject]$serverInfo
-                }
-                
-                return $null
-                
-            } -ThrottleLimit $Configuration.MaxConcurrentServers
-            
-            # Add non-null results and update progress
-            foreach ($result in $batchResults) {
-                if ($null -ne $result -and -not $processedServers.Contains($result.ServerName)) {
-                    $fileServers.Add($result)
-                    $processedServers.Add($result.ServerName)
-                    $processedCount++
-                    
-                    # Update progress
-                    Show-ProgressBar -Current $processedCount -Total $totalServers `
-                        -Activity "Discovered file server: $($result.ServerName)"
-                }
+                $null = $fileServers.Add($serverInfo)
             }
         }
         
-        Write-Host "" # Clear progress bar line
-        Write-ProgressStep "Identified $($fileServers.Count) file servers" -Status Success
+        Write-Progress -Activity "Discovering File Servers" -Completed
+        Write-FileServerLog -Message "Identified $($fileServers.Count) file servers" -Level "SUCCESS" -Context $Context
         return $fileServers
         
     } catch {
-        Write-ProgressStep "Error discovering file servers: $($_.Exception.Message)" -Status Error
+        Write-Progress -Activity "Discovering File Servers" -Completed
+        Write-FileServerLog -Message "Error discovering file servers: $($_.Exception.Message)" -Level "ERROR" -Context $Context
         throw
     }
 }
@@ -764,383 +462,71 @@ function Get-FileSharesEnhanced {
     param(
         [array]$ServerList,
         [hashtable]$Configuration,
-        $Context,
-        [PSCredential]$Credential
+        $Context
     )
     
-    $fileShares = [System.Collections.Generic.List[PSObject]]::new()
+    $fileShares = [System.Collections.ArrayList]::new()
     $totalServers = $ServerList.Count
-    $currentServer = 0
+    $processedServers = 0
     
     try {
-        Write-ProgressStep "Discovering shares on $totalServers servers..." -Status Progress
+        Write-FileServerLog -Message "Discovering shares on $totalServers servers..." -Level "INFO" -Context $Context
         
         foreach ($server in $ServerList) {
-            $currentServer++
+            $processedServers++
             $serverName = $server.ServerName
             
-            Show-ProgressBar -Current $currentServer -Total $totalServers `
-                -Activity "Server: $serverName"
-            
-            # Get circuit breaker for this server
-            if (-not $script:ServerCircuitBreakers.ContainsKey($serverName)) {
-                $script:ServerCircuitBreakers[$serverName] = [CircuitBreaker]::new($serverName)
-            }
-            $circuitBreaker = $script:ServerCircuitBreakers[$serverName]
-            
-            if (-not $circuitBreaker.CanAttempt()) {
-                Write-ProgressStep "Skipping $serverName - circuit breaker is open" -Status Warning
-                continue
-            }
+            Write-Progress -Activity "Discovering File Shares" -Status "Processing $serverName ($processedServers of $totalServers)" -PercentComplete (($processedServers / $totalServers) * 100)
             
             try {
-                # Get shares
-                $shares = Get-ServerShares -ServerName $serverName -Configuration $Configuration -Credential $Credential
+                # Get shares using WMI with timeout
+                $shares = Get-CimInstance -ClassName Win32_Share -ComputerName $serverName -OperationTimeoutSec $Configuration.TimeoutPerServerRemoteCommandSeconds -ErrorAction Stop |
+                         Where-Object { 
+                             $_.Type -eq 0 -and 
+                             $_.Name -notin $Configuration.ExcludedShareNames -and
+                             $_.Name -notmatch '^\w\$$'
+                         }
                 
-                if ($null -eq $shares -or $shares.Count -eq 0) {
-                    continue
-                }
-                
-                Write-ProgressStep "Processing $($shares.Count) shares on $serverName" -Status Info
-                
-                # Process shares with sub-progress
-                $shareCount = 0
                 foreach ($share in $shares) {
-                    $shareCount++
-                    
-                    # Update sub-progress every 5 shares
-                    if ($shareCount % 5 -eq 0 -or $shareCount -eq $shares.Count) {
-                        Write-Host "`r  Processing share $shareCount of $($shares.Count): $($share.Name)..." -NoNewline -ForegroundColor Gray
+                    $shareInfo = [PSCustomObject]@{
+                        ServerName = $serverName
+                        ShareName = $share.Name
+                        SharePath = $share.Path
+                        UNCPath = "\\$serverName\$($share.Name)"
+                        Description = $share.Description
+                        ShareType = "FileSystemDirectory"
+                        ShareState = "Online"
+                        DiscoveredAt = Get-Date
+                        _DataType = 'FileShares'
                     }
                     
-                    $shareInfo = Get-ShareDetails -ServerName $serverName `
-                                                 -Share $share `
-                                                 -Configuration $Configuration `
-                                                 -Context $Context `
-                                                 -Credential $Credential
-                    
-                    if ($shareInfo) {
-                        $fileShares.Add($shareInfo)
-                    }
+                    $null = $fileShares.Add($shareInfo)
                 }
                 
-                Write-Host "`r" + (" " * 80) + "`r" -NoNewline # Clear sub-progress line
-                
-                # Record success
-                $circuitBreaker.RecordSuccess()
+                # Update share count on server object
+                $server.ShareCount = $shares.Count
                 
             } catch {
-                $circuitBreaker.RecordFailure($_.Exception)
-                Write-ProgressStep "Error processing shares on $serverName`: $($_.Exception.Message)" -Status Error
+                Write-FileServerLog -Message "Error processing shares on $serverName`: $($_.Exception.Message)" -Level "WARN" -Context $Context
+            }
+            
+            # Memory management
+            if ($processedServers % 20 -eq 0) {
+                [System.GC]::Collect()
+                [System.GC]::WaitForPendingFinalizers()
+                [System.GC]::Collect()
             }
         }
         
-        Write-Host "" # Clear progress bar line
-        Write-ProgressStep "Discovered $($fileShares.Count) file shares" -Status Success
+        Write-Progress -Activity "Discovering File Shares" -Completed
+        Write-FileServerLog -Message "Discovered $($fileShares.Count) file shares" -Level "SUCCESS" -Context $Context
         return $fileShares
         
     } catch {
-        Write-ProgressStep "Error discovering file shares: $($_.Exception.Message)" -Status Error
+        Write-Progress -Activity "Discovering File Shares" -Completed
+        Write-FileServerLog -Message "Error discovering file shares: $($_.Exception.Message)" -Level "ERROR" -Context $Context
         throw
     }
-}
-
-
-
-function Get-ServerShares {
-    param(
-        [string]$ServerName,
-        [hashtable]$Configuration,
-        [PSCredential]$Credential
-    )
-    
-    $shares = @()
-    
-    try {
-        if ($Configuration.UseSmbShareForEnumeration) {
-            # Create CIM session
-            $cimSession = Get-OrCreateCimSession -ComputerName $ServerName -Credential $Credential
-            
-            $shares = Get-SmbShare -CimSession $cimSession -ErrorAction Stop |
-                     Where-Object { 
-                         $_.ShareType -eq 'FileSystemDirectory' -and 
-                         $_.Name -notin $Configuration.ExcludedShareNames -and
-                         $_.Name -notmatch '^\w\$$'
-                     }
-        } else {
-            # Use WMI
-            $shares = Get-CimInstance -ClassName Win32_Share `
-                                     -ComputerName $ServerName `
-                                     -Credential $Credential `
-                                     -ErrorAction Stop |
-                     Where-Object { 
-                         $_.Type -eq 0 -and 
-                         $_.Name -notin $Configuration.ExcludedShareNames -and
-                         $_.Name -notmatch '^\w\$$'
-                     }
-        }
-        
-        return $shares
-        
-    } catch {
-        throw
-    }
-}
-
-function Get-ShareDetails {
-    param(
-        [string]$ServerName,
-        $Share,
-        [hashtable]$Configuration,
-        $Context,
-        [PSCredential]$Credential
-    )
-    
-    $sharePath = $Share.Path
-    $uncPath = "\\$ServerName\$($Share.Name)"
-    
-    $shareInfo = [PSCustomObject]@{
-        ServerName = $ServerName
-        ShareName = $Share.Name
-        SharePath = $sharePath
-        UNCPath = $uncPath
-        Description = $Share.Description
-        CurrentUsers = if ($Share.PSObject.Properties['CurrentUses']) { $Share.CurrentUses } else { 0 }
-        ShareType = if ($Share.PSObject.Properties['ShareType']) { $Share.ShareType.ToString() } else { "FileSystemDirectory" }
-        ShareState = if ($Share.PSObject.Properties['ShareState']) { $Share.ShareState } else { "Online" }
-        CachingMode = if ($Share.PSObject.Properties['CachingMode']) { $Share.CachingMode } else { "None" }
-        EncryptData = if ($Share.PSObject.Properties['EncryptData']) { $Share.EncryptData } else { $false }
-        Permissions = $null
-        SizeMB = $null
-        FileCount = $null
-        FolderCount = $null
-        LastAccessed = $null
-        CollectionStatus = "Pending"
-        CollectionErrors = @()
-        _DataType = 'FileShares'
-    }
-    
-    # Collect details based on level
-    if ($Configuration.CollectShareDetailsLevel -ne "None") {
-        # Get permissions
-        if ($Configuration.CollectShareDetailsLevel -in @("Basic", "Full")) {
-            try {
-                $shareInfo.Permissions = Get-SharePermissions -UNCPath $uncPath `
-                                                             -ServerName $ServerName `
-                                                             -ShareName $Share.Name `
-                                                             -Timeout $Configuration.TimeoutPerShareAclSeconds `
-                                                             -Credential $Credential `
-                                                             -Context $Context
-            } catch {
-                $shareInfo.CollectionErrors += "ACL: $($_.Exception.Message)"
-                Write-SafeLog "Failed to get ACLs for $uncPath`: $($_.Exception.Message)" -Level "DEBUG" -Context $Context
-            }
-        }
-        
-        # Get size and file count (Full only)
-        if ($Configuration.CollectShareDetailsLevel -eq "Full") {
-            try {
-                $sizeInfo = Get-ShareSize -UNCPath $uncPath `
-                                        -ServerName $ServerName `
-                                        -LocalPath $sharePath `
-                                        -Configuration $Configuration `
-                                        -Credential $Credential `
-                                        -Context $Context
-                
-                if ($sizeInfo) {
-                    $shareInfo.SizeMB = $sizeInfo.SizeMB
-                    $shareInfo.FileCount = $sizeInfo.FileCount
-                    $shareInfo.FolderCount = $sizeInfo.FolderCount
-                    $shareInfo.LastAccessed = $sizeInfo.LastAccessed
-                }
-            } catch {
-                $shareInfo.CollectionErrors += "Size: $($_.Exception.Message)"
-                Write-SafeLog "Failed to get size for $uncPath`: $($_.Exception.Message)" -Level "DEBUG" -Context $Context
-            }
-        }
-    }
-    
-    # Set final status
-    if ($shareInfo.CollectionErrors.Count -eq 0) {
-        $shareInfo.CollectionStatus = "Success"
-    } else {
-        $shareInfo.CollectionStatus = "PartialSuccess"
-        $shareInfo.CollectionErrors = $shareInfo.CollectionErrors -join "; "
-    }
-    
-    return $shareInfo
-}
-
-function Get-SharePermissions {
-    param(
-        [string]$UNCPath,
-        [string]$ServerName,
-        [string]$ShareName,
-        [int]$Timeout,
-        [PSCredential]$Credential,
-        $Context
-    )
-    
-    $job = Start-Job -ScriptBlock {
-        param($Path, $Server, $Share, $Cred)
-        
-        try {
-            # Get NTFS permissions
-            $acl = Get-Acl -Path $Path -ErrorAction Stop
-            $ntfsPerms = $acl.Access | ForEach-Object {
-                [PSCustomObject]@{
-                    Identity = $_.IdentityReference.ToString()
-                    Rights = $_.FileSystemRights.ToString()
-                    Type = $_.AccessControlType.ToString()
-                    Inherited = $_.IsInherited
-                }
-            }
-            
-            # Get Share permissions
-            $sharePerms = @()
-            if ($Cred) {
-                $sharePerms = Invoke-Command -ComputerName $Server -Credential $Cred -ScriptBlock {
-                    param($ShareName)
-                    Get-SmbShareAccess -Name $ShareName -ErrorAction SilentlyContinue
-                } -ArgumentList $Share -ErrorAction SilentlyContinue
-            } else {
-                $sharePerms = Get-SmbShareAccess -Name $Share -CimSession $Server -ErrorAction SilentlyContinue
-            }
-            
-            return @{
-                NTFS = $ntfsPerms
-                Share = $sharePerms
-            }
-        } catch {
-            throw
-        }
-    } -ArgumentList $UNCPath, $ServerName, $ShareName, $Credential
-    
-    $completed = Wait-Job -Job $job -Timeout $Timeout
-    
-    if ($completed) {
-        $result = Receive-Job -Job $job -ErrorAction SilentlyContinue
-        Remove-Job -Job $job -Force
-        
-        if ($result) {
-            # Format permissions
-            $formatted = @{
-                NTFSPermissions = ($result.NTFS | ForEach-Object { "$($_.Identity):$($_.Rights)" }) -join "; "
-                SharePermissions = ($result.Share | ForEach-Object { "$($_.AccountName):$($_.AccessRight)" }) -join "; "
-            }
-            
-            return ($formatted | ConvertTo-Json -Compress)
-        }
-    } else {
-        Stop-Job -Job $job -Force
-        Remove-Job -Job $job -Force
-        throw "Timeout getting permissions after $Timeout seconds"
-    }
-    
-    return $null
-}
-
-function Get-ShareSize {
-    param(
-        [string]$UNCPath,
-        [string]$ServerName,
-        [string]$LocalPath,
-        [hashtable]$Configuration,
-        [PSCredential]$Credential,
-        $Context
-    )
-    
-    # Check path depth
-    $pathDepth = ($LocalPath -split '[\\/]').Count
-    if ($pathDepth -gt $Configuration.SkipShareSizeCalculationForPathDepthExceeding) {
-        Write-SafeLog "Skipping size calculation for $UNCPath - path depth exceeds threshold" -Level "DEBUG" -Context $Context
-        return @{
-            SizeMB = -1
-            FileCount = -1
-            FolderCount = -1
-            LastAccessed = $null
-            SkipReason = "PathDepthExceeded"
-        }
-    }
-    
-    $job = Start-Job -ScriptBlock {
-        param($Server, $Path, $MaxDepth, $Cred)
-        
-        try {
-            $result = Invoke-Command -ComputerName $Server -Credential $Cred -ScriptBlock {
-                param($LocalPath, $Depth)
-                
-                $stats = @{
-                    FileCount = 0
-                    FolderCount = 0
-                    TotalSize = 0
-                    LastAccessed = $null
-                }
-                
-                # Use robocopy for fast enumeration
-                $robocopyArgs = @($LocalPath, "NULL", "/L", "/S", "/NJH", "/BYTES", "/FP", "/NC", "/NDL", "/TS", "/XJ", "/R:0", "/W:0")
-                if ($Depth -gt 0) {
-                    $robocopyArgs += "/LEV:$Depth"
-                }
-                
-                $robocopyOutput = & robocopy @robocopyArgs 2>$null
-                
-                foreach ($line in $robocopyOutput) {
-                    if ($line -match '^\s*(\d+)\s+(.+)') {
-                        $size = [int64]$matches[1]
-                        $stats.TotalSize += $size
-                        $stats.FileCount++
-                        
-                        # Parse timestamp if available
-                        if ($line -match '\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2}') {
-                            $timestamp = [DateTime]::ParseExact($matches[0], 'yyyy/MM/dd HH:mm:ss', $null)
-                            if ($null -eq $stats.LastAccessed -or $timestamp -gt $stats.LastAccessed) {
-                                $stats.LastAccessed = $timestamp
-                            }
-                        }
-                    } elseif ($line -match '^\s*Dir\s+(\d+)') {
-                        $stats.FolderCount = [int]$matches[1]
-                    }
-                }
-                
-                return $stats
-            } -ArgumentList $Path, $MaxDepth
-            
-            return $result
-        } catch {
-            throw
-        }
-    } -ArgumentList $ServerName, $LocalPath, $Configuration.MaxSharePathDepthForSize, $Credential
-    
-    $completed = Wait-Job -Job $job -Timeout $Configuration.TimeoutPerShareSizeSeconds
-    
-    if ($completed) {
-        $result = Receive-Job -Job $job -ErrorAction SilentlyContinue
-        Remove-Job -Job $job -Force
-        
-        if ($result) {
-            return @{
-                SizeMB = [Math]::Round($result.TotalSize / 1MB, 2)
-                FileCount = $result.FileCount
-                FolderCount = $result.FolderCount
-                LastAccessed = $result.LastAccessed
-            }
-        }
-    } else {
-        Stop-Job -Job $job -Force
-        Remove-Job -Job $job -Force
-        Write-SafeLog "Timeout calculating size for $UNCPath after $($Configuration.TimeoutPerShareSizeSeconds) seconds" -Level "DEBUG" -Context $Context
-        
-        return @{
-            SizeMB = -1
-            FileCount = -1
-            FolderCount = -1
-            LastAccessed = $null
-            SkipReason = "Timeout"
-        }
-    }
-    
-    return $null
 }
 
 function Get-DFSNamespacesEnhanced {
@@ -1149,14 +535,14 @@ function Get-DFSNamespacesEnhanced {
         $Context
     )
     
-    $dfsNamespaces = [System.Collections.Generic.List[PSObject]]::new()
+    $dfsNamespaces = [System.Collections.ArrayList]::new()
     
     try {
-        Write-SafeLog "Discovering DFS Namespaces..." -Level "INFO" -Context $Context
+        Write-FileServerLog -Message "Discovering DFS Namespaces..." -Level "INFO" -Context $Context
         
         # Check if DFS module is available
         if (-not (Get-Module -ListAvailable -Name DfsMgmt)) {
-            Write-SafeLog "DfsMgmt module not available. Install RSAT DFS Management Tools." -Level "WARN" -Context $Context
+            Write-FileServerLog -Message "DfsMgmt module not available. Install RSAT DFS Management Tools." -Level "WARN" -Context $Context
             return $dfsNamespaces
         }
         
@@ -1166,45 +552,42 @@ function Get-DFSNamespacesEnhanced {
         $dfsRoots = Get-DfsnRoot -ErrorAction SilentlyContinue
         
         if ($null -eq $dfsRoots -or $dfsRoots.Count -eq 0) {
-            Write-SafeLog "No DFS namespaces found" -Level "INFO" -Context $Context
+            Write-FileServerLog -Message "No DFS namespaces found" -Level "INFO" -Context $Context
             return $dfsNamespaces
         }
         
+        $totalRoots = @($dfsRoots).Count
+        $processedRoots = 0
+        
         foreach ($root in $dfsRoots) {
+            $processedRoots++
+            Write-Progress -Activity "Discovering DFS Namespaces" -Status "Processing $($root.Path)" -PercentComplete (($processedRoots / $totalRoots) * 100)
+            
             try {
-                # Get namespace servers
-                $namespaceServers = Get-DfsnRootTarget -Path $root.Path -ErrorAction SilentlyContinue
-                
-                # Get additional namespace info
                 $namespaceInfo = [PSCustomObject]@{
                     NamespacePath = $root.Path
                     NamespaceType = $root.Type.ToString()
                     State = $root.State.ToString()
                     Description = $root.Description
                     TimeToLiveSecs = if ($root.TimeToLive) { $root.TimeToLive.TotalSeconds } else { 300 }
-                    EnableSiteCosting = $root.EnableSiteCosting
-                    EnableInsiteReferrals = $root.EnableInsiteReferrals
-                    EnableAccessBasedEnumeration = $root.EnableAccessBasedEnumeration
-                    EnableRootScalability = $root.EnableRootScalability
-                    EnableTargetFailback = $root.EnableTargetFailback
-                    NamespaceServers = ($namespaceServers.TargetPath -join "; ")
-                    ServerCount = @($namespaceServers).Count
                     DiscoveredAt = Get-Date
                     _DataType = 'DFSNamespaces'
                 }
                 
-                $dfsNamespaces.Add($namespaceInfo)
+                $null = $dfsNamespaces.Add($namespaceInfo)
                 
             } catch {
-                Write-SafeLog "Error processing DFS namespace $($root.Path): $($_.Exception.Message)" -Level "WARN" -Context $Context
+                Write-FileServerLog -Message "Error processing DFS namespace $($root.Path): $($_.Exception.Message)" -Level "WARN" -Context $Context
             }
         }
         
-        Write-SafeLog "Found $($dfsNamespaces.Count) DFS namespaces" -Level "SUCCESS" -Context $Context
+        Write-Progress -Activity "Discovering DFS Namespaces" -Completed
+        Write-FileServerLog -Message "Found $($dfsNamespaces.Count) DFS namespaces" -Level "SUCCESS" -Context $Context
         return $dfsNamespaces
         
     } catch {
-        Write-SafeLog "Error discovering DFS namespaces: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-Progress -Activity "Discovering DFS Namespaces" -Completed
+        Write-FileServerLog -Message "Error discovering DFS namespaces: $($_.Exception.Message)" -Level "ERROR" -Context $Context
         throw
     }
 }
@@ -1216,14 +599,19 @@ function Get-DFSFoldersEnhanced {
         $Context
     )
     
-    $dfsFolders = [System.Collections.Generic.List[PSObject]]::new()
+    $dfsFolders = [System.Collections.ArrayList]::new()
     
     try {
-        Write-SafeLog "Discovering DFS folders for $($DfsNamespaces.Count) namespaces..." -Level "INFO" -Context $Context
+        Write-FileServerLog -Message "Discovering DFS folders for $($DfsNamespaces.Count) namespaces..." -Level "INFO" -Context $Context
+        
+        $totalNamespaces = $DfsNamespaces.Count
+        $processedNamespaces = 0
         
         foreach ($namespace in $DfsNamespaces) {
+            $processedNamespaces++
             $rootPath = $namespace.NamespacePath
-            Write-SafeLog "Processing DFS namespace: $rootPath" -Level "DEBUG" -Context $Context
+            
+            Write-Progress -Activity "Discovering DFS Folders" -Status "Processing namespace $rootPath" -PercentComplete (($processedNamespaces / $totalNamespaces) * 100)
             
             try {
                 # Get all folders in namespace
@@ -1233,55 +621,36 @@ function Get-DFSFoldersEnhanced {
                     continue
                 }
                 
-                # Process in batches for performance
-                $folderBatches = Split-ArrayIntoBatches -Array $folders -BatchSize 50
-                
-                foreach ($batch in $folderBatches) {
-                    $batchResults = $batch | ForEach-Object -Parallel {
-                        $folder = $_
+                foreach ($folder in $folders) {
+                    try {
+                        $folderInfo = [PSCustomObject]@{
+                            NamespacePath = $rootPath
+                            FolderPath = $folder.Path
+                            FolderName = Split-Path $folder.Path -Leaf
+                            State = $folder.State.ToString()
+                            Description = $folder.Description
+                            DiscoveredAt = Get-Date
+                            _DataType = 'DFSFolders'
+                        }
                         
-                        try {
-                            # Get folder targets
-                            $targets = Get-DfsnFolderTarget -Path $folder.Path -ErrorAction SilentlyContinue
-                            
-                            [PSCustomObject]@{
-                                NamespacePath = $using:rootPath
-                                FolderPath = $folder.Path
-                                FolderName = Split-Path $folder.Path -Leaf
-                                State = $folder.State.ToString()
-                                Description = $folder.Description
-                                TimeToLiveSecs = if ($folder.TimeToLive) { $folder.TimeToLive.TotalSeconds } else { 300 }
-                                EnableInsiteReferrals = $folder.EnableInsiteReferrals
-                                EnableTargetFailback = $folder.EnableTargetFailback
-                                TargetCount = @($targets).Count
-                                Targets = ($targets.TargetPath -join "; ")
-                                TargetStates = ($targets.State -join "; ")
-                                PrimaryTarget = ($targets | Where-Object { $_.ReferralPriorityClass -eq 'GlobalHigh' } | Select-Object -First 1).TargetPath
-                                DiscoveredAt = Get-Date
-                                _DataType = 'DFSFolders'
-                            }
-                        } catch {
-                            $null
-                        }
-                    } -ThrottleLimit 5
-                    
-                    foreach ($result in $batchResults) {
-                        if ($null -ne $result) {
-                            $dfsFolders.Add($result)
-                        }
+                        $null = $dfsFolders.Add($folderInfo)
+                    } catch {
+                        Write-FileServerLog -Message "Error processing DFS folder $($folder.Path): $($_.Exception.Message)" -Level "WARN" -Context $Context
                     }
                 }
                 
             } catch {
-                Write-SafeLog "Error processing namespace '$rootPath': $($_.Exception.Message)" -Level "WARN" -Context $Context
+                Write-FileServerLog -Message "Error processing namespace '$rootPath': $($_.Exception.Message)" -Level "WARN" -Context $Context
             }
         }
         
-        Write-SafeLog "Discovered $($dfsFolders.Count) DFS folders" -Level "SUCCESS" -Context $Context
+        Write-Progress -Activity "Discovering DFS Folders" -Completed
+        Write-FileServerLog -Message "Discovered $($dfsFolders.Count) DFS folders" -Level "SUCCESS" -Context $Context
         return $dfsFolders
         
     } catch {
-        Write-SafeLog "Error discovering DFS folders: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-Progress -Activity "Discovering DFS Folders" -Completed
+        Write-FileServerLog -Message "Error discovering DFS folders: $($_.Exception.Message)" -Level "ERROR" -Context $Context
         throw
     }
 }
@@ -1290,84 +659,58 @@ function Get-StorageAnalysisEnhanced {
     param(
         [array]$ServerList,
         [hashtable]$Configuration,
-        $Context,
-        [PSCredential]$Credential
+        $Context
     )
     
-    $storageAnalysis = [System.Collections.Generic.List[PSObject]]::new()
+    $storageAnalysis = [System.Collections.ArrayList]::new()
     
     try {
-        Write-SafeLog "Analyzing storage on $($ServerList.Count) servers..." -Level "INFO" -Context $Context
+        Write-FileServerLog -Message "Analyzing storage on $($ServerList.Count) servers..." -Level "INFO" -Context $Context
         
-        $currentServer = 0
+        $totalServers = $ServerList.Count
+        $processedServers = 0
+        
         foreach ($server in $ServerList) {
-            $currentServer++
+            $processedServers++
             $serverName = $server.ServerName
             
-            Write-Progress -Activity "Analyzing Storage" `
-                          -Status "Server $currentServer of $($ServerList.Count): $serverName" `
-                          -PercentComplete (($currentServer / $ServerList.Count) * 100)
+            Write-Progress -Activity "Analyzing Storage" -Status "Processing $serverName" -PercentComplete (($processedServers / $totalServers) * 100)
             
             try {
-                # Get disk information
-                $disks = Get-CimInstance -ClassName Win32_LogicalDisk `
-                                        -ComputerName $serverName `
-                                        -Filter "DriveType = 3" `
-                                        -ErrorAction Stop
-                
-                # Get volume information for additional details
-                $volumes = Get-CimInstance -ClassName Win32_Volume `
-                                          -ComputerName $serverName `
-                                          -Filter "DriveType = 3" `
-                                          -ErrorAction SilentlyContinue
+                # Get disk information with timeout
+                $disks = Get-CimInstance -ClassName Win32_LogicalDisk -ComputerName $serverName -Filter "DriveType = 3" -OperationTimeoutSec $Configuration.TimeoutPerServerRemoteCommandSeconds -ErrorAction Stop
                 
                 foreach ($disk in $disks) {
-                    # Find matching volume
-                    $volume = $volumes | Where-Object { $_.DriveLetter -eq $disk.DeviceID }
-                    
                     $storageInfo = [PSCustomObject]@{
                         ServerName = $serverName
                         DriveLetter = $disk.DeviceID
                         VolumeName = $disk.VolumeName
-                        VolumeLabel = if ($volume) { $volume.Label } else { $disk.VolumeName }
                         FileSystem = $disk.FileSystem
                         TotalSizeGB = [Math]::Round($disk.Size / 1GB, 2)
                         UsedSpaceGB = [Math]::Round(($disk.Size - $disk.FreeSpace) / 1GB, 2)
                         FreeSpaceGB = [Math]::Round($disk.FreeSpace / 1GB, 2)
                         PercentUsed = if ($disk.Size -gt 0) { [Math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 1) } else { 0 }
                         PercentFree = if ($disk.Size -gt 0) { [Math]::Round(($disk.FreeSpace / $disk.Size) * 100, 1) } else { 0 }
-                        BlockSize = if ($volume) { $volume.BlockSize } else { "Unknown" }
-                        Compressed = if ($volume) { $volume.Compressed } else { $false }
-                        Encrypted = if ($volume) { $volume.FileEncryptionStatus } else { "Unknown" }
-                        IsBoot = if ($volume) { $volume.BootVolume } else { $false }
-                        IsSystem = if ($volume) { $volume.SystemVolume } else { $false }
-                        HealthStatus = "Healthy"  # Would need additional WMI queries for real health
+                        HealthStatus = if ($disk.FreeSpace / $disk.Size -lt 0.1) { "Warning: Low disk space" } else { "Healthy" }
                         LastAnalyzed = Get-Date
                         _DataType = 'StorageAnalysis'
                     }
                     
-                    # Add health warnings
-                    if ($storageInfo.PercentFree -lt 10) {
-                        $storageInfo.HealthStatus = "Warning: Low disk space"
-                    } elseif ($storageInfo.PercentFree -lt 5) {
-                        $storageInfo.HealthStatus = "Critical: Very low disk space"
-                    }
-                    
-                    $storageAnalysis.Add($storageInfo)
+                    $null = $storageAnalysis.Add($storageInfo)
                 }
                 
             } catch {
-                Write-SafeLog "Error analyzing storage on $serverName`: $($_.Exception.Message)" -Level "WARN" -Context $Context
+                Write-FileServerLog -Message "Error analyzing storage on $serverName`: $($_.Exception.Message)" -Level "WARN" -Context $Context
             }
         }
         
         Write-Progress -Activity "Analyzing Storage" -Completed
-        
-        Write-SafeLog "Completed storage analysis for $($storageAnalysis.Count) volumes" -Level "SUCCESS" -Context $Context
+        Write-FileServerLog -Message "Completed storage analysis for $($storageAnalysis.Count) volumes" -Level "SUCCESS" -Context $Context
         return $storageAnalysis
         
     } catch {
-        Write-SafeLog "Error performing storage analysis: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-Progress -Activity "Analyzing Storage" -Completed
+        Write-FileServerLog -Message "Error performing storage analysis: $($_.Exception.Message)" -Level "ERROR" -Context $Context
         throw
     }
 }
@@ -1376,39 +719,30 @@ function Get-ShadowCopyEnhanced {
     param(
         [array]$ServerList,
         [hashtable]$Configuration,
-        $Context,
-        [PSCredential]$Credential
+        $Context
     )
     
-    $shadowCopies = [System.Collections.Generic.List[PSObject]]::new()
+    $shadowCopies = [System.Collections.ArrayList]::new()
     
     try {
-        Write-SafeLog "Discovering shadow copies on $($ServerList.Count) servers..." -Level "INFO" -Context $Context
+        Write-FileServerLog -Message "Discovering shadow copies on $($ServerList.Count) servers..." -Level "INFO" -Context $Context
         
-        $currentServer = 0
+        $totalServers = $ServerList.Count
+        $processedServers = 0
+        
         foreach ($server in $ServerList) {
-            $currentServer++
+            $processedServers++
             $serverName = $server.ServerName
             
-            Write-Progress -Activity "Discovering Shadow Copies" `
-                          -Status "Server $currentServer of $($ServerList.Count): $serverName" `
-                          -PercentComplete (($currentServer / $ServerList.Count) * 100)
+            Write-Progress -Activity "Discovering Shadow Copies" -Status "Processing $serverName" -PercentComplete (($processedServers / $totalServers) * 100)
             
             try {
-                # Get shadow copies
-                $shadows = Get-CimInstance -ClassName Win32_ShadowCopy `
-                                         -ComputerName $serverName `
-                                         -ErrorAction Stop
+                # Get shadow copies with timeout
+                $shadows = Get-CimInstance -ClassName Win32_ShadowCopy -ComputerName $serverName -OperationTimeoutSec $Configuration.TimeoutPerServerRemoteCommandSeconds -ErrorAction Stop
                 
                 if ($null -eq $shadows -or $shadows.Count -eq 0) {
-                    # No shadow copies on this server
                     continue
                 }
-                
-                # Get shadow storage info
-                $shadowStorage = Get-CimInstance -ClassName Win32_ShadowStorage `
-                                               -ComputerName $serverName `
-                                               -ErrorAction SilentlyContinue
                 
                 # Group by volume
                 $volumeGroups = $shadows | Group-Object VolumeName
@@ -1417,47 +751,31 @@ function Get-ShadowCopyEnhanced {
                     $volumeName = $volumeGroup.Name
                     $volumeShadows = $volumeGroup.Group
                     
-                    # Find storage info for this volume
-                    $storage = $shadowStorage | Where-Object { $_.Volume -eq $volumeName }
-                    
-                    # Calculate stats
-                    $oldestShadow = ($volumeShadows.InstallDate | Measure-Object -Minimum).Minimum
-                    $newestShadow = ($volumeShadows.InstallDate | Measure-Object -Maximum).Maximum
-                    
                     $shadowInfo = [PSCustomObject]@{
                         ServerName = $serverName
                         VolumeName = $volumeName
                         ShadowCopyCount = $volumeShadows.Count
-                        OldestShadowDate = $oldestShadow
-                        NewestShadowDate = $newestShadow
-                        MaxSpaceGB = if ($storage) { [Math]::Round($storage.MaxSpace / 1GB, 2) } else { "Unknown" }
-                        UsedSpaceGB = if ($storage) { [Math]::Round($storage.UsedSpace / 1GB, 2) } else { "Unknown" }
-                        AllocatedSpaceGB = if ($storage) { [Math]::Round($storage.AllocatedSpace / 1GB, 2) } else { "Unknown" }
-                        DiffAreaVolume = if ($storage) { $storage.DiffVolume } else { "Unknown" }
-                        Provider = ($volumeShadows | Select-Object -First 1).ProviderID
-                        ClientAccessible = ($volumeShadows | Where-Object { $_.ClientAccessible }).Count
-                        Persistent = ($volumeShadows | Where-Object { $_.Persistent }).Count
-                        Transportable = ($volumeShadows | Where-Object { $_.Transportable }).Count
-                        NoAutoRelease = ($volumeShadows | Where-Object { $_.NoAutoRelease }).Count
+                        OldestShadowDate = ($volumeShadows.InstallDate | Measure-Object -Minimum).Minimum
+                        NewestShadowDate = ($volumeShadows.InstallDate | Measure-Object -Maximum).Maximum
                         LastAnalyzed = Get-Date
                         _DataType = 'ShadowCopies'
                     }
                     
-                    $shadowCopies.Add($shadowInfo)
+                    $null = $shadowCopies.Add($shadowInfo)
                 }
                 
             } catch {
-                Write-SafeLog "Error querying shadow copies on $serverName`: $($_.Exception.Message)" -Level "WARN" -Context $Context
+                Write-FileServerLog -Message "Error querying shadow copies on $serverName`: $($_.Exception.Message)" -Level "WARN" -Context $Context
             }
         }
         
         Write-Progress -Activity "Discovering Shadow Copies" -Completed
-        
-        Write-SafeLog "Discovered shadow copy configurations on $($shadowCopies.Count) volumes" -Level "SUCCESS" -Context $Context
+        Write-FileServerLog -Message "Discovered shadow copy configurations on $($shadowCopies.Count) volumes" -Level "SUCCESS" -Context $Context
         return $shadowCopies
         
     } catch {
-        Write-SafeLog "Error discovering shadow copies: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-Progress -Activity "Discovering Shadow Copies" -Completed
+        Write-FileServerLog -Message "Error discovering shadow copies: $($_.Exception.Message)" -Level "ERROR" -Context $Context
         throw
     }
 }
@@ -1468,31 +786,35 @@ function Get-FileServerClustersEnhanced {
         $Context
     )
     
-    $clusters = [System.Collections.Generic.List[PSObject]]::new()
+    $clusters = [System.Collections.ArrayList]::new()
     
     try {
-        Write-SafeLog "Discovering file server clusters..." -Level "INFO" -Context $Context
+        Write-FileServerLog -Message "Discovering file server clusters..." -Level "INFO" -Context $Context
         
         # Check if FailoverClusters module is available
         if (-not (Get-Module -ListAvailable -Name FailoverClusters)) {
-            Write-SafeLog "FailoverClusters module not available. Install RSAT Failover Clustering Tools." -Level "WARN" -Context $Context
+            Write-FileServerLog -Message "FailoverClusters module not available. Install RSAT Failover Clustering Tools." -Level "WARN" -Context $Context
             return $clusters
         }
         
         Import-Module FailoverClusters -ErrorAction Stop
         
         # Find clusters in AD
-        $clusterComputers = Get-ADComputer -Filter { ServicePrincipalName -like "*MSClusterVirtualServer*" } `
-                                         -Properties ServicePrincipalName, Description `
-                                         -ErrorAction SilentlyContinue
+        $clusterComputers = Get-ADComputer -Filter { ServicePrincipalName -like "*MSClusterVirtualServer*" } -Properties ServicePrincipalName, Description -ErrorAction SilentlyContinue
         
         if ($null -eq $clusterComputers -or $clusterComputers.Count -eq 0) {
-            Write-SafeLog "No clusters found in Active Directory" -Level "INFO" -Context $Context
+            Write-FileServerLog -Message "No clusters found in Active Directory" -Level "INFO" -Context $Context
             return $clusters
         }
         
+        $totalClusters = @($clusterComputers).Count
+        $processedClusters = 0
+        
         foreach ($clusterAD in $clusterComputers) {
+            $processedClusters++
             $clusterName = $clusterAD.Name
+            
+            Write-Progress -Activity "Discovering Clusters" -Status "Processing $clusterName" -PercentComplete (($processedClusters / $totalClusters) * 100)
             
             try {
                 # Get cluster information
@@ -1502,259 +824,32 @@ function Get-FileServerClustersEnhanced {
                     continue
                 }
                 
-                # Get cluster nodes
-                $nodes = Get-ClusterNode -Cluster $cluster -ErrorAction SilentlyContinue
-                
-                # Get file server resources
-                $fileServerResources = Get-ClusterResource -Cluster $cluster -ErrorAction SilentlyContinue |
-                                      Where-Object { $_.ResourceType -like "*File Server*" }
-                
-                # Get cluster shared volumes
-                $csvs = Get-ClusterSharedVolume -Cluster $cluster -ErrorAction SilentlyContinue
-                
-                # Get quorum information
-                $quorum = Get-ClusterQuorum -Cluster $cluster -ErrorAction SilentlyContinue
-                
                 $clusterInfo = [PSCustomObject]@{
                     ClusterName = $cluster.Name
                     Domain = $cluster.Domain
                     Description = if ($clusterAD.Description) { $clusterAD.Description } else { "" }
                     ClusterFQDN = "$($cluster.Name).$($cluster.Domain)"
-                    NodeCount = @($nodes).Count
-                    Nodes = ($nodes.Name -join "; ")
-                    NodeStates = ($nodes | ForEach-Object { "$($_.Name):$($_.State)" }) -join "; "
-                    FileServerResourceCount = @($fileServerResources).Count
-                    FileServerResources = ($fileServerResources.Name -join "; ")
-                    FileServerResourceStates = ($fileServerResources | ForEach-Object { "$($_.Name):$($_.State)" }) -join "; "
-                    ClusterQuorumType = if ($quorum) { $quorum.QuorumType.ToString() } else { "Unknown" }
-                    QuorumResource = if ($quorum -and $quorum.QuorumResource) { $quorum.QuorumResource } else { "None" }
-                    SharedVolumeCount = @($csvs).Count
-                    SharedVolumes = ($csvs.Name -join "; ")
-                    SharedVolumePaths = ($csvs.SharedVolumeInfo.FriendlyVolumeName -join "; ")
-                    EnabledFeatures = @()  # Would need additional queries
-                    CreatedDate = $clusterAD.whenCreated
-                    DistinguishedName = $clusterAD.DistinguishedName
                     LastAnalyzed = Get-Date
                     _DataType = 'FileServerClusters'
                 }
                 
-                $clusters.Add($clusterInfo)
+                $null = $clusters.Add($clusterInfo)
                 
             } catch {
-                Write-SafeLog "Error querying cluster '$clusterName': $($_.Exception.Message)" -Level "WARN" -Context $Context
+                Write-FileServerLog -Message "Error querying cluster '$clusterName': $($_.Exception.Message)" -Level "WARN" -Context $Context
             }
         }
         
-        Write-SafeLog "Discovered $($clusters.Count) file server clusters" -Level "SUCCESS" -Context $Context
+        Write-Progress -Activity "Discovering Clusters" -Completed
+        Write-FileServerLog -Message "Discovered $($clusters.Count) file server clusters" -Level "SUCCESS" -Context $Context
         return $clusters
         
     } catch {
-        Write-SafeLog "Error discovering file server clusters: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+        Write-Progress -Activity "Discovering Clusters" -Completed
+        Write-FileServerLog -Message "Error discovering file server clusters: $($_.Exception.Message)" -Level "ERROR" -Context $Context
         throw
     }
 }
 
-# Helper Functions
-
-function Test-ServerConnectivity {
-    param(
-        [string]$ServerName,
-        [int]$Timeout = 5
-    )
-    
-    try {
-        $ping = Test-Connection -ComputerName $ServerName -Count 1 -Quiet -ErrorAction SilentlyContinue
-        if (-not $ping) {
-            return $false
-        }
-        
-        # Test WMI/CIM connectivity
-        $testCim = Get-CimInstance -ClassName Win32_ComputerSystem `
-                                  -ComputerName $ServerName `
-                                  -OperationTimeoutSec $Timeout `
-                                  -ErrorAction SilentlyContinue
-        
-        return ($null -ne $testCim)
-        
-    } catch {
-        return $false
-    }
-}
-
-function Get-OrCreateCimSession {
-    param(
-        [string]$ComputerName,
-        [PSCredential]$Credential
-    )
-    
-    # Check if session already exists
-    if ($script:CimSessions.ContainsKey($ComputerName)) {
-        $session = $script:CimSessions[$ComputerName]
-        if ((Get-CimSession -Id $session.Id -ErrorAction SilentlyContinue)) {
-            return $session
-        }
-    }
-    
-    # Create new session
-    $sessionOptions = New-CimSessionOption -Protocol Dcom
-    
-    $sessionParams = @{
-        ComputerName = $ComputerName
-        SessionOption = $sessionOptions
-        ErrorAction = 'Stop'
-    }
-    
-    if ($Credential) {
-        $sessionParams.Credential = $Credential
-    }
-    
-    $session = New-CimSession @sessionParams
-    $script:CimSessions[$ComputerName] = $session
-    
-    return $session
-}
-
-function Split-ArrayIntoBatches {
-    param(
-        [array]$Array,
-        [int]$BatchSize
-    )
-    
-    $batches = [System.Collections.Generic.List[array]]::new()
-    
-    for ($i = 0; $i -lt $Array.Count; $i += $BatchSize) {
-        $batch = $Array[$i..[Math]::Min($i + $BatchSize - 1, $Array.Count - 1)]
-        $batches.Add($batch)
-    }
-    
-    return $batches
-}
-
-function Convert-ToFlattenedFileServerData {
-    param([hashtable]$Results)
-    
-    $flatData = [System.Collections.Generic.List[PSObject]]::new()
-    
-    # Map of result keys to export file names
-    $fileMap = @{
-        'FileServers' = 'FileServers.csv'
-        'FileShares' = 'FileShares.csv'
-        'DFSNamespaces' = 'DFSNamespaces.csv'
-        'DFSFolders' = 'DFSFolders.csv'
-        'StorageAnalysis' = 'StorageAnalysis.csv'
-        'ShadowCopies' = 'ShadowCopies.csv'
-        'FileServerClusters' = 'FileServerClusters.csv'
-    }
-    
-    foreach ($key in $Results.Keys) {
-        if ($Results[$key] -is [array] -or $Results[$key] -is [System.Collections.Generic.List[PSObject]]) {
-            if ($Results[$key].Count -gt 0) {
-                # Data is already tagged with _DataType
-                $flatData.AddRange($Results[$key])
-            }
-        }
-    }
-    
-    return $flatData
-}
-
-function Clear-FileServerResources {
-    # Clean up CIM sessions
-    foreach ($session in $script:CimSessions.Values) {
-        try {
-            Remove-CimSession -CimSession $session -ErrorAction SilentlyContinue
-        } catch {
-            # Ignore cleanup errors
-        }
-    }
-    $script:CimSessions.Clear()
-    
-    # Clean up PS sessions
-    foreach ($session in $script:PSSessionPool.Values) {
-        try {
-            Remove-PSSession -Session $session -ErrorAction SilentlyContinue
-        } catch {
-            # Ignore cleanup errors
-        }
-    }
-    $script:PSSessionPool.Clear()
-    
-    # Clear circuit breakers
-    $script:ServerCircuitBreakers.Clear()
-}
-
-# Export module members
-Export-ModuleMember -Function 'Invoke-FileServerDiscovery'
-
-
-
-
-
-# =============================================================================
-# DISCOVERY MODULE INTERFACE FUNCTIONS
-# Required by M&A Orchestrator for module invocation
-# =============================================================================
-
-function Invoke-Discovery {
-    <#
-    .SYNOPSIS
-    Main discovery function called by the M&A Orchestrator
-    
-    .PARAMETER Context
-    The discovery context containing configuration and state information
-    
-    .PARAMETER Force
-    Force discovery even if cached data exists
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$Context,
-        
-        [Parameter(Mandatory = $false)]
-        [switch]$Force
-    )
-    
-    try {
-        Write-MandALog "Starting FileServerDiscovery discovery" "INFO"
-        
-        $discoveryResult = @{
-            ModuleName = "FileServerDiscovery"
-            StartTime = Get-Date
-            Status = "Completed"
-            Data = @()
-            Errors = @()
-            Summary = @{ ItemsDiscovered = 0; ErrorCount = 0 }
-        }
-        
-        # TODO: Implement actual discovery logic for FileServerDiscovery
-        Write-MandALog "Completed FileServerDiscovery discovery" "SUCCESS"
-        
-        return $discoveryResult
-        
-    } catch {
-        Write-MandALog "Error in FileServerDiscovery discovery: $($_.Exception.Message)" "ERROR"
-        throw
-    }
-}
-
-function Get-DiscoveryInfo {
-    <#
-    .SYNOPSIS
-    Returns metadata about this discovery module
-    #>
-    [CmdletBinding()]
-    param()
-    
-    return @{
-        ModuleName = "FileServerDiscovery"
-        ModuleVersion = "1.0.0"
-        Description = "FileServerDiscovery discovery module for M&A Suite"
-        RequiredPermissions = @("Read access to FileServerDiscovery resources")
-        EstimatedDuration = "5-15 minutes"
-        SupportedEnvironments = @("OnPremises", "Cloud", "Hybrid")
-    }
-}
-
-
-Export-ModuleMember -Function Invoke-Discovery, Get-DiscoveryInfo
+# --- Module Export ---
+Export-ModuleMember -Function Invoke-FileServerDiscovery
