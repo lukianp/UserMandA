@@ -502,12 +502,17 @@ function Initialize-OrchestratorModules {
     if (Test-Path $connectivityPath) {
         try {
             Import-Module $connectivityPath -Force -Global
-            Write-OrchestratorLog -Message "Loaded connectivity module" -Level "SUCCESS"
+            Write-OrchestratorLog -Message "Loaded connectivity module: EnhancedConnectionManager" -Level "SUCCESS"
         } catch {
             Add-OrchestratorError -Source "ModuleLoader" `
                 -Message "Failed to load connectivity module" `
                 -Exception $_.Exception
         }
+    } else {
+        Write-OrchestratorLog -Message "Connectivity module not found at: $connectivityPath" -Level "WARN"
+        Add-OrchestratorError -Source "ModuleLoader" `
+            -Message "Failed to load connectivity module" `
+            -Exception (New-Object System.IO.FileNotFoundException("Connectivity module not found at: $connectivityPath"))
     }
     
     # Load phase-specific modules
@@ -780,6 +785,12 @@ function Invoke-DiscoveryPhase {
     $ResultsCollection = [System.Collections.Concurrent.ConcurrentBag[DiscoveryResult]]::new()
     $ErrorCollection = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
     
+    # Add global context to session state
+    $contextVariable = New-Object System.Management.Automation.Runspaces.SessionStateVariableEntry(
+        'MandAContext', $global:MandA, 'Global M&A Context'
+    )
+    $sessionState.Variables.Add($contextVariable)
+
     # Add to session state
     $ResultsVariable = New-Object System.Management.Automation.Runspaces.SessionStateVariableEntry(
         'ResultsCollection', $ResultsCollection, 'Thread-safe results'
@@ -789,6 +800,16 @@ function Invoke-DiscoveryPhase {
     )
     $sessionState.Variables.Add($ResultsVariable)
     $sessionState.Variables.Add($ErrorVariable)
+
+    # Pre-compile frequently used functions
+    $commonFunctions = @'
+function Write-ProgressStep {
+    param([string]$Message, [string]$Status = "Info")
+    $color = @{Progress="Yellow"; Success="Green"; Warning="Yellow"; Error="Red"; Info="White"}[$Status]
+    Write-Host "  $Message" -ForegroundColor $color
+}
+'@
+    $sessionState.Commands.Add([System.Management.Automation.Runspaces.SessionStateFunctionEntry]::new('Write-ProgressStep', $commonFunctions))
     
     # Create runspace pool
     $pool = [runspacefactory]::CreateRunspacePool(1, $maxConcurrentJobs, $sessionState, $Host)

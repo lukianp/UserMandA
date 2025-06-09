@@ -275,6 +275,17 @@ function Invoke-AzureDiscovery {
         $Context
     )
     
+    # Ensure DiscoveryResult is available
+    if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+        # Fallback to hashtable-based result
+        return @{
+            Success = $false
+            ModuleName = 'Azure'
+            Error = "DiscoveryResult class not available"
+            Data = $null
+        }
+    }
+    
     # Initialize result using the globally defined DiscoveryResult class
     $result = [DiscoveryResult]::new('Azure')
     
@@ -431,4 +442,5 @@ function Get-DiscoveryInfo {
     }
 }
 
-Export-ModuleMember -Function Invoke-Discovery, Get-DiscoveryInfo, Invoke-AzureDiscovery
+Export-ModuleMember -Function Invoke-Discovery, Get-DiscoveryInfo, Invoke-AzureDiscovery
+

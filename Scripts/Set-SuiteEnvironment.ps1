@@ -237,6 +237,81 @@ Write-Host "[Set-SuiteEnvironment] Converting configuration to hashtable format.
 $configurationHashtable = ConvertTo-HashtableRecursiveSSE -InputObject $configContent
 Write-Host "[Set-SuiteEnvironment] Configuration loaded from '$configFilePath'" -ForegroundColor Green
 
+# Define DiscoveryResult class globally for all modules
+if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+    Add-Type -TypeDefinition @'
+public class DiscoveryResult {
+    public bool Success { get; set; }
+    public string ModuleName { get; set; }
+    public object Data { get; set; }
+    public System.Collections.ArrayList Errors { get; set; }
+    public System.Collections.ArrayList Warnings { get; set; }
+    public System.Collections.Hashtable Metadata { get; set; }
+    public System.DateTime StartTime { get; set; }
+    public System.DateTime EndTime { get; set; }
+    public string ExecutionId { get; set; }
+    
+    public DiscoveryResult(string moduleName) {
+        this.ModuleName = moduleName;
+        this.Errors = new System.Collections.ArrayList();
+        this.Warnings = new System.Collections.ArrayList();
+        this.Metadata = new System.Collections.Hashtable();
+        this.StartTime = System.DateTime.Now;
+        this.ExecutionId = System.Guid.NewGuid().ToString();
+        this.Success = true;
+    }
+    
+    public void AddError(string message, System.Exception exception) {
+        AddError(message, exception, new System.Collections.Hashtable());
+    }
+    
+    public void AddError(string message, System.Exception exception, System.Collections.Hashtable context) {
+        var errorEntry = new System.Collections.Hashtable();
+        errorEntry["Timestamp"] = System.DateTime.Now;
+        errorEntry["Message"] = message;
+        
+        if (exception != null) {
+            errorEntry["Exception"] = exception.ToString();
+            errorEntry["ExceptionType"] = exception.GetType().FullName;
+            errorEntry["StackTrace"] = exception.StackTrace;
+        } else {
+            errorEntry["Exception"] = null;
+            errorEntry["ExceptionType"] = null;
+            errorEntry["StackTrace"] = System.Environment.StackTrace;
+        }
+        
+        errorEntry["Context"] = context ?? new System.Collections.Hashtable();
+        this.Errors.Add(errorEntry);
+        this.Success = false;
+    }
+    
+    public void AddWarning(string message) {
+        AddWarning(message, new System.Collections.Hashtable());
+    }
+    
+    public void AddWarning(string message, System.Collections.Hashtable context) {
+        var warningEntry = new System.Collections.Hashtable();
+        warningEntry["Timestamp"] = System.DateTime.Now;
+        warningEntry["Message"] = message;
+        warningEntry["Context"] = context;
+        this.Warnings.Add(warningEntry);
+    }
+    
+    public void Complete() {
+        this.EndTime = System.DateTime.Now;
+        if (this.StartTime != null && this.EndTime != null) {
+            var duration = this.EndTime - this.StartTime;
+            this.Metadata["Duration"] = duration;
+            this.Metadata["DurationSeconds"] = duration.TotalSeconds;
+        }
+    }
+}
+'@ -Language CSharp
+    Write-Host "[Set-SuiteEnvironment] DiscoveryResult class defined globally" -ForegroundColor Green
+} else {
+    Write-Host "[Set-SuiteEnvironment] DiscoveryResult class already exists" -ForegroundColor Gray
+}
+
 # Test array handling if verbose
 if ($VerbosePreference -eq 'Continue') {
     Test-ConfigArrayHandling -Config $configurationHashtable

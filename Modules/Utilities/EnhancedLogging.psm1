@@ -117,17 +117,18 @@ function Invoke-SafeModuleExecution {
 # --- Script-level Logging Configuration (Defaults) ---
 $script:LoggingConfig = @{
     LogFile             = $null
-    LogLevel            = "INFO" 
+    LogLevel            = "INFO"
     LogRetentionDays    = 30
     MaxLogSizeMB        = 50
     UseEmojis            = $true # Controls if text-based emojis are used
     UseColors           = $true
     ShowTimestamp       = $true
     ShowComponent       = $true
-    LogPath             = "C:\MandADiscovery\Logs" 
+    LogPath             = "C:\MandADiscovery\Logs"
     Initialized         = $false
-    DefaultContext      = $null 
+    DefaultContext      = $null
     InitializedWarningShown = $false # Track if the "not initialized" warning was shown
+    StructuredLogging   = $true # Enable structured logging
 }
 
 # --- Private Helper Functions ---
@@ -213,7 +214,7 @@ function Get-LogEmojiInternal {
             "CRITICAL" { return "[!!]" }
             "HEADER"   { return "[==]" }
             "PROGRESS" { return "[..]" }
-            "IMPORTANT"{ return "[IMP]" }  # Keeping existing for IMPORTANT as not specified
+            "IMPORTANT"{ return "[*]" }
             default    { return "[--]" }
         }
     } catch {
@@ -282,7 +283,10 @@ function Write-MandALog {
         [PSCustomObject]$Context,
         
         [Parameter(Mandatory=$false)]
-        [hashtable]$Data = @{}
+        [string]$CorrelationId = "",
+        
+        [Parameter(Mandatory=$false)]
+        [hashtable]$StructuredData = @{}
     )
 
     if (-not $script:LoggingConfig.Initialized) {
@@ -346,17 +350,39 @@ function Write-MandALog {
 
     if (-not [string]::IsNullOrWhiteSpace($script:LoggingConfig.LogFile)) {
         try {
+            # Add machine-readable format option
+            if ($script:LoggingConfig.StructuredLogging) {
+                $logEntry = @{
+                    Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
+                    Level = $Level
+                    Component = $Component
+                    Message = $Message
+                    CorrelationId = $CorrelationId
+                    Data = $StructuredData
+                } | ConvertTo-Json -Compress
+                
+                # Write to structured log file
+                $structuredLogPath = $script:LoggingConfig.LogFile -replace '\.log$', '.json'
+                $logDirForFileCheck = Split-Path $structuredLogPath -Parent
+                if (-not (Test-Path $logDirForFileCheck -PathType Container)) {
+                    New-Item -Path $logDirForFileCheck -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+                }
+                Add-Content -Path $structuredLogPath -Value $logEntry -Encoding UTF8 -ErrorAction Stop
+            }
+            
+            # Continue with existing console/file logging...
             $fileMessage = $Message
             $fileLogEntry = ""
             if ($showTimestampSetting) { $fileLogEntry += "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] " }
             $fileLogEntry += "[$($Level.ToUpper())] "
             if ($showComponentSetting -and -not [string]::IsNullOrWhiteSpace($Component)) { $fileLogEntry += "[$Component] " }
+            if (-not [string]::IsNullOrWhiteSpace($CorrelationId)) { $fileLogEntry += "[CID:$CorrelationId] " }
             $fileLogEntry += $fileMessage
             
             # Add structured data if provided
-            if ($Data -and $Data.Count -gt 0) {
+            if ($StructuredData -and $StructuredData.Count -gt 0) {
                 try {
-                    $dataJson = $Data | ConvertTo-Json -Compress -Depth 3
+                    $dataJson = $StructuredData | ConvertTo-Json -Compress -Depth 3
                     $fileLogEntry += " | Data: $dataJson"
                 } catch {
                     $fileLogEntry += " | Data: [Failed to serialize data]"
