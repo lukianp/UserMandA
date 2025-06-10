@@ -13,7 +13,7 @@ function Get-AuthInfoFromConfiguration {
         [hashtable]$Configuration
     )
 
-    # Add debugging to see what's in the configuration
+    # Add debug logging at the start of Get-AuthInfoFromConfiguration
     Write-MandALog -Message "AuthCheck: Received config keys: $($Configuration.Keys -join ', ')" -Level "DEBUG" -Component "ExchangeDiscovery"
 
     # Check all possible locations for auth info
@@ -154,30 +154,24 @@ function Invoke-ExchangeDiscovery {
         try {
             Write-ExchangeLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
             
-            # Check if already connected
-            $currentContext = Get-MgContext -ErrorAction SilentlyContinue
-            if ($currentContext -and $currentContext.Account -and $currentContext.ClientId -eq $authInfo.ClientId) {
-                Write-ExchangeLog -Level "DEBUG" -Message "Using existing Graph session" -Context $Context
-                $graphConnected = $true
-            } else {
-                if ($currentContext) {
-                    Write-ExchangeLog -Level "DEBUG" -Message "Disconnecting existing Graph session" -Context $Context
-                    Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
-                }
-                
-                # CRITICAL FIX: Use proper credential object for Connect-MgGraph
-                $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
-                $clientCredential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $secureSecret)
-                
-                # Connect using the PSCredential object (not SecureString directly)
-                Connect-MgGraph -ClientId $authInfo.ClientId `
-                                -TenantId $authInfo.TenantId `
-                                -ClientSecretCredential $clientCredential `
-                                -NoWelcome -ErrorAction Stop
-                
-                Write-ExchangeLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
-                $graphConnected = $true
+            # Always disconnect first
+            try {
+                Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+            } catch {
+                # Ignore
             }
+
+            # Create credential and connect
+            $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
+            $clientCredential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $secureSecret)
+
+            Connect-MgGraph -ClientId $authInfo.ClientId `
+                            -TenantId $authInfo.TenantId `
+                            -ClientSecretCredential $clientCredential `
+                            -NoWelcome -ErrorAction Stop
+            
+            Write-ExchangeLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
+            $graphConnected = $true
             
         } catch {
             $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, $null)
@@ -360,7 +354,7 @@ function Invoke-ExchangeDiscovery {
 
         # 7. FINALIZE METADATA
         $result.Data = $allDiscoveredData
-        $result.Metadata["RecordCount"] = $allDiscoveredData.Count
+        $result.Metadata["RecordCount"] = $allDiscoveredData.Count  # Orchestrator specifically looks for this
         $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
         $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
         $result.Metadata["MailboxCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'Mailbox' }).Count

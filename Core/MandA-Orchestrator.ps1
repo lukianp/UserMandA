@@ -805,9 +805,19 @@ function Invoke-DiscoveryPhase {
         $connections = Initialize-AllConnections -Configuration $global:MandA.Config -AuthContext $authContext
         Write-OrchestratorLog -Message "Authentication and connections successful" -Level "SUCCESS"
         
-        # Store the authentication context for injection into runspaces
-        Write-OrchestratorLog -Message "Capturing authentication context for runspace injection..." -Level "DEBUG"
-        $script:LiveAuthContext = $authContext
+        # Enhanced Authentication Context Capture
+        if ($authResult.Authenticated -and $authContext) {
+            # Ensure we capture the actual credentials, not just context
+            $credentialData = @{
+                ClientId = $authContext.ClientId
+                ClientSecret = $authContext.ClientSecret
+                TenantId = $authContext.TenantId
+                AuthenticationMethod = $authContext.AuthenticationMethod
+            }
+            $script:LiveAuthContext = $credentialData
+            
+            Write-OrchestratorLog -Message "Captured full credential data for runspace injection" -Level "DEBUG"
+        }
         
     } catch {
         Add-OrchestratorError -Source "DiscoveryPhase-Auth" -Message "Authentication failure" -Exception $_.Exception -Severity "Critical"
@@ -929,8 +939,9 @@ function Invoke-DiscoveryPhase {
         "Microsoft.Graph.DeviceManagement",
         "ExchangeOnlineManagement",
         "ActiveDirectory",
-        "Az.Accounts",
-        "Az.Resources"
+        "Az.Accounts",      # Critical for Azure discovery
+        "Az.Resources",     # Critical for Azure discovery
+        "Az.Compute"        # May be needed for VM details
     )
     
     foreach ($psModule in $powerShellModulesToLoad) {
