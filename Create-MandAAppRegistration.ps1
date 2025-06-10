@@ -424,7 +424,7 @@ function Get-CompanyProfile {
     }
     
     # Update paths based on company profile
-    $script:EncryptedOutputPath = Join-Path $script:CompanyProfilePath "credentials.config"
+    $script:EncryptedOutputPath = Join-Path $script:CompanyProfilePath "credentials.json"
     
     if ([string]::IsNullOrWhiteSpace($LogPath)) {
         $script:LogPath = Join-Path $script:CompanyProfilePath "Logs\MandADiscovery_Registration_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
@@ -1569,6 +1569,7 @@ function New-EnhancedClientSecret {
     }
 }
 
+
 function Save-EnhancedCredentials {
     param(
         [Parameter(Mandatory=$true)]
@@ -1580,139 +1581,39 @@ function Save-EnhancedCredentials {
     )
     
     Start-OperationTimer "CredentialStorage"
-    Write-ProgressHeader "CREDENTIAL STORAGE" "Encrypting and saving authentication data"
+    Write-ProgressHeader "CREDENTIAL STORAGE" "Saving authentication data"
     
     try {
         # Enhanced credential data with company information
         $credentialData = @{
-            # Core authentication
             ClientId = $AppRegistration.AppId
             ClientSecret = $ClientSecret.SecretText
             TenantId = $TenantId
-            
-            # Company information
             CompanyName = $script:SelectedCompanyName
-            ProfilePath = $script:CompanyProfilePath
-            
-            # Metadata
             ApplicationName = $AppRegistration.DisplayName
-            ApplicationObjectId = $AppRegistration.Id
-            SecretKeyId = $ClientSecret.KeyId
-            
-            # Lifecycle information
             CreatedDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-            CreatedBy = $env:USERNAME
-            CreatedOnComputer = $env:COMPUTERNAME
             ExpiryDate = $ClientSecret.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss')
-            ValidityYears = $SecretValidityYears
-            DaysUntilExpiry = ($ClientSecret.EndDateTime - (Get-Date)).Days
-            
-            # Permissions summary
-            PermissionCount = $script:AppConfig.RequiredGraphPermissions.Count
-            AzureADRoles = $script:AppConfig.AzureADRoles
-            AzureRoles = $(if (-not $SkipAzureRoles) { $script:AppConfig.AzureRoles } else { @() })
-            
-            # Technical metadata
-            ScriptVersion = $script:ScriptInfo.Version
-            PowerShellVersion = $PSVersionTable.PSVersion.ToString()
-            ComputerName = $env:COMPUTERNAME
-            Domain = $env:USERDOMAIN
-            
-            # Deployment metadata
-            AzureSubscriptionCount = if ($script:ConnectionStatus.Azure.RoleAssignmentDetails) { 
-                $script:ConnectionStatus.Azure.RoleAssignmentDetails.SuccessfulSubscriptions.Count 
-            } else { 0 }
-            RoleAssignmentSuccess = $script:ConnectionStatus.Azure.RoleAssignmentSuccess
         }
         
-        Write-EnhancedLog "Encrypting credentials using Windows DPAPI..." -Level PROGRESS
-        Write-EnhancedLog "  Target User: $env:USERNAME" -Level INFO
-        Write-EnhancedLog "  Target Computer: $env:COMPUTERNAME" -Level INFO
+        Write-EnhancedLog "Saving credentials..." -Level "PROGRESS"
         
-        $jsonData = $credentialData | ConvertTo-Json -Depth 4
-        $secureString = ConvertTo-SecureString -String $jsonData -AsPlainText -Force
-        $encryptedData = $secureString | ConvertFrom-SecureString
+        # Save as JSON (matching what CredentialManagement.psm1 expects)
+        $credentialPath = Join-Path $script:CompanyProfilePath "credentials.json"
+        $credentialData | ConvertTo-Json -Depth 4 | Set-Content -Path $credentialPath -Encoding UTF8
         
-        # Save to company-specific location
-        $credentialPath = Join-Path $script:CompanyProfilePath "credentials.config"
-        Set-Content -Path $credentialPath -Value $encryptedData -Force -Encoding UTF8 -ErrorAction Stop
-        
-        $fileSize = [math]::Round((Get-Item $credentialPath).Length / 1KB, 2)
-        Write-EnhancedLog "Credentials encrypted and saved" -Level SUCCESS
-        Write-EnhancedLog "  Location: $credentialPath" -Level INFO
-        Write-EnhancedLog "  Size: $fileSize KB" -Level INFO
-        Write-EnhancedLog "  Encryption: Windows DPAPI (current user)" -Level INFO
-        
-        # Apply secure file permissions
-        try {
-            $acl = Get-Acl $credentialPath
-            $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance, remove existing
-            
-            # Add current user full control
-            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-            $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                $currentUser,
-                "FullControl",
-                "Allow"
-            )
-            $acl.SetAccessRule($accessRule)
-            
-            # Add SYSTEM full control
-            $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                "NT AUTHORITY\SYSTEM",
-                "FullControl",
-                "Allow"
-            )
-            $acl.SetAccessRule($systemRule)
-            
-            Set-Acl -Path $credentialPath -AclObject $acl
-            Write-EnhancedLog "Applied secure file permissions (User + SYSTEM only)" -Level SUCCESS
-            
-        } catch {
-            Write-EnhancedLog "Could not set secure file permissions: $($_.Exception.Message)" -Level WARN
-        }
-        
-        # Create backup
-        $backupPath = Join-Path $script:CompanyProfilePath "Backups\credentials_$(Get-Date -Format 'yyyyMMdd_HHmmss').config"
-        Copy-Item -Path $credentialPath -Destination $backupPath -Force
-        Write-EnhancedLog "Backup created: $(Split-Path $backupPath -Leaf)" -Level SUCCESS
-        
-        # Cleanup old backups (keep last 5)
-        $backupFiles = Get-ChildItem -Path (Split-Path $backupPath -Parent) -Filter "credentials_backup_*.config" | Sort-Object CreationTime -Descending
-        if ($backupFiles.Count -gt 5) {
-            $backupFiles | Select-Object -Skip 5 | Remove-Item -Force
-            Write-EnhancedLog "Cleaned up old backup files (kept 5 most recent)" -Level INFO
-        }
-        
-        # Create credential summary file for easy reference
-        try {
-            $summaryData = @{
-                ApplicationName = $credentialData.ApplicationName
-                ClientId = $credentialData.ClientId
-                TenantId = $credentialData.TenantId
-                CreatedDate = $credentialData.CreatedDate
-                ExpiryDate = $credentialData.ExpiryDate
-                DaysUntilExpiry = $credentialData.DaysUntilExpiry
-                CredentialFile = $credentialPath
-                BackupLocation = Split-Path $backupPath -Parent
-            }
-            
-            $summaryPath = Join-Path $script:CompanyProfilePath "credential_summary.json"
-            $summaryData | ConvertTo-Json -Depth 2 | Set-Content -Path $summaryPath -Encoding UTF8
-            Write-EnhancedLog "Created credential summary file: credential_summary.json" -Level SUCCESS
-            
-        } catch {
-            Write-EnhancedLog "Could not create summary file: $($_.Exception.Message)" -Level WARN
-        }
+        Write-EnhancedLog "Credentials saved successfully!" -Level "SUCCESS"
+        Write-EnhancedLog "  Location: $credentialPath" -Level "INFO"
         
         Stop-OperationTimer "CredentialStorage" $true
         
     } catch {
-        Write-EnhancedLog "Failed to save credentials: $($_.Exception.Message)" -Level ERROR
+        Write-EnhancedLog "Failed to save credentials: $($_.Exception.Message)" -Level "ERROR"
         Stop-OperationTimer "CredentialStorage" $false
         throw
     }
 }
+
+
 #endregion
 
 #region AD Account Creation

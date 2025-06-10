@@ -1,451 +1,392 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
-#Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Users, Microsoft.Graph.Groups
 
-<#
-.SYNOPSIS
-    Microsoft Graph discovery module for M&A Discovery Suite
-.DESCRIPTION
-    Discovers users and groups from Microsoft Graph
-.NOTES
-    Author: M&A Discovery Team
-    Version: 7.1.0
-    Last Modified: 2025-06-09
-#>
+#================================================================================
+# M&A Discovery Module: Graph
+# Description: Discovers users and groups from Microsoft Graph.
+#================================================================================
 
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
-}
-
-
-function Invoke-SafeModuleExecution {
+function Get-AuthInfoFromConfiguration {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [scriptblock]$ScriptBlock,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$ModuleName,
-        
-        [Parameter(Mandatory=$false)]
-        $Context
+        [hashtable]$Configuration
     )
-    
-    $result = @{
-        Success = $false
-        Data = $null
-        Error = $null
-        Duration = $null
+
+    # Add debugging to see what's in the configuration
+    Write-MandALog -Message "AuthCheck: Received config keys: $($Configuration.Keys -join ', ')" -Level "DEBUG" -Component "GraphDiscovery"
+
+    # Check all possible locations for auth info
+    if ($Configuration._AuthContext) { return $Configuration._AuthContext }
+    if ($Configuration._Credentials) { return $Configuration._Credentials }
+    if ($Configuration.authentication) {
+        if ($Configuration.authentication._Credentials) { 
+            return $Configuration.authentication._Credentials 
+        }
+        if ($Configuration.authentication.ClientId -and 
+            $Configuration.authentication.ClientSecret -and 
+            $Configuration.authentication.TenantId) {
+            return @{
+                ClientId     = $Configuration.authentication.ClientId
+                ClientSecret = $Configuration.authentication.ClientSecret
+                TenantId     = $Configuration.authentication.TenantId
+            }
+        }
     }
-    
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    
-    try {
-        # Validate global context
-        if (-not $global:MandA -or -not $global:MandA.Initialized) {
-            throw "Global M&A context not initialized"
+    if ($Configuration.ClientId -and $Configuration.ClientSecret -and $Configuration.TenantId) {
+        return @{
+            ClientId     = $Configuration.ClientId
+            ClientSecret = $Configuration.ClientSecret
+            TenantId     = $Configuration.TenantId
         }
-        
-        # Execute the module function
-        $result.Data = & $ScriptBlock
-        $result.Success = $true
-        
-    } catch {
-        $result.Error = @{
-            Message = $_.Exception.Message
-            Type = $_.Exception.GetType().FullName
-            StackTrace = $_.ScriptStackTrace
-            InnerException = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $null }
-        }
-        
-        # Log to both file and console
-        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
-        } else {
-            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red
-        }
-        
-        # Don't rethrow - let caller handle based on result
-    } finally {
-        $stopwatch.Stop()
-        $result.Duration = $stopwatch.Elapsed
     }
-    
-    return $result
+    return $null
 }
-
-
 
 function Write-GraphLog {
+    [CmdletBinding()]
     param(
+        [Parameter(Mandatory=$true)]
         [string]$Message,
         [string]$Level = "INFO",
-        $Context
+        [hashtable]$Context
     )
-    
-    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-        Write-MandALog -Message "[Graph] $Message" -Level $Level -Component "GraphDiscovery" -Context $Context
-    } else {
-        $color = switch ($Level) {
-            "ERROR" { "Red" }
-            "WARN" { "Yellow" }
-            "SUCCESS" { "Green" }
-            "DEBUG" { "Gray" }
-            default { "White" }
-        }
-        Write-Host "[Graph] $Message" -ForegroundColor $color
-    }
+    Write-MandALog -Message "[Graph] $Message" -Level $Level -Component "GraphDiscovery" -Context $Context
 }
 
-function Test-GraphConnection {
-    param($Context)
-    
-    try {
-        $mgContext = Get-MgContext -ErrorAction Stop
-        if (-not $mgContext) {
-            return $false
-        }
-        
-        # Test with simple query
-        $null = Get-MgOrganization -ErrorAction Stop
-        return $true
-    } catch {
-        Write-GraphLog -Message "Graph connection test failed: $_" -Level "ERROR" -Context $Context
-        return $false
-    }
-}
+# --- Main Discovery Function ---
 
-function Get-GraphUsersData {
-    param(
-        [hashtable]$Configuration,
-        $Context
-    )
-    
-    $users = @()
-    
-    try {
-        Write-GraphLog -Message "Retrieving Graph users..." -Level "INFO" -Context $Context
-        
-        # Get select fields from configuration
-        $selectFields = $Configuration.graphAPI.selectFields.users
-        if (-not $selectFields -or $selectFields.Count -eq 0) {
-            $selectFields = @("id", "userPrincipalName", "displayName", "mail", "department", 
-                            "jobTitle", "accountEnabled", "createdDateTime", "assignedLicenses")
-        }
-        
-        # Get users with pagination
-        $pageSize = if ($Configuration.graphAPI.pageSize) { $Configuration.graphAPI.pageSize } else { 999 }
-        $graphUsers = Get-MgUser -Select $selectFields -All -PageSize $pageSize -ConsistencyLevel eventual -ErrorAction Stop
-        
-        $processedCount = 0
-        foreach ($user in $graphUsers) {
-            $processedCount++
-            if ($processedCount % 100 -eq 0) {
-                Write-GraphLog -Message "Processed $processedCount users..." -Level "DEBUG" -Context $Context
-            }
-            
-            $userObj = @{
-                _DiscoveryTimestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-                _DiscoveryModule = 'Graph'
-            }
-            
-            # Add selected fields
-            foreach ($field in $selectFields) {
-                if ($user.PSObject.Properties[$field]) {
-                    $value = $user.PSObject.Properties[$field].Value
-                    
-                    # Handle special fields
-                    if ($field -eq "assignedLicenses" -and $value) {
-                        $userObj[$field] = ($value | ForEach-Object { $_.SkuId }) -join ";"
-                    } else {
-                        $userObj[$field] = $value
-                    }
-                } else {
-                    $userObj[$field] = $null
-                }
-            }
-            
-            $users += [PSCustomObject]$userObj
-        }
-        
-        Write-GraphLog -Message "Retrieved $($users.Count) users" -Level "SUCCESS" -Context $Context
-    } catch {
-        Write-GraphLog -Message "Failed to retrieve users: $_" -Level "ERROR" -Context $Context
-        throw
-    }
-    
-    return $users
-}
-
-function Get-GraphGroupsData {
-    param(
-        [hashtable]$Configuration,
-        $Context
-    )
-    
-    $groups = @()
-    $groupMembers = @()
-    
-    try {
-        Write-GraphLog -Message "Retrieving Graph groups..." -Level "INFO" -Context $Context
-        
-        # Get select fields from configuration
-        $selectFields = $Configuration.graphAPI.selectFields.groups
-        if (-not $selectFields -or $selectFields.Count -eq 0) {
-            $selectFields = @("id", "displayName", "mailEnabled", "securityEnabled", 
-                            "groupTypes", "description", "visibility", "createdDateTime")
-        }
-        
-        # Get groups with pagination
-        $graphGroups = Get-MgGroup -Select $selectFields -All -ConsistencyLevel eventual -ErrorAction Stop
-        
-        $processedCount = 0
-        $getMembers = $Configuration.discovery.graph.getGroupMembers -eq $true
-        
-        foreach ($group in $graphGroups) {
-            $processedCount++
-            if ($processedCount % 50 -eq 0) {
-                Write-GraphLog -Message "Processed $processedCount groups..." -Level "DEBUG" -Context $Context
-            }
-            
-            $groupObj = @{
-                _DiscoveryTimestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-                _DiscoveryModule = 'Graph'
-            }
-            
-            # Add selected fields
-            foreach ($field in $selectFields) {
-                if ($group.PSObject.Properties[$field]) {
-                    $value = $group.PSObject.Properties[$field].Value
-                    
-                    # Handle special fields
-                    if ($field -eq "groupTypes" -and $value) {
-                        $groupObj[$field] = ($value -join ';')
-                    } else {
-                        $groupObj[$field] = $value
-                    }
-                } else {
-                    $groupObj[$field] = $null
-                }
-            }
-            
-            $groups += [PSCustomObject]$groupObj
-            
-            # Get group members if configured
-            if ($getMembers) {
-                try {
-                    $members = Get-MgGroupMember -GroupId $group.Id -All -ErrorAction Stop
-                    foreach ($member in $members) {
-                        $groupMembers += [PSCustomObject]@{
-                            GroupId = $group.Id
-                            GroupDisplayName = $group.DisplayName
-                            MemberId = $member.Id
-                            MemberType = $member.AdditionalProperties['@odata.type']
-                            MemberDisplayName = $member.AdditionalProperties['displayName']
-                            _DiscoveryTimestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-                            _DiscoveryModule = 'Graph'
-                        }
-                    }
-                } catch {
-                    Write-GraphLog -Message "Failed to get members for group $($group.DisplayName): $_" -Level "WARN" -Context $Context
-                }
-            }
-        }
-        
-        Write-GraphLog -Message "Retrieved $($groups.Count) groups and $($groupMembers.Count) memberships" -Level "SUCCESS" -Context $Context
-    } catch {
-        Write-GraphLog -Message "Failed to retrieve groups: $_" -Level "ERROR" -Context $Context
-        throw
-    }
-    
-    return @{
-        Groups = $groups
-        Members = $groupMembers
-    }
-}
-
-function Export-GraphData {
-    param(
-        [string]$FilePath,
-        [array]$Data,
-        [string]$DataType,
-        $Context
-    )
-    
-    try {
-        if ($Data.Count -gt 0) {
-            $Data | Export-Csv -Path $FilePath -NoTypeInformation -Encoding UTF8
-            Write-GraphLog -Message "Exported $($Data.Count) $DataType records to $([System.IO.Path]::GetFileName($FilePath))" -Level "SUCCESS" -Context $Context
-        } else {
-            Write-GraphLog -Message "No $DataType data to export" -Level "WARN" -Context $Context
-        }
-    } catch {
-        Write-GraphLog -Message "Failed to export $DataType data: $_" -Level "ERROR" -Context $Context
-        throw
-    }
-}
-
-# Main discovery function - matches orchestrator expectations
 function Invoke-GraphDiscovery {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration,
-        
+
         [Parameter(Mandatory=$true)]
-        $Context
+        [hashtable]$Context
     )
-    
-    # Initialize result using the globally defined DiscoveryResult class
-    $result = [DiscoveryResult]::new('Graph')
-    
+
+    Write-GraphLog -Level "HEADER" -Message "Starting Discovery" -Context $Context
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+    # 1. INITIALIZE RESULT OBJECT
+    if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+        $result = [DiscoveryResult]::new('Graph')
+    } else {
+        # Fallback to hashtable
+        $result = @{
+            Success      = $true; ModuleName = 'Graph'; RecordCount = 0;
+            Errors       = [System.Collections.ArrayList]::new(); 
+            Warnings     = [System.Collections.ArrayList]::new(); 
+            Metadata     = @{};
+            StartTime    = Get-Date; EndTime = $null; 
+            ExecutionId  = [guid]::NewGuid().ToString();
+            AddError     = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
+            AddWarning   = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
+            Complete     = { $this.EndTime = Get-Date }.GetNewClosure()
+        }
+    }
+
     try {
-        Write-GraphLog -Message "Starting Microsoft Graph Discovery..." -Level "INFO" -Context $Context
+        # 2. VALIDATE PREREQUISITES & CONTEXT
+        Write-GraphLog -Level "INFO" -Message "Validating prerequisites..." -Context $Context
         
-        # Check prerequisites
-        if (-not (Test-GraphConnection -Context $Context)) {
-            $result.AddError("Microsoft Graph connection not available", $null, @{
-                Component = "GraphConnection"
-                Resolution = "Ensure Microsoft Graph is connected using Connect-MgGraph"
-            })
+        if (-not $Context.Paths.RawDataOutput) {
+            $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
+            return $result
+        }
+        $outputPath = $Context.Paths.RawDataOutput
+        Write-GraphLog -Level "DEBUG" -Message "Output path: $outputPath" -Context $Context
+        
+        Ensure-Path -Path $outputPath
+
+        # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
+        # Get Graph API configuration
+        $pageSize = 999  # Graph API max
+        $selectFields = @{
+            users = @("id", "userPrincipalName", "displayName", "mail", "department", 
+                     "jobTitle", "accountEnabled", "createdDateTime", "assignedLicenses")
+            groups = @("id", "displayName", "mailEnabled", "securityEnabled", 
+                      "groupTypes", "description", "visibility", "createdDateTime")
+        }
+        
+        if ($Configuration.graphAPI) {
+            if ($Configuration.graphAPI.pageSize) {
+                $pageSize = $Configuration.graphAPI.pageSize
+            }
+            if ($Configuration.graphAPI.selectFields) {
+                if ($Configuration.graphAPI.selectFields.users) {
+                    $selectFields.users = $Configuration.graphAPI.selectFields.users
+                }
+                if ($Configuration.graphAPI.selectFields.groups) {
+                    $selectFields.groups = $Configuration.graphAPI.selectFields.groups
+                }
+            }
+        }
+
+        # 4. AUTHENTICATE & CONNECT
+        Write-GraphLog -Level "INFO" -Message "Extracting authentication information..." -Context $Context
+        $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
+        
+        if (-not $authInfo) {
+            Write-GraphLog -Level "ERROR" -Message "No authentication found in configuration" -Context $Context
+            $result.AddError("Authentication information could not be found in the provided configuration.", $null, $null)
             return $result
         }
         
-        # Get output path
-        $outputPath = Join-Path $Context.Paths.RawDataOutput ""
-        if (-not (Test-Path $outputPath)) {
-            New-Item -Path $outputPath -ItemType Directory -Force | Out-Null
-        }
-        
-        # Discover users
+        Write-GraphLog -Level "DEBUG" -Message "Auth info found. ClientId: $($authInfo.ClientId.Substring(0,8))..." -Context $Context
+
+        # Connect to Microsoft Graph
         try {
-            $users = Get-GraphUsersData -Configuration $Configuration -Context $Context
-            $result.Metadata['UserCount'] = $users.Count
-            
-            if ($users.Count -gt 0) {
-                Export-GraphData -FilePath (Join-Path $outputPath "GraphUsers.csv") `
-                    -Data $users -DataType "users" -Context $Context
-            }
+            Write-GraphLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
+            $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
+            Connect-MgGraph -ClientId $authInfo.ClientId `
+                            -TenantId $authInfo.TenantId `
+                            -ClientSecretCredential $secureSecret `
+                            -NoWelcome -ErrorAction Stop
+            Write-GraphLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
         } catch {
-            $result.AddError("Failed to discover Graph users", $_.Exception, @{
-                Operation = "GetUsers"
-            })
+            $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, $null)
+            return $result
         }
+
+        # 5. PERFORM DISCOVERY
+        Write-GraphLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
+        $allDiscoveredData = [System.Collections.ArrayList]::new()
         
-        # Discover groups
+        # Discover Users
+        $users = [System.Collections.ArrayList]::new()
         try {
-            $groupData = Get-GraphGroupsData -Configuration $Configuration -Context $Context
-            $result.Metadata['GroupCount'] = $groupData.Groups.Count
-            $result.Metadata['GroupMemberCount'] = $groupData.Members.Count
+            Write-GraphLog -Level "INFO" -Message "Discovering users via Graph API..." -Context $Context
             
-            if ($groupData.Groups.Count -gt 0) {
-                Export-GraphData -FilePath (Join-Path $outputPath "GraphGroups.csv") `
-                    -Data $groupData.Groups -DataType "groups" -Context $Context
+            # Build select string
+            $selectString = $selectFields.users -join ','
+            
+            # Get users with pagination
+            $graphUsers = Get-MgUser -Select $selectFields.users -All -PageSize $pageSize -ConsistencyLevel eventual -ErrorAction Stop
+            
+            $processedCount = 0
+            foreach ($user in $graphUsers) {
+                $processedCount++
+                if ($processedCount % 100 -eq 0) {
+                    Write-GraphLog -Level "DEBUG" -Message "Processed $processedCount users..." -Context $Context
+                    Write-Progress -Activity "Processing Graph Users" -Status "$processedCount users processed" -PercentComplete (($processedCount / 10000) * 100)
+                }
+                
+                # Create user object with all fields
+                $userObj = [PSCustomObject]@{
+                    id = $user.Id
+                    userPrincipalName = $user.UserPrincipalName
+                    displayName = $user.DisplayName
+                    mail = $user.Mail
+                    department = $user.Department
+                    jobTitle = $user.JobTitle
+                    accountEnabled = $user.AccountEnabled
+                    createdDateTime = $user.CreatedDateTime
+                    assignedLicenses = if ($user.AssignedLicenses) { 
+                        ($user.AssignedLicenses | ForEach-Object { $_.SkuId }) -join ";"
+                    } else { 
+                        $null 
+                    }
+                    _DataType = 'User'
+                }
+                
+                # Add any additional fields from config
+                foreach ($field in $selectFields.users) {
+                    if ($field -notin @('id', 'userPrincipalName', 'displayName', 'mail', 'department', 
+                                       'jobTitle', 'accountEnabled', 'createdDateTime', 'assignedLicenses')) {
+                        if ($user.PSObject.Properties[$field]) {
+                            $userObj | Add-Member -MemberType NoteProperty -Name $field -Value $user.$field -Force
+                        }
+                    }
+                }
+                
+                $null = $users.Add($userObj)
+                $null = $allDiscoveredData.Add($userObj)
             }
             
-            if ($groupData.Members.Count -gt 0) {
-                Export-GraphData -FilePath (Join-Path $outputPath "GraphGroupMembers.csv") `
-                    -Data $groupData.Members -DataType "group members" -Context $Context
-            }
+            Write-Progress -Activity "Processing Graph Users" -Completed
+            Write-GraphLog -Level "SUCCESS" -Message "Discovered $($users.Count) users" -Context $Context
+            
         } catch {
-            $result.AddError("Failed to discover Graph groups", $_.Exception, @{
-                Operation = "GetGroups"
-            })
+            Write-GraphLog -Level "ERROR" -Message "Error discovering users: $($_.Exception.Message)" -Context $Context
+            $result.AddWarning("Failed to discover users: $($_.Exception.Message)", @{Section="Users"})
         }
         
-        # Set overall success based on critical data
-        $result.Success = ($users.Count -gt 0 -or $groupData.Groups.Count -gt 0)
-        
+        # Discover Groups
+        $groups = [System.Collections.ArrayList]::new()
+        $groupMembers = [System.Collections.ArrayList]::new()
+        try {
+            Write-GraphLog -Level "INFO" -Message "Discovering groups via Graph API..." -Context $Context
+            
+            # Get groups with pagination
+            $graphGroups = Get-MgGroup -Select $selectFields.groups -All -PageSize $pageSize -ConsistencyLevel eventual -ErrorAction Stop
+            
+            $processedCount = 0
+            $getMembers = $Configuration.discovery.graph.getGroupMembers -eq $true
+            
+            foreach ($group in $graphGroups) {
+                $processedCount++
+                if ($processedCount % 50 -eq 0) {
+                    Write-GraphLog -Level "DEBUG" -Message "Processed $processedCount groups..." -Context $Context
+                    Write-Progress -Activity "Processing Graph Groups" -Status "$processedCount groups processed" -PercentComplete (($processedCount / 5000) * 100)
+                }
+                
+                # Create group object
+                $groupObj = [PSCustomObject]@{
+                    id = $group.Id
+                    displayName = $group.DisplayName
+                    mailEnabled = $group.MailEnabled
+                    securityEnabled = $group.SecurityEnabled
+                    groupTypes = if ($group.GroupTypes) { $group.GroupTypes -join ';' } else { $null }
+                    description = $group.Description
+                    visibility = $group.Visibility
+                    createdDateTime = $group.CreatedDateTime
+                    _DataType = 'Group'
+                }
+                
+                # Add any additional fields from config
+                foreach ($field in $selectFields.groups) {
+                    if ($field -notin @('id', 'displayName', 'mailEnabled', 'securityEnabled', 
+                                       'groupTypes', 'description', 'visibility', 'createdDateTime')) {
+                        if ($group.PSObject.Properties[$field]) {
+                            $groupObj | Add-Member -MemberType NoteProperty -Name $field -Value $group.$field -Force
+                        }
+                    }
+                }
+                
+                $null = $groups.Add($groupObj)
+                $null = $allDiscoveredData.Add($groupObj)
+                
+                # Get group members if configured
+                if ($getMembers) {
+                    try {
+                        $members = Get-MgGroupMember -GroupId $group.Id -All -ErrorAction Stop
+                        foreach ($member in $members) {
+                            $memberObj = [PSCustomObject]@{
+                                GroupId = $group.Id
+                                GroupDisplayName = $group.DisplayName
+                                MemberId = $member.Id
+                                MemberType = if ($member.AdditionalProperties -and $member.AdditionalProperties['@odata.type']) {
+                                    $member.AdditionalProperties['@odata.type']
+                                } else {
+                                    "Unknown"
+                                }
+                                _DataType = 'GroupMember'
+                            }
+                            
+                            $null = $groupMembers.Add($memberObj)
+                            $null = $allDiscoveredData.Add($memberObj)
+                        }
+                    } catch {
+                        Write-GraphLog -Level "WARN" -Message "Failed to get members for group $($group.DisplayName): $($_.Exception.Message)" -Context $Context
+                    }
+                }
+            }
+            
+            Write-Progress -Activity "Processing Graph Groups" -Completed
+            Write-GraphLog -Level "SUCCESS" -Message "Discovered $($groups.Count) groups and $($groupMembers.Count) memberships" -Context $Context
+            
+        } catch {
+            Write-GraphLog -Level "ERROR" -Message "Error discovering groups: $($_.Exception.Message)" -Context $Context
+            $result.AddWarning("Failed to discover groups: $($_.Exception.Message)", @{Section="Groups"})
+        }
+
+        # 6. EXPORT DATA TO CSV
+        if ($allDiscoveredData.Count -gt 0) {
+            Write-GraphLog -Level "INFO" -Message "Exporting $($allDiscoveredData.Count) records..." -Context $Context
+            
+            $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+            
+            # Export Users
+            $userData = $allDiscoveredData | Where-Object { $_._DataType -eq 'User' }
+            if ($userData.Count -gt 0) {
+                $userData | ForEach-Object {
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Graph" -Force
+                }
+                
+                $usersFile = Join-Path $outputPath "GraphUsers.csv"
+                $userData | Export-Csv -Path $usersFile -NoTypeInformation -Encoding UTF8
+                Write-GraphLog -Level "SUCCESS" -Message "Exported $($userData.Count) users to GraphUsers.csv" -Context $Context
+            }
+            
+            # Export Groups
+            $groupData = $allDiscoveredData | Where-Object { $_._DataType -eq 'Group' }
+            if ($groupData.Count -gt 0) {
+                $groupData | ForEach-Object {
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Graph" -Force
+                }
+                
+                $groupsFile = Join-Path $outputPath "GraphGroups.csv"
+                $groupData | Export-Csv -Path $groupsFile -NoTypeInformation -Encoding UTF8
+                Write-GraphLog -Level "SUCCESS" -Message "Exported $($groupData.Count) groups to GraphGroups.csv" -Context $Context
+            }
+            
+            # Export Group Members (if any)
+            $memberData = $allDiscoveredData | Where-Object { $_._DataType -eq 'GroupMember' }
+            if ($memberData.Count -gt 0) {
+                $memberData | ForEach-Object {
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Graph" -Force
+                }
+                
+                $membersFile = Join-Path $outputPath "GraphGroupMembers.csv"
+                $memberData | Export-Csv -Path $membersFile -NoTypeInformation -Encoding UTF8
+                Write-GraphLog -Level "SUCCESS" -Message "Exported $($memberData.Count) group members to GraphGroupMembers.csv" -Context $Context
+            }
+        } else {
+            Write-GraphLog -Level "WARN" -Message "No data discovered to export" -Context $Context
+        }
+
+        # 7. FINALIZE METADATA
+        $result.RecordCount = $allDiscoveredData.Count
+        $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
+        $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+        $result.Metadata["UserCount"] = $users.Count
+        $result.Metadata["GroupCount"] = $groups.Count
+        $result.Metadata["GroupMemberCount"] = $groupMembers.Count
+
     } catch {
-        $result.AddError("Unexpected error in Graph discovery", $_.Exception, @{
-            Operation = "GraphDiscovery"
-        })
+        # Top-level error handler
+        Write-GraphLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
+        $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
+        # 8. CLEANUP & COMPLETE
+        Write-GraphLog -Level "INFO" -Message "Cleaning up..." -Context $Context
+        
+        # Disconnect from services
+        Disconnect-MgGraph -ErrorAction SilentlyContinue
+        
+        $stopwatch.Stop()
         $result.Complete()
-        Write-GraphLog -Message "Graph Discovery completed. Success: $($result.Success), Errors: $($result.Errors.Count)" -Level "INFO" -Context $Context
+        
+        # Safe record count display
+        $recordCount = 0
+        if ($result -is [hashtable]) {
+            $recordCount = if ($result.RecordCount) { $result.RecordCount } else { 0 }
+        } else {
+            $recordCount = if ($result.RecordCount) { $result.RecordCount } else { 0 }
+        }
+        
+        Write-GraphLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $recordCount." -Context $Context
     }
-    
+
     return $result
 }
 
-# Export the required function
-Export-ModuleMember -Function Invoke-Discovery, Get-DiscoveryInfo, Invoke-GraphDiscovery
-
-# =============================================================================
-# DISCOVERY MODULE INTERFACE FUNCTIONS
-# Required by M&A Orchestrator for module invocation
-# =============================================================================
-
-function Invoke-Discovery {
-    <#
-    .SYNOPSIS
-    Main discovery function called by the M&A Orchestrator
-    
-    .PARAMETER Context
-    The discovery context containing configuration and state information
-    
-    .PARAMETER Force
-    Force discovery even if cached data exists
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$Context,
-        
-        [Parameter(Mandatory = $false)]
-        [switch]$Force
-    )
-    
-    try {
-        Write-MandALog "Starting GraphDiscovery discovery" "INFO"
-        
-        $discoveryResult = @{
-            ModuleName = "GraphDiscovery"
-            StartTime = Get-Date
-            Status = "Completed"
-            Data = @()
-            Errors = @()
-            Summary = @{ ItemsDiscovered = 0; ErrorCount = 0 }
+# --- Helper Functions ---
+function Ensure-Path {
+    param($Path)
+    if (-not (Test-Path -Path $Path -PathType Container)) {
+        try {
+            New-Item -Path $Path -ItemType Directory -Force -ErrorAction Stop | Out-Null
+        } catch {
+            throw "Failed to create output directory: $Path. Error: $($_.Exception.Message)"
         }
-        
-        # TODO: Implement actual discovery logic for GraphDiscovery
-        Write-MandALog "Completed GraphDiscovery discovery" "SUCCESS"
-        
-        return $discoveryResult
-        
-    } catch {
-        Write-MandALog "Error in GraphDiscovery discovery: $($_.Exception.Message)" "ERROR"
-        throw
     }
 }
 
-function Get-DiscoveryInfo {
-    <#
-    .SYNOPSIS
-    Returns metadata about this discovery module
-    #>
-    [CmdletBinding()]
-    param()
-    
-    return @{
-        ModuleName = "GraphDiscovery"
-        ModuleVersion = "1.0.0"
-        Description = "GraphDiscovery discovery module for M&A Suite"
-        RequiredPermissions = @("Read access to GraphDiscovery resources")
-        EstimatedDuration = "5-15 minutes"
-        SupportedEnvironments = @("OnPremises", "Cloud", "Hybrid")
-    }
-}
-
-Export-ModuleMember -Function Invoke-Discovery, Get-DiscoveryInfo, Invoke-GraphDiscovery
+# --- Module Export ---
+Export-ModuleMember -Function Invoke-GraphDiscovery

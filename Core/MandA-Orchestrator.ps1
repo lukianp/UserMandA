@@ -1021,6 +1021,18 @@ function Write-ProgressStep {
                     $global:MandA.Paths[$key] = $globalContext.Paths[$key]
                 }
                 
+                # Reconstruct authentication context from injected data
+                if ($modConfig._AuthContext) {
+                    # Ensure authentication module functions are available
+                    if (Get-Command Initialize-MandAAuthentication -ErrorAction SilentlyContinue) {
+                        # Store auth context in module scope
+                        $authModule = Get-Module Authentication
+                        if ($authModule) {
+                            & $authModule Set-Variable -Name AuthContext -Value $modConfig._AuthContext -Scope Script
+                        }
+                    }
+                }
+                
                 # Add error handling wrapper
                 trap {
                     $errorMessage = if ($_.Exception.Message) {

@@ -115,27 +115,17 @@ function Invoke-ExchangeDiscovery {
         
         Write-ExchangeLog -Level "DEBUG" -Message "Auth info found. ClientId: $($authInfo.ClientId.Substring(0,8))..." -Context $Context
 
-        # Get Graph API access token
-        Write-ExchangeLog -Level "INFO" -Message "Obtaining Graph API access token..." -Context $Context
+        # Connect to Microsoft Graph
         try {
-            $tokenUri = "https://login.microsoftonline.com/$($authInfo.TenantId)/oauth2/v2.0/token"
-            $body = @{
-                client_id     = $authInfo.ClientId
-                client_secret = $authInfo.ClientSecret
-                scope         = "https://graph.microsoft.com/.default"
-                grant_type    = "client_credentials"
-            }
-            
-            $tokenResponse = Invoke-RestMethod -Uri $tokenUri -Method POST -Body $body -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
-            $accessToken = $tokenResponse.access_token
-            
-            $headers = @{
-                'Authorization' = "Bearer $accessToken"
-                'Content-Type'  = 'application/json'
-            }
-            Write-ExchangeLog -Level "SUCCESS" -Message "Successfully obtained Graph API access token" -Context $Context
+            Write-ExchangeLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
+            $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
+            Connect-MgGraph -ClientId $authInfo.ClientId `
+                            -TenantId $authInfo.TenantId `
+                            -ClientSecretCredential $secureSecret `
+                            -NoWelcome -ErrorAction Stop
+            Write-ExchangeLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
         } catch {
-            $result.AddError("Failed to obtain Graph API access token: $($_.Exception.Message)", $_.Exception, $null)
+            $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, $null)
             return $result
         }
 
@@ -143,38 +133,45 @@ function Invoke-ExchangeDiscovery {
         Write-ExchangeLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
-        # Discover Mailboxes
+        # Discover Mailboxes (User mailboxes)
         try {
             Write-ExchangeLog -Level "INFO" -Message "Discovering mailboxes via Graph API..." -Context $Context
             
-            # Use simpler query that's less likely to fail
-            $mailboxUri = "https://graph.microsoft.com/v1.0/users?`$filter=mail ne null&`$select=id,userPrincipalName,displayName,mail,mailNickname,accountEnabled,createdDateTime,department,jobTitle&`$top=999"
+            # Use a more basic query without complex filters
+            $mailboxUri = "https://graph.microsoft.com/v1.0/users?`$select=id,userPrincipalName,displayName,mail,mailNickname,accountEnabled,createdDateTime,department,jobTitle&`$top=999"
             
             $mailboxes = @()
+            $headers = @{
+                'ConsistencyLevel' = 'eventual'
+            }
+            
             do {
-                $response = Invoke-RestMethod -Uri $mailboxUri -Headers $headers -Method Get -ErrorAction Stop
+                $response = Invoke-MgGraphRequest -Uri $mailboxUri -Method GET -Headers $headers -ErrorAction Stop
                 
                 foreach ($user in $response.value) {
-                    # Skip disabled users if configured
-                    if ($Configuration.discovery.excludeDisabledUsers -and -not $user.accountEnabled) {
-                        continue
+                    # Only include users with mail property (indicates they have a mailbox)
+                    if ($user.mail) {
+                        # Skip disabled users if configured
+                        if ($Configuration.discovery.excludeDisabledUsers -and -not $user.accountEnabled) {
+                            continue
+                        }
+                        
+                        $mailboxObj = [PSCustomObject]@{
+                            Id = $user.id
+                            UserPrincipalName = $user.userPrincipalName
+                            PrimarySmtpAddress = $user.mail
+                            DisplayName = $user.displayName
+                            Alias = $user.mailNickname
+                            AccountEnabled = $user.accountEnabled
+                            CreatedDateTime = $user.createdDateTime
+                            Department = $user.department
+                            JobTitle = $user.jobTitle
+                            RecipientType = "UserMailbox"
+                            _DataType = "Mailbox"
+                        }
+                        
+                        $mailboxes += $mailboxObj
                     }
-                    
-                    $mailboxObj = [PSCustomObject]@{
-                        Id = $user.id
-                        UserPrincipalName = $user.userPrincipalName
-                        PrimarySmtpAddress = $user.mail
-                        DisplayName = $user.displayName
-                        Alias = $user.mailNickname
-                        AccountEnabled = $user.accountEnabled
-                        CreatedDateTime = $user.createdDateTime
-                        Department = $user.department
-                        JobTitle = $user.jobTitle
-                        RecipientType = "UserMailbox"
-                        _DataType = "Mailbox"
-                    }
-                    
-                    $mailboxes += $mailboxObj
                 }
                 
                 $mailboxUri = $response.'@odata.nextLink'
@@ -198,7 +195,7 @@ function Invoke-ExchangeDiscovery {
             
             $distGroups = @()
             do {
-                $response = Invoke-RestMethod -Uri $groupUri -Headers $headers -Method Get -ErrorAction Stop
+                $response = Invoke-MgGraphRequest -Uri $groupUri -Method GET -ErrorAction Stop
                 
                 foreach ($group in $response.value) {
                     $groupObj = [PSCustomObject]@{
@@ -237,7 +234,7 @@ function Invoke-ExchangeDiscovery {
             
             $mailSecGroups = @()
             do {
-                $response = Invoke-RestMethod -Uri $secGroupUri -Headers $headers -Method Get -ErrorAction Stop
+                $response = Invoke-MgGraphRequest -Uri $secGroupUri -Method GET -ErrorAction Stop
                 
                 foreach ($group in $response.value) {
                     $groupObj = [PSCustomObject]@{
@@ -249,7 +246,7 @@ function Invoke-ExchangeDiscovery {
                         CreatedDateTime = $group.createdDateTime
                         GroupType = "MailEnabledSecurity"
                         RecipientType = "MailUniversalSecurityGroup"
-                        _DataType = "MailSecurityGroup"
+                        _DataType = "DistributionGroup"  # Group with Mailboxes to match orchestrator expectations
                     }
                     
                     $mailSecGroups += $groupObj
@@ -267,49 +264,6 @@ function Invoke-ExchangeDiscovery {
             Write-ExchangeLog -Level "ERROR" -Message "Error discovering mail-enabled security groups: $($_.Exception.Message)" -Context $Context
             $result.AddWarning("Failed to discover mail-enabled security groups: $($_.Exception.Message)", @{Section="MailSecurityGroups"})
         }
-        
-        # Discover Shared Mailboxes (if enabled)
-        if ($Configuration.exchangeOnline.includeSharedMailboxes) {
-            try {
-                Write-ExchangeLog -Level "INFO" -Message "Discovering shared mailboxes via Graph API..." -Context $Context
-                
-                # Note: Graph API doesn't directly identify shared mailboxes
-                # This is a heuristic approach - users without licenses often are shared mailboxes
-                $sharedUri = "https://graph.microsoft.com/v1.0/users?`$filter=mail ne null and accountEnabled eq true&`$select=id,userPrincipalName,displayName,mail,assignedLicenses&`$top=999"
-                
-                $sharedMailboxes = @()
-                do {
-                    $response = Invoke-RestMethod -Uri $sharedUri -Headers $headers -Method Get -ErrorAction Stop
-                    
-                    foreach ($user in $response.value) {
-                        # Heuristic: No licenses = likely shared mailbox
-                        if (-not $user.assignedLicenses -or $user.assignedLicenses.Count -eq 0) {
-                            $sharedObj = [PSCustomObject]@{
-                                Id = $user.id
-                                UserPrincipalName = $user.userPrincipalName
-                                PrimarySmtpAddress = $user.mail
-                                DisplayName = $user.displayName
-                                RecipientType = "SharedMailbox"
-                                _DataType = "SharedMailbox"
-                            }
-                            
-                            $sharedMailboxes += $sharedObj
-                        }
-                    }
-                    
-                    $sharedUri = $response.'@odata.nextLink'
-                } while ($sharedUri)
-                
-                if ($sharedMailboxes.Count -gt 0) {
-                    $null = $allDiscoveredData.AddRange($sharedMailboxes)
-                }
-                Write-ExchangeLog -Level "INFO" -Message "Discovered $($sharedMailboxes.Count) potential shared mailboxes" -Context $Context
-                
-            } catch {
-                Write-ExchangeLog -Level "ERROR" -Message "Error discovering shared mailboxes: $($_.Exception.Message)" -Context $Context
-                $result.AddWarning("Failed to discover shared mailboxes: $($_.Exception.Message)", @{Section="SharedMailboxes"})
-            }
-        }
 
         # 6. EXPORT DATA TO CSV
         if ($allDiscoveredData.Count -gt 0) {
@@ -317,51 +271,44 @@ function Invoke-ExchangeDiscovery {
             
             $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
             
-            # Group by type and export
-            $dataGroups = $allDiscoveredData | Group-Object -Property _DataType
+            # Group by type and export - Use the exact filenames expected by orchestrator
+            $mailboxData = $allDiscoveredData | Where-Object { $_._DataType -eq 'Mailbox' }
+            $groupData = $allDiscoveredData | Where-Object { $_._DataType -eq 'DistributionGroup' }
             
-            foreach ($group in $dataGroups) {
-                # Map data types to file names
-                $fileMap = @{
-                    'Mailbox' = 'ExchangeMailboxes.csv'
-                    'DistributionGroup' = 'ExchangeDistributionGroups.csv'
-                    'MailSecurityGroup' = 'ExchangeMailSecurityGroups.csv'
-                    'SharedMailbox' = 'ExchangeSharedMailboxes.csv'
-                }
-                
-                $fileName = $fileMap[$group.Name]
-                if (-not $fileName) { $fileName = "Exchange_$($group.Name).csv" }
-                
-                $filePath = Join-Path $outputPath $fileName
-                
-                # Add metadata to each record
-                $group.Group | ForEach-Object {
+            # Export Mailboxes
+            if ($mailboxData.Count -gt 0) {
+                $mailboxData | ForEach-Object {
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Exchange" -Force
                 }
                 
-                # Export to CSV
-                $group.Group | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
-                
-                Write-ExchangeLog -Level "SUCCESS" -Message "Exported data to $fileName" -Context $Context
+                $mailboxFile = Join-Path $outputPath "ExchangeMailboxes.csv"
+                $mailboxData | Export-Csv -Path $mailboxFile -NoTypeInformation -Encoding UTF8
+                Write-ExchangeLog -Level "SUCCESS" -Message "Exported $($mailboxData.Count) mailboxes to ExchangeMailboxes.csv" -Context $Context
             }
+            
+            # Export Distribution Groups (includes mail-enabled security groups)
+            if ($groupData.Count -gt 0) {
+                $groupData | ForEach-Object {
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Exchange" -Force
+                }
+                
+                $groupFile = Join-Path $outputPath "ExchangeDistributionGroups.csv"
+                $groupData | Export-Csv -Path $groupFile -NoTypeInformation -Encoding UTF8
+                Write-ExchangeLog -Level "SUCCESS" -Message "Exported $($groupData.Count) groups to ExchangeDistributionGroups.csv" -Context $Context
+            }
+            
         } else {
             Write-ExchangeLog -Level "WARN" -Message "No data discovered to export" -Context $Context
         }
 
         # 7. FINALIZE METADATA
-        # CRITICAL FIX: Ensure RecordCount property exists and is set correctly
-        if ($result -is [hashtable]) {
-            # For hashtable, ensure RecordCount key exists and is set
-            $result.RecordCount = $allDiscoveredData.Count
-            $result['RecordCount'] = $allDiscoveredData.Count  # Ensure both access methods work
-        } else {
-            # For DiscoveryResult object, set the property directly
-            $result.RecordCount = $allDiscoveredData.Count
-        }
-        
+        $result.RecordCount = $allDiscoveredData.Count
         $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
         $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+        $result.Metadata["MailboxCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'Mailbox' }).Count
+        $result.Metadata["GroupCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DistributionGroup' }).Count
 
     } catch {
         # Top-level error handler
@@ -371,20 +318,20 @@ function Invoke-ExchangeDiscovery {
         # 8. CLEANUP & COMPLETE
         Write-ExchangeLog -Level "INFO" -Message "Cleaning up..." -Context $Context
         
+        # Disconnect from services
+        Disconnect-MgGraph -ErrorAction SilentlyContinue
+        
         $stopwatch.Stop()
         $result.Complete()
         
-        # Use proper property access for record count display - SAFE ACCESS
+        # Safe record count display
         $recordCount = 0
-        try {
-            if ($result -is [hashtable]) {
-                $recordCount = if ($result.ContainsKey('RecordCount')) { $result.RecordCount } else { 0 }
-            } else {
-                $recordCount = if ($result -and $result.PSObject.Properties['RecordCount']) { $result.RecordCount } else { 0 }
-            }
-        } catch {
-            $recordCount = 0
+        if ($result -is [hashtable]) {
+            $recordCount = if ($result.RecordCount) { $result.RecordCount } else { 0 }
+        } else {
+            $recordCount = if ($result.RecordCount) { $result.RecordCount } else { 0 }
         }
+        
         Write-ExchangeLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $recordCount." -Context $Context
     }
 

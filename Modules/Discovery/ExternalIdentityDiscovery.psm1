@@ -13,6 +13,9 @@ function Get-AuthInfoFromConfiguration {
         [hashtable]$Configuration
     )
 
+    # Add debugging to see what's in the configuration
+    Write-MandALog -Message "AuthCheck: Received config keys: $($Configuration.Keys -join ', ')" -Level "DEBUG" -Component "ExternalIdentityDiscovery"
+
     # Check all possible locations for auth info
     if ($Configuration._AuthContext) { return $Configuration._AuthContext }
     if ($Configuration._Credentials) { return $Configuration._Credentials }
@@ -67,59 +70,21 @@ function Invoke-ExternalIdentityDiscovery {
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # 1. INITIALIZE RESULT OBJECT
-    $result = $null
-    $isHashtableResult = $false
-    
     if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
         $result = [DiscoveryResult]::new('ExternalIdentity')
     } else {
         # Fallback to hashtable
-        $isHashtableResult = $true
         $result = @{
-            Success      = $true
-            ModuleName   = 'ExternalIdentity'
-            RecordCount  = 0
-            Data         = $null
-            Errors       = [System.Collections.ArrayList]::new()
-            Warnings     = [System.Collections.ArrayList]::new()
-            Metadata     = @{}
-            StartTime    = Get-Date
-            EndTime      = $null
-            ExecutionId  = [guid]::NewGuid().ToString()
+            Success      = $true; ModuleName = 'ExternalIdentity'; RecordCount = 0;
+            Errors       = [System.Collections.ArrayList]::new(); 
+            Warnings     = [System.Collections.ArrayList]::new(); 
+            Metadata     = @{};
+            StartTime    = Get-Date; EndTime = $null; 
+            ExecutionId  = [guid]::NewGuid().ToString();
+            AddError     = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
+            AddWarning   = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
+            Complete     = { $this.EndTime = Get-Date }.GetNewClosure()
         }
-        
-        # Add methods for hashtable
-        $result.AddError = {
-            param($m, $e, $c)
-            $errorEntry = @{
-                Timestamp = Get-Date
-                Message = $m
-                Exception = if ($e) { $e.ToString() } else { $null }
-                ExceptionType = if ($e) { $e.GetType().FullName } else { $null }
-                Context = $c
-            }
-            $null = $this.Errors.Add($errorEntry)
-            $this.Success = $false
-        }.GetNewClosure()
-        
-        $result.AddWarning = {
-            param($m, $c)
-            $warningEntry = @{
-                Timestamp = Get-Date
-                Message = $m
-                Context = $c
-            }
-            $null = $this.Warnings.Add($warningEntry)
-        }.GetNewClosure()
-        
-        $result.Complete = {
-            $this.EndTime = Get-Date
-            if ($this.StartTime -and $this.EndTime) {
-                $duration = $this.EndTime - $this.StartTime
-                $this.Metadata['Duration'] = $duration
-                $this.Metadata['DurationSeconds'] = $duration.TotalSeconds
-            }
-        }.GetNewClosure()
     }
 
     try {
@@ -166,40 +131,24 @@ function Invoke-ExternalIdentityDiscovery {
         Write-ExternalIdentityLog -Level "DEBUG" -Message "Auth info found. ClientId: $($authInfo.ClientId.Substring(0,8))..." -Context $Context
 
         # Connect to Microsoft Graph
-        $graphConnected = $false
         try {
             Write-ExternalIdentityLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
             
-            # Check if already connected
+            # Disconnect any existing session first
             $currentContext = Get-MgContext -ErrorAction SilentlyContinue
-            if ($currentContext -and $currentContext.Account -and $currentContext.ClientId -eq $authInfo.ClientId) {
-                Write-ExternalIdentityLog -Level "DEBUG" -Message "Using existing Graph session" -Context $Context
-                $graphConnected = $true
-            } else {
-                if ($currentContext) {
-                    Write-ExternalIdentityLog -Level "DEBUG" -Message "Disconnecting existing Graph session" -Context $Context
-                    Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
-                }
-                
-                # FIX: Create PSCredential object from ClientId and SecureString
-                $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
-                $clientCredential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $secureSecret)
-                
-                # Connect using the PSCredential
-                Connect-MgGraph -ClientSecretCredential $clientCredential `
-                                -TenantId $authInfo.TenantId `
-                                -NoWelcome -ErrorAction Stop
-                
-                Write-ExternalIdentityLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
-                $graphConnected = $true
-                
-                # Verify connection
-                $mgContext = Get-MgContext -ErrorAction Stop
-                if (-not $mgContext) {
-                    throw "Failed to establish Graph context after connection"
-                }
+            if ($currentContext) {
+                Write-ExternalIdentityLog -Level "DEBUG" -Message "Disconnecting existing Graph session" -Context $Context
+                Disconnect-MgGraph -ErrorAction SilentlyContinue
             }
             
+            # Connect using client secret
+            $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
+            Connect-MgGraph -ClientId $authInfo.ClientId `
+                            -TenantId $authInfo.TenantId `
+                            -ClientSecretCredential $secureSecret `
+                            -NoWelcome -ErrorAction Stop
+            
+            Write-ExternalIdentityLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
         } catch {
             $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, $null)
             return $result
@@ -210,7 +159,7 @@ function Invoke-ExternalIdentityDiscovery {
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
         # Get B2B Guest Users
-        $guestUsers = @()
+        $guestUsers = [System.Collections.ArrayList]::new()
         try {
             Write-ExternalIdentityLog -Level "INFO" -Message "Discovering B2B guest users..." -Context $Context
             
@@ -221,7 +170,7 @@ function Invoke-ExternalIdentityDiscovery {
                 if ($nextLink) {
                     $response = Invoke-MgGraphRequest -Uri $nextLink -Method GET
                 } else {
-                    # Filter for guest users only with proper encoding
+                    # Filter for guest users only
                     $filter = "userType eq 'Guest'"
                     $uri = "https://graph.microsoft.com/v1.0/users?`$filter=$filter&`$top=$pageSize&`$select=id,displayName,userPrincipalName,mail,createdDateTime,signInActivity,externalUserState,externalUserStateChangeDateTime,companyName"
                     $response = Invoke-MgGraphRequest -Uri $uri -Method GET
@@ -248,16 +197,18 @@ function Invoke-ExternalIdentityDiscovery {
                         
                         # Calculate days since last sign-in
                         $daysSinceLastSignIn = $null
+                        $lastSignInDateTime = $null
                         if ($guest.signInActivity -and $guest.signInActivity.lastSignInDateTime) {
                             try {
                                 $lastSignIn = [DateTime]$guest.signInActivity.lastSignInDateTime
                                 $daysSinceLastSignIn = [Math]::Round(((Get-Date) - $lastSignIn).TotalDays, 0)
+                                $lastSignInDateTime = $guest.signInActivity.lastSignInDateTime
                             } catch {
                                 Write-ExternalIdentityLog -Level "DEBUG" -Message "Could not parse lastSignInDateTime for user $($guest.id)" -Context $Context
                             }
                         }
                         
-                        $guestUsers += [PSCustomObject]@{
+                        $guestObj = [PSCustomObject]@{
                             GuestId = $guest.id
                             DisplayName = $guest.displayName
                             UserPrincipalName = $guest.userPrincipalName
@@ -267,16 +218,13 @@ function Invoke-ExternalIdentityDiscovery {
                             CreatedDateTime = $guest.createdDateTime
                             ExternalUserState = $guest.externalUserState
                             ExternalUserStateChangeDateTime = $guest.externalUserStateChangeDateTime
-                            LastSignInDateTime = if ($guest.signInActivity -and $guest.signInActivity.lastSignInDateTime) { 
-                                $guest.signInActivity.lastSignInDateTime 
-                            } else { 
-                                $null 
-                            }
+                            LastSignInDateTime = $lastSignInDateTime
                             DaysSinceLastSignIn = $daysSinceLastSignIn
-                            _ObjectType = 'GuestUser'
+                            _DataType = 'GuestUser'
                         }
                         
-                        $null = $allDiscoveredData.Add($guestUsers[-1])
+                        $null = $guestUsers.Add($guestObj)
+                        $null = $allDiscoveredData.Add($guestObj)
                         
                         # Report progress
                         if ($totalGuests % 100 -eq 0) {
@@ -290,38 +238,29 @@ function Invoke-ExternalIdentityDiscovery {
             } while ($nextLink)
             
             Write-ExternalIdentityLog -Level "SUCCESS" -Message "Discovered $totalGuests B2B guest users" -Context $Context
-            
-            if ($isHashtableResult) {
-                $result.Metadata["GuestUserCount"] = $totalGuests
-            } else {
-                $result.Metadata["GuestUserCount"] = $totalGuests
-            }
+            $result.Metadata["GuestUserCount"] = $totalGuests
             
         } catch {
-            $result.AddWarning("Failed to discover guest users: $($_.Exception.Message)", @{Operation = "GetGuestUsers"})
+            Write-ExternalIdentityLog -Level "ERROR" -Message "Error discovering guest users: $($_.Exception.Message)" -Context $Context
+            $result.AddWarning("Failed to discover guest users: $($_.Exception.Message)", @{Section="GuestUsers"})
         }
         
         # Get External Collaboration Settings
         try {
             Write-ExternalIdentityLog -Level "INFO" -Message "Retrieving external collaboration settings..." -Context $Context
             
-            # Get authorization policy using cmdlet
+            # Get authorization policy
             $authPolicy = $null
             try {
-                # First try the cmdlet
-                $authPolicy = Get-MgPolicyAuthorizationPolicy -ErrorAction Stop
-            } catch {
-                # Fallback to REST API
-                Write-ExternalIdentityLog -Level "DEBUG" -Message "Cmdlet failed, trying REST API" -Context $Context
                 $uri = "https://graph.microsoft.com/v1.0/policies/authorizationPolicy"
                 $authPolicyResponse = Invoke-MgGraphRequest -Uri $uri -Method GET
-                if ($authPolicyResponse) {
+                if ($authPolicyResponse -and $authPolicyResponse.value) {
+                    $authPolicy = $authPolicyResponse.value[0]
+                } elseif ($authPolicyResponse) {
                     $authPolicy = $authPolicyResponse
                 }
-            }
-            
-            if (-not $authPolicy) {
-                throw "Could not retrieve authorization policy"
+            } catch {
+                Write-ExternalIdentityLog -Level "WARN" -Message "Could not retrieve authorization policy: $($_.Exception.Message)" -Context $Context
             }
             
             # Get B2B settings
@@ -334,25 +273,37 @@ function Invoke-ExternalIdentityDiscovery {
             }
             
             $collaborationSettings = [PSCustomObject]@{
-                AllowInvitesFrom = if ($authPolicy.AllowInvitesFrom) { $authPolicy.AllowInvitesFrom } else { "Unknown" }
-                AllowedToCreateTenants = if ($authPolicy.DefaultUserRolePermissions) {
-                    $authPolicy.DefaultUserRolePermissions.AllowedToCreateTenants
-                } else { $false }
-                AllowedToReadOtherUsers = if ($authPolicy.DefaultUserRolePermissions) {
-                    $authPolicy.DefaultUserRolePermissions.AllowedToReadOtherUsers
-                } else { $false }
-                GuestUserRoleId = $authPolicy.GuestUserRoleId
+                AllowInvitesFrom = if ($authPolicy -and $authPolicy.allowInvitesFrom) { 
+                    $authPolicy.allowInvitesFrom 
+                } else { 
+                    "Unknown" 
+                }
+                AllowedToCreateTenants = if ($authPolicy -and $authPolicy.defaultUserRolePermissions) {
+                    $authPolicy.defaultUserRolePermissions.allowedToCreateTenants
+                } else { 
+                    $false 
+                }
+                AllowedToReadOtherUsers = if ($authPolicy -and $authPolicy.defaultUserRolePermissions) {
+                    $authPolicy.defaultUserRolePermissions.allowedToReadOtherUsers
+                } else { 
+                    $false 
+                }
+                GuestUserRoleId = if ($authPolicy -and $authPolicy.guestUserRoleId) {
+                    $authPolicy.guestUserRoleId
+                } else {
+                    "Unknown"
+                }
                 B2BCollaborationInbound = if ($b2bPolicy) { "Configured" } else { "Default" }
                 B2BCollaborationOutbound = if ($b2bPolicy) { "Configured" } else { "Default" }
-                _ObjectType = 'CollaborationSettings'
+                _DataType = 'CollaborationSettings'
             }
             
             $null = $allDiscoveredData.Add($collaborationSettings)
-            
             Write-ExternalIdentityLog -Level "SUCCESS" -Message "Retrieved external collaboration settings" -Context $Context
             
         } catch {
-            $result.AddWarning("Failed to retrieve collaboration settings: $($_.Exception.Message)", @{Operation = "GetCollaborationSettings"})
+            Write-ExternalIdentityLog -Level "ERROR" -Message "Error retrieving collaboration settings: $($_.Exception.Message)" -Context $Context
+            $result.AddWarning("Failed to retrieve collaboration settings: $($_.Exception.Message)", @{Section="CollaborationSettings"})
         }
         
         # Analyze Guest Activity by Domain
@@ -382,7 +333,7 @@ function Invoke-ExternalIdentityDiscovery {
                         AverageInactivityDays = $avgInactivity
                         OldestGuestCreated = ($domainGuests.CreatedDateTime | Sort-Object | Select-Object -First 1)
                         NewestGuestCreated = ($domainGuests.CreatedDateTime | Sort-Object -Descending | Select-Object -First 1)
-                        _ObjectType = 'GuestActivityAnalysis'
+                        _DataType = 'GuestActivityAnalysis'
                     }
                 }
                 
@@ -394,15 +345,11 @@ function Invoke-ExternalIdentityDiscovery {
                 }
                 
                 Write-ExternalIdentityLog -Level "SUCCESS" -Message "Analyzed activity for $($topDomains.Count) partner domains" -Context $Context
-                
-                if ($isHashtableResult) {
-                    $result.Metadata["PartnerDomainCount"] = $topDomains.Count
-                } else {
-                    $result.Metadata["PartnerDomainCount"] = $topDomains.Count
-                }
+                $result.Metadata["PartnerDomainCount"] = $topDomains.Count
                 
             } catch {
-                $result.AddWarning("Failed to analyze guest activity: $($_.Exception.Message)", @{Operation = "AnalyzeGuestActivity"})
+                Write-ExternalIdentityLog -Level "ERROR" -Message "Error analyzing guest activity: $($_.Exception.Message)" -Context $Context
+                $result.AddWarning("Failed to analyze guest activity: $($_.Exception.Message)", @{Section="GuestActivityAnalysis"})
             }
         }
 
@@ -412,53 +359,39 @@ function Invoke-ExternalIdentityDiscovery {
             
             $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
             
-            # Group by object type and export to separate files
-            $objectGroups = $allDiscoveredData | Group-Object -Property _ObjectType
+            # Group by data type and export
+            $dataGroups = $allDiscoveredData | Group-Object -Property _DataType
             
-            foreach ($group in $objectGroups) {
-                $objectType = $group.Name
-                $objects = $group.Group
+            foreach ($group in $dataGroups) {
+                $dataType = $group.Name
+                $data = $group.Group
                 
-                # Remove the _ObjectType property before export
-                $exportData = $objects | ForEach-Object {
-                    $obj = $_.PSObject.Copy()
-                    $obj.PSObject.Properties.Remove('_ObjectType')
-                    $obj | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
-                    $obj | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "ExternalIdentity" -Force
-                    $obj
+                # Add metadata to each record
+                $data | ForEach-Object {
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "ExternalIdentity" -Force
                 }
                 
-                # Map object types to file names (MUST match orchestrator expectations)
-                $fileName = switch ($objectType) {
+                # Map to expected filenames
+                $fileName = switch ($dataType) {
                     'GuestUser' { 'B2BGuestUsers.csv' }
                     'CollaborationSettings' { 'ExternalCollaborationSettings.csv' }
                     'GuestActivityAnalysis' { 'GuestUserActivityAnalysis.csv' }
-                    default { "ExternalIdentity_$objectType.csv" }
+                    default { "ExternalIdentity_$dataType.csv" }
                 }
                 
                 $filePath = Join-Path $outputPath $fileName
-                $exportData | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
-                
-                Write-ExternalIdentityLog -Level "SUCCESS" -Message "Exported $($exportData.Count) $objectType records to $fileName" -Context $Context
+                $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+                Write-ExternalIdentityLog -Level "SUCCESS" -Message "Exported $($data.Count) $dataType records to $fileName" -Context $Context
             }
         } else {
             Write-ExternalIdentityLog -Level "WARN" -Message "No data discovered to export" -Context $Context
         }
 
         # 7. FINALIZE METADATA
-        # CRITICAL FIX: Ensure RecordCount property exists and is set correctly
-        if ($isHashtableResult) {
-            # For hashtable, ensure RecordCount key exists and is set
-            $result.RecordCount = $allDiscoveredData.Count
-            $result['RecordCount'] = $allDiscoveredData.Count  # Ensure both access methods work
-            $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
-            $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
-        } else {
-            # For DiscoveryResult object, set the property directly
-            $result.RecordCount = $allDiscoveredData.Count
-            $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
-            $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
-        }
+        $result.RecordCount = $allDiscoveredData.Count
+        $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
+        $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
 
     } catch {
         # Top-level error handler
@@ -468,34 +401,21 @@ function Invoke-ExternalIdentityDiscovery {
         # 8. CLEANUP & COMPLETE
         Write-ExternalIdentityLog -Level "INFO" -Message "Cleaning up..." -Context $Context
         
-        # Disconnect from Microsoft Graph only if we connected
-        if ($graphConnected) {
-            try {
-                $mgContext = Get-MgContext -ErrorAction SilentlyContinue
-                if ($mgContext) {
-                    Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
-                    Write-ExternalIdentityLog -Level "DEBUG" -Message "Disconnected from Microsoft Graph" -Context $Context
-                }
-            } catch {
-                # Ignore disconnect errors
-            }
-        }
+        # Disconnect from services
+        Disconnect-MgGraph -ErrorAction SilentlyContinue
         
         $stopwatch.Stop()
         $result.Complete()
         
-        # Get final record count for logging - SAFE ACCESS
-        $finalRecordCount = 0
-        try {
-            if ($isHashtableResult) {
-                $finalRecordCount = if ($result.ContainsKey('RecordCount')) { $result['RecordCount'] } else { 0 }
-            } else {
-                $finalRecordCount = if ($result -and $result.PSObject.Properties['RecordCount']) { $result.RecordCount } else { 0 }
-            }
-        } catch {
-            $finalRecordCount = 0
+        # Safe record count display
+        $recordCount = 0
+        if ($result -is [hashtable]) {
+            $recordCount = if ($result.RecordCount) { $result.RecordCount } else { 0 }
+        } else {
+            $recordCount = if ($result.RecordCount) { $result.RecordCount } else { 0 }
         }
-        Write-ExternalIdentityLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $finalRecordCount." -Context $Context
+        
+        Write-ExternalIdentityLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $recordCount." -Context $Context
     }
 
     return $result

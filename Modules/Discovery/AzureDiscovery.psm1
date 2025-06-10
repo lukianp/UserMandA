@@ -78,7 +78,6 @@ function Invoke-AzureDiscovery {
         $result = @{
             Success      = $true
             ModuleName   = 'Azure'
-            RecordCount  = 0
             Data         = $null
             Errors       = [System.Collections.ArrayList]::new()
             Warnings     = [System.Collections.ArrayList]::new()
@@ -252,11 +251,7 @@ function Invoke-AzureDiscovery {
                 Write-AzureLog -Level "SUCCESS" -Message "Discovered $($subscriptions.Count) subscriptions" -Context $Context
             }
             
-            if ($isHashtableResult) {
-                $result.Metadata["SubscriptionCount"] = $subscriptions.Count
-            } else {
-                $result.Metadata["SubscriptionCount"] = $subscriptions.Count
-            }
+            $result.Metadata["SubscriptionCount"] = $subscriptions.Count
             
         } catch {
             $result.AddWarning("Failed to discover subscriptions: $($_.Exception.Message)", @{Operation = "GetSubscriptions"})
@@ -321,11 +316,7 @@ function Invoke-AzureDiscovery {
                 
                 Write-AzureLog -Level "SUCCESS" -Message "Discovered $resourceGroupCount resource groups" -Context $Context
                 
-                if ($isHashtableResult) {
-                    $result.Metadata["ResourceGroupCount"] = $resourceGroupCount
-                } else {
-                    $result.Metadata["ResourceGroupCount"] = $resourceGroupCount
-                }
+                $result.Metadata["ResourceGroupCount"] = $resourceGroupCount
                 
                 if ($errors -gt 0) {
                     $result.AddWarning("Completed with $errors subscription errors", @{Operation = "GetResourceGroups"})
@@ -398,11 +389,7 @@ function Invoke-AzureDiscovery {
                 
                 Write-AzureLog -Level "SUCCESS" -Message "Discovered $vmCount virtual machines" -Context $Context
                 
-                if ($isHashtableResult) {
-                    $result.Metadata["VirtualMachineCount"] = $vmCount
-                } else {
-                    $result.Metadata["VirtualMachineCount"] = $vmCount
-                }
+                $result.Metadata["VirtualMachineCount"] = $vmCount
                 
                 if ($errors -gt 0) {
                     $result.AddWarning("Completed with $errors subscription errors", @{Operation = "GetVirtualMachines"})
@@ -452,25 +439,25 @@ function Invoke-AzureDiscovery {
             Write-AzureLog -Level "WARN" -Message "No data discovered to export" -Context $Context
         }
 
-        # 7. FINALIZE METADATA
-        # CRITICAL FIX: Ensure RecordCount property exists and is set correctly
-        if ($isHashtableResult) {
-            # For hashtable, ensure RecordCount key exists and is set
-            $result.RecordCount = $allDiscoveredData.Count
-            $result['RecordCount'] = $allDiscoveredData.Count  # Ensure both access methods work
-            $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
-            $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
-        } else {
-            # For DiscoveryResult object, set the property directly
-            $result.RecordCount = $allDiscoveredData.Count
-            $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
-            $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
-        }
+        # 7. FINALIZE METADATA - FIXED RecordCount handling
+        # Store the collected data
+        $result.Data = $allDiscoveredData
+        
+        # Store RecordCount in Metadata (this is where orchestrator expects it)
+        $result.Metadata["RecordCount"] = $allDiscoveredData.Count
+        $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
+        $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
 
     } catch {
         # Top-level error handler
         Write-AzureLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
-        $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
+        
+        # Handle error based on result type
+        if ($isHashtableResult) {
+            & $result.AddError "A critical error occurred during discovery: $($_.Exception.Message)" $_.Exception $null
+        } else {
+            $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
+        }
     } finally {
         # 8. CLEANUP & COMPLETE
         Write-AzureLog -Level "INFO" -Message "Cleaning up..." -Context $Context
@@ -487,19 +474,20 @@ function Invoke-AzureDiscovery {
         }
         
         $stopwatch.Stop()
-        $result.Complete()
         
-        # Get final record count for logging - SAFE ACCESS
-        $finalRecordCount = 0
-        try {
-            if ($isHashtableResult) {
-                $finalRecordCount = if ($result.ContainsKey('RecordCount')) { $result['RecordCount'] } else { 0 }
-            } else {
-                $finalRecordCount = if ($result -and $result.PSObject.Properties['RecordCount']) { $result.RecordCount } else { 0 }
-            }
-        } catch {
-            $finalRecordCount = 0
+        # Call Complete method
+        if ($isHashtableResult) {
+            & $result.Complete
+        } else {
+            $result.Complete()
         }
+        
+        # Get final record count for logging - from Metadata
+        $finalRecordCount = 0
+        if ($result.Metadata -and $result.Metadata.ContainsKey('RecordCount')) {
+            $finalRecordCount = $result.Metadata['RecordCount']
+        }
+        
         Write-AzureLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $finalRecordCount." -Context $Context
     }
 
