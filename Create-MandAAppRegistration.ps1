@@ -2120,3 +2120,10 @@ try {
     }
 }
 #endregion
+
+# Exit with appropriate code
+if ($script:ExitCode -ne 0) {
+    exit $script:ExitCode
+} else {
+    exit 0
+}
