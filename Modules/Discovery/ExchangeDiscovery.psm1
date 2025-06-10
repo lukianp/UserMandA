@@ -374,8 +374,17 @@ function Invoke-ExchangeDiscovery {
         $stopwatch.Stop()
         $result.Complete()
         
-        # Use proper property access for record count display
-        $recordCount = if ($result -is [hashtable]) { $result.RecordCount } else { $result.RecordCount }
+        # Use proper property access for record count display - SAFE ACCESS
+        $recordCount = 0
+        try {
+            if ($result -is [hashtable]) {
+                $recordCount = if ($result.ContainsKey('RecordCount')) { $result.RecordCount } else { 0 }
+            } else {
+                $recordCount = if ($result -and $result.PSObject.Properties['RecordCount']) { $result.RecordCount } else { 0 }
+            }
+        } catch {
+            $recordCount = 0
+        }
         Write-ExchangeLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $recordCount." -Context $Context
     }
 

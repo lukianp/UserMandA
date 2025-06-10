@@ -356,8 +356,17 @@ function Invoke-NetworkInfrastructureDiscovery {
         $stopwatch.Stop()
         $result.Complete() # Sets EndTime
         
-        # Get final record count safely
-        $finalRecordCount = if ($isHashtableResult) { $result['RecordCount'] } else { $result.RecordCount }
+        # Get final record count safely - SAFE ACCESS
+        $finalRecordCount = 0
+        try {
+            if ($isHashtableResult) {
+                $finalRecordCount = if ($result.ContainsKey('RecordCount')) { $result['RecordCount'] } else { 0 }
+            } else {
+                $finalRecordCount = if ($result -and $result.PSObject.Properties['RecordCount']) { $result.RecordCount } else { 0 }
+            }
+        } catch {
+            $finalRecordCount = 0
+        }
         
         Write-NetworkInfrastructureLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $finalRecordCount." -Context $Context
     }
