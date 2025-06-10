@@ -125,6 +125,12 @@ function Invoke-GraphDiscovery {
         Write-GraphLog -Level "INFO" -Message "Extracting authentication information..." -Context $Context
         $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
         
+        # Reconstruct auth from thread-safe config
+        if (-not $authInfo -and $Configuration._AuthContext) {
+            $authInfo = $Configuration._AuthContext
+            Write-GraphLog -Level "DEBUG" -Message "Using injected auth context" -Context $Context
+        }
+        
         if (-not $authInfo) {
             Write-GraphLog -Level "ERROR" -Message "No authentication found in configuration" -Context $Context
             $result.AddError("Authentication information could not be found in the provided configuration.", $null, $null)

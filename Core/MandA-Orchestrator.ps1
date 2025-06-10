@@ -520,6 +520,57 @@ function Get-SerializableAuthContext {
     }
 }
 
+function Export-ErrorDashboard {
+    param($AllErrors)
+    
+    if (-not $AllErrors -or $AllErrors.Count -eq 0) {
+        Write-OrchestratorLog -Message "No errors to export to dashboard" -Level "INFO"
+        return
+    }
+    
+    try {
+        $dashboard = $AllErrors | Group-Object Module | ForEach-Object {
+            [PSCustomObject]@{
+                Module = $_.Name
+                ErrorCount = $_.Count
+                CommonErrors = ($_.Group | Group-Object Error |
+                    Sort-Object Count -Descending |
+                    Select-Object -First 3 | ForEach-Object {
+                        "$($_.Name) (Count: $($_.Count))"
+                    }) -join "; "
+                FirstOccurrence = ($_.Group | Sort-Object Timestamp | Select-Object -First 1).Timestamp
+                LastOccurrence = ($_.Group | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
+            }
+        }
+        
+        $dashboardPath = Join-Path $global:MandA.Paths.LogOutput "ErrorDashboard_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
+        $dashboard | Export-Csv -Path $dashboardPath -NoTypeInformation -Encoding UTF8
+        
+        Write-OrchestratorLog -Message "Error dashboard exported: $dashboardPath" -Level "INFO"
+        
+        # Also create a summary report
+        $summaryPath = Join-Path $global:MandA.Paths.LogOutput "ErrorSummary_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+        $summary = @"
+=== Error Dashboard Summary ===
+Generated: $(Get-Date)
+Total Modules with Errors: $($dashboard.Count)
+Total Error Count: $($AllErrors.Count)
+
+Top Error-Prone Modules:
+$($dashboard | Sort-Object ErrorCount -Descending | Select-Object -First 5 | ForEach-Object { "  $($_.Module): $($_.ErrorCount) errors" } | Out-String)
+
+Most Common Error Types:
+$($AllErrors | Group-Object Error | Sort-Object Count -Descending | Select-Object -First 5 | ForEach-Object { "  $($_.Name): $($_.Count) occurrences" } | Out-String)
+"@
+        
+        $summary | Set-Content -Path $summaryPath -Encoding UTF8
+        Write-OrchestratorLog -Message "Error summary exported: $summaryPath" -Level "INFO"
+        
+    } catch {
+        Write-OrchestratorLog -Message "Failed to export error dashboard: $_" -Level "ERROR"
+    }
+}
+
 function Test-DiscoveryPrerequisites {
     Write-OrchestratorLog -Message "Validating discovery prerequisites..." -Level "INFO"
     
@@ -1083,7 +1134,9 @@ function Write-ProgressStep {
                     throw "Discovery function '$functionName' not found after importing module."
                 }
                 
-                # Execute discovery
+                # Execute discovery with performance tracking
+                $discoveryStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+                
                 $params = @{
                     Configuration = $modConfig
                 }
@@ -1096,6 +1149,9 @@ function Write-ProgressStep {
 
                 $moduleOutput = & $functionName @params
                 
+                # Stop performance tracking
+                $discoveryStopwatch.Stop()
+                
                 # Check if the module returned the correct object type
                 if ($moduleOutput -is [DiscoveryResult]) {
                     $discoveryResult = $moduleOutput
@@ -1105,6 +1161,10 @@ function Write-ProgressStep {
                     $discoveryResult.Data = $moduleOutput
                     $discoveryResult.Success = $true # Assume success if it returned something
                 }
+                
+                # Add performance tracking to metadata
+                $discoveryResult.Metadata["PerformanceMs"] = $discoveryStopwatch.ElapsedMilliseconds
+                $discoveryResult.Metadata["PerformanceSeconds"] = [Math]::Round($discoveryStopwatch.Elapsed.TotalSeconds, 2)
 
             } catch {
                 # This is the master catch block for any failure within the runspace
@@ -1197,17 +1257,22 @@ function Write-ProgressStep {
                     # Collect result
                     $jobResult = $job.PowerShell.EndInvoke($job.Handle)
                     
-                    # =================== START: INSERT THIS BLOCK FOR DEBUGGING ===================
+                    # =================== START: ENHANCED RUNSPACE ERROR DEBUGGING ===================
                     if ($job.PowerShell.Streams.Error) {
                         Write-OrchestratorLog -Level "ERROR" -Component "RunspaceJob" -Message "Job for module ($($job.ModuleName)) completed with errors."
-                        foreach ($err in $job.PowerShell.Streams.Error) {
-                            Write-OrchestratorLog -Level "ERROR" -Component "RunspaceJob" -Message "--> $($err.ToString())"
-                            if ($err.Exception) {
-                                Write-OrchestratorLog -Level "DEBUG" -Component "RunspaceJob" -Message "--> Exception: $($err.Exception.ToString())"
+                        
+                        # Enhanced error logging with MandALog integration
+                        $job.PowerShell.Streams.Error | ForEach-Object {
+                            if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+                                Write-MandALog "Runspace Error: $_" -Level "ERROR"
+                            }
+                            Write-OrchestratorLog -Level "ERROR" -Component "RunspaceJob" -Message "--> $($_.ToString())"
+                            if ($_.Exception) {
+                                Write-OrchestratorLog -Level "DEBUG" -Component "RunspaceJob" -Message "--> Exception: $($_.Exception.ToString())"
                             }
                         }
                     }
-                    # =================== END: INSERT THIS BLOCK FOR DEBUGGING =====================
+                    # =================== END: ENHANCED RUNSPACE ERROR DEBUGGING =====================
                     
                     $job.Completed = $true
                     $jobMonitor.CompletedJobs++
@@ -1253,16 +1318,43 @@ function Write-ProgressStep {
             }
         }
         
-        # Periodic health check
+        # Enhanced periodic health check with performance tracking
         if ((Get-Date) - $lastHealthCheck -gt [TimeSpan]::FromSeconds($healthCheckInterval)) {
             $activeCount = ($jobs | Where-Object { -not $_.Completed }).Count
             Write-OrchestratorLog -Message "Progress: $($jobMonitor.CompletedJobs)/$($jobMonitor.TotalJobs) complete, $activeCount active" -Level "DEBUG"
             
-            # Check for stuck jobs
+            # Enhanced runspace health monitoring
             foreach ($job in ($jobs | Where-Object { -not $_.Completed })) {
                 $runtime = (Get-Date) - $job.StartTime
+                
+                # Performance tracking and warnings
+                if ($runtime.TotalMinutes -gt 5 -and $runtime.TotalMinutes -lt 10) {
+                    Write-OrchestratorLog -Message "Job $($job.ModuleName) potentially stuck - running for $([Math]::Round($runtime.TotalMinutes, 1)) minutes" -Level "WARN"
+                    
+                    # Add to runspace health metrics
+                    $healthEntry = @{
+                        Timestamp = Get-Date
+                        ModuleName = $job.ModuleName
+                        Runtime = $runtime
+                        Status = "Warning"
+                        Message = "Long running job detected"
+                    }
+                    $null = $script:PerformanceMetrics.RunspaceHealth.Add($healthEntry)
+                }
+                
+                # Critical threshold for stuck jobs
                 if ($runtime.TotalSeconds -gt $stuckJobThreshold) {
-                    Write-OrchestratorLog -Message "Job $($job.ModuleName) stuck ($([Math]::Round($runtime.TotalMinutes, 1)) min)" -Level "WARN"
+                    Write-OrchestratorLog -Message "Job $($job.ModuleName) critically stuck ($([Math]::Round($runtime.TotalMinutes, 1)) min) - forcing termination" -Level "ERROR"
+                    
+                    # Add critical health entry
+                    $healthEntry = @{
+                        Timestamp = Get-Date
+                        ModuleName = $job.ModuleName
+                        Runtime = $runtime
+                        Status = "Critical"
+                        Message = "Job forced termination due to timeout"
+                    }
+                    $null = $script:PerformanceMetrics.RunspaceHealth.Add($healthEntry)
                     
                     try {
                         # Force stop the runspace
@@ -1627,6 +1719,9 @@ function Export-ErrorReport {
     
     Write-OrchestratorLog -Message "Error report exported: $errorReportPath" -Level "INFO"
     
+    # Export centralized error dashboard
+    Export-ErrorDashboard -AllErrors $allErrors
+    
     # Log summary
     Write-OrchestratorLog -Message "--- ERROR SUMMARY ---" -Level "HEADER"
     Write-OrchestratorLog -Message "Critical Errors: $($errorReport.Summary.CriticalErrors)" -Level $(if ($errorReport.Summary.CriticalErrors -gt 0) { "ERROR" } else { "SUCCESS" })
@@ -1654,6 +1749,14 @@ function Export-PerformanceReport {
         } else { 0 }
     }
 
+    # Runspace health analysis
+    $runspaceHealth = @{
+        TotalHealthEvents = $script:PerformanceMetrics.RunspaceHealth.Count
+        WarningEvents = ($script:PerformanceMetrics.RunspaceHealth | Where-Object { $_.Status -eq "Warning" }).Count
+        CriticalEvents = ($script:PerformanceMetrics.RunspaceHealth | Where-Object { $_.Status -eq "Critical" }).Count
+        HealthEvents = $script:PerformanceMetrics.RunspaceHealth
+    }
+    
     $performanceReport = @{
         Timestamp = Get-Date
         ExecutionId = $script:CorrelationId
@@ -1661,6 +1764,7 @@ function Export-PerformanceReport {
         PhaseTimings = $script:PerformanceMetrics.PhaseTimings
         ModuleTimings = $script:PerformanceMetrics.ModuleTimings
         MemoryUsage = $memoryUsage
+        RunspaceHealth = $runspaceHealth
         Configuration = @{
             Company = $CompanyName
             Mode = $Mode
@@ -1679,6 +1783,7 @@ function Export-PerformanceReport {
     Write-OrchestratorLog -Message "Total Duration: $([Math]::Round($performanceReport.TotalDuration.TotalMinutes, 1)) minutes" -Level "INFO"
     Write-OrchestratorLog -Message "Peak Memory: $($performanceReport.MemoryUsage.PeakWorkingSetMB)MB" -Level "INFO"
     Write-OrchestratorLog -Message "Average Memory: $($performanceReport.MemoryUsage.AverageWorkingSetMB)MB" -Level "INFO"
+    Write-OrchestratorLog -Message "Runspace Health Events: $($performanceReport.RunspaceHealth.TotalHealthEvents) total, $($performanceReport.RunspaceHealth.WarningEvents) warnings, $($performanceReport.RunspaceHealth.CriticalEvents) critical" -Level "INFO"
 }
 
 #===============================================================================

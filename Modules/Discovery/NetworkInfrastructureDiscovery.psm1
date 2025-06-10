@@ -107,6 +107,12 @@ function Invoke-NetworkInfrastructureDiscovery {
         Write-NetworkInfrastructureLog -Level "INFO" -Message "Extracting authentication information..." -Context $Context
         $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
         
+        # Reconstruct auth from thread-safe config
+        if (-not $authInfo -and $Configuration._AuthContext) {
+            $authInfo = $Configuration._AuthContext
+            Write-NetworkInfrastructureLog -Level "DEBUG" -Message "Using injected auth context" -Context $Context
+        }
+        
         if (-not $authInfo) {
             Write-NetworkInfrastructureLog -Level "INFO" -Message "No cloud authentication needed for on-premises discovery" -Context $Context
             # Continue with local system auth
