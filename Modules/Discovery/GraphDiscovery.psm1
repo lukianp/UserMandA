@@ -139,10 +139,13 @@ function Invoke-GraphDiscovery {
         # Connect to Microsoft Graph
         try {
             Write-GraphLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
+            
+            # CRITICAL FIX: Use proper credential object for Connect-MgGraph
             $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
-            Connect-MgGraph -ClientId $authInfo.ClientId `
+            $credential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $secureSecret)
+            
+            Connect-MgGraph -ClientSecretCredential $credential `
                             -TenantId $authInfo.TenantId `
-                            -ClientSecret $secureSecret `
                             -NoWelcome -ErrorAction Stop
             Write-GraphLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
         } catch {

@@ -141,11 +141,12 @@ function Invoke-ExternalIdentityDiscovery {
                 Disconnect-MgGraph -ErrorAction SilentlyContinue
             }
             
-            # Connect using client secret
+            # CRITICAL FIX: Use proper credential object for Connect-MgGraph
             $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
-            Connect-MgGraph -ClientId $authInfo.ClientId `
+            $clientCredential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $secureSecret)
+            
+            Connect-MgGraph -ClientSecretCredential $clientCredential `
                             -TenantId $authInfo.TenantId `
-                            -ClientSecret $secureSecret `
                             -NoWelcome -ErrorAction Stop
             
             Write-ExternalIdentityLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context

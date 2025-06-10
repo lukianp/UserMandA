@@ -165,13 +165,14 @@ function Invoke-ExchangeDiscovery {
                     Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
                 }
                 
-                # FIXED: Create PSCredential object from ClientId and SecureString
+                # CRITICAL FIX: Use proper credential object for Connect-MgGraph
                 $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
                 $clientCredential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $secureSecret)
                 
-                # Connect using the PSCredential
-                Connect-MgGraph -ClientSecretCredential $clientCredential `
+                # Connect using the PSCredential object (not SecureString directly)
+                Connect-MgGraph -ClientId $authInfo.ClientId `
                                 -TenantId $authInfo.TenantId `
+                                -ClientSecretCredential $clientCredential `
                                 -NoWelcome -ErrorAction Stop
                 
                 Write-ExchangeLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context

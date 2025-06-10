@@ -132,21 +132,24 @@ function Test-SharePointDiscoveryPrerequisites {
         }
         
         # Validate tenant configuration
-        if (-not $Configuration.sharepoint.tenantName) {
+        if (-not $Configuration.discovery -or -not $Configuration.discovery.sharepoint -or -not $Configuration.discovery.sharepoint.tenantName) {
             $Result.AddError("SharePoint tenant name not configured", $null, @{
                 Prerequisite = 'Tenant Configuration'
-                Resolution = 'Configure sharepoint.tenantName in the configuration file'
+                Resolution = 'Configure discovery.sharepoint.tenantName in the configuration file'
+                ConfigPath = 'discovery.sharepoint.tenantName'
             })
             return
         }
         
+        $tenantName = $Configuration.discovery.sharepoint.tenantName
+        
         # Test SharePoint Online connectivity
         try {
-            $adminUrl = Get-SPOAdminUrl -TenantDomain $Configuration.sharepoint.tenantName
+            $adminUrl = Get-SPOAdminUrl -TenantDomain $tenantName
             Connect-SPOService -Url $adminUrl -ErrorAction Stop
             Write-MandALog "Successfully connected to SharePoint Online admin center: $adminUrl" -Level "SUCCESS" -Context $Context
             $Result.Metadata['AdminUrl'] = $adminUrl
-            $Result.Metadata['TenantName'] = $Configuration.sharepoint.tenantName
+            $Result.Metadata['TenantName'] = $tenantName
         }
         catch {
             $Result.AddError("Failed to connect to SharePoint Online", $_.Exception, @{
