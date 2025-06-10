@@ -144,7 +144,7 @@ function Invoke-TeamsDiscovery {
             $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
             Connect-MgGraph -ClientId $authInfo.ClientId `
                             -TenantId $authInfo.TenantId `
-                            -ClientSecretCredential $secureSecret `
+                            -ClientSecret $secureSecret `
                             -NoWelcome -ErrorAction Stop
             
             # Test connection

@@ -142,7 +142,7 @@ function Invoke-GraphDiscovery {
             $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
             Connect-MgGraph -ClientId $authInfo.ClientId `
                             -TenantId $authInfo.TenantId `
-                            -ClientSecretCredential $secureSecret `
+                            -ClientSecret $secureSecret `
                             -NoWelcome -ErrorAction Stop
             Write-GraphLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
         } catch {

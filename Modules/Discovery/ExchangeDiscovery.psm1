@@ -70,21 +70,58 @@ function Invoke-ExchangeDiscovery {
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # 1. INITIALIZE RESULT OBJECT
+    $result = $null
+    $isHashtableResult = $false
+    
     if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
         $result = [DiscoveryResult]::new('Exchange')
     } else {
         # Fallback to hashtable
+        $isHashtableResult = $true
         $result = @{
-            Success      = $true; ModuleName = 'Exchange'; RecordCount = 0;
-            Errors       = [System.Collections.ArrayList]::new(); 
-            Warnings     = [System.Collections.ArrayList]::new(); 
-            Metadata     = @{};
-            StartTime    = Get-Date; EndTime = $null; 
-            ExecutionId  = [guid]::NewGuid().ToString();
-            AddError     = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
-            AddWarning   = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-            Complete     = { $this.EndTime = Get-Date }.GetNewClosure()
+            Success      = $true
+            ModuleName   = 'Exchange'
+            Data         = $null
+            Errors       = [System.Collections.ArrayList]::new()
+            Warnings     = [System.Collections.ArrayList]::new()
+            Metadata     = @{}
+            StartTime    = Get-Date
+            EndTime      = $null
+            ExecutionId  = [guid]::NewGuid().ToString()
         }
+        
+        # Add methods for hashtable
+        $result.AddError = {
+            param($m, $e, $c)
+            $errorEntry = @{
+                Timestamp = Get-Date
+                Message = $m
+                Exception = if ($e) { $e.ToString() } else { $null }
+                ExceptionType = if ($e) { $e.GetType().FullName } else { $null }
+                Context = $c
+            }
+            $null = $this.Errors.Add($errorEntry)
+            $this.Success = $false
+        }.GetNewClosure()
+        
+        $result.AddWarning = {
+            param($m, $c)
+            $warningEntry = @{
+                Timestamp = Get-Date
+                Message = $m
+                Context = $c
+            }
+            $null = $this.Warnings.Add($warningEntry)
+        }.GetNewClosure()
+        
+        $result.Complete = {
+            $this.EndTime = Get-Date
+            if ($this.StartTime -and $this.EndTime) {
+                $duration = $this.EndTime - $this.StartTime
+                $this.Metadata['Duration'] = $duration
+                $this.Metadata['DurationSeconds'] = $duration.TotalSeconds
+            }
+        }.GetNewClosure()
     }
 
     try {
@@ -100,9 +137,6 @@ function Invoke-ExchangeDiscovery {
         
         Ensure-Path -Path $outputPath
 
-        # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
-        # Exchange module doesn't require specific configuration beyond auth
-
         # 4. AUTHENTICATE & CONNECT
         Write-ExchangeLog -Level "INFO" -Message "Extracting authentication information..." -Context $Context
         $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
@@ -116,14 +150,34 @@ function Invoke-ExchangeDiscovery {
         Write-ExchangeLog -Level "DEBUG" -Message "Auth info found. ClientId: $($authInfo.ClientId.Substring(0,8))..." -Context $Context
 
         # Connect to Microsoft Graph
+        $graphConnected = $false
         try {
             Write-ExchangeLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
-            $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
-            Connect-MgGraph -ClientId $authInfo.ClientId `
-                            -TenantId $authInfo.TenantId `
-                            -ClientSecretCredential $secureSecret `
-                            -NoWelcome -ErrorAction Stop
-            Write-ExchangeLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
+            
+            # Check if already connected
+            $currentContext = Get-MgContext -ErrorAction SilentlyContinue
+            if ($currentContext -and $currentContext.Account -and $currentContext.ClientId -eq $authInfo.ClientId) {
+                Write-ExchangeLog -Level "DEBUG" -Message "Using existing Graph session" -Context $Context
+                $graphConnected = $true
+            } else {
+                if ($currentContext) {
+                    Write-ExchangeLog -Level "DEBUG" -Message "Disconnecting existing Graph session" -Context $Context
+                    Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+                }
+                
+                # FIXED: Create PSCredential object from ClientId and SecureString
+                $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
+                $clientCredential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $secureSecret)
+                
+                # Connect using the PSCredential
+                Connect-MgGraph -ClientSecretCredential $clientCredential `
+                                -TenantId $authInfo.TenantId `
+                                -NoWelcome -ErrorAction Stop
+                
+                Write-ExchangeLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
+                $graphConnected = $true
+            }
+            
         } catch {
             $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, $null)
             return $result
@@ -304,7 +358,8 @@ function Invoke-ExchangeDiscovery {
         }
 
         # 7. FINALIZE METADATA
-        $result.RecordCount = $allDiscoveredData.Count
+        $result.Data = $allDiscoveredData
+        $result.Metadata["RecordCount"] = $allDiscoveredData.Count
         $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
         $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
         $result.Metadata["MailboxCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'Mailbox' }).Count
@@ -313,26 +368,41 @@ function Invoke-ExchangeDiscovery {
     } catch {
         # Top-level error handler
         Write-ExchangeLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
-        $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
+        
+        if ($isHashtableResult) {
+            & $result.AddError "A critical error occurred during discovery: $($_.Exception.Message)" $_.Exception $null
+        } else {
+            $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
+        }
     } finally {
         # 8. CLEANUP & COMPLETE
         Write-ExchangeLog -Level "INFO" -Message "Cleaning up..." -Context $Context
         
         # Disconnect from services
-        Disconnect-MgGraph -ErrorAction SilentlyContinue
-        
-        $stopwatch.Stop()
-        $result.Complete()
-        
-        # Safe record count display
-        $recordCount = 0
-        if ($result -is [hashtable]) {
-            $recordCount = if ($result.RecordCount) { $result.RecordCount } else { 0 }
-        } else {
-            $recordCount = if ($result.RecordCount) { $result.RecordCount } else { 0 }
+        if ($graphConnected) {
+            try {
+                Disconnect-MgGraph -ErrorAction SilentlyContinue
+                Write-ExchangeLog -Level "DEBUG" -Message "Disconnected from Microsoft Graph" -Context $Context
+            } catch {
+                # Ignore disconnect errors
+            }
         }
         
-        Write-ExchangeLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $recordCount." -Context $Context
+        $stopwatch.Stop()
+        
+        if ($isHashtableResult) {
+            & $result.Complete
+        } else {
+            $result.Complete()
+        }
+        
+        # Get final record count for logging - from Metadata
+        $finalRecordCount = 0
+        if ($result.Metadata -and $result.Metadata.ContainsKey('RecordCount')) {
+            $finalRecordCount = $result.Metadata['RecordCount']
+        }
+        
+        Write-ExchangeLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $finalRecordCount." -Context $Context
     }
 
     return $result

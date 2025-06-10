@@ -172,12 +172,12 @@ function Invoke-IntuneDiscovery {
                     Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
                 }
                 
-                # Create PSCredential object from ClientId and SecureString
+                # Create SecureString for client secret
                 $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
-                $clientCredential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $secureSecret)
                 
-                # Connect using the PSCredential
-                Connect-MgGraph -ClientSecretCredential $clientCredential `
+                # Connect using the ClientSecret parameter
+                Connect-MgGraph -ClientId $authInfo.ClientId `
+                                -ClientSecret $secureSecret `
                                 -TenantId $authInfo.TenantId `
                                 -NoWelcome -ErrorAction Stop
                 

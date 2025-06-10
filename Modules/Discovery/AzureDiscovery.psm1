@@ -134,9 +134,6 @@ function Invoke-AzureDiscovery {
         
         Ensure-Path -Path $outputPath
 
-        # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
-        # Azure doesn't require specific config like SharePoint does
-
         # 4. AUTHENTICATE & CONNECT
         Write-AzureLog -Level "INFO" -Message "Extracting authentication information..." -Context $Context
         $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
@@ -167,21 +164,21 @@ function Invoke-AzureDiscovery {
         try {
             Write-AzureLog -Level "INFO" -Message "Connecting to Azure..." -Context $Context
             
-            # Check if already connected (should not be in isolated runspace)
+            # Check if already connected
             $currentContext = Get-AzContext -ErrorAction SilentlyContinue
             if ($currentContext) {
                 Write-AzureLog -Level "DEBUG" -Message "Disconnecting existing Azure session" -Context $Context
                 Disconnect-AzAccount -ErrorAction SilentlyContinue | Out-Null
             }
             
-            # Connect using service principal
+            # Connect using service principal - FIXED: Use -Tenant parameter instead of -TenantId
             $securePassword = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
             $credential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $securePassword)
             
             $connectionParams = @{
                 ServicePrincipal = $true
                 Credential = $credential
-                Tenant = $authInfo.TenantId
+                Tenant = $authInfo.TenantId  # FIXED: Changed from -TenantId to -Tenant
                 ErrorAction = 'Stop'
                 WarningAction = 'SilentlyContinue'
             }

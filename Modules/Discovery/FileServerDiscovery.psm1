@@ -139,7 +139,9 @@ function Invoke-FileServerDiscovery {
             
             if ($fileServers.Count -gt 0) {
                 Export-DiscoveryData -Data $fileServers -OutputPath $outputPath -FileName "FileServers.csv" -Context $Context
-                $null = $allDiscoveredData.AddRange($fileServers)
+                foreach ($server in $fileServers) {
+                    $null = $allDiscoveredData.Add($server)
+                }
             }
         } catch {
             $result.AddWarning("Failed to discover file servers: $($_.Exception.Message)", @{Section="FileServers"})
@@ -155,7 +157,9 @@ function Invoke-FileServerDiscovery {
                 
                 if ($fileShares.Count -gt 0) {
                     Export-DiscoveryData -Data $fileShares -OutputPath $outputPath -FileName "FileShares.csv" -Context $Context
-                    $null = $allDiscoveredData.AddRange($fileShares)
+                    foreach ($share in $fileShares) {
+                        $null = $allDiscoveredData.Add($share)
+                    }
                 }
             } catch {
                 $result.AddWarning("Failed to discover file shares: $($_.Exception.Message)", @{Section="FileShares"})
@@ -172,7 +176,9 @@ function Invoke-FileServerDiscovery {
                 
                 if ($dfsNamespaces.Count -gt 0) {
                     Export-DiscoveryData -Data $dfsNamespaces -OutputPath $outputPath -FileName "DFSNamespaces.csv" -Context $Context
-                    $null = $allDiscoveredData.AddRange($dfsNamespaces)
+                    foreach ($namespace in $dfsNamespaces) {
+                        $null = $allDiscoveredData.Add($namespace)
+                    }
                     
                     # 5.5 Discover DFS Folders
                     try {
@@ -182,7 +188,9 @@ function Invoke-FileServerDiscovery {
                         
                         if ($dfsFolders.Count -gt 0) {
                             Export-DiscoveryData -Data $dfsFolders -OutputPath $outputPath -FileName "DFSFolders.csv" -Context $Context
-                            $null = $allDiscoveredData.AddRange($dfsFolders)
+                            foreach ($folder in $dfsFolders) {
+                                $null = $allDiscoveredData.Add($folder)
+                            }
                         }
                     } catch {
                         $result.AddWarning("Failed to discover DFS folders: $($_.Exception.Message)", @{Section="DFSFolders"})
@@ -204,7 +212,9 @@ function Invoke-FileServerDiscovery {
                 
                 if ($storageAnalysis.Count -gt 0) {
                     Export-DiscoveryData -Data $storageAnalysis -OutputPath $outputPath -FileName "StorageAnalysis.csv" -Context $Context
-                    $null = $allDiscoveredData.AddRange($storageAnalysis)
+                    foreach ($storage in $storageAnalysis) {
+                        $null = $allDiscoveredData.Add($storage)
+                    }
                 }
             } catch {
                 $result.AddWarning("Failed to perform storage analysis: $($_.Exception.Message)", @{Section="StorageAnalysis"})
@@ -221,7 +231,9 @@ function Invoke-FileServerDiscovery {
                 
                 if ($shadowCopies.Count -gt 0) {
                     Export-DiscoveryData -Data $shadowCopies -OutputPath $outputPath -FileName "ShadowCopies.csv" -Context $Context
-                    $null = $allDiscoveredData.AddRange($shadowCopies)
+                    foreach ($shadow in $shadowCopies) {
+                        $null = $allDiscoveredData.Add($shadow)
+                    }
                 }
             } catch {
                 $result.AddWarning("Failed to discover shadow copies: $($_.Exception.Message)", @{Section="ShadowCopies"})
@@ -238,7 +250,9 @@ function Invoke-FileServerDiscovery {
                 
                 if ($fileServerClusters.Count -gt 0) {
                     Export-DiscoveryData -Data $fileServerClusters -OutputPath $outputPath -FileName "FileServerClusters.csv" -Context $Context
-                    $null = $allDiscoveredData.AddRange($fileServerClusters)
+                    foreach ($cluster in $fileServerClusters) {
+                        $null = $allDiscoveredData.Add($cluster)
+                    }
                 }
             } catch {
                 $result.AddWarning("Failed to discover file server clusters: $($_.Exception.Message)", @{Section="FileServerClusters"})
