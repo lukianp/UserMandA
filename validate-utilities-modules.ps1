@@ -1,38 +1,36 @@
-# Utilities Module Syntax Validation Script
-Write-Host "=== Utilities Module Syntax Validation ===" -ForegroundColor Cyan
+# Fix-AuthenticationIssues.ps1
+function Fix-DiscoveryModuleAuthentication {
+    param($ModulePath)
+    
+    $content = Get-Content $ModulePath -Raw
+    
+    # Fix the authentication pattern
+    $oldPattern = @'
+\$secureSecret = ConvertTo-SecureString \$authInfo\.ClientSecret -AsPlainText -Force
+\s*Connect-MgGraph -ClientId \$authInfo\.ClientId `
+\s*-TenantId \$authInfo\.TenantId `
+\s*-ClientSecretCredential \$secureSecret `
+'@
+    
+    $newPattern = @'
+$credential = New-Object System.Management.Automation.PSCredential(
+    $authInfo.ClientId, 
+    (ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force)
+)
+Connect-MgGraph -ClientId $authInfo.ClientId `
+                -TenantId $authInfo.TenantId `
+                -ClientSecretCredential $credential `
+'@
+    
+    $content = $content -replace $oldPattern, $newPattern
+    Set-Content $ModulePath $content -Encoding UTF8
+}
 
-$utilitiesPath = "Modules/Utilities"
-$modules = Get-ChildItem "$utilitiesPath/*.psm1"
-
-$passed = 0
-$failed = 0
-$failedModules = @()
-
+# Apply fixes
+$modules = @('GraphDiscovery.psm1', 'SharePointDiscovery.psm1', 'TeamsDiscovery.psm1')
 foreach ($module in $modules) {
-    Write-Host "Testing $($module.Name)..." -NoNewline
-    try {
-        $content = Get-Content $module.FullName -Raw
-        $null = [System.Management.Automation.PSParser]::Tokenize($content, [ref]$null)
-        Write-Host " PASS" -ForegroundColor Green
-        $passed++
-    } catch {
-        Write-Host " FAIL" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        $failed++
-        $failedModules += $module.Name
+    $path = Join-Path ".\Modules\Discovery" $module
+    if (Test-Path $path) {
+        Fix-DiscoveryModuleAuthentication -ModulePath $path
     }
 }
-
-Write-Host ""
-Write-Host "=== Summary ===" -ForegroundColor Cyan
-Write-Host "Passed: $passed" -ForegroundColor Green
-Write-Host "Failed: $failed" -ForegroundColor $(if ($failed -gt 0) { "Red" } else { "Green" })
-
-if ($failedModules.Count -gt 0) {
-    Write-Host ""
-    Write-Host "Failed modules:" -ForegroundColor Red
-    $failedModules | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
-}
-
-Write-Host ""
-Write-Host "Validation complete." -ForegroundColor Cyan

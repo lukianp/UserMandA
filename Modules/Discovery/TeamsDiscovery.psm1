@@ -137,10 +137,13 @@ function Invoke-TeamsDiscovery {
         # Connect to Microsoft Graph
         try {
             Write-TeamsLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
-            $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
-            Connect-MgGraph -ClientId $authInfo.ClientId `
-                            -TenantId $authInfo.TenantId `
-                            -ClientSecretCredential $secureSecret `
+            $credential = New-Object System.Management.Automation.PSCredential(
+    $authInfo.ClientId, 
+    (ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force)
+)
+Connect-MgGraph -ClientId $authInfo.ClientId `
+                -TenantId $authInfo.TenantId `
+                -ClientSecretCredential $credential `
                             -NoWelcome -ErrorAction Stop
             Write-TeamsLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
         } catch {

@@ -611,7 +611,10 @@ function Connect-MandAAzureEnhanced {
                 $credential = New-Object System.Management.Automation.PSCredential ($AuthContext.ClientId, $secureSecret)
                 
                 Write-MandALog "DEBUG: Calling Connect-AzAccount..." -Level "DEBUG"
-                $azContext = Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $AuthContext.TenantId -ErrorAction Stop
+                $azContext = Connect-AzAccount -ServicePrincipal `
+                                               -Credential $credential `
+                                               -Tenant $AuthContext.TenantId `
+                                               -ErrorAction Stop
                 
                 if ($azContext) {
                     Write-MandALog "[OK] Successfully connected to Azure" -Level "SUCCESS"

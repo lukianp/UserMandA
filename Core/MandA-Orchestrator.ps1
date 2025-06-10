@@ -1070,10 +1070,34 @@ function Write-ProgressStep {
         $scriptBlock = {
             param($modName, $modConfig, $globalContext, $resultsCollection, $errorCollection)
             
+            # Create module-specific log file
+            $logFile = Join-Path $globalContext.Paths.LogOutput "Runspace_$modName`_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+            
+            # Helper function for logging
+            function Write-RunspaceLog {
+                param($Message, $Level = "INFO")
+                $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
+                $logEntry = "$timestamp [$Level] $Message"
+                $logEntry | Add-Content -Path $logFile -Force
+                
+                # Also write to appropriate stream
+                switch ($Level) {
+                    "ERROR" { Write-Error $Message }
+                    "WARN" { Write-Warning $Message }
+                    "INFO" { Write-Information $Message -InformationAction Continue }
+                    "DEBUG" { Write-Debug $Message -Debug:$true }
+                    "VERBOSE" { Write-Verbose $Message -Verbose:$true }
+                }
+            }
+            
             $jobStartTime = Get-Date
             $discoveryResult = [DiscoveryResult]::new($modName)
+            
+            Write-RunspaceLog "Starting execution for module: $modName" -Level "INFO"
 
             try {
+                Write-RunspaceLog "Setting up context..." -Level "DEBUG"
+                
                 # Set up context for this thread - CREATE A PROPER COPY
                 $global:MandA = @{
                     Initialized = $true
@@ -1088,16 +1112,22 @@ function Write-ProgressStep {
                     $global:MandA.Paths[$key] = $globalContext.Paths[$key]
                 }
                 
+                Write-RunspaceLog "Context setup completed" -Level "DEBUG"
+                
                 # Reconstruct authentication context from injected data
                 if ($modConfig._AuthContext) {
+                    Write-RunspaceLog "Reconstructing authentication context..." -Level "DEBUG"
                     # Ensure authentication module functions are available
                     if (Get-Command Initialize-MandAAuthentication -ErrorAction SilentlyContinue) {
                         # Store auth context in module scope
                         $authModule = Get-Module Authentication
                         if ($authModule) {
                             & $authModule Set-Variable -Name AuthContext -Value $modConfig._AuthContext -Scope Script
+                            Write-RunspaceLog "Authentication context injected successfully" -Level "DEBUG"
                         }
                     }
+                } else {
+                    Write-RunspaceLog "WARNING: No authentication context available" -Level "WARN"
                 }
                 
                 # Add error handling wrapper
@@ -1117,6 +1147,8 @@ function Write-ProgressStep {
                 
                 # Load the specific discovery module for this job
                 $discoveryModulePath = Join-Path $global:MandA.Paths.Discovery "${modName}Discovery.psm1"
+                Write-RunspaceLog "Loading module from: $discoveryModulePath" -Level "INFO"
+                
                 if (-not (Test-Path $discoveryModulePath)) {
                     throw "Discovery module file not found: $discoveryModulePath"
                 }
@@ -1124,17 +1156,22 @@ function Write-ProgressStep {
                 # This is a critical step, wrap it in its own try/catch
                 try {
                     Import-Module -Name $discoveryModulePath -Force -Global
+                    Write-RunspaceLog "Module imported successfully: $modName" -Level "DEBUG"
                 } catch {
+                    Write-RunspaceLog "CRITICAL ERROR: Failed to import module '$discoveryModulePath'. Error: $($_.Exception.Message)" -Level "ERROR"
                     throw "Failed to import module '$discoveryModulePath'. Error: $($_.Exception.Message)"
                 }
 
                 # Check for the discovery function
                 $functionName = "Invoke-${modName}Discovery"
+                Write-RunspaceLog "Checking for discovery function: $functionName" -Level "DEBUG"
                 if (-not (Get-Command $functionName -ErrorAction SilentlyContinue)) {
+                    Write-RunspaceLog "CRITICAL ERROR: Discovery function '$functionName' not found after importing module" -Level "ERROR"
                     throw "Discovery function '$functionName' not found after importing module."
                 }
                 
                 # Execute discovery with performance tracking
+                Write-RunspaceLog "Starting discovery execution for: $modName" -Level "INFO"
                 $discoveryStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
                 
                 $params = @{
@@ -1151,12 +1188,15 @@ function Write-ProgressStep {
                 
                 # Stop performance tracking
                 $discoveryStopwatch.Stop()
+                Write-RunspaceLog "Discovery execution completed in $([Math]::Round($discoveryStopwatch.Elapsed.TotalSeconds, 2)) seconds" -Level "INFO"
                 
                 # Check if the module returned the correct object type
                 if ($moduleOutput -is [DiscoveryResult]) {
                     $discoveryResult = $moduleOutput
+                    Write-RunspaceLog "Module returned compliant DiscoveryResult object" -Level "DEBUG"
                 } else {
                     # If it didn't, the module is not compliant. Log this but don't lose the data.
+                    Write-RunspaceLog "WARNING: Module did not return a compliant DiscoveryResult object. Data may be incomplete." -Level "WARN"
                     $discoveryResult.AddWarning("Module did not return a compliant DiscoveryResult object. Data may be incomplete.")
                     $discoveryResult.Data = $moduleOutput
                     $discoveryResult.Success = $true # Assume success if it returned something
@@ -1165,9 +1205,14 @@ function Write-ProgressStep {
                 # Add performance tracking to metadata
                 $discoveryResult.Metadata["PerformanceMs"] = $discoveryStopwatch.ElapsedMilliseconds
                 $discoveryResult.Metadata["PerformanceSeconds"] = [Math]::Round($discoveryStopwatch.Elapsed.TotalSeconds, 2)
+                
+                Write-RunspaceLog "Module execution completed successfully" -Level "INFO"
 
             } catch {
                 # This is the master catch block for any failure within the runspace
+                Write-RunspaceLog "CRITICAL ERROR: $($_.Exception.Message)" -Level "ERROR"
+                Write-RunspaceLog "Stack Trace: $($_.ScriptStackTrace)" -Level "ERROR"
+                
                 $discoveryResult.Success = $false
                 $discoveryResult.AddError("Runspace execution failed: $($_.Exception.Message)", $_.Exception, @{ Module = $modName })
                 
@@ -1182,6 +1227,7 @@ function Write-ProgressStep {
             } finally {
                 $discoveryResult.Complete()
                 $resultsCollection.Add($discoveryResult)
+                Write-RunspaceLog "Module execution finalized and result added to collection" -Level "DEBUG"
             }
             
             # Return job status for monitoring
@@ -1454,8 +1500,8 @@ function Write-ProgressStep {
     
     # Process errors
     $allErrors = $ErrorCollection.ToArray()
-    foreach ($error in $allErrors) {
-        $null = $phaseResult.RecoverableErrors.Add($error)
+    foreach ($errObj in $allErrors) {
+        $null = $phaseResult.RecoverableErrors.Add($errObj)
     }
     
     # Phase timing
@@ -1650,12 +1696,12 @@ function Export-ErrorReport {
     foreach ($moduleName in $PhaseResult.ModuleResults.Keys) {
         $moduleResult = $PhaseResult.ModuleResults[$moduleName]
         if ($moduleResult -and -not $moduleResult.Success) {
-            foreach ($error in $moduleResult.Errors) {
+            foreach ($err in $moduleResult.Errors) {
                 $moduleErrors += [PSCustomObject]@{
                     Module = $moduleName
-                    Error = $error.Message
-                    Exception = $error.Exception
-                    Timestamp = $error.Timestamp
+                    Error = $err.Message
+                    Exception = $err.Exception
+                    Timestamp = $err.Timestamp
                 }
             }
         }
