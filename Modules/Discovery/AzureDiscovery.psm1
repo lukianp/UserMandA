@@ -175,11 +175,11 @@ function Invoke-AzureDiscovery {
             $securePassword = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
             $credential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $securePassword)
             
-            # CRITICAL FIX: Use -TenantId parameter for Connect-AzAccount (not -Tenant)
+            # CRITICAL FIX: Use -Tenant parameter for Connect-AzAccount
             $connectionParams = @{
                 ServicePrincipal = $true
                 Credential = $credential
-                TenantId = $authInfo.TenantId  # FIXED: Use -TenantId for Connect-AzAccount
+                Tenant = $authInfo.TenantId  # FIXED: Use -Tenant for Connect-AzAccount
                 ErrorAction = 'Stop'
                 WarningAction = 'SilentlyContinue'
             }

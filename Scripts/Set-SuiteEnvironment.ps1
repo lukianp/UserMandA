@@ -244,6 +244,7 @@ public class DiscoveryResult {
     public bool Success { get; set; }
     public string ModuleName { get; set; }
     public object Data { get; set; }
+    public int RecordCount { get; set; }
     public System.Collections.ArrayList Errors { get; set; }
     public System.Collections.ArrayList Warnings { get; set; }
     public System.Collections.Hashtable Metadata { get; set; }
@@ -253,6 +254,7 @@ public class DiscoveryResult {
     
     public DiscoveryResult(string moduleName) {
         this.ModuleName = moduleName;
+        this.RecordCount = 0;
         this.Errors = new System.Collections.ArrayList();
         this.Warnings = new System.Collections.ArrayList();
         this.Metadata = new System.Collections.Hashtable();

@@ -1,1076 +1,495 @@
 ﻿# -*- coding: utf-8-bom -*-
+#Requires -Version 5.1
 
-# Author: Lukian Poleschtschuk
-# Version: 1.0.0
-# Created: 2025-06-04
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+#================================================================================
+# M&A Discovery Module: SharePoint
+# Description: Discovers SharePoint sites, lists, libraries, permissions, and content using Graph API.
+#================================================================================
 
-
-# Author: Lukian Poleschtschuk
-# Version: 1.0.0
-# Created: 2025-06-04
-# Last Modified: 2025-06-06
-# Change Log: Initial version - any future changes require version increment
-
-
-# DiscoveryResult class definition
-# DiscoveryResult class is defined globally by the Orchestrator using Add-Type
-# No local definition needed - the global C# class will be used
-
-<#
-.SYNOPSIS
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
-    }
-    return $script:ModuleContext
-}
-
-
-function Invoke-SafeModuleExecution {
+function Get-AuthInfoFromConfiguration {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [scriptblock]$ScriptBlock,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$ModuleName,
-        
-        [Parameter(Mandatory=$false)]
-        $Context
+        [hashtable]$Configuration
     )
-    
-    $result = @{
-        Success = $false
-        Data = $null
-        Error = $null
-        Duration = $null
-    }
-    
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    
-    try {
-        # Validate global context
-        if (-not $global:MandA -or -not $global:MandA.Initialized) {
-            throw "Global M&A context not initialized"
-        }
-        
-        # Execute the module function
-        $result.Data = & $ScriptBlock
-        $result.Success = $true
-        
-    } catch {
-        $result.Error = @{
-            Message = $_.Exception.Message
-            Type = $_.Exception.GetType().FullName
-            StackTrace = $_.ScriptStackTrace
-            InnerException = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $null }
-        }
-        
-        # Log to both file and console
-        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
-        } else {
-            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red
-        }
-        
-        # Don't rethrow - let caller handle based on result
-    } finally {
-        $stopwatch.Stop()
-        $result.Duration = $stopwatch.Elapsed
-    }
-    
-    return $result
-}
 
+    # Add this for debugging:
+    Write-MandALog -Message "AuthCheck: Received config keys: $($Configuration.Keys -join ', ')" -Level "DEBUG" -Component "SharePointDiscovery"
 
-    SharePoint Online discovery for M&A Discovery Suite
-.DESCRIPTION
-    Discovers SharePoint sites, permissions, storage, external sharing, and content
-#>
-
-# Modules/Discovery/SharePointDiscovery.psm1
-
-# SharePoint Discovery Prerequisites Function
-function Test-SharePointDiscoveryPrerequisites {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration,
-        [Parameter(Mandatory=$true)]
-        [DiscoveryResult]$Result,
-        [Parameter(Mandatory=$true)]
-        $Context
-    )
-    
-    Write-MandALog "Validating SharePoint Discovery prerequisites..." -Level "INFO" -Context $Context
-    
-    try {
-        # Check if SharePoint Online PowerShell is available
-        if (-not (Get-Module -Name Microsoft.Online.SharePoint.PowerShell -ListAvailable)) {
-            $Result.AddError("SharePoint Online PowerShell module is not available", $null, @{
-                Prerequisite = 'SharePoint Online PowerShell Module'
-                Resolution = 'Install SharePoint Online PowerShell module using Install-Module Microsoft.Online.SharePoint.PowerShell'
-            })
-            return
+    # Check all possible locations for auth info
+    if ($Configuration._AuthContext) { return $Configuration._AuthContext }
+    if ($Configuration._Credentials) { return $Configuration._Credentials }
+    if ($Configuration.authentication) {
+        if ($Configuration.authentication._Credentials) { 
+            return $Configuration.authentication._Credentials 
         }
-        
-        # Import the module if not already loaded
-        if (-not (Get-Module -Name Microsoft.Online.SharePoint.PowerShell)) {
-            Import-Module Microsoft.Online.SharePoint.PowerShell -ErrorAction Stop
-            Write-MandALog "SharePoint Online PowerShell module imported successfully" -Level "DEBUG" -Context $Context
-        }
-        
-        # Validate tenant configuration
-        if (-not $Configuration.discovery -or -not $Configuration.discovery.sharepoint -or -not $Configuration.discovery.sharepoint.tenantName) {
-            $Result.AddError("SharePoint tenant name not configured", $null, @{
-                Prerequisite = 'Tenant Configuration'
-                Resolution = 'Configure discovery.sharepoint.tenantName in the configuration file'
-                ConfigPath = 'discovery.sharepoint.tenantName'
-            })
-            return
-        }
-        
-        $tenantName = $Configuration.discovery.sharepoint.tenantName
-        
-        # Test SharePoint Online connectivity
-        try {
-            $adminUrl = Get-SPOAdminUrl -TenantDomain $tenantName
-            Connect-SPOService -Url $adminUrl -ErrorAction Stop
-            Write-MandALog "Successfully connected to SharePoint Online admin center: $adminUrl" -Level "SUCCESS" -Context $Context
-            $Result.Metadata['AdminUrl'] = $adminUrl
-            $Result.Metadata['TenantName'] = $tenantName
-        }
-        catch {
-            $Result.AddError("Failed to connect to SharePoint Online", $_.Exception, @{
-                Prerequisite = 'SharePoint Online Connectivity'
-                AdminUrl = $adminUrl
-                Resolution = 'Verify SharePoint Online connection and admin permissions'
-            })
-            return
-        }
-        
-        # Test basic SharePoint operations
-        try {
-            $testSite = Get-SPOSite -Limit 1 -ErrorAction Stop
-            Write-MandALog "Successfully verified SharePoint Online access" -Level "SUCCESS" -Context $Context
-        }
-        catch {
-            $Result.AddError("Failed to access SharePoint Online sites", $_.Exception, @{
-                Prerequisite = 'SharePoint Online Access'
-                Resolution = 'Verify SharePoint Online admin permissions'
-            })
-            return
-        }
-        
-        Write-MandALog "All SharePoint Discovery prerequisites validated successfully" -Level "SUCCESS" -Context $Context
-        
-    }
-    catch {
-        $Result.AddError("Unexpected error during prerequisites validation", $_.Exception, @{
-            Prerequisite = 'General Validation'
-        })
-    }
-}
-
-function Get-SharePointSitesWithErrorHandling {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration,
-        [Parameter(Mandatory=$true)]
-        $Context
-    )
-    
-    $sites = [System.Collections.ArrayList]::new()
-    $retryCount = 0
-    $maxRetries = 3
-    
-    while ($retryCount -lt $maxRetries) {
-        try {
-            Write-MandALog "Retrieving all SharePoint sites..." -Level "INFO" -Context $Context
-            
-            # Get all sites including OneDrive sites if configured
-            $includeOneDrive = $Configuration.sharepoint.includeOneDriveSites
-            $allSites = Get-SPOSite -Limit All -IncludePersonalSite:$includeOneDrive -ErrorAction Stop
-            
-            Write-MandALog "Found $($allSites.Count) site collections" -Level "SUCCESS" -Context $Context
-            
-            # Process sites with individual error handling
-            $processedCount = 0
-            foreach ($site in $allSites) {
-                try {
-                    $processedCount++
-                    if ($processedCount % 20 -eq 0) {
-                        Write-MandALog "Processed $processedCount/$($allSites.Count) sites" -Level "PROGRESS" -Context $Context
-                    }
-                    
-                    # Get detailed site information
-                    $siteDetails = Get-SPOSite -Identity $site.Url -Detailed -ErrorAction Stop
-                    
-                    $siteObj = ConvertTo-SharePointSiteObject -Site $site -SiteDetails $siteDetails -Context $Context
-                    if ($siteObj) {
-                        $null = $sites.Add($siteObj)
-                    }
-                }
-                catch {
-                    Write-MandALog "Error processing site $($site.Url): $_" -Level "WARN" -Context $Context
-                    # Continue processing other sites
-                }
+        if ($Configuration.authentication.ClientId -and 
+            $Configuration.authentication.ClientSecret -and 
+            $Configuration.authentication.TenantId) {
+            return @{
+                ClientId     = $Configuration.authentication.ClientId
+                ClientSecret = $Configuration.authentication.ClientSecret
+                TenantId     = $Configuration.authentication.TenantId
             }
-            
-            # Success - exit retry loop
-            break
-        }
-        catch {
-            $retryCount++
-            if ($retryCount -ge $maxRetries) {
-                throw "Failed to retrieve SharePoint sites after $maxRetries attempts: $_"
-            }
-            
-            $waitTime = [Math]::Pow(2, $retryCount) * 2  # Exponential backoff
-            Write-MandALog "SharePoint site query failed (attempt $retryCount/$maxRetries). Waiting $waitTime seconds..." -Level "WARN" -Context $Context
-            Start-Sleep -Seconds $waitTime
         }
     }
-    
-    return $sites.ToArray()
+    if ($Configuration.ClientId -and $Configuration.ClientSecret -and $Configuration.TenantId) {
+        return @{
+            ClientId     = $Configuration.ClientId
+            ClientSecret = $Configuration.ClientSecret
+            TenantId     = $Configuration.TenantId
+        }
+    }
+    return $null
 }
 
-function ConvertTo-SharePointSiteObject {
-    param($Site, $SiteDetails, $Context)
-    
-    try {
-        # Determine site type
-        $siteType = "TeamSite"
-        if ($Site.Url -match "/personal/") {
-            $siteType = "OneDrive"
-        } elseif ($Site.Template -eq "SITEPAGEPUBLISHING#0") {
-            $siteType = "CommunicationSite"
-        } elseif ($Site.Template -eq "GROUP#0") {
-            $siteType = "Microsoft365Group"
-        } elseif ($Site.Template -eq "TEAMCHANNEL#0" -or $Site.Template -eq "TEAMCHANNEL#1") {
-            $siteType = "TeamChannelSite"
-        }
-        
-        return [PSCustomObject]@{
-            Url = $Site.Url
-            Title = $Site.Title
-            Template = $Site.Template
-            SiteType = $siteType
-            Owner = $Site.Owner
-            StorageQuota = $Site.StorageQuota
-            StorageUsed = $Site.StorageUsageCurrent
-            StoragePercentUsed = if ($Site.StorageQuota -gt 0) {
-                [math]::Round(($Site.StorageUsageCurrent / $Site.StorageQuota) * 100, 2)
-            } else { 0 }
-            ResourceQuota = $Site.ResourceQuota
-            ResourceUsed = $Site.ResourceUsageCurrent
-            SharingCapability = $Site.SharingCapability
-            ExternalSharingEnabled = $Site.SharingCapability -ne "Disabled"
-            Status = $Site.Status
-            LockState = $Site.LockState
-            LastContentModifiedDate = $Site.LastContentModifiedDate
-            WebsCount = $Site.WebsCount
-            CompatibilityLevel = $Site.CompatibilityLevel
-            ConditionalAccessPolicy = $Site.ConditionalAccessPolicy
-            SensitivityLabel = $SiteDetails.SensitivityLabel
-            GroupId = $Site.GroupId
-            HubSiteId = $Site.HubSiteId
-            IsHubSite = $Site.IsHubSite
-            TeamsConnected = $null -ne $Site.GroupId -and $Site.GroupId -ne [System.Guid]::Empty
-            CreatedDate = $SiteDetails.CreatedDate
-            DenyAddAndCustomizePages = $Site.DenyAddAndCustomizePages
-            DisableCompanyWideSharingLinks = $Site.DisableCompanyWideSharingLinks
-            DisableFlows = $Site.DisableFlows
-            RestrictedToGeo = $Site.RestrictedToGeo
-            SharingDomainRestrictionMode = $Site.SharingDomainRestrictionMode
-            ShowPeoplePickerSuggestionsForGuestUsers = $Site.ShowPeoplePickerSuggestionsForGuestUsers
-        }
-    }
-    catch {
-        Write-MandALog "Error converting SharePoint site object: $_" -Level "WARN" -Context $Context
-        return $null
-    }
+function Write-SharePointLog {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Message,
+        [string]$Level = "INFO",
+        [hashtable]$Context
+    )
+    Write-MandALog -Message "[SharePoint] $Message" -Level $Level -Component "SharePointDiscovery" -Context $Context
 }
+
+# --- Main Discovery Function ---
 
 function Invoke-SharePointDiscovery {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration,
-        [Parameter(Mandatory=$false)]
-        $Context
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context
     )
-    
-    # Initialize result object
-    $result = [DiscoveryResult]::new('SharePoint')
-    
-    # Set up error handling preferences
-    $originalErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Stop'
-    
-    try {
-        # Create minimal context if not provided
-        if (-not $Context) {
-            $Context = @{
-                ErrorCollector = [PSCustomObject]@{
-                    AddError = { param($s,$m,$e) Write-Warning "Error in $s`: $m" }
-                    AddWarning = { param($s,$m) Write-Warning "Warning in $s`: $m" }
-                }
-                Paths = @{
-                    RawDataOutput = Join-Path $Configuration.environment.outputPath "Raw"
-                }
-            }
+
+    Write-SharePointLog -Level "HEADER" -Message "Starting Discovery" -Context $Context
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+    # 1. INITIALIZE RESULT OBJECT
+    if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+        $result = [DiscoveryResult]::new('SharePoint')
+    } else {
+        # Fallback to hashtable
+        $result = @{
+            Success      = $true; ModuleName = 'SharePoint'; RecordCount = 0;
+            Errors       = [System.Collections.ArrayList]::new(); 
+            Warnings     = [System.Collections.ArrayList]::new(); 
+            Metadata     = @{};
+            StartTime    = Get-Date; EndTime = $null; 
+            ExecutionId  = [guid]::NewGuid().ToString();
+            AddError     = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
+            AddWarning   = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
+            Complete     = { $this.EndTime = Get-Date }.GetNewClosure()
         }
+    }
+
+    try {
+        # 2. VALIDATE PREREQUISITES & CONTEXT
+        Write-SharePointLog -Level "INFO" -Message "Validating prerequisites..." -Context $Context
         
-        Write-MandALog "--- Starting SharePoint Discovery Phase (v2.0.0) ---" -Level "HEADER" -Context $Context
+        if (-not $Context.Paths.RawDataOutput) {
+            $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
+            return $result
+        }
+        $outputPath = $Context.Paths.RawDataOutput
+        Write-SharePointLog -Level "DEBUG" -Message "Output path: $outputPath" -Context $Context
         
-        # Validate prerequisites
-        Test-SharePointDiscoveryPrerequisites -Configuration $Configuration -Result $result -Context $Context
+        Ensure-Path -Path $outputPath
+
+        # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
+        # SharePoint MUST have tenant name
+        if (-not $Configuration.discovery -or 
+            -not $Configuration.discovery.sharepoint -or 
+            -not $Configuration.discovery.sharepoint.tenantName) {
+            $result.AddError("SharePoint tenant name not configured in discovery.sharepoint.tenantName", $null, $null)
+            return $result
+        }
+        $tenantName = $Configuration.discovery.sharepoint.tenantName
         
-        if (-not $result.Success) {
-            Write-MandALog "Prerequisites check failed, aborting SharePoint discovery" -Level "ERROR" -Context $Context
+        # Configuration options
+        $includeLists = $true
+        $includeLibraries = $true
+        $includePermissions = $true
+        $includeHubSites = $true
+        $includeSiteCollectionAdmins = $true
+        $maxListsPerSite = 100
+        
+        if ($Configuration.discovery.sharepoint) {
+            $spConfig = $Configuration.discovery.sharepoint
+            if ($null -ne $spConfig.includeLists) { $includeLists = $spConfig.includeLists }
+            if ($null -ne $spConfig.includeLibraries) { $includeLibraries = $spConfig.includeLibraries }
+            if ($null -ne $spConfig.includePermissions) { $includePermissions = $spConfig.includePermissions }
+            if ($null -ne $spConfig.includeHubSites) { $includeHubSites = $spConfig.includeHubSites }
+            if ($null -ne $spConfig.includeSiteCollectionAdmins) { $includeSiteCollectionAdmins = $spConfig.includeSiteCollectionAdmins }
+            if ($null -ne $spConfig.maxListsPerSite) { $maxListsPerSite = $spConfig.maxListsPerSite }
+        }
+
+        # 4. AUTHENTICATE & CONNECT
+        Write-SharePointLog -Level "INFO" -Message "Extracting authentication information..." -Context $Context
+        $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
+        
+        if (-not $authInfo) {
+            Write-SharePointLog -Level "ERROR" -Message "No authentication found in configuration" -Context $Context
+            $result.AddError("Authentication information could not be found in the provided configuration.", $null, $null)
             return $result
         }
         
-        # Main discovery logic with nested error handling
-        $sharePointData = @{
-            SiteCollections = @()
-            HubSites = @()
-            ExternalUsers = @()
-            SharingLinks = @()
-            SitePermissions = @()
-            StorageMetrics = @()
-            ContentTypes = @()
-        }
-        
-        # Discover Site Collections with specific error handling
+        Write-SharePointLog -Level "DEBUG" -Message "Auth info found. ClientId: $($authInfo.ClientId.Substring(0,8))..." -Context $Context
+
+        # Connect to Microsoft Graph
         try {
-            Write-MandALog "Discovering SharePoint site collections..." -Level "INFO" -Context $Context
-            $sharePointData.SiteCollections = Get-SharePointSitesWithErrorHandling -Configuration $Configuration -Context $Context
-            $result.Metadata['SiteCollectionCount'] = $sharePointData.SiteCollections.Count
-            Write-MandALog "Successfully discovered $($sharePointData.SiteCollections.Count) SharePoint site collections" -Level "SUCCESS" -Context $Context
+            Write-SharePointLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
+            $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
+            Connect-MgGraph -ClientId $authInfo.ClientId `
+                            -TenantId $authInfo.TenantId `
+                            -ClientSecretCredential $secureSecret `
+                            -NoWelcome -ErrorAction Stop
+            Write-SharePointLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
+        } catch {
+            $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, $null)
+            return $result
         }
-        catch {
-            $result.AddError(
-                "Failed to discover SharePoint site collections",
-                $_.Exception,
-                @{
-                    Operation = 'Get-SPOSite'
-                    TenantName = $Configuration.sharepoint.tenantName
-                }
-            )
-            Write-MandALog "Error discovering SharePoint site collections: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-            # Continue with other discoveries even if sites fail
-        }
+
+        # 5. PERFORM DISCOVERY
+        Write-SharePointLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
+        $allDiscoveredData = [System.Collections.ArrayList]::new()
         
-        # Discover Hub Sites with specific error handling
+        # Get root site URL
+        $rootSiteUrl = "https://$tenantName.sharepoint.com"
+        Write-SharePointLog -Level "INFO" -Message "SharePoint root URL: $rootSiteUrl" -Context $Context
+        
+        # Discover all sites
+        $sites = @()
         try {
-            Write-MandALog "Discovering SharePoint hub sites..." -Level "INFO" -Context $Context
-            $sharePointData.HubSites = Get-SharePointHubSitesData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
-            $result.Metadata['HubSiteCount'] = $sharePointData.HubSites.Count
-            Write-MandALog "Successfully discovered $($sharePointData.HubSites.Count) SharePoint hub sites" -Level "SUCCESS" -Context $Context
-        }
-        catch {
-            $result.AddError(
-                "Failed to discover SharePoint hub sites",
-                $_.Exception,
-                @{
-                    Operation = 'Get-SPOHubSite'
+            Write-SharePointLog -Level "INFO" -Message "Discovering SharePoint sites..." -Context $Context
+            
+            # Get all sites
+            $sitesUri = "https://graph.microsoft.com/v1.0/sites?`$top=100"
+            
+            do {
+                $response = Invoke-MgGraphRequest -Uri $sitesUri -Method GET -ErrorAction Stop
+                
+                foreach ($site in $response.value) {
+                    # Get additional site details
+                    $siteDetails = $null
+                    try {
+                        $siteDetailsUri = "https://graph.microsoft.com/v1.0/sites/$($site.id)?`$expand=drive"
+                        $siteDetails = Invoke-MgGraphRequest -Uri $siteDetailsUri -Method GET -ErrorAction Stop
+                    } catch {
+                        Write-SharePointLog -Level "DEBUG" -Message "Could not get details for site $($site.displayName): $_" -Context $Context
+                    }
+                    
+                    $siteObj = [PSCustomObject]@{
+                        SiteId = $site.id
+                        DisplayName = $site.displayName
+                        Name = $site.name
+                        WebUrl = $site.webUrl
+                        Description = $site.description
+                        CreatedDateTime = $site.createdDateTime
+                        LastModifiedDateTime = $site.lastModifiedDateTime
+                        # Site collection info
+                        IsPersonalSite = ($site.webUrl -like "*/personal/*")
+                        SiteCollectionHostname = if ($site.siteCollection) { $site.siteCollection.hostname } else { $null }
+                        Root = if ($site.root) { $true } else { $false }
+                        # Storage info from drive
+                        StorageUsedGB = if ($siteDetails -and $siteDetails.drive -and $siteDetails.drive.quota) { 
+                            [Math]::Round($siteDetails.drive.quota.used / 1GB, 2) 
+                        } else { $null }
+                        StorageQuotaGB = if ($siteDetails -and $siteDetails.drive -and $siteDetails.drive.quota) { 
+                            [Math]::Round($siteDetails.drive.quota.total / 1GB, 2) 
+                        } else { $null }
+                        StoragePercentUsed = if ($siteDetails -and $siteDetails.drive -and $siteDetails.drive.quota -and $siteDetails.drive.quota.total -gt 0) { 
+                            [Math]::Round(($siteDetails.drive.quota.used / $siteDetails.drive.quota.total) * 100, 2) 
+                        } else { $null }
+                        DriveId = if ($siteDetails -and $siteDetails.drive) { $siteDetails.drive.id } else { $null }
+                        _DataType = 'Site'
+                    }
+                    
+                    $sites += $siteObj
+                    $null = $allDiscoveredData.Add($siteObj)
+                    
+                    Write-SharePointLog -Level "DEBUG" -Message "Discovered site: $($site.displayName)" -Context $Context
                 }
-            )
-            Write-MandALog "Error discovering SharePoint hub sites: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+                
+                $sitesUri = $response.'@odata.nextLink'
+            } while ($sitesUri)
+            
+            Write-SharePointLog -Level "SUCCESS" -Message "Discovered $($sites.Count) SharePoint sites" -Context $Context
+            
+        } catch {
+            $result.AddWarning("Failed to discover sites: $($_.Exception.Message)", @{Section="Sites"})
         }
         
-        # Discover External Users with specific error handling
-        try {
-            Write-MandALog "Discovering SharePoint external users..." -Level "INFO" -Context $Context
-            $sharePointData.ExternalUsers = Get-SharePointExternalUsersData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
-            $result.Metadata['ExternalUserCount'] = $sharePointData.ExternalUsers.Count
-            Write-MandALog "Successfully discovered $($sharePointData.ExternalUsers.Count) SharePoint external users" -Level "SUCCESS" -Context $Context
-        }
-        catch {
-            $result.AddError(
-                "Failed to discover SharePoint external users",
-                $_.Exception,
-                @{
-                    Operation = 'Get-SPOExternalUser'
+        # Discover Lists and Libraries for each site
+        if ($includeLists -or $includeLibraries) {
+            $totalLists = 0
+            $processedSites = 0
+            
+            foreach ($site in $sites) {
+                $processedSites++
+                
+                # Skip personal sites for performance
+                if ($site.IsPersonalSite) {
+                    Write-SharePointLog -Level "DEBUG" -Message "Skipping personal site: $($site.DisplayName)" -Context $Context
+                    continue
                 }
-            )
-            Write-MandALog "Error discovering SharePoint external users: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-        }
-        
-        # Discover Sharing Links with specific error handling
-        try {
-            Write-MandALog "Discovering SharePoint sharing links..." -Level "INFO" -Context $Context
-            $sharePointData.SharingLinks = Get-SharePointSharingLinksData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -Sites $sharePointData.SiteCollections
-            $result.Metadata['SharingLinkCount'] = $sharePointData.SharingLinks.Count
-            Write-MandALog "Successfully discovered $($sharePointData.SharingLinks.Count) SharePoint sharing links" -Level "SUCCESS" -Context $Context
-        }
-        catch {
-            $result.AddError(
-                "Failed to discover SharePoint sharing links",
-                $_.Exception,
-                @{
-                    Operation = 'Get-SharePointSharingLinks'
-                    SiteCount = $sharePointData.SiteCollections.Count
+                
+                try {
+                    Write-SharePointLog -Level "DEBUG" -Message "Getting lists for site: $($site.DisplayName)" -Context $Context
+                    
+                    $listsUri = "https://graph.microsoft.com/v1.0/sites/$($site.SiteId)/lists?`$top=$maxListsPerSite"
+                    $listsResponse = Invoke-MgGraphRequest -Uri $listsUri -Method GET -ErrorAction Stop
+                    
+                    foreach ($list in $listsResponse.value) {
+                        # Determine if it's a list or library
+                        $listType = 'List'
+                        if ($list.list -and $list.list.template -eq 'documentLibrary') {
+                            $listType = 'DocumentLibrary'
+                        }
+                        
+                        # Skip if not including this type
+                        if (($listType -eq 'List' -and -not $includeLists) -or
+                            ($listType -eq 'DocumentLibrary' -and -not $includeLibraries)) {
+                            continue
+                        }
+                        
+                        $listObj = [PSCustomObject]@{
+                            SiteId = $site.SiteId
+                            SiteDisplayName = $site.DisplayName
+                            SiteWebUrl = $site.WebUrl
+                            ListId = $list.id
+                            DisplayName = $list.displayName
+                            Description = $list.description
+                            ListType = $listType
+                            WebUrl = $list.webUrl
+                            CreatedDateTime = $list.createdDateTime
+                            LastModifiedDateTime = $list.lastModifiedDateTime
+                            CreatedBy = if ($list.createdBy -and $list.createdBy.user) { 
+                                $list.createdBy.user.displayName 
+                            } else { $null }
+                            Template = if ($list.list) { $list.list.template } else { $null }
+                            Hidden = if ($list.list) { $list.list.hidden } else { $null }
+                            ItemCount = if ($list.list -and $list.list.itemCount) { $list.list.itemCount } else { 0 }
+                            _DataType = 'List'
+                        }
+                        
+                        $totalLists++
+                        $null = $allDiscoveredData.Add($listObj)
+                    }
+                    
+                    # Report progress
+                    if ($processedSites % 10 -eq 0) {
+                        Write-SharePointLog -Level "DEBUG" -Message "Processed $processedSites/$($sites.Count) sites for lists..." -Context $Context
+                    }
+                    
+                    # Small delay to avoid throttling
+                    if ($processedSites % 5 -eq 0) {
+                        Start-Sleep -Milliseconds 500
+                    }
+                    
+                } catch {
+                    Write-SharePointLog -Level "DEBUG" -Message "Could not get lists for site $($site.DisplayName): $_" -Context $Context
                 }
-            )
-            Write-MandALog "Error discovering SharePoint sharing links: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+            
+            Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalLists lists/libraries across $processedSites sites" -Context $Context
         }
         
-        # Discover Site Permissions with specific error handling
-        try {
-            Write-MandALog "Discovering SharePoint site permissions..." -Level "INFO" -Context $Context
-            $sharePointData.SitePermissions = Get-SharePointSitePermissionsData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -Sites $sharePointData.SiteCollections
-            $result.Metadata['SitePermissionCount'] = $sharePointData.SitePermissions.Count
-            Write-MandALog "Successfully discovered $($sharePointData.SitePermissions.Count) SharePoint site permissions" -Level "SUCCESS" -Context $Context
-        }
-        catch {
-            $result.AddError(
-                "Failed to discover SharePoint site permissions",
-                $_.Exception,
-                @{
-                    Operation = 'Get-SPOUser'
-                    SiteCount = $sharePointData.SiteCollections.Count
+        # Discover Site Permissions (if enabled)
+        if ($includePermissions) {
+            $totalPermissions = 0
+            
+            foreach ($site in $sites | Select-Object -First 50) { # Limit to first 50 sites for performance
+                try {
+                    Write-SharePointLog -Level "DEBUG" -Message "Getting permissions for site: $($site.DisplayName)" -Context $Context
+                    
+                    $permUri = "https://graph.microsoft.com/v1.0/sites/$($site.SiteId)/permissions"
+                    $permResponse = Invoke-MgGraphRequest -Uri $permUri -Method GET -ErrorAction Stop
+                    
+                    foreach ($perm in $permResponse.value) {
+                        $permObj = [PSCustomObject]@{
+                            SiteId = $site.SiteId
+                            SiteDisplayName = $site.DisplayName
+                            PermissionId = $perm.id
+                            Roles = ($perm.roles -join ';')
+                            GrantedToType = if ($perm.grantedTo) { 'User' } elseif ($perm.grantedToIdentities) { 'Multiple' } else { 'Unknown' }
+                            GrantedTo = if ($perm.grantedTo -and $perm.grantedTo.user) { 
+                                $perm.grantedTo.user.displayName 
+                            } else { $null }
+                            GrantedToEmail = if ($perm.grantedTo -and $perm.grantedTo.user) { 
+                                $perm.grantedTo.user.email 
+                            } else { $null }
+                            HasPassword = $perm.hasPassword
+                            ShareId = $perm.shareId
+                            _DataType = 'SitePermission'
+                        }
+                        
+                        $totalPermissions++
+                        $null = $allDiscoveredData.Add($permObj)
+                    }
+                    
+                } catch {
+                    Write-SharePointLog -Level "DEBUG" -Message "Could not get permissions for site $($site.DisplayName): $_" -Context $Context
                 }
-            )
-            Write-MandALog "Error discovering SharePoint site permissions: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+            
+            if ($totalPermissions -gt 0) {
+                Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalPermissions site permissions" -Context $Context
+            }
         }
         
-        # Discover Storage Metrics with specific error handling
-        try {
-            Write-MandALog "Analyzing SharePoint storage usage..." -Level "INFO" -Context $Context
-            $sharePointData.StorageMetrics = Get-SharePointStorageMetricsData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration
-            $result.Metadata['StorageMetricCount'] = $sharePointData.StorageMetrics.Count
-            Write-MandALog "Successfully analyzed SharePoint storage usage" -Level "SUCCESS" -Context $Context
-        }
-        catch {
-            $result.AddError(
-                "Failed to analyze SharePoint storage usage",
-                $_.Exception,
-                @{
-                    Operation = 'Get-SPOTenant'
+        # Discover Hub Sites (if enabled)
+        if ($includeHubSites) {
+            try {
+                Write-SharePointLog -Level "INFO" -Message "Discovering hub sites..." -Context $Context
+                
+                # Hub sites require admin endpoint - try to get them
+                $adminSiteId = "https://$tenantName-admin.sharepoint.com,,$((New-Guid).ToString())"
+                $hubsUri = "https://graph.microsoft.com/v1.0/sites/$adminSiteId/lists('HubSites')/items"
+                
+                try {
+                    $hubsResponse = Invoke-MgGraphRequest -Uri $hubsUri -Method GET -ErrorAction Stop
+                    
+                    foreach ($hub in $hubsResponse.value) {
+                        $hubObj = [PSCustomObject]@{
+                            HubSiteId = $hub.id
+                            Title = if ($hub.fields) { $hub.fields.Title } else { $null }
+                            SiteUrl = if ($hub.fields) { $hub.fields.SiteUrl } else { $null }
+                            _DataType = 'HubSite'
+                        }
+                        
+                        $null = $allDiscoveredData.Add($hubObj)
+                    }
+                    
+                    Write-SharePointLog -Level "SUCCESS" -Message "Discovered $($hubsResponse.value.Count) hub sites" -Context $Context
+                    
+                } catch {
+                    Write-SharePointLog -Level "DEBUG" -Message "Could not access hub sites (requires admin): $_" -Context $Context
                 }
-            )
-            Write-MandALog "Error analyzing SharePoint storage usage: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+                
+            } catch {
+                $result.AddWarning("Failed to discover hub sites: $($_.Exception.Message)", @{Section="HubSites"})
+            }
         }
         
-        # Discover Content Types with specific error handling
-        try {
-            Write-MandALog "Discovering SharePoint content types..." -Level "INFO" -Context $Context
-            $sharePointData.ContentTypes = Get-SharePointContentTypesData -OutputPath (Get-ModuleContext).Paths.RawDataOutput -Configuration $Configuration -Sites $sharePointData.SiteCollections
-            $result.Metadata['ContentTypeCount'] = $sharePointData.ContentTypes.Count
-            Write-MandALog "Successfully discovered SharePoint content types" -Level "SUCCESS" -Context $Context
-        }
-        catch {
-            $result.AddError(
-                "Failed to discover SharePoint content types",
-                $_.Exception,
-                @{
-                    Operation = 'Get-SharePointContentTypes'
-                    SiteCount = $sharePointData.SiteCollections.Count
+        # Discover Site Collection Administrators (if enabled)
+        if ($includeSiteCollectionAdmins) {
+            $totalAdmins = 0
+            
+            foreach ($site in $sites | Where-Object { -not $_.IsPersonalSite } | Select-Object -First 20) {
+                try {
+                    # Get site owners (approximation of admins via Graph API)
+                    $ownersUri = "https://graph.microsoft.com/v1.0/sites/$($site.SiteId)/drive/root/permissions"
+                    $ownersResponse = Invoke-MgGraphRequest -Uri $ownersUri -Method GET -ErrorAction Stop
+                    
+                    foreach ($owner in $ownersResponse.value | Where-Object { $_.roles -contains 'owner' }) {
+                        if ($owner.grantedTo -and $owner.grantedTo.user) {
+                            $adminObj = [PSCustomObject]@{
+                                SiteId = $site.SiteId
+                                SiteDisplayName = $site.DisplayName
+                                SiteWebUrl = $site.WebUrl
+                                UserId = $owner.grantedTo.user.id
+                                UserDisplayName = $owner.grantedTo.user.displayName
+                                UserEmail = $owner.grantedTo.user.email
+                                Role = 'SiteOwner'
+                                _DataType = 'SiteAdmin'
+                            }
+                            
+                            $totalAdmins++
+                            $null = $allDiscoveredData.Add($adminObj)
+                        }
+                    }
+                    
+                } catch {
+                    Write-SharePointLog -Level "DEBUG" -Message "Could not get admins for site $($site.DisplayName): $_" -Context $Context
                 }
-            )
-            Write-MandALog "Error discovering SharePoint content types: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            }
+            
+            if ($totalAdmins -gt 0) {
+                Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalAdmins site administrators" -Context $Context
+            }
         }
-        
-        # Set the data even if partially successful
-        $result.Data = $sharePointData
-        
-        # Determine overall success based on critical data
-        if ($sharePointData.SiteCollections.Count -eq 0) {
-            $result.Success = $false
-            $result.AddError("No SharePoint site collections retrieved")
-            Write-MandALog "SharePoint Discovery failed - no site collections retrieved" -Level "ERROR" -Context $Context
+
+        # 6. EXPORT DATA TO CSV
+        if ($allDiscoveredData.Count -gt 0) {
+            Write-SharePointLog -Level "INFO" -Message "Exporting $($allDiscoveredData.Count) records..." -Context $Context
+            
+            $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+            
+            # Group by data type and export
+            $dataGroups = $allDiscoveredData | Group-Object -Property _DataType
+            
+            foreach ($group in $dataGroups) {
+                $dataType = $group.Name
+                $data = $group.Group
+                
+                # Add metadata
+                $data | ForEach-Object {
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "SharePoint" -Force
+                }
+                
+                # Determine filename - MUST match orchestrator expectations
+                $fileName = switch ($dataType) {
+                    'Site' { 'SharePointSites.csv' }
+                    'List' { 'SharePointLists.csv' }
+                    'SitePermission' { 'SharePointSitePermissions.csv' }
+                    'HubSite' { 'SharePointHubSites.csv' }
+                    'SiteAdmin' { 'SharePointSiteAdmins.csv' }
+                    default { "SharePoint_$dataType.csv" }
+                }
+                
+                $filePath = Join-Path $outputPath $fileName
+                $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+                
+                Write-SharePointLog -Level "SUCCESS" -Message "Exported $($data.Count) $dataType records to $fileName" -Context $Context
+            }
         } else {
-            Write-MandALog "--- SharePoint Discovery Phase Completed Successfully ---" -Level "SUCCESS" -Context $Context
+            Write-SharePointLog -Level "WARN" -Message "No data discovered to export" -Context $Context
         }
+
+        # 7. FINALIZE METADATA
+        $result.RecordCount = $allDiscoveredData.Count
+        $result.Metadata["TotalRecords"] = $result.RecordCount
+        $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+        $result.Metadata["SiteCount"] = $sites.Count
+        $result.Metadata["ListCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'List' }).Count
+        $result.Metadata["TenantName"] = $tenantName
+
+    } catch {
+        # Top-level error handler
+        Write-SharePointLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
+        $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
+    } finally {
+        # 8. CLEANUP & COMPLETE
+        Write-SharePointLog -Level "INFO" -Message "Cleaning up..." -Context $Context
         
-    }
-    catch {
-        # Catch-all for unexpected errors
-        $result.AddError(
-            "Unexpected error in SharePoint discovery",
-            $_.Exception,
-            @{
-                ErrorPoint = 'Main Discovery Block'
-                LastOperation = $MyInvocation.MyCommand.Name
-            }
-        )
-        Write-MandALog "Unexpected error in SharePoint Discovery: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-    }
-    finally {
-        # Always execute cleanup
-        $ErrorActionPreference = $originalErrorActionPreference
+        # Disconnect from services
+        Disconnect-MgGraph -ErrorAction SilentlyContinue
+        
+        $stopwatch.Stop()
         $result.Complete()
-        
-        # Log summary
-        Write-MandALog "SharePoint Discovery completed. Success: $($result.Success), Errors: $($result.Errors.Count), Warnings: $($result.Warnings.Count)" -Level "INFO" -Context $Context
-        
-        # Clean up connections if needed
-        try {
-            # Disconnect from SharePoint Online if needed
-            if (Get-Command Disconnect-SPOService -ErrorAction SilentlyContinue) {
-                Disconnect-SPOService -ErrorAction SilentlyContinue
-            }
-        }
-        catch {
-            Write-MandALog "Cleanup warning: $_" -Level "WARN" -Context $Context
-        }
+        Write-SharePointLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
-    
+
     return $result
 }
 
-function Get-SharePointSitesData {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration
-    )
-    
-    $outputFile = Join-Path $OutputPath "SharePointSites.csv"
-    $sitesData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "SharePoint sites CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
-    try {
-        Write-MandALog "Retrieving all SharePoint sites..." -Level "INFO"
-        
-        # Get all sites including OneDrive sites if configured
-        $includeOneDrive = $Configuration.sharepoint.includeOneDriveSites
-        $sites = Get-SPOSite -Limit All -IncludePersonalSite:$includeOneDrive -ErrorAction Stop
-        
-        Write-MandALog "Found $($sites.Count) site collections" -Level "SUCCESS"
-        
-        $processedCount = 0
-        foreach ($site in $sites) {
-            $processedCount++
-            if ($processedCount % 20 -eq 0) {
-                Write-Progress -Activity "Processing SharePoint Sites" -Status "Site $processedCount of $($sites.Count)" -PercentComplete (($processedCount / $sites.Count) * 100)
-            }
-            
-            try {
-                # Get detailed site information
-                $siteDetails = Get-SPOSite -Identity $site.Url -Detailed -ErrorAction Stop
-                
-                # Determine site type
-                $siteType = "TeamSite"
-                if ($site.Url -match "/personal/") {
-                    $siteType = "OneDrive"
-                } elseif ($site.Template -eq "SITEPAGEPUBLISHING#0") {
-                    $siteType = "CommunicationSite"
-                } elseif ($site.Template -eq "GROUP#0") {
-                    $siteType = "Microsoft365Group"
-                } elseif ($site.Template -eq "TEAMCHANNEL#0" -or $site.Template -eq "TEAMCHANNEL#1") {
-                    $siteType = "TeamChannelSite"
-                }
-                
-                $sitesData.Add([PSCustomObject]@{
-                    Url = $site.Url
-                    Title = $site.Title
-                    Template = $site.Template
-                    SiteType = $siteType
-                    Owner = $site.Owner
-                    StorageQuota = $site.StorageQuota
-                    StorageUsed = $site.StorageUsageCurrent
-                    StoragePercentUsed = if ($site.StorageQuota -gt 0) { 
-                        [math]::Round(($site.StorageUsageCurrent / $site.StorageQuota) * 100, 2) 
-                    } else { 0 }
-                    ResourceQuota = $site.ResourceQuota
-                    ResourceUsed = $site.ResourceUsageCurrent
-                    SharingCapability = $site.SharingCapability
-                    ExternalSharingEnabled = $site.SharingCapability -ne "Disabled"
-                    Status = $site.Status
-                    LockState = $site.LockState
-                    LastContentModifiedDate = $site.LastContentModifiedDate
-                    WebsCount = $site.WebsCount
-                    CompatibilityLevel = $site.CompatibilityLevel
-                    ConditionalAccessPolicy = $site.ConditionalAccessPolicy
-                    SensitivityLabel = $siteDetails.SensitivityLabel
-                    GroupId = $site.GroupId
-                    HubSiteId = $site.HubSiteId
-                    IsHubSite = $site.IsHubSite
-                    TeamsConnected = $null -ne $site.GroupId -and $site.GroupId -ne [System.Guid]::Empty
-                    CreatedDate = $siteDetails.CreatedDate
-                    DenyAddAndCustomizePages = $site.DenyAddAndCustomizePages
-                    DisableCompanyWideSharingLinks = $site.DisableCompanyWideSharingLinks
-                    DisableFlows = $site.DisableFlows
-                    RestrictedToGeo = $site.RestrictedToGeo
-                    SharingDomainRestrictionMode = $site.SharingDomainRestrictionMode
-                    ShowPeoplePickerSuggestionsForGuestUsers = $site.ShowPeoplePickerSuggestionsForGuestUsers
-                })
-                
-            } catch {
-                Write-MandALog "Error processing site $($site.Url): $($_.Exception.Message)" -Level "WARN"
-            }
+# --- Helper Functions ---
+function Ensure-Path {
+    param($Path)
+    if (-not (Test-Path -Path $Path -PathType Container)) {
+        try {
+            New-Item -Path $Path -ItemType Directory -Force -ErrorAction Stop | Out-Null
+        } catch {
+            throw "Failed to create output directory: $Path. Error: $($_.Exception.Message)"
         }
-        
-        Write-Progress -Activity "Processing SharePoint Sites" -Completed
-        
-        # Export to CSV
-        Export-DataToCSV -Data $sitesData -FilePath $outputFile
-        
-        return $sitesData
-        
-    } catch {
-        Write-MandALog "Error retrieving SharePoint sites: $($_.Exception.Message)" -Level "ERROR"
-        return @()
     }
 }
 
-function Get-SharePointHubSitesData {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration
-    )
-    
-    $outputFile = Join-Path $OutputPath "SharePointHubSites.csv"
-    $hubSitesData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "SharePoint hub sites CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
-    try {
-        Write-MandALog "Retrieving SharePoint hub sites..." -Level "INFO"
-        
-        $hubSites = Get-SPOHubSite -ErrorAction Stop
-        
-        foreach ($hub in $hubSites) {
-            # Get associated sites
-            $associatedSites = Get-SPOSite -Limit All | Where-Object { $_.HubSiteId -eq $hub.HubSiteId }
-            
-            $hubSitesData.Add([PSCustomObject]@{
-                HubSiteId = $hub.HubSiteId
-                Title = $hub.Title
-                SiteUrl = $hub.SiteUrl
-                LogoUrl = $hub.LogoUrl
-                Description = $hub.Description
-                SiteDesignId = $hub.SiteDesignId
-                SiteId = $hub.SiteId
-                EnablePermissionsSync = $hub.EnablePermissionsSync
-                HideNameInNavigation = $hub.HideNameInNavigation
-                RequiresJoinApproval = $hub.RequiresJoinApproval
-                AssociatedSiteCount = ($associatedSites | Measure-Object).Count
-                AssociatedSites = ($associatedSites.Url -join ";")
-                CreatedBy = $hub.CreatedBy
-                CreatedDate = $hub.CreatedDate
-            })
-        }
-        
-        Write-MandALog "Found $($hubSitesData.Count) hub sites" -Level "SUCCESS"
-        
-        # Export to CSV
-        Export-DataToCSV -Data $hubSitesData -FilePath $outputFile
-        
-        return $hubSitesData
-        
-    } catch {
-        Write-MandALog "Error retrieving hub sites: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
-
-function Get-SharePointExternalUsersData {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration
-    )
-    
-    $outputFile = Join-Path $OutputPath "SharePointExternalUsers.csv"
-    $externalUsersData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "SharePoint external users CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
-    try {
-        Write-MandALog "Retrieving SharePoint external users..." -Level "INFO"
-        
-        # Get external users
-        $position = 0
-        $pageSize = 50
-        $hasMore = $true
-        
-        while ($hasMore) {
-            $users = Get-SPOExternalUser -Position $position -PageSize $pageSize -ErrorAction Stop
-            
-            if ($users.Count -eq 0) {
-                $hasMore = $false
-            } else {
-                foreach ($user in $users) {
-                    $externalUsersData.Add([PSCustomObject]@{
-                        Email = $user.Email
-                        DisplayName = $user.DisplayName
-                        UniqueId = $user.UniqueId
-                        AcceptedAs = $user.AcceptedAs
-                        WhenCreated = $user.WhenCreated
-                        InvitedBy = $user.InvitedBy
-                        LoginName = $user.LoginName
-                        IsGuestUser = $true
-                        SiteUrls = ($user.SiteUrls -join ";")
-                        SiteCount = ($user.SiteUrls | Measure-Object).Count
-                    })
-                }
-                
-                $position += $pageSize
-            }
-        }
-        
-        Write-MandALog "Found $($externalUsersData.Count) external users" -Level "SUCCESS"
-        
-        # Export to CSV
-        Export-DataToCSV -Data $externalUsersData -FilePath $outputFile
-        
-        return $externalUsersData
-        
-    } catch {
-        Write-MandALog "Error retrieving external users: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
-
-function Get-SharePointSharingLinksData {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration,
-        [array]$Sites
-    )
-    
-    $outputFile = Join-Path $OutputPath "SharePointSharingLinks.csv"
-    $sharingLinksData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "SharePoint sharing links CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
-    try {
-        Write-MandALog "Note: Detailed sharing link enumeration requires additional permissions and may be limited" -Level "WARN"
-        
-        # This is a placeholder as full sharing link enumeration requires Graph API
-        # with specific permissions and is resource-intensive
-        
-        # Sample implementation for sites with external sharing enabled
-        $sitesWithExternalSharing = $Sites | Where-Object { $_.ExternalSharingEnabled }
-        
-        Write-MandALog "Found $($sitesWithExternalSharing.Count) sites with external sharing enabled" -Level "INFO"
-        
-        foreach ($site in $sitesWithExternalSharing) {
-            $sharingLinksData.Add([PSCustomObject]@{
-                SiteUrl = $site.Url
-                SiteTitle = $site.Title
-                SharingCapability = $site.SharingCapability
-                ExternalSharingEnabled = $site.ExternalSharingEnabled
-                DisableCompanyWideSharingLinks = $site.DisableCompanyWideSharingLinks
-                DefaultSharingLinkType = "NotAvailable"
-                DefaultLinkPermission = "NotAvailable"
-                RequiresAnonymousLinksExpiration = "NotAvailable"
-                SharingStatus = "EnabledForSite"
-                Notes = "Detailed link enumeration requires Graph API with Sites.Read.All permission"
-            })
-        }
-        
-        # Export to CSV
-        Export-DataToCSV -Data $sharingLinksData -FilePath $outputFile
-        
-        return $sharingLinksData
-        
-    } catch {
-        Write-MandALog "Error retrieving sharing links: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
-
-function Get-SharePointSitePermissionsData {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration,
-        [array]$Sites
-    )
-    
-    $outputFile = Join-Path $OutputPath "SharePointSitePermissions.csv"
-    $permissionsData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "SharePoint site permissions CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
-    try {
-        Write-MandALog "Retrieving site permissions for $($Sites.Count) sites..." -Level "INFO"
-        
-        # Limit to a sample of sites to avoid timeout
-        $siteSample = $Sites | Select-Object -First 50
-        
-        $processedCount = 0
-        foreach ($site in $siteSample) {
-            $processedCount++
-            if ($processedCount % 10 -eq 0) {
-                Write-Progress -Activity "Processing Site Permissions" -Status "Site $processedCount of $($siteSample.Count)" -PercentComplete (($processedCount / $siteSample.Count) * 100)
-            }
-            
-            try {
-                # Get site admins
-                $siteAdmins = Get-SPOUser -Site $site.Url -Limit All | Where-Object { $_.IsSiteAdmin }
-                
-                foreach ($admin in $siteAdmins) {
-                    $permissionsData.Add([PSCustomObject]@{
-                        SiteUrl = $site.Url
-                        SiteTitle = $site.Title
-                        UserEmail = $admin.LoginName
-                        DisplayName = $admin.DisplayName
-                        PermissionLevel = "Site Collection Administrator"
-                        UserType = $admin.UserType
-                        IsGroup = $admin.IsGroup
-                        IsSiteAdmin = $true
-                        Groups = ($admin.Groups -join ";")
-                    })
-                }
-                
-            } catch {
-                Write-MandALog "Error getting permissions for site $($site.Url): $($_.Exception.Message)" -Level "WARN"
-            }
-        }
-        
-        Write-Progress -Activity "Processing Site Permissions" -Completed
-        Write-MandALog "Retrieved permissions for $processedCount sites (sample)" -Level "SUCCESS"
-        
-        # Export to CSV
-        Export-DataToCSV -Data $permissionsData -FilePath $outputFile
-        
-        return $permissionsData
-        
-    } catch {
-        Write-MandALog "Error retrieving site permissions: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
-
-function Get-SharePointStorageMetricsData {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration
-    )
-    
-    $outputFile = Join-Path $OutputPath "SharePointStorageMetrics.csv"
-    $storageData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "SharePoint storage metrics CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
-    try {
-        Write-MandALog "Analyzing SharePoint storage usage..." -Level "INFO"
-        
-        # Get tenant storage metrics
-        $tenant = Get-SPOTenant
-        $tenantStorage = @{
-            Type = "TenantTotal"
-            Name = "Tenant Storage"
-            StorageQuotaGB = [math]::Round($tenant.StorageQuota / 1024, 2)
-            StorageUsedGB = [math]::Round($tenant.CurrentAvailableStorageInMB / 1024, 2)
-            PercentUsed = if ($tenant.StorageQuota -gt 0) {
-                [math]::Round((($tenant.StorageQuota - $tenant.CurrentAvailableStorageInMB) / $tenant.StorageQuota) * 100, 2)
-            } else { 0 }
-            ResourceQuota = $tenant.ResourceQuota
-            ResourceUsed = $tenant.ResourceQuotaAllocated
-        }
-        
-        $storageData.Add([PSCustomObject]$tenantStorage)
-        
-        # Get top storage consuming sites
-        $allSites = Get-SPOSite -Limit All | Sort-Object StorageUsageCurrent -Descending | Select-Object -First 100
-        
-        foreach ($site in $allSites) {
-            $storageData.Add([PSCustomObject]@{
-                Type = "Site"
-                Name = $site.Title
-                Url = $site.Url
-                StorageQuotaGB = [math]::Round($site.StorageQuota / 1024, 2)
-                StorageUsedGB = [math]::Round($site.StorageUsageCurrent / 1024, 2)
-                PercentUsed = if ($site.StorageQuota -gt 0) {
-                    [math]::Round(($site.StorageUsageCurrent / $site.StorageQuota) * 100, 2)
-                } else { 0 }
-                Template = $site.Template
-                LastModified = $site.LastContentModifiedDate
-                Owner = $site.Owner
-            })
-        }
-        
-        Write-MandALog "Analyzed storage for tenant and top 100 sites" -Level "SUCCESS"
-        
-        # Export to CSV
-        Export-DataToCSV -Data $storageData -FilePath $outputFile
-        
-        return $storageData
-        
-    } catch {
-        Write-MandALog "Error analyzing storage metrics: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
-
-function Get-SharePointContentTypesData {
-    param(
-        [string]$OutputPath,
-        [hashtable]$Configuration,
-        [array]$Sites
-    )
-    
-    $outputFile = Join-Path $OutputPath "SharePointContentTypes.csv"
-    $contentTypesData = [System.Collections.Generic.List[PSCustomObject]]::new()
-    
-    if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-        Write-MandALog "SharePoint content types CSV already exists. Skipping." -Level "INFO"
-        return Import-DataFromCSV -FilePath $outputFile
-    }
-    
-    try {
-        Write-MandALog "Note: Content type discovery requires CSOM and is limited in this implementation" -Level "WARN"
-        
-        # This is a simplified implementation
-        # Full content type discovery would require CSOM (Client Side Object Model)
-        
-        # Add tenant-level summary
-        $contentTypesData.Add([PSCustomObject]@{
-            Scope = "Tenant"
-            Location = "Content Type Hub"
-            ContentTypeName = "Various"
-            ContentTypeId = "N/A"
-            Group = "N/A"
-            Description = "Content type discovery requires CSOM for detailed enumeration"
-            Parent = "N/A"
-            ReadOnly = "N/A"
-            Hidden = "N/A"
-            SiteCount = $Sites.Count
-        })
-        
-        Write-MandALog "Content type placeholder data created" -Level "INFO"
-        
-        # Export to CSV
-        Export-DataToCSV -Data $contentTypesData -FilePath $outputFile
-        
-        return $contentTypesData
-        
-    } catch {
-        Write-MandALog "Error retrieving content types: $($_.Exception.Message)" -Level "ERROR"
-        return @()
-    }
-}
-
-function Get-SPOAdminUrl {
-    param([string]$TenantDomain)
-    
-    if ($TenantDomain -match "\.onmicrosoft\.com$") {
-        $tenantName = $TenantDomain -replace "\.onmicrosoft\.com$", ""
-    } else {
-        # Assume it's just the tenant name
-        $tenantName = $TenantDomain
-    }
-    
-    return "https://$tenantName-admin.sharepoint.com"
-}
-
-# Export functions
-Export-ModuleMember -Function @(
-    'Invoke-SharePointDiscovery',
-    'Get-SharePointSitesData',
-    'Get-SharePointHubSitesData',
-    'Get-SharePointExternalUsersData',
-    'Get-SharePointSharingLinksData',
-    'Get-SharePointSitePermissionsData',
-    'Get-SharePointStorageMetricsData',
-    'Get-SharePointContentTypesData'
-)
-
-
-
-
-
-# =============================================================================
-# DISCOVERY MODULE INTERFACE FUNCTIONS
-# Required by M&A Orchestrator for module invocation
-# =============================================================================
-
-function Invoke-Discovery {
-    <#
-    .SYNOPSIS
-    Main discovery function called by the M&A Orchestrator
-    
-    .PARAMETER Context
-    The discovery context containing configuration and state information
-    
-    .PARAMETER Force
-    Force discovery even if cached data exists
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$Context,
-        
-        [Parameter(Mandatory = $false)]
-        [switch]$Force
-    )
-    
-    try {
-        Write-MandALog "Starting SharePointDiscovery discovery" "INFO"
-        
-        $discoveryResult = @{
-            ModuleName = "SharePointDiscovery"
-            StartTime = Get-Date
-            Status = "Completed"
-            Data = @()
-            Errors = @()
-            Summary = @{ ItemsDiscovered = 0; ErrorCount = 0 }
-        }
-        
-        # TODO: Implement actual discovery logic for SharePointDiscovery
-        Write-MandALog "Completed SharePointDiscovery discovery" "SUCCESS"
-        
-        return $discoveryResult
-        
-    } catch {
-        Write-MandALog "Error in SharePointDiscovery discovery: $($_.Exception.Message)" "ERROR"
-        throw
-    }
-}
-
-function Get-DiscoveryInfo {
-    <#
-    .SYNOPSIS
-    Returns metadata about this discovery module
-    #>
-    [CmdletBinding()]
-    param()
-    
-    return @{
-        ModuleName = "SharePointDiscovery"
-        ModuleVersion = "1.0.0"
-        Description = "SharePointDiscovery discovery module for M&A Suite"
-        RequiredPermissions = @("Read access to SharePointDiscovery resources")
-        EstimatedDuration = "5-15 minutes"
-        SupportedEnvironments = @("OnPremises", "Cloud", "Hybrid")
-    }
-}
-
-
-Export-ModuleMember -Function Invoke-Discovery, Get-DiscoveryInfo
+# --- Module Export ---
+Export-ModuleMember -Function Invoke-SharePointDiscovery
