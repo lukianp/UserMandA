@@ -247,8 +247,16 @@ function Invoke-FileServerDiscovery {
         }
 
         # 6. FINALIZE METADATA
-        $result.RecordCount = $allDiscoveredData.Count
-        $result.Metadata["TotalRecords"] = $result.RecordCount
+        # CRITICAL FIX: Ensure RecordCount property exists and is set correctly
+        if ($result -is [hashtable]) {
+            # For hashtable, ensure RecordCount key exists and is set
+            $result.RecordCount = $allDiscoveredData.Count
+            $result['RecordCount'] = $allDiscoveredData.Count  # Ensure both access methods work
+        } else {
+            # For DiscoveryResult object, set the property directly
+            $result.RecordCount = $allDiscoveredData.Count
+        }
+        $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
         $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
         $result.Metadata["FileServersFound"] = if ($fileServers) { $fileServers.Count } else { 0 }
         $result.Metadata["FileSharesFound"] = if ($fileShares) { $fileShares.Count } else { 0 }

@@ -366,12 +366,27 @@ function Test-ModuleCompletionStatus {
         $totalRecords = 0
         $validFiles = 0
         
+        # Add debug logging for Teams
+        if ($ModuleName -eq "Teams") {
+            Write-OrchestratorLog -Message "DEBUG: Checking Teams module completion..." -Level "DEBUG"
+            Write-OrchestratorLog -Message "DEBUG: Raw data path: $rawDataPath" -Level "DEBUG"
+            Write-OrchestratorLog -Message "DEBUG: Expected files: $($expectedFiles -join ', ')" -Level "DEBUG"
+        }
+        
         foreach ($fileName in $expectedFiles) {
             $filePath = Join-Path $rawDataPath $fileName
+            
+            if ($ModuleName -eq "Teams") {
+                Write-OrchestratorLog -Message "DEBUG: Checking file: $filePath" -Level "DEBUG"
+            }
             
             if (Test-Path $filePath) {
                 $fileInfo = Get-Item $filePath
                 $existingFiles += $fileName
+                
+                if ($ModuleName -eq "Teams") {
+                    Write-OrchestratorLog -Message "DEBUG: File exists: $fileName (Size: $($fileInfo.Length) bytes)" -Level "DEBUG"
+                }
                 
                 if ($fileInfo.Length -gt 100) {
                     try {
@@ -379,12 +394,27 @@ function Test-ModuleCompletionStatus {
                         $recordCount = $csvContent.Count
                         $totalRecords += $recordCount
                         
+                        if ($ModuleName -eq "Teams") {
+                            Write-OrchestratorLog -Message "DEBUG: CSV imported successfully. Records: $recordCount" -Level "DEBUG"
+                        }
+                        
                         if ($recordCount -gt 0) {
                             $validFiles++
                         }
                     } catch {
-                        Write-OrchestratorLog -Message "Invalid CSV: $fileName" -Level "DEBUG" -DebugOnly
+                        Write-OrchestratorLog -Message "Invalid CSV: $fileName - Error: $($_.Exception.Message)" -Level "DEBUG" -DebugOnly
+                        if ($ModuleName -eq "Teams") {
+                            Write-OrchestratorLog -Message "DEBUG: Failed to import CSV: $($_.Exception.Message)" -Level "DEBUG"
+                        }
                     }
+                } else {
+                    if ($ModuleName -eq "Teams") {
+                        Write-OrchestratorLog -Message "DEBUG: File too small (<100 bytes): $fileName" -Level "DEBUG"
+                    }
+                }
+            } else {
+                if ($ModuleName -eq "Teams") {
+                    Write-OrchestratorLog -Message "DEBUG: File not found: $fileName" -Level "DEBUG"
                 }
             }
         }
@@ -395,6 +425,10 @@ function Test-ModuleCompletionStatus {
         $completionPercentage = if ($expectedFiles.Count -gt 0) {
             ($validFiles / $expectedFiles.Count) * 100
         } else { 0 }
+        
+        if ($ModuleName -eq "Teams") {
+            Write-OrchestratorLog -Message "DEBUG: Valid files: $validFiles/$($expectedFiles.Count), Completion: $completionPercentage%, Total records: $totalRecords" -Level "DEBUG"
+        }
         
         if ($validFiles -eq $expectedFiles.Count -and $totalRecords -gt 0) {
             $result.CompletionStatus = "Complete"

@@ -14,11 +14,22 @@ function Get-AuthInfoFromConfiguration {
         [hashtable]$Configuration
     )
 
-    # Standardized pattern to extract credentials passed by the orchestrator
+    # Check all possible locations for auth info
     if ($Configuration._AuthContext) { return $Configuration._AuthContext }
     if ($Configuration._Credentials) { return $Configuration._Credentials }
-    if ($Configuration.authentication -and $Configuration.authentication._Credentials) { 
-        return $Configuration.authentication._Credentials 
+    if ($Configuration.authentication) {
+        if ($Configuration.authentication._Credentials) { 
+            return $Configuration.authentication._Credentials 
+        }
+        if ($Configuration.authentication.ClientId -and 
+            $Configuration.authentication.ClientSecret -and 
+            $Configuration.authentication.TenantId) {
+            return @{
+                ClientId     = $Configuration.authentication.ClientId
+                ClientSecret = $Configuration.authentication.ClientSecret
+                TenantId     = $Configuration.authentication.TenantId
+            }
+        }
     }
     if ($Configuration.ClientId -and $Configuration.ClientSecret -and $Configuration.TenantId) {
         return @{
@@ -38,8 +49,6 @@ function Write-LicensingLog {
         [string]$Level = "INFO",
         [hashtable]$Context
     )
-    # Module-specific wrapper for consistent logging component name
-    # The global Write-MandALog function is guaranteed to exist
     Write-MandALog -Message "[Licensing] $Message" -Level $Level -Component "LicensingDiscovery" -Context $Context
 }
 
@@ -59,172 +68,424 @@ function Invoke-LicensingDiscovery {
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # 1. INITIALIZE RESULT OBJECT
-    # The DiscoveryResult class is loaded by the orchestrator
-    # This fallback provides resilience in case the class definition fails to load
+    $result = $null
+    $isHashtableResult = $false
+    
     if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
         $result = [DiscoveryResult]::new('Licensing')
     } else {
-        # Fallback to a hashtable that mimics the class structure and methods
+        # Fallback to hashtable
+        $isHashtableResult = $true
         $result = @{
-            Success      = $true; ModuleName = 'Licensing'; RecordCount = 0
-            Errors       = [System.Collections.ArrayList]::new(); Warnings = [System.Collections.ArrayList]::new(); Metadata = @{}
-            StartTime    = Get-Date; EndTime = $null; ExecutionId = [guid]::NewGuid().ToString()
-            AddError     = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
-            AddWarning   = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-            Complete     = { $this.EndTime = Get-Date }.GetNewClosure()
+            Success      = $true
+            ModuleName   = 'Licensing'
+            RecordCount  = 0
+            Data         = $null
+            Errors       = [System.Collections.ArrayList]::new()
+            Warnings     = [System.Collections.ArrayList]::new()
+            Metadata     = @{}
+            StartTime    = Get-Date
+            EndTime      = $null
+            ExecutionId  = [guid]::NewGuid().ToString()
         }
+        
+        # Add methods for hashtable
+        $result.AddError = {
+            param($m, $e, $c)
+            $errorEntry = @{
+                Timestamp = Get-Date
+                Message = $m
+                Exception = if ($e) { $e.ToString() } else { $null }
+                ExceptionType = if ($e) { $e.GetType().FullName } else { $null }
+                Context = $c
+            }
+            $null = $this.Errors.Add($errorEntry)
+            $this.Success = $false
+        }.GetNewClosure()
+        
+        $result.AddWarning = {
+            param($m, $c)
+            $warningEntry = @{
+                Timestamp = Get-Date
+                Message = $m
+                Context = $c
+            }
+            $null = $this.Warnings.Add($warningEntry)
+        }.GetNewClosure()
+        
+        $result.Complete = {
+            $this.EndTime = Get-Date
+            if ($this.StartTime -and $this.EndTime) {
+                $duration = $this.EndTime - $this.StartTime
+                $this.Metadata['Duration'] = $duration
+                $this.Metadata['DurationSeconds'] = $duration.TotalSeconds
+            }
+        }.GetNewClosure()
     }
 
     try {
         # 2. VALIDATE PREREQUISITES & CONTEXT
+        Write-LicensingLog -Level "INFO" -Message "Validating prerequisites..." -Context $Context
+        
         if (-not $Context.Paths.RawDataOutput) {
             $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
             return $result
         }
         $outputPath = $Context.Paths.RawDataOutput
+        Write-LicensingLog -Level "DEBUG" -Message "Output path: $outputPath" -Context $Context
+        
         Ensure-Path -Path $outputPath
 
-        # 3. AUTHENTICATE & CONNECT (Microsoft Graph should already be connected by orchestrator)
-        if (-not (Test-LicensingPrerequisites -Context $Context)) {
-            $result.AddError("Licensing prerequisites not met - Microsoft Graph connection required", $null, @{
-                Component = "GraphConnection"
-                Resolution = "Ensure Microsoft Graph is connected with appropriate permissions"
-            })
+        # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
+        # No specific configuration needed for licensing
+
+        # 4. AUTHENTICATE & CONNECT
+        Write-LicensingLog -Level "INFO" -Message "Extracting authentication information..." -Context $Context
+        $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
+        
+        if (-not $authInfo) {
+            Write-LicensingLog -Level "ERROR" -Message "No authentication found in configuration" -Context $Context
+            $result.AddError("Authentication information could not be found in the provided configuration.", $null, $null)
             return $result
         }
-        Write-LicensingLog -Message "Microsoft Graph connection verified" -Level "SUCCESS" -Context $Context
+        
+        Write-LicensingLog -Level "DEBUG" -Message "Auth info found. ClientId: $($authInfo.ClientId.Substring(0,8))..." -Context $Context
 
-        # 4. PERFORM DISCOVERY
+        # Connect to Microsoft Graph
+        $graphConnected = $false
+        try {
+            Write-LicensingLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
+            
+            # Check if already connected
+            $currentContext = Get-MgContext -ErrorAction SilentlyContinue
+            if ($currentContext -and $currentContext.Account -and $currentContext.ClientId -eq $authInfo.ClientId) {
+                Write-LicensingLog -Level "DEBUG" -Message "Using existing Graph session" -Context $Context
+                $graphConnected = $true
+            } else {
+                if ($currentContext) {
+                    Write-LicensingLog -Level "DEBUG" -Message "Disconnecting existing Graph session" -Context $Context
+                    Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+                }
+                
+                # Create PSCredential object from ClientId and SecureString
+                $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
+                $clientCredential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $secureSecret)
+                
+                # Connect using the PSCredential
+                Connect-MgGraph -ClientSecretCredential $clientCredential `
+                                -TenantId $authInfo.TenantId `
+                                -NoWelcome -ErrorAction Stop
+                
+                Write-LicensingLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
+                $graphConnected = $true
+                
+                # Verify connection
+                $mgContext = Get-MgContext -ErrorAction Stop
+                if (-not $mgContext) {
+                    throw "Failed to establish Graph context after connection"
+                }
+            }
+            
+        } catch {
+            $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, $null)
+            return $result
+        }
+
+        # Test licensing permissions
+        try {
+            Write-LicensingLog -Level "INFO" -Message "Testing licensing permissions..." -Context $Context
+            
+            # Try to get organization info first (requires Organization.Read.All)
+            $orgInfo = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/organization" -Method GET -ErrorAction Stop
+            Write-LicensingLog -Level "DEBUG" -Message "Organization access confirmed" -Context $Context
+            
+            # Try to get subscribed SKUs (requires Organization.Read.All or Directory.Read.All)
+            $testSku = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/subscribedSkus?`$top=1" -Method GET -ErrorAction Stop
+            Write-LicensingLog -Level "SUCCESS" -Message "License SKU access confirmed" -Context $Context
+            
+        } catch {
+            $errorMessage = $_.Exception.Message
+            
+            # Provide specific guidance based on the error
+            if ($errorMessage -like "*Insufficient privileges*" -or $errorMessage -like "*Authorization_RequestDenied*") {
+                $result.AddError(
+                    "Insufficient permissions to read license information. Required permissions: Organization.Read.All or Directory.Read.All", 
+                    $_.Exception, 
+                    @{
+                        RequiredPermissions = @("Organization.Read.All", "Directory.Read.All")
+                        CurrentError = $errorMessage
+                        Resolution = "Grant the application one of the required permissions in Azure AD"
+                    }
+                )
+            } else {
+                $result.AddError("Failed to access license information: $errorMessage", $_.Exception, $null)
+            }
+            
+            return $result
+        }
+
+        # 5. PERFORM DISCOVERY
+        Write-LicensingLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
-        # 4.1 Discover License SKUs
+        # Get License SKUs
         $skus = @()
         try {
-            Write-LicensingLog -Message "Discovering license SKUs..." -Level "INFO" -Context $Context
-            $skus = Get-LicenseSKUsData -Configuration $Configuration -Context $Context
-            Write-LicensingLog -Message "Discovered $($skus.Count) license SKUs" -Level "SUCCESS" -Context $Context
+            Write-LicensingLog -Level "INFO" -Message "Discovering license SKUs..." -Context $Context
             
-            if ($skus.Count -gt 0) {
-                $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-                $skus | ForEach-Object {
-                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
-                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Licensing" -Force
+            $uri = "https://graph.microsoft.com/v1.0/subscribedSkus"
+            $response = Invoke-MgGraphRequest -Uri $uri -Method GET
+            
+            if ($response.value) {
+                foreach ($sku in $response.value) {
+                    $totalLicenses = $sku.prepaidUnits.enabled + $sku.prepaidUnits.warning + $sku.prepaidUnits.suspended
+                    $usagePercentage = if ($totalLicenses -gt 0) {
+                        [math]::Round(($sku.consumedUnits / $totalLicenses) * 100, 2)
+                    } else { 0 }
+                    
+                    $servicePlans = $sku.servicePlans | ForEach-Object {
+                        "$($_.servicePlanName):$($_.provisioningStatus)"
+                    }
+                    
+                    $skuObj = [PSCustomObject]@{
+                        SkuId = $sku.skuId
+                        SkuPartNumber = $sku.skuPartNumber
+                        DisplayName = Get-FriendlyLicenseName -SkuPartNumber $sku.skuPartNumber
+                        CapabilityStatus = $sku.capabilityStatus
+                        AppliesTo = $sku.appliesTo
+                        TotalLicenses = $totalLicenses
+                        EnabledLicenses = $sku.prepaidUnits.enabled
+                        WarningLicenses = $sku.prepaidUnits.warning
+                        SuspendedLicenses = $sku.prepaidUnits.suspended
+                        ConsumedLicenses = $sku.consumedUnits
+                        AvailableLicenses = $sku.prepaidUnits.enabled - $sku.consumedUnits
+                        UsagePercentage = $usagePercentage
+                        ServicePlanCount = $sku.servicePlans.Count
+                        ServicePlans = ($servicePlans -join ";")
+                        _ObjectType = 'LicenseSKU'
+                    }
+                    
+                    $skus += $skuObj
+                    $null = $allDiscoveredData.Add($skuObj)
                 }
-                $skus | Export-Csv -Path (Join-Path $outputPath "LicenseSKUs.csv") -NoTypeInformation -Encoding UTF8
-                $null = $allDiscoveredData.AddRange($skus)
-                $result.Metadata['LicenseSKUCount'] = $skus.Count
+                
+                Write-LicensingLog -Level "SUCCESS" -Message "Discovered $($skus.Count) license SKUs" -Context $Context
+                
+                if ($isHashtableResult) {
+                    $result.Metadata["LicenseSKUCount"] = $skus.Count
+                } else {
+                    $result.Metadata["LicenseSKUCount"] = $skus.Count
+                }
             }
-
+            
         } catch {
-            $result.AddWarning("Failed to discover license SKUs: $($_.Exception.Message)", $_.Exception)
-            Write-LicensingLog -Message "License SKU discovery failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+            $result.AddWarning("Failed to discover license SKUs: $($_.Exception.Message)", @{Operation = "GetLicenseSKUs"})
         }
         
-        # Only continue with dependent discoveries if we have SKUs
+        # Get User License Assignments
         if ($skus.Count -gt 0) {
-            # 4.2 Discover User License Assignments
             try {
-                Write-LicensingLog -Message "Discovering user license assignments..." -Level "INFO" -Context $Context
-                $userLicenses = Get-UserLicenseAssignmentsData -Configuration $Configuration -Context $Context
-                Write-LicensingLog -Message "Discovered $($userLicenses.Count) user license assignments" -Level "SUCCESS" -Context $Context
+                Write-LicensingLog -Level "INFO" -Message "Discovering user license assignments..." -Context $Context
                 
-                if ($userLicenses.Count -gt 0) {
-                    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-                    $userLicenses | ForEach-Object {
-                        $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
-                        $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Licensing" -Force
-                    }
-                    $userLicenses | Export-Csv -Path (Join-Path $outputPath "UserLicenseAssignments.csv") -NoTypeInformation -Encoding UTF8
-                    $null = $allDiscoveredData.AddRange($userLicenses)
-                    $result.Metadata['UserLicenseAssignmentCount'] = $userLicenses.Count
-                }
-
-            } catch {
-                $result.AddWarning("Failed to discover user license assignments: $($_.Exception.Message)", $_.Exception)
-                Write-LicensingLog -Message "User license assignment discovery failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-            }
-
-            # 4.3 Analyze Service Plan Usage
-            try {
-                Write-LicensingLog -Message "Analyzing service plan usage..." -Level "INFO" -Context $Context
-                $servicePlans = Get-ServicePlanUsageData -Configuration $Configuration -Context $Context -SKUs $skus
-                Write-LicensingLog -Message "Analyzed $($servicePlans.Count) service plans" -Level "SUCCESS" -Context $Context
+                # Get licensed users with pagination
+                $userLicenseCount = 0
+                $nextLink = $null
                 
-                if ($servicePlans.Count -gt 0) {
-                    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-                    $servicePlans | ForEach-Object {
-                        $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
-                        $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Licensing" -Force
+                do {
+                    if ($nextLink) {
+                        $response = Invoke-MgGraphRequest -Uri $nextLink -Method GET
+                    } else {
+                        # Use Graph API directly for better control
+                        $uri = "https://graph.microsoft.com/v1.0/users?`$filter=assignedLicenses/`$count ne 0&`$count=true&`$top=999&`$select=id,userPrincipalName,displayName,department,usageLocation,accountEnabled,assignedLicenses,createdDateTime"
+                        $headers = @{ 'ConsistencyLevel' = 'eventual' }
+                        $response = Invoke-MgGraphRequest -Uri $uri -Method GET -Headers $headers
                     }
-                    $servicePlans | Export-Csv -Path (Join-Path $outputPath "ServicePlanUsage.csv") -NoTypeInformation -Encoding UTF8
-                    $null = $allDiscoveredData.AddRange($servicePlans)
-                    $result.Metadata['ServicePlanCount'] = $servicePlans.Count
-                }
-
-            } catch {
-                $result.AddWarning("Failed to analyze service plan usage: $($_.Exception.Message)", $_.Exception)
-                Write-LicensingLog -Message "Service plan analysis failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-            }
-
-            # 4.4 Calculate License Costs
-            try {
-                Write-LicensingLog -Message "Calculating license costs..." -Level "INFO" -Context $Context
-                $costAnalysis = Get-LicenseCostAnalysisData -Configuration $Configuration -Context $Context -SKUs $skus
-                Write-LicensingLog -Message "Calculated costs for $($costAnalysis.Count) SKUs" -Level "SUCCESS" -Context $Context
-                
-                if ($costAnalysis.Count -gt 0) {
-                    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-                    $costAnalysis | ForEach-Object {
-                        $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
-                        $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Licensing" -Force
-                    }
-                    $costAnalysis | Export-Csv -Path (Join-Path $outputPath "LicenseCostAnalysis.csv") -NoTypeInformation -Encoding UTF8
-                    $null = $allDiscoveredData.AddRange($costAnalysis)
-                    $result.Metadata['CostAnalysisRecordCount'] = $costAnalysis.Count
                     
-                    # Calculate summary metrics
-                    $totalAnnualCost = ($costAnalysis | Measure-Object -Property AnnualCost -Sum).Sum
-                    $totalUnusedCost = ($costAnalysis | Measure-Object -Property UnusedAnnualCost -Sum).Sum
-                    $result.Metadata['TotalAnnualCostUSD'] = [math]::Round($totalAnnualCost, 2)
-                    $result.Metadata['TotalUnusedAnnualCostUSD'] = [math]::Round($totalUnusedCost, 2)
+                    if ($response.value) {
+                        foreach ($user in $response.value) {
+                            foreach ($license in $user.assignedLicenses) {
+                                $assignmentObj = [PSCustomObject]@{
+                                    UserId = $user.id
+                                    UserPrincipalName = $user.userPrincipalName
+                                    DisplayName = $user.displayName
+                                    Department = $user.department
+                                    UsageLocation = $user.usageLocation
+                                    AccountEnabled = $user.accountEnabled
+                                    LicenseSkuId = $license.skuId
+                                    DisabledPlansCount = if ($license.disabledPlans) { $license.disabledPlans.Count } else { 0 }
+                                    AssignmentDate = $user.createdDateTime
+                                    _ObjectType = 'UserLicenseAssignment'
+                                }
+                                
+                                $null = $allDiscoveredData.Add($assignmentObj)
+                                $userLicenseCount++
+                            }
+                        }
+                    }
                     
-                    Write-LicensingLog -Message "Total annual cost: $([math]::Round($totalAnnualCost, 2)) USD" -Level "INFO" -Context $Context
-                    Write-LicensingLog -Message "Unused annual cost: $([math]::Round($totalUnusedCost, 2)) USD" -Level "WARN" -Context $Context
+                    $nextLink = $response.'@odata.nextLink'
+                    
+                    # Progress reporting
+                    if ($userLicenseCount % 1000 -eq 0 -and $userLicenseCount -gt 0) {
+                        Write-LicensingLog -Level "DEBUG" -Message "Processed $userLicenseCount license assignments..." -Context $Context
+                    }
+                    
+                } while ($nextLink)
+                
+                Write-LicensingLog -Level "SUCCESS" -Message "Discovered $userLicenseCount user license assignments" -Context $Context
+                
+                if ($isHashtableResult) {
+                    $result.Metadata["UserLicenseAssignmentCount"] = $userLicenseCount
+                } else {
+                    $result.Metadata["UserLicenseAssignmentCount"] = $userLicenseCount
                 }
-
+                
             } catch {
-                $result.AddWarning("Failed to calculate license costs: $($_.Exception.Message)", $_.Exception)
-                Write-LicensingLog -Message "License cost calculation failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
+                $result.AddWarning("Failed to discover user license assignments: $($_.Exception.Message)", @{Operation = "GetUserLicenseAssignments"})
+            }
+            
+            # Calculate License Costs
+            try {
+                Write-LicensingLog -Level "INFO" -Message "Calculating license costs..." -Context $Context
+                
+                $totalAnnualCost = 0
+                $totalUnusedCost = 0
+                
+                foreach ($sku in $skus) {
+                    $estimatedMonthlyPrice = Get-EstimatedLicensePrice -SkuPartNumber $sku.SkuPartNumber
+                    $monthlyCost = $estimatedMonthlyPrice * $sku.ConsumedLicenses
+                    $annualCost = $monthlyCost * 12
+                    $unusedMonthlyCost = $estimatedMonthlyPrice * $sku.AvailableLicenses
+                    $unusedAnnualCost = $unusedMonthlyCost * 12
+                    
+                    $totalAnnualCost += $annualCost
+                    $totalUnusedCost += $unusedAnnualCost
+                    
+                    $costObj = [PSCustomObject]@{
+                        SkuPartNumber = $sku.SkuPartNumber
+                        DisplayName = $sku.DisplayName
+                        EstimatedPricePerLicense = $estimatedMonthlyPrice
+                        ConsumedLicenses = $sku.ConsumedLicenses
+                        AvailableLicenses = $sku.AvailableLicenses
+                        TotalLicenses = $sku.TotalLicenses
+                        MonthlyCost = [math]::Round($monthlyCost, 2)
+                        AnnualCost = [math]::Round($annualCost, 2)
+                        UnusedMonthlyCost = [math]::Round($unusedMonthlyCost, 2)
+                        UnusedAnnualCost = [math]::Round($unusedAnnualCost, 2)
+                        CostEfficiency = $sku.UsagePercentage
+                        Currency = "USD"
+                        PriceNote = "Estimated based on public list prices"
+                        _ObjectType = 'LicenseCostAnalysis'
+                    }
+                    
+                    $null = $allDiscoveredData.Add($costObj)
+                }
+                
+                Write-LicensingLog -Level "SUCCESS" -Message "Calculated costs for $($skus.Count) SKUs" -Context $Context
+                Write-LicensingLog -Level "INFO" -Message "Total annual cost: $([math]::Round($totalAnnualCost, 2)) USD" -Context $Context
+                Write-LicensingLog -Level "WARN" -Message "Total unused annual cost: $([math]::Round($totalUnusedCost, 2)) USD" -Context $Context
+                
+                if ($isHashtableResult) {
+                    $result.Metadata["TotalAnnualCostUSD"] = [math]::Round($totalAnnualCost, 2)
+                    $result.Metadata["TotalUnusedAnnualCostUSD"] = [math]::Round($totalUnusedCost, 2)
+                } else {
+                    $result.Metadata["TotalAnnualCostUSD"] = [math]::Round($totalAnnualCost, 2)
+                    $result.Metadata["TotalUnusedAnnualCostUSD"] = [math]::Round($totalUnusedCost, 2)
+                }
+                
+            } catch {
+                $result.AddWarning("Failed to calculate license costs: $($_.Exception.Message)", @{Operation = "CalculateCosts"})
+            }
+        }
+
+        # 6. EXPORT DATA TO CSV
+        if ($allDiscoveredData.Count -gt 0) {
+            Write-LicensingLog -Level "INFO" -Message "Exporting $($allDiscoveredData.Count) records..." -Context $Context
+            
+            $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+            
+            # Group by object type and export to separate files
+            $objectGroups = $allDiscoveredData | Group-Object -Property _ObjectType
+            
+            foreach ($group in $objectGroups) {
+                $objectType = $group.Name
+                $objects = $group.Group
+                
+                # Remove the _ObjectType property before export
+                $exportData = $objects | ForEach-Object {
+                    $obj = $_.PSObject.Copy()
+                    $obj.PSObject.Properties.Remove('_ObjectType')
+                    $obj | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                    $obj | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Licensing" -Force
+                    $obj
+                }
+                
+                # Map object types to file names (MUST match orchestrator expectations)
+                $fileName = switch ($objectType) {
+                    'LicenseSKU' { 'LicenseSKUs.csv' }
+                    'UserLicenseAssignment' { 'UserLicenseAssignments.csv' }
+                    'LicenseCostAnalysis' { 'LicenseCostAnalysis.csv' }
+                    default { "Licensing_$objectType.csv" }
+                }
+                
+                $filePath = Join-Path $outputPath $fileName
+                $exportData | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+                
+                Write-LicensingLog -Level "SUCCESS" -Message "Exported $($exportData.Count) $objectType records to $fileName" -Context $Context
             }
         } else {
-            $result.AddWarning("No license SKUs found or accessible - dependent discoveries skipped", $null)
-            Write-LicensingLog -Message "No license SKUs found - skipping dependent discoveries" -Level "WARN" -Context $Context
+            Write-LicensingLog -Level "WARN" -Message "No data discovered to export" -Context $Context
         }
 
-        # 5. FINALIZE & UPDATE METADATA
-        $result.RecordCount = $allDiscoveredData.Count
-        $result.Metadata["TotalRecords"] = $result.RecordCount
-        $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
-        
-        # Set overall success based on critical data availability
-        $result.Success = ($skus.Count -gt 0)
+        # 7. FINALIZE METADATA
+        # Handle both hashtable and object cases for RecordCount
+        # CRITICAL FIX: Ensure RecordCount property exists and is set correctly
+        if ($isHashtableResult) {
+            # For hashtable, ensure RecordCount key exists and is set
+            $result.RecordCount = $allDiscoveredData.Count
+            $result['RecordCount'] = $allDiscoveredData.Count  # Ensure both access methods work
+            $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
+            $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+        } else {
+            # For DiscoveryResult object, set the property directly
+            $result.RecordCount = $allDiscoveredData.Count
+            $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
+            $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+        }
 
     } catch {
-        # This is the top-level catch for critical, unrecoverable errors
+        # Top-level error handler
+        Write-LicensingLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
         $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
-        Write-LicensingLog -Message "Critical error: $($_.Exception.Message)" -Level "ERROR" -Context $Context
     } finally {
-        # 6. CLEANUP & COMPLETE
+        # 8. CLEANUP & COMPLETE
+        Write-LicensingLog -Level "INFO" -Message "Cleaning up..." -Context $Context
+        
+        # Disconnect from Microsoft Graph only if we connected
+        if ($graphConnected) {
+            try {
+                $mgContext = Get-MgContext -ErrorAction SilentlyContinue
+                if ($mgContext) {
+                    Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+                    Write-LicensingLog -Level "DEBUG" -Message "Disconnected from Microsoft Graph" -Context $Context
+                }
+            } catch {
+                # Ignore disconnect errors
+            }
+        }
+        
         $stopwatch.Stop()
         $result.Complete()
-        Write-LicensingLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
+        
+        # Get final record count for logging
+        $finalRecordCount = if ($isHashtableResult) { $result['RecordCount'] } else { $result.RecordCount }
+        Write-LicensingLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $finalRecordCount." -Context $Context
     }
 
     return $result
 }
 
 # --- Helper Functions ---
-
 function Ensure-Path {
     param($Path)
     if (-not (Test-Path -Path $Path -PathType Container)) {
@@ -234,253 +495,6 @@ function Ensure-Path {
             throw "Failed to create output directory: $Path. Error: $($_.Exception.Message)"
         }
     }
-}
-
-function Test-LicensingPrerequisites {
-    param($Context)
-    
-    try {
-        # Check if Microsoft Graph is connected
-        $mgContext = Get-MgContext -ErrorAction Stop
-        if (-not $mgContext) {
-            Write-LicensingLog -Message "Microsoft Graph context not found" -Level "ERROR" -Context $Context
-            return $false
-        }
-        
-        # Test licensing access by trying to get SKUs
-        $null = Get-MgSubscribedSku -Top 1 -ErrorAction Stop
-        Write-LicensingLog -Message "Microsoft Graph licensing access verified" -Level "SUCCESS" -Context $Context
-        return $true
-    } catch {
-        Write-LicensingLog -Message "Prerequisites check failed: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-        return $false
-    }
-}
-
-function Get-LicenseSKUsData {
-    param(
-        [hashtable]$Configuration,
-        $Context
-    )
-    
-    $skus = [System.Collections.ArrayList]::new()
-    
-    try {
-        Write-LicensingLog -Message "Retrieving license SKUs..." -Level "INFO" -Context $Context
-        
-        $subscribedSkus = Get-MgSubscribedSku -ErrorAction Stop
-        
-        foreach ($sku in $subscribedSkus) {
-            $totalLicenses = $sku.PrepaidUnits.Enabled + $sku.PrepaidUnits.Warning + $sku.PrepaidUnits.Suspended
-            $usagePercentage = if ($totalLicenses -gt 0) {
-                [math]::Round(($sku.ConsumedUnits / $totalLicenses) * 100, 2)
-            } else { 0 }
-            
-            $servicePlans = $sku.ServicePlans | ForEach-Object {
-                "$($_.ServicePlanName):$($_.ProvisioningStatus)"
-            }
-            
-            $skuInfo = [PSCustomObject]@{
-                SkuId = $sku.SkuId
-                SkuPartNumber = $sku.SkuPartNumber
-                DisplayName = Get-FriendlyLicenseName -SkuPartNumber $sku.SkuPartNumber
-                CapabilityStatus = $sku.CapabilityStatus
-                AppliesTo = $sku.AppliesTo
-                TotalLicenses = $totalLicenses
-                EnabledLicenses = $sku.PrepaidUnits.Enabled
-                WarningLicenses = $sku.PrepaidUnits.Warning
-                SuspendedLicenses = $sku.PrepaidUnits.Suspended
-                ConsumedLicenses = $sku.ConsumedUnits
-                AvailableLicenses = $sku.PrepaidUnits.Enabled - $sku.ConsumedUnits
-                UsagePercentage = $usagePercentage
-                ServicePlanCount = $sku.ServicePlans.Count
-                ServicePlans = ($servicePlans -join ";")
-                _DataType = 'LicenseSKUs'
-            }
-            
-            $null = $skus.Add($skuInfo)
-        }
-        
-        Write-LicensingLog -Message "Retrieved $($skus.Count) license SKUs" -Level "SUCCESS" -Context $Context
-    } catch {
-        Write-LicensingLog -Message "Failed to retrieve license SKUs: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-        throw
-    }
-    
-    return $skus
-}
-
-function Get-UserLicenseAssignmentsData {
-    param(
-        [hashtable]$Configuration,
-        $Context
-    )
-    
-    $licenseAssignments = [System.Collections.ArrayList]::new()
-    
-    try {
-        Write-LicensingLog -Message "Retrieving user license assignments..." -Level "INFO" -Context $Context
-        
-        # Get all users with licenses
-        $licensedUsers = Get-MgUser -All -Property Id,UserPrincipalName,DisplayName,Department,UsageLocation,AccountEnabled,AssignedLicenses,CreatedDateTime -Filter "assignedLicenses/`$count ne 0" -ConsistencyLevel eventual -CountVariable count -ErrorAction Stop
-        
-        Write-LicensingLog -Message "Processing $count licensed users..." -Level "INFO" -Context $Context
-        
-        $processedCount = 0
-        foreach ($user in $licensedUsers) {
-            $processedCount++
-            if ($processedCount % 100 -eq 0) {
-                Write-LicensingLog -Message "Processed $processedCount users..." -Level "DEBUG" -Context $Context
-            }
-            
-            foreach ($license in $user.AssignedLicenses) {
-                $assignmentInfo = [PSCustomObject]@{
-                    UserId = $user.Id
-                    UserPrincipalName = $user.UserPrincipalName
-                    DisplayName = $user.DisplayName
-                    Department = $user.Department
-                    UsageLocation = $user.UsageLocation
-                    AccountEnabled = $user.AccountEnabled
-                    LicenseSkuId = $license.SkuId
-                    DisabledPlansCount = if ($license.DisabledPlans) { $license.DisabledPlans.Count } else { 0 }
-                    AssignmentDate = $user.CreatedDateTime
-                    _DataType = 'UserLicenseAssignments'
-                }
-                
-                $null = $licenseAssignments.Add($assignmentInfo)
-            }
-        }
-        
-        Write-LicensingLog -Message "Retrieved $($licenseAssignments.Count) license assignments" -Level "SUCCESS" -Context $Context
-    } catch {
-        Write-LicensingLog -Message "Failed to retrieve user license assignments: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-        throw
-    }
-    
-    return $licenseAssignments
-}
-
-function Get-ServicePlanUsageData {
-    param(
-        [hashtable]$Configuration,
-        $Context,
-        $SKUs
-    )
-    
-    $servicePlanData = [System.Collections.ArrayList]::new()
-    
-    try {
-        Write-LicensingLog -Message "Analyzing service plan usage..." -Level "INFO" -Context $Context
-        
-        # Build service plan inventory from SKUs
-        $servicePlanUsage = @{}
-        
-        foreach ($sku in $SKUs) {
-            $skuDetails = Get-MgSubscribedSku | Where-Object { $_.SkuId -eq $sku.SkuId }
-            
-            if ($skuDetails -and $skuDetails.ServicePlans) {
-                foreach ($servicePlan in $skuDetails.ServicePlans) {
-                    $planKey = $servicePlan.ServicePlanId
-                    
-                    if (-not $servicePlanUsage.ContainsKey($planKey)) {
-                        $servicePlanUsage[$planKey] = @{
-                            ServicePlanId = $servicePlan.ServicePlanId
-                            ServicePlanName = $servicePlan.ServicePlanName
-                            FriendlyName = Get-FriendlyServicePlanName -ServicePlanName $servicePlan.ServicePlanName
-                            TotalAvailable = 0
-                            AppliesTo = $servicePlan.AppliesTo
-                            ProvisioningStatus = $servicePlan.ProvisioningStatus
-                            IncludedInSKUs = [System.Collections.ArrayList]::new()
-                        }
-                    }
-                    
-                    $servicePlanUsage[$planKey].TotalAvailable += $sku.ConsumedLicenses
-                    $null = $servicePlanUsage[$planKey].IncludedInSKUs.Add($sku.SkuPartNumber)
-                }
-            }
-        }
-        
-        # Convert to output format
-        foreach ($planUsage in $servicePlanUsage.Values) {
-            $planInfo = [PSCustomObject]@{
-                ServicePlanId = $planUsage.ServicePlanId
-                ServicePlanName = $planUsage.ServicePlanName
-                FriendlyName = $planUsage.FriendlyName
-                AppliesTo = $planUsage.AppliesTo
-                ProvisioningStatus = $planUsage.ProvisioningStatus
-                TotalAvailable = $planUsage.TotalAvailable
-                IncludedInSKUs = (($planUsage.IncludedInSKUs | Select-Object -Unique) -join ";")
-                _DataType = 'ServicePlanUsage'
-            }
-            
-            $null = $servicePlanData.Add($planInfo)
-        }
-        
-        Write-LicensingLog -Message "Analyzed $($servicePlanData.Count) service plans" -Level "SUCCESS" -Context $Context
-    } catch {
-        Write-LicensingLog -Message "Failed to analyze service plan usage: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-        throw
-    }
-    
-    return $servicePlanData
-}
-
-function Get-LicenseCostAnalysisData {
-    param(
-        [hashtable]$Configuration,
-        $Context,
-        $SKUs
-    )
-    
-    $costData = [System.Collections.ArrayList]::new()
-    
-    try {
-        Write-LicensingLog -Message "Calculating license costs..." -Level "INFO" -Context $Context
-        
-        $totalMonthlyCost = 0
-        $totalAnnualCost = 0
-        $totalUnusedCost = 0
-        
-        foreach ($sku in $SKUs) {
-            $estimatedMonthlyPrice = Get-EstimatedLicensePrice -SkuPartNumber $sku.SkuPartNumber
-            $monthlyCost = $estimatedMonthlyPrice * $sku.ConsumedLicenses
-            $annualCost = $monthlyCost * 12
-            $unusedMonthlyCost = $estimatedMonthlyPrice * $sku.AvailableLicenses
-            $unusedAnnualCost = $unusedMonthlyCost * 12
-            
-            $totalMonthlyCost += $monthlyCost
-            $totalAnnualCost += $annualCost
-            $totalUnusedCost += $unusedAnnualCost
-            
-            $costInfo = [PSCustomObject]@{
-                SkuPartNumber = $sku.SkuPartNumber
-                DisplayName = $sku.DisplayName
-                EstimatedPricePerLicense = $estimatedMonthlyPrice
-                ConsumedLicenses = $sku.ConsumedLicenses
-                AvailableLicenses = $sku.AvailableLicenses
-                TotalLicenses = $sku.TotalLicenses
-                MonthlyCost = [math]::Round($monthlyCost, 2)
-                AnnualCost = [math]::Round($annualCost, 2)
-                UnusedMonthlyCost = [math]::Round($unusedMonthlyCost, 2)
-                UnusedAnnualCost = [math]::Round($unusedAnnualCost, 2)
-                CostEfficiency = $sku.UsagePercentage
-                Currency = "USD"
-                PriceNote = "Estimated based on public list prices"
-                _DataType = 'LicenseCostAnalysis'
-            }
-            
-            $null = $costData.Add($costInfo)
-        }
-        
-        Write-LicensingLog -Message "Calculated costs for $($costData.Count) SKUs" -Level "SUCCESS" -Context $Context
-        Write-LicensingLog -Message "Total annual cost: $([math]::Round($totalAnnualCost, 2)) USD" -Level "INFO" -Context $Context
-        Write-LicensingLog -Message "Total unused annual cost: $([math]::Round($totalUnusedCost, 2)) USD" -Level "WARN" -Context $Context
-    } catch {
-        Write-LicensingLog -Message "Failed to calculate license costs: $($_.Exception.Message)" -Level "ERROR" -Context $Context
-        throw
-    }
-    
-    return $costData
 }
 
 function Get-FriendlyLicenseName {
@@ -511,30 +525,6 @@ function Get-FriendlyLicenseName {
     }
     
     return if ($licenseNames.ContainsKey($SkuPartNumber)) { $licenseNames[$SkuPartNumber] } else { $SkuPartNumber }
-}
-
-function Get-FriendlyServicePlanName {
-    param([string]$ServicePlanName)
-    
-    $servicePlanNames = @{
-        "EXCHANGE_S_ENTERPRISE" = "Exchange Online"
-        "TEAMS1" = "Microsoft Teams"
-        "SHAREPOINTENTERPRISE" = "SharePoint Online"
-        "OFFICESUBSCRIPTION" = "Microsoft 365 Apps"
-        "MCOSTANDARD" = "Skype for Business Online"
-        "YAMMER_ENTERPRISE" = "Yammer"
-        "RMS_S_ENTERPRISE" = "Azure Rights Management"
-        "PROJECTWORKMANAGEMENT" = "Microsoft Planner"
-        "SWAY" = "Sway"
-        "INTUNE_A" = "Microsoft Intune"
-        "STREAM_O365_E3" = "Stream for Office 365"
-        "POWERAPPS_O365_P2" = "PowerApps for Office 365"
-        "FLOW_O365_P2" = "Power Automate for Office 365"
-        "FORMS_PLAN_E3" = "Microsoft Forms"
-        "WHITEBOARD_PLAN2" = "Whiteboard"
-    }
-    
-    return if ($servicePlanNames.ContainsKey($ServicePlanName)) { $servicePlanNames[$ServicePlanName] } else { $ServicePlanName }
 }
 
 function Get-EstimatedLicensePrice {

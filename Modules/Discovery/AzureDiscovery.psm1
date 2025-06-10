@@ -67,21 +67,59 @@ function Invoke-AzureDiscovery {
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # 1. INITIALIZE RESULT OBJECT
+    $result = $null
+    $isHashtableResult = $false
+    
     if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
         $result = [DiscoveryResult]::new('Azure')
     } else {
         # Fallback to hashtable
+        $isHashtableResult = $true
         $result = @{
-            Success      = $true; ModuleName = 'Azure'; RecordCount = 0;
-            Errors       = [System.Collections.ArrayList]::new(); 
-            Warnings     = [System.Collections.ArrayList]::new(); 
-            Metadata     = @{};
-            StartTime    = Get-Date; EndTime = $null; 
-            ExecutionId  = [guid]::NewGuid().ToString();
-            AddError     = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
-            AddWarning   = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-            Complete     = { $this.EndTime = Get-Date }.GetNewClosure()
+            Success      = $true
+            ModuleName   = 'Azure'
+            RecordCount  = 0
+            Data         = $null
+            Errors       = [System.Collections.ArrayList]::new()
+            Warnings     = [System.Collections.ArrayList]::new()
+            Metadata     = @{}
+            StartTime    = Get-Date
+            EndTime      = $null
+            ExecutionId  = [guid]::NewGuid().ToString()
         }
+        
+        # Add methods for hashtable
+        $result.AddError = {
+            param($m, $e, $c)
+            $errorEntry = @{
+                Timestamp = Get-Date
+                Message = $m
+                Exception = if ($e) { $e.ToString() } else { $null }
+                ExceptionType = if ($e) { $e.GetType().FullName } else { $null }
+                Context = $c
+            }
+            $null = $this.Errors.Add($errorEntry)
+            $this.Success = $false
+        }.GetNewClosure()
+        
+        $result.AddWarning = {
+            param($m, $c)
+            $warningEntry = @{
+                Timestamp = Get-Date
+                Message = $m
+                Context = $c
+            }
+            $null = $this.Warnings.Add($warningEntry)
+        }.GetNewClosure()
+        
+        $result.Complete = {
+            $this.EndTime = Get-Date
+            if ($this.StartTime -and $this.EndTime) {
+                $duration = $this.EndTime - $this.StartTime
+                $this.Metadata['Duration'] = $duration
+                $this.Metadata['DurationSeconds'] = $duration.TotalSeconds
+            }
+        }.GetNewClosure()
     }
 
     try {
@@ -214,7 +252,11 @@ function Invoke-AzureDiscovery {
                 Write-AzureLog -Level "SUCCESS" -Message "Discovered $($subscriptions.Count) subscriptions" -Context $Context
             }
             
-            $result.Metadata["SubscriptionCount"] = $subscriptions.Count
+            if ($isHashtableResult) {
+                $result.Metadata["SubscriptionCount"] = $subscriptions.Count
+            } else {
+                $result.Metadata["SubscriptionCount"] = $subscriptions.Count
+            }
             
         } catch {
             $result.AddWarning("Failed to discover subscriptions: $($_.Exception.Message)", @{Operation = "GetSubscriptions"})
@@ -278,7 +320,12 @@ function Invoke-AzureDiscovery {
                 }
                 
                 Write-AzureLog -Level "SUCCESS" -Message "Discovered $resourceGroupCount resource groups" -Context $Context
-                $result.Metadata["ResourceGroupCount"] = $resourceGroupCount
+                
+                if ($isHashtableResult) {
+                    $result.Metadata["ResourceGroupCount"] = $resourceGroupCount
+                } else {
+                    $result.Metadata["ResourceGroupCount"] = $resourceGroupCount
+                }
                 
                 if ($errors -gt 0) {
                     $result.AddWarning("Completed with $errors subscription errors", @{Operation = "GetResourceGroups"})
@@ -350,7 +397,12 @@ function Invoke-AzureDiscovery {
                 }
                 
                 Write-AzureLog -Level "SUCCESS" -Message "Discovered $vmCount virtual machines" -Context $Context
-                $result.Metadata["VirtualMachineCount"] = $vmCount
+                
+                if ($isHashtableResult) {
+                    $result.Metadata["VirtualMachineCount"] = $vmCount
+                } else {
+                    $result.Metadata["VirtualMachineCount"] = $vmCount
+                }
                 
                 if ($errors -gt 0) {
                     $result.AddWarning("Completed with $errors subscription errors", @{Operation = "GetVirtualMachines"})
@@ -401,9 +453,19 @@ function Invoke-AzureDiscovery {
         }
 
         # 7. FINALIZE METADATA
-        $result.RecordCount = $allDiscoveredData.Count
-        $result.Metadata["TotalRecords"] = $result.RecordCount
-        $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+        # CRITICAL FIX: Ensure RecordCount property exists and is set correctly
+        if ($isHashtableResult) {
+            # For hashtable, ensure RecordCount key exists and is set
+            $result.RecordCount = $allDiscoveredData.Count
+            $result['RecordCount'] = $allDiscoveredData.Count  # Ensure both access methods work
+            $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
+            $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+        } else {
+            # For DiscoveryResult object, set the property directly
+            $result.RecordCount = $allDiscoveredData.Count
+            $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
+            $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+        }
 
     } catch {
         # Top-level error handler
@@ -426,7 +488,19 @@ function Invoke-AzureDiscovery {
         
         $stopwatch.Stop()
         $result.Complete()
-        Write-AzureLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
+        
+        # Get final record count for logging - SAFE ACCESS
+        $finalRecordCount = 0
+        try {
+            if ($isHashtableResult) {
+                $finalRecordCount = if ($result.ContainsKey('RecordCount')) { $result['RecordCount'] } else { 0 }
+            } else {
+                $finalRecordCount = if ($result -and $result.PSObject.Properties['RecordCount']) { $result.RecordCount } else { 0 }
+            }
+        } catch {
+            $finalRecordCount = 0
+        }
+        Write-AzureLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $finalRecordCount." -Context $Context
     }
 
     return $result

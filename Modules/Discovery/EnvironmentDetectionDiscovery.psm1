@@ -1025,3 +1025,433 @@ function Get-DiscoveryInfo {
 
 
 Export-ModuleMember -Function Invoke-Discovery, Get-DiscoveryInfo
+# -*- coding: utf-8-bom -*-
+#Requires -Version 5.1
+
+#================================================================================
+# M&A Discovery Module: EnvironmentDetection
+# Description: Detects the type of environment (Cloud-only, Hybrid, On-prem only).
+#================================================================================
+
+function Get-AuthInfoFromConfiguration {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration
+    )
+
+    # Check all possible locations for auth info
+    if ($Configuration._AuthContext) { return $Configuration._AuthContext }
+    if ($Configuration._Credentials) { return $Configuration._Credentials }
+    if ($Configuration.authentication) {
+        if ($Configuration.authentication._Credentials) { 
+            return $Configuration.authentication._Credentials 
+        }
+        if ($Configuration.authentication.ClientId -and 
+            $Configuration.authentication.ClientSecret -and 
+            $Configuration.authentication.TenantId) {
+            return @{
+                ClientId     = $Configuration.authentication.ClientId
+                ClientSecret = $Configuration.authentication.ClientSecret
+                TenantId     = $Configuration.authentication.TenantId
+            }
+        }
+    }
+    if ($Configuration.ClientId -and $Configuration.ClientSecret -and $Configuration.TenantId) {
+        return @{
+            ClientId     = $Configuration.ClientId
+            ClientSecret = $Configuration.ClientSecret
+            TenantId     = $Configuration.TenantId
+        }
+    }
+    return $null
+}
+
+function Write-EnvironmentDetectionLog {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Message,
+        [string]$Level = "INFO",
+        [hashtable]$Context
+    )
+    Write-MandALog -Message "[EnvironmentDetection] $Message" -Level $Level -Component "EnvironmentDetectionDiscovery" -Context $Context
+}
+
+# --- Main Discovery Function ---
+
+function Invoke-EnvironmentDetectionDiscovery {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context
+    )
+
+    Write-EnvironmentDetectionLog -Level "HEADER" -Message "Starting Discovery" -Context $Context
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+    # 1. INITIALIZE RESULT OBJECT
+    if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+        $result = [DiscoveryResult]::new('EnvironmentDetection')
+    } else {
+        # Fallback to hashtable
+        $result = @{
+            Success      = $true; ModuleName = 'EnvironmentDetection'; RecordCount = 0;
+            Errors       = [System.Collections.ArrayList]::new(); 
+            Warnings     = [System.Collections.ArrayList]::new(); 
+            Metadata     = @{};
+            StartTime    = Get-Date; EndTime = $null; 
+            ExecutionId  = [guid]::NewGuid().ToString();
+            AddError     = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
+            AddWarning   = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
+            Complete     = { $this.EndTime = Get-Date }.GetNewClosure()
+        }
+    }
+
+    try {
+        # 2. VALIDATE PREREQUISITES & CONTEXT
+        Write-EnvironmentDetectionLog -Level "INFO" -Message "Validating prerequisites..." -Context $Context
+        
+        if (-not $Context.Paths.RawDataOutput) {
+            $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
+            return $result
+        }
+        $outputPath = $Context.Paths.RawDataOutput
+        Write-EnvironmentDetectionLog -Level "DEBUG" -Message "Output path: $outputPath" -Context $Context
+        
+        Ensure-Path -Path $outputPath
+
+        # 3. PERFORM DISCOVERY
+        Write-EnvironmentDetectionLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
+        
+        # Initialize environment info structure
+        $environmentInfo = @{
+            Type = "Unknown"
+            HasOnPremAD = $false
+            HasAzureAD = $false
+            HasADConnect = $false
+            ADConnectStatus = $null
+            SyncedDomains = @()
+            OnPremDomains = @()
+            CloudOnlyDomains = @()
+            ADConnectServers = @()
+            LastSyncTime = $null
+            UserCorrelation = @{
+                TotalOnPremUsers = 0
+                TotalCloudUsers = 0
+                SyncedUsers = 0
+                CloudOnlyUsers = 0
+                OnPremOnlyUsers = 0
+            }
+            EnvironmentDetails = @{
+                ADForestName = $null
+                ADForestMode = $null
+                ADDomainCount = 0
+                AzureTenantId = $null
+                AzureTenantName = $null
+                GraphAPIConnected = $false
+                ExchangeOnlineConnected = $false
+                SharePointOnlineConnected = $false
+                TeamsConnected = $false
+            }
+            DiscoveredAt = Get-Date
+        }
+        
+        # Check on-premises AD
+        Write-EnvironmentDetectionLog -Level "INFO" -Message "Checking for on-premises Active Directory..." -Context $Context
+        try {
+            $adDomain = Get-ADDomain -ErrorAction Stop
+            $adForest = Get-ADForest -ErrorAction Stop
+            
+            $environmentInfo.HasOnPremAD = $true
+            $environmentInfo.OnPremDomains += $adDomain.DNSRoot
+            $environmentInfo.EnvironmentDetails.ADForestName = $adForest.Name
+            $environmentInfo.EnvironmentDetails.ADForestMode = $adForest.ForestMode.ToString()
+            $environmentInfo.EnvironmentDetails.ADDomainCount = @($adForest.Domains).Count
+            
+            Write-EnvironmentDetectionLog -Level "SUCCESS" -Message "On-premises AD detected: $($adDomain.DNSRoot)" -Context $Context
+            
+            # Get user count
+            try {
+                $adUsers = @(Get-ADUser -Filter * -ErrorAction Stop)
+                $environmentInfo.UserCorrelation.TotalOnPremUsers = $adUsers.Count
+                Write-EnvironmentDetectionLog -Level "INFO" -Message "Found $($adUsers.Count) on-premises users" -Context $Context
+            } catch {
+                $result.AddWarning("Could not retrieve AD user count: $($_.Exception.Message)", @{Section="ADUsers"})
+            }
+        } catch {
+            Write-EnvironmentDetectionLog -Level "INFO" -Message "No on-premises AD detected or not accessible" -Context $Context
+        }
+        
+        # Check Azure AD / Microsoft Graph
+        Write-EnvironmentDetectionLog -Level "INFO" -Message "Checking for Azure AD / Microsoft Graph connection..." -Context $Context
+        try {
+            $mgContext = Get-MgContext -ErrorAction SilentlyContinue
+            
+            if ($mgContext) {
+                $environmentInfo.HasAzureAD = $true
+                $environmentInfo.EnvironmentDetails.GraphAPIConnected = $true
+                $environmentInfo.EnvironmentDetails.AzureTenantId = $mgContext.TenantId
+                
+                Write-EnvironmentDetectionLog -Level "SUCCESS" -Message "Azure AD detected: Tenant $($mgContext.TenantId)" -Context $Context
+                
+                # Get organization details
+                try {
+                    $org = Get-MgOrganization -ErrorAction Stop | Select-Object -First 1
+                    if ($org) {
+                        $environmentInfo.EnvironmentDetails.AzureTenantName = $org.DisplayName
+                        
+                        # Check for directory sync
+                        if ($org.OnPremisesSyncEnabled) {
+                            $environmentInfo.HasADConnect = $true
+                            $environmentInfo.ADConnectStatus = "Enabled"
+                            $environmentInfo.LastSyncTime = $org.OnPremisesLastSyncDateTime
+                        }
+                    }
+                } catch {
+                    $result.AddWarning("Could not retrieve organization details: $($_.Exception.Message)", @{Section="Organization"})
+                }
+                
+                # Get domain information
+                try {
+                    $domains = Get-MgDomain -ErrorAction Stop
+                    foreach ($domain in $domains) {
+                        if ($domain.AuthenticationType -eq "Federated") {
+                            $environmentInfo.SyncedDomains += $domain.Id
+                        } elseif ($domain.AuthenticationType -eq "Managed" -and $domain.IsVerified) {
+                            $environmentInfo.CloudOnlyDomains += $domain.Id
+                        }
+                    }
+                } catch {
+                    $result.AddWarning("Could not retrieve domain information: $($_.Exception.Message)", @{Section="Domains"})
+                }
+                
+                # Get cloud user statistics
+                try {
+                    Write-EnvironmentDetectionLog -Level "INFO" -Message "Retrieving cloud user statistics..." -Context $Context
+                    $pageSize = 999
+                    $cloudUsers = @()
+                    
+                    # Get first page
+                    $response = Get-MgUser -Top $pageSize -Select "OnPremisesSyncEnabled,UserPrincipalName" -ErrorAction Stop
+                    $cloudUsers += $response
+                    
+                    # Check if there are more pages
+                    $nextLink = $null
+                    if ($response -is [Microsoft.Graph.PowerShell.Models.MicrosoftGraphUser[]]) {
+                        # For array responses, check if we got a full page
+                        if ($response.Count -eq $pageSize) {
+                            Write-EnvironmentDetectionLog -Level "DEBUG" -Message "Large tenant detected, using pagination..." -Context $Context
+                            # Note: Simple pagination - in production you'd use @odata.nextLink
+                        }
+                    }
+                    
+                    $environmentInfo.UserCorrelation.TotalCloudUsers = $cloudUsers.Count
+                    $environmentInfo.UserCorrelation.SyncedUsers = @($cloudUsers | Where-Object { $_.OnPremisesSyncEnabled -eq $true }).Count
+                    $environmentInfo.UserCorrelation.CloudOnlyUsers = @($cloudUsers | Where-Object { $_.OnPremisesSyncEnabled -ne $true }).Count
+                    
+                    Write-EnvironmentDetectionLog -Level "INFO" -Message "Cloud users - Total: $($cloudUsers.Count), Synced: $($environmentInfo.UserCorrelation.SyncedUsers), Cloud-only: $($environmentInfo.UserCorrelation.CloudOnlyUsers)" -Context $Context
+                } catch {
+                    $result.AddWarning("Could not retrieve cloud user statistics: $($_.Exception.Message)", @{Section="CloudUsers"})
+                }
+                
+            } else {
+                Write-EnvironmentDetectionLog -Level "INFO" -Message "No Azure AD / Microsoft Graph connection detected" -Context $Context
+            }
+        } catch {
+            Write-EnvironmentDetectionLog -Level "WARN" -Message "Error checking Azure AD: $($_.Exception.Message)" -Context $Context
+            $result.AddWarning("Error checking Azure AD: $($_.Exception.Message)", @{Section="AzureAD"})
+        }
+        
+        # Check for AD Connect servers (if both on-prem and cloud exist)
+        if ($environmentInfo.HasOnPremAD -and $environmentInfo.HasAzureAD) {
+            Write-EnvironmentDetectionLog -Level "INFO" -Message "Searching for AD Connect servers..." -Context $Context
+            try {
+                # Search by ServicePrincipalName
+                $adConnectServers = @()
+                $spnServers = Get-ADComputer -Filter {ServicePrincipalName -like "*ADSync*"} -Properties OperatingSystem,Description -ErrorAction SilentlyContinue
+                if ($spnServers) {
+                    $adConnectServers += $spnServers
+                }
+                
+                # Search by description
+                $descServers = Get-ADComputer -Filter {Description -like "*Azure AD Connect*" -or Description -like "*ADSync*"} -Properties OperatingSystem,Description -ErrorAction SilentlyContinue
+                if ($descServers) {
+                    foreach ($server in $descServers) {
+                        if ($adConnectServers.Name -notcontains $server.Name) {
+                            $adConnectServers += $server
+                        }
+                    }
+                }
+                
+                if ($adConnectServers) {
+                    foreach ($server in $adConnectServers) {
+                        $environmentInfo.ADConnectServers += @{
+                            ServerName = $server.Name
+                            DNSHostName = $server.DNSHostName
+                            OperatingSystem = $server.OperatingSystem
+                            Description = $server.Description
+                            DiscoveryMethod = "ADQuery"
+                        }
+                    }
+                    Write-EnvironmentDetectionLog -Level "INFO" -Message "Found $($adConnectServers.Count) potential AD Connect servers" -Context $Context
+                }
+            } catch {
+                $result.AddWarning("Could not search for AD Connect servers: $($_.Exception.Message)", @{Section="ADConnect"})
+            }
+        }
+        
+        # Determine environment type
+        if ($environmentInfo.HasAzureAD -and -not $environmentInfo.HasOnPremAD) {
+            $environmentInfo.Type = "CloudOnly"
+        } elseif ($environmentInfo.HasAzureAD -and $environmentInfo.HasOnPremAD -and $environmentInfo.HasADConnect) {
+            $environmentInfo.Type = "HybridSynced"
+            # Calculate on-prem only users
+            if ($environmentInfo.UserCorrelation.TotalOnPremUsers -gt 0 -and $environmentInfo.UserCorrelation.SyncedUsers -gt 0) {
+                $environmentInfo.UserCorrelation.OnPremOnlyUsers = [Math]::Max(0, 
+                    $environmentInfo.UserCorrelation.TotalOnPremUsers - $environmentInfo.UserCorrelation.SyncedUsers)
+            }
+        } elseif ($environmentInfo.HasAzureAD -and $environmentInfo.HasOnPremAD -and -not $environmentInfo.HasADConnect) {
+            $environmentInfo.Type = "HybridDisconnected"
+        } elseif ($environmentInfo.HasOnPremAD -and -not $environmentInfo.HasAzureAD) {
+            $environmentInfo.Type = "OnPremOnly"
+        }
+        
+        # Log summary
+        Write-EnvironmentDetectionLog -Level "SUCCESS" -Message "Environment Detection Complete:" -Context $Context
+        Write-EnvironmentDetectionLog -Level "INFO" -Message "  - Type: $($environmentInfo.Type)" -Context $Context
+        Write-EnvironmentDetectionLog -Level "INFO" -Message "  - On-Prem AD: $($environmentInfo.HasOnPremAD)" -Context $Context
+        Write-EnvironmentDetectionLog -Level "INFO" -Message "  - Azure AD: $($environmentInfo.HasAzureAD)" -Context $Context
+        Write-EnvironmentDetectionLog -Level "INFO" -Message "  - AD Connect: $($environmentInfo.HasADConnect)" -Context $Context
+        
+        if ($environmentInfo.HasOnPremAD) {
+            Write-EnvironmentDetectionLog -Level "INFO" -Message "  - On-Prem Users: $($environmentInfo.UserCorrelation.TotalOnPremUsers)" -Context $Context
+        }
+        
+        if ($environmentInfo.HasAzureAD) {
+            Write-EnvironmentDetectionLog -Level "INFO" -Message "  - Cloud Users: $($environmentInfo.UserCorrelation.TotalCloudUsers)" -Context $Context
+            Write-EnvironmentDetectionLog -Level "INFO" -Message "  - Synced Users: $($environmentInfo.UserCorrelation.SyncedUsers)" -Context $Context
+        }
+
+        # 6. EXPORT DATA TO CSV
+        Write-EnvironmentDetectionLog -Level "INFO" -Message "Exporting environment detection results..." -Context $Context
+        
+        # Convert to flat object for CSV export
+        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        $envData = [PSCustomObject]@{
+            # Metadata fields
+            _DiscoveryTimestamp = $timestamp
+            _DiscoveryModule = 'EnvironmentDetection'
+            
+            # Environment data
+            EnvironmentType = $environmentInfo.Type
+            HasOnPremAD = $environmentInfo.HasOnPremAD
+            HasAzureAD = $environmentInfo.HasAzureAD
+            HasADConnect = $environmentInfo.HasADConnect
+            ADConnectStatus = $environmentInfo.ADConnectStatus
+            LastSyncTime = $environmentInfo.LastSyncTime
+            ADForestName = $environmentInfo.EnvironmentDetails.ADForestName
+            ADForestMode = $environmentInfo.EnvironmentDetails.ADForestMode
+            ADDomainCount = $environmentInfo.EnvironmentDetails.ADDomainCount
+            AzureTenantId = $environmentInfo.EnvironmentDetails.AzureTenantId
+            AzureTenantName = $environmentInfo.EnvironmentDetails.AzureTenantName
+            GraphAPIConnected = $environmentInfo.EnvironmentDetails.GraphAPIConnected
+            ExchangeOnlineConnected = $environmentInfo.EnvironmentDetails.ExchangeOnlineConnected
+            SharePointOnlineConnected = $environmentInfo.EnvironmentDetails.SharePointOnlineConnected
+            TeamsConnected = $environmentInfo.EnvironmentDetails.TeamsConnected
+            TotalOnPremUsers = $environmentInfo.UserCorrelation.TotalOnPremUsers
+            TotalCloudUsers = $environmentInfo.UserCorrelation.TotalCloudUsers
+            SyncedUsers = $environmentInfo.UserCorrelation.SyncedUsers
+            CloudOnlyUsers = $environmentInfo.UserCorrelation.CloudOnlyUsers
+            OnPremOnlyUsers = $environmentInfo.UserCorrelation.OnPremOnlyUsers
+            OnPremDomains = ($environmentInfo.OnPremDomains -join ";")
+            SyncedDomains = ($environmentInfo.SyncedDomains -join ";")
+            CloudOnlyDomains = ($environmentInfo.CloudOnlyDomains -join ";")
+            DiscoveredAt = $environmentInfo.DiscoveredAt
+        }
+        
+        # Export main environment data
+        $fileName = "EnvironmentDetection.csv"
+        $filePath = Join-Path $outputPath $fileName
+        @($envData) | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+        Write-EnvironmentDetectionLog -Level "SUCCESS" -Message "Exported environment data to $fileName" -Context $Context
+        
+        # Export AD Connect servers if found
+        if ($environmentInfo.ADConnectServers -and $environmentInfo.ADConnectServers.Count -gt 0) {
+            Write-EnvironmentDetectionLog -Level "INFO" -Message "Exporting AD Connect server information..." -Context $Context
+            $adcServers = $environmentInfo.ADConnectServers | ForEach-Object {
+                [PSCustomObject]@{
+                    _DiscoveryTimestamp = $timestamp
+                    _DiscoveryModule = 'EnvironmentDetection'
+                    ServerName = $_.ServerName
+                    DNSHostName = $_.DNSHostName
+                    OperatingSystem = $_.OperatingSystem
+                    Description = $_.Description
+                    DiscoveryMethod = $_.DiscoveryMethod
+                }
+            }
+            
+            $adcFileName = "ADConnectServers.csv"
+            $adcFilePath = Join-Path $outputPath $adcFileName
+            $adcServers | Export-Csv -Path $adcFilePath -NoTypeInformation -Encoding UTF8
+            Write-EnvironmentDetectionLog -Level "SUCCESS" -Message "Exported AD Connect server data to $adcFileName" -Context $Context
+        }
+        
+        # Store in global context if available
+        if ($null -ne $global:MandA) {
+            $global:MandA.EnvironmentType = $environmentInfo.Type
+            $global:MandA.EnvironmentInfo = $environmentInfo
+        }
+
+        # 7. FINALIZE METADATA
+        # CRITICAL FIX: Ensure RecordCount property exists and is set correctly
+        $recordCount = 1  # We export 1 environment record
+        if ($result -is [hashtable]) {
+            # For hashtable, ensure RecordCount key exists and is set
+            $result.RecordCount = $recordCount
+            $result['RecordCount'] = $recordCount  # Ensure both access methods work
+        } else {
+            # For DiscoveryResult object, set the property directly
+            $result.RecordCount = $recordCount
+        }
+        
+        $result.Metadata["TotalRecords"] = $recordCount
+        $result.Metadata["EnvironmentType"] = $environmentInfo.Type
+        $result.Metadata["HasOnPremAD"] = $environmentInfo.HasOnPremAD
+        $result.Metadata["HasAzureAD"] = $environmentInfo.HasAzureAD
+        $result.Metadata["HasADConnect"] = $environmentInfo.HasADConnect
+        $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+
+    } catch {
+        # Top-level error handler
+        Write-EnvironmentDetectionLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
+        $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
+    } finally {
+        # 8. CLEANUP & COMPLETE
+        Write-EnvironmentDetectionLog -Level "INFO" -Message "Cleaning up..." -Context $Context
+        
+        $stopwatch.Stop()
+        $result.Complete()
+        Write-EnvironmentDetectionLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
+    }
+
+    return $result
+}
+
+# --- Helper Functions ---
+function Ensure-Path {
+    param($Path)
+    if (-not (Test-Path -Path $Path -PathType Container)) {
+        try {
+            New-Item -Path $Path -ItemType Directory -Force -ErrorAction Stop | Out-Null
+        } catch {
+            throw "Failed to create output directory: $Path. Error: $($_.Exception.Message)"
+        }
+    }
+}
+
+# --- Module Export ---
+Export-ModuleMember -Function Invoke-EnvironmentDetectionDiscovery

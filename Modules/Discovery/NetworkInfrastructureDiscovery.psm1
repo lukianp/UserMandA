@@ -4,6 +4,7 @@
 #================================================================================
 # M&A Discovery Module: NetworkInfrastructure
 # Description: Discovers DHCP, DNS, and network configuration information.
+# Version: 2.0.0 - Fixed RecordCount property handling
 #================================================================================
 
 function Get-AuthInfoFromConfiguration {
@@ -37,8 +38,36 @@ function Write-NetworkInfrastructureLog {
         [hashtable]$Context
     )
     # Module-specific wrapper for consistent logging component name.
-    # The global Write-MandALog function is guaranteed to exist.
     Write-MandALog -Message "[NetworkInfrastructure] $Message" -Level $Level -Component "NetworkInfrastructureDiscovery" -Context $Context
+}
+
+# Helper function to safely set a property on either DiscoveryResult or hashtable
+function Set-ResultProperty {
+    param(
+        $Result,
+        [string]$PropertyName,
+        $Value
+    )
+    
+    if ($Result -is [hashtable]) {
+        $Result[$PropertyName] = $Value
+    } else {
+        $Result.$PropertyName = $Value
+    }
+}
+
+# Helper function to safely get a property from either DiscoveryResult or hashtable
+function Get-ResultProperty {
+    param(
+        $Result,
+        [string]$PropertyName
+    )
+    
+    if ($Result -is [hashtable]) {
+        return $Result[$PropertyName]
+    } else {
+        return $Result.$PropertyName
+    }
 }
 
 # --- Main Discovery Function ---
@@ -57,20 +86,58 @@ function Invoke-NetworkInfrastructureDiscovery {
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # 1. INITIALIZE RESULT OBJECT
-    # The DiscoveryResult class is loaded by the orchestrator.
-    # This fallback provides resilience in case the class definition fails to load.
+    $result = $null
+    $isHashtableResult = $false
+    
+    # Try to create DiscoveryResult instance
     if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
-        $result = [DiscoveryResult]::new('NetworkInfrastructure')
-    } else {
-        # Fallback to a hashtable that mimics the class structure and methods.
-        $result = @{
-            Success      = $true; ModuleName = 'NetworkInfrastructure'; RecordCount = 0;
-            Errors       = [System.Collections.ArrayList]::new(); Warnings = [System.Collections.ArrayList]::new(); Metadata = @{};
-            StartTime    = Get-Date; EndTime = $null; ExecutionId = [guid]::NewGuid().ToString();
-            AddError     = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
-            AddWarning   = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-            Complete     = { $this.EndTime = Get-Date }.GetNewClosure()
+        try {
+            $result = [DiscoveryResult]::new('NetworkInfrastructure')
+            Write-NetworkInfrastructureLog -Level "DEBUG" -Message "Created DiscoveryResult class instance" -Context $Context
+        } catch {
+            Write-NetworkInfrastructureLog -Level "WARN" -Message "Failed to create DiscoveryResult instance: $_" -Context $Context
         }
+    }
+    
+    # Fallback to hashtable if class creation failed
+    if (-not $result) {
+        $isHashtableResult = $true
+        Write-NetworkInfrastructureLog -Level "DEBUG" -Message "Using hashtable fallback for result object" -Context $Context
+        
+        $result = @{
+            Success      = $true
+            ModuleName   = 'NetworkInfrastructure'
+            RecordCount  = 0
+            Errors       = [System.Collections.ArrayList]::new()
+            Warnings     = [System.Collections.ArrayList]::new()
+            Metadata     = @{}
+            StartTime    = Get-Date
+            EndTime      = $null
+            ExecutionId  = [guid]::NewGuid().ToString()
+        }
+        
+        # Add methods as script blocks for hashtable
+        $result.AddError = {
+            param($m, $e, $c)
+            $errorEntry = @{Message=$m; Exception=$e; Context=$c; Timestamp=Get-Date}
+            $this.Errors.Add($errorEntry) | Out-Null
+            $this.Success = $false
+        }.GetNewClosure()
+        
+        $result.AddWarning = {
+            param($m, $c)
+            $warningEntry = @{Message=$m; Context=$c; Timestamp=Get-Date}
+            $this.Warnings.Add($warningEntry) | Out-Null
+        }.GetNewClosure()
+        
+        $result.Complete = {
+            $this.EndTime = Get-Date
+            if ($this.StartTime -and $this.EndTime) {
+                $duration = $this.EndTime - $this.StartTime
+                $this.Metadata['Duration'] = $duration
+                $this.Metadata['DurationSeconds'] = $duration.TotalSeconds
+            }
+        }.GetNewClosure()
     }
 
     try {
@@ -80,24 +147,29 @@ function Invoke-NetworkInfrastructureDiscovery {
             return $result
         }
         $outputPath = $Context.Paths.RawDataOutput
-        Ensure-Path -Path $outputPath # Helper to create directory if not exists
+        Ensure-Path -Path $outputPath
 
         # 3. AUTHENTICATE & CONNECT
         $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
+        
+        # For on-premises network discovery, authentication might not be required
         if (-not $authInfo) {
-            $result.AddError("Authentication information could not be found in the provided configuration.", $null, $null)
-            return $result
+            Write-NetworkInfrastructureLog -Level "INFO" -Message "No authentication context found - proceeding with local system authentication" -Context $Context
+        } else {
+            Write-NetworkInfrastructureLog -Level "SUCCESS" -Message "Authentication context available" -Context $Context
         }
-
-        # No specific authentication needed for network discovery as it uses local AD/DHCP/DNS cmdlets
-        Write-NetworkInfrastructureLog -Level "SUCCESS" -Message "Using local system authentication for network discovery." -Context $Context
 
         # 4. PERFORM DISCOVERY
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
-        # Initialize section counters
-        $result.Metadata["SectionsProcessed"] = 0
-        $result.Metadata["SectionErrors"] = 0
+        # Initialize section counters in metadata
+        if ($isHashtableResult) {
+            $result.Metadata['SectionsProcessed'] = 0
+            $result.Metadata['SectionErrors'] = 0
+        } else {
+            $result.Metadata['SectionsProcessed'] = 0
+            $result.Metadata['SectionErrors'] = 0
+        }
         
         # DHCP Discovery
         try {
@@ -131,10 +203,18 @@ function Invoke-NetworkInfrastructureDiscovery {
                 Write-NetworkInfrastructureLog -Level "SUCCESS" -Message "Discovered $($dhcpOptions.Count) DHCP options." -Context $Context
             }
             
-            $result.Metadata["SectionsProcessed"]++
+            if ($isHashtableResult) {
+                $result.Metadata['SectionsProcessed']++
+            } else {
+                $result.Metadata['SectionsProcessed']++
+            }
         } catch {
             $result.AddWarning("Failed to discover DHCP infrastructure: $($_.Exception.Message)", @{Section="DHCP"})
-            $result.Metadata["SectionErrors"]++
+            if ($isHashtableResult) {
+                $result.Metadata['SectionErrors']++
+            } else {
+                $result.Metadata['SectionErrors']++
+            }
         }
         
         # DNS Discovery
@@ -162,10 +242,18 @@ function Invoke-NetworkInfrastructureDiscovery {
                 Write-NetworkInfrastructureLog -Level "SUCCESS" -Message "Discovered $($dnsRecords.Count) DNS records." -Context $Context
             }
             
-            $result.Metadata["SectionsProcessed"]++
+            if ($isHashtableResult) {
+                $result.Metadata['SectionsProcessed']++
+            } else {
+                $result.Metadata['SectionsProcessed']++
+            }
         } catch {
             $result.AddWarning("Failed to discover DNS infrastructure: $($_.Exception.Message)", @{Section="DNS"})
-            $result.Metadata["SectionErrors"]++
+            if ($isHashtableResult) {
+                $result.Metadata['SectionErrors']++
+            } else {
+                $result.Metadata['SectionErrors']++
+            }
         }
         
         # Network Configuration Discovery
@@ -186,10 +274,18 @@ function Invoke-NetworkInfrastructureDiscovery {
                 Write-NetworkInfrastructureLog -Level "SUCCESS" -Message "Discovered $($adSites.Count) AD sites." -Context $Context
             }
             
-            $result.Metadata["SectionsProcessed"]++
+            if ($isHashtableResult) {
+                $result.Metadata['SectionsProcessed']++
+            } else {
+                $result.Metadata['SectionsProcessed']++
+            }
         } catch {
             $result.AddWarning("Failed to discover network configuration: $($_.Exception.Message)", @{Section="NetworkConfig"})
-            $result.Metadata["SectionErrors"]++
+            if ($isHashtableResult) {
+                $result.Metadata['SectionErrors']++
+            } else {
+                $result.Metadata['SectionErrors']++
+            }
         }
 
         # 5. EXPORT DATA TO CSV
@@ -234,19 +330,36 @@ function Invoke-NetworkInfrastructureDiscovery {
         }
 
         # 6. FINALIZE & UPDATE METADATA
-        $result.RecordCount = $allDiscoveredData.Count
-        $result.Metadata["TotalRecords"] = $result.RecordCount
-        $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
-        $result.Metadata["TotalSections"] = 3
+        # CRITICAL FIX: Ensure RecordCount property exists and is set correctly
+        if ($isHashtableResult) {
+            # For hashtable, ensure RecordCount key exists and is set
+            $result.RecordCount = $allDiscoveredData.Count
+            $result['RecordCount'] = $allDiscoveredData.Count  # Ensure both access methods work
+            $result.Metadata['TotalRecords'] = $allDiscoveredData.Count
+            $result.Metadata['ElapsedTimeSeconds'] = $stopwatch.Elapsed.TotalSeconds
+            $result.Metadata['TotalSections'] = 3
+        } else {
+            # For DiscoveryResult object, set the property directly
+            $result.RecordCount = $allDiscoveredData.Count
+            $result.Metadata['TotalRecords'] = $allDiscoveredData.Count
+            $result.Metadata['ElapsedTimeSeconds'] = $stopwatch.Elapsed.TotalSeconds
+            $result.Metadata['TotalSections'] = 3
+        }
 
     } catch {
         # This is the top-level catch for critical, unrecoverable errors.
         $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
+        Write-NetworkInfrastructureLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
+        Write-NetworkInfrastructureLog -Level "DEBUG" -Message "Stack trace: $($_.ScriptStackTrace)" -Context $Context
     } finally {
         # 7. CLEANUP & COMPLETE
         $stopwatch.Stop()
         $result.Complete() # Sets EndTime
-        Write-NetworkInfrastructureLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
+        
+        # Get final record count safely
+        $finalRecordCount = if ($isHashtableResult) { $result['RecordCount'] } else { $result.RecordCount }
+        
+        Write-NetworkInfrastructureLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $finalRecordCount." -Context $Context
     }
 
     return $result
@@ -259,7 +372,6 @@ function Ensure-Path {
         try {
             New-Item -Path $Path -ItemType Directory -Force -ErrorAction Stop | Out-Null
         } catch {
-            # This will be caught by the main try/catch block
             throw "Failed to create output directory: $Path. Error: $($_.Exception.Message)"
         }
     }
@@ -276,6 +388,12 @@ function Get-DHCPServersData {
     
     try {
         Write-NetworkInfrastructureLog -Message "Retrieving DHCP servers from Active Directory" -Level "INFO" -Context $Context
+        
+        # Check if DHCP server cmdlets are available
+        if (-not (Get-Command Get-DhcpServerInDC -ErrorAction SilentlyContinue)) {
+            Write-NetworkInfrastructureLog -Message "DHCP Server cmdlets not available. Ensure DHCP Server Tools are installed." -Level "WARN" -Context $Context
+            return $dhcpServers
+        }
         
         # Get DHCP servers from AD
         $dhcpServerList = Get-DhcpServerInDC -ErrorAction Stop
@@ -341,6 +459,10 @@ function Get-DHCPScopesData {
     $dhcpScopes = [System.Collections.Generic.List[PSCustomObject]]::new()
     
     try {
+        if (-not (Get-Command Get-DhcpServerInDC -ErrorAction SilentlyContinue)) {
+            return $dhcpScopes
+        }
+        
         # Get DHCP servers first
         $dhcpServers = Get-DhcpServerInDC -ErrorAction SilentlyContinue
         
@@ -393,6 +515,10 @@ function Get-DHCPReservationsData {
     $dhcpReservations = [System.Collections.Generic.List[PSCustomObject]]::new()
     
     try {
+        if (-not (Get-Command Get-DhcpServerInDC -ErrorAction SilentlyContinue)) {
+            return $dhcpReservations
+        }
+        
         $dhcpServers = Get-DhcpServerInDC -ErrorAction SilentlyContinue
         
         foreach ($server in $dhcpServers) {
@@ -440,6 +566,10 @@ function Get-DHCPOptionsData {
     $dhcpOptions = [System.Collections.Generic.List[PSCustomObject]]::new()
     
     try {
+        if (-not (Get-Command Get-DhcpServerInDC -ErrorAction SilentlyContinue)) {
+            return $dhcpOptions
+        }
+        
         $dhcpServers = Get-DhcpServerInDC -ErrorAction SilentlyContinue
         
         foreach ($server in $dhcpServers) {
@@ -506,6 +636,12 @@ function Get-DNSServersData {
     try {
         Write-NetworkInfrastructureLog -Message "Retrieving DNS servers from Active Directory" -Level "INFO" -Context $Context
         
+        # Check if AD cmdlets are available
+        if (-not (Get-Command Get-ADDomainController -ErrorAction SilentlyContinue)) {
+            Write-NetworkInfrastructureLog -Message "Active Directory cmdlets not available. Ensure RSAT-AD-PowerShell is installed." -Level "WARN" -Context $Context
+            return $dnsServers
+        }
+        
         # Get all DCs (they typically run DNS)
         $domainControllers = Get-ADDomainController -Filter * -ErrorAction Stop
         
@@ -515,10 +651,7 @@ function Get-DNSServersData {
                 $dnsService = Get-Service -ComputerName $dc.HostName -Name "DNS" -ErrorAction Stop
                 
                 if ($dnsService) {
-                    # Get DNS server configuration
-                    $dnsServerConfig = Get-DnsServer -ComputerName $dc.HostName -ErrorAction Stop
-                    
-                    $dnsServers.Add([PSCustomObject]@{
+                    $dnsServerData = [PSCustomObject]@{
                         _DataType = "DNSServers"
                         ServerName = $dc.HostName
                         IPAddress = $dc.IPv4Address
@@ -527,15 +660,28 @@ function Get-DNSServersData {
                         IsReadOnly = $dc.IsReadOnly
                         Site = $dc.Site
                         DNSServiceStatus = $dnsService.Status
-                        ServerVersion = $dnsServerConfig.ServerSetting.Version
-                        RoundRobin = $dnsServerConfig.ServerSetting.RoundRobin
-                        LocalNetPriority = $dnsServerConfig.ServerSetting.LocalNetPriority
-                        SecureResponse = $dnsServerConfig.ServerSetting.SecureResponse
-                        RecursionEnabled = $dnsServerConfig.ServerRecursion.Enable
-                        Forwarders = ($dnsServerConfig.ServerForwarder.IPAddress.IPAddressToString -join "; ")
-                        RootHints = $dnsServerConfig.ServerRootHint.Count
-                        CacheSize = $dnsServerConfig.ServerCache.MaxKBSize
-                    })
+                    }
+                    
+                    # Try to get DNS server configuration if DNS cmdlets are available
+                    if (Get-Command Get-DnsServer -ErrorAction SilentlyContinue) {
+                        try {
+                            $dnsServerConfig = Get-DnsServer -ComputerName $dc.HostName -ErrorAction Stop
+                            
+                            # Add additional properties
+                            $dnsServerData | Add-Member -MemberType NoteProperty -Name ServerVersion -Value $dnsServerConfig.ServerSetting.Version -Force
+                            $dnsServerData | Add-Member -MemberType NoteProperty -Name RoundRobin -Value $dnsServerConfig.ServerSetting.RoundRobin -Force
+                            $dnsServerData | Add-Member -MemberType NoteProperty -Name LocalNetPriority -Value $dnsServerConfig.ServerSetting.LocalNetPriority -Force
+                            $dnsServerData | Add-Member -MemberType NoteProperty -Name SecureResponse -Value $dnsServerConfig.ServerSetting.SecureResponse -Force
+                            $dnsServerData | Add-Member -MemberType NoteProperty -Name RecursionEnabled -Value $dnsServerConfig.ServerRecursion.Enable -Force
+                            $dnsServerData | Add-Member -MemberType NoteProperty -Name Forwarders -Value ($dnsServerConfig.ServerForwarder.IPAddress.IPAddressToString -join "; ") -Force
+                            $dnsServerData | Add-Member -MemberType NoteProperty -Name RootHints -Value $dnsServerConfig.ServerRootHint.Count -Force
+                            $dnsServerData | Add-Member -MemberType NoteProperty -Name CacheSize -Value $dnsServerConfig.ServerCache.MaxKBSize -Force
+                        } catch {
+                            Write-NetworkInfrastructureLog -Message "Could not get DNS configuration for $($dc.HostName)" -Level "DEBUG" -Context $Context
+                        }
+                    }
+                    
+                    $dnsServers.Add($dnsServerData)
                 }
             } catch {
                 Write-NetworkInfrastructureLog -Message "Error querying DNS on $($dc.HostName): $($_.Exception.Message)" -Level "WARN" -Context $Context
@@ -570,6 +716,12 @@ function Get-DNSZonesData {
     $dnsZones = [System.Collections.Generic.List[PSCustomObject]]::new()
     
     try {
+        # Check if DNS Server cmdlets are available
+        if (-not (Get-Command Get-DnsServerZone -ErrorAction SilentlyContinue)) {
+            Write-NetworkInfrastructureLog -Message "DNS Server cmdlets not available. Ensure DNS Server Tools are installed." -Level "WARN" -Context $Context
+            return $dnsZones
+        }
+        
         # Get primary DNS server
         $primaryDC = Get-ADDomainController -Discover -Service "PrimaryDC" -ErrorAction SilentlyContinue
         $dnsServer = if ($primaryDC) { $primaryDC.HostName } else { $env:COMPUTERNAME }
@@ -579,7 +731,7 @@ function Get-DNSZonesData {
         $zones = Get-DnsServerZone -ComputerName $dnsServer -ErrorAction Stop
         
         foreach ($zone in $zones) {
-            $dnsZones.Add([PSCustomObject]@{
+            $zoneData = [PSCustomObject]@{
                 _DataType = "DNSZones"
                 ZoneName = $zone.ZoneName
                 ZoneType = $zone.ZoneType
@@ -596,8 +748,17 @@ function Get-DNSZonesData {
                 NotifyServers = ($zone.NotifyServers -join "; ")
                 MasterServers = ($zone.MasterServers -join "; ")
                 LastZoneTransfer = $zone.LastZoneTransferResult
-                RecordCount = (Get-DnsServerResourceRecord -ComputerName $dnsServer -ZoneName $zone.ZoneName -ErrorAction SilentlyContinue | Measure-Object).Count
-            })
+            }
+            
+            # Try to get record count
+            try {
+                $recordCount = (Get-DnsServerResourceRecord -ComputerName $dnsServer -ZoneName $zone.ZoneName -ErrorAction SilentlyContinue | Measure-Object).Count
+                $zoneData | Add-Member -MemberType NoteProperty -Name RecordCount -Value $recordCount -Force
+            } catch {
+                $zoneData | Add-Member -MemberType NoteProperty -Name RecordCount -Value 0 -Force
+            }
+            
+            $dnsZones.Add($zoneData)
         }
     } catch {
         Write-NetworkInfrastructureLog -Message "Error retrieving DNS Zones: $($_.Exception.Message)" -Level "ERROR" -Context $Context
@@ -615,6 +776,12 @@ function Get-DNSRecordsData {
     $dnsRecords = [System.Collections.Generic.List[PSCustomObject]]::new()
     
     try {
+        # Check if DNS Server cmdlets are available
+        if (-not (Get-Command Get-DnsServerResourceRecord -ErrorAction SilentlyContinue)) {
+            Write-NetworkInfrastructureLog -Message "DNS Server cmdlets not available. Ensure DNS Server Tools are installed." -Level "WARN" -Context $Context
+            return $dnsRecords
+        }
+        
         # Get primary DNS server
         $primaryDC = Get-ADDomainController -Discover -Service "PrimaryDC" -ErrorAction SilentlyContinue
         $dnsServer = if ($primaryDC) { $primaryDC.HostName } else { $env:COMPUTERNAME }
@@ -715,6 +882,10 @@ function Get-ADSubnetsData {
                 Modified = if ($subnet["whenchanged"]) { $subnet["whenchanged"][0] } else { $null }
             })
         }
+        
+        $results.Dispose()
+        $searcher.Dispose()
+        
     } catch {
         Write-NetworkInfrastructureLog -Message "Error retrieving AD Subnets: $($_.Exception.Message)" -Level "ERROR" -Context $Context
     }
@@ -733,7 +904,40 @@ function Get-ADSitesData {
     try {
         Write-NetworkInfrastructureLog -Message "Retrieving AD Sites information" -Level "INFO" -Context $Context
         
-        # Get all AD sites
+        # Check if AD cmdlets are available
+        if (-not (Get-Command Get-ADReplicationSite -ErrorAction SilentlyContinue)) {
+            Write-NetworkInfrastructureLog -Message "AD Replication cmdlets not available. Using ADSI instead." -Level "WARN" -Context $Context
+            
+            # Use ADSI as fallback
+            $configNC = ([ADSI]"LDAP://RootDSE").configurationNamingContext
+            $sitesContainer = [ADSI]"LDAP://CN=Sites,$configNC"
+            
+            $searcher = New-Object System.DirectoryServices.DirectorySearcher($sitesContainer)
+            $searcher.Filter = "(objectClass=site)"
+            $searcher.PropertiesToLoad.AddRange(@("name", "description", "location", "whenCreated", "whenChanged"))
+            
+            $results = $searcher.FindAll()
+            
+            foreach ($result in $results) {
+                $site = $result.Properties
+                
+                $sites.Add([PSCustomObject]@{
+                    _DataType = "ADSites"
+                    SiteName = $site["name"][0]
+                    Description = if ($site["description"]) { $site["description"][0] } else { "" }
+                    Location = if ($site["location"]) { $site["location"][0] } else { "" }
+                    Created = if ($site["whencreated"]) { $site["whencreated"][0] } else { $null }
+                    Modified = if ($site["whenchanged"]) { $site["whenchanged"][0] } else { $null }
+                })
+            }
+            
+            $results.Dispose()
+            $searcher.Dispose()
+            
+            return $sites
+        }
+        
+        # Get all AD sites using AD cmdlets
         $adSites = Get-ADReplicationSite -Filter * -Properties * -ErrorAction Stop
         
         foreach ($site in $adSites) {
