@@ -508,6 +508,18 @@ function Test-OrchestratorPrerequisites {
     return $prereqMet
 }
 
+function Get-SerializableAuthContext {
+    param($AuthContext)
+    
+    # Ensure we have plain text values that can cross runspace boundaries
+    return @{
+        ClientId = [string]$AuthContext.ClientId
+        ClientSecret = [string]$AuthContext.ClientSecret  # Ensure string, not SecureString
+        TenantId = [string]$AuthContext.TenantId
+        AuthenticationMethod = [string]$AuthContext.AuthenticationMethod
+    }
+}
+
 function Test-DiscoveryPrerequisites {
     Write-OrchestratorLog -Message "Validating discovery prerequisites..." -Level "INFO"
     
@@ -807,16 +819,9 @@ function Invoke-DiscoveryPhase {
         
         # Enhanced Authentication Context Capture
         if ($authResult.Authenticated -and $authContext) {
-            # Ensure we capture the actual credentials, not just context
-            $credentialData = @{
-                ClientId = $authContext.ClientId
-                ClientSecret = $authContext.ClientSecret
-                TenantId = $authContext.TenantId
-                AuthenticationMethod = $authContext.AuthenticationMethod
-            }
-            $script:LiveAuthContext = $credentialData
-            
-            Write-OrchestratorLog -Message "Captured full credential data for runspace injection" -Level "DEBUG"
+            # Capture as serializable format
+            $script:LiveAuthContext = Get-SerializableAuthContext -AuthContext $authContext
+            Write-OrchestratorLog -Message "Captured serializable auth context" -Level "DEBUG"
         }
         
     } catch {
