@@ -1454,8 +1454,8 @@ function Write-ProgressStep {
     
     # Process errors
     $allErrors = $ErrorCollection.ToArray()
-    foreach ($error in $allErrors) {
-        $null = $phaseResult.RecoverableErrors.Add($error)
+    foreach ($errObj in $allErrors) {
+        $null = $phaseResult.RecoverableErrors.Add($errObj)
     }
     
     # Phase timing
@@ -1650,12 +1650,12 @@ function Export-ErrorReport {
     foreach ($moduleName in $PhaseResult.ModuleResults.Keys) {
         $moduleResult = $PhaseResult.ModuleResults[$moduleName]
         if ($moduleResult -and -not $moduleResult.Success) {
-            foreach ($error in $moduleResult.Errors) {
+            foreach ($err in $moduleResult.Errors) {
                 $moduleErrors += [PSCustomObject]@{
                     Module = $moduleName
-                    Error = $error.Message
-                    Exception = $error.Exception
-                    Timestamp = $error.Timestamp
+                    Error = $err.Message
+                    Exception = $err.Exception
+                    Timestamp = $err.Timestamp
                 }
             }
         }
