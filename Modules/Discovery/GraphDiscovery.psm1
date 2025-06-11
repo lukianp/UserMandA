@@ -109,9 +109,19 @@ function Invoke-GraphDiscovery {
         Write-GraphLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
         try {
             $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+            
+            # Validate the connection
+            $testUri = "https://graph.microsoft.com/v1.0/organization"
+            $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
+            
+            if (-not $testResponse) {
+                throw "Graph connection test failed - no response"
+            }
+            
+            Write-GraphLog -Level "SUCCESS" -Message "Graph connection validated" -Context $Context
             Write-GraphLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
         } catch {
-            $result.AddError("Failed to authenticate with Graph service: $($_.Exception.Message)", $_.Exception, $null)
+            $result.AddError("Graph authentication validation failed: $($_.Exception.Message)", $_.Exception, $null)
             return $result
         }
 
@@ -177,6 +187,12 @@ function Invoke-GraphDiscovery {
             do {
                 $response = Invoke-MgGraphRequest -Uri $uri -Method GET -Headers $headers -ErrorAction Stop
                 
+                # Add validation
+                if (-not $response -or -not $response.value) {
+                    Write-GraphLog -Level "WARN" -Message "No data returned from Graph API" -Context $Context
+                    break
+                }
+                
                 foreach ($user in $response.value) {
                     $userCount++
                     
@@ -240,6 +256,9 @@ function Invoke-GraphDiscovery {
             Write-GraphLog -Level "SUCCESS" -Message "Discovered $userCount users" -Context $Context
             
         } catch {
+            # Log the actual error instead of just adding to warnings
+            Write-GraphLog -Level "ERROR" -Message "Graph API call failed: $($_.Exception.Message)" -Context $Context
+            Write-GraphLog -Level "DEBUG" -Message "Full error: $($_.Exception | Format-List -Force | Out-String)" -Context $Context
             $result.AddWarning("Failed to discover users: $($_.Exception.Message)", @{Section="Users"})
         }
         

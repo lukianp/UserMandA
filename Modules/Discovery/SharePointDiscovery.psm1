@@ -88,13 +88,25 @@ function Invoke-SharePointDiscovery {
 
         # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
         # SharePoint MUST have tenant name
-        if (-not $Configuration.discovery -or 
-            -not $Configuration.discovery.sharepoint -or 
+        if (-not $Configuration.discovery -or
+            -not $Configuration.discovery.sharepoint -or
             -not $Configuration.discovery.sharepoint.tenantName) {
-            $result.AddError("SharePoint tenant name not configured in discovery.sharepoint.tenantName", $null, $null)
-            return $result
+            
+            # Try to extract from organization
+            try {
+                Write-SharePointLog -Level "INFO" -Message "Tenant name not configured, attempting auto-detection..." -Context $Context
+                $org = Get-MgOrganization -ErrorAction Stop
+                $defaultDomain = ($org.VerifiedDomains | Where-Object { $_.IsDefault }).Name
+                $tenantName = $defaultDomain -replace '\.onmicrosoft\.com$', ''
+                
+                Write-SharePointLog -Level "INFO" -Message "Auto-detected tenant name: $tenantName" -Context $Context
+            } catch {
+                $result.AddError("SharePoint tenant name not configured and auto-detection failed", $null, $null)
+                return $result
+            }
+        } else {
+            $tenantName = $Configuration.discovery.sharepoint.tenantName
         }
-        $tenantName = $Configuration.discovery.sharepoint.tenantName
         
         # Configuration options
         $includeLists = $true
@@ -118,9 +130,19 @@ function Invoke-SharePointDiscovery {
         Write-SharePointLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
         try {
             $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+            
+            # Validate the connection
+            $testUri = "https://graph.microsoft.com/v1.0/organization"
+            $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
+            
+            if (-not $testResponse) {
+                throw "Graph connection test failed - no response"
+            }
+            
+            Write-SharePointLog -Level "SUCCESS" -Message "Graph connection validated" -Context $Context
             Write-SharePointLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
         } catch {
-            $result.AddError("Failed to authenticate with Graph service: $($_.Exception.Message)", $_.Exception, $null)
+            $result.AddError("Graph authentication validation failed: $($_.Exception.Message)", $_.Exception, $null)
             return $result
         }
 

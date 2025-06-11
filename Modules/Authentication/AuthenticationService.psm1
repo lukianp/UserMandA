@@ -255,8 +255,12 @@ function Connect-ToAzureService {
             Import-Module Az.Accounts -Force -ErrorAction SilentlyContinue
         }
         
-        # Connect to Azure
-        $azContext = Connect-AzAccount -ServicePrincipal -Credential $Credential -Tenant $TenantId -ErrorAction Stop
+        # Connect to Azure - Fix: Use TenantId parameter correctly
+        $azContext = Connect-AzAccount `
+            -ServicePrincipal `
+            -Credential $Credential `
+            -TenantId $TenantId `
+            -ErrorAction Stop
         
         if (-not $azContext) {
             throw "Failed to establish Azure context"
