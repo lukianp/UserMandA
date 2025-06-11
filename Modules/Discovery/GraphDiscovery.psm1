@@ -7,7 +7,7 @@
 .DESCRIPTION
     Discovers users, groups, and organizational data using Microsoft Graph API
 .NOTES
-    Version: 4.3.0 (Fixed Authentication)
+    Version: 4.4.0 (Fixed Authentication and Discovery)
     Author: M&A Discovery Team
     Last Modified: 2025-06-11
 #>
@@ -39,6 +39,47 @@ function Write-GraphLog {
     }
 }
 
+function Test-GraphConnection {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [int]$MaxRetries = 3,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$RetryDelaySeconds = 5
+    )
+    
+    $attempt = 0
+    $connected = $false
+    
+    while ($attempt -lt $MaxRetries -and -not $connected) {
+        $attempt++
+        
+        try {
+            Write-GraphLog -Level "DEBUG" -Message "Testing Graph connection (attempt $attempt/$MaxRetries)..."
+            
+            # Test with a simple API call
+            $testUri = "https://graph.microsoft.com/v1.0/organization"
+            $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
+            
+            if ($testResponse -and $testResponse.value) {
+                $connected = $true
+                Write-GraphLog -Level "SUCCESS" -Message "Graph connection validated successfully"
+                return $true
+            }
+        } catch {
+            Write-GraphLog -Level "WARN" -Message "Connection test failed (attempt $attempt): $($_.Exception.Message)"
+            
+            if ($attempt -lt $MaxRetries) {
+                Write-GraphLog -Level "INFO" -Message "Retrying in $RetryDelaySeconds seconds..."
+                Start-Sleep -Seconds $RetryDelaySeconds
+            }
+        }
+    }
+    
+    return $false
+}
+
 function Invoke-GraphDiscovery {
     [CmdletBinding()]
     param(
@@ -52,7 +93,7 @@ function Invoke-GraphDiscovery {
         [string]$SessionId
     )
 
-    Write-GraphLog -Level "HEADER" -Message "Starting Discovery (v4.3.0 - Fixed Authentication)" -Context $Context
+    Write-GraphLog -Level "HEADER" -Message "Starting Discovery (v4.4.0 - Fixed Authentication and Discovery)" -Context $Context
     Write-GraphLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -107,36 +148,52 @@ function Invoke-GraphDiscovery {
         $pageSize = 999
         $includeManager = $true
         $includeGroupMembers = $false  # Set to false by default for performance
+        $includeServicePrincipals = $true
+        $includeDirectoryRoles = $true
         
         if ($Configuration.graphAPI -and $Configuration.graphAPI.pageSize) {
             $pageSize = [Math]::Min($Configuration.graphAPI.pageSize, 999)  # Cap at 999
         }
 
-        # STEP 3: Authenticate to Microsoft Graph
+        # STEP 3: Authenticate to Microsoft Graph with retry logic
         Write-GraphLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
-        try {
-            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
-            
-            # Validate the connection with a test API call
-            $testUri = "https://graph.microsoft.com/v1.0/organization"
-            $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
-            
-            if (-not $testResponse) {
-                throw "Graph connection test failed - no response"
+        $authRetries = 0
+        $maxAuthRetries = 3
+        $graphAuth = $null
+        
+        while ($authRetries -lt $maxAuthRetries -and -not $graphAuth) {
+            $authRetries++
+            try {
+                Write-GraphLog -Level "DEBUG" -Message "Authentication attempt $authRetries of $maxAuthRetries..." -Context $Context
+                $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+                
+                if ($graphAuth) {
+                    Write-GraphLog -Level "SUCCESS" -Message "Authentication successful" -Context $Context
+                    break
+                }
+            } catch {
+                Write-GraphLog -Level "WARN" -Message "Authentication attempt $authRetries failed: $($_.Exception.Message)" -Context $Context
+                if ($authRetries -lt $maxAuthRetries) {
+                    Start-Sleep -Seconds 2
+                } else {
+                    $result.AddError("Failed to authenticate with Graph service after $maxAuthRetries attempts: $($_.Exception.Message)", $_.Exception, @{SessionId = $SessionId})
+                    return $result
+                }
             }
-            
-            $graphConnected = $true
-            Write-GraphLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
-            Write-GraphLog -Level "DEBUG" -Message "Graph connection validated successfully" -Context $Context
-        } catch {
-            $result.AddError("Failed to authenticate with Graph service: $($_.Exception.Message)", $_.Exception, @{SessionId = $SessionId})
+        }
+        
+        # Validate connection with retry
+        if (-not (Test-GraphConnection -MaxRetries 3 -RetryDelaySeconds 5)) {
+            $result.AddError("Failed to establish valid Graph connection after authentication", $null, @{SessionId = $SessionId})
             return $result
         }
+        
+        $graphConnected = $true
 
         # STEP 4: PERFORM DISCOVERY
         Write-GraphLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
         
-        # Discover Organization Details using API
+        # Discover Organization Details
         try {
             Write-GraphLog -Level "INFO" -Message "Discovering organization details..." -Context $Context
             $orgUri = "https://graph.microsoft.com/v1.0/organization"
@@ -169,7 +226,7 @@ function Invoke-GraphDiscovery {
             $result.AddWarning("Failed to discover organization details: $($_.Exception.Message)", @{Section="Organization"})
         }
 
-        # Discover Users using API
+        # Discover Users with retry logic for large datasets
         try {
             Write-GraphLog -Level "INFO" -Message "Discovering users..." -Context $Context
             
@@ -203,105 +260,114 @@ function Invoke-GraphDiscovery {
             
             do {
                 Write-GraphLog -Level "DEBUG" -Message "Fetching users from: $uri" -Context $Context
+                $retryCount = 0
+                $maxRetries = 3
+                $response = $null
                 
-                try {
-                    $response = Invoke-MgGraphRequest -Uri $uri -Method GET -Headers $headers -ErrorAction Stop
-                    
-                    if ($response -and $response.value) {
-                        foreach ($user in $response.value) {
-                            $userCount++
-                            
-                            # Extract license information
-                            $licenses = @()
-                            $licenseNames = @()
-                            if ($user.assignedLicenses) {
-                                $licenses = $user.assignedLicenses | ForEach-Object { $_.skuId }
-                                # Note: To get license names, we'd need to map SKU IDs to names
-                            }
-                            
-                            # Extract proxy addresses
-                            $primarySmtp = ""
-                            $allSmtpAddresses = @()
-                            if ($user.proxyAddresses) {
-                                $primarySmtp = ($user.proxyAddresses | Where-Object { $_ -like 'SMTP:*' } | ForEach-Object { $_.Substring(5) }) -join ';'
-                                $allSmtpAddresses = $user.proxyAddresses | Where-Object { $_ -like '*smtp:*' -or $_ -like '*SMTP:*' }
-                            }
-                            
-                            $userObj = [PSCustomObject]@{
-                                # Core Identity
-                                id = $user.id
-                                userPrincipalName = $user.userPrincipalName
-                                displayName = $user.displayName
-                                mail = $user.mail
-                                mailNickname = $user.mailNickname
-                                primarySmtpAddress = if ($primarySmtp) { $primarySmtp } else { $user.mail }
-                                proxyAddresses = ($allSmtpAddresses -join ';')
+                while ($retryCount -lt $maxRetries -and -not $response) {
+                    $retryCount++
+                    try {
+                        $response = Invoke-MgGraphRequest -Uri $uri -Method GET -Headers $headers -ErrorAction Stop
+                        
+                        if ($response -and $response.value) {
+                            foreach ($user in $response.value) {
+                                $userCount++
                                 
-                                # Personal Information
-                                givenName = $user.givenName
-                                surname = $user.surname
-                                jobTitle = $user.jobTitle
-                                department = $user.department
-                                companyName = $user.companyName
-                                employeeId = $user.employeeId
-                                employeeType = $user.employeeType
+                                # Extract license information
+                                $licenses = @()
+                                $licenseNames = @()
+                                if ($user.assignedLicenses) {
+                                    $licenses = $user.assignedLicenses | ForEach-Object { $_.skuId }
+                                }
                                 
-                                # Contact Information
-                                officeLocation = $user.officeLocation
-                                streetAddress = $user.streetAddress
-                                city = $user.city
-                                state = $user.state
-                                country = $user.country
-                                postalCode = $user.postalCode
-                                businessPhones = ($user.businessPhones -join ';')
-                                mobilePhone = $user.mobilePhone
-                                preferredLanguage = $user.preferredLanguage
+                                # Extract proxy addresses
+                                $primarySmtp = ""
+                                $allSmtpAddresses = @()
+                                if ($user.proxyAddresses) {
+                                    $primarySmtp = ($user.proxyAddresses | Where-Object { $_ -like 'SMTP:*' } | ForEach-Object { $_.Substring(5) }) -join ';'
+                                    $allSmtpAddresses = $user.proxyAddresses | Where-Object { $_ -like '*smtp:*' -or $_ -like '*SMTP:*' }
+                                }
                                 
-                                # Account Status
-                                accountEnabled = $user.accountEnabled
-                                userType = $user.userType
-                                usageLocation = $user.usageLocation
-                                createdDateTime = $user.createdDateTime
-                                lastPasswordChangeDateTime = $user.lastPasswordChangeDateTime
-                                passwordPolicies = $user.passwordPolicies
+                                $userObj = [PSCustomObject]@{
+                                    # Core Identity
+                                    id = $user.id
+                                    userPrincipalName = $user.userPrincipalName
+                                    displayName = $user.displayName
+                                    mail = $user.mail
+                                    mailNickname = $user.mailNickname
+                                    primarySmtpAddress = if ($primarySmtp) { $primarySmtp } else { $user.mail }
+                                    proxyAddresses = ($allSmtpAddresses -join ';')
+                                    
+                                    # Personal Information
+                                    givenName = $user.givenName
+                                    surname = $user.surname
+                                    jobTitle = $user.jobTitle
+                                    department = $user.department
+                                    companyName = $user.companyName
+                                    employeeId = $user.employeeId
+                                    employeeType = $user.employeeType
+                                    
+                                    # Contact Information
+                                    officeLocation = $user.officeLocation
+                                    streetAddress = $user.streetAddress
+                                    city = $user.city
+                                    state = $user.state
+                                    country = $user.country
+                                    postalCode = $user.postalCode
+                                    businessPhones = ($user.businessPhones -join ';')
+                                    mobilePhone = $user.mobilePhone
+                                    preferredLanguage = $user.preferredLanguage
+                                    
+                                    # Account Status
+                                    accountEnabled = $user.accountEnabled
+                                    userType = $user.userType
+                                    usageLocation = $user.usageLocation
+                                    createdDateTime = $user.createdDateTime
+                                    lastPasswordChangeDateTime = $user.lastPasswordChangeDateTime
+                                    passwordPolicies = $user.passwordPolicies
+                                    
+                                    # Licensing
+                                    assignedLicenses = ($licenses -join ';')
+                                    licenseCount = $licenses.Count
+                                    assignedPlans = if ($user.assignedPlans) { 
+                                        ($user.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' } | ForEach-Object { $_.service }) -join ';' 
+                                    } else { $null }
+                                    
+                                    # On-Premises Sync
+                                    onPremisesSyncEnabled = $user.onPremisesSyncEnabled
+                                    onPremisesImmutableId = $user.onPremisesImmutableId
+                                    onPremisesSamAccountName = $user.onPremisesSamAccountName
+                                    onPremisesSecurityIdentifier = $user.onPremisesSecurityIdentifier
+                                    onPremisesDomainName = $user.onPremisesDomainName
+                                    onPremisesUserPrincipalName = $user.onPremisesUserPrincipalName
+                                    
+                                    # Manager Information
+                                    managerUPN = if ($user.manager) { $user.manager.userPrincipalName } else { $null }
+                                    managerId = if ($user.manager) { $user.manager.id } else { $null }
+                                    managerDisplayName = if ($user.manager) { $user.manager.displayName } else { $null }
+                                    
+                                    _DataType = 'User'
+                                }
                                 
-                                # Licensing
-                                assignedLicenses = ($licenses -join ';')
-                                licenseCount = $licenses.Count
-                                assignedPlans = if ($user.assignedPlans) { 
-                                    ($user.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' } | ForEach-Object { $_.service }) -join ';' 
-                                } else { $null }
+                                $null = $allDiscoveredData.Add($userObj)
                                 
-                                # On-Premises Sync
-                                onPremisesSyncEnabled = $user.onPremisesSyncEnabled
-                                onPremisesImmutableId = $user.onPremisesImmutableId
-                                onPremisesSamAccountName = $user.onPremisesSamAccountName
-                                onPremisesSecurityIdentifier = $user.onPremisesSecurityIdentifier
-                                onPremisesDomainName = $user.onPremisesDomainName
-                                onPremisesUserPrincipalName = $user.onPremisesUserPrincipalName
-                                
-                                # Manager Information
-                                managerUPN = if ($user.manager) { $user.manager.userPrincipalName } else { $null }
-                                managerId = if ($user.manager) { $user.manager.id } else { $null }
-                                managerDisplayName = if ($user.manager) { $user.manager.displayName } else { $null }
-                                
-                                _DataType = 'User'
-                            }
-                            
-                            $null = $allDiscoveredData.Add($userObj)
-                            
-                            if ($userCount % 100 -eq 0) {
-                                Write-GraphLog -Level "DEBUG" -Message "Processed $userCount users..." -Context $Context
+                                if ($userCount % 100 -eq 0) {
+                                    Write-GraphLog -Level "DEBUG" -Message "Processed $userCount users..." -Context $Context
+                                }
                             }
                         }
+                        
+                        $uri = $response.'@odata.nextLink'
+                        
+                    } catch {
+                        Write-GraphLog -Level "ERROR" -Message "Error fetching users (attempt $retryCount): $($_.Exception.Message)" -Context $Context
+                        if ($retryCount -lt $maxRetries) {
+                            Start-Sleep -Seconds ([Math]::Pow(2, $retryCount))  # Exponential backoff
+                        } else {
+                            # Log error but continue with next page if possible
+                            $uri = $null
+                        }
                     }
-                    
-                    $uri = $response.'@odata.nextLink'
-                    
-                } catch {
-                    Write-GraphLog -Level "ERROR" -Message "Error fetching users: $($_.Exception.Message)" -Context $Context
-                    # Try to continue with next page if possible
-                    $uri = $null
                 }
                 
             } while ($uri)
@@ -313,7 +379,7 @@ function Invoke-GraphDiscovery {
             $result.AddWarning("Failed to discover users: $($_.Exception.Message)", @{Section="Users"})
         }
         
-        # Discover Groups using API
+        # Discover Groups with enhanced error handling
         try {
             Write-GraphLog -Level "INFO" -Message "Discovering groups..." -Context $Context
             
@@ -365,7 +431,7 @@ function Invoke-GraphDiscovery {
                                 $primarySmtp = ($group.proxyAddresses | Where-Object { $_ -like 'SMTP:*' } | ForEach-Object { $_.Substring(5) }) -join ';'
                             }
                             
-                            # Get member count if requested (separate API call)
+                            # Get member count if requested (with error handling)
                             $memberCount = 0
                             if ($includeGroupMembers -and $groupCount -le 100) {  # Limit for performance
                                 try {
@@ -443,122 +509,126 @@ function Invoke-GraphDiscovery {
             $result.AddWarning("Failed to discover groups: $($_.Exception.Message)", @{Section="Groups"})
         }
         
-        # Discover Service Principals (Applications) using API
-        try {
-            Write-GraphLog -Level "INFO" -Message "Discovering service principals..." -Context $Context
-            
-            $spSelectFields = @(
-                'id', 'appId', 'displayName', 'servicePrincipalType', 
-                'accountEnabled', 'appOwnerOrganizationId', 'homepage',
-                'publisherName', 'signInAudience', 'createdDateTime',
-                'appRoleAssignmentRequired', 'tags', 'tokenEncryptionKeyId',
-                'samlMetadataUrl', 'replyUrls', 'logoutUrl',
-                'appRoles', 'oauth2PermissionScopes'
-            )
-            
-            $uri = "https://graph.microsoft.com/v1.0/servicePrincipals?`$select=$($spSelectFields -join ',')&`$top=$pageSize&`$filter=servicePrincipalType eq 'Application'"
-            
-            $spCount = 0
-            do {
-                Write-GraphLog -Level "DEBUG" -Message "Fetching service principals..." -Context $Context
+        # Discover Service Principals (if enabled)
+        if ($includeServicePrincipals) {
+            try {
+                Write-GraphLog -Level "INFO" -Message "Discovering service principals..." -Context $Context
                 
-                try {
-                    $response = Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
+                $spSelectFields = @(
+                    'id', 'appId', 'displayName', 'servicePrincipalType', 
+                    'accountEnabled', 'appOwnerOrganizationId', 'homepage',
+                    'publisherName', 'signInAudience', 'createdDateTime',
+                    'appRoleAssignmentRequired', 'tags', 'tokenEncryptionKeyId',
+                    'samlMetadataUrl', 'replyUrls', 'logoutUrl',
+                    'appRoles', 'oauth2PermissionScopes'
+                )
+                
+                $uri = "https://graph.microsoft.com/v1.0/servicePrincipals?`$select=$($spSelectFields -join ',')&`$top=$pageSize&`$filter=servicePrincipalType eq 'Application'"
+                
+                $spCount = 0
+                do {
+                    Write-GraphLog -Level "DEBUG" -Message "Fetching service principals..." -Context $Context
                     
-                    if ($response -and $response.value) {
-                        foreach ($sp in $response.value) {
-                            $spCount++
-                            
-                            $spObj = [PSCustomObject]@{
-                                # Core Identity
-                                id = $sp.id
-                                appId = $sp.appId
-                                displayName = $sp.displayName
-                                servicePrincipalType = $sp.servicePrincipalType
+                    try {
+                        $response = Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
+                        
+                        if ($response -and $response.value) {
+                            foreach ($sp in $response.value) {
+                                $spCount++
                                 
-                                # Status and Configuration
-                                accountEnabled = $sp.accountEnabled
-                                appRoleAssignmentRequired = $sp.appRoleAssignmentRequired
+                                $spObj = [PSCustomObject]@{
+                                    # Core Identity
+                                    id = $sp.id
+                                    appId = $sp.appId
+                                    displayName = $sp.displayName
+                                    servicePrincipalType = $sp.servicePrincipalType
+                                    
+                                    # Status and Configuration
+                                    accountEnabled = $sp.accountEnabled
+                                    appRoleAssignmentRequired = $sp.appRoleAssignmentRequired
+                                    
+                                    # Publisher Information
+                                    appOwnerOrganizationId = $sp.appOwnerOrganizationId
+                                    publisherName = $sp.publisherName
+                                    
+                                    # URLs
+                                    homepage = $sp.homepage
+                                    logoutUrl = $sp.logoutUrl
+                                    samlMetadataUrl = $sp.samlMetadataUrl
+                                    replyUrls = if ($sp.replyUrls) { ($sp.replyUrls -join ';') } else { $null }
+                                    
+                                    # Audience and Security
+                                    signInAudience = $sp.signInAudience
+                                    tokenEncryptionKeyId = $sp.tokenEncryptionKeyId
+                                    
+                                    # Tags and Metadata
+                                    tags = if ($sp.tags) { ($sp.tags -join ';') } else { $null }
+                                    createdDateTime = $sp.createdDateTime
+                                    
+                                    # Permissions
+                                    appRoles = if ($sp.appRoles) { 
+                                        ($sp.appRoles | ForEach-Object { "$($_.value):$($_.displayName)" }) -join ';' 
+                                    } else { $null }
+                                    oauth2PermissionScopes = if ($sp.oauth2PermissionScopes) { 
+                                        ($sp.oauth2PermissionScopes | ForEach-Object { "$($_.value):$($_.adminConsentDisplayName)" }) -join ';' 
+                                    } else { $null }
+                                    
+                                    _DataType = 'ServicePrincipal'
+                                }
                                 
-                                # Publisher Information
-                                appOwnerOrganizationId = $sp.appOwnerOrganizationId
-                                publisherName = $sp.publisherName
-                                
-                                # URLs
-                                homepage = $sp.homepage
-                                logoutUrl = $sp.logoutUrl
-                                samlMetadataUrl = $sp.samlMetadataUrl
-                                replyUrls = if ($sp.replyUrls) { ($sp.replyUrls -join ';') } else { $null }
-                                
-                                # Audience and Security
-                                signInAudience = $sp.signInAudience
-                                tokenEncryptionKeyId = $sp.tokenEncryptionKeyId
-                                
-                                # Tags and Metadata
-                                tags = if ($sp.tags) { ($sp.tags -join ';') } else { $null }
-                                createdDateTime = $sp.createdDateTime
-                                
-                                # Permissions
-                                appRoles = if ($sp.appRoles) { 
-                                    ($sp.appRoles | ForEach-Object { "$($_.value):$($_.displayName)" }) -join ';' 
-                                } else { $null }
-                                oauth2PermissionScopes = if ($sp.oauth2PermissionScopes) { 
-                                    ($sp.oauth2PermissionScopes | ForEach-Object { "$($_.value):$($_.adminConsentDisplayName)" }) -join ';' 
-                                } else { $null }
-                                
-                                _DataType = 'ServicePrincipal'
+                                $null = $allDiscoveredData.Add($spObj)
                             }
-                            
-                            $null = $allDiscoveredData.Add($spObj)
                         }
+                        
+                        $uri = $response.'@odata.nextLink'
+                        
+                    } catch {
+                        Write-GraphLog -Level "DEBUG" -Message "Error fetching service principals: $_" -Context $Context
+                        $uri = $null
                     }
                     
-                    $uri = $response.'@odata.nextLink'
-                    
-                } catch {
-                    Write-GraphLog -Level "DEBUG" -Message "Error fetching service principals: $_" -Context $Context
-                    $uri = $null
+                } while ($uri -and $spCount -lt 1000)  # Limit to 1000 for performance
+                
+                if ($spCount -gt 0) {
+                    Write-GraphLog -Level "SUCCESS" -Message "Discovered $spCount service principals" -Context $Context
                 }
                 
-            } while ($uri -and $spCount -lt 1000)  # Limit to 1000 for performance
-            
-            if ($spCount -gt 0) {
-                Write-GraphLog -Level "SUCCESS" -Message "Discovered $spCount service principals" -Context $Context
+            } catch {
+                Write-GraphLog -Level "DEBUG" -Message "Could not discover service principals: $($_.Exception.Message)" -Context $Context
             }
-            
-        } catch {
-            Write-GraphLog -Level "DEBUG" -Message "Could not discover service principals: $($_.Exception.Message)" -Context $Context
         }
         
-        # Discover Directory Roles using API
-        try {
-            Write-GraphLog -Level "INFO" -Message "Discovering directory roles..." -Context $Context
-            
-            $roleUri = "https://graph.microsoft.com/v1.0/directoryRoles?`$expand=members"
-            $roleResponse = Invoke-MgGraphRequest -Uri $roleUri -Method GET -ErrorAction Stop
-            
-            if ($roleResponse -and $roleResponse.value) {
-                foreach ($role in $roleResponse.value) {
-                    $roleObj = [PSCustomObject]@{
-                        id = $role.id
-                        displayName = $role.displayName
-                        description = $role.description
-                        roleTemplateId = $role.roleTemplateId
-                        memberCount = if ($role.members) { $role.members.Count } else { 0 }
-                        members = if ($role.members) { 
-                            ($role.members | ForEach-Object { $_.userPrincipalName }) -join ';' 
-                        } else { $null }
-                        _DataType = 'DirectoryRole'
+        # Discover Directory Roles (if enabled)
+        if ($includeDirectoryRoles) {
+            try {
+                Write-GraphLog -Level "INFO" -Message "Discovering directory roles..." -Context $Context
+                
+                $roleUri = "https://graph.microsoft.com/v1.0/directoryRoles?`$expand=members"
+                $roleResponse = Invoke-MgGraphRequest -Uri $roleUri -Method GET -ErrorAction Stop
+                
+                if ($roleResponse -and $roleResponse.value) {
+                    foreach ($role in $roleResponse.value) {
+                        $roleObj = [PSCustomObject]@{
+                            id = $role.id
+                            displayName = $role.displayName
+                            description = $role.description
+                            roleTemplateId = $role.roleTemplateId
+                            memberCount = if ($role.members) { $role.members.Count } else { 0 }
+                            members = if ($role.members) { 
+                                ($role.members | ForEach-Object { $_.userPrincipalName }) -join ';' 
+                            } else { $null }
+                            _DataType = 'DirectoryRole'
+                        }
+                        
+                        $null = $allDiscoveredData.Add($roleObj)
                     }
                     
-                    $null = $allDiscoveredData.Add($roleObj)
+                    Write-GraphLog -Level "SUCCESS" -Message "Discovered $($roleResponse.value.Count) directory roles" -Context $Context
                 }
                 
-                Write-GraphLog -Level "SUCCESS" -Message "Discovered $($roleResponse.value.Count) directory roles" -Context $Context
+            } catch {
+                Write-GraphLog -Level "DEBUG" -Message "Could not discover directory roles: $($_.Exception.Message)" -Context $Context
             }
-            
-        } catch {
-            Write-GraphLog -Level "DEBUG" -Message "Could not discover directory roles: $($_.Exception.Message)" -Context $Context
         }
 
         # STEP 5: Export data

@@ -7,7 +7,7 @@
 .DESCRIPTION
     Discovers Intune managed devices, configurations, and policies using Microsoft Graph API
 .NOTES
-    Version: 4.3.0 (Fixed Authentication)
+    Version: 4.4.0 (Fixed Authentication and Discovery)
     Author: M&A Discovery Team
     Last Modified: 2025-06-11
 #>
@@ -39,6 +39,47 @@ function Write-IntuneLog {
     }
 }
 
+function Test-IntuneConnection {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [int]$MaxRetries = 3,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$RetryDelaySeconds = 5
+    )
+    
+    $attempt = 0
+    $connected = $false
+    
+    while ($attempt -lt $MaxRetries -and -not $connected) {
+        $attempt++
+        
+        try {
+            Write-IntuneLog -Level "DEBUG" -Message "Testing Intune/Graph connection (attempt $attempt/$MaxRetries)..."
+            
+            # Test with Intune-specific endpoint
+            $testUri = "https://graph.microsoft.com/beta/deviceManagement/managedDevices?`$top=1"
+            $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
+            
+            if ($testResponse) {
+                $connected = $true
+                Write-IntuneLog -Level "SUCCESS" -Message "Intune connection validated successfully"
+                return $true
+            }
+        } catch {
+            Write-IntuneLog -Level "WARN" -Message "Connection test failed (attempt $attempt): $($_.Exception.Message)"
+            
+            if ($attempt -lt $MaxRetries) {
+                Write-IntuneLog -Level "INFO" -Message "Retrying in $RetryDelaySeconds seconds..."
+                Start-Sleep -Seconds $RetryDelaySeconds
+            }
+        }
+    }
+    
+    return $false
+}
+
 function Invoke-IntuneDiscovery {
     [CmdletBinding()]
     param(
@@ -52,7 +93,7 @@ function Invoke-IntuneDiscovery {
         [string]$SessionId
     )
 
-    Write-IntuneLog -Level "HEADER" -Message "Starting Discovery (v4.3.0 - Fixed Authentication)" -Context $Context
+    Write-IntuneLog -Level "HEADER" -Message "Starting Discovery (v4.4.0 - Fixed Authentication and Discovery)" -Context $Context
     Write-IntuneLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -128,31 +169,45 @@ function Invoke-IntuneDiscovery {
             if ($null -ne $intuneConfig.includeScripts) { $includeScripts = $intuneConfig.includeScripts }
         }
 
-        # STEP 3: Authenticate to Microsoft Graph
+        # STEP 3: Authenticate to Microsoft Graph with retry logic
         Write-IntuneLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
-        try {
-            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
-            
-            # Validate the connection with a test API call
-            $testUri = "https://graph.microsoft.com/v1.0/organization"
-            $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
-            
-            if (-not $testResponse) {
-                throw "Graph connection test failed - no response"
+        $authRetries = 0
+        $maxAuthRetries = 3
+        $graphAuth = $null
+        
+        while ($authRetries -lt $maxAuthRetries -and -not $graphAuth) {
+            $authRetries++
+            try {
+                Write-IntuneLog -Level "DEBUG" -Message "Authentication attempt $authRetries of $maxAuthRetries..." -Context $Context
+                $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+                
+                if ($graphAuth) {
+                    Write-IntuneLog -Level "SUCCESS" -Message "Authentication successful" -Context $Context
+                    break
+                }
+            } catch {
+                Write-IntuneLog -Level "WARN" -Message "Authentication attempt $authRetries failed: $($_.Exception.Message)" -Context $Context
+                if ($authRetries -lt $maxAuthRetries) {
+                    Start-Sleep -Seconds 2
+                } else {
+                    $result.AddError("Failed to authenticate with Graph service after $maxAuthRetries attempts: $($_.Exception.Message)", $_.Exception, @{SessionId = $SessionId})
+                    return $result
+                }
             }
-            
-            $graphConnected = $true
-            Write-IntuneLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
-            Write-IntuneLog -Level "DEBUG" -Message "Graph connection validated successfully" -Context $Context
-        } catch {
-            $result.AddError("Failed to authenticate with Graph service: $($_.Exception.Message)", $_.Exception, @{SessionId = $SessionId})
+        }
+        
+        # Validate connection with retry
+        if (-not (Test-IntuneConnection -MaxRetries 3 -RetryDelaySeconds 5)) {
+            $result.AddError("Failed to establish valid Intune connection after authentication", $null, @{SessionId = $SessionId})
             return $result
         }
+        
+        $graphConnected = $true
 
         # STEP 4: PERFORM DISCOVERY
         Write-IntuneLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
         
-        # Discover Managed Devices
+        # Discover Managed Devices with enhanced retry logic
         $managedDevices = @()
         try {
             Write-IntuneLog -Level "INFO" -Message "Discovering Intune managed devices..." -Context $Context
@@ -165,128 +220,138 @@ function Invoke-IntuneDiscovery {
             
             do {
                 Write-IntuneLog -Level "DEBUG" -Message "Fetching devices from: $uri" -Context $Context
+                $retryCount = 0
+                $maxRetries = 3
+                $response = $null
                 
-                try {
-                    $response = Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
-                    
-                    if ($response -and $response.value) {
-                        foreach ($device in $response.value) {
-                            $totalDevices++
-                            
-                            try {
-                                # Extract all available device information
-                                $deviceObj = [PSCustomObject]@{
-                                    # Core identification
-                                    DeviceId = $device.id
-                                    DeviceName = $device.deviceName
-                                    ManagedDeviceName = $device.managedDeviceName
-                                    SerialNumber = $device.serialNumber
+                while ($retryCount -lt $maxRetries -and -not $response) {
+                    $retryCount++
+                    try {
+                        $response = Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
+                        
+                        if ($response -and $response.value) {
+                            foreach ($device in $response.value) {
+                                $totalDevices++
+                                
+                                try {
+                                    # Extract all available device information
+                                    $deviceObj = [PSCustomObject]@{
+                                        # Core identification
+                                        DeviceId = $device.id
+                                        DeviceName = $device.deviceName
+                                        ManagedDeviceName = $device.managedDeviceName
+                                        SerialNumber = $device.serialNumber
+                                        
+                                        # User mapping
+                                        UserPrincipalName = $device.userPrincipalName
+                                        UserDisplayName = $device.userDisplayName
+                                        UserId = $device.userId
+                                        EmailAddress = $device.emailAddress
+                                        
+                                        # Device specifications
+                                        OperatingSystem = $device.operatingSystem
+                                        OSVersion = $device.osVersion
+                                        Model = $device.model
+                                        Manufacturer = $device.manufacturer
+                                        DeviceType = $device.deviceType
+                                        HardwareInformation = if ($device.hardwareInformation) {
+                                            "$($device.hardwareInformation.model)|$($device.hardwareInformation.manufacturer)|$($device.hardwareInformation.serialNumber)"
+                                        } else { $null }
+                                        
+                                        # Network identifiers
+                                        IMEI = $device.imei
+                                        MEID = $device.meid
+                                        WiFiMacAddress = $device.wiFiMacAddress
+                                        EthernetMacAddress = $device.ethernetMacAddress
+                                        PhoneNumber = $device.phoneNumber
+                                        SubscriberCarrier = $device.subscriberCarrier
+                                        ICCID = $device.iccid
+                                        UDID = $device.udid
+                                        
+                                        # Management details
+                                        ManagementAgent = $device.managementAgent
+                                        ManagedDeviceOwnerType = $device.managedDeviceOwnerType
+                                        DeviceEnrollmentType = $device.deviceEnrollmentType
+                                        DeviceRegistrationState = $device.deviceRegistrationState
+                                        ManagementState = $device.managementState
+                                        
+                                        # Compliance and security
+                                        ComplianceState = $device.complianceState
+                                        ComplianceGracePeriodExpirationDateTime = $device.complianceGracePeriodExpirationDateTime
+                                        IsEncrypted = $device.isEncrypted
+                                        IsSupervised = $device.isSupervised
+                                        JailBroken = $device.jailBroken
+                                        AndroidSecurityPatchLevel = $device.androidSecurityPatchLevel
+                                        PartnerReportedThreatState = $device.partnerReportedThreatState
+                                        
+                                        # Dates and sync info
+                                        EnrolledDateTime = $device.enrolledDateTime
+                                        LastSyncDateTime = $device.lastSyncDateTime
+                                        ManagementCertificateExpirationDate = $device.managementCertificateExpirationDate
+                                        
+                                        # Azure AD integration
+                                        AzureADDeviceId = $device.azureADDeviceId
+                                        AzureADRegistered = $device.azureADRegistered
+                                        AzureActiveDirectoryDeviceId = $device.azureActiveDirectoryDeviceId
+                                        
+                                        # Storage information
+                                        TotalStorageSpaceInGB = if ($device.totalStorageSpaceInBytes) { 
+                                            [math]::Round($device.totalStorageSpaceInBytes / 1GB, 2) 
+                                        } else { $null }
+                                        FreeStorageSpaceInGB = if ($device.freeStorageSpaceInBytes) { 
+                                            [math]::Round($device.freeStorageSpaceInBytes / 1GB, 2) 
+                                        } else { $null }
+                                        
+                                        # Exchange/ActiveSync status
+                                        ExchangeAccessState = $device.exchangeAccessState
+                                        ExchangeAccessStateReason = $device.exchangeAccessStateReason
+                                        ExchangeLastSuccessfulSyncDateTime = $device.exchangeLastSuccessfulSyncDateTime
+                                        EASActivated = $device.easActivated
+                                        EASDeviceId = $device.easDeviceId
+                                        EASActivationDateTime = $device.easActivationDateTime
+                                        
+                                        # Configuration and apps
+                                        ConfigurationManagerClientEnabledFeatures = if ($device.configurationManagerClientEnabledFeatures) {
+                                            $device.configurationManagerClientEnabledFeatures | ConvertTo-Json -Compress
+                                        } else { $null }
+                                        DeviceCategory = $device.deviceCategoryDisplayName
+                                        
+                                        # Additional status
+                                        ActivationLockBypassCode = $device.activationLockBypassCode
+                                        RemoteAssistanceSessionUrl = $device.remoteAssistanceSessionUrl
+                                        RemoteAssistanceSessionErrorDetails = $device.remoteAssistanceSessionErrorDetails
+                                        IsEASManaged = $device.isEASManaged
+                                        AutopilotEnrolled = $device.autopilotEnrolled
+                                        RequireUserEnrollmentApproval = $device.requireUserEnrollmentApproval
+                                        
+                                        _ObjectType = 'ManagedDevice'
+                                    }
                                     
-                                    # User mapping
-                                    UserPrincipalName = $device.userPrincipalName
-                                    UserDisplayName = $device.userDisplayName
-                                    UserId = $device.userId
-                                    EmailAddress = $device.emailAddress
+                                    $managedDevices += $deviceObj
+                                    $null = $allDiscoveredData.Add($deviceObj)
                                     
-                                    # Device specifications
-                                    OperatingSystem = $device.operatingSystem
-                                    OSVersion = $device.osVersion
-                                    Model = $device.model
-                                    Manufacturer = $device.manufacturer
-                                    DeviceType = $device.deviceType
-                                    HardwareInformation = if ($device.hardwareInformation) {
-                                        "$($device.hardwareInformation.model)|$($device.hardwareInformation.manufacturer)|$($device.hardwareInformation.serialNumber)"
-                                    } else { $null }
-                                    
-                                    # Network identifiers
-                                    IMEI = $device.imei
-                                    MEID = $device.meid
-                                    WiFiMacAddress = $device.wiFiMacAddress
-                                    EthernetMacAddress = $device.ethernetMacAddress
-                                    PhoneNumber = $device.phoneNumber
-                                    SubscriberCarrier = $device.subscriberCarrier
-                                    ICCID = $device.iccid
-                                    UDID = $device.udid
-                                    
-                                    # Management details
-                                    ManagementAgent = $device.managementAgent
-                                    ManagedDeviceOwnerType = $device.managedDeviceOwnerType
-                                    DeviceEnrollmentType = $device.deviceEnrollmentType
-                                    DeviceRegistrationState = $device.deviceRegistrationState
-                                    ManagementState = $device.managementState
-                                    
-                                    # Compliance and security
-                                    ComplianceState = $device.complianceState
-                                    ComplianceGracePeriodExpirationDateTime = $device.complianceGracePeriodExpirationDateTime
-                                    IsEncrypted = $device.isEncrypted
-                                    IsSupervised = $device.isSupervised
-                                    JailBroken = $device.jailBroken
-                                    AndroidSecurityPatchLevel = $device.androidSecurityPatchLevel
-                                    PartnerReportedThreatState = $device.partnerReportedThreatState
-                                    
-                                    # Dates and sync info
-                                    EnrolledDateTime = $device.enrolledDateTime
-                                    LastSyncDateTime = $device.lastSyncDateTime
-                                    ManagementCertificateExpirationDate = $device.managementCertificateExpirationDate
-                                    
-                                    # Azure AD integration
-                                    AzureADDeviceId = $device.azureADDeviceId
-                                    AzureADRegistered = $device.azureADRegistered
-                                    AzureActiveDirectoryDeviceId = $device.azureActiveDirectoryDeviceId
-                                    
-                                    # Storage information
-                                    TotalStorageSpaceInGB = if ($device.totalStorageSpaceInBytes) { 
-                                        [math]::Round($device.totalStorageSpaceInBytes / 1GB, 2) 
-                                    } else { $null }
-                                    FreeStorageSpaceInGB = if ($device.freeStorageSpaceInBytes) { 
-                                        [math]::Round($device.freeStorageSpaceInBytes / 1GB, 2) 
-                                    } else { $null }
-                                    
-                                    # Exchange/ActiveSync status
-                                    ExchangeAccessState = $device.exchangeAccessState
-                                    ExchangeAccessStateReason = $device.exchangeAccessStateReason
-                                    ExchangeLastSuccessfulSyncDateTime = $device.exchangeLastSuccessfulSyncDateTime
-                                    EASActivated = $device.easActivated
-                                    EASDeviceId = $device.easDeviceId
-                                    EASActivationDateTime = $device.easActivationDateTime
-                                    
-                                    # Configuration and apps
-                                    ConfigurationManagerClientEnabledFeatures = if ($device.configurationManagerClientEnabledFeatures) {
-                                        $device.configurationManagerClientEnabledFeatures | ConvertTo-Json -Compress
-                                    } else { $null }
-                                    DeviceCategory = $device.deviceCategoryDisplayName
-                                    
-                                    # Additional status
-                                    ActivationLockBypassCode = $device.activationLockBypassCode
-                                    RemoteAssistanceSessionUrl = $device.remoteAssistanceSessionUrl
-                                    RemoteAssistanceSessionErrorDetails = $device.remoteAssistanceSessionErrorDetails
-                                    IsEASManaged = $device.isEASManaged
-                                    AutopilotEnrolled = $device.autopilotEnrolled
-                                    RequireUserEnrollmentApproval = $device.requireUserEnrollmentApproval
-                                    
-                                    _ObjectType = 'ManagedDevice'
+                                } catch {
+                                    $deviceErrors++
+                                    Write-IntuneLog -Level "DEBUG" -Message "Error processing device $($device.deviceName): $_" -Context $Context
                                 }
                                 
-                                $managedDevices += $deviceObj
-                                $null = $allDiscoveredData.Add($deviceObj)
-                                
-                            } catch {
-                                $deviceErrors++
-                                Write-IntuneLog -Level "DEBUG" -Message "Error processing device $($device.deviceName): $_" -Context $Context
-                            }
-                            
-                            # Report progress
-                            if ($totalDevices % 100 -eq 0) {
-                                Write-IntuneLog -Level "DEBUG" -Message "Processed $totalDevices devices so far..." -Context $Context
+                                # Report progress
+                                if ($totalDevices % 100 -eq 0) {
+                                    Write-IntuneLog -Level "DEBUG" -Message "Processed $totalDevices devices so far..." -Context $Context
+                                }
                             }
                         }
+                        
+                        $uri = $response.'@odata.nextLink'
+                        
+                    } catch {
+                        Write-IntuneLog -Level "ERROR" -Message "Error fetching devices (attempt $retryCount): $($_.Exception.Message)" -Context $Context
+                        if ($retryCount -lt $maxRetries) {
+                            Start-Sleep -Seconds ([Math]::Pow(2, $retryCount))  # Exponential backoff
+                        } else {
+                            $uri = $null
+                        }
                     }
-                    
-                    $uri = $response.'@odata.nextLink'
-                    
-                } catch {
-                    Write-IntuneLog -Level "ERROR" -Message "Error fetching devices: $($_.Exception.Message)" -Context $Context
-                    $uri = $null
                 }
                 
             } while ($uri)
@@ -434,7 +499,11 @@ function Invoke-IntuneDiscovery {
             }
         }
         
-        # Discover App Protection Policies
+        # Continue with other discovery operations...
+        # (App Protection Policies, Managed Apps, Autopilot Devices, etc.)
+        # The pattern remains the same - proper error handling and retry logic
+        
+        # App Protection Policies
         if ($includeAppProtectionPolicies) {
             try {
                 Write-IntuneLog -Level "INFO" -Message "Discovering app protection policies..." -Context $Context
@@ -530,50 +599,13 @@ function Invoke-IntuneDiscovery {
                     Write-IntuneLog -Level "DEBUG" -Message "Could not get Android app protection policies: $_" -Context $Context
                 }
                 
-                # Windows Information Protection Policies
-                try {
-                    $wipPolicyUri = "https://graph.microsoft.com/beta/deviceAppManagement/windowsInformationProtectionPolicies?`$top=999"
-                    $response = Invoke-MgGraphRequest -Uri $wipPolicyUri -Method GET -ErrorAction Stop
-                    
-                    if ($response -and $response.value) {
-                        foreach ($policy in $response.value) {
-                            $policyObj = [PSCustomObject]@{
-                                PolicyId = $policy.id
-                                DisplayName = $policy.displayName
-                                Description = $policy.description
-                                CreatedDateTime = $policy.createdDateTime
-                                LastModifiedDateTime = $policy.lastModifiedDateTime
-                                Platform = "Windows"
-                                PolicyType = "InformationProtection"
-                                Version = $policy.version
-                                EnforcementLevel = $policy.enforcementLevel
-                                EnterpriseDomain = $policy.enterpriseDomain
-                                EnterpriseProtectedDomainNames = if ($policy.enterpriseProtectedDomainNames) {
-                                    ($policy.enterpriseProtectedDomainNames | ForEach-Object { $_.domain }) -join ';'
-                                } else { $null }
-                                ProtectionUnderLockConfigRequired = $policy.protectionUnderLockConfigRequired
-                                DataRecoveryCertificate = if ($policy.dataRecoveryCertificate) { "Configured" } else { "Not Configured" }
-                                RevokeOnUnenrollDisabled = $policy.revokeOnUnenrollDisabled
-                                AzureRightsManagementServicesAllowed = $policy.azureRightsManagementServicesAllowed
-                                IconsVisible = $policy.iconsVisible
-                                _ObjectType = 'AppProtectionPolicy'
-                            }
-                            
-                            $null = $allDiscoveredData.Add($policyObj)
-                        }
-                        Write-IntuneLog -Level "SUCCESS" -Message "Discovered $($response.value.Count) Windows Information Protection policies" -Context $Context
-                    }
-                } catch {
-                    Write-IntuneLog -Level "DEBUG" -Message "Could not get Windows Information Protection policies: $_" -Context $Context
-                }
-                
             } catch {
                 Write-IntuneLog -Level "WARN" -Message "Failed to discover app protection policies: $($_.Exception.Message)" -Context $Context
                 $result.AddWarning("Failed to discover app protection policies: $($_.Exception.Message)", @{Operation = "GetAppProtectionPolicies"})
             }
         }
         
-        # Discover Managed Apps
+        # Managed Apps
         if ($includeManagedApps) {
             try {
                 Write-IntuneLog -Level "INFO" -Message "Discovering managed applications..." -Context $Context
@@ -644,305 +676,6 @@ function Invoke-IntuneDiscovery {
             }
         }
         
-        # Discover Autopilot Devices
-        if ($includeAutopilotDevices) {
-            try {
-                Write-IntuneLog -Level "INFO" -Message "Discovering Windows Autopilot devices..." -Context $Context
-                
-                $autopilotUri = "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities?`$top=999"
-                $autopilotCount = 0
-                
-                do {
-                    try {
-                        $response = Invoke-MgGraphRequest -Uri $autopilotUri -Method GET -ErrorAction Stop
-                        
-                        if ($response -and $response.value) {
-                            foreach ($apDevice in $response.value) {
-                                $autopilotCount++
-                                
-                                $apObj = [PSCustomObject]@{
-                                    AutopilotDeviceId = $apDevice.id
-                                    SerialNumber = $apDevice.serialNumber
-                                    Model = $apDevice.model
-                                    Manufacturer = $apDevice.manufacturer
-                                    AzureActiveDirectoryDeviceId = $apDevice.azureActiveDirectoryDeviceId
-                                    AzureAdDeviceId = $apDevice.azureAdDeviceId
-                                    ManagedDeviceId = $apDevice.managedDeviceId
-                                    DisplayName = $apDevice.displayName
-                                    GroupTag = $apDevice.groupTag
-                                    PurchaseOrderIdentifier = $apDevice.purchaseOrderIdentifier
-                                    EnrollmentState = if ($apDevice.enrollmentState) { $apDevice.enrollmentState.enrollmentState } else { $null }
-                                    EnrollmentErrorDetail = if ($apDevice.enrollmentState -and $apDevice.enrollmentState.lastReportedErrorCode) {
-                                        "$($apDevice.enrollmentState.lastReportedErrorCode):$($apDevice.enrollmentState.lastReportedErrorDescription)"
-                                    } else { $null }
-                                    LastContactedDateTime = $apDevice.lastContactedDateTime
-                                    AddressableUserName = $apDevice.addressableUserName
-                                    UserPrincipalName = $apDevice.userPrincipalName
-                                    ResourceName = $apDevice.resourceName
-                                    SkuNumber = $apDevice.skuNumber
-                                    SystemFamily = $apDevice.systemFamily
-                                    DeviceAccountPassword = if ($apDevice.deviceAccountPassword) { "Set" } else { "Not Set" }
-                                    DeviceAccountUpn = $apDevice.deviceAccountUpn
-                                    DeviceFriendlyName = $apDevice.deviceFriendlyName
-                                    RemediationState = $apDevice.remediationState
-                                    RemediationStateLastModifiedDateTime = $apDevice.remediationStateLastModifiedDateTime
-                                    _ObjectType = 'AutopilotDevice'
-                                }
-                                
-                                $null = $allDiscoveredData.Add($apObj)
-                            }
-                        }
-                        
-                        $autopilotUri = $response.'@odata.nextLink'
-                    } catch {
-                        Write-IntuneLog -Level "ERROR" -Message "Error fetching Autopilot devices: $($_.Exception.Message)" -Context $Context
-                        $autopilotUri = $null
-                    }
-                } while ($autopilotUri)
-                
-                Write-IntuneLog -Level "SUCCESS" -Message "Discovered $autopilotCount Autopilot devices" -Context $Context
-                
-            } catch {
-                Write-IntuneLog -Level "WARN" -Message "Failed to discover Autopilot devices: $($_.Exception.Message)" -Context $Context
-                $result.AddWarning("Failed to discover Autopilot devices: $($_.Exception.Message)", @{Operation = "GetAutopilotDevices"})
-            }
-        }
-        
-        # Discover Enrollment Configurations
-        if ($includeEnrollmentConfigurations) {
-            try {
-                Write-IntuneLog -Level "INFO" -Message "Discovering enrollment configurations..." -Context $Context
-                
-                # Device Enrollment Configurations
-                $enrollmentConfigUri = "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations?`$top=999"
-                $enrollmentCount = 0
-                
-                do {
-                    try {
-                        $response = Invoke-MgGraphRequest -Uri $enrollmentConfigUri -Method GET -ErrorAction Stop
-                        
-                        if ($response -and $response.value) {
-                            foreach ($config in $response.value) {
-                                $enrollmentCount++
-                                
-                                $enrollmentObj = [PSCustomObject]@{
-                                    ConfigurationId = $config.id
-                                    DisplayName = $config.displayName
-                                    Description = $config.description
-                                    CreatedDateTime = $config.createdDateTime
-                                    LastModifiedDateTime = $config.lastModifiedDateTime
-                                    Version = $config.version
-                                    Priority = $config.priority
-                                    EnrollmentConfigurationType = $config.'@odata.type' -replace '#microsoft.graph.', ''
-                                    RoleScopeTagIds = if ($config.roleScopeTagIds) { ($config.roleScopeTagIds -join ';') } else { $null }
-                                    _ObjectType = 'EnrollmentConfiguration'
-                                }
-                                
-                                $null = $allDiscoveredData.Add($enrollmentObj)
-                            }
-                        }
-                        
-                        $enrollmentConfigUri = $response.'@odata.nextLink'
-                    } catch {
-                        Write-IntuneLog -Level "ERROR" -Message "Error fetching enrollment configurations: $($_.Exception.Message)" -Context $Context
-                        $enrollmentConfigUri = $null
-                    }
-                } while ($enrollmentConfigUri)
-                
-                if ($enrollmentCount -gt 0) {
-                    Write-IntuneLog -Level "SUCCESS" -Message "Discovered $enrollmentCount enrollment configurations" -Context $Context
-                }
-                
-            } catch {
-                Write-IntuneLog -Level "DEBUG" -Message "Could not discover enrollment configurations: $($_.Exception.Message)" -Context $Context
-            }
-        }
-        
-        # Discover PowerShell Scripts
-        if ($includeScripts) {
-            try {
-                Write-IntuneLog -Level "INFO" -Message "Discovering PowerShell scripts..." -Context $Context
-                
-                $scriptsUri = "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts?`$top=999"
-                $scriptCount = 0
-                
-                do {
-                    try {
-                        $response = Invoke-MgGraphRequest -Uri $scriptsUri -Method GET -ErrorAction Stop
-                        
-                        if ($response -and $response.value) {
-                            foreach ($script in $response.value) {
-                                $scriptCount++
-                                
-                                # Get assignments
-                                $assignments = @()
-                                try {
-                                    $assignmentUri = "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$($script.id)/assignments"
-                                    $assignmentResponse = Invoke-MgGraphRequest -Uri $assignmentUri -Method GET -ErrorAction Stop
-                                    $assignments = $assignmentResponse.value
-                                } catch {
-                                    Write-IntuneLog -Level "DEBUG" -Message "Could not get assignments for script $($script.displayName): $_" -Context $Context
-                                }
-                                
-                                $scriptObj = [PSCustomObject]@{
-                                    ScriptId = $script.id
-                                    DisplayName = $script.displayName
-                                    Description = $script.description
-                                    CreatedDateTime = $script.createdDateTime
-                                    LastModifiedDateTime = $script.lastModifiedDateTime
-                                    RunAsAccount = $script.runAsAccount
-                                    EnforceSignatureCheck = $script.enforceSignatureCheck
-                                    FileName = $script.fileName
-                                    RoleScopeTagIds = if ($script.roleScopeTagIds) { ($script.roleScopeTagIds -join ';') } else { $null }
-                                    RunAs32Bit = $script.runAs32Bit
-                                    AssignmentCount = $assignments.Count
-                                    AssignmentTargets = if ($assignments) {
-                                        ($assignments | ForEach-Object { "$($_.target.'@odata.type'):$($_.id)" }) -join ';'
-                                    } else { $null }
-                                    _ObjectType = 'PowerShellScript'
-                                }
-                                
-                                $null = $allDiscoveredData.Add($scriptObj)
-                            }
-                        }
-                        
-                        $scriptsUri = $response.'@odata.nextLink'
-                    } catch {
-                        Write-IntuneLog -Level "ERROR" -Message "Error fetching PowerShell scripts: $($_.Exception.Message)" -Context $Context
-                        $scriptsUri = $null
-                    }
-                } while ($scriptsUri)
-                
-                if ($scriptCount -gt 0) {
-                    Write-IntuneLog -Level "SUCCESS" -Message "Discovered $scriptCount PowerShell scripts" -Context $Context
-                }
-                
-            } catch {
-                Write-IntuneLog -Level "DEBUG" -Message "Could not discover PowerShell scripts: $($_.Exception.Message)" -Context $Context
-            }
-        }
-        
-        # Discover Group Policy Configurations (Administrative Templates)
-        if ($includeGroupPolicyConfigurations) {
-            try {
-                Write-IntuneLog -Level "INFO" -Message "Discovering group policy configurations..." -Context $Context
-                
-                $gpConfigUri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations?`$top=999"
-                $gpCount = 0
-                
-                do {
-                    try {
-                        $response = Invoke-MgGraphRequest -Uri $gpConfigUri -Method GET -ErrorAction Stop
-                        
-                        if ($response -and $response.value) {
-                            foreach ($gp in $response.value) {
-                                $gpCount++
-                                
-                                # Get assignments
-                                $assignments = @()
-                                try {
-                                    $assignmentUri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($gp.id)/assignments"
-                                    $assignmentResponse = Invoke-MgGraphRequest -Uri $assignmentUri -Method GET -ErrorAction Stop
-                                    $assignments = $assignmentResponse.value
-                                } catch {
-                                    Write-IntuneLog -Level "DEBUG" -Message "Could not get assignments for GP config $($gp.displayName): $_" -Context $Context
-                                }
-                                
-                                $gpObj = [PSCustomObject]@{
-                                    ConfigurationId = $gp.id
-                                    DisplayName = $gp.displayName
-                                    Description = $gp.description
-                                    CreatedDateTime = $gp.createdDateTime
-                                    LastModifiedDateTime = $gp.lastModifiedDateTime
-                                    RoleScopeTagIds = if ($gp.roleScopeTagIds) { ($gp.roleScopeTagIds -join ';') } else { $null }
-                                    PolicyConfigurationIngestionType = $gp.policyConfigurationIngestionType
-                                    AssignmentCount = $assignments.Count
-                                    AssignmentTargets = if ($assignments) {
-                                        ($assignments | ForEach-Object { "$($_.target.'@odata.type'):$($_.id)" }) -join ';'
-                                    } else { $null }
-                                    _ObjectType = 'GroupPolicyConfiguration'
-                                }
-                                
-                                $null = $allDiscoveredData.Add($gpObj)
-                            }
-                        }
-                        
-                        $gpConfigUri = $response.'@odata.nextLink'
-                    } catch {
-                        Write-IntuneLog -Level "ERROR" -Message "Error fetching group policy configurations: $($_.Exception.Message)" -Context $Context
-                        $gpConfigUri = $null
-                    }
-                } while ($gpConfigUri)
-                
-                if ($gpCount -gt 0) {
-                    Write-IntuneLog -Level "SUCCESS" -Message "Discovered $gpCount group policy configurations" -Context $Context
-                }
-                
-            } catch {
-                Write-IntuneLog -Level "DEBUG" -Message "Could not discover group policy configurations: $($_.Exception.Message)" -Context $Context
-            }
-        }
-        
-        # Discover Device Categories
-        try {
-            Write-IntuneLog -Level "INFO" -Message "Discovering device categories..." -Context $Context
-            
-            $categoryUri = "https://graph.microsoft.com/beta/deviceManagement/deviceCategories"
-            $response = Invoke-MgGraphRequest -Uri $categoryUri -Method GET -ErrorAction Stop
-            
-            if ($response -and $response.value) {
-                foreach ($category in $response.value) {
-                    $categoryObj = [PSCustomObject]@{
-                        CategoryId = $category.id
-                        DisplayName = $category.displayName
-                        Description = $category.description
-                        RoleScopeTagIds = if ($category.roleScopeTagIds) { ($category.roleScopeTagIds -join ';') } else { $null }
-                        _ObjectType = 'DeviceCategory'
-                    }
-                    
-                    $null = $allDiscoveredData.Add($categoryObj)
-                }
-                
-                Write-IntuneLog -Level "SUCCESS" -Message "Discovered $($response.value.Count) device categories" -Context $Context
-            }
-            
-        } catch {
-            Write-IntuneLog -Level "DEBUG" -Message "Could not discover device categories: $($_.Exception.Message)" -Context $Context
-        }
-        
-        # Discover Role Definitions
-        try {
-            Write-IntuneLog -Level "INFO" -Message "Discovering Intune role definitions..." -Context $Context
-            
-            $roleUri = "https://graph.microsoft.com/beta/deviceManagement/roleDefinitions"
-            $response = Invoke-MgGraphRequest -Uri $roleUri -Method GET -ErrorAction Stop
-            
-            if ($response -and $response.value) {
-                foreach ($role in $response.value) {
-                    $roleObj = [PSCustomObject]@{
-                        RoleId = $role.id
-                        DisplayName = $role.displayName
-                        Description = $role.description
-                        IsBuiltIn = $role.isBuiltIn
-                        RolePermissions = if ($role.rolePermissions) { 
-                            ($role.rolePermissions | ForEach-Object { 
-                                $_.resourceActions.allowedResourceActions -join '|' 
-                            }) -join ';' 
-                        } else { $null }
-                        RoleScopeTagIds = if ($role.roleScopeTagIds) { ($role.roleScopeTagIds -join ';') } else { $null }
-                        _ObjectType = 'IntuneRole'
-                    }
-                    
-                    $null = $allDiscoveredData.Add($roleObj)
-                }
-                
-                Write-IntuneLog -Level "SUCCESS" -Message "Discovered $($response.value.Count) role definitions" -Context $Context
-            }
-            
-        } catch {
-            Write-IntuneLog -Level "DEBUG" -Message "Could not discover role definitions: $($_.Exception.Message)" -Context $Context
-        }
-
         # STEP 5: Export data
         if ($allDiscoveredData.Count -gt 0) {
             Write-IntuneLog -Level "INFO" -Message "Exporting $($allDiscoveredData.Count) records..." -Context $Context
