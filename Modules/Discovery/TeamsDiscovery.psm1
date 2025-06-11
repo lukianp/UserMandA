@@ -1,46 +1,28 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
-#================================================================================
-# M&A Discovery Module: Teams
-# Description: Discovers Microsoft Teams, channels, members, apps, and settings using Graph API.
-#================================================================================
 
-function Get-AuthInfoFromConfiguration {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration
-    )
-
-    # Add this for debugging:
-    Write-MandALog -Message "AuthCheck: Received config keys: $($Configuration.Keys -join ', ')" -Level "DEBUG" -Component "TeamsDiscovery"
-
-    # Check all possible locations for auth info
-    if ($Configuration._AuthContext) { return $Configuration._AuthContext }
-    if ($Configuration._Credentials) { return $Configuration._Credentials }
-    if ($Configuration.authentication) {
-        if ($Configuration.authentication._Credentials) { 
-            return $Configuration.authentication._Credentials 
-        }
-        if ($Configuration.authentication.ClientId -and 
-            $Configuration.authentication.ClientSecret -and 
-            $Configuration.authentication.TenantId) {
-            return @{
-                ClientId     = $Configuration.authentication.ClientId
-                ClientSecret = $Configuration.authentication.ClientSecret
-                TenantId     = $Configuration.authentication.TenantId
+# Fallback logging function if Write-MandALog is not available
+if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
+    function Write-MandALog {
+        param(
+            [string]$Message,
+            [string]$Level = "INFO",
+            [string]$Component = "Discovery",
+            [hashtable]$Context = @{}
+        )
+        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        Write-Host "[$timestamp] [$Level] [$Component] $Message" -ForegroundColor $(
+            switch ($Level) {
+                'ERROR' { 'Red' }
+                'WARN' { 'Yellow' }
+                'SUCCESS' { 'Green' }
+                'HEADER' { 'Cyan' }
+                'DEBUG' { 'Gray' }
+                default { 'White' }
             }
-        }
+        )
     }
-    if ($Configuration.ClientId -and $Configuration.ClientSecret -and $Configuration.TenantId) {
-        return @{
-            ClientId     = $Configuration.ClientId
-            ClientSecret = $Configuration.ClientSecret
-            TenantId     = $Configuration.TenantId
-        }
-    }
-    return $null
 }
 
 function Write-TeamsLog {
@@ -63,7 +45,10 @@ function Invoke-TeamsDiscovery {
         [hashtable]$Configuration,
 
         [Parameter(Mandatory=$true)]
-        [hashtable]$Context
+        [hashtable]$Context,
+
+        [Parameter(Mandatory=$false)]
+        [string]$SessionId
     )
 
     Write-TeamsLog -Level "HEADER" -Message "Starting Discovery" -Context $Context
@@ -117,37 +102,12 @@ function Invoke-TeamsDiscovery {
         }
 
         # 4. AUTHENTICATE & CONNECT
-        Write-TeamsLog -Level "INFO" -Message "Extracting authentication information..." -Context $Context
-        $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
-        
-        # Reconstruct auth from thread-safe config
-        if (-not $authInfo -and $Configuration._AuthContext) {
-            $authInfo = $Configuration._AuthContext
-            Write-TeamsLog -Level "DEBUG" -Message "Using injected auth context" -Context $Context
-        }
-        
-        if (-not $authInfo) {
-            Write-TeamsLog -Level "ERROR" -Message "No authentication found in configuration" -Context $Context
-            $result.AddError("Authentication information could not be found in the provided configuration.", $null, $null)
-            return $result
-        }
-        
-        Write-TeamsLog -Level "DEBUG" -Message "Auth info found. ClientId: $($authInfo.ClientId.Substring(0,8))..." -Context $Context
-
-        # Connect to Microsoft Graph
+        Write-TeamsLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
         try {
-            Write-TeamsLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
-            $credential = New-Object System.Management.Automation.PSCredential(
-    $authInfo.ClientId, 
-    (ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force)
-)
-Connect-MgGraph -ClientId $authInfo.ClientId `
-                -TenantId $authInfo.TenantId `
-                -ClientSecretCredential $credential `
-                            -NoWelcome -ErrorAction Stop
-            Write-TeamsLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
+            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+            Write-TeamsLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
         } catch {
-            $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, $null)
+            $result.AddError("Failed to authenticate with Graph service: $($_.Exception.Message)", $_.Exception, $null)
             return $result
         }
 

@@ -1,46 +1,28 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
-#================================================================================
-# M&A Discovery Module: SharePoint
-# Description: Discovers SharePoint sites, lists, libraries, permissions, and content using Graph API.
-#================================================================================
 
-function Get-AuthInfoFromConfiguration {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$Configuration
-    )
-
-    # Add this for debugging:
-    Write-MandALog -Message "AuthCheck: Received config keys: $($Configuration.Keys -join ', ')" -Level "DEBUG" -Component "SharePointDiscovery"
-
-    # Check all possible locations for auth info
-    if ($Configuration._AuthContext) { return $Configuration._AuthContext }
-    if ($Configuration._Credentials) { return $Configuration._Credentials }
-    if ($Configuration.authentication) {
-        if ($Configuration.authentication._Credentials) { 
-            return $Configuration.authentication._Credentials 
-        }
-        if ($Configuration.authentication.ClientId -and 
-            $Configuration.authentication.ClientSecret -and 
-            $Configuration.authentication.TenantId) {
-            return @{
-                ClientId     = $Configuration.authentication.ClientId
-                ClientSecret = $Configuration.authentication.ClientSecret
-                TenantId     = $Configuration.authentication.TenantId
+# Fallback logging function if Write-MandALog is not available
+if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
+    function Write-MandALog {
+        param(
+            [string]$Message,
+            [string]$Level = "INFO",
+            [string]$Component = "Discovery",
+            [hashtable]$Context = @{}
+        )
+        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        Write-Host "[$timestamp] [$Level] [$Component] $Message" -ForegroundColor $(
+            switch ($Level) {
+                'ERROR' { 'Red' }
+                'WARN' { 'Yellow' }
+                'SUCCESS' { 'Green' }
+                'HEADER' { 'Cyan' }
+                'DEBUG' { 'Gray' }
+                default { 'White' }
             }
-        }
+        )
     }
-    if ($Configuration.ClientId -and $Configuration.ClientSecret -and $Configuration.TenantId) {
-        return @{
-            ClientId     = $Configuration.ClientId
-            ClientSecret = $Configuration.ClientSecret
-            TenantId     = $Configuration.TenantId
-        }
-    }
-    return $null
 }
 
 function Write-SharePointLog {
@@ -63,10 +45,14 @@ function Invoke-SharePointDiscovery {
         [hashtable]$Configuration,
 
         [Parameter(Mandatory=$true)]
-        [hashtable]$Context
+        [hashtable]$Context,
+
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
     )
 
-    Write-SharePointLog -Level "HEADER" -Message "Starting Discovery" -Context $Context
+    Write-SharePointLog -Level "HEADER" -Message "Starting Discovery (v4.0 - Clean Session Auth)" -Context $Context
+    Write-SharePointLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # 1. INITIALIZE RESULT OBJECT
@@ -128,38 +114,13 @@ function Invoke-SharePointDiscovery {
             if ($null -ne $spConfig.maxListsPerSite) { $maxListsPerSite = $spConfig.maxListsPerSite }
         }
 
-        # 4. AUTHENTICATE & CONNECT
-        Write-SharePointLog -Level "INFO" -Message "Extracting authentication information..." -Context $Context
-        $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
-        
-        # Reconstruct auth from thread-safe config
-        if (-not $authInfo -and $Configuration._AuthContext) {
-            $authInfo = $Configuration._AuthContext
-            Write-SharePointLog -Level "DEBUG" -Message "Using injected auth context" -Context $Context
-        }
-        
-        if (-not $authInfo) {
-            Write-SharePointLog -Level "ERROR" -Message "No authentication found in configuration" -Context $Context
-            $result.AddError("Authentication information could not be found in the provided configuration.", $null, $null)
-            return $result
-        }
-        
-        Write-SharePointLog -Level "DEBUG" -Message "Auth info found. ClientId: $($authInfo.ClientId.Substring(0,8))..." -Context $Context
-
-        # Connect to Microsoft Graph
+        # 4. AUTHENTICATE & CONNECT (NEW SESSION-BASED)
+        Write-SharePointLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
         try {
-            Write-SharePointLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
-            $credential = New-Object System.Management.Automation.PSCredential(
-    $authInfo.ClientId, 
-    (ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force)
-)
-Connect-MgGraph -ClientId $authInfo.ClientId `
-                -TenantId $authInfo.TenantId `
-                -ClientSecretCredential $credential `
-                            -NoWelcome -ErrorAction Stop
-            Write-SharePointLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
+            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+            Write-SharePointLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
         } catch {
-            $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, $null)
+            $result.AddError("Failed to authenticate with Graph service: $($_.Exception.Message)", $_.Exception, $null)
             return $result
         }
 
@@ -307,121 +268,6 @@ Connect-MgGraph -ClientId $authInfo.ClientId `
             
             Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalLists lists/libraries across $processedSites sites" -Context $Context
         }
-        
-        # Discover Site Permissions (if enabled)
-        if ($includePermissions) {
-            $totalPermissions = 0
-            
-            foreach ($site in $sites | Select-Object -First 50) { # Limit to first 50 sites for performance
-                try {
-                    Write-SharePointLog -Level "DEBUG" -Message "Getting permissions for site: $($site.DisplayName)" -Context $Context
-                    
-                    $permUri = "https://graph.microsoft.com/v1.0/sites/$($site.SiteId)/permissions"
-                    $permResponse = Invoke-MgGraphRequest -Uri $permUri -Method GET -ErrorAction Stop
-                    
-                    foreach ($perm in $permResponse.value) {
-                        $permObj = [PSCustomObject]@{
-                            SiteId = $site.SiteId
-                            SiteDisplayName = $site.DisplayName
-                            PermissionId = $perm.id
-                            Roles = ($perm.roles -join ';')
-                            GrantedToType = if ($perm.grantedTo) { 'User' } elseif ($perm.grantedToIdentities) { 'Multiple' } else { 'Unknown' }
-                            GrantedTo = if ($perm.grantedTo -and $perm.grantedTo.user) { 
-                                $perm.grantedTo.user.displayName 
-                            } else { $null }
-                            GrantedToEmail = if ($perm.grantedTo -and $perm.grantedTo.user) { 
-                                $perm.grantedTo.user.email 
-                            } else { $null }
-                            HasPassword = $perm.hasPassword
-                            ShareId = $perm.shareId
-                            _DataType = 'SitePermission'
-                        }
-                        
-                        $totalPermissions++
-                        $null = $allDiscoveredData.Add($permObj)
-                    }
-                    
-                } catch {
-                    Write-SharePointLog -Level "DEBUG" -Message "Could not get permissions for site $($site.DisplayName): $_" -Context $Context
-                }
-            }
-            
-            if ($totalPermissions -gt 0) {
-                Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalPermissions site permissions" -Context $Context
-            }
-        }
-        
-        # Discover Hub Sites (if enabled)
-        if ($includeHubSites) {
-            try {
-                Write-SharePointLog -Level "INFO" -Message "Discovering hub sites..." -Context $Context
-                
-                # Hub sites require admin endpoint - try to get them
-                $adminSiteId = "https://$tenantName-admin.sharepoint.com,,$((New-Guid).ToString())"
-                $hubsUri = "https://graph.microsoft.com/v1.0/sites/$adminSiteId/lists('HubSites')/items"
-                
-                try {
-                    $hubsResponse = Invoke-MgGraphRequest -Uri $hubsUri -Method GET -ErrorAction Stop
-                    
-                    foreach ($hub in $hubsResponse.value) {
-                        $hubObj = [PSCustomObject]@{
-                            HubSiteId = $hub.id
-                            Title = if ($hub.fields) { $hub.fields.Title } else { $null }
-                            SiteUrl = if ($hub.fields) { $hub.fields.SiteUrl } else { $null }
-                            _DataType = 'HubSite'
-                        }
-                        
-                        $null = $allDiscoveredData.Add($hubObj)
-                    }
-                    
-                    Write-SharePointLog -Level "SUCCESS" -Message "Discovered $($hubsResponse.value.Count) hub sites" -Context $Context
-                    
-                } catch {
-                    Write-SharePointLog -Level "DEBUG" -Message "Could not access hub sites (requires admin): $_" -Context $Context
-                }
-                
-            } catch {
-                $result.AddWarning("Failed to discover hub sites: $($_.Exception.Message)", @{Section="HubSites"})
-            }
-        }
-        
-        # Discover Site Collection Administrators (if enabled)
-        if ($includeSiteCollectionAdmins) {
-            $totalAdmins = 0
-            
-            foreach ($site in $sites | Where-Object { -not $_.IsPersonalSite } | Select-Object -First 20) {
-                try {
-                    # Get site owners (approximation of admins via Graph API)
-                    $ownersUri = "https://graph.microsoft.com/v1.0/sites/$($site.SiteId)/drive/root/permissions"
-                    $ownersResponse = Invoke-MgGraphRequest -Uri $ownersUri -Method GET -ErrorAction Stop
-                    
-                    foreach ($owner in $ownersResponse.value | Where-Object { $_.roles -contains 'owner' }) {
-                        if ($owner.grantedTo -and $owner.grantedTo.user) {
-                            $adminObj = [PSCustomObject]@{
-                                SiteId = $site.SiteId
-                                SiteDisplayName = $site.DisplayName
-                                SiteWebUrl = $site.WebUrl
-                                UserId = $owner.grantedTo.user.id
-                                UserDisplayName = $owner.grantedTo.user.displayName
-                                UserEmail = $owner.grantedTo.user.email
-                                Role = 'SiteOwner'
-                                _DataType = 'SiteAdmin'
-                            }
-                            
-                            $totalAdmins++
-                            $null = $allDiscoveredData.Add($adminObj)
-                        }
-                    }
-                    
-                } catch {
-                    Write-SharePointLog -Level "DEBUG" -Message "Could not get admins for site $($site.DisplayName): $_" -Context $Context
-                }
-            }
-            
-            if ($totalAdmins -gt 0) {
-                Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalAdmins site administrators" -Context $Context
-            }
-        }
 
         # 6. EXPORT DATA TO CSV
         if ($allDiscoveredData.Count -gt 0) {
@@ -440,6 +286,7 @@ Connect-MgGraph -ClientId $authInfo.ClientId `
                 $data | ForEach-Object {
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "SharePoint" -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
                 }
                 
                 # Determine filename - MUST match orchestrator expectations
@@ -468,6 +315,7 @@ Connect-MgGraph -ClientId $authInfo.ClientId `
         $result.Metadata["SiteCount"] = $sites.Count
         $result.Metadata["ListCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'List' }).Count
         $result.Metadata["TenantName"] = $tenantName
+        $result.Metadata["SessionId"] = $SessionId
 
     } catch {
         # Top-level error handler

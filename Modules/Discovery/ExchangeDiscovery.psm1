@@ -6,6 +6,9 @@
 # Description: Discovers Exchange Online mailboxes and groups using Microsoft Graph API.
 #================================================================================
 
+# Import authentication service
+Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Authentication\AuthenticationService.psm1") -Force
+
 function Get-AuthInfoFromConfiguration {
     [CmdletBinding()]
     param(
@@ -63,10 +66,14 @@ function Invoke-ExchangeDiscovery {
         [hashtable]$Configuration,
 
         [Parameter(Mandatory=$true)]
-        [hashtable]$Context
+        [hashtable]$Context,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
     )
 
-    Write-ExchangeLog -Level "HEADER" -Message "Starting Discovery" -Context $Context
+    Write-ExchangeLog -Level "HEADER" -Message "Starting Discovery (v3.0 - Session-based)" -Context $Context
+    Write-ExchangeLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # 1. INITIALIZE RESULT OBJECT
@@ -137,50 +144,17 @@ function Invoke-ExchangeDiscovery {
         
         Ensure-Path -Path $outputPath
 
-        # 4. AUTHENTICATE & CONNECT
-        Write-ExchangeLog -Level "INFO" -Message "Extracting authentication information..." -Context $Context
-        $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
+        # 4. AUTHENTICATE & CONNECT - SIMPLIFIED!
+        Write-ExchangeLog -Level "INFO" -Message "Getting authentication for Microsoft Graph..." -Context $Context
         
-        # Reconstruct auth from thread-safe config
-        if (-not $authInfo -and $Configuration._AuthContext) {
-            $authInfo = $Configuration._AuthContext
-            Write-ExchangeLog -Level "DEBUG" -Message "Using injected auth context" -Context $Context
-        }
-        
-        if (-not $authInfo) {
-            Write-ExchangeLog -Level "ERROR" -Message "No authentication found in configuration" -Context $Context
-            $result.AddError("Authentication information could not be found in the provided configuration.", $null, $null)
-            return $result
-        }
-        
-        Write-ExchangeLog -Level "DEBUG" -Message "Auth info found. ClientId: $($authInfo.ClientId.Substring(0,8))..." -Context $Context
-
-        # Connect to Microsoft Graph
-        $graphConnected = $false
         try {
-            Write-ExchangeLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
-            
-            # Always disconnect first
-            try {
-                Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
-            } catch {
-                # Ignore
-            }
-
-            # Create credential and connect
-            $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
-            $clientCredential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $secureSecret)
-
-            Connect-MgGraph -ClientId $authInfo.ClientId `
-                            -TenantId $authInfo.TenantId `
-                            -ClientSecretCredential $clientCredential `
-                            -NoWelcome -ErrorAction Stop
-            
-            Write-ExchangeLog -Level "SUCCESS" -Message "Connected to Microsoft Graph" -Context $Context
+            # Get Graph authentication using the new authentication service
+            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+            Write-ExchangeLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session" -Context $Context
             $graphConnected = $true
             
         } catch {
-            $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, $null)
+            $result.AddError("Failed to authenticate with Microsoft Graph: $($_.Exception.Message)", $_.Exception, $null)
             return $result
         }
 
@@ -335,6 +309,7 @@ function Invoke-ExchangeDiscovery {
                 $mailboxData | ForEach-Object {
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Exchange" -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
                 }
                 
                 $mailboxFile = Join-Path $outputPath "ExchangeMailboxes.csv"
@@ -347,6 +322,7 @@ function Invoke-ExchangeDiscovery {
                 $groupData | ForEach-Object {
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Exchange" -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
                 }
                 
                 $groupFile = Join-Path $outputPath "ExchangeDistributionGroups.csv"
@@ -363,6 +339,7 @@ function Invoke-ExchangeDiscovery {
         $result.Metadata["RecordCount"] = $allDiscoveredData.Count  # Orchestrator specifically looks for this
         $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
         $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+        $result.Metadata["SessionId"] = $SessionId
         $result.Metadata["MailboxCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'Mailbox' }).Count
         $result.Metadata["GroupCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DistributionGroup' }).Count
 
@@ -377,17 +354,7 @@ function Invoke-ExchangeDiscovery {
         }
     } finally {
         # 8. CLEANUP & COMPLETE
-        Write-ExchangeLog -Level "INFO" -Message "Cleaning up..." -Context $Context
-        
-        # Disconnect from services
-        if ($graphConnected) {
-            try {
-                Disconnect-MgGraph -ErrorAction SilentlyContinue
-                Write-ExchangeLog -Level "DEBUG" -Message "Disconnected from Microsoft Graph" -Context $Context
-            } catch {
-                # Ignore disconnect errors
-            }
-        }
+        Write-ExchangeLog -Level "INFO" -Message "Discovery completed (connections managed by auth service)" -Context $Context
         
         $stopwatch.Stop()
         

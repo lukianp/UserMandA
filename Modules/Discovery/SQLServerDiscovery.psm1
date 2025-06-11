@@ -1,265 +1,159 @@
 ﻿# -*- coding: utf-8-bom -*-
+#Requires -Version 5.1
 
-# Author: Lukian Poleschtschuk
-# Version: 1.0.0
-# Created: 2025-06-05
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
 
-<#
-.SYNOPSIS
-    SQL Server infrastructure discovery for M&A Discovery Suite
-.DESCRIPTION
-    Discovers SQL Server instances, databases, configurations, and dependencies
-#>
-
-# Module-scope context variable
-$script:ModuleContext = $null
-
-# Lazy initialization function
-function Get-ModuleContext {
-    if ($null -eq $script:ModuleContext) {
-        if ($null -ne $global:MandA) {
-            $script:ModuleContext = $global:MandA
-        } else {
-            throw "Module context not available"
-        }
+# Fallback logging function if Write-MandALog is not available
+if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
+    function Write-MandALog {
+        param(
+            [string]$Message,
+            [string]$Level = "INFO",
+            [string]$Component = "Discovery",
+            [hashtable]$Context = @{}
+        )
+        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        Write-Host "[$timestamp] [$Level] [$Component] $Message" -ForegroundColor $(
+            switch ($Level) {
+                'ERROR' { 'Red' }
+                'WARN' { 'Yellow' }
+                'SUCCESS' { 'Green' }
+                'HEADER' { 'Cyan' }
+                'DEBUG' { 'Gray' }
+                default { 'White' }
+            }
+        )
     }
-    return $script:ModuleContext
 }
 
-
-function Invoke-SafeModuleExecution {
+function Write-SQLServerLog {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [scriptblock]$ScriptBlock,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$ModuleName,
-        
-        [Parameter(Mandatory=$false)]
-        $Context
+        [string]$Message,
+        [string]$Level = "INFO",
+        [hashtable]$Context
     )
-    
-    $result = @{
-        Success = $false
-        Data = $null
-        Error = $null
-        Duration = $null
-    }
-    
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    
-    try {
-        # Validate global context
-        if (-not $global:MandA -or -not $global:MandA.Initialized) {
-            throw "Global M&A context not initialized"
-        }
-        
-        # Execute the module function
-        $result.Data = & $ScriptBlock
-        $result.Success = $true
-        
-    } catch {
-        $result.Error = @{
-            Message = $_.Exception.Message
-            Type = $_.Exception.GetType().FullName
-            StackTrace = $_.ScriptStackTrace
-            InnerException = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $null }
-        }
-        
-        # Log to both file and console
-        if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-            Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
-        } else {
-            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red
-        }
-        
-        # Don't rethrow - let caller handle based on result
-    } finally {
-        $stopwatch.Stop()
-        $result.Duration = $stopwatch.Elapsed
-    }
-    
-    return $result
+    Write-MandALog -Message "[SQLServer] $Message" -Level $Level -Component "SQLServerDiscovery" -Context $Context
 }
-
-
 
 function Invoke-SQLServerDiscovery {
     [CmdletBinding()]
-    param([hashtable]$Configuration)
-    
-    # Create DiscoveryResult object
-    $result = [DiscoveryResult]::new("SQLServer")
-    
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context,
+
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
+    )
+
+    Write-SQLServerLog -Level "HEADER" -Message "Starting Discovery (v4.0 - Clean Session Auth)" -Context $Context
+    Write-SQLServerLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+    # Initialize result object
+    if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+        $result = [DiscoveryResult]::new('SQLServer')
+    } else {
+        $result = @{
+            Success = $true; ModuleName = 'SQLServer'; RecordCount = 0;
+            Errors = [System.Collections.ArrayList]::new(); 
+            Warnings = [System.Collections.ArrayList]::new(); 
+            Metadata = @{}; StartTime = Get-Date; EndTime = $null; 
+            ExecutionId = [guid]::NewGuid().ToString();
+            AddError = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
+            AddWarning = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
+            Complete = { $this.EndTime = Get-Date }.GetNewClosure()
+        }
+    }
+
     try {
-        Write-MandALog "Starting SQL Server infrastructure discovery" -Level "HEADER" -Component "SQLServerDiscovery"
-        
-        $context = Get-ModuleContext
-        $outputPath = $context.Paths.RawDataOutput
-        
-        # Create a simple CSV file for SQL Server instances
-        $outputFile = Join-Path $outputPath "SQLInstances.csv"
-        
-        # Check if we should skip existing files
-        if ($Configuration.discovery.skipExistingFiles -and (Test-Path $outputFile)) {
-            Write-MandALog "SQL Instances CSV already exists. Skipping." -Level "INFO" -Component "SQLServerDiscovery"
-            $result.Data = @{ Message = "Skipped - file exists" }
-        } else {
-            # Create basic SQL Server discovery data
-            $sqlData = @()
-            
+        # Validate context
+        if (-not $Context.Paths.RawDataOutput) {
+            $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
+            return $result
+        }
+        $outputPath = $Context.Paths.RawDataOutput
+        Ensure-Path -Path $outputPath
+
+        # Authenticate using session (if needed for this service type)
+        if ("Database" -eq "Graph") {
+            Write-SQLServerLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
             try {
-                # Try to discover local SQL Server instances
-                $regPath = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL"
-                
-                if (Test-Path $regPath) {
-                    $instanceKeys = Get-ItemProperty $regPath -ErrorAction SilentlyContinue
-                    
-                    foreach ($property in $instanceKeys.PSObject.Properties) {
-                        if ($property.Name -notin @("PSPath", "PSParentPath", "PSChildName", "PSDrive", "PSProvider")) {
-                            $sqlData += [PSCustomObject]@{
-                                ServerName = $env:COMPUTERNAME
-                                InstanceName = $property.Name
-                                FullName = if ($property.Name -eq "MSSQLSERVER") { $env:COMPUTERNAME } else { "$env:COMPUTERNAME\$($property.Name)" }
-                                DiscoveryMethod = "Registry"
-                                DiscoveryTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                                Status = "Discovered"
-                            }
-                        }
-                    }
-                }
-                
-                # If no instances found, create a placeholder entry
-                if ($sqlData.Count -eq 0) {
-                    $sqlData += [PSCustomObject]@{
-                        ServerName = "No SQL Server instances found"
-                        InstanceName = "N/A"
-                        FullName = "N/A"
-                        DiscoveryMethod = "Registry"
-                        DiscoveryTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                        Status = "Not Found"
-                    }
-                }
-                
-                # Export to CSV
-                $sqlData | Export-Csv -Path $outputFile -NoTypeInformation -Encoding UTF8
-                Write-MandALog "Exported $($sqlData.Count) SQL Server entries to CSV" -Level "SUCCESS" -Component "SQLServerDiscovery"
-                
-                $result.Data = @{
-                    InstanceCount = $sqlData.Count
-                    OutputFile = $outputFile
-                    Instances = $sqlData
-                }
-                
+                $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+                Write-SQLServerLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
             } catch {
-                Write-MandALog "Error during SQL Server discovery: $($_.Exception.Message)" -Level "WARN" -Component "SQLServerDiscovery"
-                
-                # Create empty CSV with headers
-                $headers = [PSCustomObject]@{
-                    ServerName = "Error during discovery"
-                    InstanceName = "N/A"
-                    FullName = "N/A"
-                    DiscoveryMethod = "Error"
-                    DiscoveryTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                    Status = "Error: $($_.Exception.Message)"
+                $result.AddError("Failed to authenticate with Graph service: $($_.Exception.Message)", $_.Exception, $null)
+                return $result
+            }
+        } else {
+            Write-SQLServerLog -Level "INFO" -Message "Using session-based authentication for Database service" -Context $Context
+        }
+
+        # Perform discovery (placeholder - implement specific discovery logic)
+        $allDiscoveredData = [System.Collections.ArrayList]::new()
+        
+        Write-SQLServerLog -Level "INFO" -Message "Discovery logic not yet implemented for this module" -Context $Context
+        
+        # Example discovery result
+        $exampleData = [PSCustomObject]@{
+            ModuleName = 'SQLServer'
+            Status = 'NotImplemented'
+            SessionId = $SessionId
+            _DataType = 'PlaceholderData'
+        }
+        $null = $allDiscoveredData.Add($exampleData)
+
+        # Export data
+        if ($allDiscoveredData.Count -gt 0) {
+            $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+            $dataGroups = $allDiscoveredData | Group-Object -Property _DataType
+            
+            foreach ($group in $dataGroups) {
+                $data = $group.Group
+                $data | ForEach-Object {
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "SQLServer" -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
                 }
                 
-                $headers | Export-Csv -Path $outputFile -NoTypeInformation -Encoding UTF8
-                
-                $result.Data = @{
-                    InstanceCount = 0
-                    OutputFile = $outputFile
-                    Error = $_.Exception.Message
-                }
+                $fileName = "SQLServer_$($group.Name).csv"
+                $filePath = Join-Path $outputPath $fileName
+                $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+                Write-SQLServerLog -Level "SUCCESS" -Message "Exported $($data.Count) $($group.Name) records to $fileName" -Context $Context
             }
         }
-        
-        $result.Metadata["OutputFile"] = $outputFile
-        Write-MandALog "SQL Server discovery completed" -Level "SUCCESS" -Component "SQLServerDiscovery"
-        
+
+        $result.RecordCount = $allDiscoveredData.Count
+        $result.Metadata["TotalRecords"] = $result.RecordCount
+        $result.Metadata["SessionId"] = $SessionId
+
     } catch {
-        $result.AddError("SQL Server discovery failed", $_.Exception)
-        Write-MandALog "SQL Server discovery failed: $($_.Exception.Message)" -Level "ERROR" -Component "SQLServerDiscovery"
+        Write-SQLServerLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
+        $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
+        if ("Database" -eq "Graph") {
+            Disconnect-MgGraph -ErrorAction SilentlyContinue
+        }
+        $stopwatch.Stop()
         $result.Complete()
+        Write-SQLServerLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
-    
+
     return $result
 }
 
-# Export functions
-Export-ModuleMember -Function @(
-    'Invoke-SQLServerDiscovery'
-)
-
-# =============================================================================
-# DISCOVERY MODULE INTERFACE FUNCTIONS
-# Required by M&A Orchestrator for module invocation
-# =============================================================================
-
-function Invoke-Discovery {
-    <#
-    .SYNOPSIS
-    Main discovery function called by the M&A Orchestrator
-    
-    .PARAMETER Context
-    The discovery context containing configuration and state information
-    
-    .PARAMETER Force
-    Force discovery even if cached data exists
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$Context,
-        
-        [Parameter(Mandatory = $false)]
-        [switch]$Force
-    )
-    
-    try {
-        Write-MandALog "Starting SQLServerDiscovery discovery" "INFO"
-        
-        $discoveryResult = @{
-            ModuleName = "SQLServerDiscovery"
-            StartTime = Get-Date
-            Status = "Completed"
-            Data = @()
-            Errors = @()
-            Summary = @{ ItemsDiscovered = 0; ErrorCount = 0 }
+function Ensure-Path {
+    param($Path)
+    if (-not (Test-Path -Path $Path -PathType Container)) {
+        try {
+            New-Item -Path $Path -ItemType Directory -Force -ErrorAction Stop | Out-Null
+        } catch {
+            throw "Failed to create output directory: $Path. Error: $($_.Exception.Message)"
         }
-        
-        # TODO: Implement actual discovery logic for SQLServerDiscovery
-        Write-MandALog "Completed SQLServerDiscovery discovery" "SUCCESS"
-        
-        return $discoveryResult
-        
-    } catch {
-        Write-MandALog "Error in SQLServerDiscovery discovery: $($_.Exception.Message)" "ERROR"
-        throw
     }
 }
 
-function Get-DiscoveryInfo {
-    <#
-    .SYNOPSIS
-    Returns metadata about this discovery module
-    #>
-    [CmdletBinding()]
-    param()
-    
-    return @{
-        ModuleName = "SQLServerDiscovery"
-        ModuleVersion = "1.0.0"
-        Description = "SQLServerDiscovery discovery module for M&A Suite"
-        RequiredPermissions = @("Read access to SQLServerDiscovery resources")
-        EstimatedDuration = "5-15 minutes"
-        SupportedEnvironments = @("OnPremises", "Cloud", "Hybrid")
-    }
-}
-
-
-Export-ModuleMember -Function Invoke-Discovery, Get-DiscoveryInfo
+Export-ModuleMember -Function Invoke-SQLServerDiscovery

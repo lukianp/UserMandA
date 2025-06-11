@@ -42,10 +42,14 @@ function Invoke-ActiveDirectoryDiscovery {
         [hashtable]$Configuration,
 
         [Parameter(Mandatory=$true)]
-        [hashtable]$Context
+        [hashtable]$Context,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
     )
 
-    Write-ActiveDirectoryLog -Level "HEADER" -Message "Starting Discovery" -Context $Context
+    Write-ActiveDirectoryLog -Level "HEADER" -Message "Starting Discovery (v3.0 - Session-based)" -Context $Context
+    Write-ActiveDirectoryLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # 1. INITIALIZE RESULT OBJECT
@@ -209,6 +213,7 @@ function Invoke-ActiveDirectoryDiscovery {
                 $group.Group | ForEach-Object {
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "ActiveDirectory" -Force
+                    $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
                 }
                 
                 # Export to CSV
@@ -232,6 +237,7 @@ function Invoke-ActiveDirectoryDiscovery {
         }
         $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
         $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+        $result.Metadata["SessionId"] = $SessionId
 
     } catch {
         # Top-level error handler
