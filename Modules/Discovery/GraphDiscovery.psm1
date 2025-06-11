@@ -1,6 +1,19 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+<#
+.SYNOPSIS
+    Microsoft Graph Discovery Module for M&A Discovery Suite
+.DESCRIPTION
+    Discovers users, groups, and organizational data using Microsoft Graph API
+.NOTES
+    Version: 4.1.0 (Fixed)
+    Author: M&A Discovery Team
+    Last Modified: 2025-06-11
+#>
+
+# Import authentication service
+Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Authentication\AuthenticationService.psm1") -Force
 
 # Fallback logging function if Write-MandALog is not available
 if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
@@ -36,8 +49,6 @@ function Write-GraphLog {
     Write-MandALog -Message "[Graph] $Message" -Level $Level -Component "GraphDiscovery" -Context $Context
 }
 
-# --- Main Discovery Function ---
-
 function Invoke-GraphDiscovery {
     [CmdletBinding()]
     param(
@@ -51,30 +62,38 @@ function Invoke-GraphDiscovery {
         [string]$SessionId
     )
 
-    Write-GraphLog -Level "HEADER" -Message "Starting Discovery (v4.0 - Clean Session Auth)" -Context $Context
+    Write-GraphLog -Level "HEADER" -Message "Starting Discovery (v4.1.0 - Fixed)" -Context $Context
     Write-GraphLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-    # 1. INITIALIZE RESULT OBJECT
+    # Initialize result object
+    $result = $null
     if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
         $result = [DiscoveryResult]::new('Graph')
     } else {
         # Fallback to hashtable
         $result = @{
-            Success      = $true; ModuleName = 'Graph'; RecordCount = 0;
-            Errors       = [System.Collections.ArrayList]::new(); 
-            Warnings     = [System.Collections.ArrayList]::new(); 
-            Metadata     = @{};
-            StartTime    = Get-Date; EndTime = $null; 
-            ExecutionId  = [guid]::NewGuid().ToString();
+            Success      = $true
+            ModuleName   = 'Graph'
+            RecordCount  = 0
+            Errors       = [System.Collections.ArrayList]::new()
+            Warnings     = [System.Collections.ArrayList]::new()
+            Metadata     = @{}
+            StartTime    = Get-Date
+            EndTime      = $null
+            ExecutionId  = [guid]::NewGuid().ToString()
             AddError     = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
             AddWarning   = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
             Complete     = { $this.EndTime = Get-Date }.GetNewClosure()
         }
     }
 
+    # Initialize variables
+    $allDiscoveredData = [System.Collections.ArrayList]::new()
+    $graphConnected = $false
+
     try {
-        # 2. VALIDATE PREREQUISITES & CONTEXT
+        # STEP 1: Validate prerequisites
         Write-GraphLog -Level "INFO" -Message "Validating prerequisites..." -Context $Context
         
         if (-not $Context.Paths.RawDataOutput) {
@@ -84,69 +103,91 @@ function Invoke-GraphDiscovery {
         $outputPath = $Context.Paths.RawDataOutput
         Write-GraphLog -Level "DEBUG" -Message "Output path: $outputPath" -Context $Context
         
-        Ensure-Path -Path $outputPath
+        # Ensure output directory exists
+        if (-not (Test-Path -Path $outputPath -PathType Container)) {
+            try {
+                New-Item -Path $outputPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
+            } catch {
+                $result.AddError("Failed to create output directory: $outputPath", $_.Exception, $null)
+                return $result
+            }
+        }
 
-        # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
+        # STEP 2: Get module configuration
         $pageSize = 999
         $includeSignInActivity = $false
         $includeManager = $true
-        $includeDevices = $true
-        $includeApplications = $true
-        $includeServicePrincipals = $true
-        $includeDirectoryRoles = $true
+        
+        if ($Configuration.graphAPI -and $Configuration.graphAPI.pageSize) {
+            $pageSize = $Configuration.graphAPI.pageSize
+        }
         
         if ($Configuration.discovery -and $Configuration.discovery.graph) {
             $graphConfig = $Configuration.discovery.graph
-            if ($null -ne $graphConfig.includeSignInActivity) { $includeSignInActivity = $graphConfig.includeSignInActivity }
-            if ($null -ne $graphConfig.includeManager) { $includeManager = $graphConfig.includeManager }
-            if ($null -ne $graphConfig.includeDevices) { $includeDevices = $graphConfig.includeDevices }
-            if ($null -ne $graphConfig.includeApplications) { $includeApplications = $graphConfig.includeApplications }
-            if ($null -ne $graphConfig.includeServicePrincipals) { $includeServicePrincipals = $graphConfig.includeServicePrincipals }
-            if ($null -ne $graphConfig.includeDirectoryRoles) { $includeDirectoryRoles = $graphConfig.includeDirectoryRoles }
+            if ($null -ne $graphConfig.includeSignInActivity) { 
+                $includeSignInActivity = $graphConfig.includeSignInActivity 
+            }
+            if ($null -ne $graphConfig.includeManager) { 
+                $includeManager = $graphConfig.includeManager 
+            }
         }
 
-        # 4. AUTHENTICATE & CONNECT (NEW SESSION-BASED)
+        # STEP 3: Authenticate
         Write-GraphLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
         try {
             $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+            $graphConnected = $true
+            Write-GraphLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
             
-            # Validate the connection
+            # Validate connection with a simple test
+            Write-GraphLog -Level "DEBUG" -Message "Validating Graph connection..." -Context $Context
             $testUri = "https://graph.microsoft.com/v1.0/organization"
             $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
             
-            if (-not $testResponse) {
-                throw "Graph connection test failed - no response"
+            if ($testResponse -and $testResponse.value) {
+                Write-GraphLog -Level "DEBUG" -Message "Graph connection validated successfully" -Context $Context
+            } else {
+                throw "Graph connection test returned no data"
             }
             
-            Write-GraphLog -Level "SUCCESS" -Message "Graph connection validated" -Context $Context
-            Write-GraphLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
         } catch {
-            $result.AddError("Graph authentication validation failed: $($_.Exception.Message)", $_.Exception, $null)
+            $result.AddError("Failed to authenticate with Graph service: $($_.Exception.Message)", $_.Exception, @{SessionId = $SessionId})
             return $result
         }
 
-        # 5. PERFORM DISCOVERY
+        # STEP 4: PERFORM DISCOVERY
         Write-GraphLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
-        $allDiscoveredData = [System.Collections.ArrayList]::new()
         
         # Discover Organization Details
         try {
             Write-GraphLog -Level "INFO" -Message "Discovering organization details..." -Context $Context
-            $org = Get-MgOrganization -ErrorAction Stop
-            if ($org) {
-                $orgData = [PSCustomObject]@{
-                    TenantId = $org.Id
-                    DisplayName = $org.DisplayName
-                    VerifiedDomains = ($org.VerifiedDomains | Where-Object { $_.IsVerified } | ForEach-Object { $_.Name }) -join ';'
-                    DefaultDomain = ($org.VerifiedDomains | Where-Object { $_.IsDefault } | Select-Object -First 1).Name
-                    TechnicalNotificationMails = ($org.TechnicalNotificationMails -join ';')
-                    PreferredLanguage = $org.PreferredLanguage
-                    _DataType = 'Organization'
+            $orgUri = "https://graph.microsoft.com/v1.0/organization"
+            $orgResponse = Invoke-MgGraphRequest -Uri $orgUri -Method GET -ErrorAction Stop
+            
+            if ($orgResponse -and $orgResponse.value) {
+                foreach ($org in $orgResponse.value) {
+                    $orgData = [PSCustomObject]@{
+                        TenantId = $org.id
+                        DisplayName = $org.displayName
+                        VerifiedDomains = ($org.verifiedDomains | Where-Object { $_.isVerified } | ForEach-Object { $_.name }) -join ';'
+                        DefaultDomain = ($org.verifiedDomains | Where-Object { $_.isDefault } | Select-Object -First 1).name
+                        TechnicalNotificationMails = ($org.technicalNotificationMails -join ';')
+                        PreferredLanguage = $org.preferredLanguage
+                        City = $org.city
+                        State = $org.state
+                        Country = $org.country
+                        PostalCode = $org.postalCode
+                        BusinessPhones = ($org.businessPhones -join ';')
+                        CreatedDateTime = $org.createdDateTime
+                        OnPremisesSyncEnabled = $org.onPremisesSyncEnabled
+                        _DataType = 'Organization'
+                    }
+                    $null = $allDiscoveredData.Add($orgData)
+                    Write-GraphLog -Level "SUCCESS" -Message "Discovered organization: $($org.displayName)" -Context $Context
                 }
-                $null = $allDiscoveredData.Add($orgData)
-                Write-GraphLog -Level "SUCCESS" -Message "Discovered organization: $($org.DisplayName)" -Context $Context
             }
         } catch {
+            Write-GraphLog -Level "WARN" -Message "Failed to discover organization details: $($_.Exception.Message)" -Context $Context
             $result.AddWarning("Failed to discover organization details: $($_.Exception.Message)", @{Section="Organization"})
         }
 
@@ -170,7 +211,7 @@ function Invoke-GraphDiscovery {
             
             $expandFields = @()
             if ($includeManager) {
-                $expandFields += 'manager'
+                $expandFields += 'manager($select=id,displayName,userPrincipalName)'
             }
             
             $uri = "https://graph.microsoft.com/v1.0/users?`$select=$($userSelectFields -join ',')&`$top=$pageSize"
@@ -185,69 +226,69 @@ function Invoke-GraphDiscovery {
             
             $userCount = 0
             do {
+                Write-GraphLog -Level "DEBUG" -Message "Fetching users from: $uri" -Context $Context
                 $response = Invoke-MgGraphRequest -Uri $uri -Method GET -Headers $headers -ErrorAction Stop
                 
-                # Add validation
-                if (-not $response -or -not $response.value) {
-                    Write-GraphLog -Level "WARN" -Message "No data returned from Graph API" -Context $Context
-                    break
-                }
-                
-                foreach ($user in $response.value) {
-                    $userCount++
-                    
-                    $licenses = @()
-                    $plans = @()
-                    if ($user.assignedLicenses) {
-                        $licenses = $user.assignedLicenses | ForEach-Object { $_.skuId }
+                if ($response -and $response.value) {
+                    foreach ($user in $response.value) {
+                        $userCount++
+                        
+                        # Process licenses
+                        $licenses = @()
+                        $plans = @()
+                        if ($user.assignedLicenses) {
+                            $licenses = $user.assignedLicenses | ForEach-Object { $_.skuId }
+                        }
+                        if ($user.assignedPlans) {
+                            $plans = $user.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' } | ForEach-Object { $_.servicePlanId }
+                        }
+                        
+                        $userObj = [PSCustomObject]@{
+                            id = $user.id
+                            userPrincipalName = $user.userPrincipalName
+                            displayName = $user.displayName
+                            mail = $user.mail
+                            mailNickname = $user.mailNickname
+                            givenName = $user.givenName
+                            surname = $user.surname
+                            jobTitle = $user.jobTitle
+                            department = $user.department
+                            companyName = $user.companyName
+                            officeLocation = $user.officeLocation
+                            businessPhones = ($user.businessPhones -join ';')
+                            mobilePhone = $user.mobilePhone
+                            preferredLanguage = $user.preferredLanguage
+                            employeeId = $user.employeeId
+                            employeeType = $user.employeeType
+                            createdDateTime = $user.createdDateTime
+                            accountEnabled = $user.accountEnabled
+                            assignedLicenses = ($licenses -join ';')
+                            assignedPlans = ($plans -join ';')
+                            licenseCount = $licenses.Count
+                            onPremisesSyncEnabled = $user.onPremisesSyncEnabled
+                            onPremisesImmutableId = $user.onPremisesImmutableId
+                            onPremisesSamAccountName = $user.onPremisesSamAccountName
+                            proxyAddresses = (($user.proxyAddresses | Where-Object { $_ -like 'SMTP:*' -or $_ -like 'smtp:*' }) -join ';')
+                            userType = $user.userType
+                            usageLocation = $user.usageLocation
+                            city = $user.city
+                            state = $user.state
+                            country = $user.country
+                            postalCode = $user.postalCode
+                            managerUPN = if ($user.manager) { $user.manager.userPrincipalName } else { $null }
+                            managerId = if ($user.manager) { $user.manager.id } else { $null }
+                            lastSignInDateTime = if ($user.signInActivity) { $user.signInActivity.lastSignInDateTime } else { $null }
+                            _DataType = 'User'
+                        }
+                        
+                        $null = $allDiscoveredData.Add($userObj)
+                        
+                        if ($userCount % 100 -eq 0) {
+                            Write-GraphLog -Level "DEBUG" -Message "Processed $userCount users..." -Context $Context
+                        }
                     }
-                    if ($user.assignedPlans) {
-                        $plans = $user.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' } | ForEach-Object { $_.servicePlanId }
-                    }
-                    
-                    $userObj = [PSCustomObject]@{
-                        id = $user.id
-                        userPrincipalName = $user.userPrincipalName
-                        displayName = $user.displayName
-                        mail = $user.mail
-                        mailNickname = $user.mailNickname
-                        givenName = $user.givenName
-                        surname = $user.surname
-                        jobTitle = $user.jobTitle
-                        department = $user.department
-                        companyName = $user.companyName
-                        officeLocation = $user.officeLocation
-                        businessPhones = ($user.businessPhones -join ';')
-                        mobilePhone = $user.mobilePhone
-                        preferredLanguage = $user.preferredLanguage
-                        employeeId = $user.employeeId
-                        employeeType = $user.employeeType
-                        createdDateTime = $user.createdDateTime
-                        accountEnabled = $user.accountEnabled
-                        assignedLicenses = ($licenses -join ';')
-                        assignedPlans = ($plans -join ';')
-                        licenseCount = $licenses.Count
-                        onPremisesSyncEnabled = $user.onPremisesSyncEnabled
-                        onPremisesImmutableId = $user.onPremisesImmutableId
-                        onPremisesSamAccountName = $user.onPremisesSamAccountName
-                        proxyAddresses = (($user.proxyAddresses | Where-Object { $_ -like 'SMTP:*' -or $_ -like 'smtp:*' }) -join ';')
-                        userType = $user.userType
-                        usageLocation = $user.usageLocation
-                        city = $user.city
-                        state = $user.state
-                        country = $user.country
-                        postalCode = $user.postalCode
-                        managerUPN = if ($user.manager) { $user.manager.userPrincipalName } else { $null }
-                        managerId = if ($user.manager) { $user.manager.id } else { $null }
-                        lastSignInDateTime = if ($user.signInActivity) { $user.signInActivity.lastSignInDateTime } else { $null }
-                        _DataType = 'User'
-                    }
-                    
-                    $null = $allDiscoveredData.Add($userObj)
-                    
-                    if ($userCount % 100 -eq 0) {
-                        Write-GraphLog -Level "DEBUG" -Message "Processed $userCount users..." -Context $Context
-                    }
+                } else {
+                    Write-GraphLog -Level "DEBUG" -Message "No users in response" -Context $Context
                 }
                 
                 $uri = $response.'@odata.nextLink'
@@ -256,9 +297,7 @@ function Invoke-GraphDiscovery {
             Write-GraphLog -Level "SUCCESS" -Message "Discovered $userCount users" -Context $Context
             
         } catch {
-            # Log the actual error instead of just adding to warnings
-            Write-GraphLog -Level "ERROR" -Message "Graph API call failed: $($_.Exception.Message)" -Context $Context
-            Write-GraphLog -Level "DEBUG" -Message "Full error: $($_.Exception | Format-List -Force | Out-String)" -Context $Context
+            Write-GraphLog -Level "ERROR" -Message "Failed to discover users: $($_.Exception.Message)" -Context $Context
             $result.AddWarning("Failed to discover users: $($_.Exception.Message)", @{Section="Users"})
         }
         
@@ -277,50 +316,57 @@ function Invoke-GraphDiscovery {
             $uri = "https://graph.microsoft.com/v1.0/groups?`$select=$($groupSelectFields -join ',')&`$top=$pageSize"
             
             $groupCount = 0
-            $groupMembers = [System.Collections.ArrayList]::new()
-            
             do {
+                Write-GraphLog -Level "DEBUG" -Message "Fetching groups from: $uri" -Context $Context
                 $response = Invoke-MgGraphRequest -Uri $uri -Method GET -Headers $headers -ErrorAction Stop
                 
-                foreach ($group in $response.value) {
-                    $groupCount++
-                    
-                    # Determine group type
-                    $groupType = 'SecurityGroup'
-                    if ($group.groupTypes -contains 'Unified') {
-                        $groupType = 'Microsoft365Group'
-                    } elseif ($group.mailEnabled -and -not $group.securityEnabled) {
-                        $groupType = 'DistributionList'
-                    } elseif ($group.mailEnabled -and $group.securityEnabled) {
-                        $groupType = 'MailEnabledSecurityGroup'
-                    } elseif ($group.groupTypes -contains 'DynamicMembership') {
-                        $groupType = 'DynamicGroup'
+                if ($response -and $response.value) {
+                    foreach ($group in $response.value) {
+                        $groupCount++
+                        
+                        # Determine group type
+                        $groupType = 'SecurityGroup'
+                        if ($group.groupTypes -contains 'Unified') {
+                            $groupType = 'Microsoft365Group'
+                        } elseif ($group.mailEnabled -and -not $group.securityEnabled) {
+                            $groupType = 'DistributionList'
+                        } elseif ($group.mailEnabled -and $group.securityEnabled) {
+                            $groupType = 'MailEnabledSecurityGroup'
+                        } elseif ($group.groupTypes -contains 'DynamicMembership') {
+                            $groupType = 'DynamicGroup'
+                        }
+                        
+                        $groupObj = [PSCustomObject]@{
+                            id = $group.id
+                            displayName = $group.displayName
+                            mail = $group.mail
+                            mailNickname = $group.mailNickname
+                            mailEnabled = $group.mailEnabled
+                            securityEnabled = $group.securityEnabled
+                            groupType = $groupType
+                            groupTypes = ($group.groupTypes -join ';')
+                            description = $group.description
+                            visibility = $group.visibility
+                            createdDateTime = $group.createdDateTime
+                            renewedDateTime = $group.renewedDateTime
+                            membershipRule = $group.membershipRule
+                            membershipRuleProcessingState = $group.membershipRuleProcessingState
+                            isDynamic = ($null -ne $group.membershipRule)
+                            proxyAddresses = (($group.proxyAddresses | Where-Object { $_ -like 'SMTP:*' -or $_ -like 'smtp:*' }) -join ';')
+                            onPremisesSyncEnabled = $group.onPremisesSyncEnabled
+                            onPremisesSamAccountName = $group.onPremisesSamAccountName
+                            classification = $group.classification
+                            _DataType = 'Group'
+                        }
+                        
+                        $null = $allDiscoveredData.Add($groupObj)
+                        
+                        if ($groupCount % 100 -eq 0) {
+                            Write-GraphLog -Level "DEBUG" -Message "Processed $groupCount groups..." -Context $Context
+                        }
                     }
-                    
-                    $groupObj = [PSCustomObject]@{
-                        id = $group.id
-                        displayName = $group.displayName
-                        mail = $group.mail
-                        mailNickname = $group.mailNickname
-                        mailEnabled = $group.mailEnabled
-                        securityEnabled = $group.securityEnabled
-                        groupType = $groupType
-                        groupTypes = ($group.groupTypes -join ';')
-                        description = $group.description
-                        visibility = $group.visibility
-                        createdDateTime = $group.createdDateTime
-                        renewedDateTime = $group.renewedDateTime
-                        membershipRule = $group.membershipRule
-                        membershipRuleProcessingState = $group.membershipRuleProcessingState
-                        isDynamic = ($null -ne $group.membershipRule)
-                        proxyAddresses = (($group.proxyAddresses | Where-Object { $_ -like 'SMTP:*' -or $_ -like 'smtp:*' }) -join ';')
-                        onPremisesSyncEnabled = $group.onPremisesSyncEnabled
-                        onPremisesSamAccountName = $group.onPremisesSamAccountName
-                        classification = $group.classification
-                        _DataType = 'Group'
-                    }
-                    
-                    $null = $allDiscoveredData.Add($groupObj)
+                } else {
+                    Write-GraphLog -Level "DEBUG" -Message "No groups in response" -Context $Context
                 }
                 
                 $uri = $response.'@odata.nextLink'
@@ -329,10 +375,11 @@ function Invoke-GraphDiscovery {
             Write-GraphLog -Level "SUCCESS" -Message "Discovered $groupCount groups" -Context $Context
             
         } catch {
+            Write-GraphLog -Level "ERROR" -Message "Failed to discover groups: $($_.Exception.Message)" -Context $Context
             $result.AddWarning("Failed to discover groups: $($_.Exception.Message)", @{Section="Groups"})
         }
 
-        # 6. EXPORT DATA TO CSV
+        # STEP 5: Export data
         if ($allDiscoveredData.Count -gt 0) {
             Write-GraphLog -Level "INFO" -Message "Exporting $($allDiscoveredData.Count) records..." -Context $Context
             
@@ -345,11 +392,14 @@ function Invoke-GraphDiscovery {
                 $dataType = $group.Name
                 $data = $group.Group
                 
-                # Add metadata
-                $data | ForEach-Object {
-                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
-                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Graph" -Force
-                    $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
+                # Remove _DataType property and add metadata
+                $exportData = $data | ForEach-Object {
+                    $obj = $_.PSObject.Copy()
+                    $obj.PSObject.Properties.Remove('_DataType')
+                    $obj | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                    $obj | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Graph" -Force
+                    $obj | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
+                    $obj
                 }
                 
                 # Determine filename
@@ -361,17 +411,18 @@ function Invoke-GraphDiscovery {
                 }
                 
                 $filePath = Join-Path $outputPath $fileName
-                $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+                $exportData | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
                 
-                Write-GraphLog -Level "SUCCESS" -Message "Exported $($data.Count) $dataType records to $fileName" -Context $Context
+                Write-GraphLog -Level "SUCCESS" -Message "Exported $($exportData.Count) $dataType records to $fileName" -Context $Context
             }
         } else {
             Write-GraphLog -Level "WARN" -Message "No data discovered to export" -Context $Context
         }
 
-        # 7. FINALIZE METADATA
+        # STEP 6: Update result metadata
         $result.RecordCount = $allDiscoveredData.Count
-        $result.Metadata["TotalRecords"] = $result.RecordCount
+        $result.Metadata["RecordCount"] = $allDiscoveredData.Count
+        $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
         $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
         $result.Metadata["SessionId"] = $SessionId
         
@@ -381,52 +432,42 @@ function Invoke-GraphDiscovery {
             $result.Metadata["$($group.Name)Count"] = $group.Count
         }
 
-    }
-    catch [System.UnauthorizedAccessException] {
-        $result.AddError("Access denied: $($_.Exception.Message)", $_.Exception, @{ErrorType="Authorization"})
-        Write-GraphLog -Level "ERROR" -Message "Authorization error: $($_.Exception.Message)" -Context $Context
-    }
-    catch [System.Net.WebException] {
-        $result.AddError("Network error: $($_.Exception.Message)", $_.Exception, @{ErrorType="Network"})
-        Write-GraphLog -Level "ERROR" -Message "Network error: $($_.Exception.Message)" -Context $Context
-    }
-    catch {
-        $result.AddError("Unexpected error: $($_.Exception.Message)", $_.Exception, @{ErrorType="General"})
-        Write-GraphLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
-    }
-    finally {
-        # 8. CLEANUP & COMPLETE
+    } catch {
+        # Catch any unexpected errors
+        Write-GraphLog -Level "ERROR" -Message "Critical error during discovery: $($_.Exception.Message)" -Context $Context
+        Write-GraphLog -Level "DEBUG" -Message "Stack trace: $($_.ScriptStackTrace)" -Context $Context
+        $result.AddError("Critical error during discovery: $($_.Exception.Message)", $_.Exception, @{
+            ErrorType = "General"
+            StackTrace = $_.ScriptStackTrace
+        })
+    } finally {
+        # STEP 7: Cleanup
         Write-GraphLog -Level "INFO" -Message "Cleaning up..." -Context $Context
         
-        # Disconnect from services
-        Disconnect-MgGraph -ErrorAction SilentlyContinue
+        if ($graphConnected) {
+            try {
+                Disconnect-MgGraph -ErrorAction SilentlyContinue
+                Write-GraphLog -Level "DEBUG" -Message "Disconnected from Microsoft Graph" -Context $Context
+            } catch {
+                Write-GraphLog -Level "DEBUG" -Message "Error disconnecting from Graph: $_" -Context $Context
+            }
+        }
         
         $stopwatch.Stop()
         $result.Complete()
         
-        # Ensure RecordCount is properly set
+        # Ensure RecordCount is properly set in hashtable result
         if ($result -is [hashtable]) {
             $result['RecordCount'] = $allDiscoveredData.Count
         }
         
-        Write-GraphLog -Level $(if($result.Success){"SUCCESS"}else{"ERROR"}) -Message "Discovery completed with $($result.RecordCount) records" -Context $Context
+        $finalStatus = if($result.Success){"SUCCESS"}else{"ERROR"}
+        Write-GraphLog -Level $finalStatus -Message "Discovery completed with $($result.RecordCount) records" -Context $Context
         Write-GraphLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 
     return $result
 }
 
-# --- Helper Functions ---
-function Ensure-Path {
-    param($Path)
-    if (-not (Test-Path -Path $Path -PathType Container)) {
-        try {
-            New-Item -Path $Path -ItemType Directory -Force -ErrorAction Stop | Out-Null
-        } catch {
-            throw "Failed to create output directory: $Path. Error: $($_.Exception.Message)"
-        }
-    }
-}
-
-# --- Module Export ---
+# Export module function
 Export-ModuleMember -Function Invoke-GraphDiscovery
