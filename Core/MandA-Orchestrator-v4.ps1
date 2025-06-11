@@ -464,7 +464,7 @@ try {
             $moduleResult = $result.ModuleResults[$moduleName]
             $moduleStatus = if ($moduleResult.Success) { "SUCCESS" } else { "FAILED" }
             $recordCount = if ($moduleResult.RecordCount) { $moduleResult.RecordCount } else { 0 }
-            Write-OrchestratorLog -Message "  $moduleName: $moduleStatus ($recordCount records)" -Level $(if ($moduleResult.Success) { "SUCCESS" } else { "ERROR" })
+            Write-OrchestratorLog -Message "  $moduleName $moduleStatus ($recordCount records)" -Level $(if ($moduleResult.Success) { "SUCCESS" } else { "ERROR" })
         }
     }
     

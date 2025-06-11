@@ -317,11 +317,20 @@ function Invoke-SharePointDiscovery {
         $result.Metadata["TenantName"] = $tenantName
         $result.Metadata["SessionId"] = $SessionId
 
-    } catch {
-        # Top-level error handler
+    }
+    catch [System.UnauthorizedAccessException] {
+        $result.AddError("Access denied: $($_.Exception.Message)", $_.Exception, @{ErrorType="Authorization"})
+        Write-SharePointLog -Level "ERROR" -Message "Authorization error: $($_.Exception.Message)" -Context $Context
+    }
+    catch [System.Net.WebException] {
+        $result.AddError("Network error: $($_.Exception.Message)", $_.Exception, @{ErrorType="Network"})
+        Write-SharePointLog -Level "ERROR" -Message "Network error: $($_.Exception.Message)" -Context $Context
+    }
+    catch {
+        $result.AddError("Unexpected error: $($_.Exception.Message)", $_.Exception, @{ErrorType="General"})
         Write-SharePointLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
-        $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
-    } finally {
+    }
+    finally {
         # 8. CLEANUP & COMPLETE
         Write-SharePointLog -Level "INFO" -Message "Cleaning up..." -Context $Context
         
@@ -330,6 +339,13 @@ function Invoke-SharePointDiscovery {
         
         $stopwatch.Stop()
         $result.Complete()
+        
+        # Ensure RecordCount is properly set
+        if ($result -is [hashtable]) {
+            $result['RecordCount'] = $allDiscoveredData.Count
+        }
+        
+        Write-SharePointLog -Level $(if($result.Success){"SUCCESS"}else{"ERROR"}) -Message "Discovery completed with $($result.RecordCount) records" -Context $Context
         Write-SharePointLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

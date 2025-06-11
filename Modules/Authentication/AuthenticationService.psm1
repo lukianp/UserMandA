@@ -127,8 +127,16 @@ function Get-AuthenticationForService {
     )
     
     try {
-        # Use provided session ID or current session
-        $targetSessionId = if ($SessionId) { $SessionId } else { $script:CurrentSessionId }
+        # Add validation for SessionId
+        if ([string]::IsNullOrEmpty($SessionId)) {
+            # Use current session if SessionId not provided
+            $targetSessionId = $script:CurrentSessionId
+            if ([string]::IsNullOrEmpty($targetSessionId)) {
+                throw "SessionId is required but was null or empty, and no current session is available"
+            }
+        } else {
+            $targetSessionId = $SessionId
+        }
         
         if (-not $targetSessionId) {
             throw "No authentication session available. Call Initialize-AuthenticationService first."

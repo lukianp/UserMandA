@@ -362,11 +362,20 @@ function Invoke-GraphDiscovery {
             $result.Metadata["$($group.Name)Count"] = $group.Count
         }
 
-    } catch {
-        # Top-level error handler
+    }
+    catch [System.UnauthorizedAccessException] {
+        $result.AddError("Access denied: $($_.Exception.Message)", $_.Exception, @{ErrorType="Authorization"})
+        Write-GraphLog -Level "ERROR" -Message "Authorization error: $($_.Exception.Message)" -Context $Context
+    }
+    catch [System.Net.WebException] {
+        $result.AddError("Network error: $($_.Exception.Message)", $_.Exception, @{ErrorType="Network"})
+        Write-GraphLog -Level "ERROR" -Message "Network error: $($_.Exception.Message)" -Context $Context
+    }
+    catch {
+        $result.AddError("Unexpected error: $($_.Exception.Message)", $_.Exception, @{ErrorType="General"})
         Write-GraphLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
-        $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
-    } finally {
+    }
+    finally {
         # 8. CLEANUP & COMPLETE
         Write-GraphLog -Level "INFO" -Message "Cleaning up..." -Context $Context
         
@@ -375,6 +384,13 @@ function Invoke-GraphDiscovery {
         
         $stopwatch.Stop()
         $result.Complete()
+        
+        # Ensure RecordCount is properly set
+        if ($result -is [hashtable]) {
+            $result['RecordCount'] = $allDiscoveredData.Count
+        }
+        
+        Write-GraphLog -Level $(if($result.Success){"SUCCESS"}else{"ERROR"}) -Message "Discovery completed with $($result.RecordCount) records" -Context $Context
         Write-GraphLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

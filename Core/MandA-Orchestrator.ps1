@@ -275,8 +275,17 @@ function Invoke-SessionBasedDiscoveryPhase {
         $script:AuthenticationSessionId = $authResult.SessionId
         Write-OrchestratorLog -Message "Authentication session created: $($script:AuthenticationSessionId)" -Level "SUCCESS"
         
-        # STEP 2: Determine modules to run
+        # STEP 2: Determine modules to run based on mode
         $enabledSources = $global:MandA.Config.discovery.enabledSources
+        
+        # Filter sources based on mode
+        if ($Mode -eq "AzureOnly") {
+            # Define Azure-only modules (cloud-based Microsoft services)
+            $azureOnlyModules = @("Azure", "Graph", "Intune", "SharePoint", "Teams", "Exchange", "Licensing", "NetworkInfrastructure")
+            $enabledSources = $enabledSources | Where-Object { $_ -in $azureOnlyModules }
+            Write-OrchestratorLog -Message "AzureOnly mode: Filtering to Azure/cloud modules only: $($azureOnlyModules -join ', ')" -Level "INFO"
+        }
+        
         $sourcesToRun = @($enabledSources | Where-Object {
             if ($Force) { return $true }
             
@@ -434,8 +443,12 @@ try {
     $phaseResults = @{}
     
     switch ($Mode) {
-        "Discovery" { 
-            $phaseResults.Discovery = Invoke-SessionBasedDiscoveryPhase 
+        "Discovery" {
+            $phaseResults.Discovery = Invoke-SessionBasedDiscoveryPhase
+        }
+        "AzureOnly" {
+            Write-OrchestratorLog -Message "Running Azure-only discovery phase" -Level "INFO"
+            $phaseResults.Discovery = Invoke-SessionBasedDiscoveryPhase
         }
         "Full" {
             $phaseResults.Discovery = Invoke-SessionBasedDiscoveryPhase
@@ -464,7 +477,7 @@ try {
             $moduleResult = $result.ModuleResults[$moduleName]
             $moduleStatus = if ($moduleResult.Success) { "SUCCESS" } else { "FAILED" }
             $recordCount = if ($moduleResult.RecordCount) { $moduleResult.RecordCount } else { 0 }
-            Write-OrchestratorLog -Message "  $moduleName: $moduleStatus ($recordCount records)" -Level $(if ($moduleResult.Success) { "SUCCESS" } else { "ERROR" })
+            Write-OrchestratorLog -Message "  ${moduleName}: $moduleStatus ($recordCount records)" -Level $(if ($moduleResult.Success) { "SUCCESS" } else { "ERROR" })
         }
     }
     
