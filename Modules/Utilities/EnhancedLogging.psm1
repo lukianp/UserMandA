@@ -230,6 +230,42 @@ function Get-LogEmojiInternal {
     }
 }
 
+function Get-StatusIndicator {
+    <#
+    .SYNOPSIS
+        Returns a status indicator string based on the provided status.
+    .DESCRIPTION
+        Provides standardized status indicators for different status types.
+        This function is useful for consistent status display across the M&A Discovery Suite.
+    .PARAMETER Status
+        The status to get an indicator for. Valid values: Success, Warning, Error, Info
+    .EXAMPLE
+        Get-StatusIndicator -Status "Success"
+        Returns: [OK]
+    .EXAMPLE
+        Get-StatusIndicator -Status "Error"
+        Returns: [ERROR]
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Status
+    )
+    
+    try {
+        switch ($Status) {
+            'Success' { return '[OK]' }
+            'Warning' { return '[WARNING]' }
+            'Error'   { return '[ERROR]' }
+            'Info'    { return '[INFO]' }
+            default   { return '[--]' }
+        }
+    } catch {
+        Write-MandALog "Error in function 'Get-StatusIndicator': $($_.Exception.Message)" "ERROR"
+        throw
+    }
+}
+
 # --- Public Functions ---
 
 function Initialize-Logging {
@@ -647,6 +683,7 @@ Export-ModuleMember -Function @(
     'Get-EffectiveLoggingSetting',
     'Get-LogColorInternal',
     'Get-LogEmojiInternal',
+    'Get-StatusIndicator',
     'New-CorrelationId',
     'Start-PerformanceTimer',
     'Stop-PerformanceTimer'
