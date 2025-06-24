@@ -269,8 +269,8 @@ Write-Host "  Parallel Throttle (Parameter): $ParallelThrottle" -ForegroundColor
     #FIX: Replaced emojis with ASCII equivalents
     switch ($ExitCode) {
         0 { Write-Host "[QuickStart] [OK] M&A Discovery Suite completed successfully!" -ForegroundColor Green }
-        1 { Write-Host "[QuickStart] [WARNING] M&A Discovery Suite completed with warnings. Check logs for details." -ForegroundColor Yellow }
-        2 { Write-Host "[QuickStart] [ERROR] M&A Discovery Suite encountered critical errors. Review error report in logs directory." -ForegroundColor Red }
+        1 { Write-Host "[QuickStart] [WARNING] M&A Discovery Suite completed with warnings." -ForegroundColor Yellow }
+        2 { Write-Host "[QuickStart] [ERROR] M&A Discovery Suite encountered critical errors." -ForegroundColor Red }
         default { Write-Host "[QuickStart] [FAILURE] M&A Discovery Suite failed with exit code: $ExitCode." -ForegroundColor Red }
     }
     #FIX: Ensured $Duration.ToString format string is valid and $Duration is correctly initialized. No change needed if $Duration is TimeSpan.
