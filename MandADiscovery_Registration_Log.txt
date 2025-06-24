@@ -1,0 +1,47 @@
+﻿Enhanced M&A Discovery Suite - Azure AD App Registration
+Version: 4.0.0
+Started: 2025-06-24 11:16:14
+User: lukia
+Computer: DADDY_WALRUS
+Domain: DADDY_WALRUS
+PowerShell: 5.1.26100.4202
+[2025-06-24 11:16:14] [INFO] Script Information:
+[2025-06-24 11:16:14] [INFO]   Name: Enhanced M&A Discovery Suite - App Registration
+[2025-06-24 11:16:14] [INFO]   Version: 4.0.0
+[2025-06-24 11:16:14] [INFO]   Author: M&A Discovery Team
+[2025-06-24 11:16:14] [INFO] Execution Parameters:
+[2025-06-24 11:16:14] [INFO]   Log Path: .\MandADiscovery_Registration_Log.txt
+[2025-06-24 11:16:14] [INFO]   Output Path: C:\DiscoveryData\discoverycredentials.config
+[2025-06-24 11:16:14] [INFO]   Force Mode: False
+[2025-06-24 11:16:14] [INFO]   Validate Only: False
+[2025-06-24 11:16:14] [INFO]   Skip Azure Roles: False
+[2025-06-24 11:16:14] [INFO]   Secret Validity: 2 years
+[2025-06-24 11:16:14] [PROGRESS] ?? Starting: Prerequisites
+[2025-06-24 11:16:14] [SUCCESS] Running with administrator privileges
+[2025-06-24 11:16:14] [PROGRESS] Testing network connectivity to 4 endpoints...
+[2025-06-24 11:16:14] [SUCCESS] Connectivity to Microsoft Graph: Available
+[2025-06-24 11:16:14] [SUCCESS] Connectivity to Azure Management: Available
+[2025-06-24 11:16:14] [SUCCESS] Connectivity to Azure AD Authentication: Available
+[2025-06-24 11:16:14] [SUCCESS] Connectivity to Azure AD Graph (Legacy): Available
+[2025-06-24 11:16:14] [SUCCESS] Network connectivity: 4/4 endpoints accessible
+[2025-06-24 11:16:15] [SUCCESS] Available memory: 64.59GB
+[2025-06-24 11:16:15] [SUCCESS] Available disk space: 277.09GB
+[2025-06-24 11:16:15] [SUCCESS] Output directory accessible with write permissions: C:\DiscoveryData
+[2025-06-24 11:16:15] [PROGRESS] Checking PowerShell modules...
+[2025-06-24 11:16:15] [WARN] Prerequisites validation found 1 warning(s):
+[2025-06-24 11:16:15] [WARN]   PowerShell 5.1 detected. PowerShell 7+ recommended for enhanced performance and compatibility
+[2025-06-24 11:16:15] [ERROR] Prerequisites validation failed with 5 issue(s):
+[2025-06-24 11:16:15] [ERROR]   Required module 'Az.Accounts' not found. Install with: Install-Module Az.Accounts -Scope CurrentUser
+[2025-06-24 11:16:15] [ERROR]   Required module 'Az.Resources' not found. Install with: Install-Module Az.Resources -Scope CurrentUser
+[2025-06-24 11:16:15] [ERROR]   Required module 'Microsoft.Graph.Applications' not found. Install with: Install-Module Microsoft.Graph.Applications -Scope CurrentUser
+[2025-06-24 11:16:15] [ERROR]   Required module 'Microsoft.Graph.Authentication' not found. Install with: Install-Module Microsoft.Graph.Authentication -Scope CurrentUser
+[2025-06-24 11:16:15] [ERROR]   Required module 'Microsoft.Graph.Identity.DirectoryManagement' not found. Install with: Install-Module Microsoft.Graph.Identity.DirectoryManagement -Scope CurrentUser
+[2025-06-24 11:16:15] [ERROR] [X] Prerequisites (?? 0.78s)
+[2025-06-24 11:16:15] [CRITICAL] CRITICAL ERROR: Prerequisites validation failed. Please resolve issues and retry.
+[2025-06-24 11:16:15] [DEBUG] Stack Trace: at <ScriptBlock>, D:\Scripts\UserMandA\Scripts\DiscoveryCreateAppRegistration.ps1: line 1469 at <ScriptBlock>, <No file>: line 1
+[2025-06-24 11:16:15] [ERROR] Check the log file for detailed error information: .\MandADiscovery_Registration_Log.txt
+[2025-06-24 11:16:15] [PROGRESS] Performing cleanup operations...
+[2025-06-24 11:16:15] [WARN] Error during Graph disconnect: The term 'Get-MgContext' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+[2025-06-24 11:16:15] [WARN] Error during Azure disconnect: The term 'Get-AzContext' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+[2025-06-24 11:16:15] [SUCCESS] Metrics saved: MandADiscovery_Registration_Log_metrics.json
+[2025-06-24 11:16:15] [SUCCESS] Cleanup completed. Full log: .\MandADiscovery_Registration_Log.txt
