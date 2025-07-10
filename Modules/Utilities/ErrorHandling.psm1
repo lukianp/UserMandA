@@ -931,6 +931,187 @@ class DiscoveryResult {
     }
 }
 
+# Discovery-specific retry function with standardized error handling
+function Invoke-DiscoveryWithRetry {
+    <#
+    .SYNOPSIS
+        Executes discovery operations with retry logic and standardized error handling
+    .DESCRIPTION
+        Provides specialized retry logic for discovery modules with exponential backoff,
+        correlation ID support, and standardized DiscoveryResult output.
+    .PARAMETER ScriptBlock
+        The discovery script block to execute
+    .PARAMETER ModuleName
+        Name of the discovery module
+    .PARAMETER MaxRetries
+        Maximum number of retry attempts (default: 3)
+    .PARAMETER DelaySeconds
+        Initial delay between retries in seconds (default: 2)
+    .PARAMETER ExponentialBackoff
+        Whether to use exponential backoff (default: true)
+    .PARAMETER Context
+        Logging context with correlation ID
+    .EXAMPLE
+        $result = Invoke-DiscoveryWithRetry -ScriptBlock { Get-MgUser -All } -ModuleName "GraphDiscovery" -Context $context
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [scriptblock]$ScriptBlock,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$ModuleName,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$MaxRetries = 3,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$DelaySeconds = 2,
+        
+        [Parameter(Mandatory=$false)]
+        [switch]$ExponentialBackoff,
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context
+    )
+    
+    $discoveryResult = New-DiscoveryResult -ModuleName $ModuleName
+    $attempt = 0
+    $lastError = $null
+    
+    Write-SafeLog -Message "[$ModuleName] Starting discovery operation with retry logic (Max: $MaxRetries)" -Level "INFO" -Component $ModuleName -Context $Context
+    
+    while ($attempt -lt $MaxRetries) {
+        $attempt++
+        
+        try {
+            Write-SafeLog -Message "[$ModuleName] Discovery attempt $attempt of $MaxRetries" -Level "DEBUG" -Component $ModuleName -Context $Context
+            
+            # Execute the discovery operation
+            $result = & $ScriptBlock
+            $discoveryResult.Data = $result
+            $discoveryResult.Complete()
+            
+            Write-SafeLog -Message "[$ModuleName] Discovery completed successfully on attempt $attempt" -Level "SUCCESS" -Component $ModuleName -Context $Context
+            return $discoveryResult
+            
+        } catch {
+            $lastError = $_
+            $errorType = $_.Exception.GetType().Name
+            
+            # Add error to discovery result
+            $discoveryResult.AddErrorWithContext(
+                "Discovery attempt $attempt failed: $($_.Exception.Message)",
+                $_,
+                @{
+                    AttemptNumber = $attempt
+                    MaxRetries = $MaxRetries
+                    ModuleName = $ModuleName
+                    CorrelationId = if ($Context -and $Context.CorrelationId) { $Context.CorrelationId } else { $null }
+                }
+            )
+            
+            Write-SafeLog -Message "[$ModuleName] Attempt $attempt failed: $($_.Exception.Message)" -Level "WARN" -Component $ModuleName -Context $Context
+            
+            # Check if this is a retryable error
+            $retryableErrors = @('TimeoutException', 'HttpRequestException', 'SocketException', 'WebException')
+            $isRetryable = $retryableErrors -contains $errorType -or
+                          $_.Exception.Message -match 'timeout|throttle|rate limit|service unavailable|temporary'
+            
+            # Check for critical errors that should not be retried
+            if (Test-CriticalError -ErrorRecord $_ -Context $Context) {
+                Write-SafeLog -Message "[$ModuleName] Critical error detected, stopping retries" -Level "ERROR" -Component $ModuleName -Context $Context
+                break
+            }
+            
+            if ($attempt -ge $MaxRetries -or -not $isRetryable) {
+                Write-SafeLog -Message "[$ModuleName] No more retries or error not retryable" -Level "ERROR" -Component $ModuleName -Context $Context
+                break
+            }
+            
+            # Calculate delay with exponential backoff
+            $delay = if ($ExponentialBackoff) {
+                $DelaySeconds * [Math]::Pow(2, $attempt - 1)
+            } else {
+                $DelaySeconds
+            }
+            
+            Write-SafeLog -Message "[$ModuleName] Retrying in $delay seconds..." -Level "INFO" -Component $ModuleName -Context $Context
+            Start-Sleep -Seconds $delay
+        }
+    }
+    
+    # All retries failed
+    $discoveryResult.Complete()
+    Write-SafeLog -Message "[$ModuleName] Discovery failed after $attempt attempts" -Level "ERROR" -Component $ModuleName -Context $Context
+    
+    return $discoveryResult
+}
+
+# Output path validation function
+function Test-OutputPathValidation {
+    <#
+    .SYNOPSIS
+        Validates and ensures output paths exist for discovery modules
+    .DESCRIPTION
+        Standardized output path validation that creates directories if needed
+        and validates write permissions.
+    .PARAMETER OutputPath
+        The output path to validate
+    .PARAMETER ModuleName
+        Name of the module requesting validation
+    .PARAMETER Context
+        Logging context
+    .EXAMPLE
+        $isValid = Test-OutputPathValidation -OutputPath "C:\Discovery\Output" -ModuleName "GraphDiscovery" -Context $context
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$OutputPath,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$ModuleName,
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$Context
+    )
+    
+    try {
+        Write-SafeLog -Message "[$ModuleName] Validating output path: $OutputPath" -Level "DEBUG" -Component $ModuleName -Context $Context
+        
+        # Check if path exists
+        if (-not (Test-Path $OutputPath)) {
+            Write-SafeLog -Message "[$ModuleName] Output path does not exist, creating: $OutputPath" -Level "INFO" -Component $ModuleName -Context $Context
+            
+            try {
+                New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
+                Write-SafeLog -Message "[$ModuleName] Successfully created output directory: $OutputPath" -Level "SUCCESS" -Component $ModuleName -Context $Context
+            } catch {
+                Write-SafeLog -Message "[$ModuleName] Failed to create output directory: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
+                return $false
+            }
+        }
+        
+        # Test write permissions by creating a temporary file
+        $testFile = Join-Path $OutputPath "test_write_permissions_$([guid]::NewGuid().ToString().Substring(0,8)).tmp"
+        
+        try {
+            "test" | Out-File -FilePath $testFile -Force
+            Remove-Item -Path $testFile -Force -ErrorAction SilentlyContinue
+            Write-SafeLog -Message "[$ModuleName] Output path validation successful: $OutputPath" -Level "DEBUG" -Component $ModuleName -Context $Context
+            return $true
+        } catch {
+            Write-SafeLog -Message "[$ModuleName] No write permissions for output path: $OutputPath - $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
+            return $false
+        }
+        
+    } catch {
+        Write-SafeLog -Message "[$ModuleName] Output path validation failed: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
+        return $false
+    }
+}
+
 # Export the class constructor as a function
 function New-DiscoveryResult {
     param([string]$ModuleName)
@@ -952,7 +1133,9 @@ Export-ModuleMember -Function @(
     'New-DiscoveryResult',
     'Get-ModuleContext',
     'Write-SafeLog',
-    'Invoke-SafeModuleExecution'
+    'Invoke-SafeModuleExecution',
+    'Invoke-DiscoveryWithRetry',
+    'Test-OutputPathValidation'
 )
 
 Write-Host "[ErrorHandling.psm1] Module loaded successfully." -ForegroundColor Green

@@ -127,12 +127,11 @@ function Get-AuthenticationForService {
     )
     
     try {
-        # Add validation for SessionId
+        # Fix: Add proper null checks for SessionId
         if ([string]::IsNullOrEmpty($SessionId)) {
-            # Use current session if SessionId not provided
             $targetSessionId = $script:CurrentSessionId
             if ([string]::IsNullOrEmpty($targetSessionId)) {
-                throw "SessionId is required but was null or empty, and no current session is available"
+                throw "SessionId is required but was null or empty"
             }
         } else {
             $targetSessionId = $SessionId
