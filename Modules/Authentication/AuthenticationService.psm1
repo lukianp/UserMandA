@@ -123,71 +123,108 @@ function Get-AuthenticationForService {
         [string]$Service,
         
         [Parameter(Mandatory=$false)]
-        [string]$SessionId
+        [string]$SessionId,
+
+        [Parameter(Mandatory=$false)]
+        [int]$MaxRetries = 3,
+
+        [Parameter(Mandatory=$false)]
+        [int]$InitialDelaySeconds = 2
     )
     
-    try {
-        # Fix: Add proper null checks for SessionId
-        if ([string]::IsNullOrEmpty($SessionId)) {
-            $targetSessionId = $script:CurrentSessionId
-            if ([string]::IsNullOrEmpty($targetSessionId)) {
-                throw "SessionId is required but was null or empty"
+    $attempt = 0
+    $lastError = $null
+
+    while ($attempt -lt $MaxRetries) {
+        $attempt++
+        try {
+            # Fix: Add proper null checks for SessionId
+            if ([string]::IsNullOrEmpty($SessionId)) {
+                $targetSessionId = $script:CurrentSessionId
+                if ([string]::IsNullOrEmpty($targetSessionId)) {
+                    throw "SessionId is required but was null or empty"
+                }
+            } else {
+                $targetSessionId = $SessionId
             }
-        } else {
-            $targetSessionId = $SessionId
-        }
-        
-        if (-not $targetSessionId) {
-            throw "No authentication session available. Call Initialize-AuthenticationService first."
-        }
-        
-        # Get the session
-        $session = Get-AuthenticationSession -SessionId $targetSessionId
-        if (-not $session) {
-            throw "Authentication session not found or expired: $targetSessionId"
-        }
-        
-        # Check for cached connection
-        $connection = $session.GetConnection($Service)
-        if ($connection) {
-            Write-Verbose "[AuthService] Using cached connection for $Service"
-            return $connection
-        }
-        
-        # Create new connection based on service type
-        $credential = $session.GetCredential()
-        $newConnection = $null
-        
-        switch ($Service) {
-            "Graph" {
-                $newConnection = Connect-ToMicrosoftGraphService -Credential $credential -TenantId $session.TenantId
+            
+            if (-not $targetSessionId) {
+                throw "No authentication session available. Call Initialize-AuthenticationService first."
             }
-            "Azure" {
-                $newConnection = Connect-ToAzureService -Credential $credential -TenantId $session.TenantId
+            
+            # Get the session
+            $session = Get-AuthenticationSession -SessionId $targetSessionId
+            if (-not $session) {
+                throw "Authentication session not found or expired: $targetSessionId"
             }
-            "Exchange" {
-                $newConnection = Connect-ToExchangeService -Credential $credential -TenantId $session.TenantId
+
+            # Check session expiry and renew if needed
+            if (Get-Command Test-SessionExpiry -ErrorAction SilentlyContinue) {
+                $sessionStatus = Test-SessionExpiry -SessionId $targetSessionId
+                if (-not $sessionStatus.Valid) {
+                    throw "Session invalid: $($sessionStatus.Reason)"
+                }
+                if ($sessionStatus.NeedsRenewal) {
+                    Write-Verbose "[AuthService] Session needs renewal. Attempting to renew..."
+                    # Implement actual renewal logic here. For now, we'll just warn.
+                    # In a real scenario, this would involve re-authenticating or refreshing tokens.
+                    # For this task, we assume the session object handles renewal internally or it's a manual process.
+                    Write-Warning "Session for $Service is nearing expiry. Manual renewal might be required."
+                }
             }
-            "SharePoint" {
-                $newConnection = Connect-ToSharePointService -Credential $credential -TenantId $session.TenantId
+            
+            # Check for cached connection
+            $connection = $session.GetConnection($Service)
+            if ($connection) {
+                Write-Verbose "[AuthService] Using cached connection for $Service"
+                return $connection
             }
-            "Teams" {
-                $newConnection = Connect-ToTeamsService -Credential $credential -TenantId $session.TenantId
+            
+            # Create new connection based on service type
+            $credential = $session.GetCredential()
+            $newConnection = $null
+            
+            Write-Verbose "[AuthService] Attempting to connect to $Service (attempt $attempt of $MaxRetries)"
+
+            switch ($Service) {
+                "Graph" {
+                    $newConnection = Connect-ToMicrosoftGraphService -Credential $credential -TenantId $session.TenantId
+                }
+                "Azure" {
+                    $newConnection = Connect-ToAzureService -Credential $credential -TenantId $session.TenantId
+                }
+                "Exchange" {
+                    $newConnection = Connect-ToExchangeService -Credential $credential -TenantId $session.TenantId
+                }
+                "SharePoint" {
+                    $newConnection = Connect-ToSharePointService -Credential $credential -TenantId $session.TenantId
+                }
+                "Teams" {
+                    $newConnection = Connect-ToTeamsService -Credential $credential -TenantId $session.TenantId
+                }
+            }
+            
+            if ($newConnection) {
+                # Cache the connection
+                $session.SetConnection($Service, $newConnection)
+                Write-Verbose "[AuthService] Created and cached new connection for $Service"
+                return $newConnection
+            } else {
+                throw "Failed to create connection for service: $Service"
+            }
+            
+        } catch {
+            $lastError = $_
+            Write-Warning "Failed to get authentication for service $Service (attempt $attempt): $($_.Exception.Message)"
+            
+            if ($attempt -lt $MaxRetries) {
+                $delay = [Math]::Pow($InitialDelaySeconds, $attempt) # Exponential backoff
+                Write-Verbose "Retrying in $delay seconds..."
+                Start-Sleep -Seconds $delay
+            } else {
+                throw $lastError # Re-throw last error after max retries
             }
         }
-        
-        if ($newConnection) {
-            # Cache the connection
-            $session.SetConnection($Service, $newConnection)
-            Write-Verbose "[AuthService] Created and cached new connection for $Service"
-            return $newConnection
-        } else {
-            throw "Failed to create connection for service: $Service"
-        }
-        
-    } catch {
-        Write-Error "Failed to get authentication for service $Service : $($_.Exception.Message)"
-        throw
     }
 }
 

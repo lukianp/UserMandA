@@ -39,87 +39,15 @@ param(
     [switch]$ValidateOnly,
     
     [Parameter(Mandatory=$false)]
-    [switch]$DebugMode
+    [switch]$DebugMode,
+
+    [Parameter(Mandatory=$false)]
+    [switch]$Diagnostic # New parameter for diagnostic mode
 )
 
 #===============================================================================
 #                       CRITICAL CLASS DEFINITIONS
 #===============================================================================
-
-# Define DiscoveryResult class in global scope immediately
-if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
-    Add-Type -TypeDefinition @'
-public class DiscoveryResult {
-    public bool Success { get; set; }
-    public string ModuleName { get; set; }
-    public object Data { get; set; }
-    public System.Collections.ArrayList Errors { get; set; }
-    public System.Collections.ArrayList Warnings { get; set; }
-    public System.Collections.Hashtable Metadata { get; set; }
-    public System.DateTime StartTime { get; set; }
-    public System.DateTime EndTime { get; set; }
-    public string ExecutionId { get; set; }
-    public int RecordCount { get; set; }
-    
-    public DiscoveryResult(string moduleName) {
-        this.ModuleName = moduleName;
-        this.Errors = new System.Collections.ArrayList();
-        this.Warnings = new System.Collections.ArrayList();
-        this.Metadata = new System.Collections.Hashtable();
-        this.StartTime = System.DateTime.Now;
-        this.ExecutionId = System.Guid.NewGuid().ToString();
-        this.Success = true;
-        this.RecordCount = 0;
-    }
-    
-    public void AddError(string message, System.Exception exception) {
-        AddError(message, exception, new System.Collections.Hashtable());
-    }
-    
-    public void AddError(string message, System.Exception exception, System.Collections.Hashtable context) {
-        var errorEntry = new System.Collections.Hashtable();
-        errorEntry["Timestamp"] = System.DateTime.Now;
-        errorEntry["Message"] = message;
-        
-        if (exception != null) {
-            errorEntry["Exception"] = exception.ToString();
-            errorEntry["ExceptionType"] = exception.GetType().FullName;
-            errorEntry["StackTrace"] = exception.StackTrace;
-        } else {
-            errorEntry["Exception"] = null;
-            errorEntry["ExceptionType"] = null;
-            errorEntry["StackTrace"] = System.Environment.StackTrace;
-        }
-        
-        errorEntry["Context"] = context ?? new System.Collections.Hashtable();
-        this.Errors.Add(errorEntry);
-        this.Success = false;
-    }
-    
-    public void AddWarning(string message) {
-        AddWarning(message, new System.Collections.Hashtable());
-    }
-    
-    public void AddWarning(string message, System.Collections.Hashtable context) {
-        var warningEntry = new System.Collections.Hashtable();
-        warningEntry["Timestamp"] = System.DateTime.Now;
-        warningEntry["Message"] = message;
-        warningEntry["Context"] = context;
-        this.Warnings.Add(warningEntry);
-    }
-    
-    public void Complete() {
-        this.EndTime = System.DateTime.Now;
-        if (this.StartTime != null && this.EndTime != null) {
-            var duration = this.EndTime - this.StartTime;
-            this.Metadata["Duration"] = duration;
-            this.Metadata["DurationSeconds"] = duration.TotalSeconds;
-        }
-    }
-}
-'@ -Language CSharp
-    Write-Host "[ORCHESTRATOR] DiscoveryResult class defined globally" -ForegroundColor Green
-}
 
 #===============================================================================
 #                       INITIALIZATION
@@ -145,6 +73,16 @@ $script:StartTime = Get-Date
 $script:DebugMode = $DebugMode -or $VerbosePreference -eq 'Continue'
 $script:CorrelationId = [guid]::NewGuid().ToString()
 $script:AuthenticationSessionId = $null
+
+# Progress tracking
+$script:ProgressData = @{
+    TotalModules = 0
+    CompletedModules = 0
+    CurrentModule = ""
+    PhaseStartTime = $script:StartTime
+    EstimatedEndTime = $null
+    OverallProgress = 0 # Percentage
+}
 
 #===============================================================================
 #                       HELPER FUNCTIONS
@@ -187,6 +125,207 @@ function Write-OrchestratorLog {
         
         Write-Host "$timestamp $indicator [$Level] [$Component] $Message" -ForegroundColor $color
     }
+}
+
+function Update-OrchestratorProgress {
+    param(
+        [string]$CurrentModule = "",
+        [int]$CompletedModules = 0,
+        [int]$TotalModules = 0
+    )
+    
+    $script:ProgressData.CurrentModule = $CurrentModule
+    $script:ProgressData.CompletedModules = $CompletedModules
+    $script:ProgressData.TotalModules = $TotalModules
+    
+    if ($TotalModules -gt 0) {
+        $script:ProgressData.OverallProgress = [Math]::Round(($CompletedModules / $TotalModules) * 100, 0)
+        
+        $elapsed = (Get-Date) - $script:ProgressData.PhaseStartTime
+        if ($CompletedModules -gt 0) {
+            $timePerModule = $elapsed.TotalSeconds / $CompletedModules
+            $remainingModules = $TotalModules - $CompletedModules
+            $estimatedRemainingSeconds = $remainingModules * $timePerModule
+            $script:ProgressData.EstimatedEndTime = (Get-Date).AddSeconds($estimatedRemainingSeconds)
+        }
+    }
+    
+    Write-Progress -Activity "M&A Discovery Orchestrator" `
+                   -Status "Phase: Discovery | Module: $($script:ProgressData.CurrentModule)" `
+                   -PercentComplete $script:ProgressData.OverallProgress `
+                   -CurrentOperation "Completed $($script:ProgressData.CompletedModules) of $($script:ProgressData.TotalModules) modules"
+    
+    Write-OrchestratorLog -Message "Progress: $($script:ProgressData.OverallProgress)% - $($script:ProgressData.CurrentModule)" -Level "PROGRESS" -DebugOnly
+}
+
+function Write-ProgressSummaryFile {
+    param(
+        [string]$OutputPath,
+        [hashtable]$PhaseResults
+    )
+    
+    $summaryFilePath = Join-Path $OutputPath "OrchestratorProgressSummary.json"
+    
+    $summaryContent = @{
+        OverallStatus = "Completed"
+        StartTime = $script:StartTime
+        EndTime = Get-Date
+        TotalDurationSeconds = ((Get-Date) - $script:StartTime).TotalSeconds
+        Phases = @{}
+    }
+    
+    foreach ($phaseName in $PhaseResults.Keys) {
+        $phaseResult = $PhaseResults[$phaseName]
+        $summaryContent.Phases[$phaseName] = @{
+            Success = $phaseResult.Success
+            TotalModules = $phaseResult.ModuleResults.Count
+            SuccessfulModules = ($phaseResult.ModuleResults.Values | Where-Object { $_.Success }).Count
+            ModuleDetails = $phaseResult.ModuleResults
+            CriticalErrors = $phaseResult.CriticalErrors
+            RecoverableErrors = $phaseResult.RecoverableErrors
+            Warnings = $phaseResult.Warnings
+        }
+    }
+    
+    $summaryContent | ConvertTo-Json -Depth 10 | Set-Content -Path $summaryFilePath -Encoding UTF8
+    Write-OrchestratorLog -Message "Progress summary written to: $summaryFilePath" -Level "INFO"
+}
+
+function Invoke-DiagnosticMode {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context,
+
+        [Parameter(Mandatory=$true)]
+        [string]$OutputPath
+    )
+
+    Write-OrchestratorLog -Message "========================================" -Level "HEADER"
+    Write-OrchestratorLog -Message "STARTING DIAGNOSTIC MODE" -Level "HEADER"
+    Write-OrchestratorLog -Message "========================================" -Level "HEADER"
+
+    $diagnosticReport = [System.Text.StringBuilder]::new()
+    $diagnosticReport.AppendLine("M&A Discovery Suite Diagnostic Report")
+    $diagnosticReport.AppendLine("Generated: $(Get-Date)")
+    $diagnosticReport.AppendLine("----------------------------------------")
+    $diagnosticReport.AppendLine("")
+
+    # 1. PowerShell Environment Check
+    $diagnosticReport.AppendLine("1. PowerShell Environment:")
+    $diagnosticReport.AppendLine("   PowerShell Version: $($PSVersionTable.PSVersion)")
+    $diagnosticReport.AppendLine("   PS Edition: $($PSVersionTable.PSEdition)")
+    $diagnosticReport.AppendLine("   OS: $([System.Environment]::OSVersion.VersionString)")
+    $diagnosticReport.AppendLine("   Current User: $([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)")
+    $diagnosticReport.AppendLine("")
+
+    # 2. Suite Structure Check
+    $diagnosticReport.AppendLine("2. Suite Structure Check:")
+    $requiredDirs = @("Core", "Modules", "Scripts", "Configuration", "Documentation")
+    foreach ($dir in $requiredDirs) {
+        $path = Join-Path $Context.Paths.SuiteRoot $dir
+        $status = if (Test-Path $path -PathType Container) { "Found" } else { "Missing" }
+        $diagnosticReport.AppendLine("   - $dir: $status ($path)")
+    }
+    $diagnosticReport.AppendLine("")
+
+    # 3. Configuration File Check
+    $diagnosticReport.AppendLine("3. Configuration File Check:")
+    $configFilePath = $Context.Paths.ConfigFile
+    $status = if (Test-Path $configFilePath -PathType Leaf) { "Found" } else { "Missing" }
+    $diagnosticReport.AppendLine("   - default-config.json: $status ($configFilePath)")
+    if ($status -eq "Found") {
+        try {
+            $configContent = Get-Content $configFilePath -Raw | ConvertFrom-Json -ErrorAction Stop
+            $diagnosticReport.AppendLine("     - Parsed Successfully: True")
+            $diagnosticReport.AppendLine("     - Company Name: $($configContent.metadata.companyName)")
+            $diagnosticReport.AppendLine("     - Discovery Sources: $($configContent.discovery.enabledSources -join ', ')")
+        } catch {
+            $diagnosticReport.AppendLine("     - Parsed Successfully: False (Error: $($_.Exception.Message))")
+        }
+    }
+    $diagnosticReport.AppendLine("")
+
+    # 4. Module Loading Check
+    $diagnosticReport.AppendLine("4. Core Module Loading Check:")
+    $coreModules = @(
+        "Modules\Core\ClassDefinitions.psm1",
+        "Modules\Authentication\AuthSession.psm1",
+        "Modules\Authentication\SessionManager.psm1",
+        "Modules\Authentication\CredentialManagement.psm1",
+        "Modules\Authentication\AuthenticationService.psm1",
+        "Modules\Discovery\DiscoveryBase.psm1",
+        "Modules\Utilities\EnhancedLogging.psm1",
+        "Modules\Utilities\ErrorHandling.psm1"
+    )
+    foreach ($moduleRelativePath in $coreModules) {
+        $modulePath = Join-Path $Context.Paths.SuiteRoot $moduleRelativePath
+        $status = if (Test-Path $modulePath -PathType Leaf) { "Found" } else { "Missing" }
+        $diagnosticReport.AppendLine("   - $moduleRelativePath: $status")
+        if ($status -eq "Found") {
+            try {
+                Import-Module $modulePath -Force -ErrorAction Stop
+                $diagnosticReport.AppendLine("     - Importable: True")
+            } catch {
+                $diagnosticReport.AppendLine("     - Importable: False (Error: $($_.Exception.Message))")
+            }
+        }
+    }
+    $diagnosticReport.AppendLine("")
+
+    # 5. Authentication Service Test (Basic)
+    $diagnosticReport.AppendLine("5. Authentication Service Test:")
+    if (Get-Command Test-AuthenticationService -ErrorAction SilentlyContinue) {
+        try {
+            $authTestResult = Test-AuthenticationService
+            $diagnosticReport.AppendLine("   - Service Test Success: $($authTestResult.Success)")
+            if (-not $authTestResult.Success) {
+                $diagnosticReport.AppendLine("     - Error: $($authTestResult.Error)")
+            }
+            $diagnosticReport.AppendLine("   - Session Valid: $($authTestResult.SessionValid)")
+            $authTestResult.Services.GetEnumerator() | ForEach-Object {
+                $diagnosticReport.AppendLine("   - $($_.Name) Connection: $($_.Value.Connected)")
+                if (-not $_.Value.Connected) {
+                    $diagnosticReport.AppendLine("     - Error: $($_.Value.Error)")
+                }
+            }
+        } catch {
+            $diagnosticReport.AppendLine("   - Test-AuthenticationService Failed: $($_.Exception.Message)")
+        }
+    } else {
+        $diagnosticReport.AppendLine("   - Test-AuthenticationService not found. Cannot perform authentication test.")
+    }
+    $diagnosticReport.AppendLine("")
+
+    # 6. Output Paths Check
+    $diagnosticReport.AppendLine("6. Output Paths Check:")
+    $outputPaths = @(
+        $Context.Paths.CompanyProfileRoot,
+        $Context.Paths.LogOutput,
+        $Context.Paths.RawDataOutput,
+        $Context.Paths.ProcessedDataOutput,
+        $Context.Paths.ExportOutput,
+        $Context.Paths.TempPath
+    )
+    foreach ($path in $outputPaths) {
+        $status = if (Test-Path $path -PathType Container) { "Exists" } else { "Missing" }
+        $diagnosticReport.AppendLine("   - $path: $status")
+        if ($status -eq "Missing") {
+            try {
+                New-Item -Path $path -ItemType Directory -Force -ErrorAction Stop | Out-Null
+                $diagnosticReport.AppendLine("     - Attempted Creation: Success")
+            } catch {
+                $diagnosticReport.AppendLine("     - Attempted Creation: Failed (Error: $($_.Exception.Message))")
+            }
+        }
+    }
+    $diagnosticReport.AppendLine("")
+
+    $reportFilePath = Join-Path $OutputPath "MandADiscovery_DiagnosticReport_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+    $diagnosticReport.ToString() | Set-Content -Path $reportFilePath -Encoding UTF8
+
+    Write-OrchestratorLog -Message "Diagnostic report generated at: $reportFilePath" -Level "SUCCESS"
+    Write-OrchestratorLog -Message "========================================" -Level "HEADER"
 }
 
 function Initialize-SessionBasedModules {
@@ -234,6 +373,7 @@ function Initialize-SessionBasedModules {
         if (Test-Path $modulePath) {
             try {
                 Import-Module $modulePath -Force -Global -ErrorAction Stop
+                $loadedCount++
                 Write-OrchestratorLog -Message "Loaded utility module: $module" -Level "SUCCESS"
             } catch {
                 Write-OrchestratorLog -Message "Failed to load utility module $module : $($_.Exception.Message)" -Level "WARN"
@@ -254,7 +394,8 @@ function Invoke-SessionBasedDiscoveryPhase {
 
     Write-OrchestratorLog -Message "STARTING SESSION-BASED DISCOVERY PHASE (v4.0 - NO RUNSPACES)" -Level "HEADER"
     $phaseStartTime = Get-Date
-    
+    $script:ProgressData.PhaseStartTime = $phaseStartTime # Reset phase start time for accurate ETA
+
     $phaseResult = @{
         Success = $true
         ModuleResults = @{}
@@ -291,8 +432,10 @@ function Invoke-SessionBasedDiscoveryPhase {
         }
 
         Write-OrchestratorLog -Message "Running $($sourcesToRun.Count) discovery modules directly in main session" -Level "INFO"
+        Update-OrchestratorProgress -TotalModules $sourcesToRun.Count -CompletedModules 0
 
         # STEP 3: Execute each module directly in the main session (NO RUNSPACES!)
+        $completedModulesCount = 0
         foreach ($moduleName in $sourcesToRun) {
             Write-OrchestratorLog -Message "Executing module: $moduleName" -Level "INFO"
             $moduleStartTime = Get-Date
@@ -372,6 +515,8 @@ function Invoke-SessionBasedDiscoveryPhase {
                     Duration = (Get-Date) - $moduleStartTime
                 })
             }
+            $completedModulesCount++
+            Update-OrchestratorProgress -CurrentModule $moduleName -CompletedModules $completedModulesCount -TotalModules $sourcesToRun.Count
         }
         
         # Summary
@@ -404,6 +549,12 @@ try {
     # Initialize session-based modules
     Initialize-SessionBasedModules -Phase $Mode
     
+    # Handle diagnostic mode
+    if ($Diagnostic) {
+        Invoke-DiagnosticMode -Context $global:MandA -OutputPath $global:MandA.Paths.LogOutput
+        exit 0 # Exit after diagnostic report
+    }
+
     # Handle configuration
     if ($Force) {
         Write-OrchestratorLog -Message "Force mode enabled" -Level "INFO"
@@ -468,6 +619,9 @@ try {
         }
     }
     
+    # Write progress summary file
+    Write-ProgressSummaryFile -OutputPath $global:MandA.Paths.LogOutput -PhaseResults $phaseResults
+
     # Determine exit code
     $criticalCount = ($phaseResults.Values | ForEach-Object { $_.CriticalErrors.Count } | Measure-Object -Sum).Sum
     $errorCount = ($phaseResults.Values | ForEach-Object { $_.RecoverableErrors.Count } | Measure-Object -Sum).Sum

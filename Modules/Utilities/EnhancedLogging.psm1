@@ -136,6 +136,7 @@ $script:LoggingConfig = @{
     InitializedWarningShown = $false # Track if the "not initialized" warning was shown
     StructuredLogging   = $true # Enable structured logging
     EnablePerformanceTracking = $true # Enable performance metrics logging
+    LogRotationInterval = "Daily" # New setting: Daily, Weekly, Monthly, Never
 }
 
 # --- Private Helper Functions ---
@@ -301,9 +302,9 @@ function Initialize-Logging {
         }
     }
     
-    # Set up log file
+    # Set up log file with date in name
     $logFileBaseName = "MandA_Discovery"
-    $timestampForFile = Get-Date -Format "yyyyMMdd_HHmmss"
+    $timestampForFile = Get-Date -Format "yyyyMMdd" # Only date for daily rotation
     $script:LoggingConfig.LogFile = Join-Path $script:LoggingConfig.LogPath "$($logFileBaseName)_$timestampForFile.log"
     
     Write-Host "[EnhancedLogging.Initialize-Logging] Logging initialized. LogFile: $($script:LoggingConfig.LogFile)" -ForegroundColor Green
@@ -331,6 +332,12 @@ function Write-MandALog {
         [Parameter(Mandatory=$false)]
         [hashtable]$StructuredData = @{}
     )
+    
+    # Local Get-OrElse implementation
+    function Get-OrElse {
+        param($Value, $Default)
+        if ($null -ne $Value) { return $Value } else { return $Default }
+    }
 
     if (-not $script:LoggingConfig.Initialized) {
         $fallbackTimestamp = if ($script:LoggingConfig.ShowTimestamp -or $true) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] " } else { "" }
@@ -343,17 +350,12 @@ function Write-MandALog {
         return
     }
     
-    # Local Get-OrElse implementation
-    function Get-OrElse {
-        param($Value, $Default)
-        if ($null -ne $Value) { return $Value } else { return $Default }
-    }
-    
     $effectiveContext = Get-OrElse $Context $script:LoggingConfig.DefaultContext
     
     $currentLogLevel = Get-EffectiveLoggingSetting -SettingName 'LogLevel' -Context $effectiveContext -DefaultValue "INFO"
     $showTimestampSetting = Get-EffectiveLoggingSetting -SettingName 'ShowTimestamp' -Context $effectiveContext -DefaultValue $true
     $showComponentSetting = Get-EffectiveLoggingSetting -SettingName 'ShowComponent' -Context $effectiveContext -DefaultValue $true
+    $logRotationInterval = Get-EffectiveLoggingSetting -SettingName 'LogRotationInterval' -Context $effectiveContext -DefaultValue "Daily"
     
     $levelHierarchy = @{ "DEBUG"=0; "INFO"=1; "PROGRESS"=1; "SUCCESS"=1; "WARN"=2; "IMPORTANT"=2; "ERROR"=3; "CRITICAL"=4; "HEADER"=5 }
     $configLogLevelNum = Get-OrElse $levelHierarchy[$currentLogLevel.ToUpper()] 1
@@ -393,6 +395,24 @@ function Write-MandALog {
 
     if (-not [string]::IsNullOrWhiteSpace($script:LoggingConfig.LogFile)) {
         try {
+            # Check for log rotation by date
+            $currentLogFileDate = (Get-Date -Path $script:LoggingConfig.LogFile -Format "yyyyMMdd")
+            $todayDate = (Get-Date -Format "yyyyMMdd")
+
+            $performRotation = $false
+            if ($logRotationInterval -eq "Daily" -and $currentLogFileDate -ne $todayDate) {
+                $performRotation = $true
+            }
+            # Add more rotation intervals (Weekly, Monthly) here if needed
+            # Example for Weekly:
+            # elseif ($logRotationInterval -eq "Weekly" -and (Get-Date).DayOfWeek -eq "Monday" -and $currentLogFileDate -ne $todayDate) {
+            #     $performRotation = $true
+            # }
+
+            if ($performRotation) {
+                Move-LogFile -Context $effectiveContext -RotateByDate $true
+            }
+
             # Add machine-readable format option
             if ($script:LoggingConfig.StructuredLogging) {
                 $logEntry = @{
@@ -454,7 +474,10 @@ function Move-LogFile {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
-        [PSCustomObject]$Context 
+        [PSCustomObject]$Context,
+        
+        [Parameter(Mandatory=$false)]
+        [switch]$RotateByDate # New parameter to indicate date-based rotation
     )
     
     if (-not $script:LoggingConfig.Initialized -or [string]::IsNullOrWhiteSpace($script:LoggingConfig.LogFile)) {
@@ -475,6 +498,7 @@ function Move-LogFile {
 
         $logNameClean = $logNameBaseOriginal -replace '_\d{8}_\d{6}_ROTATED_\d{17}$',''
         $logNameClean = $logNameClean -replace '_\d{8}_\d{6}$',''
+        $logNameClean = $logNameClean -replace '_\d{8}$','' # Clean up date part for new rotation
 
         $rotationTimestamp = Get-Date -Format "yyyyMMddHHmmssfff"
         $rotatedLogFileName = "$($logNameClean)_ROTATED_$rotationTimestamp$logExtension"
@@ -491,7 +515,7 @@ function Move-LogFile {
         }
 
         $newLogFileBase = "MandA_Discovery"
-        $newTimestampForFile = Get-Date -Format "yyyyMMdd_HHmmss"
+        $newTimestampForFile = Get-Date -Format "yyyyMMdd" # Only date for daily rotation
         $script:LoggingConfig.LogFile = Join-Path $logDir "$($newLogFileBase)_$newTimestampForFile.log"
         Write-Host "[INFO] [Logger] New log file started: $($script:LoggingConfig.LogFile)"
     } catch {

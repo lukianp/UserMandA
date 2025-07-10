@@ -240,13 +240,81 @@ function Clear-AllAuthenticationSessions {
     }
 }
 
+function Test-SessionExpiry {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$RenewalThresholdMinutes = 10
+    )
+    
+    $session = Get-AuthenticationSession -SessionId $SessionId
+    if (-not $session) {
+        return @{ Valid = $false; Reason = "Session not found" }
+    }
+    
+    $timeUntilExpiry = ($session.ExpiryTime - [DateTime]::UtcNow).TotalMinutes
+    
+    if ($timeUntilExpiry -le 0) {
+        return @{ Valid = $false; Reason = "Session expired" }
+    }
+    
+    if ($timeUntilExpiry -le $RenewalThresholdMinutes) {
+        return @{ Valid = $true; NeedsRenewal = $true; MinutesRemaining = [Math]::Round($timeUntilExpiry, 1) }
+    }
+    
+    return @{ Valid = $true; NeedsRenewal = $false; MinutesRemaining = [Math]::Round($timeUntilExpiry, 1) }
+}
+
+function Invoke-SessionMaintenance {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
+    )
+    
+    $sessionStatus = Test-SessionExpiry -SessionId $SessionId
+    
+    if (-not $sessionStatus.Valid) {
+        throw "Session invalid: $($sessionStatus.Reason)"
+    }
+    
+    if ($sessionStatus.NeedsRenewal) {
+        Write-Warning "Session expires in $($sessionStatus.MinutesRemaining) minutes. Renewal recommended."
+        # Here you would implement session renewal logic
+    }
+    
+    # Clean up expired tokens from cache
+    $session = Get-AuthenticationSession -SessionId $SessionId
+    if ($session) {
+        $tokensToRemove = @()
+        foreach ($service in $session._tokenExpiries.Keys) {
+            if ([DateTime]::UtcNow -gt $session._tokenExpiries[$service]) {
+                $tokensToRemove += $service
+            }
+        }
+        
+        foreach ($service in $tokensToRemove) {
+            $session._serviceTokens.TryRemove($service, [ref]$null)
+            $session._tokenExpiries.TryRemove($service, [ref]$null)
+            Write-Verbose "Removed expired token for service: $service"
+        }
+    }
+    
+    return $sessionStatus
+}
+
 # Export functions
 Export-ModuleMember -Function @(
     'New-AuthenticationSession',
     'Get-AuthenticationSession', 
     'Remove-AuthenticationSession',
     'Get-AuthenticationSessionCount',
-    'Clear-AllAuthenticationSessions'
-)
+    'Clear-AllAuthenticationSessions',
+    'Test-SessionExpiry',
+    'Invoke-SessionMaintenance'
+) -Cmdlet * -Variable *
 
 Write-Host "[SessionManager.psm1] Thread-safe session manager loaded" -ForegroundColor Green
