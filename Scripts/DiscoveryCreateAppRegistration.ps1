@@ -1,15 +1,24 @@
-﻿# Enhanced M&A Discovery Suite - Azure AD App Registration Script
-# 
-# SYNOPSIS
-#     Creates Azure AD app registration with comprehensive permissions for M&A environment discovery,
-#     assigns required roles, and securely stores credentials for downstream automation workflows.
-#
-# DESCRIPTION
-#     This foundational script creates a service principal with all required Microsoft Graph and Azure 
-#     permissions, grants admin consent, assigns Cloud Application Administrator and Reader roles, creates 
-#     a client secret, and encrypts credentials for secure use by discovery and aggregation scripts. 
-#     Enhanced with robust error handling, comprehensive validation, colorful progress output, and 
-#     enterprise-grade security for M&A environments.
+﻿# -*- coding: utf-8-bom -*-
+#Requires -Version 5.1
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
+<#
+.SYNOPSIS
+    Azure AD App Registration Script for M&A Discovery Suite
+.DESCRIPTION
+    Creates Azure AD app registration with comprehensive permissions for M&A environment discovery, assigns required roles, 
+    and securely stores credentials for downstream automation workflows. This foundational script creates a service principal 
+    with all required Microsoft Graph and Azure permissions, grants admin consent, assigns Cloud Application Administrator 
+    and Reader roles, creates a client secret, and encrypts credentials for secure use by discovery and aggregation scripts.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, Microsoft Graph modules, Azure modules
 #
 # PARAMETERS
 #     -LogPath: Path for detailed execution log (default: .\MandADiscovery_Registration_Log.txt)

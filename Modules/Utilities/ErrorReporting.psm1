@@ -3,21 +3,22 @@
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-02
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
-    Provides standardized error handling and retry mechanisms for the M&A Discovery Suite.
+    Standardized error handling and retry mechanisms for the M&A Discovery Suite
 .DESCRIPTION
-    This module includes functions to invoke script blocks with retry logic,
-    get user-friendly error messages, and manage error summaries. It integrates
-    with the EnhancedLogging module for output.
+    This module provides functions to invoke script blocks with retry logic, get user-friendly error messages, 
+    and manage error summaries. It integrates with the EnhancedLogging module for output and offers 
+    comprehensive error handling capabilities including exponential backoff, error categorization, 
+    and detailed error reporting with context preservation.
 .NOTES
     Version: 1.0.0
-    Author: M&A Discovery Suite Team
-    Date: 2025-06-05
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
 
     Key Design Points:
     - Uses Write-SafeLog for logging (assumes EnhancedLogging.psm1 is loaded).

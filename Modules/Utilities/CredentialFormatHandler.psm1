@@ -1,8 +1,23 @@
-﻿<#
+﻿# -*- coding: utf-8-bom -*-
+#Requires -Version 5.1
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
+<#
 .SYNOPSIS
-    Handles credential file format operations for M&A Discovery Suite
+    Credential file format operations for M&A Discovery Suite
 .DESCRIPTION
-    Provides functions to read and save encrypted credential files
+    Provides functions to read and save encrypted credential files with secure handling of sensitive authentication data. 
+    This module implements encrypted credential storage using Windows Data Protection API (DPAPI) and JSON formatting 
+    for cross-platform compatibility. It includes validation, error handling, and secure credential lifecycle management.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, Windows Data Protection API
 #>
 
 

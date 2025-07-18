@@ -1,23 +1,24 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
-    M&A Discovery Suite - Session-Based Core Orchestration Engine v4.0.0
+    M&A Discovery Suite - Core Orchestration Engine
 .DESCRIPTION
-    New session-based orchestrator that eliminates runspaces entirely.
-    Runs all discovery modules directly in the main PowerShell session.
+    Session-based orchestrator that runs all discovery modules directly in the main PowerShell session for optimal 
+    performance and reliability. This engine manages the complete discovery workflow including authentication, 
+    module execution, data processing, and result aggregation with comprehensive error handling and logging 
+    capabilities for large-scale M&A discovery operations.
 .NOTES
-    Version: 4.0.0
-    Created: 2025-06-11
-    Architecture: Direct session execution with session-based authentication
-    
-    Key Improvements:
-    - NO RUNSPACES - All modules run in main session
-    - Session-based authentication with simple SessionId passing
-    - Direct function calls to discovery modules
-    - Simplified error handling and logging
-    - Automatic connection management and cleanup
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, M&A Discovery Suite modules, Microsoft Graph modules, Azure modules
 #>
 
 [CmdletBinding()]

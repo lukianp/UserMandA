@@ -3,21 +3,23 @@
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-05
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
-    Provides enhanced logging capabilities for the M&A Discovery Suite.
+    Enhanced logging capabilities for the M&A Discovery Suite
 .DESCRIPTION
-    This module offers functions for initializing the logging system, writing formatted
-    log messages to both console and file, with support for log levels,
-    timestamps, component names, colors, and emojis. It's designed to work with the
-    $global:MandA context for configuration or a passed context object.
-    This version incorporates fixes based on the provided fault list, particularly
-    FAULT 7 (Write-MandALog before init) and FAULT 16 (Context Parameter),
-    and replaces direct emoji characters with text equivalents for compatibility.
+    This module provides functions for initializing the logging system, writing formatted log messages to both 
+    console and file, with support for log levels, timestamps, component names, colors, and structured logging. 
+    It's designed to work with the $global:MandA context for configuration or a passed context object and includes 
+    comprehensive logging features including daily log rotation, performance metrics, error tracking, and 
+    multi-threaded logging support for concurrent operations.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, FileSystem access for log files
 .NOTES
     Version: 1.0.2
     Author: M&A Discovery Suite Team (with fixes by Gemini)

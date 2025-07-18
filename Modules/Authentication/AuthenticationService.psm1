@@ -1,17 +1,24 @@
 # -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
     Unified Authentication Service for M&A Discovery Suite
 .DESCRIPTION
-    Provides centralized, thread-safe authentication management with automatic
-    session lifecycle, credential validation, and service connection management.
+    Provides centralized, thread-safe authentication management with automatic session lifecycle, credential validation, 
+    and service connection management. This module serves as the primary interface for authentication operations, 
+    handling connections to Microsoft Graph, Azure, Exchange, SharePoint, and Teams services with retry logic, 
+    connection caching, and session management.
 .NOTES
-    Author: M&A Discovery Team
-    Version: 3.0.0
-    Created: 2025-06-11
-    Architecture: New thread-safe session-based authentication
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, AuthSession module, SessionManager module, Microsoft Graph modules, Azure modules
 #>
 
 # Import required modules (SessionManager should already be loaded by caller)

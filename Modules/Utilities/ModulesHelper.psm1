@@ -1,16 +1,24 @@
 ﻿# -*- coding: utf-8-bom -*-
+#Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-04
-# Last Modified: 2025-06-06
-# Change Log: Initial version - any future changes require version increment
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
     Helper functions for M&A Discovery Suite modules
 .DESCRIPTION
-    Provides standardized initialization and path resolution
+    Provides standardized initialization and path resolution for M&A Discovery Suite modules. This module includes 
+    functions for module context management, path resolution, dependency checking, and standardized module 
+    initialization patterns. It ensures consistent module behavior across the entire discovery suite and 
+    provides common utility functions used by multiple modules.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
 #>
 
 # Module-scope context variable

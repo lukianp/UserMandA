@@ -4,20 +4,24 @@ Import-Module (Join-Path $PSScriptRoot "..\Modules\Core\ClassDefinitions.psm1") 
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-05
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
-    Sets up the environment for the M&A Discovery Suite v5.2.2.
-    Provides centralized path management, configuration loading, and global utilities.
+    Environment setup script for the M&A Discovery Suite
 .DESCRIPTION
-    Establishes a single global context object ($global:MandA) containing
-    all required paths, the loaded configuration, and essential global functions like Get-OrElse.
-    This version fixes array handling in configuration parsing to prevent arrays from becoming hashtables.
+    Establishes a single global context object ($global:MandA) containing all required paths, loaded configuration, 
+    and essential global functions. This script provides centralized path management, configuration loading, 
+    and global utilities for the M&A Discovery Suite with proper array handling in configuration parsing 
+    to prevent arrays from becoming hashtables.
 .PARAMETER ProvidedSuiteRoot
     Optional. Override the automatic suite root detection.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, ClassDefinitions module
 .PARAMETER CompanyName
     Mandatory. The company name for profile-specific paths.
 .NOTES

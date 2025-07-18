@@ -1,17 +1,24 @@
 # -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
     Thread-safe session manager for M&A Discovery Suite authentication
 .DESCRIPTION
-    Manages authentication sessions with automatic cleanup, thread-safe access,
-    and lifecycle management for concurrent runspace operations.
+    Manages authentication sessions with automatic cleanup, thread-safe access, and lifecycle management for concurrent 
+    runspace operations. This module provides the SessionManager singleton class and PowerShell wrapper functions for 
+    creating, managing, and maintaining authentication sessions. It handles session expiry, token cleanup, and thread-safe 
+    access to authentication sessions across multiple concurrent operations.
 .NOTES
-    Author: M&A Discovery Team
-    Version: 3.0.0
-    Created: 2025-06-11
-    Architecture: New thread-safe session-based authentication
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, AuthSession module, .NET Framework 4.7.2+
 #>
 
 using namespace System.Collections.Concurrent

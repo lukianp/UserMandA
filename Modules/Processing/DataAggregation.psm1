@@ -1,12 +1,25 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
-#================================================================================
-# M&A Processing Module: DataAggregation (v3.0 - Full Processing Orchestrator)
-# Description: Orchestrates the entire data processing phase. It aggregates raw
-#              discovery data using memory-efficient streaming, then calls other
-#              processing modules for profiling and wave generation.
-#================================================================================
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
+<#
+.SYNOPSIS
+    Data Aggregation Module for M&A Discovery Suite
+.DESCRIPTION
+    Orchestrates the entire data processing phase by aggregating raw discovery data using memory-efficient streaming, 
+    then calls other processing modules for profiling and wave generation. This module provides comprehensive data 
+    aggregation capabilities including multi-source data correlation, memory-efficient processing, and 
+    orchestration of downstream processing workflows.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module, Processing modules
+#>
 
 function Write-ProcessingLog {
     [CmdletBinding()]

@@ -1,11 +1,23 @@
 # -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
     Centralized class definitions for M&A Discovery Suite
 .DESCRIPTION
-    Single source of truth for all custom classes to prevent type conflicts
+    This module provides centralized class definitions for the M&A Discovery Suite, serving as the single source of truth 
+    for all custom classes to prevent type conflicts and ensure consistency across all discovery modules. It includes the 
+    core DiscoveryResult class with comprehensive error handling, warning management, and metadata tracking capabilities.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+
 #>
 
 # Only define if not already loaded

@@ -1,6 +1,25 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
+<#
+.SYNOPSIS
+    User Profile Builder Module for M&A Discovery Suite
+.DESCRIPTION
+    Builds comprehensive user profiles from discovery data including complexity scoring, migration readiness assessment, 
+    and risk analysis. This module provides intelligent user profiling capabilities including complexity calculation, 
+    dependency mapping, and migration prioritization to optimize user migration planning and execution.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
+#>
+
 function Invoke-UserProfileBuilder {
     [CmdletBinding()]
     param(

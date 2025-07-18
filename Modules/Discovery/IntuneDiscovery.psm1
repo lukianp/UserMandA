@@ -1,15 +1,23 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
     Microsoft Intune Discovery Module for M&A Discovery Suite
 .DESCRIPTION
-    Discovers Intune managed devices, configurations, and policies using Microsoft Graph API
+    Discovers Intune managed devices, configurations, and policies using Microsoft Graph API. This module provides 
+    comprehensive Intune discovery including device management policies, configuration profiles, compliance settings, 
+    and mobile device management configurations essential for M&A device management assessment and migration planning.
 .NOTES
-    Version: 4.4.0 (Fixed Authentication and Discovery)
-    Author: M&A Discovery Team
-    Last Modified: 2025-06-11
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, Microsoft.Graph modules, DiscoveryBase module
 #>
 
 # Import base module

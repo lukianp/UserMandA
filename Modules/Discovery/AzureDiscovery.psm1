@@ -1,17 +1,24 @@
 # -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
     Azure Discovery Module for M&A Discovery Suite
 .DESCRIPTION
-    Discovers Azure subscriptions, resources, and Azure AD information using 
-    Microsoft Graph and Azure Resource Manager APIs
+    Discovers Azure subscriptions, resources, and Azure AD information using Microsoft Graph and Azure Resource Manager APIs. 
+    This module provides comprehensive Azure infrastructure discovery including subscriptions, resource groups, virtual machines, 
+    storage accounts, networking components, and security configurations essential for M&A due diligence and cloud 
+    infrastructure assessment.
 .NOTES
-    Version: 3.1.0 (Fixed)
-    Author: M&A Discovery Team
-    Last Modified: 2025-06-11
-    Architecture: New thread-safe session-based authentication
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, Az modules, Microsoft.Graph modules, DiscoveryBase module
 #>
 
 # Import base module

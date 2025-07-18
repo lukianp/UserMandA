@@ -1,12 +1,24 @@
 # -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
-    Base module for all discovery operations with standardized patterns, including batching and throttling.
+    Base module for all discovery operations with standardized patterns and throttling
 .DESCRIPTION
-    Provides consistent initialization, validation, and error handling for all discovery modules.
-    Includes `Invoke-GraphAPIWithPaging` for efficient data retrieval with batching and retry logic for throttling.
+    Provides consistent initialization, validation, and error handling for all discovery modules. This module includes 
+    standardized patterns for discovery operations including batching, throttling, retry logic, and efficient data 
+    retrieval with `Invoke-GraphAPIWithPaging`. It serves as the foundation for all discovery modules ensuring 
+    consistent behavior, error handling, and performance optimization across the entire discovery suite.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, ClassDefinitions module, AuthenticationService module
 #>
 
 # Import required modules

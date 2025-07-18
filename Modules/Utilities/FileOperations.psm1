@@ -3,21 +3,22 @@
 # Used by orchestrator!
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-03
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
-    Provides common file and directory operation utilities for the M&A Discovery Suite.
+    Common file and directory operation utilities for the M&A Discovery Suite
 .DESCRIPTION
-    This module includes functions for importing/exporting CSV data,
-    testing file write access, backing up files, and other file system tasks.
-    It standardizes on UTF-8 encoding and integrates with EnhancedLogging.
+    This module provides functions for importing/exporting CSV data, testing file write access, backing up files, 
+    and other file system tasks. It standardizes on UTF-8 encoding and integrates with EnhancedLogging for 
+    consistent operation logging. The module includes secure file handling, atomic operations, and comprehensive 
+    error handling for file system operations.
 .NOTES
     Version: 1.0.0
-    Author: M&A Discovery Suite Team
-    Date: 2025-06-05
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
 
     Key Design Points:
     - Uses Write-MandALog for logging.

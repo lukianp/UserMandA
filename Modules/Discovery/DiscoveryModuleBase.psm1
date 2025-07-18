@@ -3,6 +3,25 @@
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
+<#
+.SYNOPSIS
+    Discovery Module Base for M&A Discovery Suite
+.DESCRIPTION
+    Provides base functionality and common patterns for discovery modules. This module serves as a foundation for all 
+    discovery operations including standardized initialization, error handling, logging, and result formatting 
+    to ensure consistent behavior across all discovery modules in the suite.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, ClassDefinitions module
+#>
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
 # Created: 2025-06-04
 # Last Modified: 2025-06-06
 # Change Log: Updated version control header

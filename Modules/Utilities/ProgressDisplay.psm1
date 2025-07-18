@@ -3,21 +3,22 @@
 # Used by orchestrator!
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-04
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
-    Provides utility functions for displaying progress and status information in the M&A Discovery Suite.
+    Visual progress and status display utilities for the M&A Discovery Suite
 .DESCRIPTION
-    This module contains functions to render visual progress indicators, status tables,
-    and section headers to the console, enhancing the user experience during suite execution.
-    It integrates with EnhancedLogging for consistent output styling where appropriate.
-    This version incorporates fixes and considerations based on the provided fault list,
-    particularly ensuring FAULT 19 (Write-Progress Not Cleared) is handled.
+    This module provides functions to render visual progress indicators, status tables, and section headers to the console, 
+    enhancing the user experience during suite execution. It integrates with EnhancedLogging for consistent output 
+    styling and includes comprehensive progress visualization capabilities with proper progress cleanup and 
+    error handling to prevent UI artifacts.
 .NOTES
-    Version: 1.0.1
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
     Author: M&A Discovery Suite Team
     Date: 2025-06-05
 

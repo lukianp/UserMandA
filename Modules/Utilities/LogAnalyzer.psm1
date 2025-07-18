@@ -1,16 +1,24 @@
 # -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
-    Module for analyzing M&A Discovery Suite logs
+    Log analysis module for M&A Discovery Suite
 .DESCRIPTION
-    Provides functions to parse structured logs, generate summary reports,
-    and identify error patterns.
+    Provides functions to parse structured logs, generate summary reports, and identify error patterns for the 
+    M&A Discovery Suite. This module includes comprehensive log analysis capabilities including pattern recognition, 
+    trend analysis, error categorization, performance metrics extraction, and detailed reporting functionality 
+    to help troubleshoot and optimize discovery operations.
 .NOTES
-    Author: M&A Discovery Team
     Version: 1.0.0
-    Created: 2025-06-11
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
 #>
 
 function Get-MandALogEntries {

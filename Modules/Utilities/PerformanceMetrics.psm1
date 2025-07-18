@@ -3,21 +3,22 @@
 # Used by orchestrator!
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-06
-# Last Modified: 2025-06-06
-# Change Log: Initial implementation of performance metrics logging
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
-    Provides performance metrics logging capabilities for the M&A Discovery Suite.
+    Performance metrics logging capabilities for the M&A Discovery Suite
 .DESCRIPTION
-    This module offers functions for measuring operation performance, collecting timing data,
-    and generating performance reports. It integrates with the existing EnhancedLogging
-    module to provide comprehensive performance insights.
+    This module provides functions for measuring operation performance, collecting timing data, and generating 
+    performance reports. It integrates with the existing EnhancedLogging module to provide comprehensive 
+    performance insights including execution times, memory usage, resource consumption, and detailed 
+    performance analytics for optimization and troubleshooting.
 .NOTES
     Version: 1.0.0
-    Author: M&A Discovery Suite Team
-    Date: 2025-06-06
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
 
     Key Design Points:
     - Integrates with Write-MandALog for consistent logging

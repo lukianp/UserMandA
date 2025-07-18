@@ -1,6 +1,25 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
+<#
+.SYNOPSIS
+    Group Policy Object Discovery Module for M&A Discovery Suite
+.DESCRIPTION
+    Discovers Group Policy Objects, settings, and configurations from Active Directory environments. This module provides 
+    comprehensive GPO discovery including policy settings, security configurations, and organizational unit linkages 
+    essential for M&A Active Directory policy assessment and migration planning.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, ActiveDirectory module, GroupPolicy module
+#>
+
 
 # Fallback logging function if Write-MandALog is not available
 if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {

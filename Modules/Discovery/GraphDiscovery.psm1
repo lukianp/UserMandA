@@ -1,9 +1,24 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
-    Enhanced Microsoft Graph Discovery Module
+    Enhanced Microsoft Graph Discovery Module for M&A Discovery Suite
+.DESCRIPTION
+    Comprehensive Microsoft Graph discovery module providing advanced capabilities for discovering and analyzing 
+    Microsoft 365 environments. This module leverages the Microsoft Graph API to discover users, groups, applications, 
+    devices, and organizational settings with advanced filtering, batching, and throttling capabilities for 
+    large-scale enterprise environments.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, Microsoft.Graph modules, DiscoveryBase module
 #>
 
 # Import base module

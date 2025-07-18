@@ -1,15 +1,24 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
     Enhanced Exchange Discovery Module for M&A Discovery Suite
 .DESCRIPTION
-    Discovers Exchange Online mailboxes, distribution groups, mail-enabled security groups,
-    mailbox statistics, mail flow rules, retention policies, and more using Microsoft Graph API
+    Discovers Exchange Online mailboxes, distribution groups, mail-enabled security groups, mailbox statistics, 
+    mail flow rules, retention policies, and more using Microsoft Graph API. This module provides comprehensive 
+    Exchange Online discovery including detailed mailbox configurations, distribution lists, mail flow analysis, 
+    and email security settings essential for M&A email system assessment and migration planning.
 .NOTES
-    Version: 4.0.0 (Enhanced)
-    Requires: Microsoft.Graph modules, Exchange.ManageAsApp permission
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, Microsoft.Graph modules, Exchange.ManageAsApp permission, DiscoveryBase module
 #>
 
 # Import base module

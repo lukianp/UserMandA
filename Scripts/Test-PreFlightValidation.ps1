@@ -1,23 +1,27 @@
 ﻿# -*- coding: utf-8-bom -*-
+#Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-06
-# Last Modified: 2025-06-06
-# Change Log: Initial implementation of standalone pre-flight validation script
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
     Standalone pre-flight validation script for M&A Discovery Suite
 .DESCRIPTION
-    Performs pre-flight validation checks for PowerShell version, execution policy,
-    and administrator rights without requiring the full suite environment setup.
-    This script can be run independently before attempting to use the M&A Discovery Suite.
+    Performs comprehensive pre-flight validation checks for PowerShell version, execution policy, administrator rights, 
+    required modules, and system resources without requiring the full suite environment setup. This script can be run 
+    independently before attempting to use the M&A Discovery Suite to ensure all prerequisites are met.
 .PARAMETER ThrowOnFailure
     If specified, throws an exception when critical prerequisites fail
 .PARAMETER Quiet
     If specified, suppresses detailed output and returns only the result
 .NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+
     Author: Lukian Poleschtschuk
     Version: 1.0.0
     Created: 2025-06-06

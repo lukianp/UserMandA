@@ -1,16 +1,24 @@
 # -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
-    Module for managing a simple in-memory cache.
+    In-memory cache management module for M&A Discovery Suite
 .DESCRIPTION
-    Provides functions to cache frequently accessed data with a time-to-live (TTL)
-    and support for cache invalidation.
+    Provides functions to cache frequently accessed data with time-to-live (TTL) and support for cache invalidation. 
+    This module implements a thread-safe caching system using ConcurrentDictionary for high-performance data caching 
+    across concurrent operations. It includes automatic cache cleanup, TTL management, cache statistics, and 
+    comprehensive cache lifecycle management for optimal performance and memory usage.
 .NOTES
-    Author: M&A Discovery Team
     Version: 1.0.0
-    Created: 2025-06-11
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, .NET Framework 4.7.2+
 #>
 
 using namespace System.Collections.Concurrent

@@ -3,21 +3,24 @@
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-06
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
-    M&A Discovery Suite - Quick Start Entry Point (Rewritten v6.0.0)
+    M&A Discovery Suite - Quick Start Entry Point
 .DESCRIPTION
-    User-friendly entry point to initialize the M&A Discovery Suite environment for a specific company
-    and then launch the main orchestrator. This script ensures the environment is correctly
-    set up before any operations begin.
+    User-friendly entry point to initialize the M&A Discovery Suite environment for a specific company and then launch 
+    the main orchestrator. This script ensures the environment is correctly set up before any operations begin, 
+    including profile creation, credential management, and orchestrator initialization for comprehensive M&A discovery operations.
 .PARAMETER CompanyName
-    The name of the company for which the discovery operations will be run.
-    This determines the profile directory for outputs, logs, and credentials.
-    If not provided, the script will attempt to list existing profiles or prompt for a name.
+    The name of the company for which the discovery operations will be run. This determines the profile directory 
+    for outputs, logs, and credentials. If not provided, the script will attempt to list existing profiles or prompt for a name.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, M&A Discovery Suite modules
 .PARAMETER ConfigurationFile
     Optional. Path to a specific JSON configuration file to use.
     If not provided, the 'default-config.json' within the suite's 'Configuration' directory will be used.
@@ -218,42 +221,9 @@ Write-Host "  Validate Only: $(if ($ValidateOnly) { 'Yes' } else { 'No' })" -For
 Write-Host "  Parallel Throttle (Parameter): $ParallelThrottle" -ForegroundColor White
     Write-Host ""
 
-    # --- Launch Monitoring Windows ---
-    Write-Host "[QuickStart] Launching monitoring windows..." -ForegroundColor Yellow
-    
-    # Launch Log Monitor in separate window
-    $logMonitorScript = Join-Path $SuiteRoot "Scripts\Show-LogMonitor.ps1"
-    if (Test-Path $logMonitorScript) {
-        $logMonitorArgs = @(
-            "-ExecutionPolicy", "Bypass"
-            "-File", "`"$logMonitorScript`""
-            "-CompanyName", "`"$($global:MandA.CompanyName)`""
-            "-LogPath", "`"$($global:MandA.Paths.LogOutput)`""
-        )
-        
-        Write-Host "[QuickStart] Starting Log Monitor window..." -ForegroundColor Green
-        Start-Process "powershell.exe" -ArgumentList $logMonitorArgs -WindowStyle Normal
-    } else {
-        Write-Host "[QuickStart] [WARNING] Log Monitor script not found: $logMonitorScript" -ForegroundColor Yellow
-    }
-    
-    # Launch Discovery Status Dashboard in separate window
-    $dashboardScript = Join-Path $SuiteRoot "Scripts\Show-DiscoveryStatus.ps1"
-    if (Test-Path $dashboardScript) {
-        $dashboardArgs = @(
-            "-ExecutionPolicy", "Bypass"
-            "-File", "`"$dashboardScript`""
-            "-CompanyName", "`"$($global:MandA.CompanyName)`""
-        )
-        
-        Write-Host "[QuickStart] Starting Discovery Status Dashboard window..." -ForegroundColor Green
-        Start-Process "powershell.exe" -ArgumentList $dashboardArgs -WindowStyle Normal
-    } else {
-        Write-Host "[QuickStart] [WARNING] Discovery Status script not found: $dashboardScript" -ForegroundColor Yellow
-    }
-    
-    # Give monitoring windows time to start
-    Start-Sleep -Seconds 2
+    # --- Monitoring Info ---
+    Write-Host "[QuickStart] Monitoring is available through the built-in logging system" -ForegroundColor Green
+    Write-Host "[QuickStart] Log files are located at: $($global:MandA.Paths.LogOutput)" -ForegroundColor Cyan
     
     # --- Launch Orchestrator ---
     Write-Host "[QuickStart] Launching M&A Discovery Suite Orchestrator..." -ForegroundColor Yellow
