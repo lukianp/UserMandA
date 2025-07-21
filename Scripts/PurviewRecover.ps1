@@ -90,8 +90,10 @@ function Write-LogEntry {
         'Success' { Write-Host $logEntry -ForegroundColor Green }
     }
     
-    # Write to log file
-    $logEntry | Out-File -FilePath $script:LogFilePath -Append -Encoding UTF8
+    # Write to log file if path is defined
+    if ($script:LogFilePath) {
+        $logEntry | Out-File -FilePath $script:LogFilePath -Append -Encoding UTF8
+    }
 }
 
 # Function to test module availability and install if needed
@@ -329,26 +331,26 @@ function Export-SearchResults {
 
 # Main script execution
 function Main {
-    # Create export directory
-    if (!(Test-Path $script:ExportPath)) {
-        New-Item -ItemType Directory -Path $script:ExportPath -Force | Out-Null
-    }
-    
-    # Set up logging
-    $script:LogFilePath = Join-Path $script:ExportPath "EmailRecovery_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
-    Write-LogEntry "Starting Purview Email Recovery Script" -Level Info
-    
-    # Check if CSV exists
+    # Check if CSV exists first (before any logging)
     if (!(Test-Path $CsvPath)) {
-        Write-LogEntry "CSV file not found: $CsvPath" -Level Error
+        Write-Host "CSV file not found: $CsvPath" -ForegroundColor Red
         exit 1
     }
     
     # Ensure required modules
     Ensure-RequiredModules
     
-    # Get interactive setup
+    # Get interactive setup (this sets $script:ExportPath)
     Get-InteractiveSetup
+    
+    # Now create export directory after setup
+    if (!(Test-Path $script:ExportPath)) {
+        New-Item -ItemType Directory -Path $script:ExportPath -Force | Out-Null
+    }
+    
+    # Set up logging after export path is defined
+    $script:LogFilePath = Join-Path $script:ExportPath "EmailRecovery_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+    Write-LogEntry "Starting Purview Email Recovery Script" -Level Info
     
     # Connect to compliance center
     if (!(Connect-ComplianceCenter)) {
@@ -444,7 +446,12 @@ try {
     Main
 }
 catch {
-    Write-LogEntry "Unhandled error: $_" -Level Error
+    # Check if logging is set up before trying to use it
+    if ($script:LogFilePath) {
+        Write-LogEntry "Unhandled error: $_" -Level Error
+    } else {
+        Write-Host "Unhandled error: $_" -ForegroundColor Red
+    }
     exit 1
 }
 finally {
