@@ -177,7 +177,7 @@ try {
     }
 
     # Source the environment script. It will populate $global:MandA
-    . $EnvScriptPath -CompanyName $CompanyName -ProvidedSuiteRoot $SuiteRoot
+    . $EnvScriptPath $SuiteRoot $CompanyName
 
     if (-not $global:MandA -or -not $global:MandA.Initialized) {
         throw "CRITICAL: Failed to initialize global M&A environment context (`$global:MandA`) via Set-SuiteEnvironment.ps1."
@@ -253,6 +253,38 @@ Write-Host "  Parallel Throttle (Parameter): $ParallelThrottle" -ForegroundColor
         Write-Host "  Raw Data:       $($global:MandA.Paths.RawDataOutput)" -ForegroundColor DarkGray
         Write-Host "  Processed Data: $($global:MandA.Paths.ProcessedDataOutput)" -ForegroundColor DarkGray
         Write-Host "  Exports:        $($global:MandA.Paths.ExportOutput)" -ForegroundColor DarkGray
+    }
+
+    # --- Interactive Menu Option ---
+    Write-Host "`n[QuickStart] Next Steps:" -ForegroundColor Cyan
+    Write-Host "  [1] Launch Interactive Menu System" -ForegroundColor Green
+    Write-Host "  [2] Exit QuickStart" -ForegroundColor Gray
+    Write-Host ""
+    
+    $menuChoice = Read-Host "[QuickStart] Select an option (1-2)"
+    
+    if ($menuChoice -eq "1") {
+        Write-Host "[QuickStart] Launching Interactive Menu System..." -ForegroundColor Yellow
+        Write-Host ("=" * 75) -ForegroundColor DarkGray
+        
+        $InteractiveMenuScript = Join-Path $SuiteRoot "Scripts\Interactive-Menu.ps1"
+        if (Test-Path $InteractiveMenuScript -PathType Leaf) {
+            try {
+                $menuParams = @{
+                    CompanyName = $global:MandA.CompanyName
+                }
+                & $InteractiveMenuScript @menuParams
+                $menuExitCode = $LASTEXITCODE
+                Write-Host "[QuickStart] Interactive Menu exited with code: $menuExitCode" -ForegroundColor DarkGray
+            } catch {
+                Write-Host "[QuickStart] [ERROR] Failed to launch Interactive Menu: $($_.Exception.Message)" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "[QuickStart] [ERROR] Interactive Menu script not found at: $InteractiveMenuScript" -ForegroundColor Red
+            Write-Host "[QuickStart] Please ensure all suite files are properly installed." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "[QuickStart] Thank you for using M&A Discovery Suite!" -ForegroundColor Green
     }
 
     exit $ExitCode

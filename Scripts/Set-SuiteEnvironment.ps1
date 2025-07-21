@@ -31,14 +31,14 @@ Import-Module (Join-Path $PSScriptRoot "..\Modules\Core\ClassDefinitions.psm1") 
     - Added debug output for configuration parsing
     - Improved type detection and conversion
 #>
-[CmdletBinding()]
-param(
-    [Parameter(Mandatory=$false)]
-    [string]$ProvidedSuiteRoot,
 
-    [Parameter(Mandatory=$true)]
-    [string]$CompanyName
-)
+# Handle parameters for dot-sourcing
+$ProvidedSuiteRoot = $args[0]
+$CompanyName = $args[1]
+
+if (-not $CompanyName) {
+    throw "CompanyName parameter is required"
+}
 
 # --- Script Initialization & Global Utilities ---
 $ErrorActionPreference = "Stop"

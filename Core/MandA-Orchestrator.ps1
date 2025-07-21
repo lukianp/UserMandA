@@ -226,7 +226,7 @@ function Invoke-DiagnosticMode {
     foreach ($dir in $requiredDirs) {
         $path = Join-Path $Context.Paths.SuiteRoot $dir
         $status = if (Test-Path $path -PathType Container) { "Found" } else { "Missing" }
-        $diagnosticReport.AppendLine("   - $dir: $status ($path)")
+        $diagnosticReport.AppendLine("   - ${dir}: $status ($path)")
     }
     $diagnosticReport.AppendLine("")
 
@@ -262,7 +262,7 @@ function Invoke-DiagnosticMode {
     foreach ($moduleRelativePath in $coreModules) {
         $modulePath = Join-Path $Context.Paths.SuiteRoot $moduleRelativePath
         $status = if (Test-Path $modulePath -PathType Leaf) { "Found" } else { "Missing" }
-        $diagnosticReport.AppendLine("   - $moduleRelativePath: $status")
+        $diagnosticReport.AppendLine("   - ${moduleRelativePath}: $status")
         if ($status -eq "Found") {
             try {
                 Import-Module $modulePath -Force -ErrorAction Stop
@@ -310,7 +310,7 @@ function Invoke-DiagnosticMode {
     )
     foreach ($path in $outputPaths) {
         $status = if (Test-Path $path -PathType Container) { "Exists" } else { "Missing" }
-        $diagnosticReport.AppendLine("   - $path: $status")
+        $diagnosticReport.AppendLine("   - ${path}: $status")
         if ($status -eq "Missing") {
             try {
                 New-Item -Path $path -ItemType Directory -Force -ErrorAction Stop | Out-Null

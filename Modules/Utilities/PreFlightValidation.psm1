@@ -149,9 +149,21 @@ function Test-SuitePrerequisites {
             }
         }
         
-        # Check administrator rights
-        $currentPrincipal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
-        $isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        # Check administrator rights (cross-platform)
+        $isAdmin = $false
+        try {
+            if ($PSVersionTable.Platform -eq 'Win32NT' -or $PSVersionTable.PSEdition -eq 'Desktop') {
+                # Windows check
+                $currentPrincipal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+                $isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+            } else {
+                # Unix/Linux check
+                $isAdmin = (id -u) -eq 0
+            }
+        } catch {
+            # Fallback - assume not admin if we can't determine
+            $isAdmin = $false
+        }
         
         $adminResult = @{
             Test = "Administrator Rights"
