@@ -209,13 +209,21 @@ function Search-EmailByMessageId {
         [string]$SearchName
     )
     
-    # Build search query
-    $searchQuery = "messageid:`"$MessageId`""
+    # Build search query - handle message IDs with angle brackets
+    # Remove angle brackets if present and ensure proper formatting
+    $cleanMessageId = $MessageId.Trim('<', '>', ' ')
+    
+    # Build query with proper syntax for message ID
+    $searchQuery = "messageid:`"$cleanMessageId`""
+    
     if (![string]::IsNullOrWhiteSpace($SenderAddress)) {
-        $searchQuery += " AND from:`"$SenderAddress`""
+        # Clean sender address too
+        $cleanSenderAddress = $SenderAddress.Trim()
+        $searchQuery += " AND from:`"$cleanSenderAddress`""
     }
     
-    Write-LogEntry "Creating search: $SearchName with query: $searchQuery" -Level Info
+    Write-LogEntry "Creating search: $SearchName" -Level Info
+    Write-LogEntry "Search query: $searchQuery" -Level Info
     
     try {
         # Create compliance search
@@ -304,7 +312,9 @@ function Export-SearchResults {
             
             if ($searchResults.Items -gt 0) {
                 # Create export directory for this message
-                $messageExportPath = Join-Path $script:ExportPath $MessageId.Replace('<', '').Replace('>', '')
+                # Clean message ID for use in folder name
+                $cleanedMessageId = $MessageId.Replace('<', '').Replace('>', '').Replace('@', '_at_').Replace('.', '_')
+                $messageExportPath = Join-Path $script:ExportPath $cleanedMessageId
                 if (!(Test-Path $messageExportPath)) {
                     New-Item -ItemType Directory -Path $messageExportPath -Force | Out-Null
                 }
@@ -362,10 +372,22 @@ function Main {
         $emails = Import-Csv -Path $CsvPath -ErrorAction Stop
         Write-LogEntry "Imported $($emails.Count) emails from CSV" -Level Info
         
-        # Validate CSV headers
-        if (!($emails[0].PSObject.Properties.Name -contains 'bluebayaddress') -or 
-            !($emails[0].PSObject.Properties.Name -contains 'messageid')) {
-            throw "CSV must contain 'bluebayaddress' and 'messageid' columns"
+        # Validate CSV has data
+        if ($emails.Count -eq 0) {
+            throw "CSV file is empty"
+        }
+        
+        # Validate CSV headers - be flexible with case
+        $headers = $emails[0].PSObject.Properties.Name
+        $hasMessageId = $headers -match "messageid"
+        $hasBluebayAddress = $headers -match "bluebayaddress"
+        
+        if (!$hasMessageId) {
+            throw "CSV must contain 'messageid' column"
+        }
+        
+        if (!$hasBluebayAddress) {
+            Write-LogEntry "Warning: CSV does not contain 'bluebayaddress' column. Searches will use message ID only." -Level Warning
         }
     }
     catch {
@@ -389,10 +411,34 @@ function Main {
         Write-Host "`n[$emailCount/$($emails.Count)] Processing email..." -ForegroundColor Cyan
         
         $searchName = "Recovery_$(Get-Date -Format 'yyyyMMddHHmmss')_$($emailCount)"
-        $messageId = $email.messageid.Trim()
-        $senderAddress = $email.bluebayaddress.Trim()
         
-        Write-LogEntry "Processing: MessageID=$messageId, Sender=$senderAddress" -Level Info
+        # Safely access properties (case-insensitive)
+        $messageIdValue = ""
+        $senderAddressValue = ""
+        
+        foreach ($prop in $email.PSObject.Properties) {
+            if ($prop.Name -match "^messageid$") {
+                $messageIdValue = $prop.Value
+            }
+            elseif ($prop.Name -match "^bluebayaddress$") {
+                $senderAddressValue = $prop.Value
+            }
+        }
+        
+        $messageId = if ($messageIdValue) { $messageIdValue.Trim() } else { "" }
+        $senderAddress = if ($senderAddressValue) { $senderAddressValue.Trim() } else { "" }
+        
+        # Clean message ID for display
+        $displayMessageId = $messageId.Trim('<', '>')
+        
+        Write-LogEntry "Processing: MessageID=$displayMessageId, Sender=$senderAddress" -Level Info
+        
+        # Validate email data
+        if ([string]::IsNullOrWhiteSpace($messageId)) {
+            Write-LogEntry "Skipping row $emailCount - empty message ID" -Level Warning
+            $results.Failed++
+            continue
+        }
         
         # Search for the email
         $searchResult = Search-EmailByMessageId -MessageId $messageId -SenderAddress $senderAddress -SearchName $searchName
