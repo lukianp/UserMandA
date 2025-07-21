@@ -30,6 +30,9 @@ $script:ApiCallStartTime = Get-Date
 $script:MaxApiCallsPerHour = 100  # Adjust based on your tenant limits
 $script:MaxApiCallsPerMinute = 10
 
+# Initialize script variables
+$script:LogFilePath = $null
+
 # Function to handle API rate limiting
 function Invoke-RateLimitedAction {
     [CmdletBinding()]
@@ -522,7 +525,11 @@ function Main {
     Write-Host "Emails exported: $($results.Exported)" -ForegroundColor Green
     Write-Host "Export failures: $($results.Failed)" -ForegroundColor Red
     
-    Write-LogEntry "Script completed. Check log file: $script:LogFilePath" -Level Success
+    if ($script:LogFilePath) {
+        Write-LogEntry "Script completed. Check log file: $script:LogFilePath" -Level Success
+    } else {
+        Write-LogEntry "Script completed." -Level Success
+    }
     
     # Note about PST exports
     if ($script:ExportFormat -eq 'PST') {
