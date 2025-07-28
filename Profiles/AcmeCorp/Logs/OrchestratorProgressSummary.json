@@ -1,0 +1,924 @@
+{
+  "StartTime": "2025-07-25T16:11:13.9771696+00:00",
+  "EndTime": "2025-07-25T16:11:47.1470409+00:00",
+  "OverallStatus": "Completed",
+  "Phases": {
+    "Discovery": {
+      "Warnings": [],
+      "RecoverableErrors": [
+        {
+          "Module": "ExternalIdentity",
+          "Error": "The term 'Disconnect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+          "Type": "System.Management.Automation.CommandNotFoundException",
+          "Timestamp": "2025-07-25T16:11:27.4737949+00:00",
+          "Duration": {
+            "Ticks": 774081,
+            "Days": 0,
+            "Hours": 0,
+            "Milliseconds": 77,
+            "Microseconds": 408,
+            "Nanoseconds": 100,
+            "Minutes": 0,
+            "Seconds": 0,
+            "TotalDays": 8.959270833333334E-07,
+            "TotalHours": 2.150225E-05,
+            "TotalMilliseconds": 77.4081,
+            "TotalMicroseconds": 77408.1,
+            "TotalNanoseconds": 77408100.0,
+            "TotalMinutes": 0.001290135,
+            "TotalSeconds": 0.0774081
+          }
+        },
+        {
+          "Module": "Licensing",
+          "Error": "The term 'Disconnect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+          "Type": "System.Management.Automation.CommandNotFoundException",
+          "Timestamp": "2025-07-25T16:11:40.2170598+00:00",
+          "Duration": {
+            "Ticks": 697862,
+            "Days": 0,
+            "Hours": 0,
+            "Milliseconds": 69,
+            "Microseconds": 786,
+            "Nanoseconds": 200,
+            "Minutes": 0,
+            "Seconds": 0,
+            "TotalDays": 8.077106481481482E-07,
+            "TotalHours": 1.9385055555555556E-05,
+            "TotalMilliseconds": 69.7862,
+            "TotalMicroseconds": 69786.2,
+            "TotalNanoseconds": 69786200.0,
+            "TotalMinutes": 0.0011631033333333333,
+            "TotalSeconds": 0.0697862
+          }
+        },
+        {
+          "Module": "SharePoint",
+          "Error": "The term 'Disconnect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+          "Type": "System.Management.Automation.CommandNotFoundException",
+          "Timestamp": "2025-07-25T16:11:40.3003441+00:00",
+          "Duration": {
+            "Ticks": 720579,
+            "Days": 0,
+            "Hours": 0,
+            "Milliseconds": 72,
+            "Microseconds": 57,
+            "Nanoseconds": 900,
+            "Minutes": 0,
+            "Seconds": 0,
+            "TotalDays": 8.340034722222222E-07,
+            "TotalHours": 2.0016083333333333E-05,
+            "TotalMilliseconds": 72.0579,
+            "TotalMicroseconds": 72057.9,
+            "TotalNanoseconds": 72057900.0,
+            "TotalMinutes": 0.001200965,
+            "TotalSeconds": 0.0720579
+          }
+        },
+        {
+          "Module": "Teams",
+          "Error": "The term 'Disconnect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+          "Type": "System.Management.Automation.CommandNotFoundException",
+          "Timestamp": "2025-07-25T16:11:40.3882528+00:00",
+          "Duration": {
+            "Ticks": 873004,
+            "Days": 0,
+            "Hours": 0,
+            "Milliseconds": 87,
+            "Microseconds": 300,
+            "Nanoseconds": 400,
+            "Minutes": 0,
+            "Seconds": 0,
+            "TotalDays": 1.0104212962962962E-06,
+            "TotalHours": 2.4250111111111112E-05,
+            "TotalMilliseconds": 87.3004,
+            "TotalMicroseconds": 87300.4,
+            "TotalNanoseconds": 87300400.0,
+            "TotalMinutes": 0.0014550066666666668,
+            "TotalSeconds": 0.0873004
+          }
+        },
+        {
+          "Module": "CertificateAuthority",
+          "Error": "The running command stopped because the preference variable \"ErrorActionPreference\" or common parameter is set to Stop: At /workspaces/UserMandA/Modules/Discovery/CertificateAuthorityDiscovery.psm1:286 char:115\n+ … ority\" -Message \"Failed to read certificate store $storeName: $($_.Ex …\n+                                                     ~~~~~~~~~~~\nVariable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to delimit the name.",
+          "Type": "System.Management.Automation.ActionPreferenceStopException",
+          "Timestamp": "2025-07-25T16:11:40.4801781+00:00",
+          "Duration": {
+            "Ticks": 89747,
+            "Days": 0,
+            "Hours": 0,
+            "Milliseconds": 8,
+            "Microseconds": 974,
+            "Nanoseconds": 700,
+            "Minutes": 0,
+            "Seconds": 0,
+            "TotalDays": 1.0387384259259259E-07,
+            "TotalHours": 2.4929722222222224E-06,
+            "TotalMilliseconds": 8.9747,
+            "TotalMicroseconds": 8974.7,
+            "TotalNanoseconds": 8974700.0,
+            "TotalMinutes": 0.00014957833333333333,
+            "TotalSeconds": 0.0089747
+          }
+        }
+      ],
+      "ModuleDetails": {
+        "Graph": {
+          "Success": false,
+          "ModuleName": "Graph",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [
+            {
+              "ExceptionType": "System.Management.Automation.CommandNotFoundException",
+              "Exception": "System.Management.Automation.CommandNotFoundException: The term 'Connect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)",
+              "Context": {
+                "Service": "Graph"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:33.8293292+00:00",
+              "Message": "Failed to connect to Graph service",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)"
+            }
+          ],
+          "Warnings": [],
+          "Metadata": {
+            "PerformanceSeconds": 6.31,
+            "Duration": {
+              "Ticks": 63071855,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 307,
+              "Microseconds": 185,
+              "Nanoseconds": 500,
+              "Minutes": 0,
+              "Seconds": 6,
+              "TotalDays": 7.299983217592593E-05,
+              "TotalHours": 0.0017519959722222221,
+              "TotalMilliseconds": 6307.1855,
+              "TotalMicroseconds": 6307185.5,
+              "TotalNanoseconds": 6307185500.0,
+              "TotalMinutes": 0.10511975833333333,
+              "TotalSeconds": 6.3071855
+            },
+            "PerformanceMs": 6308,
+            "DurationSeconds": 6.3071855
+          },
+          "StartTime": "2025-07-25T16:11:27.5222349+00:00",
+          "EndTime": "2025-07-25T16:11:33.8294204+00:00",
+          "ExecutionId": "74cabf57-467c-414d-b619-c3f836b727e0"
+        },
+        "EnvironmentDetection": {
+          "Success": true,
+          "ModuleName": "EnvironmentDetection",
+          "Data": null,
+          "RecordCount": 1,
+          "Errors": [],
+          "Warnings": [],
+          "Metadata": {
+            "Duration": {
+              "Ticks": 83496,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 8,
+              "Microseconds": 349,
+              "Nanoseconds": 600,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 9.66388888888889E-08,
+              "TotalHours": 2.3193333333333334E-06,
+              "TotalMilliseconds": 8.3496,
+              "TotalMicroseconds": 8349.6,
+              "TotalNanoseconds": 8349600.0,
+              "TotalMinutes": 0.00013916,
+              "TotalSeconds": 0.0083496
+            },
+            "TotalRecords": 1,
+            "PerformanceMs": 15,
+            "PerformanceSeconds": 0.02,
+            "SessionId": "2cdea8b4-1161-49d9-b652-02b42700c921",
+            "DurationSeconds": 0.0083496
+          },
+          "StartTime": "2025-07-25T16:11:21.0194455+00:00",
+          "EndTime": "2025-07-25T16:11:21.0277951+00:00",
+          "ExecutionId": "cd41ac0a-5792-4164-9b35-35b75d64b931"
+        },
+        "SecurityInfrastructure": {
+          "Success": false,
+          "ModuleName": "SecurityInfrastructure",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [
+            {
+              "ExceptionType": "System.Management.Automation.CommandNotFoundException",
+              "Exception": "System.Management.Automation.CommandNotFoundException: The term 'Get-Service' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)",
+              "Context": {
+                "Section": "BackupRecovery"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:47.0808178+00:00",
+              "Message": "Failed to discover backup solutions: The term 'Get-Service' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)"
+            },
+            {
+              "ExceptionType": "System.Management.Automation.CommandNotFoundException",
+              "Exception": "System.Management.Automation.CommandNotFoundException: The term 'Get-Service' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)",
+              "Context": {
+                "Section": "MonitoringSIEM"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:47.1064974+00:00",
+              "Message": "Failed to discover monitoring/SIEM solutions: The term 'Get-Service' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)"
+            },
+            {
+              "ExceptionType": "System.Management.Automation.CommandNotFoundException",
+              "Exception": "System.Management.Automation.CommandNotFoundException: The term 'Get-Service' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)",
+              "Context": {
+                "Section": "VPNRemoteAccess"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:47.1331829+00:00",
+              "Message": "Failed to discover VPN/remote access solutions: The term 'Get-Service' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)"
+            }
+          ],
+          "Warnings": [],
+          "Metadata": {
+            "PerformanceSeconds": 0.19,
+            "Duration": {
+              "Ticks": 1853595,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 185,
+              "Microseconds": 359,
+              "Nanoseconds": 500,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 2.1453645833333335E-06,
+              "TotalHours": 5.148875E-05,
+              "TotalMilliseconds": 185.3595,
+              "TotalMicroseconds": 185359.5,
+              "TotalNanoseconds": 185359500.0,
+              "TotalMinutes": 0.003089325,
+              "TotalSeconds": 0.1853595
+            },
+            "PerformanceMs": 186,
+            "DurationSeconds": 0.1853595
+          },
+          "StartTime": "2025-07-25T16:11:46.9479729+00:00",
+          "EndTime": "2025-07-25T16:11:47.1333324+00:00",
+          "ExecutionId": "21edabfe-28bd-44c0-ba27-12871ef43aa0"
+        },
+        "VMware": {
+          "Success": true,
+          "ModuleName": "VMware",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [],
+          "Warnings": [],
+          "Metadata": {
+            "PerformanceSeconds": 0.04,
+            "Duration": {
+              "Ticks": 435421,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 43,
+              "Microseconds": 542,
+              "Nanoseconds": 100,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 5.039594907407408E-07,
+              "TotalHours": 1.2095027777777778E-05,
+              "TotalMilliseconds": 43.5421,
+              "TotalMicroseconds": 43542.1,
+              "TotalNanoseconds": 43542100.0,
+              "TotalMinutes": 0.0007257016666666667,
+              "TotalSeconds": 0.0435421
+            },
+            "PerformanceMs": 44,
+            "DurationSeconds": 0.0435421
+          },
+          "StartTime": "2025-07-25T16:11:40.4264343+00:00",
+          "EndTime": "2025-07-25T16:11:40.4699764+00:00",
+          "ExecutionId": "4f1861fa-8248-438e-b29d-a29cc7638759"
+        },
+        "Teams": {
+          "Success": false,
+          "ModuleName": "Teams",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [
+            {
+              "ExceptionType": "System.Management.Automation.CommandNotFoundException",
+              "Exception": "System.Management.Automation.CommandNotFoundException: The term 'Disconnect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.PSScriptCmdlet.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.CommandProcessorBase.Complete()",
+              "Context": {
+                "Module": "Teams"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:40.3881697+00:00",
+              "Message": "Module execution failed: The term 'Disconnect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.PSScriptCmdlet.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.CommandProcessorBase.Complete()"
+            }
+          ],
+          "Warnings": [],
+          "Metadata": {
+            "DurationSeconds": 6.57E-05,
+            "Duration": {
+              "Ticks": 657,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 0,
+              "Microseconds": 65,
+              "Nanoseconds": 700,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 7.604166666666667E-10,
+              "TotalHours": 1.825E-08,
+              "TotalMilliseconds": 0.0657,
+              "TotalMicroseconds": 65.7,
+              "TotalNanoseconds": 65700.0,
+              "TotalMinutes": 1.095E-06,
+              "TotalSeconds": 6.57E-05
+            }
+          },
+          "StartTime": "2025-07-25T16:11:40.3881474+00:00",
+          "EndTime": "2025-07-25T16:11:40.3882131+00:00",
+          "ExecutionId": "5fbc8640-46dc-4231-8f27-fd3ad279eef3"
+        },
+        "PowerPlatform": {
+          "Success": false,
+          "ModuleName": "PowerPlatform",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [
+            {
+              "ExceptionType": "System.Management.Automation.CommandNotFoundException",
+              "Exception": "System.Management.Automation.CommandNotFoundException: The term 'Connect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)",
+              "Context": {
+                "Service": "Graph"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:46.9338254+00:00",
+              "Message": "Failed to connect to Graph service",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)"
+            }
+          ],
+          "Warnings": [],
+          "Metadata": {
+            "PerformanceSeconds": 6.32,
+            "Duration": {
+              "Ticks": 63169727,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 316,
+              "Microseconds": 972,
+              "Nanoseconds": 700,
+              "Minutes": 0,
+              "Seconds": 6,
+              "TotalDays": 7.311310995370371E-05,
+              "TotalHours": 0.001754714638888889,
+              "TotalMilliseconds": 6316.9727,
+              "TotalMicroseconds": 6316972.7,
+              "TotalNanoseconds": 6316972700.0,
+              "TotalMinutes": 0.10528287833333333,
+              "TotalSeconds": 6.3169727
+            },
+            "PerformanceMs": 6317,
+            "DurationSeconds": 6.3169727
+          },
+          "StartTime": "2025-07-25T16:11:40.6169564+00:00",
+          "EndTime": "2025-07-25T16:11:46.9339291+00:00",
+          "ExecutionId": "f1465bc2-33f2-4219-923a-8c95c09a8b89"
+        },
+        "Intune": {
+          "Success": false,
+          "ModuleName": "Intune",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [
+            {
+              "ExceptionType": "System.Management.Automation.CommandNotFoundException",
+              "Exception": "System.Management.Automation.CommandNotFoundException: The term 'Connect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)",
+              "Context": {
+                "Service": "Graph"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:40.1453529+00:00",
+              "Message": "Failed to connect to Graph service",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)"
+            }
+          ],
+          "Warnings": [],
+          "Metadata": {
+            "PerformanceSeconds": 6.31,
+            "Duration": {
+              "Ticks": 63083140,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 308,
+              "Microseconds": 314,
+              "Nanoseconds": 0,
+              "Minutes": 0,
+              "Seconds": 6,
+              "TotalDays": 7.301289351851852E-05,
+              "TotalHours": 0.0017523094444444444,
+              "TotalMilliseconds": 6308.314,
+              "TotalMicroseconds": 6308314.0,
+              "TotalNanoseconds": 6308314000.0,
+              "TotalMinutes": 0.10513856666666667,
+              "TotalSeconds": 6.308314
+            },
+            "PerformanceMs": 6309,
+            "DurationSeconds": 6.308314
+          },
+          "StartTime": "2025-07-25T16:11:33.8371826+00:00",
+          "EndTime": "2025-07-25T16:11:40.1454966+00:00",
+          "ExecutionId": "82c719ed-5f13-476c-8921-198d3403166e"
+        },
+        "Licensing": {
+          "Success": false,
+          "ModuleName": "Licensing",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [
+            {
+              "ExceptionType": "System.Management.Automation.CommandNotFoundException",
+              "Exception": "System.Management.Automation.CommandNotFoundException: The term 'Disconnect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.PSScriptCmdlet.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.CommandProcessorBase.Complete()",
+              "Context": {
+                "Module": "Licensing"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:40.2169624+00:00",
+              "Message": "Module execution failed: The term 'Disconnect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.PSScriptCmdlet.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.CommandProcessorBase.Complete()"
+            }
+          ],
+          "Warnings": [],
+          "Metadata": {
+            "DurationSeconds": 6.58E-05,
+            "Duration": {
+              "Ticks": 658,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 0,
+              "Microseconds": 65,
+              "Nanoseconds": 800,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 7.61574074074074E-10,
+              "TotalHours": 1.8277777777777778E-08,
+              "TotalMilliseconds": 0.0658,
+              "TotalMicroseconds": 65.8,
+              "TotalNanoseconds": 65800.0,
+              "TotalMinutes": 1.0966666666666666E-06,
+              "TotalSeconds": 6.58E-05
+            }
+          },
+          "StartTime": "2025-07-25T16:11:40.2169419+00:00",
+          "EndTime": "2025-07-25T16:11:40.2170077+00:00",
+          "ExecutionId": "798b0f3d-75a7-473e-94c9-42ecea832716"
+        },
+        "SharePoint": {
+          "Success": false,
+          "ModuleName": "SharePoint",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [
+            {
+              "ExceptionType": "System.Management.Automation.CommandNotFoundException",
+              "Exception": "System.Management.Automation.CommandNotFoundException: The term 'Disconnect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.PSScriptCmdlet.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.CommandProcessorBase.Complete()",
+              "Context": {
+                "Module": "SharePoint"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:40.3002574+00:00",
+              "Message": "Module execution failed: The term 'Disconnect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.PSScriptCmdlet.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.CommandProcessorBase.Complete()"
+            }
+          ],
+          "Warnings": [],
+          "Metadata": {
+            "DurationSeconds": 6.8E-05,
+            "Duration": {
+              "Ticks": 680,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 0,
+              "Microseconds": 68,
+              "Nanoseconds": 0,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 7.87037037037037E-10,
+              "TotalHours": 1.888888888888889E-08,
+              "TotalMilliseconds": 0.068,
+              "TotalMicroseconds": 68.0,
+              "TotalNanoseconds": 68000.0,
+              "TotalMinutes": 1.1333333333333334E-06,
+              "TotalSeconds": 6.8E-05
+            }
+          },
+          "StartTime": "2025-07-25T16:11:40.3002359+00:00",
+          "EndTime": "2025-07-25T16:11:40.3003039+00:00",
+          "ExecutionId": "9411d12a-9313-407a-9b54-26ff2c936f23"
+        },
+        "FileServer": {
+          "Success": true,
+          "ModuleName": "FileServer",
+          "Data": null,
+          "RecordCount": 1,
+          "Errors": [],
+          "Warnings": [],
+          "Metadata": {
+            "Duration": {
+              "Ticks": 68498,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 6,
+              "Microseconds": 849,
+              "Nanoseconds": 800,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 7.92800925925926E-08,
+              "TotalHours": 1.9027222222222222E-06,
+              "TotalMilliseconds": 6.8498,
+              "TotalMicroseconds": 6849.8,
+              "TotalNanoseconds": 6849800.0,
+              "TotalMinutes": 0.00011416333333333333,
+              "TotalSeconds": 0.0068498
+            },
+            "TotalRecords": 1,
+            "PerformanceMs": 13,
+            "PerformanceSeconds": 0.01,
+            "SessionId": "2cdea8b4-1161-49d9-b652-02b42700c921",
+            "DurationSeconds": 0.0068498
+          },
+          "StartTime": "2025-07-25T16:11:27.4862246+00:00",
+          "EndTime": "2025-07-25T16:11:27.4930744+00:00",
+          "ExecutionId": "a67ee2e2-1d55-4174-825d-5c77360f36f2"
+        },
+        "Exchange": {
+          "Success": false,
+          "ModuleName": "Exchange",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [
+            {
+              "ExceptionType": "System.Management.Automation.CommandNotFoundException",
+              "Exception": "System.Management.Automation.CommandNotFoundException: The term 'Connect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)",
+              "Context": {
+                "Service": "Graph"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:27.3945711+00:00",
+              "Message": "Failed to connect to Graph service",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)"
+            }
+          ],
+          "Warnings": [],
+          "Metadata": {
+            "PerformanceSeconds": 6.35,
+            "Duration": {
+              "Ticks": 63514017,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 351,
+              "Microseconds": 401,
+              "Nanoseconds": 700,
+              "Minutes": 0,
+              "Seconds": 6,
+              "TotalDays": 7.351159375E-05,
+              "TotalHours": 0.00176427825,
+              "TotalMilliseconds": 6351.4017,
+              "TotalMicroseconds": 6351401.7,
+              "TotalNanoseconds": 6351401700.0,
+              "TotalMinutes": 0.105856695,
+              "TotalSeconds": 6.3514017
+            },
+            "PerformanceMs": 6352,
+            "DurationSeconds": 6.3514017
+          },
+          "StartTime": "2025-07-25T16:11:21.0432971+00:00",
+          "EndTime": "2025-07-25T16:11:27.3946988+00:00",
+          "ExecutionId": "5ebf0cbc-4c8b-459b-9ba6-8cd9f173908b"
+        },
+        "Azure": {
+          "Success": false,
+          "ModuleName": "Azure",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [
+            {
+              "ExceptionType": "System.Management.Automation.CommandNotFoundException",
+              "Exception": "System.Management.Automation.CommandNotFoundException: The term 'Connect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)",
+              "Context": {
+                "Service": "Graph"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:20.9339784+00:00",
+              "Message": "Failed to connect to Graph service",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)"
+            }
+          ],
+          "Warnings": [],
+          "Metadata": {
+            "PerformanceSeconds": 6.52,
+            "Duration": {
+              "Ticks": 65099736,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 509,
+              "Microseconds": 973,
+              "Nanoseconds": 600,
+              "Minutes": 0,
+              "Seconds": 6,
+              "TotalDays": 7.534691666666667E-05,
+              "TotalHours": 0.001808326,
+              "TotalMilliseconds": 6509.9736,
+              "TotalMicroseconds": 6509973.6,
+              "TotalNanoseconds": 6509973600.0,
+              "TotalMinutes": 0.10849956,
+              "TotalSeconds": 6.5099736
+            },
+            "PerformanceMs": 6516,
+            "DurationSeconds": 6.5099736
+          },
+          "StartTime": "2025-07-25T16:11:14.4242199+00:00",
+          "EndTime": "2025-07-25T16:11:20.9341935+00:00",
+          "ExecutionId": "af9ac8ad-87c0-42ef-ba60-ed018758d34a"
+        },
+        "SQLServer": {
+          "Success": true,
+          "ModuleName": "SQLServer",
+          "Data": null,
+          "RecordCount": 1,
+          "Errors": [],
+          "Warnings": [],
+          "Metadata": {
+            "Duration": {
+              "Ticks": 55988,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 5,
+              "Microseconds": 598,
+              "Nanoseconds": 800,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 6.480092592592593E-08,
+              "TotalHours": 1.5552222222222222E-06,
+              "TotalMilliseconds": 5.5988,
+              "TotalMicroseconds": 5598.8,
+              "TotalNanoseconds": 5598800.0,
+              "TotalMinutes": 9.331333333333334E-05,
+              "TotalSeconds": 0.0055988
+            },
+            "TotalRecords": 1,
+            "PerformanceMs": 9,
+            "PerformanceSeconds": 0.01,
+            "SessionId": "2cdea8b4-1161-49d9-b652-02b42700c921",
+            "DurationSeconds": 0.0055988
+          },
+          "StartTime": "2025-07-25T16:11:40.306943+00:00",
+          "EndTime": "2025-07-25T16:11:40.3125418+00:00",
+          "ExecutionId": "33e55b61-02e8-4ef0-be77-5ffe72b514ce"
+        },
+        "ActiveDirectory": {
+          "Success": false,
+          "ModuleName": "ActiveDirectory",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [
+            {
+              "ExceptionType": null,
+              "Exception": null,
+              "Context": {},
+              "Timestamp": "2025-07-25T16:11:14.3492909+00:00",
+              "Message": "ActiveDirectory PowerShell module is not available. Install RSAT or ActiveDirectory module.",
+              "StackTrace": "   at System.Environment.get_StackTrace()\n   at DiscoveryResult.AddError(String message, Exception exception, Hashtable context)\n   at CallSite.Target(Closure, CallSite, Object, String, Object, Object)\n   at System.Dynamic.UpdateDelegates.UpdateAndExecute4[T0,T1,T2,T3,TRet](CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3)\n   at System.Management.Automation.Interpreter.DynamicInstruction`5.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.PSScriptCmdlet.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.CommandProcessorBase.Complete()\n   at System.Management.Automation.CommandProcessorBase.DoComplete()\n   at System.Management.Automation.Internal.PipelineProcessor.DoCompleteCore(CommandProcessorBase commandRequestingUpstreamCommandsToStop)\n   at System.Management.Automation.Internal.PipelineProcessor.SynchronousExecuteEnumerate(Object input)\n   at System.Management.Automation.PipelineOps.InvokePipeline(Object input, Boolean ignoreInput, CommandParameterInternal[][] pipeElements, CommandBaseAst[] pipeElementAsts, CommandRedirection[][] commandRedirections, FunctionContext funcContext)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`6.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.PSScriptCmdlet.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.CommandProcessorBase.Complete()\n   at System.Management.Automation.CommandProcessorBase.DoComplete()\n   at System.Management.Automation.Internal.PipelineProcessor.DoCompleteCore(CommandProcessorBase commandRequestingUpstreamCommandsToStop)\n   at System.Management.Automation.Internal.PipelineProcessor.SynchronousExecuteEnumerate(Object input)\n   at System.Management.Automation.PipelineOps.InvokePipeline(Object input, Boolean ignoreInput, CommandParameterInternal[][] pipeElements, CommandBaseAst[] pipeElementAsts, CommandRedirection[][] commandRedirections, FunctionContext funcContext)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`6.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.PSScriptCmdlet.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.CommandProcessorBase.Complete()\n   at System.Management.Automation.CommandProcessorBase.DoComplete()\n   at System.Management.Automation.Internal.PipelineProcessor.DoCompleteCore(CommandProcessorBase commandRequestingUpstreamCommandsToStop)\n   at System.Management.Automation.Internal.PipelineProcessor.SynchronousExecuteEnumerate(Object input)\n   at System.Management.Automation.PipelineOps.InvokePipeline(Object input, Boolean ignoreInput, CommandParameterInternal[][] pipeElements, CommandBaseAst[] pipeElementAsts, CommandRedirection[][] commandRedirections, FunctionContext funcContext)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`6.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.PSScriptCmdlet.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.CommandProcessorBase.Complete()\n   at System.Management.Automation.CommandProcessorBase.DoComplete()\n   at System.Management.Automation.Internal.PipelineProcessor.DoCompleteCore(CommandProcessorBase commandRequestingUpstreamCommandsToStop)\n   at System.Management.Automation.Internal.PipelineProcessor.SynchronousExecuteEnumerate(Object input)\n   at System.Management.Automation.PipelineOps.InvokePipeline(Object input, Boolean ignoreInput, CommandParameterInternal[][] pipeElements, CommandBaseAst[] pipeElementAsts, CommandRedirection[][] commandRedirections, FunctionContext funcContext)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`6.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.DlrScriptCommandProcessor.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.DlrScriptCommandProcessor.Complete()\n   at System.Management.Automation.CommandProcessorBase.DoComplete()\n   at System.Management.Automation.Internal.PipelineProcessor.DoCompleteCore(CommandProcessorBase commandRequestingUpstreamCommandsToStop)\n   at System.Management.Automation.Internal.PipelineProcessor.SynchronousExecuteEnumerate(Object input)\n   at System.Management.Automation.Runspaces.LocalPipeline.InvokeHelper()\n   at System.Management.Automation.Runspaces.LocalPipeline.InvokeThreadProc()\n   at System.Management.Automation.Runspaces.PipelineThread.WorkerProc()\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)"
+            }
+          ],
+          "Warnings": [],
+          "Metadata": {
+            "PerformanceSeconds": 0.04,
+            "Duration": {
+              "Ticks": 331430,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 33,
+              "Microseconds": 143,
+              "Nanoseconds": 0,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 3.8359953703703703E-07,
+              "TotalHours": 9.206388888888888E-06,
+              "TotalMilliseconds": 33.143,
+              "TotalMicroseconds": 33143.0,
+              "TotalNanoseconds": 33143000.0,
+              "TotalMinutes": 0.0005523833333333333,
+              "TotalSeconds": 0.033143
+            },
+            "PerformanceMs": 39,
+            "DurationSeconds": 0.033143
+          },
+          "StartTime": "2025-07-25T16:11:14.3333104+00:00",
+          "EndTime": "2025-07-25T16:11:14.3664534+00:00",
+          "ExecutionId": "bb3214a0-77b4-486a-a137-94b4f0d845da"
+        },
+        "GPO": {
+          "Success": true,
+          "ModuleName": "GPO",
+          "Data": null,
+          "RecordCount": 1,
+          "Errors": [],
+          "Warnings": [],
+          "Metadata": {
+            "Duration": {
+              "Ticks": 295217,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 29,
+              "Microseconds": 521,
+              "Nanoseconds": 700,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 3.416863425925926E-07,
+              "TotalHours": 8.200472222222222E-06,
+              "TotalMilliseconds": 29.5217,
+              "TotalMicroseconds": 29521.7,
+              "TotalNanoseconds": 29521700.0,
+              "TotalMinutes": 0.0004920283333333333,
+              "TotalSeconds": 0.0295217
+            },
+            "TotalRecords": 1,
+            "PerformanceMs": 42,
+            "PerformanceSeconds": 0.04,
+            "SessionId": "2cdea8b4-1161-49d9-b652-02b42700c921",
+            "DurationSeconds": 0.0295217
+          },
+          "StartTime": "2025-07-25T16:11:20.9564804+00:00",
+          "EndTime": "2025-07-25T16:11:20.9860021+00:00",
+          "ExecutionId": "3f605852-ec79-4e07-8f9c-9e646acdd211"
+        },
+        "NetworkInfrastructure": {
+          "Success": true,
+          "ModuleName": "NetworkInfrastructure",
+          "Data": null,
+          "RecordCount": 1,
+          "Errors": [],
+          "Warnings": [],
+          "Metadata": {
+            "Duration": {
+              "Ticks": 47472,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 4,
+              "Microseconds": 747,
+              "Nanoseconds": 200,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 5.494444444444444E-08,
+              "TotalHours": 1.3186666666666666E-06,
+              "TotalMilliseconds": 4.7472,
+              "TotalMicroseconds": 4747.2,
+              "TotalNanoseconds": 4747200.0,
+              "TotalMinutes": 7.912E-05,
+              "TotalSeconds": 0.0047472
+            },
+            "TotalRecords": 1,
+            "PerformanceMs": 7,
+            "PerformanceSeconds": 0.01,
+            "SessionId": "2cdea8b4-1161-49d9-b652-02b42700c921",
+            "DurationSeconds": 0.0047472
+          },
+          "StartTime": "2025-07-25T16:11:40.2227939+00:00",
+          "EndTime": "2025-07-25T16:11:40.2275411+00:00",
+          "ExecutionId": "cbd5d075-3c45-4736-8da8-8aa99b374dda"
+        },
+        "ExternalIdentity": {
+          "Success": false,
+          "ModuleName": "ExternalIdentity",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [
+            {
+              "ExceptionType": "System.Management.Automation.CommandNotFoundException",
+              "Exception": "System.Management.Automation.CommandNotFoundException: The term 'Disconnect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.PSScriptCmdlet.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.CommandProcessorBase.Complete()",
+              "Context": {
+                "Module": "ExternalIdentity"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:27.4707526+00:00",
+              "Message": "Module execution failed: The term 'Disconnect-MgGraph' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.Interpreter.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.LightLambda.RunVoid1[T0](T0 arg0)\n   at System.Management.Automation.PSScriptCmdlet.RunClause(Action`1 clause, Object dollarUnderbar, Object inputToProcess)\n   at System.Management.Automation.CommandProcessorBase.Complete()"
+            }
+          ],
+          "Warnings": [],
+          "Metadata": {
+            "DurationSeconds": 0.0011682,
+            "Duration": {
+              "Ticks": 11682,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 1,
+              "Microseconds": 168,
+              "Nanoseconds": 200,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 1.3520833333333333E-08,
+              "TotalHours": 3.245E-07,
+              "TotalMilliseconds": 1.1682,
+              "TotalMicroseconds": 1168.2,
+              "TotalNanoseconds": 1168200.0,
+              "TotalMinutes": 1.947E-05,
+              "TotalSeconds": 0.0011682
+            }
+          },
+          "StartTime": "2025-07-25T16:11:27.4696818+00:00",
+          "EndTime": "2025-07-25T16:11:27.47085+00:00",
+          "ExecutionId": "42078028-238b-4f59-b24b-21c021f7e5e5"
+        },
+        "CertificateAuthority": {
+          "Success": false,
+          "ModuleName": "CertificateAuthority",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [
+            {
+              "ExceptionType": "System.Management.Automation.ActionPreferenceStopException",
+              "Exception": "System.Management.Automation.ActionPreferenceStopException: The running command stopped because the preference variable \"ErrorActionPreference\" or common parameter is set to Stop: At /workspaces/UserMandA/Modules/Discovery/CertificateAuthorityDiscovery.psm1:286 char:115\n+ … ority\" -Message \"Failed to read certificate store $storeName: $($_.Ex …\n+                                                     ~~~~~~~~~~~\nVariable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to delimit the name.\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)",
+              "Context": {
+                "Module": "CertificateAuthority"
+              },
+              "InnerException": null,
+              "Timestamp": "2025-07-25T16:11:40.4794173+00:00",
+              "Message": "Module execution failed: The running command stopped because the preference variable \"ErrorActionPreference\" or common parameter is set to Stop: At /workspaces/UserMandA/Modules/Discovery/CertificateAuthorityDiscovery.psm1:286 char:115\n+ … ority\" -Message \"Failed to read certificate store $storeName: $($_.Ex …\n+                                                     ~~~~~~~~~~~\nVariable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to delimit the name.",
+              "StackTrace": "   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)"
+            }
+          ],
+          "Warnings": [],
+          "Metadata": {
+            "DurationSeconds": 0.0008397,
+            "Duration": {
+              "Ticks": 8397,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 0,
+              "Microseconds": 839,
+              "Nanoseconds": 700,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 9.71875E-09,
+              "TotalHours": 2.3325E-07,
+              "TotalMilliseconds": 0.8397,
+              "TotalMicroseconds": 839.7,
+              "TotalNanoseconds": 839700.0,
+              "TotalMinutes": 1.3995E-05,
+              "TotalSeconds": 0.0008397
+            }
+          },
+          "StartTime": "2025-07-25T16:11:40.4786251+00:00",
+          "EndTime": "2025-07-25T16:11:40.4794648+00:00",
+          "ExecutionId": "7a162061-e876-457c-b976-242e4cb11d19"
+        },
+        "DNSDHCP": {
+          "Success": true,
+          "ModuleName": "DNSDHCP",
+          "Data": null,
+          "RecordCount": 0,
+          "Errors": [],
+          "Warnings": [],
+          "Metadata": {
+            "PerformanceSeconds": 0.08,
+            "Duration": {
+              "Ticks": 795756,
+              "Days": 0,
+              "Hours": 0,
+              "Milliseconds": 79,
+              "Microseconds": 575,
+              "Nanoseconds": 600,
+              "Minutes": 0,
+              "Seconds": 0,
+              "TotalDays": 9.210138888888889E-07,
+              "TotalHours": 2.2104333333333335E-05,
+              "TotalMilliseconds": 79.5756,
+              "TotalMicroseconds": 79575.6,
+              "TotalNanoseconds": 79575600.0,
+              "TotalMinutes": 0.00132626,
+              "TotalSeconds": 0.0795756
+            },
+            "PerformanceMs": 80,
+            "DurationSeconds": 0.0795756
+          },
+          "StartTime": "2025-07-25T16:11:40.5258464+00:00",
+          "EndTime": "2025-07-25T16:11:40.605422+00:00",
+          "ExecutionId": "3306d14a-74b5-44d7-afef-76a72d08c595"
+        }
+      },
+      "CriticalErrors": [],
+      "SuccessfulModules": 7,
+      "Success": true,
+      "TotalModules": 19
+    }
+  },
+  "TotalDurationSeconds": 33.1698989
+}
