@@ -441,8 +441,7 @@ function Test-Prerequisites {
             if ($installedModule) {
                 Write-EnhancedLog "Module available: $module v$($installedModule.Version)" -Level SUCCESS
             } else {
-                # Default to auto-install unless explicitly disabled with -AutoInstallModules:$false
-                if (-not $PSBoundParameters.ContainsKey('AutoInstallModules') -or $AutoInstallModules) {
+                if ($AutoInstallModules) {
                     Write-EnhancedLog "Module '$module' not found. Installing..." -Level WARN
                     try {
                         # Set TLS 1.2 for secure downloads

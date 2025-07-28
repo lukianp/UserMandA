@@ -48,7 +48,7 @@ function Write-ProgressHeader {
 # REPLACE THIS:
 # [switch]$AutoInstallModules = $true,
 # WITH THIS:
-[switch]$AutoInstallModules,
+[switch]$AutoInstallModules
 
 # 3. Fix for module installation logic in Test-Prerequisites (around line 444)
 # REPLACE THIS SECTION:
