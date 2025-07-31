@@ -35,10 +35,15 @@
 #
 # NOTES
 #     Author: Enhanced M&A Discovery Suite
-#     Version: 4.0.0
+#     Version: 4.0.1
 #     Created: 2025
-#     Last Modified: 2025-05-22
-#     
+#     Last Modified: 2025-06-24
+#
+#     FIXES in v4.0.1:
+#     - Fixed module installation order: Ensure-RequiredModules now runs BEFORE Test-Prerequisites
+#     - Fixed console output formatting in Write-ProgressHeader function
+#     - Resolved System.Collections.DictionaryEntry display issues
+#
 #     Security: Credentials encrypted with Windows DPAPI for current user context
 #     Resume: Supports re-running without recreation of existing resources
 #     Validation: Comprehensive prerequisites and permission validation
@@ -83,7 +88,7 @@ $ProgressPreference = "Continue"
 # Script metadata and validation
 $script:ScriptInfo = @{
     Name = "Enhanced M&A Discovery Suite - App Registration"
-    Version = "4.0.0"
+    Version = "4.0.1"
     Author = "M&A Discovery Team"
     RequiredPSVersion = "5.1"
     Dependencies = @("Az.Accounts", "Az.Resources", "Microsoft.Graph.Applications", "Microsoft.Graph.Authentication", "Microsoft.Graph.Identity.DirectoryManagement")
@@ -243,18 +248,18 @@ function Write-EnhancedLog {
 function Write-ProgressHeader {
     param(
         [Parameter(Mandatory=$true)]
-        [string]$Title, 
+        [string]$Title,
         [Parameter(Mandatory=$false)]
         [string]$Subtitle = ""
     )
     
-    $separator = "?" * 90
-    Write-Host "`n$separator" @($script:ColorScheme.Separator)
-    Write-Host "  ?? $Title" @($script:ColorScheme.Header)
+    $separator = "═" * 90
+    Write-Host "`n$separator" -ForegroundColor $script:ColorScheme.Separator.ForegroundColor
+    Write-Host "  ║ $Title" -ForegroundColor $script:ColorScheme.Header.ForegroundColor -BackgroundColor $script:ColorScheme.Header.BackgroundColor
     if ($Subtitle) {
-        Write-Host "  ?? $Subtitle" @($script:ColorScheme.Info)
+        Write-Host "  ║ $Subtitle" -ForegroundColor $script:ColorScheme.Info.ForegroundColor
     }
-    Write-Host "$separator`n" @($script:ColorScheme.Separator)
+    Write-Host "$separator`n" -ForegroundColor $script:ColorScheme.Separator.ForegroundColor
 }
 
 function Write-OperationResult {
@@ -455,27 +460,42 @@ function Ensure-RequiredModules {
     Write-ProgressHeader "MODULE MANAGEMENT" "Installing and updating required PowerShell modules"
     
     try {
-        # Clean up existing modules to prevent conflicts
-        Write-EnhancedLog "Unloading potentially conflicting modules..." -Level PROGRESS
-        $loadedModules = Get-Module -Name "Az.*", "Microsoft.Graph.*" -ErrorAction SilentlyContinue
-        $unloadCount = 0
-        foreach ($module in $loadedModules) {
-            try {
-                Remove-Module -Name $module.Name -Force -ErrorAction Stop
-                $unloadCount++
-                Write-EnhancedLog "Unloaded $($module.Name) v$($module.Version)" -Level SUCCESS
-            } catch {
-                Write-EnhancedLog "Could not unload $($module.Name): $($_.Exception.Message)" -Level WARN
+        # Enhanced cleanup to prevent module conflicts
+        Write-EnhancedLog "Performing comprehensive module cleanup..." -Level PROGRESS
+        
+        # Remove all loaded Az and Microsoft.Graph modules
+        $conflictingModules = @("Az.*", "Microsoft.Graph.*", "AzureRM.*")
+        foreach ($pattern in $conflictingModules) {
+            $loadedModules = Get-Module -Name $pattern -ErrorAction SilentlyContinue
+            foreach ($module in $loadedModules) {
+                try {
+                    Remove-Module -Name $module.Name -Force -ErrorAction Stop
+                    Write-EnhancedLog "Unloaded conflicting module: $($module.Name) v$($module.Version)" -Level SUCCESS
+                } catch {
+                    Write-EnhancedLog "Could not unload $($module.Name): $($_.Exception.Message)" -Level WARN
+                }
             }
         }
         
-        if ($unloadCount -gt 0) {
-            Write-EnhancedLog "Unloaded $unloadCount modules successfully" -Level SUCCESS
+        # Check for and warn about AzureRM modules
+        $azureRMModules = Get-Module -ListAvailable -Name "AzureRM*" -ErrorAction SilentlyContinue
+        if ($azureRMModules) {
+            Write-EnhancedLog "WARNING: AzureRM modules detected. These may conflict with Az modules." -Level WARN
+            Write-EnhancedLog "Consider uninstalling AzureRM modules: Uninstall-AzureRM" -Level WARN
         }
         
-        # Process each required module with enhanced progress tracking
+        # Force garbage collection to release module assemblies
+        [System.GC]::Collect()
+        [System.GC]::WaitForPendingFinalizers()
+        [System.GC]::Collect()
+        
+        Write-EnhancedLog "Module cleanup completed" -Level SUCCESS
+        
+        # Process each required module with enhanced error handling
         $totalModules = $script:ScriptInfo.Dependencies.Count
         $processedModules = 0
+        $successfulModules = @()
+        $failedModules = @()
         
         foreach ($moduleName in $script:ScriptInfo.Dependencies) {
             $processedModules++
@@ -484,26 +504,50 @@ function Ensure-RequiredModules {
             Write-EnhancedLog "Processing module: $moduleName" -Level PROGRESS
             
             try {
-                $installedModule = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue | 
+                # Check if module is already installed
+                $installedModule = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue |
                     Sort-Object Version -Descending | Select-Object -First 1
                 
                 if (-not $installedModule) {
                     Write-EnhancedLog "Installing $moduleName..." -Level PROGRESS
-                    Install-Module -Name $moduleName -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
+                    
+                    # Install with specific parameters to avoid conflicts
+                    $installParams = @{
+                        Name = $moduleName
+                        Scope = 'CurrentUser'
+                        Force = $true
+                        AllowClobber = $true
+                        Repository = 'PSGallery'
+                        SkipPublisherCheck = $true
+                        ErrorAction = 'Stop'
+                    }
+                    
+                    Install-Module @installParams
                     Write-EnhancedLog "Successfully installed $moduleName" -Level SUCCESS
                 } else {
                     $installedVersion = $installedModule.Version.ToString()
                     Write-EnhancedLog "Found $moduleName v$installedVersion" -Level INFO
                     
-                    # Check for updates (optional, non-blocking)
+                    # Optional update check (non-blocking)
                     try {
                         $latestModule = Find-Module -Name $moduleName -Repository PSGallery -ErrorAction Stop
                         $latestVersion = $latestModule.Version.ToString()
                         
                         if ([version]$installedVersion -lt [version]$latestVersion) {
-                            Write-EnhancedLog "Update available for $moduleName v$installedVersion ? v$latestVersion" -Level INFO
+                            Write-EnhancedLog "Update available for $moduleName v$installedVersion → v$latestVersion" -Level INFO
                             Write-EnhancedLog "Installing latest version..." -Level PROGRESS
-                            Install-Module -Name $moduleName -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
+                            
+                            $updateParams = @{
+                                Name = $moduleName
+                                Scope = 'CurrentUser'
+                                Force = $true
+                                AllowClobber = $true
+                                Repository = 'PSGallery'
+                                SkipPublisherCheck = $true
+                                ErrorAction = 'Stop'
+                            }
+                            
+                            Install-Module @updateParams
                             Write-EnhancedLog "Successfully updated $moduleName to v$latestVersion" -Level SUCCESS
                         } else {
                             Write-EnhancedLog "$moduleName is up to date (v$installedVersion)" -Level SUCCESS
@@ -513,27 +557,111 @@ function Ensure-RequiredModules {
                     }
                 }
                 
-                # Import with version verification
-                $latestInstalled = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue | 
+                # Import module with enhanced error handling
+                $latestInstalled = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue |
                     Sort-Object Version -Descending | Select-Object -First 1
                 
                 if ($latestInstalled) {
-                    Import-Module -Name $moduleName -RequiredVersion $latestInstalled.Version -Force -ErrorAction Stop
+                    # Special handling for Az modules to prevent conflicts
+                    if ($moduleName -like "Az.*") {
+                        Write-EnhancedLog "Importing Az module with conflict prevention..." -Level PROGRESS
+                        
+                        # Import with specific parameters for Az modules
+                        $importParams = @{
+                            Name = $moduleName
+                            RequiredVersion = $latestInstalled.Version
+                            Force = $true
+                            Global = $false
+                            ErrorAction = 'Stop'
+                        }
+                        
+                        Import-Module @importParams
+                    } else {
+                        # Standard import for other modules
+                        Import-Module -Name $moduleName -RequiredVersion $latestInstalled.Version -Force -ErrorAction Stop
+                    }
+                    
                     Write-EnhancedLog "Imported $moduleName v$($latestInstalled.Version)" -Level SUCCESS
+                    $successfulModules += $moduleName
                 } else {
                     throw "Module $moduleName not found after installation"
                 }
                 
             } catch {
-                Write-EnhancedLog "Failed to process $moduleName`: $($_.Exception.Message)" -Level ERROR
-                Stop-OperationTimer "ModuleManagement" $false
-                throw "Module management failed for $moduleName"
+                $errorMessage = $_.Exception.Message
+                Write-EnhancedLog "Failed to process $moduleName`: $errorMessage" -Level ERROR
+                $failedModules += @{ Name = $moduleName; Error = $errorMessage }
+                
+                # For critical modules, continue with warning instead of failing completely
+                if ($moduleName -in @("Az.Accounts", "Microsoft.Graph.Authentication")) {
+                    Write-EnhancedLog "Critical module $moduleName failed. Attempting alternative approach..." -Level WARN
+                    
+                    try {
+                        # Try importing without version specification
+                        Import-Module -Name $moduleName -Force -ErrorAction Stop
+                        Write-EnhancedLog "Successfully imported $moduleName using fallback method" -Level SUCCESS
+                        $successfulModules += $moduleName
+                        
+                        # Remove from failed list if fallback succeeded
+                        $failedModules = $failedModules | Where-Object { $_.Name -ne $moduleName }
+                    } catch {
+                        Write-EnhancedLog "Fallback import also failed for $moduleName" -Level ERROR
+                    }
+                }
             }
         }
         
         Write-Progress -Activity "Processing Modules" -Completed
-        Write-EnhancedLog "All $totalModules modules processed successfully" -Level SUCCESS
-        Stop-OperationTimer "ModuleManagement" $true
+        
+        # Enhanced summary with detailed results
+        Write-EnhancedLog "Module processing summary:" -Level INFO
+        Write-EnhancedLog "  Successful: $($successfulModules.Count)" -Level SUCCESS
+        Write-EnhancedLog "  Failed: $($failedModules.Count)" -Level $(if ($failedModules.Count -gt 0) { "ERROR" } else { "SUCCESS" })
+        
+        if ($successfulModules.Count -gt 0) {
+            Write-EnhancedLog "Successfully processed modules:" -Level SUCCESS
+            $successfulModules | ForEach-Object { Write-EnhancedLog "  ✓ $_" -Level SUCCESS }
+        }
+        
+        if ($failedModules.Count -gt 0) {
+            Write-EnhancedLog "Failed modules:" -Level ERROR
+            $failedModules | ForEach-Object { Write-EnhancedLog "  ✗ $($_.Name): $($_.Error)" -Level ERROR }
+            
+            # Check if critical modules failed
+            $criticalModules = @("Az.Accounts", "Microsoft.Graph.Authentication")
+            $failedCritical = $failedModules | Where-Object { $_.Name -in $criticalModules }
+            
+            if ($failedCritical.Count -gt 0) {
+                Write-EnhancedLog "Critical modules failed. Script cannot continue." -Level CRITICAL
+                Stop-OperationTimer "ModuleManagement" $false
+                throw "Critical module management failures: $($failedCritical.Name -join ', ')"
+            } else {
+                Write-EnhancedLog "Non-critical modules failed. Continuing with available modules." -Level WARN
+            }
+        }
+        
+        # Verify essential modules are loaded
+        $essentialModules = @("Az.Accounts", "Microsoft.Graph.Authentication")
+        $loadedEssential = @()
+        
+        foreach ($essential in $essentialModules) {
+            $loaded = Get-Module -Name $essential -ErrorAction SilentlyContinue
+            if ($loaded) {
+                $loadedEssential += $essential
+                Write-EnhancedLog "Essential module verified: $essential v$($loaded.Version)" -Level SUCCESS
+            } else {
+                Write-EnhancedLog "Essential module not loaded: $essential" -Level ERROR
+            }
+        }
+        
+        if ($loadedEssential.Count -eq $essentialModules.Count) {
+            Write-EnhancedLog "All essential modules are loaded and ready" -Level SUCCESS
+            Stop-OperationTimer "ModuleManagement" $true
+        } else {
+            Write-EnhancedLog "Some essential modules are missing. Script may encounter issues." -Level WARN
+            Stop-OperationTimer "ModuleManagement" $false
+            throw "Essential modules not available: $($essentialModules | Where-Object { $_ -notin $loadedEssential } | Join-String -Separator ', ')"
+        }
         
     } catch {
         Write-EnhancedLog "Module management error: $($_.Exception.Message)" -Level ERROR
@@ -1464,7 +1592,11 @@ PowerShell: $($PSVersionTable.PSVersion)
     Write-EnhancedLog "  Skip Azure Roles: $SkipAzureRoles" -Level INFO
     Write-EnhancedLog "  Secret Validity: $SecretValidityYears years" -Level INFO
     
-    # Prerequisites validation
+    # **IMPORTANT CHANGE: Call Ensure-RequiredModules BEFORE Test-Prerequisites**
+    # Ensure external PowerShell modules are installed and imported first.
+    Ensure-RequiredModules
+    
+    # Now, perform prerequisites validation, which should pass if modules were just installed.
     if (-not (Test-Prerequisites)) {
         throw "Prerequisites validation failed. Please resolve issues and retry."
     }
@@ -1473,9 +1605,6 @@ PowerShell: $($PSVersionTable.PSVersion)
         Write-EnhancedLog "Validation-only mode completed successfully" -Level SUCCESS
         exit 0
     }
-    
-    # Module management
-    Ensure-RequiredModules
     
     # Establish connections
     if (-not (Connect-EnhancedGraph)) {
