@@ -1,0 +1,464 @@
+<Window x:Class="MandADiscoverySuite.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="M&amp;A Discovery Suite" Height="800" Width="1400"
+        WindowStartupLocation="CenterScreen"
+        Background="#FF1E1E1E">
+    
+    <Window.Resources>
+        <Style x:Key="SidebarButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="50"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="20,0,0,0"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FF2D2D30"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#FF007ACC"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Light"/>
+            <Setter Property="Margin" Value="0,0,0,20"/>
+        </Style>
+        
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#FF2D2D30"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Margin" Value="10"/>
+            <Setter Property="Padding" Value="20"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FF3E3E42"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Sidebar -->
+        <Border Grid.Column="0" Background="#FF252526">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Logo/Title -->
+                <Border Grid.Row="0" Padding="20" BorderBrush="#FF3E3E42" BorderThickness="0,0,0,1">
+                    <StackPanel>
+                        <TextBlock Text="M&amp;A Discovery" Foreground="White" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="Suite" Foreground="#FF007ACC" FontSize="20" FontWeight="Light"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Company Selector -->
+                <Border Grid.Row="1" Padding="20,10" BorderBrush="#FF3E3E42" BorderThickness="0,0,0,1">
+                    <StackPanel>
+                        <TextBlock Text="Active Company" Foreground="#FFB0B0B0" FontSize="12" Margin="0,0,0,5"/>
+                        <ComboBox x:Name="CompanySelector" 
+                                  Background="#FF3E3E42" 
+                                  Foreground="White"
+                                  BorderBrush="#FF555555">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Foreground="White"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Navigation Buttons -->
+                <StackPanel Grid.Row="2" Margin="0,20,0,0">
+                    <Button x:Name="DiscoveryButton" Style="{StaticResource SidebarButtonStyle}" Click="NavigationButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔍" FontSize="18" Margin="0,0,10,0"/>
+                            <TextBlock Text="Discovery"/>
+                        </StackPanel>
+                    </Button>
+                    
+                    <Button x:Name="ViewButton" Style="{StaticResource SidebarButtonStyle}" Click="NavigationButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📊" FontSize="18" Margin="0,0,10,0"/>
+                            <TextBlock Text="View"/>
+                        </StackPanel>
+                    </Button>
+                    
+                    <Button x:Name="MigrateButton" Style="{StaticResource SidebarButtonStyle}" Click="NavigationButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🚀" FontSize="18" Margin="0,0,10,0"/>
+                            <TextBlock Text="Migrate"/>
+                        </StackPanel>
+                    </Button>
+                    
+                    <Separator Margin="20,20" Background="#FF3E3E42"/>
+                    
+                    <Button x:Name="ReportsButton" Style="{StaticResource SidebarButtonStyle}" Click="NavigationButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📄" FontSize="18" Margin="0,0,10,0"/>
+                            <TextBlock Text="Reports"/>
+                        </StackPanel>
+                    </Button>
+                    
+                    <Button x:Name="SettingsButton" Style="{StaticResource SidebarButtonStyle}" Click="NavigationButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⚙️" FontSize="18" Margin="0,0,10,0"/>
+                            <TextBlock Text="Settings"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                
+                <!-- Status Bar -->
+                <Border Grid.Row="3" Background="#FF007ACC" Padding="20,10">
+                    <StackPanel>
+                        <TextBlock Text="Status: Ready" Foreground="White" FontSize="12" FontWeight="Bold"/>
+                        <TextBlock x:Name="StatusDetails" Text="No active operations" Foreground="White" FontSize="10" Opacity="0.8"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+        
+        <!-- Main Content Area -->
+        <Grid Grid.Column="1" Background="#FF1E1E1E">
+            <!-- Discovery View -->
+            <ScrollViewer x:Name="DiscoveryView" Visibility="Visible" VerticalScrollBarVisibility="Auto">
+                <Grid Margin="30">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Discovery" Style="{StaticResource HeaderTextStyle}"/>
+                    
+                    <!-- Quick Actions -->
+                    <WrapPanel Grid.Row="1" Margin="0,0,0,20">
+                        <Button x:Name="RunFullDiscoveryButton" Click="RunFullDiscovery_Click"
+                                Background="#FF007ACC" Foreground="White" 
+                                Padding="20,10" Margin="0,0,10,0"
+                                BorderThickness="0" FontWeight="Medium">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" 
+                                            CornerRadius="4"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                            Run Full Discovery
+                        </Button>
+                        
+                        <Button x:Name="ImportDataButton" Click="ImportData_Click"
+                                Background="#FF3E3E42" Foreground="White" 
+                                Padding="20,10" Margin="0,0,10,0"
+                                BorderThickness="0" FontWeight="Medium">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" 
+                                            CornerRadius="4"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                            Import Existing Data
+                        </Button>
+                    </WrapPanel>
+                    
+                    <!-- Discovery Modules Grid -->
+                    <ItemsControl Grid.Row="2" x:Name="DiscoveryModules">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource CardStyle}" Width="280" Height="180">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        
+                                        <StackPanel Grid.Row="0" Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Icon}" FontSize="24" Margin="0,0,10,0"/>
+                                            <TextBlock Text="{Binding Name}" Foreground="White" FontSize="16" FontWeight="Medium"/>
+                                        </StackPanel>
+                                        
+                                        <TextBlock Grid.Row="1" Text="{Binding Description}" 
+                                                   Foreground="#FFB0B0B0" FontSize="12" 
+                                                   TextWrapping="Wrap" Margin="0,10,0,0"/>
+                                        
+                                        <Grid Grid.Row="2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                                <Ellipse Width="8" Height="8" Fill="{Binding StatusColor}" Margin="0,0,5,0"/>
+                                                <TextBlock Text="{Binding Status}" Foreground="#FFB0B0B0" FontSize="11"/>
+                                            </StackPanel>
+                                            
+                                            <Button Grid.Column="1" Content="Run" 
+                                                    Click="RunModule_Click" Tag="{Binding ModuleName}"
+                                                    Background="#FF007ACC" Foreground="White"
+                                                    Padding="15,5" BorderThickness="0">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" 
+                                                                CornerRadius="3"
+                                                                Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </ScrollViewer>
+            
+            <!-- View View -->
+            <Grid x:Name="ViewView" Visibility="Collapsed" Margin="30">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Text="Data View" Style="{StaticResource HeaderTextStyle}"/>
+                
+                <!-- View Selector -->
+                <WrapPanel Grid.Row="1" Margin="0,0,0,20">
+                    <RadioButton x:Name="UserViewRadio" Content="User View" IsChecked="True"
+                                 Foreground="White" Margin="0,0,20,0" 
+                                 GroupName="ViewType" Checked="ViewType_Changed"/>
+                    <RadioButton x:Name="ComputerViewRadio" Content="Computer View"
+                                 Foreground="White" Margin="0,0,20,0"
+                                 GroupName="ViewType" Checked="ViewType_Changed"/>
+                    <RadioButton x:Name="InfraViewRadio" Content="Infrastructure View"
+                                 Foreground="White" Margin="0,0,20,0"
+                                 GroupName="ViewType" Checked="ViewType_Changed"/>
+                    <RadioButton x:Name="WaveViewRadio" Content="Wave View"
+                                 Foreground="White" Margin="0,0,20,0"
+                                 GroupName="ViewType" Checked="ViewType_Changed"/>
+                </WrapPanel>
+                
+                <!-- Data Grid -->
+                <DataGrid Grid.Row="2" x:Name="ViewDataGrid"
+                          Background="#FF2D2D30" Foreground="White"
+                          BorderBrush="#FF3E3E42" BorderThickness="1"
+                          GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="#FF3E3E42"
+                          RowBackground="#FF2D2D30"
+                          AlternatingRowBackground="#FF252526"
+                          CanUserResizeColumns="True"
+                          CanUserSortColumns="True"
+                          AutoGenerateColumns="True">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#FF007ACC"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Padding" Value="10,5"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                </DataGrid>
+            </Grid>
+            
+            <!-- Migrate View -->
+            <Grid x:Name="MigrateView" Visibility="Collapsed" Margin="30">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Text="Migration" Style="{StaticResource HeaderTextStyle}"/>
+                
+                <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
+                    <TabControl.Resources>
+                        <Style TargetType="TabItem">
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Background" Value="#FF2D2D30"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Padding" Value="20,10"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="TabItem">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                Margin="0,0,2,0">
+                                            <ContentPresenter x:Name="ContentSite"
+                                                              VerticalAlignment="Center"
+                                                              HorizontalAlignment="Center"
+                                                              ContentSource="Header"
+                                                              Margin="{TemplateBinding Padding}"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Background" Value="#FF007ACC"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </TabControl.Resources>
+                    
+                    <TabItem Header="User Migration">
+                        <Grid Margin="20">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <TextBlock Grid.Row="0" Text="User Account Migration" 
+                                       Foreground="White" FontSize="18" Margin="0,0,0,20"/>
+                            
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,20">
+                                <Button Content="Select Users" Click="SelectUsers_Click"
+                                        Background="#FF3E3E42" Foreground="White"
+                                        Padding="15,8" Margin="0,0,10,0" BorderThickness="0"/>
+                                <Button Content="Map Security Groups" Click="MapSecurityGroups_Click"
+                                        Background="#FF3E3E42" Foreground="White"
+                                        Padding="15,8" Margin="0,0,10,0" BorderThickness="0"/>
+                                <Button Content="Start Migration" Click="StartUserMigration_Click"
+                                        Background="#FF007ACC" Foreground="White"
+                                        Padding="15,8" BorderThickness="0"/>
+                            </StackPanel>
+                            
+                            <DataGrid Grid.Row="2" x:Name="UserMigrationGrid"
+                                      Background="#FF2D2D30" Foreground="White"
+                                      BorderBrush="#FF3E3E42"/>
+                        </Grid>
+                    </TabItem>
+                    
+                    <TabItem Header="Mailbox Migration">
+                        <Grid Margin="20">
+                            <TextBlock Text="Mailbox Migration Module" Foreground="White" FontSize="16"/>
+                        </Grid>
+                    </TabItem>
+                    
+                    <TabItem Header="SharePoint Migration">
+                        <Grid Margin="20">
+                            <TextBlock Text="SharePoint Migration Module" Foreground="White" FontSize="16"/>
+                        </Grid>
+                    </TabItem>
+                    
+                    <TabItem Header="Teams Migration">
+                        <Grid Margin="20">
+                            <TextBlock Text="Teams Migration Module" Foreground="White" FontSize="16"/>
+                        </Grid>
+                    </TabItem>
+                    
+                    <TabItem Header="OneDrive Migration">
+                        <Grid Margin="20">
+                            <TextBlock Text="OneDrive Migration Module" Foreground="White" FontSize="16"/>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+            
+            <!-- Reports View -->
+            <Grid x:Name="ReportsView" Visibility="Collapsed" Margin="30">
+                <TextBlock Text="Reports" Style="{StaticResource HeaderTextStyle}"/>
+            </Grid>
+            
+            <!-- Settings View -->
+            <Grid x:Name="SettingsView" Visibility="Collapsed" Margin="30">
+                <TextBlock Text="Settings" Style="{StaticResource HeaderTextStyle}"/>
+            </Grid>
+        </Grid>
+        
+        <!-- Progress Overlay -->
+        <Grid x:Name="ProgressOverlay" Grid.ColumnSpan="2" 
+              Background="#CC000000" Visibility="Collapsed">
+            <Border Background="#FF2D2D30" CornerRadius="8" 
+                    Width="400" Height="200"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Grid Margin="30">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" x:Name="ProgressTitle" 
+                               Text="Operation in Progress" 
+                               Foreground="White" FontSize="18" FontWeight="Medium"
+                               Margin="0,0,0,20"/>
+                    
+                    <ProgressBar Grid.Row="1" x:Name="ProgressBar" 
+                                 Height="10" Margin="0,0,0,10"
+                                 Background="#FF3E3E42" Foreground="#FF007ACC"/>
+                    
+                    <TextBlock Grid.Row="2" x:Name="ProgressStatus" 
+                               Text="Processing..." 
+                               Foreground="#FFB0B0B0" FontSize="12"
+                               Margin="0,0,0,20"/>
+                    
+                    <Button Grid.Row="3" Content="Cancel" 
+                            Click="CancelOperation_Click"
+                            Background="#FFB71C1C" Foreground="White"
+                            Padding="20,8" BorderThickness="0"
+                            HorizontalAlignment="Center">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}" 
+                                        CornerRadius="4"
+                                        Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
