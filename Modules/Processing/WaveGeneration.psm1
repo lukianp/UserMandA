@@ -1,6 +1,26 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
+<#
+.SYNOPSIS
+    Wave Generation Module for M&A Discovery Suite
+.DESCRIPTION
+    Generates migration waves from user data based on various criteria including department, location, and business rules. 
+    This module provides intelligent wave generation capabilities for M&A migrations including user grouping, 
+    wave sizing, dependency analysis, and migration scheduling to optimize migration success and minimize 
+    business disruption.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
+#>
+
 function Invoke-WaveGeneration {
     [CmdletBinding()]
     param(

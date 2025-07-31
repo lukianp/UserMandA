@@ -1,16 +1,25 @@
-﻿# Enhanced M&A Discovery Suite - Azure AD App Registration Script
-# 
-# SYNOPSIS
-#     Creates Azure AD app registration with comprehensive permissions for M&A environment discovery,
-#     assigns required roles, and securely stores credentials for downstream automation workflows.
-#
-# DESCRIPTION
-#     This foundational script creates a service principal with all required Microsoft Graph and Azure 
-#     permissions, grants admin consent, assigns Cloud Application Administrator and Reader roles, creates 
-#     a client secret, and encrypts credentials for secure use by discovery and aggregation scripts. 
-#     Enhanced with robust error handling, comprehensive validation, colorful progress output, and 
-#     enterprise-grade security for M&A environments.
-#
+﻿# -*- coding: utf-8-bom -*-
+#Requires -Version 5.1
+
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
+<#
+.SYNOPSIS
+    Azure AD App Registration Script for M&A Discovery Suite
+.DESCRIPTION
+    Creates Azure AD app registration with comprehensive permissions for M&A environment discovery, assigns required roles, 
+    and securely stores credentials for downstream automation workflows. This foundational script creates a service principal 
+    with all required Microsoft Graph and Azure permissions, grants admin consent, assigns Cloud Application Administrator 
+    and Reader roles, creates a client secret, and encrypts credentials for secure use by discovery and aggregation scripts.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, Microsoft Graph modules, Azure modules
+#>
 # PARAMETERS
 #     -LogPath: Path for detailed execution log (default: .\MandADiscovery_Registration_Log.txt)
 #     -EncryptedOutputPath: Path for encrypted credentials file (default: C:\DiscoveryData\discoverycredentials.config)
@@ -74,6 +83,9 @@ param(
     
     [Parameter(Mandatory=$false, HelpMessage="Skip Azure subscription role assignments")]
     [switch]$SkipAzureRoles,
+    
+    [Parameter(Mandatory=$false, HelpMessage="Automatically install missing PowerShell modules")]
+    [switch]$AutoInstallModules,
     
     [Parameter(Mandatory=$false, HelpMessage="Client secret validity period in years (1-2)")]
     [ValidateRange(1, 2)]
@@ -253,6 +265,7 @@ function Write-ProgressHeader {
         [string]$Subtitle = ""
     )
     
+<<<<<<< HEAD
     $separator = "═" * 90
     Write-Host "`n$separator" -ForegroundColor $script:ColorScheme.Separator.ForegroundColor
     Write-Host "  ║ $Title" -ForegroundColor $script:ColorScheme.Header.ForegroundColor -BackgroundColor $script:ColorScheme.Header.BackgroundColor
@@ -260,6 +273,18 @@ function Write-ProgressHeader {
         Write-Host "  ║ $Subtitle" -ForegroundColor $script:ColorScheme.Info.ForegroundColor
     }
     Write-Host "$separator`n" -ForegroundColor $script:ColorScheme.Separator.ForegroundColor
+=======
+    $separator = "?" * 90
+    $separatorParams = $script:ColorScheme.Separator
+    Write-Host "`n$separator" @separatorParams
+    $headerParams = $script:ColorScheme.Header
+    Write-Host "  ?? $Title" @headerParams
+    if ($Subtitle) {
+        $infoParams = $script:ColorScheme.Info
+        Write-Host "  ?? $Subtitle" @infoParams
+    }
+    Write-Host "$separator`n" @separatorParams
+>>>>>>> fcc33954554df555f1a2471d7cff99d77cf164f3
 }
 
 function Write-OperationResult {
@@ -329,15 +354,21 @@ function Test-Prerequisites {
             Write-EnhancedLog "PowerShell version: $psVersion" -Level SUCCESS
         }
         
-        # Administrator privileges check
-        $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-        $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
-        $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        # Administrator privileges check (cross-platform)
+        $isAdmin = $false
+        if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+            $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+            $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
+            $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        } elseif ($IsLinux -or $IsMacOS) {
+            # On Unix-like systems, check if running as root or with sudo
+            $isAdmin = (id -u) -eq 0
+        }
         
         if ($isAdmin) {
-            Write-EnhancedLog "Running with administrator privileges" -Level SUCCESS
+            Write-EnhancedLog "Running with administrator/root privileges" -Level SUCCESS
         } else {
-            $warnings += "Not running as administrator. Some operations may require elevation"
+            $warnings += "Not running as administrator/root. Some operations may require elevation"
         }
         
         # Enhanced network connectivity tests with progress
@@ -415,8 +446,9 @@ function Test-Prerequisites {
             }
         }
         
-        # Enhanced module availability check with versions
-        Write-EnhancedLog "Checking PowerShell modules..." -Level PROGRESS
+        # Enhanced module availability check with automatic installation
+        Write-EnhancedLog "Checking and installing PowerShell modules..." -Level PROGRESS
+        $moduleInstallationFailed = $false
         foreach ($module in $script:ScriptInfo.Dependencies) {
             $installedModule = Get-Module -ListAvailable -Name $module -ErrorAction SilentlyContinue | 
                 Sort-Object Version -Descending | Select-Object -First 1
@@ -424,7 +456,36 @@ function Test-Prerequisites {
             if ($installedModule) {
                 Write-EnhancedLog "Module available: $module v$($installedModule.Version)" -Level SUCCESS
             } else {
-                $issues += "Required module '$module' not found. Install with: Install-Module $module -Scope CurrentUser"
+                if ($AutoInstallModules) {
+                    Write-EnhancedLog "Module '$module' not found. Installing..." -Level WARN
+                    try {
+                        # Set TLS 1.2 for secure downloads
+                        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                        
+                        # Install NuGet provider if needed (silently)
+                        $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -ErrorAction SilentlyContinue
+                        
+                        # Install the module
+                        Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
+                        
+                        # Verify installation
+                        $verifyModule = Get-Module -ListAvailable -Name $module -ErrorAction SilentlyContinue | 
+                            Sort-Object Version -Descending | Select-Object -First 1
+                        
+                        if ($verifyModule) {
+                            Write-EnhancedLog "Successfully installed $module v$($verifyModule.Version)" -Level SUCCESS
+                        } else {
+                            throw "Module installation verification failed"
+                        }
+                    } catch {
+                        Write-EnhancedLog "Failed to install module '$module': $($_.Exception.Message)" -Level ERROR
+                        $issues += "Failed to install required module '$module'. Please install manually: Install-Module $module -Scope CurrentUser"
+                        $moduleInstallationFailed = $true
+                    }
+                } else {
+                    Write-EnhancedLog "Module '$module' not found" -Level WARN
+                    $issues += "Required module '$module' not found. Install with: Install-Module $module -Scope CurrentUser"
+                }
             }
         }
         
@@ -1446,13 +1507,27 @@ function Save-EnhancedCredentials {
             RoleAssignmentSuccess = $script:ConnectionStatus.Azure.RoleAssignmentSuccess
         }
         
-        Write-EnhancedLog "Encrypting credentials using Windows DPAPI..." -Level PROGRESS
-        Write-EnhancedLog "  Target User: $env:USERNAME" -Level INFO
-        Write-EnhancedLog "  Target Computer: $env:COMPUTERNAME" -Level INFO
+        # Cross-platform encryption
+        if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+            Write-EnhancedLog "Encrypting credentials using Windows DPAPI..." -Level PROGRESS
+            Write-EnhancedLog "  Target User: $env:USERNAME" -Level INFO
+            Write-EnhancedLog "  Target Computer: $env:COMPUTERNAME" -Level INFO
+        } else {
+            Write-EnhancedLog "Storing credentials (plain JSON on Linux)..." -Level PROGRESS
+            Write-EnhancedLog "  Target User: $env:USER" -Level INFO
+            Write-EnhancedLog "  Target Host: $(hostname)" -Level INFO
+        }
         
         $jsonData = $credentialData | ConvertTo-Json -Depth 4
-        $secureString = ConvertTo-SecureString -String $jsonData -AsPlainText -Force
-        $encryptedData = $secureString | ConvertFrom-SecureString
+        
+        if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+            # Windows: Use DPAPI encryption
+            $secureString = ConvertTo-SecureString -String $jsonData -AsPlainText -Force
+            $encryptedData = $secureString | ConvertFrom-SecureString
+        } else {
+            # Linux/macOS: Store as plain JSON (rely on file permissions for security)
+            $encryptedData = $jsonData
+        }
         
         # Ensure directory exists with proper permissions
         $encryptedDir = Split-Path $EncryptedOutputPath -Parent
@@ -1472,29 +1547,35 @@ function Save-EnhancedCredentials {
         
         # Apply secure file permissions
         try {
-            $acl = Get-Acl $EncryptedOutputPath
-            $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance, remove existing
-            
-            # Add current user full control
-            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-            $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                $currentUser,
-                "FullControl",
-                "Allow"
-            )
-            $acl.SetAccessRule($accessRule)
-            
-            # Add SYSTEM full control
-            $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                "NT AUTHORITY\SYSTEM",
-                "FullControl",
-                "Allow"
-            )
-            $acl.SetAccessRule($systemRule)
-            
-            Set-Acl -Path $EncryptedOutputPath -AclObject $acl
-            Write-EnhancedLog "Applied secure file permissions (User + SYSTEM only)" -Level SUCCESS
-            
+            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+                # Windows-specific ACL permissions
+                $acl = Get-Acl $EncryptedOutputPath
+                $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance, remove existing
+                
+                # Add current user full control
+                $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+                $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                    $currentUser,
+                    "FullControl",
+                    "Allow"
+                )
+                $acl.SetAccessRule($accessRule)
+                
+                # Add SYSTEM full control
+                $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                    "NT AUTHORITY\SYSTEM",
+                    "FullControl",
+                    "Allow"
+                )
+                $acl.SetAccessRule($systemRule)
+                
+                Set-Acl -Path $EncryptedOutputPath -AclObject $acl
+                Write-EnhancedLog "Applied secure file permissions (User + SYSTEM only)" -Level SUCCESS
+            } else {
+                # Unix-like permissions (Linux/macOS)
+                & chmod 600 $EncryptedOutputPath 2>$null
+                Write-EnhancedLog "Applied secure file permissions (owner read/write only)" -Level SUCCESS
+            }
         } catch {
             Write-EnhancedLog "Could not set secure file permissions: $($_.Exception.Message)" -Level WARN
         }

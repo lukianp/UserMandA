@@ -1,23 +1,26 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
-    Provides configuration validation against a JSON schema for the M&A Discovery Suite.
+    Configuration validation against JSON schema for the M&A Discovery Suite
 .DESCRIPTION
-    This module includes functions to test a loaded configuration object (hashtable)
-    against a defined JSON schema file (config.schema.json). It reports validation
-    errors and warnings.
+    This module provides functions to test a loaded configuration object (hashtable) against a defined JSON schema file 
+    (config.schema.json). It reports validation errors and warnings with detailed context information. The module 
+    supports recursive validation of configuration nodes against schema definitions and handles basic JSON schema types 
+    including string, integer, boolean, array, and object with properties like 'required', 'enum', 'pattern', 
+    'minimum', and 'maximum'.
 .NOTES
     Version: 1.0.0
-    Author: M&A Discovery Suite Team
-    Date: 2025-06-10
-
-    Key Design Points:
-    - Uses Write-MandALog for logging.
-    - Relies on $global:MandA or a passed -Context for logging context.
-    - Recursively validates configuration nodes against schema definitions.
-    - Handles basic JSON schema types (string, integer, boolean, array, object) and properties like 'required', 'enum', 'pattern', 'minimum', 'maximum'.
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
+#>
     - PowerShell 5.1 compatible.
 #>
 

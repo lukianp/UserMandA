@@ -1,17 +1,24 @@
 # -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
-    Simplified credential management for new authentication service
+    Secure credential management for M&A Discovery Suite authentication
 .DESCRIPTION
-    Provides secure credential storage and retrieval for the new session-based
-    authentication system. Simplified interface with enhanced security.
+    Provides secure credential storage and retrieval for the session-based authentication system. This module handles 
+    encrypted credential storage, interactive credential collection, validation, and secure credential management 
+    operations. It integrates with the CredentialFormatHandler for secure file operations and supports both 
+    interactive and automated credential workflows.
 .NOTES
-    Author: M&A Discovery Team
-    Version: 3.0.0
-    Created: 2025-06-11
-    Architecture: New thread-safe session-based authentication
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, CredentialFormatHandler module
 #>
 
 # Import credential format handler

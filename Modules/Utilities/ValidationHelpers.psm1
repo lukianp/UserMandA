@@ -3,21 +3,23 @@
 # Used by orchestrator!
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-05-29
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
-    Provides common validation helper functions for the M&A Discovery Suite.
+    Common validation helper functions for the M&A Discovery Suite
 .DESCRIPTION
-    This module includes functions for validating prerequisites, data formats (GUID, email, UPN),
-    configuration files, directory write access, module availability, network connectivity,
-    and data quality. It integrates with EnhancedLogging.
+    This module provides functions for validating prerequisites, data formats (GUID, email, UPN), configuration files, 
+    directory write access, module availability, network connectivity, and data quality. It integrates with 
+    EnhancedLogging for consistent validation reporting and includes comprehensive validation logic for all 
+    common data types and system requirements used throughout the discovery suite.
 .NOTES
     Version: 1.0.0
-    Author: M&A Discovery Suite Team
-    Date: 2025-06-05
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
+#>
 
     Key Design Points:
     - Uses Write-MandALog for logging.

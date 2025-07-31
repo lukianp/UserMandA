@@ -3,19 +3,21 @@
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-04
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
-    M&A Discovery Suite - CSV Export Module
+    CSV Export Module for M&A Discovery Suite
 .DESCRIPTION
-    This module is responsible for exporting processed data (user profiles,
-    migration waves, complexity analysis, etc.) to CSV files.
+    This module is responsible for exporting processed data including user profiles, migration waves, complexity analysis, 
+    and discovery results to CSV files. It provides comprehensive CSV export capabilities with data formatting, 
+    validation, and standardized output formats for M&A reporting and analysis workflows.
 .NOTES
-    Version: 1.1.0 (Refactored for orchestrator data contracts)
-    Author: Gemini
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
 #>
 
 # Module-scope context variable

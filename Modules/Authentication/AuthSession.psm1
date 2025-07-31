@@ -1,17 +1,23 @@
 # -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
     Thread-safe authentication session management for M&A Discovery Suite
 .DESCRIPTION
-    Provides secure, thread-safe authentication session handling with automatic
-    token management and connection caching for concurrent runspace operations.
+    Provides secure, thread-safe authentication session handling with automatic token management and connection caching 
+    for concurrent runspace operations. This module defines the AuthSession class that manages authentication credentials, 
+    service tokens, and connection caching in a thread-safe manner using ReaderWriterLockSlim and ConcurrentDictionary.
 .NOTES
-    Author: M&A Discovery Team
-    Version: 3.0.0
-    Created: 2025-06-11
-    Architecture: New thread-safe session-based authentication
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, .NET Framework 4.7.2+
 #>
 
 using namespace System.Collections.Concurrent

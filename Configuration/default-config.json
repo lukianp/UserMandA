@@ -9,15 +9,15 @@
     "$schema": "./config.schema.json",
     "metadata": {
         "version": "4.1.0",
-        "companyName": "Zedra",
+        "companyName": "TestCompany",
         "projectName": "M&A Discovery Suite",
         "description": "Automated discovery and migration planning for M&A activities",
         "author": "IT Migration Team",
         "lastUpdated": "2025-06-01"
     },
     "environment": {
-        "profilesBasePath": "C:\\MandADiscovery\\Profiles",
-        "tempPath": "C:\\MandADiscovery\\Temp",
+        "profilesBasePath": "./Profiles",
+        "tempPath": "./Temp",
         "logLevel": "DEBUG",
         "maxRetries": 3,
         "domainController": "ad.zedra.com",
@@ -73,7 +73,12 @@
             "NetworkInfrastructure",
             "SharePoint",
             "SQLServer",
-            "Teams"
+            "Teams",
+            "VMware",
+            "CertificateAuthority",
+            "DNSDHCP",
+            "PowerPlatform",
+            "SecurityInfrastructure"
         ],
         "skipExistingFiles": true,
         "parallelProcessing": true,

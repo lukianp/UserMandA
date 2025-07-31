@@ -2,22 +2,23 @@
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
-# Version: 1.0.1
-# Created: 2025-06-05
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
-    Provides functions for tracking the progress and performance metrics of operations
-    within the M&A Discovery Suite.
+    Progress tracking and performance metrics for M&A Discovery Suite operations
 .DESCRIPTION
-    This module allows for initializing progress trackers, starting and stopping operation timers,
-    updating step-based progress, and retrieving/exporting collected metrics.
-    It's designed to be used by various components of the suite to monitor execution duration
-    and status of different phases and operations. This version incorporates fixes and
-    considerations based on the provided fault list.
+    This module provides functions for initializing progress trackers, starting and stopping operation timers, 
+    updating step-based progress, and retrieving/exporting collected metrics. It's designed to be used by 
+    various components of the suite to monitor execution duration and status of different phases and operations. 
+    The module includes comprehensive progress tracking, performance metrics collection, and detailed reporting capabilities.
 .NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
     Version: 1.0.1
     Author: Lukian Poleschtschuk
     Date: 2025-06-05

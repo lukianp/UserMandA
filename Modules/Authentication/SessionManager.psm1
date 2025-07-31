@@ -1,17 +1,24 @@
 # -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
 <#
 .SYNOPSIS
     Thread-safe session manager for M&A Discovery Suite authentication
 .DESCRIPTION
-    Manages authentication sessions with automatic cleanup, thread-safe access,
-    and lifecycle management for concurrent runspace operations.
+    Manages authentication sessions with automatic cleanup, thread-safe access, and lifecycle management for concurrent 
+    runspace operations. This module provides the SessionManager singleton class and PowerShell wrapper functions for 
+    creating, managing, and maintaining authentication sessions. It handles session expiry, token cleanup, and thread-safe 
+    access to authentication sessions across multiple concurrent operations.
 .NOTES
-    Author: M&A Discovery Team
-    Version: 3.0.0
-    Created: 2025-06-11
-    Architecture: New thread-safe session-based authentication
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, AuthSession module, .NET Framework 4.7.2+
 #>
 
 using namespace System.Collections.Concurrent
@@ -240,13 +247,81 @@ function Clear-AllAuthenticationSessions {
     }
 }
 
+function Test-SessionExpiry {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$RenewalThresholdMinutes = 10
+    )
+    
+    $session = Get-AuthenticationSession -SessionId $SessionId
+    if (-not $session) {
+        return @{ Valid = $false; Reason = "Session not found" }
+    }
+    
+    $timeUntilExpiry = ($session.ExpiryTime - [DateTime]::UtcNow).TotalMinutes
+    
+    if ($timeUntilExpiry -le 0) {
+        return @{ Valid = $false; Reason = "Session expired" }
+    }
+    
+    if ($timeUntilExpiry -le $RenewalThresholdMinutes) {
+        return @{ Valid = $true; NeedsRenewal = $true; MinutesRemaining = [Math]::Round($timeUntilExpiry, 1) }
+    }
+    
+    return @{ Valid = $true; NeedsRenewal = $false; MinutesRemaining = [Math]::Round($timeUntilExpiry, 1) }
+}
+
+function Invoke-SessionMaintenance {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
+    )
+    
+    $sessionStatus = Test-SessionExpiry -SessionId $SessionId
+    
+    if (-not $sessionStatus.Valid) {
+        throw "Session invalid: $($sessionStatus.Reason)"
+    }
+    
+    if ($sessionStatus.NeedsRenewal) {
+        Write-Warning "Session expires in $($sessionStatus.MinutesRemaining) minutes. Renewal recommended."
+        # Here you would implement session renewal logic
+    }
+    
+    # Clean up expired tokens from cache
+    $session = Get-AuthenticationSession -SessionId $SessionId
+    if ($session) {
+        $tokensToRemove = @()
+        foreach ($service in $session._tokenExpiries.Keys) {
+            if ([DateTime]::UtcNow -gt $session._tokenExpiries[$service]) {
+                $tokensToRemove += $service
+            }
+        }
+        
+        foreach ($service in $tokensToRemove) {
+            $session._serviceTokens.TryRemove($service, [ref]$null)
+            $session._tokenExpiries.TryRemove($service, [ref]$null)
+            Write-Verbose "Removed expired token for service: $service"
+        }
+    }
+    
+    return $sessionStatus
+}
+
 # Export functions
 Export-ModuleMember -Function @(
     'New-AuthenticationSession',
     'Get-AuthenticationSession', 
     'Remove-AuthenticationSession',
     'Get-AuthenticationSessionCount',
-    'Clear-AllAuthenticationSessions'
-)
+    'Clear-AllAuthenticationSessions',
+    'Test-SessionExpiry',
+    'Invoke-SessionMaintenance'
+) -Cmdlet * -Variable *
 
 Write-Host "[SessionManager.psm1] Thread-safe session manager loaded" -ForegroundColor Green

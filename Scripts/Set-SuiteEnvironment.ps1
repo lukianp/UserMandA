@@ -1,22 +1,27 @@
 ﻿#Requires -Version 5.1
 # -*- coding: utf-8-bom -*-
+Import-Module (Join-Path $PSScriptRoot "..\Modules\Core\ClassDefinitions.psm1") -Force
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-05
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
-    Sets up the environment for the M&A Discovery Suite v5.2.2.
-    Provides centralized path management, configuration loading, and global utilities.
+    Environment setup script for the M&A Discovery Suite
 .DESCRIPTION
-    Establishes a single global context object ($global:MandA) containing
-    all required paths, the loaded configuration, and essential global functions like Get-OrElse.
-    This version fixes array handling in configuration parsing to prevent arrays from becoming hashtables.
+    Establishes a single global context object ($global:MandA) containing all required paths, loaded configuration, 
+    and essential global functions. This script provides centralized path management, configuration loading, 
+    and global utilities for the M&A Discovery Suite with proper array handling in configuration parsing 
+    to prevent arrays from becoming hashtables.
 .PARAMETER ProvidedSuiteRoot
     Optional. Override the automatic suite root detection.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, ClassDefinitions module
 .PARAMETER CompanyName
     Mandatory. The company name for profile-specific paths.
 .NOTES
@@ -26,14 +31,14 @@
     - Added debug output for configuration parsing
     - Improved type detection and conversion
 #>
-[CmdletBinding()]
-param(
-    [Parameter(Mandatory=$false)]
-    [string]$ProvidedSuiteRoot,
 
-    [Parameter(Mandatory=$true)]
-    [string]$CompanyName
-)
+# Handle parameters for dot-sourcing
+$ProvidedSuiteRoot = $args[0]
+$CompanyName = $args[1]
+
+if (-not $CompanyName) {
+    throw "CompanyName parameter is required"
+}
 
 # --- Script Initialization & Global Utilities ---
 $ErrorActionPreference = "Stop"
@@ -78,52 +83,68 @@ function Test-MandASuiteStructureInternal {
 }
 
 function ConvertTo-HashtableRecursiveSSE {
-    param($InputObject)
+    param($InputObject, [int]$Depth = 0, [int]$MaxDepth = 10)
+    
+    if ($Depth -gt $MaxDepth) {
+        Write-Warning "Maximum recursion depth reached at $MaxDepth"
+        return $InputObject
+    }
     
     if ($null -eq $InputObject) {
         return $null
     }
     
-    # Handle arrays and collections (but not strings or hashtables)
-    if ($InputObject -is [System.Collections.IEnumerable] -and
-        $InputObject -isnot [string] -and
-        $InputObject -isnot [hashtable] -and
-        $InputObject -isnot [System.Collections.IDictionary]) {
+    # Handle arrays - MUST come before other collection checks
+    if ($InputObject -is [array]) {
+        Write-Verbose "Processing array at depth $Depth with $($InputObject.Count) items"
+        $processedArray = @()
         
-        # Convert to array and process each element
-        $array = @()
         foreach ($item in $InputObject) {
             if ($item -is [PSCustomObject] -or $item -is [hashtable]) {
-                $array += ConvertTo-HashtableRecursiveSSE $item
+                $processedArray += ConvertTo-HashtableRecursiveSSE -InputObject $item -Depth ($Depth + 1) -MaxDepth $MaxDepth
             } else {
-                # Keep primitive values (strings, numbers, booleans) as-is
-                $array += $item
+                # Keep primitive values as-is
+                $processedArray += $item
             }
         }
         
-        # Return as array (the comma operator ensures it stays an array)
-        return ,$array
+        # Force return as array using comma operator
+        return ,$processedArray
     }
     
-    # Handle PSCustomObject - convert to hashtable
+    # Handle PSCustomObject
     if ($InputObject -is [PSCustomObject]) {
+        Write-Verbose "Processing PSCustomObject at depth $Depth"
         $hash = @{}
+        
         foreach ($property in $InputObject.PSObject.Properties) {
-            $hash[$property.Name] = ConvertTo-HashtableRecursiveSSE $property.Value
+            $hash[$property.Name] = ConvertTo-HashtableRecursiveSSE -InputObject $property.Value -Depth ($Depth + 1) -MaxDepth $MaxDepth
         }
+        
         return $hash
     }
     
-    # Handle existing hashtables - process their values
+    # Handle existing hashtables
     if ($InputObject -is [hashtable] -or $InputObject -is [System.Collections.IDictionary]) {
+        Write-Verbose "Processing hashtable at depth $Depth"
         $hash = @{}
+        
         foreach ($key in $InputObject.Keys) {
-            $hash[$key] = ConvertTo-HashtableRecursiveSSE $InputObject[$key]
+            $hash[$key] = ConvertTo-HashtableRecursiveSSE -InputObject $InputObject[$key] -Depth ($Depth + 1) -MaxDepth $MaxDepth
         }
+        
         return $hash
     }
     
-    # Return all other types as-is (strings, numbers, booleans, etc.)
+    # Handle other collections that should NOT be converted to arrays
+    if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
+        Write-Verbose "Processing non-array collection at depth $Depth"
+        # Convert to array first, then process
+        $array = @($InputObject)
+        return ,$(ConvertTo-HashtableRecursiveSSE -InputObject $array -Depth $Depth -MaxDepth $MaxDepth)
+    }
+    
+    # Return all other types as-is
     return $InputObject
 }
 
@@ -237,82 +258,6 @@ Write-Host "[Set-SuiteEnvironment] Converting configuration to hashtable format.
 $configurationHashtable = ConvertTo-HashtableRecursiveSSE -InputObject $configContent
 Write-Host "[Set-SuiteEnvironment] Configuration loaded from '$configFilePath'" -ForegroundColor Green
 
-# Define DiscoveryResult class globally for all modules
-if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
-    Add-Type -TypeDefinition @'
-public class DiscoveryResult {
-    public bool Success { get; set; }
-    public string ModuleName { get; set; }
-    public object Data { get; set; }
-    public int RecordCount { get; set; }
-    public System.Collections.ArrayList Errors { get; set; }
-    public System.Collections.ArrayList Warnings { get; set; }
-    public System.Collections.Hashtable Metadata { get; set; }
-    public System.DateTime StartTime { get; set; }
-    public System.DateTime EndTime { get; set; }
-    public string ExecutionId { get; set; }
-    
-    public DiscoveryResult(string moduleName) {
-        this.ModuleName = moduleName;
-        this.RecordCount = 0;
-        this.Errors = new System.Collections.ArrayList();
-        this.Warnings = new System.Collections.ArrayList();
-        this.Metadata = new System.Collections.Hashtable();
-        this.StartTime = System.DateTime.Now;
-        this.ExecutionId = System.Guid.NewGuid().ToString();
-        this.Success = true;
-    }
-    
-    public void AddError(string message, System.Exception exception) {
-        AddError(message, exception, new System.Collections.Hashtable());
-    }
-    
-    public void AddError(string message, System.Exception exception, System.Collections.Hashtable context) {
-        var errorEntry = new System.Collections.Hashtable();
-        errorEntry["Timestamp"] = System.DateTime.Now;
-        errorEntry["Message"] = message;
-        
-        if (exception != null) {
-            errorEntry["Exception"] = exception.ToString();
-            errorEntry["ExceptionType"] = exception.GetType().FullName;
-            errorEntry["StackTrace"] = exception.StackTrace;
-        } else {
-            errorEntry["Exception"] = null;
-            errorEntry["ExceptionType"] = null;
-            errorEntry["StackTrace"] = System.Environment.StackTrace;
-        }
-        
-        errorEntry["Context"] = context ?? new System.Collections.Hashtable();
-        this.Errors.Add(errorEntry);
-        this.Success = false;
-    }
-    
-    public void AddWarning(string message) {
-        AddWarning(message, new System.Collections.Hashtable());
-    }
-    
-    public void AddWarning(string message, System.Collections.Hashtable context) {
-        var warningEntry = new System.Collections.Hashtable();
-        warningEntry["Timestamp"] = System.DateTime.Now;
-        warningEntry["Message"] = message;
-        warningEntry["Context"] = context;
-        this.Warnings.Add(warningEntry);
-    }
-    
-    public void Complete() {
-        this.EndTime = System.DateTime.Now;
-        if (this.StartTime != null && this.EndTime != null) {
-            var duration = this.EndTime - this.StartTime;
-            this.Metadata["Duration"] = duration;
-            this.Metadata["DurationSeconds"] = duration.TotalSeconds;
-        }
-    }
-}
-'@ -Language CSharp
-    Write-Host "[Set-SuiteEnvironment] DiscoveryResult class defined globally" -ForegroundColor Green
-} else {
-    Write-Host "[Set-SuiteEnvironment] DiscoveryResult class already exists" -ForegroundColor Gray
-}
 
 # Test array handling if verbose
 if ($VerbosePreference -eq 'Continue') {

@@ -1,23 +1,24 @@
 ﻿# -*- coding: utf-8-bom -*-
+#Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-06
-# Last Modified: 2025-06-06
-# Change Log: Initial implementation of pre-flight validation module
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
     Pre-flight validation module for M&A Discovery Suite
 .DESCRIPTION
-    Provides pre-flight validation functions to check PowerShell version, execution policy,
-    and administrator rights before running M&A Discovery Suite operations.
+    Provides comprehensive pre-flight validation functions to check PowerShell version, execution policy, 
+    administrator rights, required modules, network connectivity, and system resources before running 
+    M&A Discovery Suite operations. This module ensures all prerequisites are met before beginning 
+    discovery operations to prevent runtime failures and ensure optimal performance.
 .NOTES
-    Author: Lukian Poleschtschuk
     Version: 1.0.0
-    Created: 2025-06-06
-    Last Modified: 2025-06-06
-    Change Log: Initial version - any future changes require version increment
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, EnhancedLogging module
 #>
 
 function Invoke-SafeModuleExecution {
@@ -148,9 +149,21 @@ function Test-SuitePrerequisites {
             }
         }
         
-        # Check administrator rights
-        $currentPrincipal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
-        $isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        # Check administrator rights (cross-platform)
+        $isAdmin = $false
+        try {
+            if ($PSVersionTable.Platform -eq 'Win32NT' -or $PSVersionTable.PSEdition -eq 'Desktop') {
+                # Windows check
+                $currentPrincipal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+                $isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+            } else {
+                # Unix/Linux check
+                $isAdmin = (id -u) -eq 0
+            }
+        } catch {
+            # Fallback - assume not admin if we can't determine
+            $isAdmin = $false
+        }
         
         $adminResult = @{
             Test = "Administrator Rights"

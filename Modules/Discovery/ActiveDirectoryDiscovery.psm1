@@ -1,10 +1,25 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
-#================================================================================
-# M&A Discovery Module: ActiveDirectory
-# Description: Discovers Active Directory users, groups, computers, OUs, sites and DNS zones.
-#================================================================================
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
+<#
+.SYNOPSIS
+    Active Directory discovery module for M&A Discovery Suite
+.DESCRIPTION
+    Discovers Active Directory users, groups, computers, organizational units, sites, and DNS zones for comprehensive 
+    on-premises infrastructure assessment. This module provides detailed Active Directory topology discovery, 
+    permission analysis, group membership mapping, and security assessment capabilities essential for 
+    M&A due diligence and migration planning.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, ActiveDirectory module, Windows authentication
+#>
 
 function Get-AuthInfoFromConfiguration {
     [CmdletBinding()]

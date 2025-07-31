@@ -1,6 +1,25 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Author: Lukian Poleschtschuk
+# Version: 1.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
+
+<#
+.SYNOPSIS
+    Microsoft Teams Discovery Module for M&A Discovery Suite
+.DESCRIPTION
+    Discovers Microsoft Teams, channels, members, and configurations using Microsoft Graph API. This module provides 
+    comprehensive Teams discovery including team structures, channel configurations, member permissions, and 
+    collaboration settings essential for M&A Teams environment assessment and migration planning.
+.NOTES
+    Version: 1.0.0
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, Microsoft.Graph modules, DiscoveryBase module
+#>
+
 
 # Fallback logging function if Write-MandALog is not available
 if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {

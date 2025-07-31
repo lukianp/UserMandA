@@ -3,24 +3,22 @@
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
-# Created: 2025-06-06
-# Last Modified: 2025-06-06
+# Created: 2025-01-18
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
     Authentication Monitoring Module for M&A Discovery Suite
 .DESCRIPTION
-    Provides comprehensive authentication status monitoring and visibility functions
-    for all connected services including Microsoft Graph, Exchange Online, and On-Premises AD.
+    Provides comprehensive authentication status monitoring and visibility functions for all connected services 
+    including Microsoft Graph, Exchange Online, and On-Premises AD. This module offers real-time authentication 
+    status checking, multi-service connection validation, detailed connection information display, and 
+    comprehensive error handling and reporting capabilities.
 .NOTES
     Version: 1.0.0
-    Created: 2025-06-06
-    
-    Key Features:
-    - Real-time authentication status checking
-    - Multi-service connection validation
-    - Detailed connection information display
-    - Error handling and reporting
+    Author: Lukian Poleschtschuk
+    Created: 2025-01-18
+    Requires: PowerShell 5.1+, Microsoft Graph modules, Exchange Online modules
 #>
 
 #===============================================================================

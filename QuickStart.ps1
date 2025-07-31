@@ -2,38 +2,45 @@
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
-# Version: 1.0.0
-# Created: 2025-06-06
-# Last Modified: 2025-06-06
-# Change Log: Updated version control header
+# Version: 7.0.0
+# Created: 2025-01-18
+# Last Modified: 2025-01-28
 
 <#
 .SYNOPSIS
-    M&A Discovery Suite - Quick Start Entry Point (Rewritten v6.0.0)
+    M&A Discovery Suite - Enhanced Quick Start with Integrated App Registration
 .DESCRIPTION
-    User-friendly entry point to initialize the M&A Discovery Suite environment for a specific company
-    and then launch the main orchestrator. This script ensures the environment is correctly
-    set up before any operations begin.
+    Enhanced entry point with integrated Azure AD app registration functionality.
+    Provides a comprehensive interactive menu system for all M&A Discovery operations.
+    This script ensures the environment is correctly set up before any operations begin, 
+    including profile creation, credential management, app registration, and orchestrator initialization.
 .PARAMETER CompanyName
-    The name of the company for which the discovery operations will be run.
-    This determines the profile directory for outputs, logs, and credentials.
-    If not provided, the script will attempt to list existing profiles or prompt for a name.
+    The name of the company for which the discovery operations will be run. This determines the profile directory 
+    for outputs, logs, and credentials. If not provided, the script will attempt to list existing profiles or prompt for a name.
+.NOTES
+    Version: 7.0.0 (Enhanced with Integrated App Registration)
+    Author: M&A Discovery Team
+    Created: 2025-01-18
+    Last Modified: 2025-01-28
+    Requires: PowerShell 5.1+, M&A Discovery Suite modules, Microsoft Graph modules
 .PARAMETER ConfigurationFile
     Optional. Path to a specific JSON configuration file to use.
     If not provided, the 'default-config.json' within the suite's 'Configuration' directory will be used.
 .PARAMETER Mode
     Specifies the operation mode for the orchestrator.
-    Valid values: "Discovery", "Processing", "Export", "Full", "AzureOnly". Default is "Full".
+    Valid values: "Discovery", "Processing", "Export", "Full", "AzureOnly", "Interactive". Default is "Interactive".
 .PARAMETER Force
     Optional. Switch to force certain operations, like overwriting existing discovery files.
 .PARAMETER ValidateOnly
     Optional. Switch to perform validation checks only, without executing discovery, processing, or export.
 .PARAMETER ParallelThrottle
     Optional. Overrides the 'maxConcurrentJobs' setting in the configuration for parallel discovery. Default is 5.
+.PARAMETER SecretValidityYears
+    Optional. Client secret validity period in years when creating app registration (1-2). Default is 2.
+.PARAMETER SkipAzureRoles
+    Optional. Skip Azure subscription role assignments during app registration.
 .NOTES
-    Version: 6.0.0 (Rewritten)
-    Author: M&A Discovery Team (Based on original by Lukian Poleschtschuk, enhanced by Gemini)
-    Purpose: To provide a clean, robust, and user-friendly way to start the M&A Discovery Suite.
+    Purpose: Unified entry point with all functionality integrated, including app registration and interactive menus.
 #>
 
 [CmdletBinding(SupportsShouldProcess = $true)]
@@ -45,8 +52,8 @@ param(
     [string]$ConfigurationFile,
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("Discovery", "Processing", "Export", "Full", "AzureOnly")]
-    [string]$Mode = "Full",
+    [ValidateSet("Discovery", "Processing", "Export", "Full", "AzureOnly", "Interactive")]
+    [string]$Mode = "Interactive",
 
     [Parameter(Mandatory = $false)]
     [switch]$Force,
@@ -55,13 +62,101 @@ param(
     [switch]$ValidateOnly,
 
     [Parameter(Mandatory = $false)]
-    [int]$ParallelThrottle = 5 # Note: Orchestrator will primarily use config's maxConcurrentJobs
+    [int]$ParallelThrottle = 5,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateRange(1, 2)]
+    [int]$SecretValidityYears = 2,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$SkipAzureRoles
 )
 
+#region Global Configuration
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "Continue"
 $script:QuickStartTime = Get-Date
-$script:QuickStartVersion = "6.0.0 (Rewritten)"
+$script:QuickStartVersion = "7.0.0"
+
+# Script metadata
+$script:ScriptInfo = @{
+    Name = "Enhanced M&A Discovery Suite"
+    Version = "7.0.0"
+    RequiredPSVersion = "5.1"
+    Dependencies = @(
+        "Az.Accounts", 
+        "Az.Resources", 
+        "Microsoft.Graph.Applications", 
+        "Microsoft.Graph.Authentication", 
+        "Microsoft.Graph.Identity.DirectoryManagement"
+    )
+}
+
+# Enhanced application configuration for integrated app registration
+$script:AppConfig = @{
+    DisplayName = "MandADiscovery"
+    Description = "M&A Environment Discovery Service Principal with comprehensive permissions"
+    RequiredGraphPermissions = @{
+        # Core directory permissions
+        "Application.Read.All" = "Read all applications"
+        "AppRoleAssignment.Read.All" = "Read app role assignments"
+        "AuditLog.Read.All" = "Read audit logs"
+        "Directory.Read.All" = "Read directory data"
+        "Group.Read.All" = "Read all groups"
+        "GroupMember.Read.All" = "Read group memberships"
+        "User.Read.All" = "Read all users"
+        "Organization.Read.All" = "Read organization info"
+        
+        # Device and compliance
+        "Device.Read.All" = "Read all devices"
+        "DeviceManagementConfiguration.Read.All" = "Read device management config"
+        "DeviceManagementManagedDevices.Read.All" = "Read managed devices"
+        
+        # Policy and governance
+        "Policy.Read.All" = "Read policies"
+        "Policy.Read.ConditionalAccess" = "Read conditional access"
+        "Reports.Read.All" = "Read reports"
+        "RoleManagement.Read.All" = "Read role management"
+        
+        # Exchange Online
+        "Exchange.ManageAsApp" = "Manage Exchange as app"
+        "Mail.Read" = "Read mail"
+        "MailboxSettings.Read" = "Read mailbox settings"
+        
+        # SharePoint and Teams
+        "Sites.Read.All" = "Read SharePoint sites"
+        "Team.ReadBasic.All" = "Read team info"
+        "Channel.ReadBasic.All" = "Read channel info"
+    }
+    AzureADRoles = @("Cloud Application Administrator")
+    AzureRoles = @("Reader")
+}
+
+# Enhanced color scheme
+$script:ColorScheme = @{
+    Header = @{ ForegroundColor = "White"; BackgroundColor = "DarkBlue" }
+    Success = @{ ForegroundColor = "Green" }
+    Info = @{ ForegroundColor = "Cyan" }
+    Warning = @{ ForegroundColor = "Yellow" }
+    Error = @{ ForegroundColor = "Red" }
+    Progress = @{ ForegroundColor = "Magenta" }
+    MenuOption = @{ ForegroundColor = "White" }
+    MenuHighlight = @{ ForegroundColor = "Yellow" }
+}
+
+# Connection status tracking
+$script:ConnectionStatus = @{
+    Graph = @{ Connected = $false; Context = $null }
+    Azure = @{ Connected = $false; Context = $null }
+}
+
+# Menu state tracking
+$script:MenuState = @{
+    CurrentMenu = "Main"
+    History = @()
+    SessionStartTime = Get-Date
+}
+#endregion
 
 Write-Host "`n" -NoNewline
 Write-Host "========================================================================" -ForegroundColor Cyan
@@ -174,7 +269,7 @@ try {
     }
 
     # Source the environment script. It will populate $global:MandA
-    . $EnvScriptPath -CompanyName $CompanyName -ProvidedSuiteRoot $SuiteRoot
+    . $EnvScriptPath $SuiteRoot $CompanyName
 
     if (-not $global:MandA -or -not $global:MandA.Initialized) {
         throw "CRITICAL: Failed to initialize global M&A environment context (`$global:MandA`) via Set-SuiteEnvironment.ps1."
@@ -182,6 +277,79 @@ try {
     Write-Host "[QuickStart] [OK] M&A Suite Environment initialized successfully for '$($global:MandA.CompanyName)'." -ForegroundColor Green
     Write-Host "[QuickStart]   Log output path: $($global:MandA.Paths.LogOutput)" -ForegroundColor DarkGray
     Write-Host "[QuickStart]   Credential file path: $($global:MandA.Paths.CredentialFile)" -ForegroundColor DarkGray
+
+    # --- Check for App Registration and Credentials ---
+    Write-Host "`n[QuickStart] Checking for Azure AD App Registration and credentials..." -ForegroundColor Yellow
+    
+    $CredentialFile = $global:MandA.Paths.CredentialFile
+    $AppRegScriptPath = Join-Path $SuiteRoot "Scripts\DiscoveryCreateAppRegistration.ps1"
+    
+    if (-not (Test-Path $CredentialFile -PathType Leaf)) {
+        Write-Host "[QuickStart] No credentials found at: $CredentialFile" -ForegroundColor Yellow
+        
+        if (Test-Path $AppRegScriptPath -PathType Leaf) {
+            Write-Host "[QuickStart] Would you like to create an Azure AD App Registration now?" -ForegroundColor Cyan
+            Write-Host "[QuickStart] This will:" -ForegroundColor White
+            Write-Host "  - Create an Azure AD application with required permissions" -ForegroundColor Gray
+            Write-Host "  - Grant admin consent for Microsoft Graph and Azure permissions" -ForegroundColor Gray
+            Write-Host "  - Create a client secret (valid for 2 years)" -ForegroundColor Gray
+            Write-Host "  - Store encrypted credentials for the discovery process" -ForegroundColor Gray
+            Write-Host ""
+            
+            $CreateAppReg = Read-Host "[QuickStart] Create App Registration? (Y/N)"
+            
+            if ($CreateAppReg -eq 'Y' -or $CreateAppReg -eq 'y') {
+                Write-Host "[QuickStart] Launching App Registration creation script..." -ForegroundColor Green
+                
+                $AppRegParams = @{
+                    EncryptedOutputPath = $CredentialFile
+                    LogPath = Join-Path $global:MandA.Paths.LogOutput "AppRegistration_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+                }
+                
+                if ($Force.IsPresent) {
+                    $AppRegParams['Force'] = $true
+                }
+                
+                try {
+                    & $AppRegScriptPath @AppRegParams
+                    
+                    if (Test-Path $CredentialFile -PathType Leaf) {
+                        Write-Host "[QuickStart] [OK] App Registration created successfully!" -ForegroundColor Green
+                        Write-Host "[QuickStart]   Credentials stored at: $CredentialFile" -ForegroundColor DarkGray
+                    } else {
+                        Write-Host "[QuickStart] [WARNING] App Registration script completed but credentials file not found." -ForegroundColor Yellow
+                        Write-Host "[QuickStart] You may need to manually provide credentials or re-run the script." -ForegroundColor Yellow
+                    }
+                } catch {
+                    Write-Host "[QuickStart] [ERROR] Failed to create App Registration: $_" -ForegroundColor Red
+                    Write-Host "[QuickStart] You can try running the script manually:" -ForegroundColor Yellow
+                    Write-Host "  & '$AppRegScriptPath' -EncryptedOutputPath '$CredentialFile'" -ForegroundColor Cyan
+                }
+            } else {
+                Write-Host "[QuickStart] Skipping App Registration creation." -ForegroundColor Yellow
+                Write-Host "[QuickStart] Note: Discovery modules requiring Azure authentication will fail without credentials." -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "[QuickStart] [WARNING] App Registration script not found at: $AppRegScriptPath" -ForegroundColor Yellow
+            Write-Host "[QuickStart] Please ensure credentials are manually configured before running discovery." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "[QuickStart] [OK] Credentials found at: $CredentialFile" -ForegroundColor Green
+        
+        # Optional: Validate credential file format
+        try {
+            $CredContent = Get-Content $CredentialFile -Raw
+            if ($CredContent -match "^\s*\{.*\}\s*$") {
+                # Plain JSON format (not encrypted)
+                Write-Host "[QuickStart]   Credential format: JSON (unencrypted)" -ForegroundColor DarkGray
+            } else {
+                # Encrypted format
+                Write-Host "[QuickStart]   Credential format: Encrypted" -ForegroundColor DarkGray
+            }
+        } catch {
+            Write-Host "[QuickStart]   Unable to validate credential format" -ForegroundColor DarkGray
+        }
+    }
 
     # --- Prepare Orchestrator Parameters ---
     $OrchestratorPath = $global:MandA.Paths.OrchestratorScript # Get from global context
@@ -218,49 +386,44 @@ Write-Host "  Validate Only: $(if ($ValidateOnly) { 'Yes' } else { 'No' })" -For
 Write-Host "  Parallel Throttle (Parameter): $ParallelThrottle" -ForegroundColor White
     Write-Host ""
 
-    # --- Launch Monitoring Windows ---
-    Write-Host "[QuickStart] Launching monitoring windows..." -ForegroundColor Yellow
+    # --- Monitoring Info ---
+    Write-Host "[QuickStart] Monitoring is available through the built-in logging system" -ForegroundColor Green
+    Write-Host "[QuickStart] Log files are located at: $($global:MandA.Paths.LogOutput)" -ForegroundColor Cyan
     
-    # Launch Log Monitor in separate window
-    $logMonitorScript = Join-Path $SuiteRoot "Scripts\Show-LogMonitor.ps1"
-    if (Test-Path $logMonitorScript) {
-        $logMonitorArgs = @(
-            "-ExecutionPolicy", "Bypass"
-            "-File", "`"$logMonitorScript`""
-            "-CompanyName", "`"$($global:MandA.CompanyName)`""
-            "-LogPath", "`"$($global:MandA.Paths.LogOutput)`""
-        )
+    # --- Check for Interactive Mode ---
+    if ($Mode -eq "Interactive") {
+        Write-Host "[QuickStart] Interactive mode selected. Launching menu system..." -ForegroundColor Yellow
+        Write-Host ("=" * 75) -ForegroundColor DarkGray
         
-        Write-Host "[QuickStart] Starting Log Monitor window..." -ForegroundColor Green
-        Start-Process "powershell.exe" -ArgumentList $logMonitorArgs -WindowStyle Normal
-    } else {
-        Write-Host "[QuickStart] [WARNING] Log Monitor script not found: $logMonitorScript" -ForegroundColor Yellow
+        $InteractiveMenuScript = Join-Path $SuiteRoot "Scripts\Interactive-Menu.ps1"
+        if (Test-Path $InteractiveMenuScript -PathType Leaf) {
+            try {
+                $menuParams = @{
+                    CompanyName = $global:MandA.CompanyName
+                }
+                & $InteractiveMenuScript @menuParams
+                $ExitCode = $LASTEXITCODE
+                Write-Host "[QuickStart] Interactive Menu exited with code: $ExitCode" -ForegroundColor DarkGray
+            } catch {
+                Write-Host "[QuickStart] [ERROR] Failed to launch Interactive Menu: $($_.Exception.Message)" -ForegroundColor Red
+                $ExitCode = 99
+            }
+        } else {
+            Write-Host "[QuickStart] [ERROR] Interactive Menu script not found at: $InteractiveMenuScript" -ForegroundColor Red
+            Write-Host "[QuickStart] Falling back to orchestrator mode..." -ForegroundColor Yellow
+            $Mode = "Full"
+            $OrchestratorParams.Mode = $Mode
+        }
     }
     
-    # Launch Discovery Status Dashboard in separate window
-    $dashboardScript = Join-Path $SuiteRoot "Scripts\Show-DiscoveryStatus.ps1"
-    if (Test-Path $dashboardScript) {
-        $dashboardArgs = @(
-            "-ExecutionPolicy", "Bypass"
-            "-File", "`"$dashboardScript`""
-            "-CompanyName", "`"$($global:MandA.CompanyName)`""
-        )
-        
-        Write-Host "[QuickStart] Starting Discovery Status Dashboard window..." -ForegroundColor Green
-        Start-Process "powershell.exe" -ArgumentList $dashboardArgs -WindowStyle Normal
-    } else {
-        Write-Host "[QuickStart] [WARNING] Discovery Status script not found: $dashboardScript" -ForegroundColor Yellow
-    }
-    
-    # Give monitoring windows time to start
-    Start-Sleep -Seconds 2
-    
-    # --- Launch Orchestrator ---
-    Write-Host "[QuickStart] Launching M&A Discovery Suite Orchestrator..." -ForegroundColor Yellow
-    Write-Host ("=" * 75) -ForegroundColor DarkGray
+    # --- Launch Orchestrator (if not in interactive mode) ---
+    if ($Mode -ne "Interactive") {
+        Write-Host "[QuickStart] Launching M&A Discovery Suite Orchestrator..." -ForegroundColor Yellow
+        Write-Host ("=" * 75) -ForegroundColor DarkGray
 
-    & $OrchestratorPath @OrchestratorParams
-    $ExitCode = $LASTEXITCODE
+        & $OrchestratorPath @OrchestratorParams
+        $ExitCode = $LASTEXITCODE
+    }
 
     # --- Display Completion Status ---
     $Duration = (Get-Date) - $script:QuickStartTime
@@ -283,6 +446,42 @@ Write-Host "  Parallel Throttle (Parameter): $ParallelThrottle" -ForegroundColor
         Write-Host "  Raw Data:       $($global:MandA.Paths.RawDataOutput)" -ForegroundColor DarkGray
         Write-Host "  Processed Data: $($global:MandA.Paths.ProcessedDataOutput)" -ForegroundColor DarkGray
         Write-Host "  Exports:        $($global:MandA.Paths.ExportOutput)" -ForegroundColor DarkGray
+    }
+
+    # --- Interactive Menu Option (if not already in interactive mode) ---
+    if ($Mode -ne "Interactive") {
+        Write-Host "`n[QuickStart] Next Steps:" -ForegroundColor Cyan
+        Write-Host "  [1] Launch Interactive Menu System" -ForegroundColor Green
+        Write-Host "  [2] Exit QuickStart" -ForegroundColor Gray
+        Write-Host ""
+        
+        $menuChoice = Read-Host "[QuickStart] Select an option (1-2)"
+        
+        if ($menuChoice -eq "1") {
+            Write-Host "[QuickStart] Launching Interactive Menu System..." -ForegroundColor Yellow
+            Write-Host ("=" * 75) -ForegroundColor DarkGray
+            
+            $InteractiveMenuScript = Join-Path $SuiteRoot "Scripts\Interactive-Menu.ps1"
+            if (Test-Path $InteractiveMenuScript -PathType Leaf) {
+                try {
+                    $menuParams = @{
+                        CompanyName = $global:MandA.CompanyName
+                    }
+                    & $InteractiveMenuScript @menuParams
+                    $menuExitCode = $LASTEXITCODE
+                    Write-Host "[QuickStart] Interactive Menu exited with code: $menuExitCode" -ForegroundColor DarkGray
+                } catch {
+                    Write-Host "[QuickStart] [ERROR] Failed to launch Interactive Menu: $($_.Exception.Message)" -ForegroundColor Red
+                }
+            } else {
+                Write-Host "[QuickStart] [ERROR] Interactive Menu script not found at: $InteractiveMenuScript" -ForegroundColor Red
+                Write-Host "[QuickStart] Please ensure all suite files are properly installed." -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "[QuickStart] Thank you for using M&A Discovery Suite!" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "`n[QuickStart] Thank you for using M&A Discovery Suite!" -ForegroundColor Green
     }
 
     exit $ExitCode
