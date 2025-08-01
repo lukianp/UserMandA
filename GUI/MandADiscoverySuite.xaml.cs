@@ -308,6 +308,126 @@ namespace MandADiscoverySuite
             }
         }
 
+        private class MandACredentials
+        {
+            public string TenantId { get; set; }
+            public string ClientId { get; set; }
+            public string ClientSecret { get; set; }
+            public string ApplicationName { get; set; }
+            public string ExpiryDate { get; set; }
+            public int DaysUntilExpiry { get; set; }
+        }
+
+        private MandACredentials GetCompanyCredentials(string companyName)
+        {
+            try
+            {
+                string discoveryPath = GetDiscoveryDataPath();
+                string credentialPath = Path.Combine(discoveryPath, companyName, "Credentials", "discoverycredentials.config");
+                
+                if (!File.Exists(credentialPath))
+                {
+                    throw new FileNotFoundException($"Credential file not found at: {credentialPath}. Please run the App Registration script first.");
+                }
+
+                string credentialContent = File.ReadAllText(credentialPath);
+                string jsonContent;
+                
+                // Check if the content is encrypted (DPAPI) or plain JSON
+                try
+                {
+                    // First, try to deserialize as JSON directly
+                    var testCredentials = JsonSerializer.Deserialize<MandACredentials>(credentialContent);
+                    if (testCredentials != null && !string.IsNullOrEmpty(testCredentials.ClientId))
+                    {
+                        // It's already plain JSON
+                        jsonContent = credentialContent;
+                    }
+                    else
+                    {
+                        throw new JsonException("Invalid JSON");
+                    }
+                }
+                catch (JsonException)
+                {
+                    // If JSON deserialization fails, assume it's DPAPI encrypted
+                    try
+                    {
+                        // Convert from DPAPI encrypted string
+                        var secureString = new System.Security.SecureString();
+                        foreach (char c in credentialContent)
+                        {
+                            secureString.AppendChar(c);
+                        }
+                        secureString.MakeReadOnly();
+                        
+                        // Decrypt using DPAPI
+                        var decryptedBytes = System.Security.Cryptography.ProtectedData.Unprotect(
+                            Convert.FromBase64String(credentialContent),
+                            null,
+                            System.Security.Cryptography.DataProtectionScope.CurrentUser);
+                        
+                        jsonContent = System.Text.Encoding.UTF8.GetString(decryptedBytes);
+                    }
+                    catch
+                    {
+                        // If DPAPI decryption also fails, try PowerShell SecureString format
+                        try
+                        {
+                            // Use PowerShell.exe to decrypt
+                            var psi = new ProcessStartInfo
+                            {
+                                FileName = "powershell.exe",
+                                Arguments = $"-NoProfile -Command \"$encryptedData = Get-Content -Path '{credentialPath}' -Raw; $secureString = ConvertTo-SecureString -String $encryptedData; $plainText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureString)); Write-Output $plainText\"",
+                                RedirectStandardOutput = true,
+                                RedirectStandardError = true,
+                                UseShellExecute = false,
+                                CreateNoWindow = true
+                            };
+                            
+                            using (var process = Process.Start(psi))
+                            {
+                                jsonContent = process.StandardOutput.ReadToEnd().Trim();
+                                var error = process.StandardError.ReadToEnd();
+                                process.WaitForExit();
+                                
+                                if (process.ExitCode != 0 || !string.IsNullOrEmpty(error))
+                                {
+                                    throw new InvalidOperationException($"PowerShell decryption failed: {error}");
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            throw new InvalidOperationException(
+                                "Unable to decrypt credential file. The file may be corrupted or encrypted with a different user account. " +
+                                "Please re-run the App Registration script.");
+                        }
+                    }
+                }
+                
+                // Now deserialize the JSON content
+                var credentials = JsonSerializer.Deserialize<MandACredentials>(jsonContent);
+                
+                if (credentials == null || string.IsNullOrEmpty(credentials.ClientId) || 
+                    string.IsNullOrEmpty(credentials.ClientSecret) || string.IsNullOrEmpty(credentials.TenantId))
+                {
+                    throw new InvalidOperationException("Invalid credential file format or missing required fields.");
+                }
+
+                // Log successful credential loading (without exposing secrets)
+                var maskedClientId = credentials.ClientId.Substring(0, 8) + "****";
+                var maskedTenantId = credentials.TenantId.Substring(0, 8) + "****";
+                System.Diagnostics.Debug.WriteLine($"Successfully loaded credentials for {companyName} - ClientId: {maskedClientId}, TenantId: {maskedTenantId}");
+
+                return credentials;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to load credentials for {companyName}: {ex.Message}");
+            }
+        }
+
         private void LoadCompanyProfiles()
         {
             companyProfiles.Clear();
@@ -994,6 +1114,11 @@ namespace MandADiscoverySuite
             
             try
             {
+                Dispatcher.Invoke(() => UpdateProgress("Loading credentials...", 10));
+                
+                // Load credentials from the credential file
+                var credentials = GetCompanyCredentials(companyName);
+                
                 Dispatcher.Invoke(() => UpdateProgress("Connecting to Entra ID...", 20));
                 
                 var script = $@"
@@ -1003,7 +1128,6 @@ namespace MandADiscoverySuite
                     
                     # Get the company profile
                     $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
-                    $companyProfile = $profileManager.GetProfile()
                     $outputPath = $profileManager.GetProfileDataPath()
                     
                     # Ensure output directory exists
@@ -1014,10 +1138,11 @@ namespace MandADiscoverySuite
                     # Create Entra ID App discovery instance
                     $entraIdDiscovery = Get-EntraIDAppDiscovery
                     
-                    # Set parameters for discovery
+                    # Set parameters for discovery using loaded credentials
                     $discoveryParams = @{{
-                        TenantId = $companyProfile.AzureConfig.TenantId
-                        ClientId = $companyProfile.AzureConfig.ClientId
+                        TenantId = '{credentials.TenantId}'
+                        ClientId = '{credentials.ClientId}'
+                        ClientSecret = '{credentials.ClientSecret}'
                         GraphScopes = @(
                             'Application.Read.All',
                             'Directory.Read.All',
@@ -1169,6 +1294,11 @@ namespace MandADiscoverySuite
             
             try
             {
+                Dispatcher.Invoke(() => UpdateProgress("Loading credentials...", 10));
+                
+                // Load credentials from the credential file
+                var credentials = GetCompanyCredentials(companyName);
+                
                 Dispatcher.Invoke(() => UpdateProgress("Connecting to Azure...", 20));
                 
                 var script = $@"
@@ -1179,7 +1309,6 @@ namespace MandADiscoverySuite
                     
                     # Get the company profile and create discovery context
                     $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
-                    $companyProfile = $profileManager.GetProfile()
                     
                     # Create discovery context
                     $context = @{{
@@ -1190,12 +1319,12 @@ namespace MandADiscoverySuite
                         DiscoverySession = [guid]::NewGuid().ToString()
                     }}
                     
-                    # Create configuration for Azure discovery
+                    # Create configuration for Azure discovery using loaded credentials
                     $configuration = @{{
                         environment = @{{
-                            tenant = $companyProfile.AzureConfig.TenantId
-                            clientId = $companyProfile.AzureConfig.ClientId
-                            subscriptionId = $companyProfile.AzureConfig.SubscriptionId
+                            tenant = '{credentials.TenantId}'
+                            clientId = '{credentials.ClientId}'
+                            clientSecret = '{credentials.ClientSecret}'
                         }}
                         discovery = @{{
                             azure = @{{
@@ -1316,6 +1445,11 @@ namespace MandADiscoverySuite
             
             try
             {
+                Dispatcher.Invoke(() => UpdateProgress("Loading credentials...", 10));
+                
+                // Load credentials from the credential file (may be needed for hybrid scenarios)
+                var credentials = GetCompanyCredentials(companyName);
+                
                 Dispatcher.Invoke(() => UpdateProgress("Connecting to Active Directory...", 20));
                 
                 var script = $@"
@@ -1326,15 +1460,19 @@ namespace MandADiscoverySuite
                     
                     # Get the company profile and create discovery context
                     $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
-                    $companyProfile = $profileManager.GetProfile()
                     
-                    # Create discovery context
+                    # Create discovery context with credential info for hybrid scenarios
                     $context = @{{
                         Paths = @{{
                             RawDataOutput = $profileManager.GetProfileDataPath()
                         }}
                         CompanyName = '{companyName}'
                         DiscoverySession = [guid]::NewGuid().ToString()
+                        AzureCredentials = @{{
+                            TenantId = '{credentials.TenantId}'
+                            ClientId = '{credentials.ClientId}'
+                            ClientSecret = '{credentials.ClientSecret}'
+                        }}
                     }}
                     
                     # Create configuration for Active Directory discovery
@@ -1443,6 +1581,11 @@ namespace MandADiscoverySuite
             
             try
             {
+                Dispatcher.Invoke(() => UpdateProgress("Loading credentials...", 10));
+                
+                // Load credentials from the credential file
+                var credentials = GetCompanyCredentials(companyName);
+                
                 Dispatcher.Invoke(() => UpdateProgress("Connecting to Exchange Online...", 20));
                 
                 var script = $@"
@@ -1453,7 +1596,6 @@ namespace MandADiscoverySuite
                     
                     # Get the company profile and create discovery context
                     $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
-                    $companyProfile = $profileManager.GetProfile()
                     
                     # Create discovery context
                     $context = @{{
@@ -1464,11 +1606,12 @@ namespace MandADiscoverySuite
                         DiscoverySession = [guid]::NewGuid().ToString()
                     }}
                     
-                    # Create configuration for Exchange discovery
+                    # Create configuration for Exchange discovery using loaded credentials
                     $configuration = @{{
                         environment = @{{
-                            tenant = $companyProfile.AzureConfig.TenantId
-                            clientId = $companyProfile.AzureConfig.ClientId
+                            tenant = '{credentials.TenantId}'
+                            clientId = '{credentials.ClientId}'
+                            clientSecret = '{credentials.ClientSecret}'
                         }}
                         discovery = @{{
                             excludeDisabledUsers = $true
@@ -1575,6 +1718,11 @@ namespace MandADiscoverySuite
             
             try
             {
+                Dispatcher.Invoke(() => UpdateProgress("Loading credentials...", 10));
+                
+                // Load credentials from the credential file
+                var credentials = GetCompanyCredentials(companyName);
+                
                 Dispatcher.Invoke(() => UpdateProgress("Connecting to SharePoint Online...", 20));
                 
                 var script = $@"
@@ -1585,7 +1733,6 @@ namespace MandADiscoverySuite
                     
                     # Get the company profile and create discovery context
                     $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
-                    $companyProfile = $profileManager.GetProfile()
                     
                     # Create discovery context
                     $context = @{{
@@ -1596,15 +1743,16 @@ namespace MandADiscoverySuite
                         DiscoverySession = [guid]::NewGuid().ToString()
                     }}
                     
-                    # Create configuration for SharePoint discovery
+                    # Create configuration for SharePoint discovery using loaded credentials
                     $configuration = @{{
                         environment = @{{
-                            tenant = $companyProfile.AzureConfig.TenantId
-                            clientId = $companyProfile.AzureConfig.ClientId
+                            tenant = '{credentials.TenantId}'
+                            clientId = '{credentials.ClientId}'
+                            clientSecret = '{credentials.ClientSecret}'
                         }}
                         discovery = @{{
                             sharepoint = @{{
-                                tenantName = $companyProfile.SharePointConfig.TenantName
+                                tenantName = '{companyName}'
                                 includeLists = $true
                                 includeLibraries = $true
                                 includePermissions = $true
@@ -1713,6 +1861,11 @@ namespace MandADiscoverySuite
             
             try
             {
+                Dispatcher.Invoke(() => UpdateProgress("Loading credentials...", 10));
+                
+                // Load credentials from the credential file
+                var credentials = GetCompanyCredentials(companyName);
+                
                 Dispatcher.Invoke(() => UpdateProgress("Connecting to Microsoft Teams...", 20));
                 
                 var script = $@"
@@ -1723,7 +1876,6 @@ namespace MandADiscoverySuite
                     
                     # Get the company profile and create discovery context
                     $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
-                    $companyProfile = $profileManager.GetProfile()
                     
                     # Create discovery context
                     $context = @{{
@@ -1734,11 +1886,12 @@ namespace MandADiscoverySuite
                         DiscoverySession = [guid]::NewGuid().ToString()
                     }}
                     
-                    # Create configuration for Teams discovery
+                    # Create configuration for Teams discovery using loaded credentials
                     $configuration = @{{
                         environment = @{{
-                            tenant = $companyProfile.AzureConfig.TenantId
-                            clientId = $companyProfile.AzureConfig.ClientId
+                            tenant = '{credentials.TenantId}'
+                            clientId = '{credentials.ClientId}'
+                            clientSecret = '{credentials.ClientSecret}'
                         }}
                         discovery = @{{
                             teams = @{{
@@ -3152,6 +3305,17 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
         {
             try
             {
+                // Get the currently selected company name
+                var selectedProfile = (CompanyProfile)CompanySelector.SelectedItem;
+                if (selectedProfile == null || selectedProfile.Name == "+ Create New Profile")
+                {
+                    MessageBox.Show("Please select a valid company profile before running App Registration.", 
+                        "No Company Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                string companyName = selectedProfile.Name;
+
                 // Check if app registration script exists
                 string appRegScriptPath = Path.Combine(GetRootPath(), "Scripts", "DiscoveryCreateAppRegistration.ps1");
                 if (!File.Exists(appRegScriptPath))
@@ -3161,19 +3325,26 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                     return;
                 }
 
-                // Ensure C:\DiscoveryData directory exists
+                // Ensure base discovery directory exists
                 string discoveryDataPath = GetDiscoveryDataPath();
                 if (!Directory.Exists(discoveryDataPath))
                 {
                     Directory.CreateDirectory(discoveryDataPath);
                 }
 
-                // Launch the DiscoveryCreateAppRegistration.ps1 script directly with parameters
+                // Ensure company-specific directory exists
+                string companyPath = Path.Combine(discoveryDataPath, companyName);
+                if (!Directory.Exists(companyPath))
+                {
+                    Directory.CreateDirectory(companyPath);
+                }
+
+                // Launch the DiscoveryCreateAppRegistration.ps1 script with company name parameter
                 var powerShellWindow = new PowerShellWindow(appRegScriptPath, "Azure App Registration Setup", 
-                    "Sets up Azure AD app registration with comprehensive M&A discovery permissions",
+                    $"Setting up Azure AD app registration for {companyName} with comprehensive M&A discovery permissions",
+                    "-CompanyName", companyName,
                     "-AutoInstallModules", 
-                    "-EncryptedOutputPath", $"'{Path.Combine(discoveryDataPath, "discoverycredentials.config")}'",
-                    "-LogPath", $"'{Path.Combine(discoveryDataPath, "app_registration.log")}'",
+                    "-LogPath", Path.Combine(companyPath, "Logs", "app_registration.log"),
                     "-Verbose")
                 {
                     Owner = this,
@@ -3184,7 +3355,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 powerShellWindow.Show();
                 
                 // Show success message
-                StatusDetails.Text = $"Profile: {((CompanyProfile)CompanySelector.SelectedItem)?.Name ?? "Unknown"} | Running DiscoveryCreateAppRegistration.ps1";
+                StatusDetails.Text = $"Profile: {companyName} | Running App Registration for {companyName}";
                 
             }
             catch (Exception ex)
@@ -6141,6 +6312,16 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
         {
             try
             {
+                // Get the currently selected company name
+                var selectedProfile = (CompanyProfile)CompanySelector.SelectedItem;
+                if (selectedProfile == null || selectedProfile.Name == "+ Create New Profile")
+                {
+                    MessageBox.Show("Please select a valid company profile before running App Registration.", 
+                        "No Company Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                string companyName = selectedProfile.Name;
                 string scriptPath = Path.Combine(rootPath, "Scripts", "DiscoveryCreateAppRegistration.ps1");
                 
                 if (!File.Exists(scriptPath))
@@ -6149,11 +6330,29 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                         "Script Not Found", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
+
+                // Ensure base discovery directory exists
+                string discoveryDataPath = GetDiscoveryDataPath();
+                if (!Directory.Exists(discoveryDataPath))
+                {
+                    Directory.CreateDirectory(discoveryDataPath);
+                }
+
+                // Ensure company-specific directory exists
+                string companyPath = Path.Combine(discoveryDataPath, companyName);
+                if (!Directory.Exists(companyPath))
+                {
+                    Directory.CreateDirectory(companyPath);
+                }
                 
                 var powerShellWindow = new PowerShellWindow(
                     scriptPath,
-                    "DiscoveryCreateAppRegistration.ps1",
-                    "Creates Azure AD app registration with comprehensive permissions for M&A environment discovery, assigns required roles, and securely stores credentials for downstream automation workflows."
+                    "Azure App Registration Setup",
+                    $"Creating Azure AD app registration for {companyName} with comprehensive permissions for M&A environment discovery, assigning required roles, and securely storing credentials for downstream automation workflows.",
+                    "-CompanyName", companyName,
+                    "-AutoInstallModules",
+                    "-LogPath", Path.Combine(companyPath, "Logs", "app_registration.log"),
+                    "-Verbose"
                 );
                 
                 powerShellWindow.Owner = this;
@@ -6161,15 +6360,10 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 
                 // After app registration, suggest refreshing credentials
                 var result = MessageBox.Show(
-                    "App Registration script has completed. Would you like to configure credentials for the selected profile now?",
-                    "Configure Credentials",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-                    
-                if (result == MessageBoxResult.Yes)
-                {
-                    ConfigureCredentials_Click(sender, e);
-                }
+                    $"App Registration script for {companyName} has completed. The credentials should now be available for discovery operations.",
+                    "App Registration Complete",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
             catch (Exception ex)
             {

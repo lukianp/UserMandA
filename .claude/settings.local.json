@@ -28,7 +28,9 @@
       "Bash(git rm:*)",
       "Bash(del nul)",
       "Bash(pwsh:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(.Build-GUI.ps1)",
+      "Bash(.Launch-MandADiscoverySuite.bat)"
     ],
     "deny": []
   }

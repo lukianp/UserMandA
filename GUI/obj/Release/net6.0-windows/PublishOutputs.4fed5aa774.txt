@@ -55,7 +55,6 @@ C:\EnterpriseDiscovery\bin\Release\Modules\Utilities\ProgressTracking.psm1
 C:\EnterpriseDiscovery\bin\Release\Modules\Utilities\UnifiedErrorHandling.psm1
 C:\EnterpriseDiscovery\bin\Release\Modules\Utilities\ValidationHelpers.psm1
 C:\EnterpriseDiscovery\bin\Release\Scripts\DiscoveryCreateAppRegistration.ps1
-C:\EnterpriseDiscovery\bin\Release\Scripts\DiscoveryCreateAppRegistration_backup.ps1
 C:\EnterpriseDiscovery\bin\Release\Scripts\Fix-AppRegistrationScript.ps1
 C:\EnterpriseDiscovery\bin\Release\Scripts\Fix-CommentBlock.ps1
 C:\EnterpriseDiscovery\bin\Release\Scripts\Fix-ModuleConflicts.ps1

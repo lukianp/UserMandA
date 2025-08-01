@@ -91,16 +91,30 @@ param(
     [int]$SecretValidityYears = 2
 )
 
+#region Helper Functions
+function Test-IsWindows {
+    # Helper function to determine if running on Windows
+    if ($PSVersionTable.PSVersion.Major -ge 6) {
+        # PowerShell Core/7+ has $IsWindows variable
+        return $IsWindows
+    } else {
+        # PowerShell 5.1 and below - check Platform or OS
+        return ([System.Environment]::OSVersion.Platform -eq 'Win32NT') -or 
+               ($PSVersionTable.Platform -eq 'Win32NT') -or
+               ($env:OS -match 'Windows')
+    }
+}
+
 #region Company Setup and Directory Management
 function Get-CompanyName {
     param([string]$CurrentCompanyName)
     
     if ([string]::IsNullOrWhiteSpace($CurrentCompanyName)) {
         Write-Host "`n" -ForegroundColor Cyan
-        Write-Host "═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════" -ForegroundColor DarkCyan
-        Write-Host "  🏢 COMPANY SETUP" -ForegroundColor White -BackgroundColor DarkBlue
+        Write-Host "===============================================================================" -ForegroundColor DarkCyan
+        Write-Host "  COMPANY SETUP" -ForegroundColor White -BackgroundColor DarkBlue
         Write-Host "  Enter the company name to organize discovery data and create dedicated folders" -ForegroundColor Cyan
-        Write-Host "═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════" -ForegroundColor DarkCyan
+        Write-Host "===============================================================================" -ForegroundColor DarkCyan
         Write-Host ""
         
         do {
@@ -138,7 +152,7 @@ function Initialize-CompanyDirectories {
         $baseDiscoveryPath = "C:\DiscoveryData"
         $companyPath = Join-Path $baseDiscoveryPath $sanitizedCompanyName
         
-        Write-Host "  📁 Creating company directory structure..." -ForegroundColor Magenta
+        Write-Host "  Creating company directory structure..." -ForegroundColor Magenta
         
         # Create directories
         $directories = @(
@@ -151,21 +165,25 @@ function Initialize-CompanyDirectories {
         )
         
         foreach ($dir in $directories) {
-            if (-not (Test-Path $dir -PathType Container)) {
+            if (!(Test-Path $dir -PathType Container)) {
                 New-Item -Path $dir -ItemType Directory -Force -ErrorAction Stop | Out-Null
-                Write-Host "  ✅ Created: $($dir -replace [regex]::Escape($baseDiscoveryPath), 'C:\\DiscoveryData')" -ForegroundColor Green
+                $displayPath = $dir.Replace($baseDiscoveryPath, 'C:\DiscoveryData')
+                Write-Host "  Created: $displayPath" -ForegroundColor Green
             } else {
-                Write-Host "  📂 Exists: $($dir -replace [regex]::Escape($baseDiscoveryPath), 'C:\\DiscoveryData')" -ForegroundColor Yellow
+                $displayPath = $dir.Replace($baseDiscoveryPath, 'C:\DiscoveryData')
+                Write-Host "  Exists: $displayPath" -ForegroundColor Yellow
             }
         }
         
         # Set the paths for this company
         $script:CompanyPath = $companyPath
-        $script:CompanyCredentialsPath = Join-Path $companyPath "Credentials\discoverycredentials.config"
-        $script:CompanyLogPath = Join-Path $companyPath "Logs\MandADiscovery_Registration_Log.txt"
+        $credentialsDir = Join-Path $companyPath "Credentials"
+        $logsDir = Join-Path $companyPath "Logs"
+        $script:CompanyCredentialsPath = Join-Path $credentialsDir "discoverycredentials.config"
+        $script:CompanyLogPath = Join-Path $logsDir "MandADiscovery_Registration_Log.txt"
         
-        Write-Host "  🎯 Company setup complete for: $CompanyName" -ForegroundColor Green
-        Write-Host "  📍 Base Path: $companyPath" -ForegroundColor Cyan
+        Write-Host "  Company setup complete for: $CompanyName" -ForegroundColor Green
+        Write-Host "  Base Path: $companyPath" -ForegroundColor Cyan
         Write-Host ""
         
         return @{
@@ -175,7 +193,7 @@ function Initialize-CompanyDirectories {
         }
         
     } catch {
-        Write-Host "  ❌ Failed to create company directories: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  Failed to create company directories: $($_.Exception.Message)" -ForegroundColor Red
         throw
     }
 }
@@ -189,7 +207,7 @@ if ([string]::IsNullOrWhiteSpace($EncryptedOutputPath)) {
     $EncryptedOutputPath = $companySetup.CredentialsPath
 }
 
-if ($LogPath -eq ".\MandADiscovery_Registration_Log.txt") {
+if ($LogPath -eq '.\MandADiscovery_Registration_Log.txt') {
     $LogPath = $companySetup.LogPath
 }
 
@@ -452,7 +470,7 @@ function Test-Prerequisites {
         
         # Administrator privileges check (cross-platform)
         $isAdmin = $false
-        if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+        if (Test-IsWindows) {
             $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
             $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
             $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -485,11 +503,13 @@ function Test-Prerequisites {
                     Write-EnhancedLog "Connectivity to $($test.Service): Available" -Level SUCCESS
                     $connectionResults += $true
                 } else {
-                    $issues += "Cannot connect to $($test.Service) ($($test.Host):$($test.Port))"
+                    $hostPort = "$($test.Host):$($test.Port)"
+                    $issues += "Cannot connect to $($test.Service) ($hostPort)"
                     $connectionResults += $false
                 }
             } catch {
-                $issues += "Network test failed for $($test.Service): $($_.Exception.Message)"
+                $errorMsg = "Network test failed for $($test.Service): $($_.Exception.Message)"
+                $issues += $errorMsg
                 $connectionResults += $false
             }
         }
@@ -927,7 +947,7 @@ function Connect-EnhancedAzure {
 #region Enhanced App Registration Management
 function New-EnhancedAppRegistration {
     Start-OperationTimer "AppRegistration"
-    Write-ProgressHeader "APPLICATION REGISTRATION" "Creating M&A Discovery service principal with comprehensive permissions"
+    Write-ProgressHeader "APPLICATION REGISTRATION" "Creating M`&A Discovery service principal with comprehensive permissions"
     
     $appName = $script:AppConfig.DisplayName
     
@@ -969,7 +989,7 @@ function New-EnhancedAppRegistration {
         
         foreach ($permission in $script:AppConfig.RequiredGraphPermissions.GetEnumerator()) {
             $processedPermissions++
-            Write-Progress -Activity "Mapping Permissions" -Status "Processing $($permission.Key) ($processedPermissions of $totalPermissions)" -PercentComplete (($processedPermissions / $totalPermissions) * 100)
+            Write-Progress -Activity "Mapping Permissions" -Status "Processing $($permission.Key) - $processedPermissions of $totalPermissions" -PercentComplete (($processedPermissions / $totalPermissions) * 100)
             
             $permissionName = $permission.Key
             $permissionDescription = $permission.Value
@@ -1080,7 +1100,7 @@ function Grant-EnhancedAdminConsent {
                     $permissionName = "Unknown Permission"
                 }
                 
-                Write-Progress -Activity "Granting Permissions" -Status "Processing $permissionName ($currentPermission of $totalPermissions)" -PercentComplete (($currentPermission / $totalPermissions) * 100)
+                Write-Progress -Activity "Granting Permissions" -Status "Processing $permissionName - $currentPermission of $totalPermissions" -PercentComplete (($currentPermission / $totalPermissions) * 100)
                 
                 # Check if already assigned
                 $existingAssignment = Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $appSp.Id -ErrorAction SilentlyContinue | 
@@ -1244,7 +1264,7 @@ function Set-EnhancedRoleAssignments {
                         $subscriptionId = $subscription.Id
                         $scope = "/subscriptions/$subscriptionId"
                         
-                        Write-Progress -Activity "Processing Subscriptions" -Status "Processing $subscriptionName ($($i+1) of $($enabledSubscriptions.Count))" -PercentComplete (($i / $enabledSubscriptions.Count) * 100)
+                        Write-Progress -Activity "Processing Subscriptions" -Status "Processing $subscriptionName - $($i+1) of $($enabledSubscriptions.Count)" -PercentComplete (($i / $enabledSubscriptions.Count) * 100)
                         Write-EnhancedLog "Processing subscription [$($i+1)/$($enabledSubscriptions.Count)]: $subscriptionName" -Level PROGRESS
                         
                         try {
@@ -1410,7 +1430,7 @@ function New-EnhancedClientSecret {
     Write-ProgressHeader "CLIENT SECRET" "Generating secure authentication credentials"
     
     try {
-        $secretDescription = "M&A Discovery Secret - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+        $secretDescription = "M`&A Discovery Secret - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
         $secretEndDate = (Get-Date).AddYears($SecretValidityYears)
         
         Write-EnhancedLog "Creating client secret..." -Level PROGRESS
@@ -1503,7 +1523,7 @@ function Save-EnhancedCredentials {
         }
         
         # Cross-platform encryption
-        if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+        if (Test-IsWindows) {
             Write-EnhancedLog "Encrypting credentials using Windows DPAPI..." -Level PROGRESS
             Write-EnhancedLog "  Target User: $env:USERNAME" -Level INFO
             Write-EnhancedLog "  Target Computer: $env:COMPUTERNAME" -Level INFO
@@ -1515,12 +1535,15 @@ function Save-EnhancedCredentials {
         
         $jsonData = $credentialData | ConvertTo-Json -Depth 4
         
-        if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+        if (Test-IsWindows) {
             # Windows: Use DPAPI encryption
+            Write-EnhancedLog "Encrypting credentials using Windows DPAPI..." -Level INFO
             $secureString = ConvertTo-SecureString -String $jsonData -AsPlainText -Force
             $encryptedData = $secureString | ConvertFrom-SecureString
+            Write-EnhancedLog "Credentials encrypted successfully" -Level SUCCESS
         } else {
             # Linux/macOS: Store as plain JSON (rely on file permissions for security)
+            Write-EnhancedLog "Non-Windows OS detected. Storing as protected JSON file." -Level WARN
             $encryptedData = $jsonData
         }
         
@@ -1542,7 +1565,7 @@ function Save-EnhancedCredentials {
         
         # Apply secure file permissions
         try {
-            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+            if (Test-IsWindows) {
                 # Windows-specific ACL permissions
                 $acl = Get-Acl $EncryptedOutputPath
                 $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance, remove existing
@@ -1642,7 +1665,7 @@ try {
     
     # Enhanced header with script information
     $headerContent = @"
-Enhanced M&A Discovery Suite - Azure AD App Registration
+Enhanced M`&A Discovery Suite - Azure AD App Registration
 Version: $($script:ScriptInfo.Version)
 Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 User: $env:USERNAME
@@ -1653,7 +1676,7 @@ PowerShell: $($PSVersionTable.PSVersion)
     
     $headerContent | Out-File -FilePath $LogPath -Encoding UTF8
     
-    Write-ProgressHeader "M&A DISCOVERY SUITE - APP REGISTRATION" "Enhanced automation with enterprise-grade security and validation"
+    Write-ProgressHeader "M AND A DISCOVERY SUITE - APP REGISTRATION" "Enhanced automation with enterprise-grade security and validation"
     
     Write-EnhancedLog "Script Information:" -Level INFO
     Write-EnhancedLog "  Name: $($script:ScriptInfo.Name)" -Level INFO
@@ -1726,7 +1749,7 @@ PowerShell: $($PSVersionTable.PSVersion)
     $totalOperations = $script:Metrics.Operations.Count
     
     # Enhanced final summary
-    Write-ProgressHeader "DEPLOYMENT SUMMARY" "M&A Discovery service principal ready for operations"
+    Write-ProgressHeader "DEPLOYMENT SUMMARY" "M`&A Discovery service principal ready for operations"
     
     Write-EnhancedLog "APPLICATION DETAILS:" -Level HEADER
     Write-EnhancedLog "  Application Name: $($script:AppConfig.DisplayName)" -Level SUCCESS
@@ -1810,7 +1833,7 @@ PowerShell: $($PSVersionTable.PSVersion)
     # Final metrics save
     if ($script:Metrics) {
         try {
-            $metricsPath = $LogPath -replace '\.txt$', '_metrics.json'
+            $metricsPath = $LogPath -replace '.txt$', '_metrics.json'
             $script:Metrics | ConvertTo-Json -Depth 3 | Set-Content -Path $metricsPath -Encoding UTF8
             Write-EnhancedLog "Metrics saved: $(Split-Path $metricsPath -Leaf)" -Level SUCCESS
         } catch {
