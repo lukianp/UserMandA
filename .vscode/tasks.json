@@ -1,0 +1,168 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build M&A Discovery Suite (Release)",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/GUI/Build-GUI.ps1",
+                "-Configuration", "Release"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "detail": "Build the M&A Discovery Suite GUI in Release configuration"
+        },
+        {
+            "label": "Build M&A Discovery Suite (Debug)",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/GUI/Build-GUI.ps1",
+                "-Configuration", "Debug"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "detail": "Build the M&A Discovery Suite GUI in Debug configuration"
+        },
+        {
+            "label": "Build Self-Contained (Release)",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/GUI/Build-GUI.ps1",
+                "-Configuration", "Release",
+                "-SelfContained"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "detail": "Build self-contained M&A Discovery Suite (includes .NET runtime)"
+        },
+        {
+            "label": "Run Palo Alto Discovery",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy", "Bypass",
+                "-Command",
+                "& {",
+                    "Set-Location '${workspaceFolder}';",
+                    "Import-Module './Modules/Discovery/PaloAltoDiscovery.psm1' -Force;",
+                    "$discovery = Get-PaloAltoDiscovery;",
+                    "$results = $discovery.ExecuteDiscovery();",
+                    "Write-Host 'Discovery completed. Results:' -ForegroundColor Green;",
+                    "$results",
+                "}"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "detail": "Test run Palo Alto network discovery"
+        },
+        {
+            "label": "Run Full Discovery Test",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/QuickStart.ps1"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "detail": "Run the full discovery orchestrator"
+        },
+        {
+            "label": "Start Interactive Menu",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/Scripts/Launch-InteractiveMenu.ps1"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "detail": "Launch the interactive PowerShell menu"
+        },
+        {
+            "label": "Clean Build Output",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy", "Bypass",
+                "-Command",
+                "& {",
+                    "Set-Location '${workspaceFolder}/GUI';",
+                    "if (Test-Path 'bin') { Remove-Item -Path 'bin' -Recurse -Force; Write-Host 'Removed bin directory' -ForegroundColor Yellow };",
+                    "if (Test-Path 'obj') { Remove-Item -Path 'obj' -Recurse -Force; Write-Host 'Removed obj directory' -ForegroundColor Yellow };",
+                    "Write-Host 'Clean completed' -ForegroundColor Green",
+                "}"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "detail": "Clean build output directories"
+        }
+    ]
+}

@@ -445,22 +445,22 @@ class CompanyProfileManager {
         $report += "Path: $($this.ProfilePath)"
         $report += ""
         
-        $this.GenerateTreeReport($this.ProfilePath, "", $report)
+        $this.GenerateTreeReport($this.ProfilePath, "", [ref]$report)
         
         $report | Set-Content -Path $reportPath -Encoding UTF8
         Write-Host "Directory structure report saved to: $reportPath" -ForegroundColor Green
     }
     
-    hidden [void] GenerateTreeReport([string]$path, [string]$indent, [array]$report) {
+    hidden [void] GenerateTreeReport([string]$path, [string]$indent, [ref]$report) {
         $items = Get-ChildItem -Path $path | Sort-Object -Property PSIsContainer -Descending
         
         foreach ($item in $items) {
             if ($item.PSIsContainer) {
-                $report += "$indent+-- $($item.Name)\"
+                $report.Value += "$indent+-- $($item.Name)\"
                 $this.GenerateTreeReport($item.FullName, "$indent|   ", $report)
             }
             else {
-                $report += "$indent|-- $($item.Name)"
+                $report.Value += "$indent|-- $($item.Name)"
             }
         }
     }

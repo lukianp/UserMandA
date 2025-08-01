@@ -265,26 +265,16 @@ function Write-ProgressHeader {
         [string]$Subtitle = ""
     )
     
-<<<<<<< HEAD
     $separator = "═" * 90
-    Write-Host "`n$separator" -ForegroundColor $script:ColorScheme.Separator.ForegroundColor
-    Write-Host "  ║ $Title" -ForegroundColor $script:ColorScheme.Header.ForegroundColor -BackgroundColor $script:ColorScheme.Header.BackgroundColor
-    if ($Subtitle) {
-        Write-Host "  ║ $Subtitle" -ForegroundColor $script:ColorScheme.Info.ForegroundColor
-    }
-    Write-Host "$separator`n" -ForegroundColor $script:ColorScheme.Separator.ForegroundColor
-=======
-    $separator = "?" * 90
     $separatorParams = $script:ColorScheme.Separator
     Write-Host "`n$separator" @separatorParams
     $headerParams = $script:ColorScheme.Header
-    Write-Host "  ?? $Title" @headerParams
+    Write-Host "  ║ $Title" @headerParams
     if ($Subtitle) {
         $infoParams = $script:ColorScheme.Info
-        Write-Host "  ?? $Subtitle" @infoParams
+        Write-Host "  ║ $Subtitle" @infoParams
     }
     Write-Host "$separator`n" @separatorParams
->>>>>>> fcc33954554df555f1a2471d7cff99d77cf164f3
 }
 
 function Write-OperationResult {

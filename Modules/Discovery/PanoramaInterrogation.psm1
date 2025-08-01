@@ -3,7 +3,7 @@ using namespace System.Collections.Generic
 
 Set-StrictMode -Version 3.0
 
-class PanoramaInterrogation : DiscoveryModuleBase {
+class PanoramaInterrogation {
     [string]$DiscoveryType = 'PanoramaInterrogation'
     [string]$DataFileName = 'Panorama_ConfigExport.json'
     
@@ -13,10 +13,7 @@ class PanoramaInterrogation : DiscoveryModuleBase {
     hidden [string]$AuthMethod
     hidden [hashtable]$ExportedData
     
-    PanoramaInterrogation() : base('PanoramaInterrogation') {
-        $this.RequiredModules = @()
-        $this.SupportedAuthTypes = @('APIKey', 'Credential')
-        $this.InitializeModule()
+    PanoramaInterrogation() {
         $this.ExportedData = @{
             Devices = @()
             DeviceGroups = @()
@@ -388,7 +385,7 @@ class PanoramaInterrogation : DiscoveryModuleBase {
                                elseif ($addr.'ip-range') { 'IP-Range' }
                                elseif ($addr.fqdn) { 'FQDN' }
                                else { 'Unknown' }
-                        Value = $addr.'ip-netmask' ?? $addr.'ip-range' ?? $addr.fqdn ?? 'N/A'
+                        Value = if ($addr.'ip-netmask') { $addr.'ip-netmask' } elseif ($addr.'ip-range') { $addr.'ip-range' } elseif ($addr.fqdn) { $addr.fqdn } else { 'N/A' }
                         Description = $addr.description
                         Tags = $addr.tag.member
                     }
@@ -415,7 +412,7 @@ class PanoramaInterrogation : DiscoveryModuleBase {
                     $groupInfo = @{
                         Name = $group.name
                         Type = if ($group.static) { 'Static' } else { 'Dynamic' }
-                        Members = $group.static.member ?? @()
+                        Members = if ($group.static.member) { $group.static.member } else { @() }
                         Description = $group.description
                         Tags = $group.tag.member
                     }
@@ -448,7 +445,7 @@ class PanoramaInterrogation : DiscoveryModuleBase {
                         Protocol = if ($svc.protocol.tcp) { 'TCP' }
                                   elseif ($svc.protocol.udp) { 'UDP' }
                                   else { 'Other' }
-                        Port = $svc.protocol.tcp.port ?? $svc.protocol.udp.port ?? 'N/A'
+                        Port = if ($svc.protocol.tcp.port) { $svc.protocol.tcp.port } elseif ($svc.protocol.udp.port) { $svc.protocol.udp.port } else { 'N/A' }
                         Description = $svc.description
                         Tags = $svc.tag.member
                     }
@@ -754,7 +751,7 @@ class PanoramaInterrogation : DiscoveryModuleBase {
                 foreach ($schedule in $schedules) {
                     $scheduleInfo = @{
                         Name = $schedule.name
-                        Type = $schedule.'schedule-type'.recurring ?? $schedule.'schedule-type'.'non-recurring'
+                        Type = if ($schedule.'schedule-type'.recurring) { $schedule.'schedule-type'.recurring } elseif ($schedule.'schedule-type'.'non-recurring') { $schedule.'schedule-type'.'non-recurring' } else { 'Unknown' }
                         Configuration = $schedule
                     }
                     

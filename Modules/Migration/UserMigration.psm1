@@ -368,7 +368,10 @@ class UserMigration {
         for ($i = 1; $i -le $string1.Length; $i++) {
             for ($j = 1; $j -le $string2.Length; $j++) {
                 $cost = if ($string1[$i - 1] -eq $string2[$j - 1]) { 0 } else { 1 }
-                $matrix[$i, $j] = [Math]::Min([Math]::Min($matrix[$i - 1, $j] + 1, $matrix[$i, $j - 1] + 1), $matrix[$i - 1, $j - 1] + $cost)
+                $deletion = $matrix[($i - 1), $j] + 1
+                $insertion = $matrix[$i, ($j - 1)] + 1
+                $substitution = $matrix[($i - 1), ($j - 1)] + $cost
+                $matrix[$i, $j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
             }
         }
         

@@ -152,37 +152,35 @@ if (!(Test-Path $IconPath)) {
 
 # Create a batch file launcher
 $LauncherPath = Join-Path $OutputPath "Launch-MandADiscoverySuite.bat"
-$LauncherContent = @"
-@echo off
-REM M&A Discovery Suite Launcher
-REM Ensures PowerShell execution policy allows running the application
-
-echo Starting M&A Discovery Suite...
-echo.
-
-REM Check if .NET 6 runtime is available
-dotnet --version >nul 2>&1
-if errorlevel 1 (
-    echo ERROR: .NET 6 runtime is required but not found.
-    echo Please download and install .NET 6 runtime from:
-    echo https://dotnet.microsoft.com/download/dotnet/6.0
-    echo.
-    pause
-    exit /b 1
-)
-
-REM Set PowerShell execution policy for current user (if needed)
-powershell -Command "if ((Get-ExecutionPolicy -Scope CurrentUser) -eq 'Restricted') { Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force }"
-
-REM Launch the application
-"MandADiscoverySuite.exe"
-
-if errorlevel 1 (
-    echo.
-    echo Application exited with an error.
-    pause
-)
-"@
+$LauncherContent = '@echo off' + [Environment]::NewLine + 
+'REM M&A Discovery Suite Launcher' + [Environment]::NewLine + 
+'REM Ensures PowerShell execution policy allows running the application' + [Environment]::NewLine + 
+[Environment]::NewLine + 
+'echo Starting M&A Discovery Suite...' + [Environment]::NewLine + 
+'echo.' + [Environment]::NewLine + 
+[Environment]::NewLine + 
+'REM Check if .NET 6 runtime is available' + [Environment]::NewLine + 
+'dotnet --version >nul 2>&1' + [Environment]::NewLine + 
+'if errorlevel 1 (' + [Environment]::NewLine + 
+'    echo ERROR: .NET 6 runtime is required but not found.' + [Environment]::NewLine + 
+'    echo Please download and install .NET 6 runtime from:' + [Environment]::NewLine + 
+'    echo https://dotnet.microsoft.com/download/dotnet/6.0' + [Environment]::NewLine + 
+'    echo.' + [Environment]::NewLine + 
+'    pause' + [Environment]::NewLine + 
+'    exit /b 1' + [Environment]::NewLine + 
+')' + [Environment]::NewLine + 
+[Environment]::NewLine + 
+'REM Set PowerShell execution policy for current user (if needed)' + [Environment]::NewLine + 
+'powershell -Command "if ((Get-ExecutionPolicy -Scope CurrentUser) -eq ''Restricted'') { Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force }"' + [Environment]::NewLine + 
+[Environment]::NewLine + 
+'REM Launch the application' + [Environment]::NewLine + 
+'"MandADiscoverySuite.exe"' + [Environment]::NewLine + 
+[Environment]::NewLine + 
+'if errorlevel 1 (' + [Environment]::NewLine + 
+'    echo.' + [Environment]::NewLine + 
+'    echo Application exited with an error.' + [Environment]::NewLine + 
+'    pause' + [Environment]::NewLine + 
+')'
 
 Set-Content -Path $LauncherPath -Value $LauncherContent -Encoding ASCII
 

@@ -3,7 +3,7 @@ using namespace System.Collections.Generic
 
 Set-StrictMode -Version 3.0
 
-class EntraIDAppDiscovery : DiscoveryModuleBase {
+class EntraIDAppDiscovery {
     [string]$DiscoveryType = 'EntraIDApp'
     [string]$DataFileName = 'EntraIDApp_DiscoveryData.csv'
     

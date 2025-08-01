@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -338,29 +339,48 @@ namespace MandADiscoverySuite
             if (module == null)
                 return;
             
+            if (CompanySelector.SelectedItem == null || 
+                ((CompanyProfile)CompanySelector.SelectedItem).Name == "+ Create New Profile")
+            {
+                MessageBox.Show("Please select or create a company profile first.", "No Profile Selected", 
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            
             ShowProgress($"Running {module.Name}", "Initializing module...");
+            cancellationTokenSource = new CancellationTokenSource();
             
             try
             {
                 module.Status = "Running";
                 module.StatusColor = "#FFFFA726";
                 
-                await Task.Run(() =>
+                var companyProfile = (CompanyProfile)CompanySelector.SelectedItem;
+                var discoveryResult = await Task.Run(() => ExecuteDiscoveryModule(moduleName, companyProfile.Name, cancellationTokenSource.Token));
+                
+                if (!cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    // Simulate module execution
-                    for (int i = 0; i <= 100; i += 10)
+                    module.Status = discoveryResult.Success ? "Completed" : "Failed";
+                    module.StatusColor = discoveryResult.Success ? "#FF4CAF50" : "#FFF44336";
+                    
+                    HideProgress();
+                    if (discoveryResult.Success)
                     {
-                        System.Threading.Thread.Sleep(500);
-                        Dispatcher.Invoke(() => UpdateProgress($"Processing... {i}%", i));
+                        MessageBox.Show($"{module.Name} discovery completed successfully!\n\nResults:\n{discoveryResult.Summary}", 
+                            "Module Complete", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
-                });
-                
-                module.Status = "Completed";
-                module.StatusColor = "#FF4CAF50";
-                
-                HideProgress();
-                MessageBox.Show($"{module.Name} discovery completed successfully!", "Module Complete", 
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                    else
+                    {
+                        MessageBox.Show($"{module.Name} discovery failed:\n{discoveryResult.ErrorMessage}", 
+                            "Module Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+                else
+                {
+                    module.Status = "Cancelled";
+                    module.StatusColor = "#FF808080";
+                    HideProgress();
+                }
             }
             catch (Exception ex)
             {
@@ -368,9 +388,229 @@ namespace MandADiscoverySuite
                 module.StatusColor = "#FFF44336";
                 
                 HideProgress();
-                MessageBox.Show($"Module failed: {ex.Message}", "Error", 
+                MessageBox.Show($"Module execution failed: {ex.Message}", "Error", 
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+        
+        private DiscoveryResult ExecuteDiscoveryModule(string moduleName, string companyName, CancellationToken cancellationToken)
+        {
+            var result = new DiscoveryResult();
+            
+            try
+            {
+                using (var modulePs = PowerShell.Create())
+                {
+                    modulePs.AddScript($@"
+                        Set-Location '{rootPath}'
+                        $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
+                        $profilePaths = $profileManager.GetProfilePaths()
+                    ");
+                    
+                    Dispatcher.Invoke(() => UpdateProgress("Setting up company profile...", 10));
+                    
+                    switch (moduleName)
+                    {
+                        case "PaloAlto":
+                            return ExecutePaloAltoDiscovery(modulePs, companyName, cancellationToken);
+                        case "EntraIDApp":
+                            return ExecuteEntraIDAppDiscovery(modulePs, companyName, cancellationToken);
+                        case "Azure":
+                            return ExecuteAzureDiscovery(modulePs, companyName, cancellationToken);
+                        case "ActiveDirectory":
+                            return ExecuteActiveDirectoryDiscovery(modulePs, companyName, cancellationToken);
+                        case "Exchange":
+                            return ExecuteExchangeDiscovery(modulePs, companyName, cancellationToken);
+                        case "SharePoint":
+                            return ExecuteSharePointDiscovery(modulePs, companyName, cancellationToken);
+                        case "Teams":
+                            return ExecuteTeamsDiscovery(modulePs, companyName, cancellationToken);
+                        default:
+                            result.Success = false;
+                            result.ErrorMessage = $"Module {moduleName} not implemented yet";
+                            return result;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+                return result;
+            }
+        }
+        
+        private DiscoveryResult ExecutePaloAltoDiscovery(PowerShell ps, string companyName, CancellationToken cancellationToken)
+        {
+            var result = new DiscoveryResult();
+            
+            try
+            {
+                Dispatcher.Invoke(() => UpdateProgress("Scanning network for Palo Alto devices...", 20));
+                
+                ps.AddScript($@"
+                    $paloAltoDiscovery = Get-PaloAltoDiscovery
+                    $paloAltoDiscovery.SetParameters(@{{
+                        NetworkRanges = @{{
+                            'Default' = @('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16')
+                        }}
+                    }})
+                    
+                    $discoveryResults = $paloAltoDiscovery.ExecuteDiscovery()
+                    $exportData = $paloAltoDiscovery.ExportResults()
+                    
+                    $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
+                    $profileManager.SaveDiscoveryData('PaloAlto', $exportData, 'JSON')
+                    
+                    return $discoveryResults
+                ");
+                
+                Dispatcher.Invoke(() => UpdateProgress("Processing Palo Alto discovery...", 60));
+                
+                var psResults = ps.Invoke();
+                
+                if (ps.HadErrors)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = string.Join("\n", ps.Streams.Error.Select(e => e.ToString()));
+                    return result;
+                }
+                
+                if (psResults.Count > 0)
+                {
+                    var discoveryData = psResults[0];
+                    var deviceCount = GetPSObjectProperty(discoveryData, "TotalDevices", 0);
+                    var panoramaCount = GetPSObjectProperty(discoveryData, "TotalPanoramas", 0);
+                    
+                    result.Success = true;
+                    result.Summary = $"Discovered {deviceCount} Palo Alto devices and {panoramaCount} Panorama servers";
+                    result.DataCount = deviceCount + panoramaCount;
+                }
+                else
+                {
+                    result.Success = true;
+                    result.Summary = "Discovery completed - no devices found";
+                    result.DataCount = 0;
+                }
+                
+                Dispatcher.Invoke(() => UpdateProgress("Palo Alto discovery completed", 100));
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+                return result;
+            }
+        }
+        
+        private DiscoveryResult ExecuteEntraIDAppDiscovery(PowerShell ps, string companyName, CancellationToken cancellationToken)
+        {
+            var result = new DiscoveryResult();
+            
+            try
+            {
+                Dispatcher.Invoke(() => UpdateProgress("Connecting to Microsoft Graph...", 20));
+                
+                ps.AddScript($@"
+                    $entraAppDiscovery = Get-EntraIDAppDiscovery
+                    
+                    # You would set parameters here based on stored credentials
+                    $entraAppDiscovery.SetParameters(@{{
+                        TenantId = 'your-tenant-id'
+                        GraphScopes = @('Application.Read.All', 'Directory.Read.All')
+                    }})
+                    
+                    $discoveryResults = $entraAppDiscovery.ExecuteDiscovery()
+                    $exportData = $entraAppDiscovery.ExportResults()
+                    
+                    $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
+                    $profileManager.SaveDiscoveryData('EntraIDApp', $exportData, 'JSON')
+                    
+                    return $discoveryResults
+                ");
+                
+                Dispatcher.Invoke(() => UpdateProgress("Discovering enterprise applications...", 60));
+                
+                var psResults = ps.Invoke();
+                
+                if (ps.HadErrors)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = string.Join("\n", ps.Streams.Error.Select(e => e.ToString()));
+                    return result;
+                }
+                
+                if (psResults.Count > 0)
+                {
+                    var discoveryData = psResults[0];
+                    var appCount = GetPSObjectProperty(discoveryData, "TotalApps", 0);
+                    var spCount = GetPSObjectProperty(discoveryData, "TotalServicePrincipals", 0);
+                    var expiringSecrets = GetPSObjectProperty(discoveryData, "ExpiringSecrets", 0);
+                    
+                    result.Success = true;
+                    result.Summary = $"Discovered {appCount} app registrations, {spCount} service principals\n{expiringSecrets} secrets expiring soon";
+                    result.DataCount = appCount + spCount;
+                }
+                else
+                {
+                    result.Success = true;
+                    result.Summary = "Discovery completed - no applications found";
+                    result.DataCount = 0;
+                }
+                
+                Dispatcher.Invoke(() => UpdateProgress("Entra ID App discovery completed", 100));
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+                return result;
+            }
+        }
+        
+        private DiscoveryResult ExecuteAzureDiscovery(PowerShell ps, string companyName, CancellationToken cancellationToken)
+        {
+            var result = new DiscoveryResult { Success = false, ErrorMessage = "Azure discovery module not yet implemented" };
+            return result;
+        }
+        
+        private DiscoveryResult ExecuteActiveDirectoryDiscovery(PowerShell ps, string companyName, CancellationToken cancellationToken)
+        {
+            var result = new DiscoveryResult { Success = false, ErrorMessage = "Active Directory discovery module not yet implemented" };
+            return result;
+        }
+        
+        private DiscoveryResult ExecuteExchangeDiscovery(PowerShell ps, string companyName, CancellationToken cancellationToken)
+        {
+            var result = new DiscoveryResult { Success = false, ErrorMessage = "Exchange discovery module not yet implemented" };
+            return result;
+        }
+        
+        private DiscoveryResult ExecuteSharePointDiscovery(PowerShell ps, string companyName, CancellationToken cancellationToken)
+        {
+            var result = new DiscoveryResult { Success = false, ErrorMessage = "SharePoint discovery module not yet implemented" };
+            return result;
+        }
+        
+        private DiscoveryResult ExecuteTeamsDiscovery(PowerShell ps, string companyName, CancellationToken cancellationToken)
+        {
+            var result = new DiscoveryResult { Success = false, ErrorMessage = "Teams discovery module not yet implemented" };
+            return result;
+        }
+        
+        private int GetPSObjectProperty(PSObject obj, string propertyName, int defaultValue)
+        {
+            try
+            {
+                var property = obj.Properties[propertyName];
+                if (property != null && int.TryParse(property.Value.ToString(), out int value))
+                    return value;
+            }
+            catch { }
+            
+            return defaultValue;
         }
 
         private void ViewType_Changed(object sender, RoutedEventArgs e)
@@ -380,28 +620,309 @@ namespace MandADiscoverySuite
 
         private void LoadViewData()
         {
-            // Load appropriate data based on selected view type
-            if (UserViewRadio.IsChecked == true)
+            if (CompanySelector.SelectedItem == null || 
+                ((CompanyProfile)CompanySelector.SelectedItem).Name == "+ Create New Profile")
             {
-                // Load user data
-                var userData = new List<dynamic>
-                {
-                    new { Name = "John Doe", Email = "john.doe@company.com", Department = "IT", Status = "Active" },
-                    new { Name = "Jane Smith", Email = "jane.smith@company.com", Department = "HR", Status = "Active" }
-                };
-                ViewDataGrid.ItemsSource = userData;
+                ViewDataGrid.ItemsSource = null;
+                return;
             }
-            else if (ComputerViewRadio.IsChecked == true)
+            
+            var companyProfile = (CompanyProfile)CompanySelector.SelectedItem;
+            
+            try
             {
-                // Load computer data
-                var computerData = new List<dynamic>
+                if (UserViewRadio.IsChecked == true)
                 {
-                    new { Name = "DESKTOP-001", OS = "Windows 11", LastSeen = DateTime.Now.AddHours(-2), Status = "Online" },
-                    new { Name = "LAPTOP-002", OS = "Windows 10", LastSeen = DateTime.Now.AddDays(-1), Status = "Offline" }
-                };
-                ViewDataGrid.ItemsSource = computerData;
+                    LoadUserViewData(companyProfile.Name);
+                }
+                else if (ComputerViewRadio.IsChecked == true)
+                {
+                    LoadComputerViewData(companyProfile.Name);
+                }
+                else if (InfraViewRadio.IsChecked == true)
+                {
+                    LoadInfrastructureViewData(companyProfile.Name);
+                }
+                else if (WaveViewRadio.IsChecked == true)
+                {
+                    LoadWaveViewData(companyProfile.Name);
+                }
             }
-            // Add more view types as needed
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load view data: {ex.Message}", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                ViewDataGrid.ItemsSource = null;
+            }
+        }
+        
+        private void LoadUserViewData(string companyName)
+        {
+            try
+            {
+                using (var ps = PowerShell.Create())
+                {
+                    ps.AddScript($@"
+                        Set-Location '{rootPath}'
+                        $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
+                        
+                        $userData = @()
+                        
+                        # Try to load Active Directory data
+                        try {{
+                            $adData = $profileManager.LoadDiscoveryData('ActiveDirectory', 'JSON')
+                            if ($adData.Users) {{
+                                foreach ($user in $adData.Users) {{
+                                    $userData += [PSCustomObject]@{{
+                                        Name = $user.DisplayName
+                                        Email = $user.UserPrincipalName
+                                        Department = $user.Department
+                                        Status = if ($user.Enabled) {{ 'Active' }} else {{ 'Disabled' }}
+                                        Source = 'Active Directory'
+                                        LastLogon = $user.LastLogonDate
+                                        Groups = ($user.MemberOf | Measure-Object).Count
+                                    }}
+                                }}
+                            }}
+                        }} catch {{}}
+                        
+                        # Try to load Azure AD data
+                        try {{
+                            $azureData = $profileManager.LoadDiscoveryData('Azure', 'JSON')
+                            if ($azureData.Users) {{
+                                foreach ($user in $azureData.Users) {{
+                                    $userData += [PSCustomObject]@{{
+                                        Name = $user.DisplayName
+                                        Email = $user.UserPrincipalName
+                                        Department = $user.Department
+                                        Status = if ($user.AccountEnabled) {{ 'Active' }} else {{ 'Disabled' }}
+                                        Source = 'Azure AD'
+                                        LastLogon = $user.SignInActivity.LastSignInDateTime
+                                        Groups = ($user.MemberOf | Measure-Object).Count
+                                    }}
+                                }}
+                            }}
+                        }} catch {{}}
+                        
+                        return $userData
+                    ");
+                    
+                    var results = ps.Invoke();
+                    if (results.Count > 0 && results[0] != null)
+                    {
+                        ViewDataGrid.ItemsSource = results[0].BaseObject;
+                    }
+                    else
+                    {
+                        // Show sample data if no discovery data available
+                        var sampleData = new List<dynamic>
+                        {
+                            new { Name = "Run Active Directory discovery to see user data", Email = "", Department = "", Status = "No Data", Source = "Sample", LastLogon = (DateTime?)null, Groups = 0 }
+                        };
+                        ViewDataGrid.ItemsSource = sampleData;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorData = new List<dynamic>
+                {
+                    new { Name = $"Error loading user data: {ex.Message}", Email = "", Department = "", Status = "Error", Source = "System", LastLogon = (DateTime?)null, Groups = 0 }
+                };
+                ViewDataGrid.ItemsSource = errorData;
+            }
+        }
+        
+        private void LoadComputerViewData(string companyName)
+        {
+            try
+            {
+                using (var ps = PowerShell.Create())
+                {
+                    ps.AddScript($@"
+                        Set-Location '{rootPath}'
+                        $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
+                        
+                        $computerData = @()
+                        
+                        # Try to load Active Directory computer data
+                        try {{
+                            $adData = $profileManager.LoadDiscoveryData('ActiveDirectory', 'JSON')
+                            if ($adData.Computers) {{
+                                foreach ($computer in $adData.Computers) {{
+                                    $computerData += [PSCustomObject]@{{
+                                        Name = $computer.Name
+                                        OS = $computer.OperatingSystem
+                                        LastSeen = $computer.LastLogonDate
+                                        Status = if ($computer.Enabled) {{ 'Active' }} else {{ 'Disabled' }}
+                                        OU = $computer.DistinguishedName -replace '^CN=[^,]+,',''
+                                        Source = 'Active Directory'
+                                    }}
+                                }}
+                            }}
+                        }} catch {{}}
+                        
+                        return $computerData
+                    ");
+                    
+                    var results = ps.Invoke();
+                    if (results.Count > 0 && results[0] != null)
+                    {
+                        ViewDataGrid.ItemsSource = results[0].BaseObject;
+                    }
+                    else
+                    {
+                        var sampleData = new List<dynamic>
+                        {
+                            new { Name = "Run Active Directory discovery to see computer data", OS = "", LastSeen = (DateTime?)null, Status = "No Data", OU = "", Source = "Sample" }
+                        };
+                        ViewDataGrid.ItemsSource = sampleData;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorData = new List<dynamic>
+                {
+                    new { Name = $"Error loading computer data: {ex.Message}", OS = "", LastSeen = (DateTime?)null, Status = "Error", OU = "", Source = "System" }
+                };
+                ViewDataGrid.ItemsSource = errorData;
+            }
+        }
+        
+        private void LoadInfrastructureViewData(string companyName)
+        {
+            try
+            {
+                using (var ps = PowerShell.Create())
+                {
+                    ps.AddScript($@"
+                        Set-Location '{rootPath}'
+                        $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
+                        
+                        $infraData = @()
+                        
+                        # Try to load Palo Alto data
+                        try {{
+                            $paloData = $profileManager.LoadDiscoveryData('PaloAlto', 'JSON')
+                            if ($paloData.Devices) {{
+                                foreach ($device in $paloData.Devices) {{
+                                    $infraData += [PSCustomObject]@{{
+                                        Name = $device.Hostname
+                                        Type = 'Palo Alto ' + $device.DeviceType
+                                        Model = $device.Model
+                                        IPAddress = $device.IPAddress
+                                        Status = $device.HAStatus
+                                        Version = $device.SoftwareVersion
+                                        Source = 'Palo Alto Networks'
+                                    }}
+                                }}
+                            }}
+                        }} catch {{}}
+                        
+                        # Try to load network infrastructure data
+                        try {{
+                            $netData = $profileManager.LoadDiscoveryData('NetworkInfrastructure', 'JSON')
+                            if ($netData.Devices) {{
+                                foreach ($device in $netData.Devices) {{
+                                    $infraData += [PSCustomObject]@{{
+                                        Name = $device.Hostname
+                                        Type = $device.DeviceType
+                                        Model = $device.Model
+                                        IPAddress = $device.IPAddress
+                                        Status = $device.Status
+                                        Version = $device.Version
+                                        Source = 'Network Infrastructure'
+                                    }}
+                                }}
+                            }}
+                        }} catch {{}}
+                        
+                        return $infraData
+                    ");
+                    
+                    var results = ps.Invoke();
+                    if (results.Count > 0 && results[0] != null)
+                    {
+                        ViewDataGrid.ItemsSource = results[0].BaseObject;
+                    }
+                    else
+                    {
+                        var sampleData = new List<dynamic>
+                        {
+                            new { Name = "Run infrastructure discovery to see device data", Type = "", Model = "", IPAddress = "", Status = "No Data", Version = "", Source = "Sample" }
+                        };
+                        ViewDataGrid.ItemsSource = sampleData;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorData = new List<dynamic>
+                {
+                    new { Name = $"Error loading infrastructure data: {ex.Message}", Type = "", Model = "", IPAddress = "", Status = "Error", Version = "", Source = "System" }
+                };
+                ViewDataGrid.ItemsSource = errorData;
+            }
+        }
+        
+        private void LoadWaveViewData(string companyName)
+        {
+            try
+            {
+                using (var ps = PowerShell.Create())
+                {
+                    ps.AddScript($@"
+                        Set-Location '{rootPath}'
+                        $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
+                        
+                        $waveData = @()
+                        
+                        # Try to load wave data
+                        try {{
+                            $waves = $profileManager.LoadDiscoveryData('Waves', 'JSON')
+                            if ($waves.WaveAssignments) {{
+                                foreach ($assignment in $waves.WaveAssignments) {{
+                                    $waveData += [PSCustomObject]@{{
+                                        UserName = $assignment.UserName
+                                        Email = $assignment.Email
+                                        Department = $assignment.Department
+                                        Wave = $assignment.WaveNumber
+                                        Priority = $assignment.Priority
+                                        Complexity = $assignment.ComplexityScore
+                                        Dependencies = $assignment.Dependencies.Count
+                                        Status = $assignment.MigrationStatus
+                                    }}
+                                }}
+                            }}
+                        }} catch {{}}
+                        
+                        return $waveData
+                    ");
+                    
+                    var results = ps.Invoke();
+                    if (results.Count > 0 && results[0] != null)
+                    {
+                        ViewDataGrid.ItemsSource = results[0].BaseObject;
+                    }
+                    else
+                    {
+                        var sampleData = new List<dynamic>
+                        {
+                            new { UserName = "Generate waves to see migration planning data", Email = "", Department = "", Wave = 0, Priority = "", Complexity = 0, Dependencies = 0, Status = "No Data" }
+                        };
+                        ViewDataGrid.ItemsSource = sampleData;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorData = new List<dynamic>
+                {
+                    new { UserName = $"Error loading wave data: {ex.Message}", Email = "", Department = "", Wave = 0, Priority = "Error", Complexity = 0, Dependencies = 0, Status = "Error" }
+                };
+                ViewDataGrid.ItemsSource = errorData;
+            }
         }
 
         private void SelectUsers_Click(object sender, RoutedEventArgs e)
@@ -501,5 +1022,14 @@ namespace MandADiscoverySuite
         {
             return Name;
         }
+    }
+    
+    public class DiscoveryResult
+    {
+        public bool Success { get; set; }
+        public string Summary { get; set; } = "";
+        public string ErrorMessage { get; set; } = "";
+        public int DataCount { get; set; } = 0;
+        public Dictionary<string, object> AdditionalData { get; set; } = new Dictionary<string, object>();
     }
 }
