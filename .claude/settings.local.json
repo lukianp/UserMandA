@@ -21,7 +21,12 @@
       "Bash(rm:*)",
       "Bash(cp:*)",
       "Bash(./Build-GUI.ps1)",
-      "Bash(Start-Process \"C:\\EnterpriseDiscovery\\bin\\Release\\MandADiscoverySuite.exe\" -WindowStyle Normal)"
+      "Bash(Start-Process \"C:\\EnterpriseDiscovery\\bin\\Release\\MandADiscoverySuite.exe\" -WindowStyle Normal)",
+      "Bash(.MandADiscoverySuite.exe)",
+      "Bash(Start-Process .MandADiscoverySuite.exe)",
+      "Bash(cmd.exe /c Launch-MandADiscoverySuite.bat)",
+      "Bash(git rm:*)",
+      "Bash(del nul)"
     ],
     "deny": []
   }

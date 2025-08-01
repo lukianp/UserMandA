@@ -167,37 +167,145 @@ namespace MandADiscoverySuite
 
         private string GetRootPath()
         {
-            // Use C:\EnterpriseDiscovery for application files
-            string appPath = @"C:\EnterpriseDiscovery";
+            // Priority order for application path resolution:
+            // 1. Environment variable MANDA_APP_PATH
+            // 2. Registry setting (for enterprise deployment)
+            // 3. Executable directory (portable mode)
+            // 4. Default system location
             
-            // Create directory if it doesn't exist
-            if (!Directory.Exists(appPath))
+            string appPath = null;
+            
+            // Try environment variable first
+            appPath = Environment.GetEnvironmentVariable("MANDA_APP_PATH");
+            if (!string.IsNullOrEmpty(appPath) && Directory.Exists(appPath))
             {
-                Directory.CreateDirectory(appPath);
+                return appPath;
             }
             
-            return appPath;
+            // Try registry setting (for enterprise installations)
+            try
+            {
+                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\MandADiscoverySuite"))
+                {
+                    appPath = key?.GetValue("InstallPath") as string;
+                    if (!string.IsNullOrEmpty(appPath) && Directory.Exists(appPath))
+                    {
+                        return appPath;
+                    }
+                }
+            }
+            catch { /* Registry access may fail in restricted environments */ }
+            
+            // Try portable mode (executable directory)
+            var exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            var modulesPath = Path.Combine(exeDir, "Modules");
+            if (Directory.Exists(modulesPath))
+            {
+                return exeDir;
+            }
+            
+            // Try current working directory
+            var currentDir = Directory.GetCurrentDirectory();
+            modulesPath = Path.Combine(currentDir, "Modules");
+            if (Directory.Exists(modulesPath))
+            {
+                return currentDir;
+            }
+            
+            // Default to system location (create if needed)
+            appPath = @"C:\EnterpriseDiscovery";
+            try
+            {
+                if (!Directory.Exists(appPath))
+                {
+                    Directory.CreateDirectory(appPath);
+                }
+                return appPath;
+            }
+            catch
+            {
+                // If can't create system directory, use user profile
+                appPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MandADiscoverySuite");
+                Directory.CreateDirectory(appPath);
+                return appPath;
+            }
         }
         
         private string GetDiscoveryDataPath()
         {
-            // Default to C:\DiscoveryData for company profiles
-            string dataPath = @"C:\DiscoveryData";
+            // Priority order for data path resolution:
+            // 1. Environment variable MANDA_DISCOVERY_PATH
+            // 2. Registry setting (for enterprise deployment)
+            // 3. User profile Documents folder (user mode)
+            // 4. Default system location
             
-            // Check if environment variable is set for custom path
-            string envPath = Environment.GetEnvironmentVariable("MANDA_DISCOVERY_PATH");
-            if (!string.IsNullOrEmpty(envPath))
+            string dataPath = null;
+            
+            // Try environment variable first
+            dataPath = Environment.GetEnvironmentVariable("MANDA_DISCOVERY_PATH");
+            if (!string.IsNullOrEmpty(dataPath))
             {
-                dataPath = envPath;
+                try
+                {
+                    Directory.CreateDirectory(dataPath);
+                    return dataPath;
+                }
+                catch { /* Continue to next option */ }
             }
             
-            // Ensure the directory exists
-            if (!Directory.Exists(dataPath))
+            // Try registry setting (for enterprise installations)
+            try
+            {
+                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\MandADiscoverySuite"))
+                {
+                    dataPath = key?.GetValue("DataPath") as string;
+                    if (!string.IsNullOrEmpty(dataPath))
+                    {
+                        Directory.CreateDirectory(dataPath);
+                        return dataPath;
+                    }
+                }
+            }
+            catch { /* Registry access may fail in restricted environments */ }
+            
+            // Try user profile mode (safer for restricted environments)
+            if (IsRestrictedEnvironment())
+            {
+                dataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MandADiscoveryData");
+                Directory.CreateDirectory(dataPath);
+                return dataPath;
+            }
+            
+            // Default to system location
+            dataPath = @"C:\DiscoveryData";
+            try
             {
                 Directory.CreateDirectory(dataPath);
+                return dataPath;
             }
-            
-            return dataPath;
+            catch (UnauthorizedAccessException)
+            {
+                // Fallback to user documents if system access denied
+                dataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MandADiscoveryData");
+                Directory.CreateDirectory(dataPath);
+                return dataPath;
+            }
+        }
+        
+        private bool IsRestrictedEnvironment()
+        {
+            try
+            {
+                // Test if we can write to system directories
+                var testPath = @"C:\temp_manda_test";
+                Directory.CreateDirectory(testPath);
+                Directory.Delete(testPath);
+                return false;
+            }
+            catch
+            {
+                return true;
+            }
         }
 
         private void LoadCompanyProfiles()
@@ -321,7 +429,40 @@ namespace MandADiscoverySuite
         {
             discoveryModules.Clear();
             
-            var modules = new[]
+            // Load modules from configuration if available, otherwise use defaults
+            var configModules = LoadDiscoveryModulesFromConfig();
+            var modules = configModules ?? GetDefaultDiscoveryModules();
+            
+            foreach (var module in modules)
+            {
+                discoveryModules.Add(module);
+            }
+        }
+        
+        private DiscoveryModule[] LoadDiscoveryModulesFromConfig()
+        {
+            try
+            {
+                var configPath = Path.Combine(GetRootPath(), "Configuration", "DiscoveryModules.json");
+                if (File.Exists(configPath))
+                {
+                    var json = File.ReadAllText(configPath);
+                    var config = JsonSerializer.Deserialize<DiscoveryModuleConfig>(json);
+                    return config?.Modules?.Where(m => m.Enabled).ToArray();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but continue with defaults
+                Debug.WriteLine($"Failed to load module configuration: {ex.Message}");
+            }
+            
+            return null; // Use defaults
+        }
+        
+        private DiscoveryModule[] GetDefaultDiscoveryModules()
+        {
+            return new[]
             {
                 new DiscoveryModule
                 {
@@ -412,13 +553,66 @@ namespace MandADiscoverySuite
                     Description = "Discover switches, routers, VLANs, subnets, network topology, and performance metrics",
                     Status = "Running",
                     StatusColor = "#FFFFA726"
+                },
+
+                new DiscoveryModule
+                {
+                    Name = "Office 365 Tenant",
+                    ModuleName = "Office365Tenant",
+                    Icon = "🏢",
+                    Description = "Discover O365 tenant configuration, licensing, domains, compliance policies, and governance settings",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                
+                new DiscoveryModule
+                {
+                    Name = "Intune Device Management",
+                    ModuleName = "IntuneDevice",
+                    Icon = "📱",
+                    Description = "Discover managed devices, compliance policies, configuration profiles, mobile apps, and protection policies",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                
+                new DiscoveryModule
+                {
+                    Name = "Certificate Authority",
+                    ModuleName = "CertificateAuthority",
+                    Icon = "🔒",
+                    Description = "Discover PKI infrastructure, certificate authorities, templates, issued certificates, and trust relationships",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                
+                new DiscoveryModule
+                {
+                    Name = "DNS & DHCP",
+                    ModuleName = "DNSDHCP",
+                    Icon = "🌍",
+                    Description = "Discover DNS zones, records, DHCP scopes, reservations, and network configuration services",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                
+                new DiscoveryModule
+                {
+                    Name = "Power Platform",
+                    ModuleName = "PowerPlatform",
+                    Icon = "⚡",
+                    Description = "Discover Power Apps, Power Automate flows, Power BI workspaces, dataflows, and governance policies",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
                 }
             };
-            
-            foreach (var module in modules)
-            {
-                discoveryModules.Add(module);
-            }
+        }
+        
+        // Configuration classes for module loading
+        public class DiscoveryModuleConfig
+        {
+            public DiscoveryModule[] Modules { get; set; }
+            public string Version { get; set; }
+            public DateTime LastUpdated { get; set; }
         }
 
         private void InitializeDataGrids()
@@ -4644,6 +4838,466 @@ $null = Read-Host
             }
         }
 
+        private async void RunOffice365TenantDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            if (CompanySelector.SelectedItem == null || 
+                ((CompanyProfile)CompanySelector.SelectedItem).Name == "+ Create New Profile")
+            {
+                MessageBox.Show("Please select or create a company profile first.", "No Profile Selected", 
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var companyProfile = (CompanyProfile)CompanySelector.SelectedItem;
+            
+            try
+            {
+                var script = $@"
+# Office 365 Tenant Discovery Script for {companyProfile.Name}
+# Generated by M&A Discovery Suite
+
+Write-Host '=== Office 365 Tenant Discovery ===' -ForegroundColor Cyan
+Write-Host 'Company: {companyProfile.Name}' -ForegroundColor White
+Write-Host 'Starting discovery...' -ForegroundColor Green
+Write-Host ''
+
+# Set execution location
+Set-Location '{rootPath}'
+
+# Import required modules
+Write-Host 'Loading modules...' -ForegroundColor Yellow
+Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module '.\Modules\Discovery\Office365TenantDiscovery.psm1' -Force
+
+# Get the company profile and create discovery context
+Write-Host 'Initializing company profile...' -ForegroundColor Yellow
+$profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
+$companyProfile = $profileManager.GetProfile()
+
+# Create discovery context
+$context = @{{
+    Paths = @{{
+        RawDataOutput = $profileManager.GetProfileDataPath()
+    }}
+    CompanyName = '{companyProfile.Name}'
+    DiscoverySession = [guid]::NewGuid().ToString()
+}}
+
+Write-Host 'Discovery context created:' -ForegroundColor Green
+Write-Host ""Path: $($context.Paths.RawDataOutput)"" -ForegroundColor Gray
+Write-Host ""Session: $($context.DiscoverySession)"" -ForegroundColor Gray
+Write-Host ''
+
+# Create configuration for Office 365 Tenant discovery
+$configuration = @{{
+    tenantId = $companyProfile.AzureConfig.TenantId
+    discovery = @{{
+        includeLicensing = $true
+        includeDomains = $true
+        includeCompliance = $true
+        includeRoles = $true
+    }}
+}}
+
+Write-Host 'Configuration:' -ForegroundColor Green
+Write-Host ""Tenant ID: $($configuration.tenantId)"" -ForegroundColor Gray
+Write-Host ''
+
+# Execute Office 365 Tenant discovery
+Write-Host 'Starting Office 365 Tenant discovery...' -ForegroundColor Cyan
+Write-Host 'This may take several minutes...' -ForegroundColor Yellow
+Write-Host ''
+
+$discoveryResult = Invoke-Office365TenantDiscovery -Configuration $configuration -Context $context -SessionId $context.DiscoverySession
+
+# Display results
+Write-Host ''
+Write-Host '=== Discovery Results ===' -ForegroundColor Cyan
+
+if ($discoveryResult -and $discoveryResult.Count -gt 0) {{
+    Write-Host 'Status: SUCCESS' -ForegroundColor Green
+    Write-Host ""Total Records: $($discoveryResult.Count)"" -ForegroundColor White
+    
+    Write-Host ''
+    Write-Host 'Discovery completed successfully!' -ForegroundColor Green
+    Write-Host 'Files created in company profile directory' -ForegroundColor Yellow
+    
+}} else {{
+    Write-Host 'Status: NO DATA' -ForegroundColor Yellow
+    Write-Host 'No Office 365 tenant data was discovered' -ForegroundColor Yellow
+}}
+
+Write-Host ''
+Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
+Write-Host 'You can now refresh the GUI to see the discovered data.' -ForegroundColor Green
+";
+
+                var powerShellWindow = new PowerShellWindow(script, "Office 365 Tenant Discovery", 
+                    "Discovers O365 tenant configuration, licensing, and governance")
+                {
+                    Owner = this,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+                
+                powerShellWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error launching Office 365 Tenant discovery: {ex.Message}", 
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void RunIntuneDeviceDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            if (CompanySelector.SelectedItem == null || 
+                ((CompanyProfile)CompanySelector.SelectedItem).Name == "+ Create New Profile")
+            {
+                MessageBox.Show("Please select or create a company profile first.", "No Profile Selected", 
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var companyProfile = (CompanyProfile)CompanySelector.SelectedItem;
+            
+            try
+            {
+                var script = $@"
+# Intune Device Management Discovery Script for {companyProfile.Name}
+# Generated by M&A Discovery Suite
+
+Write-Host '=== Intune Device Management Discovery ===' -ForegroundColor Cyan
+Write-Host 'Company: {companyProfile.Name}' -ForegroundColor White
+Write-Host 'Starting discovery...' -ForegroundColor Green
+Write-Host ''
+
+Set-Location '{rootPath}'
+
+Write-Host 'Loading modules...' -ForegroundColor Yellow
+Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module '.\Modules\Discovery\IntuneDeviceDiscovery.psm1' -Force
+
+$profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
+$companyProfile = $profileManager.GetProfile()
+
+$context = @{{
+    Paths = @{{
+        RawDataOutput = $profileManager.GetProfileDataPath()
+    }}
+    CompanyName = '{companyProfile.Name}'
+    DiscoverySession = [guid]::NewGuid().ToString()
+}}
+
+$configuration = @{{
+    tenantId = $companyProfile.AzureConfig.TenantId
+    discovery = @{{
+        includeManagedDevices = $true
+        includeCompliancePolicies = $true
+        includeConfigurationProfiles = $true
+        includeMobileApps = $true
+        includeAppProtectionPolicies = $true
+    }}
+}}
+
+Write-Host 'Starting Intune Device Management discovery...' -ForegroundColor Cyan
+Write-Host 'This will discover managed devices, policies, and mobile applications...' -ForegroundColor Yellow
+Write-Host ''
+
+$discoveryResult = Invoke-IntuneDeviceDiscovery -Configuration $configuration -Context $context -SessionId $context.DiscoverySession
+
+Write-Host ''
+Write-Host '=== Discovery Results ===' -ForegroundColor Cyan
+if ($discoveryResult -and $discoveryResult.Count -gt 0) {{
+    Write-Host 'Status: SUCCESS' -ForegroundColor Green
+    Write-Host ""Total Records: $($discoveryResult.Count)"" -ForegroundColor White
+}} else {{
+    Write-Host 'Status: NO DATA' -ForegroundColor Yellow
+}}
+
+Write-Host ''
+Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
+";
+
+                var powerShellWindow = new PowerShellWindow(script, "Intune Device Management Discovery", 
+                    "Discovers managed devices, policies, and mobile applications")
+                {
+                    Owner = this,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+                
+                powerShellWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error launching Intune Device discovery: {ex.Message}", 
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void RunCertificateAuthorityDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            if (CompanySelector.SelectedItem == null || 
+                ((CompanyProfile)CompanySelector.SelectedItem).Name == "+ Create New Profile")
+            {
+                MessageBox.Show("Please select or create a company profile first.", "No Profile Selected", 
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var companyProfile = (CompanyProfile)CompanySelector.SelectedItem;
+            
+            try
+            {
+                var script = $@"
+# Certificate Authority Discovery Script for {companyProfile.Name}
+# Generated by M&A Discovery Suite
+
+Write-Host '=== Certificate Authority Discovery ===' -ForegroundColor Cyan
+Write-Host 'Company: {companyProfile.Name}' -ForegroundColor White
+Write-Host 'Starting PKI infrastructure discovery...' -ForegroundColor Green
+Write-Host ''
+
+Set-Location '{rootPath}'
+
+Write-Host 'Loading modules...' -ForegroundColor Yellow
+Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module '.\Modules\Discovery\CertificateAuthorityDiscovery.psm1' -Force
+
+$profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
+$companyProfile = $profileManager.GetProfile()
+
+$context = @{{
+    Paths = @{{
+        RawDataOutput = $profileManager.GetProfileDataPath()
+    }}
+    CompanyName = '{companyProfile.Name}'
+    DiscoverySession = [guid]::NewGuid().ToString()
+}}
+
+$configuration = @{{
+    environment = @{{
+        domainController = $companyProfile.ActiveDirectoryConfig.DomainController
+    }}
+    discovery = @{{
+        includeCertificateAuthorities = $true
+        includeCertificateTemplates = $true
+        includeIssuedCertificates = $true
+        includeTrustRelationships = $true
+        maxCertificates = 10000
+    }}
+}}
+
+Write-Host 'Starting Certificate Authority discovery...' -ForegroundColor Cyan
+Write-Host 'This will discover PKI infrastructure, CAs, templates, and certificates...' -ForegroundColor Yellow
+Write-Host ''
+
+$discoveryResult = Invoke-CertificateAuthorityDiscovery -Configuration $configuration -Context $context -SessionId $context.DiscoverySession
+
+Write-Host ''
+Write-Host '=== Discovery Results ===' -ForegroundColor Cyan
+if ($discoveryResult -and $discoveryResult.Count -gt 0) {{
+    Write-Host 'Status: SUCCESS' -ForegroundColor Green
+    Write-Host ""Total Records: $($discoveryResult.Count)"" -ForegroundColor White
+}} else {{
+    Write-Host 'Status: NO DATA' -ForegroundColor Yellow
+}}
+
+Write-Host ''
+Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
+";
+
+                var powerShellWindow = new PowerShellWindow(script, "Certificate Authority Discovery", 
+                    "Discovers PKI infrastructure, CAs, templates, and certificates")
+                {
+                    Owner = this,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+                
+                powerShellWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error launching Certificate Authority discovery: {ex.Message}", 
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void RunDNSDHCPDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            if (CompanySelector.SelectedItem == null || 
+                ((CompanyProfile)CompanySelector.SelectedItem).Name == "+ Create New Profile")
+            {
+                MessageBox.Show("Please select or create a company profile first.", "No Profile Selected", 
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var companyProfile = (CompanyProfile)CompanySelector.SelectedItem;
+            
+            try
+            {
+                var script = $@"
+# DNS & DHCP Discovery Script for {companyProfile.Name}
+# Generated by M&A Discovery Suite
+
+Write-Host '=== DNS & DHCP Discovery ===' -ForegroundColor Cyan
+Write-Host 'Company: {companyProfile.Name}' -ForegroundColor White
+Write-Host 'Starting network services discovery...' -ForegroundColor Green
+Write-Host ''
+
+Set-Location '{rootPath}'
+
+Write-Host 'Loading modules...' -ForegroundColor Yellow
+Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module '.\Modules\Discovery\DNSDHCPDiscovery.psm1' -Force
+
+$profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
+$companyProfile = $profileManager.GetProfile()
+
+$context = @{{
+    Paths = @{{
+        RawDataOutput = $profileManager.GetProfileDataPath()
+    }}
+    CompanyName = '{companyProfile.Name}'
+    DiscoverySession = [guid]::NewGuid().ToString()
+}}
+
+$configuration = @{{
+    environment = @{{
+        domainController = $companyProfile.ActiveDirectoryConfig.DomainController
+        dnsServers = @($companyProfile.ActiveDirectoryConfig.DomainController)
+    }}
+    discovery = @{{
+        includeDNSZones = $true
+        includeDNSRecords = $true
+        includeDHCPScopes = $true
+        includeDHCPReservations = $true
+        includeForwarders = $true
+    }}
+}}
+
+Write-Host 'Starting DNS & DHCP discovery...' -ForegroundColor Cyan
+Write-Host 'This will discover DNS zones, records, DHCP scopes, and network configuration...' -ForegroundColor Yellow
+Write-Host ''
+
+$discoveryResult = Invoke-DNSDHCPDiscovery -Configuration $configuration -Context $context -SessionId $context.DiscoverySession
+
+Write-Host ''
+Write-Host '=== Discovery Results ===' -ForegroundColor Cyan
+if ($discoveryResult -and $discoveryResult.Count -gt 0) {{
+    Write-Host 'Status: SUCCESS' -ForegroundColor Green
+    Write-Host ""Total Records: $($discoveryResult.Count)"" -ForegroundColor White
+}} else {{
+    Write-Host 'Status: NO DATA' -ForegroundColor Yellow
+}}
+
+Write-Host ''
+Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
+";
+
+                var powerShellWindow = new PowerShellWindow(script, "DNS & DHCP Discovery", 
+                    "Discovers DNS zones, records, DHCP scopes, and network configuration")
+                {
+                    Owner = this,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+                
+                powerShellWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error launching DNS & DHCP discovery: {ex.Message}", 
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void RunPowerPlatformDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            if (CompanySelector.SelectedItem == null || 
+                ((CompanyProfile)CompanySelector.SelectedItem).Name == "+ Create New Profile")
+            {
+                MessageBox.Show("Please select or create a company profile first.", "No Profile Selected", 
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var companyProfile = (CompanyProfile)CompanySelector.SelectedItem;
+            
+            try
+            {
+                var script = $@"
+# Power Platform Discovery Script for {companyProfile.Name}
+# Generated by M&A Discovery Suite
+
+Write-Host '=== Power Platform Discovery ===' -ForegroundColor Cyan
+Write-Host 'Company: {companyProfile.Name}' -ForegroundColor White
+Write-Host 'Starting Power Platform discovery...' -ForegroundColor Green
+Write-Host ''
+
+Set-Location '{rootPath}'
+
+Write-Host 'Loading modules...' -ForegroundColor Yellow
+Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module '.\Modules\Discovery\PowerPlatformDiscovery.psm1' -Force
+
+$profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
+$companyProfile = $profileManager.GetProfile()
+
+$context = @{{
+    Paths = @{{
+        RawDataOutput = $profileManager.GetProfileDataPath()
+    }}
+    CompanyName = '{companyProfile.Name}'
+    DiscoverySession = [guid]::NewGuid().ToString()
+}}
+
+$configuration = @{{
+    tenantId = $companyProfile.AzureConfig.TenantId
+    discovery = @{{
+        includePowerApps = $true
+        includePowerAutomate = $true
+        includePowerBI = $true
+        includeDataflows = $true
+        includeEnvironments = $true
+        includeConnectors = $true
+    }}
+}}
+
+Write-Host 'Starting Power Platform discovery...' -ForegroundColor Cyan
+Write-Host 'This will discover Power Apps, Power Automate, Power BI, and governance...' -ForegroundColor Yellow
+Write-Host ''
+
+$discoveryResult = Invoke-PowerPlatformDiscovery -Configuration $configuration -Context $context -SessionId $context.DiscoverySession
+
+Write-Host ''
+Write-Host '=== Discovery Results ===' -ForegroundColor Cyan
+if ($discoveryResult -and $discoveryResult.Count -gt 0) {{
+    Write-Host 'Status: SUCCESS' -ForegroundColor Green
+    Write-Host ""Total Records: $($discoveryResult.Count)"" -ForegroundColor White
+}} else {{
+    Write-Host 'Status: NO DATA' -ForegroundColor Yellow
+}}
+
+Write-Host ''
+Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
+";
+
+                var powerShellWindow = new PowerShellWindow(script, "Power Platform Discovery", 
+                    "Discovers Power Apps, Power Automate, Power BI, and governance")
+                {
+                    Owner = this,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+                
+                powerShellWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error launching Power Platform discovery: {ex.Message}", 
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void ImportAppList_Click(object sender, RoutedEventArgs e)
         {
             var openFileDialog = new Microsoft.Win32.OpenFileDialog
@@ -5536,6 +6190,7 @@ $null = Read-Host
         public string ModuleName { get; set; }
         public string Icon { get; set; }
         public string Description { get; set; }
+        public bool Enabled { get; set; } = true;
         
         public string Status
         {
