@@ -1,0 +1,131 @@
+﻿{
+    "EndTime":  null,
+    "StartTime":  {
+                      "value":  "\/Date(1750763227301)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "24 June 2025 12:07:07"
+                  },
+    "Operations":  {
+                       "SecretCreation":  {
+                                              "Duration":  null,
+                                              "Success":  false
+                                          },
+                       "ModuleManagement":  {
+                                                "Duration":  {
+                                                                 "Ticks":  192140382,
+                                                                 "Days":  0,
+                                                                 "Hours":  0,
+                                                                 "Milliseconds":  214,
+                                                                 "Minutes":  0,
+                                                                 "Seconds":  19,
+                                                                 "TotalDays":  0.00022238470138888887,
+                                                                 "TotalHours":  0.0053372328333333328,
+                                                                 "TotalMilliseconds":  19214.038200000003,
+                                                                 "TotalMinutes":  0.32023397000000003,
+                                                                 "TotalSeconds":  19.214038199999997
+                                                             },
+                                                "StartTime":  {
+                                                                  "value":  "\/Date(1750763227362)\/",
+                                                                  "DisplayHint":  2,
+                                                                  "DateTime":  "24 June 2025 12:07:07"
+                                                              },
+                                                "Success":  true
+                                            },
+                       "CredentialStorage":  {
+                                                 "Duration":  null,
+                                                 "Success":  false
+                                             },
+                       "Prerequisites":  {
+                                             "Duration":  {
+                                                              "Ticks":  13088596,
+                                                              "Days":  0,
+                                                              "Hours":  0,
+                                                              "Milliseconds":  308,
+                                                              "Minutes":  0,
+                                                              "Seconds":  1,
+                                                              "TotalDays":  1.5148837962962963E-05,
+                                                              "TotalHours":  0.00036357211111111108,
+                                                              "TotalMilliseconds":  1308.8596,
+                                                              "TotalMinutes":  0.021814326666666668,
+                                                              "TotalSeconds":  1.3088596
+                                                          },
+                                             "StartTime":  {
+                                                               "value":  "\/Date(1750763246588)\/",
+                                                               "DisplayHint":  2,
+                                                               "DateTime":  "24 June 2025 12:07:26"
+                                                           },
+                                             "Success":  true
+                                         },
+                       "GraphConnection":  {
+                                               "Duration":  {
+                                                                "Ticks":  1621181974,
+                                                                "Days":  0,
+                                                                "Hours":  0,
+                                                                "Milliseconds":  118,
+                                                                "Minutes":  2,
+                                                                "Seconds":  42,
+                                                                "TotalDays":  0.0018763680254629629,
+                                                                "TotalHours":  0.045032832611111108,
+                                                                "TotalMilliseconds":  162118.1974,
+                                                                "TotalMinutes":  2.7019699566666668,
+                                                                "TotalSeconds":  162.11819739999999
+                                                            },
+                                               "StartTime":  {
+                                                                 "value":  "\/Date(1750763247901)\/",
+                                                                 "DisplayHint":  2,
+                                                                 "DateTime":  "24 June 2025 12:07:27"
+                                                             },
+                                               "Success":  false
+                                           },
+                       "AzureConnection":  {
+                                               "Duration":  {
+                                                                "Ticks":  496815523,
+                                                                "Days":  0,
+                                                                "Hours":  0,
+                                                                "Milliseconds":  681,
+                                                                "Minutes":  0,
+                                                                "Seconds":  49,
+                                                                "TotalDays":  0.00057501796643518518,
+                                                                "TotalHours":  0.013800431194444443,
+                                                                "TotalMilliseconds":  49681.5523,
+                                                                "TotalMinutes":  0.82802587166666664,
+                                                                "TotalSeconds":  49.6815523
+                                                            },
+                                               "StartTime":  {
+                                                                 "value":  "\/Date(1750763410025)\/",
+                                                                 "DisplayHint":  2,
+                                                                 "DateTime":  "24 June 2025 12:10:10"
+                                                             },
+                                               "Success":  true
+                                           },
+                       "RoleAssignment":  {
+                                              "Duration":  null,
+                                              "Success":  false
+                                          },
+                       "AppRegistration":  {
+                                               "Duration":  {
+                                                                "Ticks":  7019134,
+                                                                "Days":  0,
+                                                                "Hours":  0,
+                                                                "Milliseconds":  701,
+                                                                "Minutes":  0,
+                                                                "Seconds":  0,
+                                                                "TotalDays":  8.1239976851851856E-06,
+                                                                "TotalHours":  0.00019497594444444443,
+                                                                "TotalMilliseconds":  701.9134,
+                                                                "TotalMinutes":  0.011698556666666667,
+                                                                "TotalSeconds":  0.7019134
+                                                            },
+                                               "StartTime":  {
+                                                                 "value":  "\/Date(1750763483224)\/",
+                                                                 "DisplayHint":  2,
+                                                                 "DateTime":  "24 June 2025 12:11:23"
+                                                             },
+                                               "Success":  false
+                                           },
+                       "PermissionGrant":  {
+                                               "Duration":  null,
+                                               "Success":  false
+                                           }
+                   }
+}

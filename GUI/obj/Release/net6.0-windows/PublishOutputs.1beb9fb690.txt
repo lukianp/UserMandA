@@ -1,0 +1,5 @@
+D:\Scripts\UserMandA\GUI\bin\Release\MandADiscoverySuite.exe
+D:\Scripts\UserMandA\GUI\bin\Release\MandADiscoverySuite.dll
+D:\Scripts\UserMandA\GUI\bin\Release\MandADiscoverySuite.deps.json
+D:\Scripts\UserMandA\GUI\bin\Release\MandADiscoverySuite.runtimeconfig.json
+D:\Scripts\UserMandA\GUI\bin\Release\MandADiscoverySuite.pdb
