@@ -22,33 +22,20 @@ class CompanyProfileManager {
     }
     
     hidden [string] GetSourceDirectory() {
-        $scriptRoot = $PSScriptRoot
+        # Default to C:\DiscoveryData for company profiles
+        $defaultPath = "C:\DiscoveryData"
         
-        while ($scriptRoot -and !(Test-Path (Join-Path $scriptRoot "QuickStart.ps1"))) {
-            $scriptRoot = Split-Path $scriptRoot -Parent
+        # Check if environment variable is set for custom path
+        if ($env:MANDA_DISCOVERY_PATH) {
+            $defaultPath = $env:MANDA_DISCOVERY_PATH
         }
         
-        if (!$scriptRoot) {
-            $possiblePaths = @(
-                "D:\Scripts\UserMandA",
-                "C:\Scripts\UserMandA",
-                "$env:USERPROFILE\Scripts\UserMandA",
-                "$env:ProgramData\UserMandA"
-            )
-            
-            foreach ($path in $possiblePaths) {
-                if (Test-Path (Join-Path $path "QuickStart.ps1")) {
-                    $scriptRoot = $path
-                    break
-                }
-            }
+        # Ensure the directory exists
+        if (!(Test-Path $defaultPath)) {
+            New-Item -ItemType Directory -Path $defaultPath -Force | Out-Null
         }
         
-        if (!$scriptRoot) {
-            throw "Could not determine UserMandA root directory. Please ensure QuickStart.ps1 exists in the root."
-        }
-        
-        return $scriptRoot
+        return $defaultPath
     }
     
     hidden [void] InitializeDirectoryStructure() {

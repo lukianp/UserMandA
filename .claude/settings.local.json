@@ -4,7 +4,13 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(powershell:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(./Launch-MandADiscoverySuite.bat)",
+      "Bash(start MandADiscoverySuite.exe)",
+      "Bash(dotnet build:*)",
+      "Bash(start .binReleasenet6.0-windowsMandADiscoverySuite.exe)",
+      "Bash(dotnet run:*)"
     ],
     "deny": []
   }

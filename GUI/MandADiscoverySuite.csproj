@@ -4,20 +4,15 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>app.ico</ApplicationIcon>
+    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>MandADiscoverySuite</AssemblyName>
     <RootNamespace>MandADiscoverySuite</RootNamespace>
     <Nullable>enable</Nullable>
-    <PublishSingleFile>true</PublishSingleFile>
+    <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
 
 
-  <ItemGroup>
-    <None Update="app.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
 
 </Project>
