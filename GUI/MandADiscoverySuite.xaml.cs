@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.Text.Json;
@@ -1639,6 +1640,258 @@ namespace MandADiscoverySuite
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        #region Drag and Drop Event Handlers
+
+        private Point startPoint;
+        private bool isDragging = false;
+        private MigrationWave draggedUser;
+
+        private void WavesDataGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            startPoint = e.GetPosition(null);
+            isDragging = false;
+            
+            // Get the clicked row data
+            var row = ItemsControl.ContainerFromElement(WavesDataGrid, e.OriginalSource as DependencyObject) as DataGridRow;
+            if (row != null)
+            {
+                draggedUser = row.Item as MigrationWave;
+            }
+        }
+
+        private void WavesDataGrid_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed && !isDragging && draggedUser != null)
+            {
+                Point mousePos = e.GetPosition(null);
+                Vector diff = startPoint - mousePos;
+
+                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+                {
+                    isDragging = true;
+                    
+                    // Create drag data
+                    DataObject dragData = new DataObject("MigrationWave", draggedUser);
+                    
+                    // Change cursor to indicate dragging
+                    Mouse.OverrideCursor = Cursors.Hand;
+                    
+                    // Start drag operation
+                    DragDropEffects result = DragDrop.DoDragDrop(WavesDataGrid, dragData, DragDropEffects.Move);
+                    
+                    // Reset cursor
+                    Mouse.OverrideCursor = null;
+                    isDragging = false;
+                }
+            }
+        }
+
+        private void WavesDataGrid_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("MigrationWave"))
+            {
+                e.Effects = DragDropEffects.Move;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+        }
+
+        private void WavesDataGrid_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("MigrationWave"))
+            {
+                var user = e.Data.GetData("MigrationWave") as MigrationWave;
+                if (user != null)
+                {
+                    // Handle drop within the grid - could be used for reordering
+                    MessageBox.Show($"User {user.UserName} dropped within grid", "Drag & Drop", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+        }
+
+        private void WaveDropZone_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("MigrationWave"))
+            {
+                e.Effects = DragDropEffects.Move;
+                
+                // Highlight the drop zone
+                var border = sender as Border;
+                if (border != null)
+                {
+                    border.BorderBrush = new SolidColorBrush(Color.FromRgb(66, 153, 225)); // Blue highlight
+                    border.Background = new SolidColorBrush(Color.FromArgb(30, 66, 153, 225)); // Semi-transparent blue
+                }
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
+        private void WaveDropZone_DragLeave(object sender, DragEventArgs e)
+        {
+            // Remove highlight when dragging leaves the zone
+            var border = sender as Border;
+            if (border != null)
+            {
+                border.BorderBrush = Brushes.Transparent;
+                border.Background = Brushes.Transparent;
+            }
+        }
+
+        private void WaveDropZone_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("MigrationWave"))
+            {
+                var user = e.Data.GetData("MigrationWave") as MigrationWave;
+                var border = sender as Border;
+                
+                if (user != null && border != null)
+                {
+                    // Get the target wave number from the border's Tag
+                    if (int.TryParse(border.Tag.ToString(), out int targetWave))
+                    {
+                        // Update the user's wave assignment
+                        int oldWave = user.Wave;
+                        user.Wave = targetWave;
+                        
+                        // Update the UI
+                        UpdateWaveAssignment(user, oldWave, targetWave);
+                        
+                        // Refresh the DataGrid
+                        WavesDataGrid.Items.Refresh();
+                        
+                        // Show confirmation
+                        MessageBox.Show($"User {user.UserName} moved from Wave {oldWave} to Wave {targetWave}", 
+                                      "Wave Assignment Updated", MessageBoxButton.OK, MessageBoxImage.Information);
+                        
+                        // Update wave statistics
+                        UpdateWaveStatistics();
+                    }
+                }
+                
+                // Remove highlight
+                border.BorderBrush = Brushes.Transparent;
+                border.Background = Brushes.Transparent;
+            }
+            
+            e.Handled = true;
+        }
+
+        private void UpdateWaveAssignment(MigrationWave user, int oldWave, int newWave)
+        {
+            try
+            {
+                // Update priority based on wave
+                user.Priority = GetWavePriority(newWave);
+                
+                // Update estimated duration based on wave complexity
+                user.EstimatedDuration = GetWaveDuration(newWave);
+                
+                // Log the change for audit purposes
+                string logMessage = $"User {user.UserName} ({user.Email}) moved from Wave {oldWave} to Wave {newWave} at {DateTime.Now}";
+                File.AppendAllText(Path.Combine(GetDiscoveryDataPath(), "WaveChanges.log"), logMessage + Environment.NewLine);
+                
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error updating wave assignment: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private string GetWavePriority(int wave)
+        {
+            return wave switch
+            {
+                1 => "Critical",
+                2 => "High",
+                3 => "Medium",
+                4 => "Medium",
+                5 => "Low",
+                _ => "Medium"
+            };
+        }
+
+        private string GetWaveDuration(int wave)
+        {
+            return wave switch
+            {
+                1 => "1-2 weeks",
+                2 => "2-3 weeks",
+                3 => "2-3 weeks",
+                4 => "3-4 weeks",
+                5 => "2-4 weeks",
+                _ => "2-3 weeks"
+            };
+        }
+
+        private void UpdateWaveStatistics()
+        {
+            try
+            {
+                // Get current wave data (in a real implementation, this would come from your data source)
+                var waveData = GetWaveAssignmentData();
+                
+                // Update wave user counts
+                var wave1Count = waveData.Count(u => u.Wave == 1);
+                var wave2Count = waveData.Count(u => u.Wave == 2);
+                var wave3Count = waveData.Count(u => u.Wave == 3);
+                var wave4Count = waveData.Count(u => u.Wave == 4);
+                var wave5Count = waveData.Count(u => u.Wave == 5);
+                
+                // Update UI elements
+                if (Wave1UserCount != null) Wave1UserCount.Text = $"Week 1-2 • {wave1Count} users";
+                if (Wave2UserCount != null) Wave2UserCount.Text = $"Week 3-5 • {wave2Count} users";
+                if (Wave3UserCount != null) Wave3UserCount.Text = $"Week 6-8 • {wave3Count} users";
+                if (Wave4UserCount != null) Wave4UserCount.Text = $"Week 9-11 • {wave4Count} users";
+                if (Wave5UserCount != null) Wave5UserCount.Text = $"Week 12+ • {wave5Count} users";
+                
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't show to user unless necessary
+                System.Diagnostics.Debug.WriteLine($"Error updating wave statistics: {ex.Message}");
+            }
+        }
+
+        private List<MigrationWave> GetWaveAssignmentData()
+        {
+            // In a real implementation, this would retrieve data from your data source
+            // For now, return sample data or data from the DataGrid
+            var data = new List<MigrationWave>();
+            
+            if (WavesDataGrid.ItemsSource is IEnumerable<MigrationWave> waveData)
+            {
+                data.AddRange(waveData);
+            }
+            else
+            {
+                // Return sample data if no real data is available
+                data.AddRange(GenerateSampleWaveData());
+            }
+            
+            return data;
+        }
+
+        private List<MigrationWave> GenerateSampleWaveData()
+        {
+            return new List<MigrationWave>
+            {
+                new MigrationWave { UserName = "John Smith", Email = "john.smith@company.com", Department = "IT", Wave = 1, Priority = "Critical", Complexity = 3, Dependencies = 2, Status = "Ready", EstimatedDuration = "1-2 weeks", RiskLevel = "Low" },
+                new MigrationWave { UserName = "Jane Doe", Email = "jane.doe@company.com", Department = "Finance", Wave = 2, Priority = "High", Complexity = 2, Dependencies = 1, Status = "Planning", EstimatedDuration = "2-3 weeks", RiskLevel = "Medium" },
+                new MigrationWave { UserName = "Bob Johnson", Email = "bob.johnson@company.com", Department = "Sales", Wave = 3, Priority = "Medium", Complexity = 1, Dependencies = 0, Status = "Pending", EstimatedDuration = "2-3 weeks", RiskLevel = "Low" },
+                new MigrationWave { UserName = "Alice Brown", Email = "alice.brown@company.com", Department = "Operations", Wave = 4, Priority = "Medium", Complexity = 2, Dependencies = 3, Status = "Pending", EstimatedDuration = "3-4 weeks", RiskLevel = "Medium" },
+                new MigrationWave { UserName = "Charlie Wilson", Email = "charlie.wilson@company.com", Department = "Support", Wave = 5, Priority = "Low", Complexity = 1, Dependencies = 0, Status = "Pending", EstimatedDuration = "2-4 weeks", RiskLevel = "Low" }
+            };
+        }
+
+        #endregion
     }
 
     public class DiscoveryModule : INotifyPropertyChanged

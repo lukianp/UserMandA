@@ -1400,7 +1400,9 @@
                             
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="Wave Assignment Details" Style="{StaticResource SectionHeaderStyle}"/>
-                                <DataGrid x:Name="WavesDataGrid" Style="{StaticResource ModernDataGridStyle}" Height="400">
+                                <DataGrid x:Name="WavesDataGrid" Style="{StaticResource ModernDataGridStyle}" Height="400" 
+                                          AllowDrop="True" Drop="WavesDataGrid_Drop" DragOver="WavesDataGrid_DragOver"
+                                          MouseMove="WavesDataGrid_MouseMove" PreviewMouseLeftButtonDown="WavesDataGrid_PreviewMouseLeftButtonDown">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="User Name" Binding="{Binding UserName}" Width="150">
                                             <DataGridTextColumn.HeaderStyle>
@@ -1429,35 +1431,55 @@
                                 <TextBlock Text="Wave Timeline" Style="{StaticResource SectionHeaderStyle}"/>
                                 <Border Background="#FF2D3748" CornerRadius="6" Padding="16">
                                     <StackPanel>
-                                        <StackPanel Margin="0,0,0,16">
-                                            <TextBlock Text="Wave 1 - Executive &amp; IT" Foreground="#FF4299E1" FontSize="13" FontWeight="Medium"/>
-                                            <TextBlock Text="Week 1-2 • 234 users" Foreground="#FFA0AEC0" FontSize="11"/>
-                                            <ProgressBar Value="100" Maximum="100" Height="4" Background="#FF1A202C" Foreground="#FF4299E1" BorderThickness="0" Margin="0,4,0,0"/>
-                                        </StackPanel>
+                                        <Border x:Name="Wave1DropZone" Tag="1" Margin="0,0,0,16" Background="Transparent" 
+                                                AllowDrop="True" Drop="WaveDropZone_Drop" DragOver="WaveDropZone_DragOver" 
+                                                DragLeave="WaveDropZone_DragLeave" CornerRadius="4" BorderThickness="2" BorderBrush="Transparent">
+                                            <StackPanel>
+                                                <TextBlock Text="Wave 1 - Executive &amp; IT" Foreground="#FF4299E1" FontSize="13" FontWeight="Medium"/>
+                                                <TextBlock x:Name="Wave1UserCount" Text="Week 1-2 • 234 users" Foreground="#FFA0AEC0" FontSize="11"/>
+                                                <ProgressBar Value="100" Maximum="100" Height="4" Background="#FF1A202C" Foreground="#FF4299E1" BorderThickness="0" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
                                         
-                                        <StackPanel Margin="0,0,0,16">
-                                            <TextBlock Text="Wave 2 - Finance &amp; Legal" Foreground="#FF48BB78" FontSize="13" FontWeight="Medium"/>
-                                            <TextBlock Text="Week 3-5 • 189 users" Foreground="#FFA0AEC0" FontSize="11"/>
-                                            <ProgressBar Value="65" Maximum="100" Height="4" Background="#FF1A202C" Foreground="#FF48BB78" BorderThickness="0" Margin="0,4,0,0"/>
-                                        </StackPanel>
+                                        <Border x:Name="Wave2DropZone" Tag="2" Margin="0,0,0,16" Background="Transparent" 
+                                                AllowDrop="True" Drop="WaveDropZone_Drop" DragOver="WaveDropZone_DragOver" 
+                                                DragLeave="WaveDropZone_DragLeave" CornerRadius="4" BorderThickness="2" BorderBrush="Transparent">
+                                            <StackPanel>
+                                                <TextBlock Text="Wave 2 - Finance &amp; Legal" Foreground="#FF48BB78" FontSize="13" FontWeight="Medium"/>
+                                                <TextBlock x:Name="Wave2UserCount" Text="Week 3-5 • 189 users" Foreground="#FFA0AEC0" FontSize="11"/>
+                                                <ProgressBar Value="65" Maximum="100" Height="4" Background="#FF1A202C" Foreground="#FF48BB78" BorderThickness="0" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
                                         
-                                        <StackPanel Margin="0,0,0,16">
-                                            <TextBlock Text="Wave 3 - Sales &amp; Marketing" Foreground="#FFED8936" FontSize="13" FontWeight="Medium"/>
-                                            <TextBlock Text="Week 6-8 • 456 users" Foreground="#FFA0AEC0" FontSize="11"/>
-                                            <ProgressBar Value="20" Maximum="100" Height="4" Background="#FF1A202C" Foreground="#FFED8936" BorderThickness="0" Margin="0,4,0,0"/>
-                                        </StackPanel>
+                                        <Border x:Name="Wave3DropZone" Tag="3" Margin="0,0,0,16" Background="Transparent" 
+                                                AllowDrop="True" Drop="WaveDropZone_Drop" DragOver="WaveDropZone_DragOver" 
+                                                DragLeave="WaveDropZone_DragLeave" CornerRadius="4" BorderThickness="2" BorderBrush="Transparent">
+                                            <StackPanel>
+                                                <TextBlock Text="Wave 3 - Sales &amp; Marketing" Foreground="#FFED8936" FontSize="13" FontWeight="Medium"/>
+                                                <TextBlock x:Name="Wave3UserCount" Text="Week 6-8 • 456 users" Foreground="#FFA0AEC0" FontSize="11"/>
+                                                <ProgressBar Value="20" Maximum="100" Height="4" Background="#FF1A202C" Foreground="#FFED8936" BorderThickness="0" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
                                         
-                                        <StackPanel Margin="0,0,0,16">
-                                            <TextBlock Text="Wave 4 - Operations" Foreground="#FF9F7AEA" FontSize="13" FontWeight="Medium"/>
-                                            <TextBlock Text="Week 9-11 • 298 users" Foreground="#FFA0AEC0" FontSize="11"/>
-                                            <ProgressBar Value="0" Maximum="100" Height="4" Background="#FF1A202C" Foreground="#FF9F7AEA" BorderThickness="0" Margin="0,4,0,0"/>
-                                        </StackPanel>
+                                        <Border x:Name="Wave4DropZone" Tag="4" Margin="0,0,0,16" Background="Transparent" 
+                                                AllowDrop="True" Drop="WaveDropZone_Drop" DragOver="WaveDropZone_DragOver" 
+                                                DragLeave="WaveDropZone_DragLeave" CornerRadius="4" BorderThickness="2" BorderBrush="Transparent">
+                                            <StackPanel>
+                                                <TextBlock Text="Wave 4 - Operations" Foreground="#FF9F7AEA" FontSize="13" FontWeight="Medium"/>
+                                                <TextBlock x:Name="Wave4UserCount" Text="Week 9-11 • 298 users" Foreground="#FFA0AEC0" FontSize="11"/>
+                                                <ProgressBar Value="0" Maximum="100" Height="4" Background="#FF1A202C" Foreground="#FF9F7AEA" BorderThickness="0" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
                                         
-                                        <StackPanel>
-                                            <TextBlock Text="Wave 5 - General Users" Foreground="#FFF56565" FontSize="13" FontWeight="Medium"/>
-                                            <TextBlock Text="Week 12+ • 70 users" Foreground="#FFA0AEC0" FontSize="11"/>
-                                            <ProgressBar Value="0" Maximum="100" Height="4" Background="#FF1A202C" Foreground="#FFF56565" BorderThickness="0" Margin="0,4,0,0"/>
-                                        </StackPanel>
+                                        <Border x:Name="Wave5DropZone" Tag="5" Background="Transparent" 
+                                                AllowDrop="True" Drop="WaveDropZone_Drop" DragOver="WaveDropZone_DragOver" 
+                                                DragLeave="WaveDropZone_DragLeave" CornerRadius="4" BorderThickness="2" BorderBrush="Transparent">
+                                            <StackPanel>
+                                                <TextBlock Text="Wave 5 - General Users" Foreground="#FFF56565" FontSize="13" FontWeight="Medium"/>
+                                                <TextBlock x:Name="Wave5UserCount" Text="Week 12+ • 70 users" Foreground="#FFA0AEC0" FontSize="11"/>
+                                                <ProgressBar Value="0" Maximum="100" Height="4" Background="#FF1A202C" Foreground="#FFF56565" BorderThickness="0" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
                                     </StackPanel>
                                 </Border>
                                 
