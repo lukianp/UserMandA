@@ -10,7 +10,10 @@
       "Bash(start MandADiscoverySuite.exe)",
       "Bash(dotnet build:*)",
       "Bash(start .binReleasenet6.0-windowsMandADiscoverySuite.exe)",
-      "Bash(dotnet run:*)"
+      "Bash(dotnet run:*)",
+      "Bash(taskkill:*)",
+      "Bash(start:*)",
+      "Bash(./MandADiscoverySuite.exe)"
     ],
     "deny": []
   }

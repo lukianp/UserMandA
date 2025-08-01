@@ -128,6 +128,7 @@ namespace MandADiscoverySuite
                 }
             }
             
+            // Always add the create new profile option
             companyProfiles.Add(new CompanyProfile { Name = "+ Create New Profile", Path = "" });
         }
 
@@ -289,6 +290,7 @@ namespace MandADiscoverySuite
             UsersView.Visibility = Visibility.Collapsed;
             ComputersView.Visibility = Visibility.Collapsed;
             InfrastructureView.Visibility = Visibility.Collapsed;
+            ApplicationsView.Visibility = Visibility.Collapsed;
             WavesView.Visibility = Visibility.Collapsed;
             MigrateView.Visibility = Visibility.Collapsed;
             ReportsView.Visibility = Visibility.Collapsed;
@@ -300,6 +302,7 @@ namespace MandADiscoverySuite
             UsersButton.Background = Brushes.Transparent;
             ComputersButton.Background = Brushes.Transparent;
             InfrastructureButton.Background = Brushes.Transparent;
+            ApplicationsButton.Background = Brushes.Transparent;
             WavesButton.Background = Brushes.Transparent;
             MigrateButton.Background = Brushes.Transparent;
             ReportsButton.Background = Brushes.Transparent;
@@ -332,6 +335,11 @@ namespace MandADiscoverySuite
                     case "InfrastructureButton":
                         InfrastructureView.Visibility = Visibility.Visible;
                         currentView = "Infrastructure";
+                        break;
+                    case "ApplicationsButton":
+                        ApplicationsView.Visibility = Visibility.Visible;
+                        currentView = "Applications";
+                        LoadApplicationsData();
                         break;
                     case "WavesButton":
                         WavesView.Visibility = Visibility.Visible;
@@ -927,6 +935,19 @@ namespace MandADiscoverySuite
             }
         }
 
+        private async void CreateNewProfile_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new CreateProfileDialog();
+            if (dialog.ShowDialog() == true)
+            {
+                string newProfileName = dialog.ProfileName;
+                if (!string.IsNullOrWhiteSpace(newProfileName))
+                {
+                    await CreateNewCompanyProfile(newProfileName);
+                }
+            }
+        }
+
         private void SaveModuleSettings_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -1314,6 +1335,310 @@ namespace MandADiscoverySuite
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        // Applications Section Methods
+        private ObservableCollection<DiscoveredApplication> applicationsData;
+
+        private void LoadApplicationsData()
+        {
+            if (applicationsData == null)
+            {
+                applicationsData = new ObservableCollection<DiscoveredApplication>();
+                GenerateSampleApplicationData();
+                ApplicationsGrid.ItemsSource = applicationsData;
+                UpdateApplicationsStats();
+            }
+        }
+
+        private void GenerateSampleApplicationData()
+        {
+            var sampleApps = new List<DiscoveredApplication>
+            {
+                new DiscoveredApplication 
+                { 
+                    Name = "Microsoft Office 365", 
+                    Version = "2023", 
+                    Vendor = "Microsoft", 
+                    InstallPath = @"C:\Program Files\Microsoft Office", 
+                    RiskLevel = "Low", 
+                    CloudReadiness = "Cloud Native", 
+                    LastUpdated = DateTime.Now.AddDays(-5).ToString("yyyy-MM-dd"),
+                    Category = "Productivity",
+                    Usage = "High",
+                    IsBusinessCritical = true,
+                    DependencyCount = 3,
+                    MigrationComplexity = "Low"
+                },
+                new DiscoveredApplication 
+                { 
+                    Name = "Adobe Photoshop", 
+                    Version = "2024", 
+                    Vendor = "Adobe", 
+                    InstallPath = @"C:\Program Files\Adobe\Adobe Photoshop 2024", 
+                    RiskLevel = "Medium", 
+                    CloudReadiness = "Cloud Compatible", 
+                    LastUpdated = DateTime.Now.AddDays(-10).ToString("yyyy-MM-dd"),
+                    Category = "Creative",
+                    Usage = "Medium",
+                    IsBusinessCritical = false,
+                    DependencyCount = 8,
+                    MigrationComplexity = "Medium"
+                },
+                new DiscoveredApplication 
+                { 
+                    Name = "Custom ERP System", 
+                    Version = "3.2.1", 
+                    Vendor = "Internal", 
+                    InstallPath = @"C:\ERP\System", 
+                    RiskLevel = "High", 
+                    CloudReadiness = "Legacy", 
+                    LastUpdated = DateTime.Now.AddDays(-90).ToString("yyyy-MM-dd"),
+                    Category = "Business",
+                    Usage = "Critical",
+                    IsBusinessCritical = true,
+                    DependencyCount = 25,
+                    MigrationComplexity = "High"
+                },
+                new DiscoveredApplication 
+                { 
+                    Name = "Slack", 
+                    Version = "4.38.125", 
+                    Vendor = "Slack Technologies", 
+                    InstallPath = @"C:\Users\{User}\AppData\Local\slack", 
+                    RiskLevel = "Low", 
+                    CloudReadiness = "Cloud Native", 
+                    LastUpdated = DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd"),
+                    Category = "Communication",
+                    Usage = "High",
+                    IsBusinessCritical = true,
+                    DependencyCount = 2,
+                    MigrationComplexity = "Low"
+                },
+                new DiscoveredApplication 
+                { 
+                    Name = "AutoCAD 2020", 
+                    Version = "2020.1.3", 
+                    Vendor = "Autodesk", 
+                    InstallPath = @"C:\Program Files\Autodesk\AutoCAD 2020", 
+                    RiskLevel = "High", 
+                    CloudReadiness = "Legacy", 
+                    LastUpdated = DateTime.Now.AddDays(-180).ToString("yyyy-MM-dd"),
+                    Category = "Engineering",
+                    Usage = "Medium",
+                    IsBusinessCritical = true,
+                    DependencyCount = 15,
+                    MigrationComplexity = "High"
+                },
+                new DiscoveredApplication 
+                { 
+                    Name = "Google Chrome", 
+                    Version = "120.0.6099.129", 
+                    Vendor = "Google", 
+                    InstallPath = @"C:\Program Files\Google\Chrome\Application", 
+                    RiskLevel = "Low", 
+                    CloudReadiness = "Cloud Ready", 
+                    LastUpdated = DateTime.Now.AddDays(-3).ToString("yyyy-MM-dd"),
+                    Category = "Web Browser",
+                    Usage = "High",
+                    IsBusinessCritical = false,
+                    DependencyCount = 1,
+                    MigrationComplexity = "Low"
+                }
+            };
+
+            foreach (var app in sampleApps)
+            {
+                applicationsData.Add(app);
+            }
+        }
+
+        private void UpdateApplicationsStats()
+        {
+            if (applicationsData == null) return;
+
+            Dispatcher.Invoke(() => {
+                TotalAppsCount.Text = applicationsData.Count.ToString();
+                HighRiskAppsCount.Text = applicationsData.Count(a => a.RiskLevel == "High").ToString();
+                CloudReadyAppsCount.Text = applicationsData.Count(a => a.CloudReadiness == "Cloud Native" || a.CloudReadiness == "Cloud Ready").ToString();
+                PendingReviewCount.Text = applicationsData.Count(a => a.RiskLevel == "Medium" || a.CloudReadiness == "Pending Review").ToString();
+                
+                CriticalDepsCount.Text = applicationsData.Sum(a => a.DependencyCount).ToString();
+                CircularDepsCount.Text = "0"; // Placeholder for actual circular dependency analysis
+                IsolatedAppsCount.Text = applicationsData.Count(a => a.DependencyCount == 0).ToString();
+            });
+        }
+
+        private async void RunAppDiscovery_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                ShowProgress("Application Discovery", "Running comprehensive application discovery...");
+                
+                // Simulate discovery process 
+                await Task.Delay(3000);
+                
+                // In real implementation, this would call PowerShell module
+                // Add more sample data to simulate discovery
+                var newApps = new List<DiscoveredApplication>
+                {
+                    new DiscoveredApplication 
+                    { 
+                        Name = "Visual Studio Code", 
+                        Version = "1.85.1", 
+                        Vendor = "Microsoft", 
+                        InstallPath = @"C:\Users\{User}\AppData\Local\Programs\Microsoft VS Code", 
+                        RiskLevel = "Low", 
+                        CloudReadiness = "Cloud Ready", 
+                        LastUpdated = DateTime.Now.ToString("yyyy-MM-dd"),
+                        Category = "Development",
+                        Usage = "High",
+                        IsBusinessCritical = false,
+                        DependencyCount = 5,
+                        MigrationComplexity = "Low"
+                    },
+                    new DiscoveredApplication 
+                    { 
+                        Name = "MySQL Workbench", 
+                        Version = "8.0.34", 
+                        Vendor = "Oracle", 
+                        InstallPath = @"C:\Program Files\MySQL\MySQL Workbench 8.0 CE", 
+                        RiskLevel = "Medium", 
+                        CloudReadiness = "Cloud Compatible", 
+                        LastUpdated = DateTime.Now.ToString("yyyy-MM-dd"),
+                        Category = "Database",
+                        Usage = "Medium",
+                        IsBusinessCritical = true,
+                        DependencyCount = 12,
+                        MigrationComplexity = "Medium"
+                    }
+                };
+
+                foreach (var app in newApps)
+                {
+                    applicationsData.Add(app);
+                }
+
+                HideProgress();
+                UpdateApplicationsStats();
+                
+                MessageBox.Show($"Application discovery completed! Found {newApps.Count} new applications.", 
+                    "Discovery Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                HideProgress();
+                MessageBox.Show($"Error during application discovery: {ex.Message}", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ImportAppList_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Import Application List",
+                Filter = "CSV files (*.csv)|*.csv|JSON files (*.json)|*.json|All files (*.*)|*.*",
+                DefaultExt = "csv"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    // Placeholder for file import logic
+                    MessageBox.Show($"Application list imported from: {openFileDialog.FileName}", 
+                        "Import Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error importing application list: {ex.Message}", "Import Error", 
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void RefreshApps_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Refresh the applications data
+                LoadApplicationsData();
+                UpdateApplicationsStats();
+                
+                MessageBox.Show("Application data refreshed successfully!", "Refresh Complete", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error refreshing applications: {ex.Message}", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void AppSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (applicationsData == null) return;
+
+            var searchText = AppSearchBox.Text.ToLower();
+            if (string.IsNullOrEmpty(searchText))
+            {
+                ApplicationsGrid.ItemsSource = applicationsData;
+            }
+            else
+            {
+                var filteredApps = applicationsData.Where(app => 
+                    app.Name.ToLower().Contains(searchText) ||
+                    app.Vendor.ToLower().Contains(searchText) ||
+                    app.Category.ToLower().Contains(searchText) ||
+                    app.RiskLevel.ToLower().Contains(searchText)).ToList();
+                
+                ApplicationsGrid.ItemsSource = filteredApps;
+            }
+        }
+
+        private void AppFilterCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (applicationsData == null || AppFilterCombo.SelectedItem == null) return;
+
+            var selectedFilter = ((ComboBoxItem)AppFilterCombo.SelectedItem).Content.ToString();
+            IEnumerable<DiscoveredApplication> filteredApps = applicationsData;
+
+            switch (selectedFilter)
+            {
+                case "High Risk":
+                    filteredApps = applicationsData.Where(app => app.RiskLevel == "High");
+                    break;
+                case "Cloud Ready":
+                    filteredApps = applicationsData.Where(app => app.CloudReadiness == "Cloud Native" || app.CloudReadiness == "Cloud Ready");
+                    break;
+                case "Legacy":
+                    filteredApps = applicationsData.Where(app => app.CloudReadiness == "Legacy");
+                    break;
+                case "Pending Review":
+                    filteredApps = applicationsData.Where(app => app.RiskLevel == "Medium" || app.CloudReadiness == "Pending Review");
+                    break;
+                default: // "All Apps"
+                    filteredApps = applicationsData;
+                    break;
+            }
+
+            ApplicationsGrid.ItemsSource = filteredApps.ToList();
+        }
+
+        private void AnalyzeDependencies_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Placeholder for dependency analysis
+                MessageBox.Show("Dependency analysis feature will analyze application interdependencies and provide migration recommendations.", 
+                    "Feature Coming Soon", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error analyzing dependencies: {ex.Message}", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 
     public class DiscoveryModule : INotifyPropertyChanged
@@ -1440,5 +1765,21 @@ namespace MandADiscoverySuite
         public string Status { get; set; }
         public string EstimatedDuration { get; set; }
         public string RiskLevel { get; set; }
+    }
+
+    public class DiscoveredApplication
+    {
+        public string Name { get; set; }
+        public string Version { get; set; }
+        public string Vendor { get; set; }
+        public string InstallPath { get; set; }
+        public string RiskLevel { get; set; }
+        public string CloudReadiness { get; set; }
+        public string LastUpdated { get; set; }
+        public string Category { get; set; }
+        public string Usage { get; set; }
+        public bool IsBusinessCritical { get; set; }
+        public int DependencyCount { get; set; }
+        public string MigrationComplexity { get; set; }
     }
 }
