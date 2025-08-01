@@ -13,7 +13,15 @@
       "Bash(dotnet run:*)",
       "Bash(taskkill:*)",
       "Bash(start:*)",
-      "Bash(./MandADiscoverySuite.exe)"
+      "Bash(./MandADiscoverySuite.exe)",
+      "Bash(tasklist)",
+      "Bash(dotnet clean:*)",
+      "Bash(rmdir:*)",
+      "Bash(cmd /c:*)",
+      "Bash(rm:*)",
+      "Bash(cp:*)",
+      "Bash(./Build-GUI.ps1)",
+      "Bash(Start-Process \"C:\\EnterpriseDiscovery\\bin\\Release\\MandADiscoverySuite.exe\" -WindowStyle Normal)"
     ],
     "deny": []
   }

@@ -177,6 +177,103 @@
             </Setter>
         </Style>
         
+        <!-- ComboBox Modern Style -->
+        <Style x:Key="ModernComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="#FF2D3748"/>
+            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Name="ToggleButton" 
+                                        Background="{TemplateBinding Background}" 
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        Focusable="false"
+                                        IsChecked="{Binding Path=IsDropDownOpen,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}"
+                                        ClickMode="Press">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition/>
+                                        <ColumnDefinition Width="20"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ContentPresenter Grid.Column="0" Name="ContentSite" 
+                                                    IsHitTestVisible="False" 
+                                                    Content="{TemplateBinding SelectionBoxItem}"
+                                                    ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                    ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                    Margin="3,3,23,3"
+                                                    VerticalAlignment="Center"
+                                                    HorizontalAlignment="Left" 
+                                                    TextBlock.Foreground="#FFE2E8F0"/>
+                                    <Path Grid.Column="1" x:Name="Arrow" 
+                                        Fill="#FFE2E8F0" 
+                                        HorizontalAlignment="Center" 
+                                        VerticalAlignment="Center" 
+                                        Data="M 0 0 L 4 4 L 8 0 Z"/>
+                                </Grid>
+                            </ToggleButton>
+                            <ContentPresenter Name="ContentPresenter" 
+                                            Content="{TemplateBinding SelectionBoxItem}"
+                                            ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                            ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                            Margin="3,3,23,3"
+                                            IsHitTestVisible="False"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Left"
+                                            TextBlock.Foreground="#FFE2E8F0"/>
+                            <TextBox x:Name="PART_EditableTextBox"
+                                   Style="{x:Null}" 
+                                   Template="{DynamicResource ComboBoxTextBox}" 
+                                   HorizontalAlignment="Left" 
+                                   VerticalAlignment="Center" 
+                                   Margin="3,3,23,3"
+                                   Focusable="True" 
+                                   Background="#FF2D3748"
+                                   Foreground="#FFE2E8F0"
+                                   Visibility="Hidden"
+                                   IsReadOnly="{TemplateBinding IsReadOnly}"/>
+                            <Popup Name="Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True" 
+                                   Focusable="False"
+                                   PopupAnimation="Slide">
+                                <Grid Name="DropDown"
+                                      SnapsToDevicePixels="True"                
+                                      MinWidth="{TemplateBinding ActualWidth}"
+                                      MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border x:Name="DropDownBorder"
+                                            Background="#FF2D3748" 
+                                            BorderThickness="1"
+                                            BorderBrush="#FF4A5568"/>
+                                    <ScrollViewer Margin="4,6,4,6" SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" 
+                                                   TextBlock.Foreground="#FFE2E8F0"/>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Resources>
+                <Style TargetType="ComboBoxItem">
+                    <Setter Property="Background" Value="#FF2D3748"/>
+                    <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                    <Setter Property="Padding" Value="8,4"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter Property="Background" Value="#FF4A5568"/>
+                            <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Style.Resources>
+        </Style>
+
         <!-- Data Grid Modern Style -->
         <Style x:Key="ModernDataGridStyle" TargetType="DataGrid">
             <Setter Property="Background" Value="#FF1A202C"/>
@@ -232,6 +329,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -256,14 +354,12 @@
                             </Grid.ColumnDefinitions>
                             
                             <ComboBox Grid.Column="0" x:Name="CompanySelector" 
-                                      Background="#FF2D3748" 
-                                      Foreground="#FFE2E8F0"
-                                      BorderBrush="#FF4A5568"
+                                      Style="{StaticResource ModernComboBoxStyle}"
                                       Height="40"
                                       FontSize="14"
-                                      Padding="12,8"
                                       Margin="0,0,8,0"
-                                      DisplayMemberPath="Name">
+                                      DisplayMemberPath="Name"
+                                      SelectionChanged="CompanySelector_SelectionChanged">
                             </ComboBox>
                             
                             <Button Grid.Column="1" x:Name="CreateProfileButton"
@@ -545,8 +641,11 @@
                     </Button>
                 </StackPanel>
                 
+                <!-- Spacer -->
+                <Grid Grid.Row="5"/>
+                
                 <!-- Enhanced Status Bar -->
-                <Border Grid.Row="4" Background="{StaticResource PrimaryGradient}" Padding="24,16">
+                <Border Grid.Row="6" Background="{StaticResource PrimaryGradient}" Padding="24,16">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                             <Ellipse Width="8" Height="8" Fill="#FF48BB78" Margin="0,0,8,0"/>
@@ -1827,6 +1926,19 @@
                                         </Button.ToolTip>
                                     </Button>
                                     
+                                    <Button Content="🔐 App Registration" 
+                                            Click="AppRegistration_Click"
+                                            Style="{StaticResource ModernButtonStyle}" 
+                                            Background="#FF6B46C1"
+                                            Margin="0,0,12,8">
+                                        <Button.ToolTip>
+                                            <ToolTip>
+                                                <TextBlock Text="Create Azure AD App Registration with required permissions for M&amp;A Discovery" 
+                                                           MaxWidth="300" TextWrapping="Wrap"/>
+                                            </ToolTip>
+                                        </Button.ToolTip>
+                                    </Button>
+                                    
                                     <Button Content="Configure Credentials" 
                                             Click="ConfigureCredentials_Click"
                                             Style="{StaticResource ModernButtonStyle}" 
@@ -1919,10 +2031,9 @@
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
-        </Grid>
-        
-        <!-- Applications View -->
-        <Grid x:Name="ApplicationsView" Visibility="Collapsed" Margin="32">
+            
+            <!-- Applications View -->
+            <Grid x:Name="ApplicationsView" Visibility="Collapsed" Margin="32">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -2212,6 +2323,7 @@
                     </Border>
                 </StackPanel>
             </ScrollViewer>
+        </Grid>
         </Grid>
         
         <!-- Enhanced Progress Overlay -->

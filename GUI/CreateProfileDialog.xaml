@@ -26,10 +26,11 @@
                  Background="#FF2D3748" Foreground="#FFE2E8F0"
                  BorderBrush="#FF4A5568" BorderThickness="1"
                  Padding="10,8" FontSize="14"
-                 Margin="0,0,0,20"/>
+                 Margin="0,0,0,20"
+                 KeyDown="ProfileNameTextBox_KeyDown"/>
         
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Cancel" Click="Cancel_Click"
+            <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"
                     Background="#FF4A5568" Foreground="White"
                     BorderThickness="0" Padding="20,8"
                     Margin="0,0,10,0">
@@ -44,7 +45,7 @@
                 </Button.Template>
             </Button>
             
-            <Button Content="Create" Click="Create_Click"
+            <Button Content="Create" Click="Create_Click" IsDefault="True"
                     Background="#FF4299E1" Foreground="White"
                     BorderThickness="0" Padding="20,8">
                 <Button.Template>

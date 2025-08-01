@@ -1,4 +1,4 @@
-# -*- coding: utf-8-bom -*-
+﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk

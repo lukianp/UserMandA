@@ -13,6 +13,23 @@
     <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
 
+  <!-- Copy all PowerShell modules to output directory -->
+  <ItemGroup>
+    <None Include="..\Modules\**\*.psm1" CopyToOutputDirectory="PreserveNewest" Link="Modules\%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="..\Modules\**\*.psd1" CopyToOutputDirectory="PreserveNewest" Link="Modules\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
 
+  <!-- Copy all PowerShell scripts to output directory -->
+  <ItemGroup>
+    <None Include="..\Scripts\*.ps1" CopyToOutputDirectory="PreserveNewest" Link="Scripts\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Copy QuickStart.ps1 from root -->
+  <ItemGroup>
+    <None Include="..\QuickStart.ps1" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Ensure Company Profile data stays in C:\DiscoveryData -->
+  <!-- This is handled by the application logic, not copied with the build -->
 
 </Project>

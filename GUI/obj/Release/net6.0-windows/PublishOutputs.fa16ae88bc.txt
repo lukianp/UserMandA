@@ -1,5 +1,0 @@
-D:\Scripts\UserMandA-1\GUI\bin\Release\MandADiscoverySuite.exe
-D:\Scripts\UserMandA-1\GUI\bin\Release\MandADiscoverySuite.dll
-D:\Scripts\UserMandA-1\GUI\bin\Release\MandADiscoverySuite.deps.json
-D:\Scripts\UserMandA-1\GUI\bin\Release\MandADiscoverySuite.runtimeconfig.json
-D:\Scripts\UserMandA-1\GUI\bin\Release\MandADiscoverySuite.pdb

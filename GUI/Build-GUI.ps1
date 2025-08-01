@@ -33,7 +33,7 @@ param(
     [string]$Configuration = 'Release',
     
     [Parameter(Mandatory = $false)]
-    [string]$OutputPath = ".\bin\$Configuration",
+    [string]$OutputPath = "C:\EnterpriseDiscovery\bin\$Configuration",
     
     [Parameter(Mandatory = $false)]
     [switch]$SelfContained

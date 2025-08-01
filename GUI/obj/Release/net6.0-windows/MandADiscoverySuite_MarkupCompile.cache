@@ -10,11 +10,11 @@ none
 false
 TRACE;RELEASE;NET;NET6_0;NETCOREAPP
 D:\Scripts\UserMandA-1\GUI\App.xaml
-2-1959050481
+41838501703
 
-373566069
+51215373148
 203155564505
-CreateProfileDialog.xaml;MandADiscoverySuite.xaml;
+CreateProfileDialog.xaml;DebugLogWindow.xaml;MandADiscoverySuite.xaml;PowerShellWindow.xaml;
 
 False
 
