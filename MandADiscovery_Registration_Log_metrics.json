@@ -1,9 +1,9 @@
 ﻿{
     "EndTime":  null,
     "StartTime":  {
-                      "value":  "\/Date(1754076184871)\/",
+                      "value":  "\/Date(1754076674300)\/",
                       "DisplayHint":  2,
-                      "DateTime":  "01 August 2025 20:23:04"
+                      "DateTime":  "01 August 2025 20:31:14"
                   },
     "Operations":  {
                        "SecretCreation":  {
@@ -11,24 +11,7 @@
                                               "Success":  false
                                           },
                        "ModuleManagement":  {
-                                                "Duration":  {
-                                                                 "Ticks":  278274703,
-                                                                 "Days":  0,
-                                                                 "Hours":  0,
-                                                                 "Milliseconds":  827,
-                                                                 "Minutes":  0,
-                                                                 "Seconds":  27,
-                                                                 "TotalDays":  0.00032207720254629629,
-                                                                 "TotalHours":  0.007729852861111111,
-                                                                 "TotalMilliseconds":  27827.4703,
-                                                                 "TotalMinutes":  0.46379117166666667,
-                                                                 "TotalSeconds":  27.827470299999998
-                                                             },
-                                                "StartTime":  {
-                                                                  "value":  "\/Date(1754076186599)\/",
-                                                                  "DisplayHint":  2,
-                                                                  "DateTime":  "01 August 2025 20:23:06"
-                                                              },
+                                                "Duration":  null,
                                                 "Success":  false
                                             },
                        "CredentialStorage":  {
@@ -37,22 +20,22 @@
                                              },
                        "Prerequisites":  {
                                              "Duration":  {
-                                                              "Ticks":  15581974,
+                                                              "Ticks":  10501123,
                                                               "Days":  0,
                                                               "Hours":  0,
-                                                              "Milliseconds":  558,
+                                                              "Milliseconds":  50,
                                                               "Minutes":  0,
                                                               "Seconds":  1,
-                                                              "TotalDays":  1.8034692129629628E-05,
-                                                              "TotalHours":  0.00043283261111111112,
-                                                              "TotalMilliseconds":  1558.1974,
-                                                              "TotalMinutes":  0.025969956666666669,
-                                                              "TotalSeconds":  1.5581973999999998
+                                                              "TotalDays":  1.2154077546296296E-05,
+                                                              "TotalHours":  0.00029169786111111112,
+                                                              "TotalMilliseconds":  1050.1123,
+                                                              "TotalMinutes":  0.017501871666666668,
+                                                              "TotalSeconds":  1.0501122999999999
                                                           },
                                              "StartTime":  {
-                                                               "value":  "\/Date(1754076185027)\/",
+                                                               "value":  "\/Date(1754076674463)\/",
                                                                "DisplayHint":  2,
-                                                               "DateTime":  "01 August 2025 20:23:05"
+                                                               "DateTime":  "01 August 2025 20:31:14"
                                                            },
                                              "Success":  true
                                          },

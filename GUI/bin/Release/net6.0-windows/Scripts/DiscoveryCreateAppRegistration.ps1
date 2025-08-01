@@ -198,6 +198,9 @@ $script:Metrics = @{
         CredentialStorage = @{ Duration = $null; Success = $false }
     }
 }
+
+# Initialize script path variables
+$script:LogPath = $LogPath
 #endregion
 
 #region Enhanced Logging and Output Functions
@@ -564,13 +567,35 @@ function Ensure-RequiredModules {
                     }
                 }
                 
-                # Import with version verification
+                # Import with version verification and enhanced error handling
                 $latestInstalled = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue | 
                     Sort-Object Version -Descending | Select-Object -First 1
                 
                 if ($latestInstalled) {
-                    Import-Module -Name $moduleName -RequiredVersion $latestInstalled.Version -Force -ErrorAction Stop
-                    Write-EnhancedLog "Imported $moduleName v$($latestInstalled.Version)" -Level SUCCESS
+                    # Remove any loaded versions first to prevent conflicts
+                    $loadedModule = Get-Module -Name $moduleName -ErrorAction SilentlyContinue
+                    if ($loadedModule) {
+                        Remove-Module -Name $moduleName -Force -ErrorAction SilentlyContinue
+                        Write-EnhancedLog "Unloaded existing $moduleName module" -Level INFO
+                    }
+                    
+                    # Special handling for Az.Resources module which has known loading issues
+                    if ($moduleName -eq "Az.Resources") {
+                        try {
+                            # Force import without version requirement first
+                            Import-Module -Name $moduleName -Force -ErrorAction Stop
+                            Write-EnhancedLog "Imported $moduleName (latest available version)" -Level SUCCESS
+                        } catch {
+                            Write-EnhancedLog "Standard import failed for $moduleName, trying alternative method..." -Level WARN
+                            # Try importing with explicit path
+                            $modulePath = $latestInstalled.ModuleBase
+                            Import-Module -Name $modulePath -Force -ErrorAction Stop
+                            Write-EnhancedLog "Imported $moduleName v$($latestInstalled.Version) using explicit path" -Level SUCCESS
+                        }
+                    } else {
+                        Import-Module -Name $moduleName -RequiredVersion $latestInstalled.Version -Force -ErrorAction Stop
+                        Write-EnhancedLog "Imported $moduleName v$($latestInstalled.Version)" -Level SUCCESS
+                    }
                 } else {
                     throw "Module $moduleName not found after installation"
                 }
