@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace MandADiscoverySuite
@@ -192,6 +193,91 @@ namespace MandADiscoverySuite
             {
                 AppendOutput("Stopping script execution...", Colors.Yellow);
                 cancellationTokenSource.Cancel();
+            }
+        }
+
+        private void OutputText_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.A && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                // Ctrl+A - Select All
+                OutputText.SelectAll();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                // Ctrl+C - Copy Selected Text
+                if (!string.IsNullOrEmpty(OutputText.SelectedText))
+                {
+                    Clipboard.SetText(OutputText.SelectedText);
+                }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.C && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+            {
+                // Ctrl+Shift+C - Copy All Text
+                CopyButton_Click(sender, new RoutedEventArgs());
+                e.Handled = true;
+            }
+        }
+
+        private void SelectAll_Click(object sender, RoutedEventArgs e)
+        {
+            OutputText.SelectAll();
+            OutputText.Focus();
+        }
+
+        private void CopySelected_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(OutputText.SelectedText))
+                {
+                    Clipboard.SetText(OutputText.SelectedText);
+                }
+                else if (!string.IsNullOrEmpty(OutputText.Text))
+                {
+                    // If nothing is selected, copy all text
+                    Clipboard.SetText(OutputText.Text);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppendOutput($"Failed to copy to clipboard: {ex.Message}", Colors.Red);
+            }
+        }
+
+        private void CopyButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(OutputText.Text))
+                {
+                    // Copy all text to clipboard
+                    Clipboard.SetText(OutputText.Text);
+                    
+                    // Show a brief confirmation by changing button content
+                    var originalContent = CopyButton.Content;
+                    CopyButton.Content = "✓ Copied!";
+                    
+                    // Reset button content after 2 seconds
+                    var timer = new System.Windows.Threading.DispatcherTimer();
+                    timer.Interval = TimeSpan.FromSeconds(2);
+                    timer.Tick += (s, args) =>
+                    {
+                        CopyButton.Content = originalContent;
+                        timer.Stop();
+                    };
+                    timer.Start();
+                }
+                else
+                {
+                    AppendOutput("No content to copy.", Colors.Yellow);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppendOutput($"Failed to copy to clipboard: {ex.Message}", Colors.Red);
             }
         }
 

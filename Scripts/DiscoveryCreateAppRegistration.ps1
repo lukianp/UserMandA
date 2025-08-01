@@ -62,13 +62,17 @@
 
 [CmdletBinding()]
 param(
+    [Parameter(Mandatory=$false, HelpMessage="Company name for organizing discovery data")]
+    [ValidateNotNullOrEmpty()]
+    [string]$CompanyName = "",
+    
     [Parameter(Mandatory=$false, HelpMessage="Path for detailed execution log")]
     [ValidateNotNullOrEmpty()]
     [string]$LogPath = ".\MandADiscovery_Registration_Log.txt",
     
     [Parameter(Mandatory=$false, HelpMessage="Path for encrypted credentials output")]
     [ValidateNotNullOrEmpty()]
-    [string]$EncryptedOutputPath = "C:\DiscoveryData\discoverycredentials.config",
+    [string]$EncryptedOutputPath = "",
     
     [Parameter(Mandatory=$false, HelpMessage="Force recreation of existing app registration")]
     [switch]$Force,
@@ -87,6 +91,110 @@ param(
     [int]$SecretValidityYears = 2
 )
 
+#region Company Setup and Directory Management
+function Get-CompanyName {
+    param([string]$CurrentCompanyName)
+    
+    if ([string]::IsNullOrWhiteSpace($CurrentCompanyName)) {
+        Write-Host "`n" -ForegroundColor Cyan
+        Write-Host "═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════" -ForegroundColor DarkCyan
+        Write-Host "  🏢 COMPANY SETUP" -ForegroundColor White -BackgroundColor DarkBlue
+        Write-Host "  Enter the company name to organize discovery data and create dedicated folders" -ForegroundColor Cyan
+        Write-Host "═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════" -ForegroundColor DarkCyan
+        Write-Host ""
+        
+        do {
+            $companyInput = Read-Host "  Enter Company Name"
+            $companyInput = $companyInput.Trim()
+            
+            if ([string]::IsNullOrWhiteSpace($companyInput)) {
+                Write-Host "  Company name cannot be empty. Please try again." -ForegroundColor Red
+            } elseif ($companyInput.Length -lt 2) {
+                Write-Host "  Company name must be at least 2 characters long. Please try again." -ForegroundColor Red
+            } elseif ($companyInput -match '[<>:"/\\|?*]') {
+                Write-Host "  Company name contains invalid characters. Please avoid these: < > : `" / \ | ? *" -ForegroundColor Red
+            } else {
+                break
+            }
+        } while ($true)
+        
+        return $companyInput
+    } else {
+        return $CurrentCompanyName
+    }
+}
+
+function Initialize-CompanyDirectories {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$CompanyName
+    )
+    
+    try {
+        # Sanitize company name for use in file paths
+        $sanitizedCompanyName = $CompanyName -replace '[<>:"/\\|?*]', '_'
+        
+        # Create main company directory
+        $baseDiscoveryPath = "C:\DiscoveryData"
+        $companyPath = Join-Path $baseDiscoveryPath $sanitizedCompanyName
+        
+        Write-Host "  📁 Creating company directory structure..." -ForegroundColor Magenta
+        
+        # Create directories
+        $directories = @(
+            $companyPath,
+            (Join-Path $companyPath "Credentials"),
+            (Join-Path $companyPath "Discovery"),
+            (Join-Path $companyPath "Reports"),
+            (Join-Path $companyPath "Logs"),
+            (Join-Path $companyPath "Backups")
+        )
+        
+        foreach ($dir in $directories) {
+            if (-not (Test-Path $dir -PathType Container)) {
+                New-Item -Path $dir -ItemType Directory -Force -ErrorAction Stop | Out-Null
+                Write-Host "  ✅ Created: $($dir -replace [regex]::Escape($baseDiscoveryPath), 'C:\\DiscoveryData')" -ForegroundColor Green
+            } else {
+                Write-Host "  📂 Exists: $($dir -replace [regex]::Escape($baseDiscoveryPath), 'C:\\DiscoveryData')" -ForegroundColor Yellow
+            }
+        }
+        
+        # Set the paths for this company
+        $script:CompanyPath = $companyPath
+        $script:CompanyCredentialsPath = Join-Path $companyPath "Credentials\discoverycredentials.config"
+        $script:CompanyLogPath = Join-Path $companyPath "Logs\MandADiscovery_Registration_Log.txt"
+        
+        Write-Host "  🎯 Company setup complete for: $CompanyName" -ForegroundColor Green
+        Write-Host "  📍 Base Path: $companyPath" -ForegroundColor Cyan
+        Write-Host ""
+        
+        return @{
+            CompanyPath = $companyPath
+            CredentialsPath = $script:CompanyCredentialsPath
+            LogPath = $script:CompanyLogPath
+        }
+        
+    } catch {
+        Write-Host "  ❌ Failed to create company directories: $($_.Exception.Message)" -ForegroundColor Red
+        throw
+    }
+}
+
+# Initialize company setup
+$script:CompanyName = Get-CompanyName -CurrentCompanyName $CompanyName
+$companySetup = Initialize-CompanyDirectories -CompanyName $script:CompanyName
+
+# Update paths if not explicitly provided
+if ([string]::IsNullOrWhiteSpace($EncryptedOutputPath)) {
+    $EncryptedOutputPath = $companySetup.CredentialsPath
+}
+
+if ($LogPath -eq ".\MandADiscovery_Registration_Log.txt") {
+    $LogPath = $companySetup.LogPath
+}
+
+#endregion
+
 #region Enhanced Global Configuration
 $ErrorActionPreference = "Stop"
 $VerbosePreference = "SilentlyContinue"
@@ -94,9 +202,9 @@ $ProgressPreference = "Continue"
 
 # Script metadata and validation
 $script:ScriptInfo = @{
-    Name = "Enhanced M&A Discovery Suite - App Registration"
+    Name = "Enhanced M`&A Discovery Suite - App Registration"
     Version = "4.0.0"
-    Author = "M&A Discovery Team"
+    Author = "M`&A Discovery Team"
     RequiredPSVersion = "5.1"
     Dependencies = @("Az.Accounts", "Az.Resources", "Microsoft.Graph.Applications", "Microsoft.Graph.Authentication", "Microsoft.Graph.Identity.DirectoryManagement")
 }
@@ -104,7 +212,7 @@ $script:ScriptInfo = @{
 # Enhanced application configuration
 $script:AppConfig = @{
     DisplayName = "MandADiscovery"
-    Description = "M&A Environment Discovery Service Principal with comprehensive permissions for organizational assessment"
+    Description = "M`&A Environment Discovery Service Principal with comprehensive permissions for organizational assessment"
     RequiredGraphPermissions = @{
         # Core directory permissions
         "Application.Read.All" = "Read all applications and service principals"
@@ -218,7 +326,7 @@ function Write-EnhancedLog {
     )
     
     $timestamp = if (-not $NoTimestamp) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] " } else { "" }
-    $cleanedMessage = $Message -replace "[\r\n]+", " "
+    $cleanedMessage = $Message -replace "`[\r\n`]+", " "
     $logMessage = "$timestamp[$Level] $cleanedMessage"
     
     # Enhanced colorful console output with new levels
@@ -533,7 +641,7 @@ function Ensure-RequiredModules {
         
         foreach ($moduleName in $script:ScriptInfo.Dependencies) {
             $processedModules++
-            Write-Progress -Activity "Processing Modules" -Status "Processing $moduleName ($processedModules of $totalModules)" -PercentComplete (($processedModules / $totalModules) * 100)
+            Write-Progress -Activity "Processing Modules" -Status "Processing $moduleName - $processedModules of $totalModules" -PercentComplete (($processedModules / $totalModules) * 100)
             
             Write-EnhancedLog "Processing module: $moduleName" -Level PROGRESS
             

@@ -88,8 +88,22 @@
         <!-- Output Area -->
         <Border Grid.Row="2" Background="#FF1A202C" CornerRadius="8" BorderBrush="#FF4A5568" BorderThickness="1">
             <ScrollViewer x:Name="OutputScrollViewer" VerticalScrollBarVisibility="Auto" Padding="12">
-                <TextBlock x:Name="OutputText" FontFamily="Consolas" FontSize="12" 
-                           Foreground="#FFE2E8F0" TextWrapping="Wrap"/>
+                <TextBox x:Name="OutputText" FontFamily="Consolas" FontSize="12" 
+                         Foreground="#FFE2E8F0" TextWrapping="Wrap" 
+                         Background="Transparent" BorderThickness="0"
+                         IsReadOnly="True" 
+                         SelectionBrush="#FF4299E1"
+                         VerticalScrollBarVisibility="Disabled"
+                         HorizontalScrollBarVisibility="Disabled"
+                         KeyDown="OutputText_KeyDown">
+                    <TextBox.ContextMenu>
+                        <ContextMenu Background="#FF2D3748" Foreground="#FFE2E8F0">
+                            <MenuItem Header="Select All" Click="SelectAll_Click" InputGestureText="Ctrl+A"/>
+                            <MenuItem Header="Copy" Click="CopySelected_Click" InputGestureText="Ctrl+C"/>
+                            <MenuItem Header="Copy All Output" Click="CopyButton_Click" InputGestureText="Ctrl+Shift+C"/>
+                        </ContextMenu>
+                    </TextBox.ContextMenu>
+                </TextBox>
             </ScrollViewer>
         </Border>
         
@@ -106,6 +120,9 @@
             <Button x:Name="StopButton" Content="⏹ Stop" Style="{StaticResource ModernButtonStyle}" 
                     Click="StopButton_Click" Margin="0,0,12,0" IsEnabled="False"
                     Background="#FFF56565"/>
+            <Button x:Name="CopyButton" Content="📋 Copy Output" Style="{StaticResource ModernButtonStyle}" 
+                    Click="CopyButton_Click" Margin="0,0,12,0"
+                    Background="#FF4299E1"/>
             <Button x:Name="ClearButton" Content="🗑 Clear" Style="{StaticResource ModernButtonStyle}" 
                     Click="ClearButton_Click" Margin="0,0,12,0"
                     Background="#FF718096"/>
