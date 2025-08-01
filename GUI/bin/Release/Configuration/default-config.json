@@ -1,0 +1,340 @@
+﻿{
+    "_metadata": {
+        "author": "Lukian Poleschtschuk",
+        "version": "1.0.0",
+        "created": "2025-06-04",
+        "lastModified": "2025-06-06",
+        "changeLog": "Updated version control header"
+    },
+    "$schema": "./config.schema.json",
+    "metadata": {
+        "version": "4.1.0",
+        "companyName": "TestCompany",
+        "projectName": "M&A Discovery Suite",
+        "description": "Automated discovery and migration planning for M&A activities",
+        "author": "IT Migration Team",
+        "lastUpdated": "2025-06-01"
+    },
+    "environment": {
+        "profilesBasePath": "./Profiles",
+        "tempPath": "./Temp",
+        "logLevel": "DEBUG",
+        "maxRetries": 3,
+        "domainController": "ad.zedra.com",
+        "globalCatalog": "ad.zedra.com",
+        "logging": {
+            "useEmojis": true,
+            "useColors": true,
+            "showTimestamp": true,
+            "showComponent": true,
+            "maxLogSizeMB": 50,
+            "logRetentionDays": 30,
+            "verboseProgress": true
+        },
+        "connectivity": {
+            "preferInteractiveAuth": false,
+            "proxyBypassForExchange": true,
+            "maxConnectionRetries": 3,
+            "connectionTimeout": 30,
+            "retryDelaySeconds": 5,
+            "haltOnConnectionError": [
+                "ActiveDirectory",
+                "Graph"
+            ]
+        },
+        "timeouts": {
+            "default": 3600,
+            "discovery": 3600,
+            "export": 3600,
+            "authentication": 600,
+            "moduleExecution": 3600,
+            "longRunningTasks": 3600
+        }
+    },
+    "authentication": {
+        "useServicePrincipal": true,
+        "useInteractiveAuth": false,
+        "credentialFileName": "credentials.json",
+        "tokenRefreshThreshold": 600,
+        "authenticationMethod": "ClientSecret"
+    },
+    "discovery": {
+        "enabledSources": [
+            "ActiveDirectory",
+            "Azure",
+            "GPO",
+            "EnvironmentDetection",
+            "Exchange",
+            "ExternalIdentity",
+            "FileServer",
+            "Graph",
+            "Intune",
+            "Licensing",
+            "NetworkInfrastructure",
+            "SharePoint",
+            "SQLServer",
+            "Teams",
+            "VMware",
+            "CertificateAuthority",
+            "DNSDHCP",
+            "PowerPlatform",
+            "SecurityInfrastructure"
+        ],
+        "skipExistingFiles": true,
+        "parallelProcessing": true,
+        "maxConcurrentJobs": 2,
+        "batchSize": 1000,
+        "excludeDisabledUsers": false,
+        "includeGuestUsers": true,
+        "discoveryScope": {
+            "includedOUs": [],
+            "excludedOUs": [],
+            "includedDomains": [],
+            "excludedDomains": []
+        },
+        "compressionEnabled": true,
+        "powershellModules": {
+            "Microsoft.Graph.Authentication": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "Essential for all Microsoft Graph API authentication."
+            },
+            "Microsoft.Graph.Users": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For Azure AD user discovery."
+            },
+            "Microsoft.Graph.Groups": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For Azure AD group discovery."
+            },
+            "Microsoft.Graph.Applications": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For Azure AD App Registrations, Enterprise Apps."
+            },
+            "Microsoft.Graph.Identity.DirectoryManagement": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For Directory Roles, Organization Info."
+            },
+            "Microsoft.Graph.Identity.SignIns": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For user sign-in activity."
+            },
+            "Microsoft.Graph.Reports": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For usage reports."
+            },
+            "Microsoft.Graph.DeviceManagement": {
+                "RequiredVersion": "2.10.0",
+                "Notes": "For Intune device and policy discovery."
+            },
+            "ExchangeOnlineManagement": {
+                "RequiredVersion": "3.2.0",
+                "Notes": "For all Exchange Online discovery."
+            },
+            "ActiveDirectory": {
+                "RequiredVersion": "1.0.1.0",
+                "Notes": "For on-premises AD discovery."
+            },
+            "DnsServer": {
+                "RequiredVersion": "2.0.0.0",
+                "Notes": "For DNS discovery."
+            },
+            "GroupPolicy": {
+                "RequiredVersion": "1.0.0.0",
+                "Notes": "For GPO discovery."
+            },
+            "DfsMgmt": {
+                "RequiredVersion": "2.0.0.0",
+                "Notes": "For DFS discovery."
+            },
+            "FailoverClusters": {
+                "RequiredVersion": "2.0.0.0",
+                "Notes": "For File Server Cluster discovery."
+            },
+            "Az.Accounts": {
+                "RequiredVersion": "2.12.0",
+                "Notes": "For Azure Resource Manager authentication."
+            },
+            "Az.Resources": {
+                "RequiredVersion": "6.5.0",
+                "Notes": "For Azure Resource discovery."
+            },
+            "ImportExcel": {
+                "RequiredVersion": "7.8.5",
+                "Notes": "For generating reports in Excel format."
+            }
+        },
+        "adDns": {
+            "dnsServer": null,
+            "detailedZones": [
+                "*"
+            ]
+        },
+        "externalIdentity": {
+            "getGuestAppRoleAssignments": true,
+            "collectSharePointSettings": true,
+            "collectTeamsSettings": true,
+            "topPartnerDomainsToAnalyze": 10,
+            "recentGuestCountForInvitationFallback": 50
+        },
+        "fileServer": {
+            "targetServers": [],
+            "excludedServers": [],
+            "useSmbShareForEnumeration": true,
+            "timeoutPerServerRemoteCommandSeconds": 120,
+            "collectShareDetailsLevel": "Basic",
+            "timeoutPerShareAclSeconds": 60,
+            "timeoutPerShareSizeSeconds": 300,
+            "maxSharePathDepthForSize": 1,
+            "excludedShareNames": [
+                "ADMIN$",
+                "IPC$",
+                "PRINT$",
+                "FAX$",
+                "SYSVOL",
+                "NETLOGON"
+            ],
+            "discoverDFS": true,
+            "discoverStorageAnalysis": true,
+            "discoverShadowCopies": true,
+            "discoverClusters": true,
+            "skipShareSizeCalculationForPathDepthExceeding": 1000000
+        },
+        "sharepoint": {
+            "tenantName": "zedra"
+        }
+    },
+    "processing": {
+        "chunkSize": 100,
+        "includeDisabledUsers": false,
+        "generateWavesByDepartment": true,
+        "maxWaveSize": 50,
+        "complexityThresholds": {
+            "low": 3,
+            "medium": 7,
+            "high": 10
+        },
+        "priorityWeights": {
+            "complexity": 0.3,
+            "readiness": 0.4,
+            "businessImpact": 0.3
+        },
+        "riskFactors": {
+            "largeMailboxThresholdGB": 10,
+            "inactivityThresholdDays": 90,
+            "complexLicenseCount": 3
+        }
+    },
+    "export": {
+        "formats": [
+            "CSV",
+            "JSON"
+        ],
+        "excelEnabled": true,
+        "powerAppsOptimized": true,
+        "includeMetadata": true,
+        "archiveResults": true,
+        "reportRetentionDays": 90,
+        "jsonExportDepth": 5,
+        "powerAppsJsonDepth": 3,
+        "exportOptions": {
+            "includeRawData": false,
+            "includeProcessedData": true,
+            "includeSummaryReports": true,
+            "includeVisualizations": false
+        }
+    },
+    "performance": {
+        "memoryThresholdMB": 12384,
+        "diskSpaceThresholdGB": 2,
+        "throttleLimit": 100,
+        "progressUpdateInterval": 100,
+        "enableCaching": true,
+        "cacheExpirationMinutes": 60,
+        "enableGarbageCollection": true
+    },
+    "advancedSettings": {
+        "debugMode": false,
+        "verboseLogging": false,
+        "simulationMode": false,
+        "validateDataIntegrity": true,
+        "enableAuditLog": true,
+        "customModulePath": "",
+        "bypassCertificateValidation": false,
+        "createPlaceholderFunctions": false
+    },
+    "notifications": {
+        "enabled": false,
+        "smtpServer": "",
+        "smtpPort": 587,
+        "useSSL": true,
+        "from": "manda-discovery@contoso.com",
+        "to": [
+            "it-team@contoso.com"
+        ],
+        "sendOnCompletion": true,
+        "sendOnError": true
+    },
+    "graphAPI": {
+        "apiVersion": "v1.0",
+        "useBetaEndpoint": false,
+        "pageSize": 999,
+        "selectFields": {
+            "users": [
+                "id",
+                "userPrincipalName",
+                "displayName",
+                "mail",
+                "department",
+                "jobTitle",
+                "createdDateTime",
+                "accountEnabled",
+                "lastSignInDateTime",
+                "onPremisesSyncEnabled",
+                "onPremisesImmutableId",
+                "companyName",
+                "usageLocation",
+                "assignedLicenses",
+                "memberOf"
+            ],
+            "groups": [
+                "id",
+                "displayName",
+                "description",
+                "mailEnabled",
+                "securityEnabled",
+                "groupTypes",
+                "visibility"
+            ],
+            "applications": [
+                "id",
+                "appId",
+                "displayName",
+                "publisherDomain",
+                "signInAudience"
+            ],
+            "servicePrincipals": [
+                "id",
+                "appId",
+                "displayName",
+                "servicePrincipalType",
+                "accountEnabled",
+                "appRoles",
+                "oauth2PermissionScopes",
+                "owners"
+            ]
+        }
+    },
+    "exchangeOnline": {
+        "includeSoftDeletedMailboxes": false,
+        "includeArchiveMailboxes": true,
+        "includeResourceMailboxes": false,
+        "includeSharedMailboxes": true,
+        "mailboxStatsBatchSize": 100
+    },
+    "azure": {
+        "includeClassicResources": false,
+        "subscriptionFilter": [],
+        "resourceGroupFilter": [],
+        "tagFilter": {}
+    }
+}

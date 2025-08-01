@@ -4,7 +4,9 @@ D:\Scripts\UserMandA\GUI\bin\Release\net6.0-windows\MandADiscoverySuite.runtimec
 D:\Scripts\UserMandA\GUI\bin\Release\net6.0-windows\MandADiscoverySuite.dll
 D:\Scripts\UserMandA\GUI\bin\Release\net6.0-windows\MandADiscoverySuite.pdb
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.csproj.AssemblyReference.cache
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\CreateProfileDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\CreateProfileDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\App.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite_MarkupCompile.cache
@@ -18,5 +20,3 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\refint\MandADiscoverySuite.d
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.pdb
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.genruntimeconfig.cache
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\ref\MandADiscoverySuite.dll
-D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\CreateProfileDialog.baml
-D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\CreateProfileDialog.g.cs

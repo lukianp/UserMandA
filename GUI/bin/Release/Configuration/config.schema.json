@@ -1,0 +1,725 @@
+﻿{
+    "_metadata":  {
+                      "author":  "Lukian Poleschtschuk",
+                      "version":  "1.0.0",
+                      "created":  "2025-06-01",
+                      "lastModified":  "2025-06-06",
+                      "changeLog":  "Updated version control header"
+                  },
+    "$schema":  "http://json-schema.org/draft-07/schema#",
+    "title":  "M\u0026A Discovery Suite Configuration Schema",
+    "description":  "Schema for default-config.json (v1.1 - Comprehensive)",
+    "type":  "object",
+    "properties":  {
+                       "metadata":  {
+                                        "type":  "object",
+                                        "properties":  {
+                                                           "version":  {
+                                                                           "type":  "string",
+                                                                           "pattern":  "^\\d+\\.\\d+\\.\\d+$"
+                                                                       },
+                                                           "companyName":  {
+                                                                               "type":  "string"
+                                                                           },
+                                                           "projectName":  {
+                                                                               "type":  "string"
+                                                                           },
+                                                           "description":  {
+                                                                               "type":  "string"
+                                                                           },
+                                                           "author":  {
+                                                                          "type":  "string"
+                                                                      },
+                                                           "lastUpdated":  {
+                                                                               "type":  "string",
+                                                                               "format":  "date"
+                                                                           }
+                                                       },
+                                        "required":  [
+                                                         "version",
+                                                         "companyName"
+                                                     ]
+                                    },
+                       "environment":  {
+                                           "type":  "object",
+                                           "properties":  {
+                                                              "outputPath":  {
+                                                                                 "type":  "string",
+                                                                                 "minLength":  1
+                                                                             },
+                                                              "tempPath":  {
+                                                                               "type":  "string",
+                                                                               "minLength":  1
+                                                                           },
+                                                              "logLevel":  {
+                                                                               "type":  "string",
+                                                                               "enum":  [
+                                                                                            "DEBUG",
+                                                                                            "INFO",
+                                                                                            "WARN",
+                                                                                            "ERROR",
+                                                                                            "SUCCESS",
+                                                                                            "HEADER",
+                                                                                            "PROGRESS"
+                                                                                        ]
+                                                                           },
+                                                              "maxRetries":  {
+                                                                                 "type":  "integer",
+                                                                                 "minimum":  0,
+                                                                                 "maximum":  10
+                                                                             },
+                                                              "domainController":  {
+                                                                                       "type":  [
+                                                                                                    "string",
+                                                                                                    "null"
+                                                                                                ]
+                                                                                   },
+                                                              "globalCatalog":  {
+                                                                                    "type":  [
+                                                                                                 "string",
+                                                                                                 "null"
+                                                                                             ]
+                                                                                },
+                                                              "logging":  {
+                                                                              "type":  "object",
+                                                                              "properties":  {
+                                                                                                 "useEmojis":  {
+                                                                                                                   "type":  "boolean"
+                                                                                                               },
+                                                                                                 "useColors":  {
+                                                                                                                   "type":  "boolean"
+                                                                                                               },
+                                                                                                 "showTimestamp":  {
+                                                                                                                       "type":  "boolean"
+                                                                                                                   },
+                                                                                                 "showComponent":  {
+                                                                                                                       "type":  "boolean"
+                                                                                                                   },
+                                                                                                 "maxLogSizeMB":  {
+                                                                                                                      "type":  "integer",
+                                                                                                                      "minimum":  1
+                                                                                                                  },
+                                                                                                 "logRetentionDays":  {
+                                                                                                                          "type":  "integer",
+                                                                                                                          "minimum":  0
+                                                                                                                      }
+                                                                                             },
+                                                                              "required":  [
+                                                                                               "maxLogSizeMB",
+                                                                                               "logRetentionDays"
+                                                                                           ]
+                                                                          },
+                                                              "connectivity":  {
+                                                                                   "type":  "object",
+                                                                                   "properties":  {
+                                                                                                      "preferInteractiveAuth":  {
+                                                                                                                                    "type":  "boolean"
+                                                                                                                                },
+                                                                                                      "proxyBypassForExchange":  {
+                                                                                                                                     "type":  "boolean"
+                                                                                                                                 },
+                                                                                                      "maxConnectionRetries":  {
+                                                                                                                                   "type":  "integer",
+                                                                                                                                   "minimum":  1,
+                                                                                                                                   "maximum":  5
+                                                                                                                               },
+                                                                                                      "connectionTimeout":  {
+                                                                                                                                "type":  "integer",
+                                                                                                                                "minimum":  5,
+                                                                                                                                "maximum":  300
+                                                                                                                            },
+                                                                                                      "retryDelaySeconds":  {
+                                                                                                                                "type":  "integer",
+                                                                                                                                "minimum":  1,
+                                                                                                                                "maximum":  60
+                                                                                                                            },
+                                                                                                      "haltOnConnectionError":  {
+                                                                                                                                    "type":  "array",
+                                                                                                                                    "items":  {
+                                                                                                                                                  "type":  "string"
+                                                                                                                                              }
+                                                                                                                                }
+                                                                                                  },
+                                                                                   "required":  [
+                                                                                                    "maxConnectionRetries",
+                                                                                                    "connectionTimeout",
+                                                                                                    "retryDelaySeconds"
+                                                                                                ]
+                                                                               }
+                                                          },
+                                           "required":  [
+                                                            "outputPath",
+                                                            "tempPath",
+                                                            "logLevel",
+                                                            "logging",
+                                                            "connectivity"
+                                                        ]
+                                       },
+                       "authentication":  {
+                                              "type":  "object",
+                                              "properties":  {
+                                                                 "useServicePrincipal":  {
+                                                                                             "type":  "boolean"
+                                                                                         },
+                                                                 "useInteractiveAuth":  {
+                                                                                            "type":  "boolean"
+                                                                                        },
+                                                                 "credentialStorePath":  {
+                                                                                             "type":  "string",
+                                                                                             "minLength":  1
+                                                                                         },
+                                                                 "tokenRefreshThreshold":  {
+                                                                                               "type":  "integer",
+                                                                                               "minimum":  60
+                                                                                           },
+                                                                 "authenticationMethod":  {
+                                                                                              "type":  "string",
+                                                                                              "enum":  [
+                                                                                                           "ClientSecret",
+                                                                                                           "Interactive"
+                                                                                                       ],
+                                                                                              "description":  "Authentication method to use (certificate-based auth removed)"
+                                                                                          }
+                                                             },
+                                              "required":  [
+                                                               "credentialStorePath",
+                                                               "authenticationMethod"
+                                                           ]
+                                          },
+                       "discovery":  {
+                                         "type":  "object",
+                                         "properties":  {
+                                                            "enabledSources":  {
+                                                                                   "type":  "array",
+                                                                                   "items":  {
+                                                                                                 "type":  "string"
+                                                                                             },
+                                                                                   "minItems":  1
+                                                                               },
+                                                            "skipExistingFiles":  {
+                                                                                      "type":  "boolean"
+                                                                                  },
+                                                            "parallelProcessing":  {
+                                                                                       "type":  "boolean"
+                                                                                   },
+                                                            "maxConcurrentJobs":  {
+                                                                                      "type":  "integer",
+                                                                                      "minimum":  1,
+                                                                                      "maximum":  20
+                                                                                  },
+                                                            "batchSize":  {
+                                                                              "type":  "integer",
+                                                                              "minimum":  10,
+                                                                              "maximum":  10000
+                                                                          },
+                                                            "excludeDisabledUsers":  {
+                                                                                         "type":  "boolean"
+                                                                                     },
+                                                            "includeGuestUsers":  {
+                                                                                      "type":  "boolean"
+                                                                                  },
+                                                            "discoveryScope":  {
+                                                                                   "type":  "object",
+                                                                                   "properties":  {
+                                                                                                      "includedOUs":  {
+                                                                                                                          "type":  "array",
+                                                                                                                          "items":  {
+                                                                                                                                        "type":  "string"
+                                                                                                                                    }
+                                                                                                                      },
+                                                                                                      "excludedOUs":  {
+                                                                                                                          "type":  "array",
+                                                                                                                          "items":  {
+                                                                                                                                        "type":  "string"
+                                                                                                                                    }
+                                                                                                                      },
+                                                                                                      "includedDomains":  {
+                                                                                                                              "type":  "array",
+                                                                                                                              "items":  {
+                                                                                                                                            "type":  "string"
+                                                                                                                                        }
+                                                                                                                          },
+                                                                                                      "excludedDomains":  {
+                                                                                                                              "type":  "array",
+                                                                                                                              "items":  {
+                                                                                                                                            "type":  "string"
+                                                                                                                                        }
+                                                                                                                          }
+                                                                                                  },
+                                                                                   "additionalProperties":  false
+                                                                               },
+                                                            "compressionEnabled":  {
+                                                                                       "type":  "boolean"
+                                                                                   },
+                                                            "powershellModules":  {
+                                                                                      "type":  "object"
+                                                                                  },
+                                                            "adDns":  {
+                                                                          "type":  "object",
+                                                                          "properties":  {
+                                                                                             "dnsServer":  {
+                                                                                                               "type":  [
+                                                                                                                            "string",
+                                                                                                                            "null"
+                                                                                                                        ]
+                                                                                                           },
+                                                                                             "detailedZones":  {
+                                                                                                                   "type":  "array",
+                                                                                                                   "items":  {
+                                                                                                                                 "type":  "string"
+                                                                                                                             }
+                                                                                                               }
+                                                                                         },
+                                                                          "additionalProperties":  false
+                                                                      },
+                                                            "externalIdentity":  {
+                                                                                     "type":  "object",
+                                                                                     "properties":  {
+                                                                                                        "getGuestAppRoleAssignments":  {
+                                                                                                                                           "type":  "boolean"
+                                                                                                                                       },
+                                                                                                        "collectSharePointSettings":  {
+                                                                                                                                          "type":  "boolean"
+                                                                                                                                      },
+                                                                                                        "collectTeamsSettings":  {
+                                                                                                                                     "type":  "boolean"
+                                                                                                                                 },
+                                                                                                        "topPartnerDomainsToAnalyze":  {
+                                                                                                                                           "type":  "integer",
+                                                                                                                                           "minimum":  1
+                                                                                                                                       },
+                                                                                                        "recentGuestCountForInvitationFallback":  {
+                                                                                                                                                      "type":  "integer",
+                                                                                                                                                      "minimum":  0
+                                                                                                                                                  }
+                                                                                                    },
+                                                                                     "additionalProperties":  false
+                                                                                 },
+                                                            "fileServer":  {
+                                                                               "type":  "object",
+                                                                               "properties":  {
+                                                                                                  "targetServers":  {
+                                                                                                                        "type":  "array",
+                                                                                                                        "items":  {
+                                                                                                                                      "type":  "string"
+                                                                                                                                  }
+                                                                                                                    },
+                                                                                                  "excludedServers":  {
+                                                                                                                          "type":  "array",
+                                                                                                                          "items":  {
+                                                                                                                                        "type":  "string"
+                                                                                                                                    }
+                                                                                                                      },
+                                                                                                  "useSmbShareForEnumeration":  {
+                                                                                                                                    "type":  "boolean"
+                                                                                                                                },
+                                                                                                  "timeoutPerServerRemoteCommandSeconds":  {
+                                                                                                                                               "type":  "integer",
+                                                                                                                                               "minimum":  1
+                                                                                                                                           },
+                                                                                                  "collectShareDetailsLevel":  {
+                                                                                                                                   "type":  "string",
+                                                                                                                                   "enum":  [
+                                                                                                                                                "Basic",
+                                                                                                                                                "Full"
+                                                                                                                                            ]
+                                                                                                                               },
+                                                                                                  "timeoutPerShareAclSeconds":  {
+                                                                                                                                    "type":  "integer",
+                                                                                                                                    "minimum":  1
+                                                                                                                                },
+                                                                                                  "timeoutPerShareSizeSeconds":  {
+                                                                                                                                     "type":  "integer",
+                                                                                                                                     "minimum":  1
+                                                                                                                                 },
+                                                                                                  "maxSharePathDepthForSize":  {
+                                                                                                                                   "type":  "integer",
+                                                                                                                                   "minimum":  0
+                                                                                                                               },
+                                                                                                  "excludedShareNames":  {
+                                                                                                                             "type":  "array",
+                                                                                                                             "items":  {
+                                                                                                                                           "type":  "string"
+                                                                                                                                       }
+                                                                                                                         },
+                                                                                                  "discoverDFS":  {
+                                                                                                                      "type":  "boolean"
+                                                                                                                  },
+                                                                                                  "discoverStorageAnalysis":  {
+                                                                                                                                  "type":  "boolean"
+                                                                                                                              },
+                                                                                                  "discoverShadowCopies":  {
+                                                                                                                               "type":  "boolean"
+                                                                                                                           },
+                                                                                                  "discoverClusters":  {
+                                                                                                                           "type":  "boolean"
+                                                                                                                       },
+                                                                                                  "skipShareSizeCalculationForPathDepthExceeding":  {
+                                                                                                                                                        "type":  "integer",
+                                                                                                                                                        "minimum":  0
+                                                                                                                                                    }
+                                                                                              }
+                                                                           }
+                                                        },
+                                         "required":  [
+                                                          "enabledSources",
+                                                          "batchSize"
+                                                      ],
+                                         "additionalProperties":  false
+                                     },
+                       "processing":  {
+                                          "type":  "object",
+                                          "properties":  {
+                                                             "chunkSize":  {
+                                                                               "type":  "integer",
+                                                                               "minimum":  1
+                                                                           },
+                                                             "includeDisabledUsers":  {
+                                                                                          "type":  "boolean"
+                                                                                      },
+                                                             "generateWavesByDepartment":  {
+                                                                                               "type":  "boolean"
+                                                                                           },
+                                                             "maxWaveSize":  {
+                                                                                 "type":  "integer",
+                                                                                 "minimum":  1
+                                                                             },
+                                                             "complexityThresholds":  {
+                                                                                          "type":  "object",
+                                                                                          "properties":  {
+                                                                                                             "low":  {
+                                                                                                                         "type":  "integer"
+                                                                                                                     },
+                                                                                                             "medium":  {
+                                                                                                                            "type":  "integer"
+                                                                                                                        },
+                                                                                                             "high":  {
+                                                                                                                          "type":  "integer"
+                                                                                                                      }
+                                                                                                         },
+                                                                                          "required":  [
+                                                                                                           "low",
+                                                                                                           "medium",
+                                                                                                           "high"
+                                                                                                       ],
+                                                                                          "additionalProperties":  false
+                                                                                      },
+                                                             "priorityWeights":  {
+                                                                                     "type":  "object",
+                                                                                     "properties":  {
+                                                                                                        "complexity":  {
+                                                                                                                           "type":  "number",
+                                                                                                                           "minimum":  0,
+                                                                                                                           "maximum":  1
+                                                                                                                       },
+                                                                                                        "readiness":  {
+                                                                                                                          "type":  "number",
+                                                                                                                          "minimum":  0,
+                                                                                                                          "maximum":  1
+                                                                                                                      },
+                                                                                                        "businessImpact":  {
+                                                                                                                               "type":  "number",
+                                                                                                                               "minimum":  0,
+                                                                                                                               "maximum":  1
+                                                                                                                           }
+                                                                                                    },
+                                                                                     "additionalProperties":  false
+                                                                                 },
+                                                             "riskFactors":  {
+                                                                                 "type":  "object",
+                                                                                 "properties":  {
+                                                                                                    "largeMailboxThresholdGB":  {
+                                                                                                                                    "type":  "integer",
+                                                                                                                                    "minimum":  0
+                                                                                                                                },
+                                                                                                    "inactivityThresholdDays":  {
+                                                                                                                                    "type":  "integer",
+                                                                                                                                    "minimum":  0
+                                                                                                                                },
+                                                                                                    "complexLicenseCount":  {
+                                                                                                                                "type":  "integer",
+                                                                                                                                "minimum":  0
+                                                                                                                            }
+                                                                                                },
+                                                                                 "additionalProperties":  false
+                                                                             }
+                                                         },
+                                          "required":  [
+                                                           "chunkSize"
+                                                       ],
+                                          "additionalProperties":  false
+                                      },
+                       "export":  {
+                                      "type":  "object",
+                                      "properties":  {
+                                                         "formats":  {
+                                                                         "type":  "array",
+                                                                         "items":  {
+                                                                                       "type":  "string",
+                                                                                       "enum":  [
+                                                                                                    "CSV",
+                                                                                                    "JSON",
+                                                                                                    "Excel",
+                                                                                                    "CompanyControlSheet"
+                                                                                                ]
+                                                                                   },
+                                                                         "minItems":  1
+                                                                     },
+                                                         "excelEnabled":  {
+                                                                              "type":  "boolean"
+                                                                          },
+                                                         "powerAppsOptimized":  {
+                                                                                    "type":  "boolean"
+                                                                                },
+                                                         "includeMetadata":  {
+                                                                                 "type":  "boolean"
+                                                                             },
+                                                         "archiveResults":  {
+                                                                                "type":  "boolean"
+                                                                            },
+                                                         "reportRetentionDays":  {
+                                                                                     "type":  "integer",
+                                                                                     "minimum":  0
+                                                                                 },
+                                                         "jsonExportDepth":  {
+                                                                                 "type":  "integer",
+                                                                                 "minimum":  1,
+                                                                                 "maximum":  10
+                                                                             },
+                                                         "powerAppsJsonDepth":  {
+                                                                                    "type":  "integer",
+                                                                                    "minimum":  1,
+                                                                                    "maximum":  10
+                                                                                },
+                                                         "exportOptions":  {
+                                                                               "type":  "object",
+                                                                               "properties":  {
+                                                                                                  "includeRawData":  {
+                                                                                                                         "type":  "boolean"
+                                                                                                                     },
+                                                                                                  "includeProcessedData":  {
+                                                                                                                               "type":  "boolean"
+                                                                                                                           },
+                                                                                                  "includeSummaryReports":  {
+                                                                                                                                "type":  "boolean"
+                                                                                                                            },
+                                                                                                  "includeVisualizations":  {
+                                                                                                                                "type":  "boolean"
+                                                                                                                            }
+                                                                                              },
+                                                                               "additionalProperties":  false
+                                                                           }
+                                                     },
+                                      "required":  [
+                                                       "formats"
+                                                   ],
+                                      "additionalProperties":  false
+                                  },
+                       "performance":  {
+                                           "type":  "object",
+                                           "properties":  {
+                                                              "memoryThresholdMB":  {
+                                                                                        "type":  "integer",
+                                                                                        "minimum":  512
+                                                                                    },
+                                                              "diskSpaceThresholdGB":  {
+                                                                                           "type":  "integer",
+                                                                                           "minimum":  1
+                                                                                       },
+                                                              "throttleLimit":  {
+                                                                                    "type":  "integer",
+                                                                                    "minimum":  0
+                                                                                },
+                                                              "progressUpdateInterval":  {
+                                                                                             "type":  "integer",
+                                                                                             "minimum":  1
+                                                                                         },
+                                                              "enableCaching":  {
+                                                                                    "type":  "boolean"
+                                                                                },
+                                                              "cacheExpirationMinutes":  {
+                                                                                             "type":  "integer",
+                                                                                             "minimum":  1
+                                                                                         },
+                                                              "enableGarbageCollection":  {
+                                                                                              "type":  "boolean"
+                                                                                          }
+                                                          },
+                                           "additionalProperties":  false
+                                       },
+                       "advancedSettings":  {
+                                                "type":  "object",
+                                                "properties":  {
+                                                                   "debugMode":  {
+                                                                                     "type":  "boolean"
+                                                                                 },
+                                                                   "verboseLogging":  {
+                                                                                          "type":  "boolean"
+                                                                                      },
+                                                                   "simulationMode":  {
+                                                                                          "type":  "boolean"
+                                                                                      },
+                                                                   "validateDataIntegrity":  {
+                                                                                                 "type":  "boolean"
+                                                                                             },
+                                                                   "enableAuditLog":  {
+                                                                                          "type":  "boolean"
+                                                                                      },
+                                                                   "customModulePath":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                   "bypassCertificateValidation":  {
+                                                                                                       "type":  "boolean"
+                                                                                                   },
+                                                                   "createPlaceholderFunctions":  {
+                                                                                                      "type":  "boolean"
+                                                                                                  }
+                                                               },
+                                                "additionalProperties":  false
+                                            },
+                       "notifications":  {
+                                             "type":  "object",
+                                             "properties":  {
+                                                                "enabled":  {
+                                                                                "type":  "boolean"
+                                                                            },
+                                                                "smtpServer":  {
+                                                                                   "type":  "string"
+                                                                               },
+                                                                "smtpPort":  {
+                                                                                 "type":  "integer",
+                                                                                 "minimum":  1,
+                                                                                 "maximum":  65535
+                                                                             },
+                                                                "useSSL":  {
+                                                                               "type":  "boolean"
+                                                                           },
+                                                                "from":  {
+                                                                             "type":  "string",
+                                                                             "format":  "email"
+                                                                         },
+                                                                "to":  {
+                                                                           "type":  "array",
+                                                                           "items":  {
+                                                                                         "type":  "string",
+                                                                                         "format":  "email"
+                                                                                     }
+                                                                       },
+                                                                "sendOnCompletion":  {
+                                                                                         "type":  "boolean"
+                                                                                     },
+                                                                "sendOnError":  {
+                                                                                    "type":  "boolean"
+                                                                                }
+                                                            },
+                                             "additionalProperties":  false
+                                         },
+                       "graphAPI":  {
+                                        "type":  "object",
+                                        "properties":  {
+                                                           "apiVersion":  {
+                                                                              "type":  "string",
+                                                                              "enum":  [
+                                                                                           "v1.0",
+                                                                                           "beta"
+                                                                                       ]
+                                                                          },
+                                                           "useBetaEndpoint":  {
+                                                                                   "type":  "boolean"
+                                                                               },
+                                                           "pageSize":  {
+                                                                            "type":  "integer",
+                                                                            "minimum":  1,
+                                                                            "maximum":  999
+                                                                        },
+                                                           "selectFields":  {
+                                                                                "type":  "object",
+                                                                                "properties":  {
+                                                                                                   "users":  {
+                                                                                                                 "type":  "array",
+                                                                                                                 "items":  {
+                                                                                                                               "type":  "string"
+                                                                                                                           }
+                                                                                                             },
+                                                                                                   "groups":  {
+                                                                                                                  "type":  "array",
+                                                                                                                  "items":  {
+                                                                                                                                "type":  "string"
+                                                                                                                            }
+                                                                                                              },
+                                                                                                   "applications":  {
+                                                                                                                        "type":  "array",
+                                                                                                                        "items":  {
+                                                                                                                                      "type":  "string"
+                                                                                                                                  }
+                                                                                                                    },
+                                                                                                   "servicePrincipals":  {
+                                                                                                                             "type":  "array",
+                                                                                                                             "items":  {
+                                                                                                                                           "type":  "string"
+                                                                                                                                       }
+                                                                                                                         }
+                                                                                               },
+                                                                                "additionalProperties":  false
+                                                                            }
+                                                       },
+                                        "additionalProperties":  false
+                                    },
+                       "exchangeOnline":  {
+                                              "type":  "object",
+                                              "properties":  {
+                                                                 "includeSoftDeletedMailboxes":  {
+                                                                                                     "type":  "boolean"
+                                                                                                 },
+                                                                 "includeArchiveMailboxes":  {
+                                                                                                 "type":  "boolean"
+                                                                                             },
+                                                                 "includeResourceMailboxes":  {
+                                                                                                  "type":  "boolean"
+                                                                                              },
+                                                                 "includeSharedMailboxes":  {
+                                                                                                "type":  "boolean"
+                                                                                            },
+                                                                 "mailboxStatsBatchSize":  {
+                                                                                               "type":  "integer",
+                                                                                               "minimum":  1,
+                                                                                               "maximum":  1000
+                                                                                           }
+                                                             },
+                                              "additionalProperties":  false
+                                          },
+                       "azure":  {
+                                     "type":  "object",
+                                     "properties":  {
+                                                        "includeClassicResources":  {
+                                                                                        "type":  "boolean"
+                                                                                    },
+                                                        "subscriptionFilter":  {
+                                                                                   "type":  "array",
+                                                                                   "items":  {
+                                                                                                 "type":  "string"
+                                                                                             }
+                                                                               },
+                                                        "resourceGroupFilter":  {
+                                                                                    "type":  "array",
+                                                                                    "items":  {
+                                                                                                  "type":  "string"
+                                                                                              }
+                                                                                },
+                                                        "tagFilter":  {
+                                                                          "type":  "object"
+                                                                      }
+                                                    },
+                                     "additionalProperties":  false
+                                 }
+                   },
+    "required":  [
+                     "metadata",
+                     "environment",
+                     "authentication",
+                     "discovery",
+                     "processing",
+                     "export"
+                 ],
+    "additionalProperties":  false
+}

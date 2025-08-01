@@ -1,0 +1,82 @@
+{
+    "companyName": "DemoCompany",
+    "profilePath": "./Profiles",
+    "reportFormat": "All",
+    "retryPolicy": {
+        "maxRetries": 3,
+        "retryDelay": 5
+    },
+    "logging": {
+        "logLevel": "Information",
+        "logToFile": true,
+        "logPath": "./Profiles/DemoCompany/Logs",
+        "logRetentionDays": 30,
+        "enableDebugMode": false
+    },
+    "paths": {
+        "modules": "./Modules",
+        "export": "./Profiles/DemoCompany/Exports",
+        "logs": "./Profiles/DemoCompany/Logs",
+        "rawData": "./Profiles/DemoCompany/Raw",
+        "processedData": "./Profiles/DemoCompany/Processed",
+        "temp": "./Profiles/DemoCompany/Temp"
+    },
+    "timeouts": {
+        "default": 300,
+        "authentication": 60,
+        "apiCall": 30,
+        "moduleExecution": 3600,
+        "longRunningTasks": 3600
+    },
+    "authentication": {
+        "useServicePrincipal": true,
+        "useInteractiveAuth": false,
+        "credentialFileName": "credentials.json",
+        "tokenRefreshThreshold": 600,
+        "authenticationMethod": "ClientSecret"
+    },
+    "discovery": {
+        "enabledSources": [
+            "NetworkInfrastructure",
+            "SQLServer",
+            "FileServer",
+            "GPO",
+            "ExternalIdentity",
+            "EnvironmentDetection"
+        ],
+        "skipExistingFiles": false,
+        "parallelProcessing": false,
+        "maxConcurrentJobs": 1,
+        "batchSize": 1000,
+        "excludeDisabledUsers": false,
+        "includeGuestUsers": true,
+        "discoveryScope": {
+            "includedOUs": [],
+            "excludedOUs": [],
+            "includedDomains": [],
+            "excludedDomains": []
+        },
+        "compressionEnabled": true
+    },
+    "processing": {
+        "enableParallel": false,
+        "maxConcurrentTasks": 1,
+        "validationEnabled": true,
+        "deduplicationEnabled": true
+    },
+    "export": {
+        "format": ["CSV", "JSON", "Excel"],
+        "includeRawData": false,
+        "compressOutput": true,
+        "generateSummaryReport": true
+    },
+    "advancedSettings": {
+        "simulationMode": true,
+        "createPlaceholderFunctions": true,
+        "enableCaching": true,
+        "cacheExpirationMinutes": 30,
+        "enableApiThrottling": true,
+        "throttleLimit": 100,
+        "throttleWindow": 60
+    }
+}
