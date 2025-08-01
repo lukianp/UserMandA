@@ -2604,13 +2604,21 @@ if (-not (Test-Path $outputPath)) {{
     New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
 }}
 
-# Create Entra ID App discovery instance
-Write-Host ''
-Write-Host 'Initializing Entra ID App discovery...' -ForegroundColor Yellow
-$entraIdDiscovery = Get-EntraIDAppDiscovery
+# Create discovery context
+$context = @{{
+    Paths = @{{
+        RawDataOutput = $outputPath
+    }}
+    CompanyName = '{companyProfile.Name}'
+    DiscoverySession = [guid]::NewGuid().ToString()
+}}
 
-# Set parameters for discovery
-$discoveryParams = @{{
+Write-Host 'Discovery context created:' -ForegroundColor Green
+Write-Host ""Session: $($context.DiscoverySession)"" -ForegroundColor Gray
+Write-Host ''
+
+# Create configuration for Entra ID App discovery
+$configuration = @{{
     TenantId = $companyProfile.AzureConfig.TenantId
     ClientId = $companyProfile.AzureConfig.ClientId
     GraphScopes = @(
@@ -2625,10 +2633,13 @@ $discoveryParams = @{{
     )
 }}
 
-$entraIdDiscovery.SetParameters($discoveryParams)
+Write-Host 'Configuration:' -ForegroundColor Green
+Write-Host ""Tenant ID: $($configuration.TenantId)"" -ForegroundColor Gray
+Write-Host ""Client ID: $($configuration.ClientId)"" -ForegroundColor Gray
+Write-Host ''
 
 Write-Host 'Required Graph API permissions:' -ForegroundColor Yellow
-foreach ($scope in $discoveryParams.GraphScopes) {{
+foreach ($scope in $configuration.GraphScopes) {{
     Write-Host ""  - $scope"" -ForegroundColor Gray
 }}
 
@@ -2639,7 +2650,7 @@ Write-Host 'This may take several minutes depending on the number of application
 Write-Host ''
 
 try {{
-    $discoveryData = $entraIdDiscovery.ExecuteDiscovery()
+    $discoveryData = Invoke-EntraIDAppDiscovery -Configuration $configuration -Context $context -SessionId $context.DiscoverySession
     
     Write-Host 'Discovery completed successfully!' -ForegroundColor Green
     Write-Host ''
@@ -4520,7 +4531,7 @@ Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
 Import-Module '.\Modules\Discovery\ApplicationDiscovery.psm1' -Force
 
 # Initialize profile manager
-$profileManager = Initialize-CompanyProfile -CompanyName '{currentProfile.Name}'
+$profileManager = Get-CompanyProfileManager -CompanyName '{currentProfile.Name}'
 if (-not $profileManager) {{
     Write-Host '❌ Failed to initialize company profile' -ForegroundColor Red
     return
@@ -4529,64 +4540,50 @@ if (-not $profileManager) {{
 Write-Host '✅ Profile initialized successfully' -ForegroundColor Green
 Write-Host ''
 
-# Get stored credentials
-$credPath = Join-Path 'C:\DiscoveryData' 'discoverycredentials.config'
-if (-not (Test-Path $credPath)) {{
-    Write-Host '⚠️  No credentials found. Please run App Registration setup first.' -ForegroundColor Yellow
-    Write-Host 'Press any key to exit...'
-    $null = Read-Host
-    return
+# Create discovery context
+$context = @{{
+    Paths = @{{
+        RawDataOutput = $profileManager.GetProfileDataPath()
+    }}
+    CompanyName = '{currentProfile.Name}'
+    DiscoverySession = [guid]::NewGuid().ToString()
 }}
 
-Write-Host 'Loading credentials...' -ForegroundColor Gray
-$configuration = @{{
-    TenantId = $profileManager.Configuration.TenantId
-    ClientId = $profileManager.Configuration.ClientId
-    ClientSecret = $profileManager.Configuration.ClientSecret
-}}
-
-# Run different discovery methods
+Write-Host 'Discovery context created:' -ForegroundColor Green
+Write-Host ""Path: $($context.Paths.RawDataOutput)"" -ForegroundColor Gray
+Write-Host ""Session: $($context.DiscoverySession)"" -ForegroundColor Gray
 Write-Host ''
-Write-Host '🔍 Starting Application Discovery Methods' -ForegroundColor Cyan
-Write-Host '-' * 40 -ForegroundColor Gray
 
-# 1. Intune Application Discovery
-try {{
-    Write-Host ''
-    Write-Host '1️⃣ Discovering Intune Applications...' -ForegroundColor Yellow
-    $intuneApps = Get-IntuneApplications -Configuration $configuration
-    if ($intuneApps) {{
-        Write-Host ""  ✅ Found $($intuneApps.Count) Intune applications"" -ForegroundColor Green
-        $profileManager.SaveDiscoveryData('IntuneApplications', $intuneApps, 'CSV')
-    }} else {{
-        Write-Host '  ℹ️  No Intune applications found or access denied' -ForegroundColor Yellow
+# Create configuration for Application discovery
+$companyProfile = $profileManager.GetProfile()
+$configuration = @{{
+    TenantId = $companyProfile.AzureConfig.TenantId
+    ClientId = $companyProfile.AzureConfig.ClientId
+    ClientSecret = $companyProfile.AzureConfig.ClientSecret
+    discovery = @{{
+        domains = @($companyProfile.DomainName)
+        includeIntune = $true
+        includeDNS = $true
     }}
-}} catch {{
-    Write-Host ""  ❌ Intune discovery failed: $_"" -ForegroundColor Red
 }}
 
-# 2. DNS-based Application Discovery
-try {{
-    Write-Host ''
-    Write-Host '2️⃣ Discovering DNS Applications...' -ForegroundColor Yellow
-    $dnsApps = Get-DNSApplications -DomainName $profileManager.Configuration.DomainName
-    if ($dnsApps) {{
-        Write-Host ""  ✅ Found $($dnsApps.Count) DNS-based applications"" -ForegroundColor Green
-        $profileManager.SaveDiscoveryData('DNSApplications', $dnsApps, 'CSV')
-    }} else {{
-        Write-Host '  ℹ️  No DNS applications found' -ForegroundColor Yellow
-    }}
-}} catch {{
-    Write-Host ""  ❌ DNS discovery failed: $_"" -ForegroundColor Red
-}}
+Write-Host 'Configuration:' -ForegroundColor Green
+Write-Host ""Tenant ID: $($configuration.TenantId)"" -ForegroundColor Gray
+Write-Host ""Domains: $($configuration.discovery.domains -join ', ')"" -ForegroundColor Gray
+Write-Host ''
 
-# 3. Build Application Catalog
+# Execute discovery
+Write-Host ''
+Write-Host '🔍 Starting Application Discovery' -ForegroundColor Cyan
+Write-Host 'This may take several minutes depending on the environment...' -ForegroundColor Yellow
+Write-Host ''
+
 try {{
+    $discoveryResult = Invoke-ApplicationDiscovery -Configuration $configuration -Context $context -SessionId $context.DiscoverySession
+    
     Write-Host ''
-    Write-Host '3️⃣ Building Application Catalog...' -ForegroundColor Yellow
-    $catalog = New-ApplicationCatalog -IntuneApps $intuneApps -DNSApps $dnsApps
-    if ($catalog) {{
-        Write-Host ""  ✅ Created catalog with $($catalog.Count) unique applications"" -ForegroundColor Green
+    Write-Host '=== Discovery Results ===' -ForegroundColor Cyan
+    Write-Host ""Total Applications: $($discoveryResult.Count)"" -ForegroundColor Green
         
         # Enrich with internet data
         Write-Host '  🌐 Enriching with internet data...' -ForegroundColor Gray
