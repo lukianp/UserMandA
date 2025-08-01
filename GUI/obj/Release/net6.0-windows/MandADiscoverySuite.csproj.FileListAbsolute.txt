@@ -1,0 +1,10 @@
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.csproj.AssemblyReference.cache
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\App.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite_MarkupCompile.cache
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.g.resources
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.GeneratedMSBuildEditorConfig.editorconfig
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.AssemblyInfoInputs.cache
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.AssemblyInfo.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.csproj.CoreCompileInputs.cache

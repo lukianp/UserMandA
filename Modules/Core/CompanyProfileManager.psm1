@@ -301,6 +301,7 @@ class CompanyProfileManager {
         }
         
         $fileName = "${moduleName}_${timestamp}"
+        $filePath = $null
         
         switch ($format.ToUpper()) {
             'JSON' {
@@ -320,13 +321,15 @@ class CompanyProfileManager {
             }
         }
         
-        $latestLink = Join-Path $moduleDir "${moduleName}_Latest.$($format.ToLower())"
-        if (Test-Path $latestLink) {
-            Remove-Item $latestLink -Force
+        if ($filePath) {
+            $latestLink = Join-Path $moduleDir "${moduleName}_Latest.$($format.ToLower())"
+            if (Test-Path $latestLink) {
+                Remove-Item $latestLink -Force
+            }
+            Copy-Item -Path $filePath -Destination $latestLink -Force
+            
+            Write-Verbose "Saved discovery data to: $filePath"
         }
-        Copy-Item -Path $filePath -Destination $latestLink -Force
-        
-        Write-Verbose "Saved discovery data to: $filePath"
     }
     
     [object] LoadDiscoveryData([string]$moduleName, [string]$format = 'JSON', [bool]$latest = $true) {
@@ -369,6 +372,9 @@ class CompanyProfileManager {
                 throw "Unsupported format: $format"
             }
         }
+        
+        # This should never be reached, but PowerShell requires explicit return
+        return $null
     }
     
     [void] UpdateProfileMetadata([hashtable]$updates) {

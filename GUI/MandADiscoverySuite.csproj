@@ -10,15 +10,9 @@
     <Nullable>enable</Nullable>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <PublishReadyToRun>true</PublishReadyToRun>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.Management.Automation" Version="7.3.0" />
-    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.3.0" />
-  </ItemGroup>
 
   <ItemGroup>
     <None Update="app.ico">

@@ -604,7 +604,7 @@ class PanoramaInterrogation {
                             Name = $vr.name
                             Template = $template.Name
                             Interfaces = $vr.interface.member
-                            StaticRoutes = $vr.routing-table.ip.'static-route'.entry
+                            StaticRoutes = $vr.'routing-table'.ip.'static-route'.entry
                             BGP = $vr.protocol.bgp
                             OSPF = $vr.protocol.ospf
                         }

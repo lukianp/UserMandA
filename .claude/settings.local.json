@@ -3,7 +3,8 @@
   "permissions": {
     "allow": [
       "Bash(mkdir:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }
