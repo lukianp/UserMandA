@@ -1374,7 +1374,7 @@
                         </Border>
                     </UniformGrid>
                     
-                    <!-- Network Topology Visualization -->
+                    <!-- Dynamic Network Topology Visualization -->
                     <Border Grid.Row="2" Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -1383,57 +1383,47 @@
                             </Grid.ColumnDefinitions>
                             
                             <StackPanel Grid.Column="0">
-                                <TextBlock Text="Network Topology" Style="{StaticResource SectionHeaderStyle}"/>
-                                <Border Background="#FF2D3748" CornerRadius="8" Height="300" Padding="20">
-                                    <Canvas>
-                                        <!-- Internet -->
-                                        <Border Canvas.Left="250" Canvas.Top="20" Background="{StaticResource AccentGradient}" 
-                                                CornerRadius="8" Padding="12,6">
-                                            <TextBlock Text="🌍 Internet" Foreground="White" FontSize="12"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <TextBlock Text="Network Topology" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center"/>
+                                    <Button x:Name="RefreshTopologyButton" Content="🔄 Refresh" 
+                                            Style="{StaticResource ModernButtonStyle}" 
+                                            Background="#FF4299E1" Margin="16,0,0,0" Padding="8,4"
+                                            Click="RefreshTopology_Click" FontSize="12"/>
+                                    <Button x:Name="AutoLayoutButton" Content="📐 Auto Layout" 
+                                            Style="{StaticResource ModernButtonStyle}" 
+                                            Background="#FF48BB78" Margin="8,0,0,0" Padding="8,4"
+                                            Click="AutoLayoutTopology_Click" FontSize="12"/>
+                                </StackPanel>
+                                <Border Background="#FF2D3748" CornerRadius="8" Height="300" Padding="10">
+                                    <Grid>
+                                        <Canvas x:Name="NetworkTopologyCanvas" ClipToBounds="True">
+                                            <!-- Dynamic network nodes and connections will be added here -->
+                                        </Canvas>
+                                        
+                                        <!-- Loading Indicator -->
+                                        <Border x:Name="TopologyLoadingPanel" Background="#AA1A202C" 
+                                                CornerRadius="8" Visibility="Collapsed">
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="⏳" FontSize="24" HorizontalAlignment="Center" 
+                                                           Foreground="#FF4299E1" Margin="0,0,0,8"/>
+                                                <TextBlock Text="Scanning network topology..." 
+                                                           Foreground="#FFE2E8F0" FontSize="14" HorizontalAlignment="Center"/>
+                                            </StackPanel>
                                         </Border>
                                         
-                                        <!-- WAN Router -->
-                                        <Border Canvas.Left="220" Canvas.Top="80" Background="#FFED8936" 
-                                                CornerRadius="8" Padding="12,6">
-                                            <TextBlock Text="🔄 WAN Router" Foreground="White" FontSize="11"/>
+                                        <!-- No Data Indicator -->
+                                        <Border x:Name="TopologyNoDataPanel" Background="Transparent" 
+                                                CornerRadius="8" Visibility="Collapsed">
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="🔍" FontSize="32" HorizontalAlignment="Center" 
+                                                           Foreground="#FF718096" Margin="0,0,0,8"/>
+                                                <TextBlock Text="No network topology data available" 
+                                                           Foreground="#FF718096" FontSize="14" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="Run Network Infrastructure Discovery to populate this view" 
+                                                           Foreground="#FF4A5568" FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                            </StackPanel>
                                         </Border>
-                                        
-                                        <!-- Palo Alto Firewall -->
-                                        <Border Canvas.Left="200" Canvas.Top="140" Background="#FFF56565" 
-                                                CornerRadius="8" Padding="12,6">
-                                            <TextBlock Text="🔥 PA Firewall" Foreground="White" FontSize="11"/>
-                                        </Border>
-                                        
-                                        <!-- Core Switch -->
-                                        <Border Canvas.Left="180" Canvas.Top="200" Background="#FF4299E1" 
-                                                CornerRadius="8" Padding="12,6">
-                                            <TextBlock Text="🔗 Core Switch" Foreground="White" FontSize="11"/>
-                                        </Border>
-                                        
-                                        <!-- Branch Networks -->
-                                        <Border Canvas.Left="50" Canvas.Top="250" Background="#FF48BB78" 
-                                                CornerRadius="6" Padding="8,4">
-                                            <TextBlock Text="💻 Workstations" Foreground="White" FontSize="10"/>
-                                        </Border>
-                                        
-                                        <Border Canvas.Left="180" Canvas.Top="250" Background="#FF48BB78" 
-                                                CornerRadius="6" Padding="8,4">
-                                            <TextBlock Text="🖥️ Servers" Foreground="White" FontSize="10"/>
-                                        </Border>
-                                        
-                                        <Border Canvas.Left="320" Canvas.Top="250" Background="#FF9F7AEA" 
-                                                CornerRadius="6" Padding="8,4">
-                                            <TextBlock Text="☁️ Cloud" Foreground="White" FontSize="10"/>
-                                        </Border>
-                                        
-                                        <!-- Connection Lines -->
-                                        <Line X1="280" Y1="46" X2="250" Y2="80" Stroke="#FF4A5568" StrokeThickness="2"/>
-                                        <Line X1="250" Y1="106" X2="230" Y2="140" Stroke="#FF4A5568" StrokeThickness="2"/>
-                                        <Line X1="230" Y1="166" X2="210" Y2="200" Stroke="#FF4A5568" StrokeThickness="2"/>
-                                        <Line X1="180" Y1="226" X2="100" Y2="250" Stroke="#FF4A5568" StrokeThickness="2"/>
-                                        <Line X1="210" Y1="226" X2="210" Y2="250" Stroke="#FF4A5568" StrokeThickness="2"/>
-                                        <Line X1="240" Y1="226" X2="350" Y2="250" Stroke="#FF4A5568" StrokeThickness="2"/>
-                                    </Canvas>
+                                    </Grid>
                                 </Border>
                             </StackPanel>
                             

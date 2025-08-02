@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "TyDG48p2UyMMoWVmbITghXdORZDaJlK8WKQV+00E38D6aJi+nWAPL0Wza/q4XiaihRC0k/buo6D9Vt6EQr9MDw==",
+  "dgSpecHash": "wmNFT3ECw588xSryACTa/FT2VXrCANQsYDp9ElVuqV7uGE5fqIELDuNihJE/2xW7vm7BTvB6Ymfl/Z8wSonigQ==",
   "success": true,
-  "projectFilePath": "D:\\Scripts\\UserMandA\\gui\\MandADiscoverySuite.csproj",
+  "projectFilePath": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }

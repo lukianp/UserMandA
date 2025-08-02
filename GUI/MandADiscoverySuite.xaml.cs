@@ -13,7 +13,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using System.Windows.Threading;
+using IOPath = System.IO.Path;
 using System.Text.Json;
 using System.Windows.Data;
 using System.DirectoryServices;
@@ -202,8 +204,8 @@ namespace MandADiscoverySuite
             catch { /* Registry access may fail in restricted environments */ }
             
             // Try portable mode (executable directory)
-            var exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            var modulesPath = Path.Combine(exeDir, "Modules");
+            var exeDir = IOPath.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            var modulesPath = IOPath.Combine(exeDir, "Modules");
             if (Directory.Exists(modulesPath))
             {
                 return exeDir;
@@ -211,7 +213,7 @@ namespace MandADiscoverySuite
             
             // Try current working directory
             var currentDir = Directory.GetCurrentDirectory();
-            modulesPath = Path.Combine(currentDir, "Modules");
+            modulesPath = IOPath.Combine(currentDir, "Modules");
             if (Directory.Exists(modulesPath))
             {
                 return currentDir;
@@ -230,7 +232,7 @@ namespace MandADiscoverySuite
             catch
             {
                 // If can't create system directory, use user profile
-                appPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MandADiscoverySuite");
+                appPath = IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MandADiscoverySuite");
                 Directory.CreateDirectory(appPath);
                 return appPath;
             }
@@ -276,7 +278,7 @@ namespace MandADiscoverySuite
             // Try user profile mode (safer for restricted environments)
             if (IsRestrictedEnvironment())
             {
-                dataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MandADiscoveryData");
+                dataPath = IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MandADiscoveryData");
                 Directory.CreateDirectory(dataPath);
                 return dataPath;
             }
@@ -291,7 +293,7 @@ namespace MandADiscoverySuite
             catch (UnauthorizedAccessException)
             {
                 // Fallback to user documents if system access denied
-                dataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MandADiscoveryData");
+                dataPath = IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MandADiscoveryData");
                 Directory.CreateDirectory(dataPath);
                 return dataPath;
             }
@@ -328,7 +330,7 @@ namespace MandADiscoverySuite
             try
             {
                 string discoveryPath = GetDiscoveryDataPath();
-                string credentialPath = Path.Combine(discoveryPath, companyName, "Credentials", "discoverycredentials.config");
+                string credentialPath = IOPath.Combine(discoveryPath, companyName, "Credentials", "discoverycredentials.config");
                 
                 if (!File.Exists(credentialPath))
                 {
@@ -442,18 +444,18 @@ namespace MandADiscoverySuite
             {
                 foreach (var dir in Directory.GetDirectories(discoveryPath))
                 {
-                    string dirName = Path.GetFileName(dir);
+                    string dirName = IOPath.GetFileName(dir);
                     
                     // Skip system directories
                     if (dirName.StartsWith(".") || dirName.StartsWith("$"))
                         continue;
                     
                     // Check for profile metadata file OR any CSV files OR credentials.json (legacy detection)
-                    string metadataPath = Path.Combine(dir, "profile-metadata.json");
-                    string credentialsPath = Path.Combine(dir, "credentials.json");
+                    string metadataPath = IOPath.Combine(dir, "profile-metadata.json");
+                    string credentialsPath = IOPath.Combine(dir, "credentials.json");
                     bool hasCsvFiles = Directory.GetFiles(dir, "*.csv", SearchOption.AllDirectories).Length > 0;
-                    bool hasRawData = Directory.Exists(Path.Combine(dir, "Raw"));
-                    bool hasLogs = Directory.Exists(Path.Combine(dir, "Logs"));
+                    bool hasRawData = Directory.Exists(IOPath.Combine(dir, "Raw"));
+                    bool hasLogs = Directory.Exists(IOPath.Combine(dir, "Logs"));
                     
                     // If it has metadata file, credentials, CSV files, or discovery structure, it's a valid profile
                     if (File.Exists(metadataPath) || File.Exists(credentialsPath) || hasCsvFiles || hasRawData || hasLogs)
@@ -505,7 +507,7 @@ namespace MandADiscoverySuite
                     Status = "Active"
                 };
                 
-                string metadataPath = Path.Combine(profilePath, "profile-metadata.json");
+                string metadataPath = IOPath.Combine(profilePath, "profile-metadata.json");
                 string jsonContent = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(metadataPath, jsonContent);
             }
@@ -522,7 +524,7 @@ namespace MandADiscoverySuite
             try
             {
                 // Look for Active Directory users CSV file
-                string adUsersPath = Path.Combine(profile.Path, "ActiveDirectoryUsers.csv");
+                string adUsersPath = IOPath.Combine(profile.Path, "ActiveDirectoryUsers.csv");
                 if (File.Exists(adUsersPath))
                 {
                     var lines = File.ReadAllLines(adUsersPath);
@@ -568,7 +570,7 @@ namespace MandADiscoverySuite
         {
             try
             {
-                var configPath = Path.Combine(GetRootPath(), "Configuration", "DiscoveryModules.json");
+                var configPath = IOPath.Combine(GetRootPath(), "Configuration", "DiscoveryModules.json");
                 if (File.Exists(configPath))
                 {
                     var json = File.ReadAllText(configPath);
@@ -807,6 +809,7 @@ namespace MandADiscoverySuite
                     case "InfrastructureButton":
                         InfrastructureView.Visibility = Visibility.Visible;
                         currentView = "Infrastructure";
+                        InitializeNetworkTopology();
                         break;
                     case "DomainDiscoveryButton":
                         // Check if a Domain Discovery PowerShell method exists, otherwise show the view
@@ -2126,7 +2129,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
 ";
 
                 // Create temporary script file
-                var tempScriptPath = Path.Combine(Path.GetTempPath(), $"ActiveDirectoryDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
+                var tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), $"ActiveDirectoryDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
                 File.WriteAllText(tempScriptPath, script);
                 
                 // Launch the discovery script in a dedicated PowerShell window
@@ -2300,7 +2303,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
 ";
 
                 // Create temporary script file
-                var tempScriptPath = Path.Combine(Path.GetTempPath(), $"ExchangeDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
+                var tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), $"ExchangeDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
                 File.WriteAllText(tempScriptPath, script);
                 
                 // Launch the discovery script in a dedicated PowerShell window
@@ -2485,7 +2488,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
 ";
 
                 // Create temporary script file
-                var tempScriptPath = Path.Combine(Path.GetTempPath(), $"SharePointDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
+                var tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), $"SharePointDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
                 File.WriteAllText(tempScriptPath, script);
                 
                 // Launch the discovery script in a dedicated PowerShell window
@@ -2666,7 +2669,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
 ";
 
                 // Create temporary script file
-                var tempScriptPath = Path.Combine(Path.GetTempPath(), $"TeamsDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
+                var tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), $"TeamsDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
                 File.WriteAllText(tempScriptPath, script);
                 
                 // Launch the discovery script in a dedicated PowerShell window
@@ -2863,7 +2866,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
 ";
 
                 // Create temporary script file
-                var tempScriptPath = Path.Combine(Path.GetTempPath(), $"AzureDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
+                var tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), $"AzureDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
                 File.WriteAllText(tempScriptPath, script);
                 
                 // Launch the discovery script in a dedicated PowerShell window
@@ -3073,7 +3076,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
 ";
 
                 // Create temporary script file
-                var tempScriptPath = Path.Combine(Path.GetTempPath(), $"EntraIDAppDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
+                var tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), $"EntraIDAppDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
                 File.WriteAllText(tempScriptPath, script);
                 
                 // Launch the discovery script in a dedicated PowerShell window
@@ -3295,7 +3298,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 string companyName = selectedProfile.Name;
 
                 // Check if app registration script exists
-                string appRegScriptPath = Path.Combine(GetRootPath(), "Scripts", "DiscoveryCreateAppRegistration.ps1");
+                string appRegScriptPath = IOPath.Combine(GetRootPath(), "Scripts", "DiscoveryCreateAppRegistration.ps1");
                 if (!File.Exists(appRegScriptPath))
                 {
                     MessageBox.Show($"App registration script not found at:\n{appRegScriptPath}\n\nPlease ensure the DiscoveryCreateAppRegistration.ps1 script is present in the Scripts directory.", 
@@ -3311,7 +3314,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 }
 
                 // Ensure company-specific directory exists
-                string companyPath = Path.Combine(discoveryDataPath, companyName);
+                string companyPath = IOPath.Combine(discoveryDataPath, companyName);
                 if (!Directory.Exists(companyPath))
                 {
                     Directory.CreateDirectory(companyPath);
@@ -3322,7 +3325,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                     $"Setting up Azure AD app registration for {companyName} with comprehensive M&A discovery permissions",
                     "-CompanyName", companyName,
                     "-AutoInstallModules", 
-                    "-LogPath", Path.Combine(companyPath, "Logs", "app_registration.log"),
+                    "-LogPath", IOPath.Combine(companyPath, "Logs", "app_registration.log"),
                     "-Verbose")
                 {
                     Owner = this,
@@ -3355,7 +3358,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                     return;
                 }
 
-                string credentialsPath = Path.Combine(selectedProfile.Path, "credentials-template.json");
+                string credentialsPath = IOPath.Combine(selectedProfile.Path, "credentials-template.json");
                 
                 if (File.Exists(credentialsPath))
                 {
@@ -3626,8 +3629,8 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                     }
                 };
 
-                string settingsPath = Path.Combine(selectedProfile.Path, "Config", "module-settings.json");
-                string configDir = Path.GetDirectoryName(settingsPath);
+                string settingsPath = IOPath.Combine(selectedProfile.Path, "Config", "module-settings.json");
+                string configDir = IOPath.GetDirectoryName(settingsPath);
                 
                 if (!Directory.Exists(configDir))
                 {
@@ -3909,12 +3912,12 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 int totalRecords = 0;
                 
                 // Check for Raw directory with discovery module output
-                string rawDataPath = Path.Combine(profile.Path, "Raw");
+                string rawDataPath = IOPath.Combine(profile.Path, "Raw");
                 
                 // Load users from AD discovery or fallback to users.csv
                 int userCount = 0;
-                string adUsersFile = Path.Combine(rawDataPath, "ADUsers.csv");
-                string usersFile = Path.Combine(profile.Path, "users.csv");
+                string adUsersFile = IOPath.Combine(rawDataPath, "ADUsers.csv");
+                string usersFile = IOPath.Combine(profile.Path, "users.csv");
                 
                 if (File.Exists(adUsersFile))
                 {
@@ -3930,8 +3933,8 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 
                 // Load computers from AD discovery or fallback to computers.csv  
                 int computerCount = 0;
-                string adComputersFile = Path.Combine(rawDataPath, "ADComputers.csv");
-                string computersFile = Path.Combine(profile.Path, "computers.csv");
+                string adComputersFile = IOPath.Combine(rawDataPath, "ADComputers.csv");
+                string computersFile = IOPath.Combine(profile.Path, "computers.csv");
                 
                 if (File.Exists(adComputersFile))
                 {
@@ -3948,11 +3951,11 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 // Load infrastructure from various discovery sources
                 int infraCount = 0;
                 string[] infraFiles = {
-                    Path.Combine(rawDataPath, "FileServer_NetworkShares.csv"),
-                    Path.Combine(rawDataPath, "FileServer_FileServers.csv"),
-                    Path.Combine(rawDataPath, "Network_DNSServers.csv"),
-                    Path.Combine(rawDataPath, "Network_DHCPServers.csv"),
-                    Path.Combine(profile.Path, "servers.csv")
+                    IOPath.Combine(rawDataPath, "FileServer_NetworkShares.csv"),
+                    IOPath.Combine(rawDataPath, "FileServer_FileServers.csv"),
+                    IOPath.Combine(rawDataPath, "Network_DNSServers.csv"),
+                    IOPath.Combine(rawDataPath, "Network_DHCPServers.csv"),
+                    IOPath.Combine(profile.Path, "servers.csv")
                 };
                 
                 foreach (string infraFile in infraFiles)
@@ -3971,8 +3974,8 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 
                 // Load applications from discovery or fallback
                 int appCount = 0;
-                string appsDiscoveryFile = Path.Combine(rawDataPath, "ApplicationsDiscovered.csv");
-                string appsFile = Path.Combine(profile.Path, "applications.csv");
+                string appsDiscoveryFile = IOPath.Combine(rawDataPath, "ApplicationsDiscovered.csv");
+                string appsFile = IOPath.Combine(profile.Path, "applications.csv");
                 
                 if (File.Exists(appsDiscoveryFile))
                 {
@@ -5309,7 +5312,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 if (saveDialog.ShowDialog() == true)
                 {
                     await ExportDiscoveryData(saveDialog.FileName, exportFormat);
-                    StatusDetails.Text = $"✅ Export completed: {System.IO.Path.GetFileName(saveDialog.FileName)}";
+                    StatusDetails.Text = $"✅ Export completed: {IOPath.GetFileName(saveDialog.FileName)}";
                     MessageBox.Show($"Data exported successfully to:\n{saveDialog.FileName}", "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
@@ -5759,8 +5762,8 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 System.Diagnostics.Debug.WriteLine(logEntry.ToString());
 
                 // Optionally write to log file
-                var logPath = Path.Combine(GetDiscoveryDataPath(), "Logs", "error.log");
-                Directory.CreateDirectory(Path.GetDirectoryName(logPath) ?? "");
+                var logPath = IOPath.Combine(GetDiscoveryDataPath(), "Logs", "error.log");
+                Directory.CreateDirectory(IOPath.GetDirectoryName(logPath) ?? "");
                 File.AppendAllText(logPath, logEntry.ToString());
             }
             catch (Exception logEx)
@@ -6609,7 +6612,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 if (lines.Length <= 1) return 0;
                 
                 // Get the filename to determine the data type
-                string fileName = Path.GetFileName(filePath);
+                string fileName = IOPath.GetFileName(filePath);
                 string deviceType = "Server";
                 
                 if (fileName.Contains("NetworkShares")) deviceType = "File Share";
@@ -6697,7 +6700,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
             try
             {
                 // Scan the Raw directory for all discovery files
-                string rawDataPath = Path.Combine(currentProfile.Path, "Raw");
+                string rawDataPath = IOPath.Combine(currentProfile.Path, "Raw");
                 var discoveryFiles = new List<string>();
                 int totalRecords = 0;
 
@@ -6712,7 +6715,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                             int recordCount = Math.Max(0, lines.Length - 1); // Subtract header row
                             if (recordCount > 0)
                             {
-                                string fileName = Path.GetFileNameWithoutExtension(file);
+                                string fileName = IOPath.GetFileNameWithoutExtension(file);
                                 discoveryFiles.Add($"• {fileName}: {recordCount} records");
                                 totalRecords += recordCount;
                             }
@@ -6766,7 +6769,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
             {
                 // First create the profile directory and metadata immediately
                 string discoveryPath = GetDiscoveryDataPath();
-                string profilePath = Path.Combine(discoveryPath, profileName);
+                string profilePath = IOPath.Combine(discoveryPath, profileName);
                 
                 if (!Directory.Exists(discoveryPath))
                 {
@@ -6783,9 +6786,9 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 
                 // Create profile directory structure
                 Directory.CreateDirectory(profilePath);
-                Directory.CreateDirectory(Path.Combine(profilePath, "Raw"));
-                Directory.CreateDirectory(Path.Combine(profilePath, "Logs"));
-                Directory.CreateDirectory(Path.Combine(profilePath, "Exports"));
+                Directory.CreateDirectory(IOPath.Combine(profilePath, "Raw"));
+                Directory.CreateDirectory(IOPath.Combine(profilePath, "Logs"));
+                Directory.CreateDirectory(IOPath.Combine(profilePath, "Exports"));
                 
                 // Create metadata file immediately
                 CreateProfileMetadata(profilePath, profileName);
@@ -6802,7 +6805,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                     profile_name = profileName
                 };
                 
-                string credentialsPath = Path.Combine(profilePath, "credentials.json");
+                string credentialsPath = IOPath.Combine(profilePath, "credentials.json");
                 string credentialsJson = JsonSerializer.Serialize(credentialsTemplate, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(credentialsPath, credentialsJson);
                 
@@ -6882,13 +6885,13 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
         {
             try
             {
-                string profilePath = Path.Combine(GetDiscoveryDataPath(), profile.Name);
+                string profilePath = IOPath.Combine(GetDiscoveryDataPath(), profile.Name);
                 
                 // Load from various discovery CSV files
                 var applications = new List<DiscoveredApplication>();
                 
                 // 1. Load Intune Applications
-                string intuneAppsFile = Path.Combine(profilePath, "IntuneApplications.csv");
+                string intuneAppsFile = IOPath.Combine(profilePath, "IntuneApplications.csv");
                 if (File.Exists(intuneAppsFile))
                 {
                     var intuneApps = LoadApplicationsFromCsv(intuneAppsFile, "Intune");
@@ -6896,7 +6899,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 }
                 
                 // 2. Load DNS Discovered Applications
-                string dnsAppsFile = Path.Combine(profilePath, "DNSApplications.csv");
+                string dnsAppsFile = IOPath.Combine(profilePath, "DNSApplications.csv");
                 if (File.Exists(dnsAppsFile))
                 {
                     var dnsApps = LoadApplicationsFromCsv(dnsAppsFile, "DNS");
@@ -6904,7 +6907,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 }
                 
                 // 3. Load Application Catalog (master list)
-                string catalogFile = Path.Combine(profilePath, "ApplicationCatalog.csv");
+                string catalogFile = IOPath.Combine(profilePath, "ApplicationCatalog.csv");
                 if (File.Exists(catalogFile))
                 {
                     var catalogApps = LoadApplicationsFromCsv(catalogFile, "Catalog");
@@ -6912,7 +6915,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 }
                 
                 // 4. Load from general discovered applications file
-                string generalAppsFile = Path.Combine(profilePath, "DiscoveredApplications.csv");
+                string generalAppsFile = IOPath.Combine(profilePath, "DiscoveredApplications.csv");
                 if (File.Exists(generalAppsFile))
                 {
                     var generalApps = LoadApplicationsFromCsv(generalAppsFile, "Discovery");
@@ -6961,7 +6964,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 if (lines.Length <= 1) return applications; // No data or only headers
                 
                 // Get profile path from the file path (parent directory)
-                string profilePath = Path.GetDirectoryName(filePath) ?? "";
+                string profilePath = IOPath.GetDirectoryName(filePath) ?? "";
                 
                 // Parse header to find column indices
                 var headers = lines[0].Split(',').Select(h => h.Trim('"')).ToArray();
@@ -7103,7 +7106,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 }
                 
                 // Load user data and cross-reference with applications
-                string usersFile = Path.Combine(profilePath, "ADUsers.csv");
+                string usersFile = IOPath.Combine(profilePath, "ADUsers.csv");
                 if (File.Exists(usersFile))
                 {
                     var userLines = File.ReadAllLines(usersFile);
@@ -7164,7 +7167,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                     // Likely a system-wide installation on servers
                     
                     // Load computer/server data
-                    string computersFile = Path.Combine(profilePath, "ADComputers.csv");
+                    string computersFile = IOPath.Combine(profilePath, "ADComputers.csv");
                     if (File.Exists(computersFile))
                     {
                         var computerLines = File.ReadAllLines(computersFile);
@@ -7334,7 +7337,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 }
                 
                 // Launch the application discovery in a dedicated PowerShell window
-                string tempScriptPath = Path.Combine(Path.GetTempPath(), "RunApplicationDiscovery.ps1");
+                string tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), "RunApplicationDiscovery.ps1");
                 
                 // Build the PowerShell script for application discovery
                 string script = $@"
@@ -7561,7 +7564,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
 ";
 
                 // Write script to temp file
-                string tempScriptPath = Path.Combine(Path.GetTempPath(), $"Office365Discovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
+                string tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), $"Office365Discovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
                 File.WriteAllText(tempScriptPath, script);
                 
                 // Launch the discovery script in a dedicated PowerShell window
@@ -7652,7 +7655,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 ";
 
                 // Write script to temp file
-                string tempScriptPath = Path.Combine(Path.GetTempPath(), $"IntuneDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
+                string tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), $"IntuneDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
                 File.WriteAllText(tempScriptPath, script);
                 
                 // Launch the discovery script in a dedicated PowerShell window
@@ -7745,7 +7748,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 ";
 
                 // Write script to temp file
-                string tempScriptPath = Path.Combine(Path.GetTempPath(), $"CertificateAuthorityDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
+                string tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), $"CertificateAuthorityDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
                 File.WriteAllText(tempScriptPath, script);
                 
                 // Launch the discovery script in a dedicated PowerShell window
@@ -7839,7 +7842,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 ";
 
                 // Write script to temp file
-                string tempScriptPath = Path.Combine(Path.GetTempPath(), $"DNSDHCPDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
+                string tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), $"DNSDHCPDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
                 File.WriteAllText(tempScriptPath, script);
                 
                 // Launch the discovery script in a dedicated PowerShell window
@@ -7931,7 +7934,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 ";
 
                 // Write script to temp file
-                string tempScriptPath = Path.Combine(Path.GetTempPath(), $"PowerPlatformDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
+                string tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), $"PowerPlatformDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
                 File.WriteAllText(tempScriptPath, script);
                 
                 // Launch the discovery script in a dedicated PowerShell window
@@ -7965,7 +7968,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 try
                 {
                     var importedApps = new List<DiscoveredApplication>();
-                    string fileExtension = Path.GetExtension(openFileDialog.FileName).ToLower();
+                    string fileExtension = IOPath.GetExtension(openFileDialog.FileName).ToLower();
                     
                     if (fileExtension == ".csv")
                     {
@@ -8447,7 +8450,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             try
             {
                 // Create security group mappings file path
-                var mappingsPath = Path.Combine(profile.Path, "SecurityGroupMappings.json");
+                var mappingsPath = IOPath.Combine(profile.Path, "SecurityGroupMappings.json");
                 
                 // Create mappings data structure
                 var mappingsData = new
@@ -8472,7 +8475,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 File.WriteAllText(mappingsPath, json);
 
                 // Also save as CSV for easy viewing
-                var csvPath = Path.Combine(profile.Path, "SecurityGroupMappings.csv");
+                var csvPath = IOPath.Combine(profile.Path, "SecurityGroupMappings.csv");
                 var csvContent = "SourceGroup,TargetGroup,MappingType\n";
                 csvContent += string.Join("\n", mappedGroups.Select(kvp => $"{kvp.Key},{kvp.Value},SecurityGroup"));
                 File.WriteAllText(csvPath, csvContent);
@@ -8639,7 +8642,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 
                 // Log the change for audit purposes
                 string logMessage = $"User {user.UserName} ({user.Email}) moved from Wave {oldWave} to Wave {newWave} at {DateTime.Now}";
-                File.AppendAllText(Path.Combine(GetDiscoveryDataPath(), "WaveChanges.log"), logMessage + Environment.NewLine);
+                File.AppendAllText(IOPath.Combine(GetDiscoveryDataPath(), "WaveChanges.log"), logMessage + Environment.NewLine);
                 
             }
             catch (Exception ex)
@@ -8740,14 +8743,14 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                     
                     foreach (var dir in currentDirectories)
                     {
-                        string dirName = Path.GetFileName(dir);
+                        string dirName = IOPath.GetFileName(dir);
                         if (dirName.StartsWith(".") || dirName.StartsWith("$"))
                             continue;
                             
-                        string credentialsPath = Path.Combine(dir, "credentials.json");
+                        string credentialsPath = IOPath.Combine(dir, "credentials.json");
                         bool hasCsvFiles = Directory.GetFiles(dir, "*.csv", SearchOption.AllDirectories).Length > 0;
-                        bool hasRawData = Directory.Exists(Path.Combine(dir, "Raw"));
-                        bool hasLogs = Directory.Exists(Path.Combine(dir, "Logs"));
+                        bool hasRawData = Directory.Exists(IOPath.Combine(dir, "Raw"));
+                        bool hasLogs = Directory.Exists(IOPath.Combine(dir, "Logs"));
                         
                         if (File.Exists(credentialsPath) || hasCsvFiles || hasRawData || hasLogs)
                         {
@@ -8792,7 +8795,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 string companyName = selectedProfile.Name;
-                string scriptPath = Path.Combine(rootPath, "Scripts", "DiscoveryCreateAppRegistration.ps1");
+                string scriptPath = IOPath.Combine(rootPath, "Scripts", "DiscoveryCreateAppRegistration.ps1");
                 
                 if (!File.Exists(scriptPath))
                 {
@@ -8809,7 +8812,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Ensure company-specific directory exists
-                string companyPath = Path.Combine(discoveryDataPath, companyName);
+                string companyPath = IOPath.Combine(discoveryDataPath, companyName);
                 if (!Directory.Exists(companyPath))
                 {
                     Directory.CreateDirectory(companyPath);
@@ -8821,7 +8824,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                     $"Creating Azure AD app registration for {companyName} with comprehensive permissions for M&A environment discovery, assigning required roles, and securely storing credentials for downstream automation workflows.",
                     "-CompanyName", companyName,
                     "-AutoInstallModules",
-                    "-LogPath", Path.Combine(companyPath, "Logs", "app_registration.log"),
+                    "-LogPath", IOPath.Combine(companyPath, "Logs", "app_registration.log"),
                     "-Verbose"
                 );
                 
@@ -9163,7 +9166,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
         private int CalculateUserCount(CompanyProfile profile)
         {
             // Only show data from actual discovery modules - no estimated or dummy data
-            var userDataPath = Path.Combine("C:\\DiscoveryData", profile.Name, "ADUsers.csv");
+            var userDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ADUsers.csv");
             if (File.Exists(userDataPath))
             {
                 try
@@ -9181,7 +9184,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
         private int CalculateDeviceCount(CompanyProfile profile)
         {
             // Only show data from actual discovery modules - no estimated or dummy data
-            var deviceDataPath = Path.Combine("C:\\DiscoveryData", profile.Name, "ADComputers.csv");
+            var deviceDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ADComputers.csv");
             if (File.Exists(deviceDataPath))
             {
                 try
@@ -9201,12 +9204,12 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             // Count various infrastructure components
             int count = 0;
             
-            var basePath = Path.Combine("C:\\DiscoveryData", profile.Name);
+            var basePath = IOPath.Combine("C:\\DiscoveryData", profile.Name);
             var infraFiles = new[] { "AzureResourceGroups.csv", "AzureSubscriptions.csv", "SharePointSites.csv" };
             
             foreach (var file in infraFiles)
             {
-                var filePath = Path.Combine(basePath, file);
+                var filePath = IOPath.Combine(basePath, file);
                 if (File.Exists(filePath))
                 {
                     try
@@ -9369,7 +9372,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 };
 
                 // Analyze application inventory for legacy systems
-                var appDataPath = Path.Combine("C:\\DiscoveryData", profile.Name, "ApplicationCatalog.csv");
+                var appDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ApplicationCatalog.csv");
                 var legacyCount = 0;
                 var totalApps = 0;
 
@@ -9419,7 +9422,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var riskPoints = 0.0;
 
                 // Analyze Entra ID app security
-                var appSecPath = Path.Combine("C:\\DiscoveryData", profile.Name, "EntraIDSecrets.csv");
+                var appSecPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "EntraIDSecrets.csv");
                 if (File.Exists(appSecPath))
                 {
                     try
@@ -9452,7 +9455,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Analyze certificate security
-                var certPath = Path.Combine("C:\\DiscoveryData", profile.Name, "EntraIDCertificates.csv");
+                var certPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "EntraIDCertificates.csv");
                 if (File.Exists(certPath))
                 {
                     try
@@ -9470,7 +9473,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Check for privileged access issues
-                var userDataPath = Path.Combine("C:\\DiscoveryData", profile.Name, "ADUsers.csv");
+                var userDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ADUsers.csv");
                 if (File.Exists(userDataPath))
                 {
                     try
@@ -9518,7 +9521,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var riskPoints = 0.0;
 
                 // Check for data retention policies
-                var exchangePath = Path.Combine("C:\\DiscoveryData", profile.Name, "ExchangeMailboxes.csv");
+                var exchangePath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ExchangeMailboxes.csv");
                 if (File.Exists(exchangePath))
                 {
                     try
@@ -9542,7 +9545,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Check SharePoint compliance
-                var spPath = Path.Combine("C:\\DiscoveryData", profile.Name, "SharePointSites.csv");
+                var spPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "SharePointSites.csv");
                 if (File.Exists(spPath))
                 {
                     try
@@ -9599,7 +9602,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var riskPoints = 0.0;
 
                 // Analyze application dependencies
-                var appPath = Path.Combine("C:\\DiscoveryData", profile.Name, "ApplicationCatalog.csv");
+                var appPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ApplicationCatalog.csv");
                 if (File.Exists(appPath))
                 {
                     try
@@ -9625,7 +9628,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Analyze infrastructure complexity
-                var infraPath = Path.Combine("C:\\DiscoveryData", profile.Name, "AzureResourceGroups.csv");
+                var infraPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "AzureResourceGroups.csv");
                 if (File.Exists(infraPath))
                 {
                     try
@@ -9643,8 +9646,8 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Hybrid environment complexity
-                var adPath = Path.Combine("C\\DiscoveryData", profile.Name, "ADUsers.csv");
-                var cloudPath = Path.Combine("C\\DiscoveryData", profile.Name, "AzureTenant.csv");
+                var adPath = IOPath.Combine("C\\DiscoveryData", profile.Name, "ADUsers.csv");
+                var cloudPath = IOPath.Combine("C\\DiscoveryData", profile.Name, "AzureTenant.csv");
                 if (File.Exists(adPath) && File.Exists(cloudPath))
                 {
                     complexityFactors.Add("Hybrid on-premises and cloud environment");
@@ -9677,7 +9680,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var riskPoints = 0.0;
 
                 // Assess Exchange data volume
-                var exchangePath = Path.Combine("C:\\DiscoveryData", profile.Name, "ExchangeMailboxes.csv");
+                var exchangePath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ExchangeMailboxes.csv");
                 if (File.Exists(exchangePath))
                 {
                     try
@@ -9702,7 +9705,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Assess SharePoint data volume
-                var spPath = Path.Combine("C\\DiscoveryData", profile.Name, "SharePointSites.csv");
+                var spPath = IOPath.Combine("C\\DiscoveryData", profile.Name, "SharePointSites.csv");
                 if (File.Exists(spPath))
                 {
                     try
@@ -9831,14 +9834,14 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 try
                 {
                     // Create reports directory structure
-                    var reportsDir = Path.Combine("C:\\DiscoveryData", profile.Name, "Reports");
-                    var reportTypeDir = Path.Combine(reportsDir, reportType.Replace(" ", "_"));
+                    var reportsDir = IOPath.Combine("C:\\DiscoveryData", profile.Name, "Reports");
+                    var reportTypeDir = IOPath.Combine(reportsDir, reportType.Replace(" ", "_"));
                     Directory.CreateDirectory(reportTypeDir);
 
                     // Generate timestamp and filename
                     var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                     var reportFileName = $"{reportName.Replace(" ", "_")}_{timestamp}.html";
-                    var reportPath = Path.Combine(reportTypeDir, reportFileName);
+                    var reportPath = IOPath.Combine(reportTypeDir, reportFileName);
 
                     // Generate comprehensive report content
                     var htmlContent = await GenerateComprehensiveReportContent(profile, reportName, reportType, description);
@@ -10305,7 +10308,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             {
                 try
                 {
-                    var filePath = Path.Combine("C:\\DiscoveryData", profile.Name, fileName);
+                    var filePath = IOPath.Combine("C:\\DiscoveryData", profile.Name, fileName);
                     if (!File.Exists(filePath)) return GetDefaultCount(fileName);
                     
                     var lines = await File.ReadAllLinesAsync(filePath);
@@ -10347,7 +10350,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 
                 foreach (var file in files)
                 {
-                    var filePath = Path.Combine("C:\\DiscoveryData", profile.Name, file);
+                    var filePath = IOPath.Combine("C:\\DiscoveryData", profile.Name, file);
                     if (File.Exists(filePath)) return "Completed";
                 }
 
@@ -10628,7 +10631,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             // Helper methods for feature calculation
             private async Task<double> GetNormalizedUserCount(CompanyProfile profile)
             {
-                var userDataPath = Path.Combine("C:\\DiscoveryData", profile.Name, "ADUsers.csv");
+                var userDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ADUsers.csv");
                 var count = 0;
                 if (File.Exists(userDataPath))
                 {
@@ -10646,7 +10649,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 
             private async Task<double> GetNormalizedDeviceCount(CompanyProfile profile)
             {
-                var deviceDataPath = Path.Combine("C:\\DiscoveryData", profile.Name, "ADComputers.csv");
+                var deviceDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ADComputers.csv");
                 var count = 0;
                 if (File.Exists(deviceDataPath))
                 {
@@ -10663,7 +10666,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 
             private async Task<double> GetNormalizedAppCount(CompanyProfile profile)
             {
-                var appDataPath = Path.Combine("C:\\DiscoveryData", profile.Name, "ApplicationCatalog.csv");
+                var appDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ApplicationCatalog.csv");
                 var count = 0;
                 if (File.Exists(appDataPath))
                 {
@@ -10696,7 +10699,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var complexity = 0.0;
                 
                 // Check for multiple resource groups
-                var azureRgPath = Path.Combine("C:\\DiscoveryData", profile.Name, "AzureResourceGroups.csv");
+                var azureRgPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "AzureResourceGroups.csv");
                 if (File.Exists(azureRgPath))
                 {
                     var lines = await File.ReadAllLinesAsync(azureRgPath);
@@ -10716,7 +10719,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var filesToCheck = new[] { "ADUsers.csv", "ExchangeMailboxes.csv", "SharePointSites.csv", "TeamsTeams.csv", "AzureResourceGroups.csv" };
                 foreach (var file in filesToCheck)
                 {
-                    var filePath = Path.Combine("C:\\DiscoveryData", profile.Name, file);
+                    var filePath = IOPath.Combine("C:\\DiscoveryData", profile.Name, file);
                     if (File.Exists(filePath)) points += 0.2;
                 }
                 
@@ -10728,7 +10731,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var posture = 0.7; // Start with reasonable baseline
                 
                 // Check for security issues
-                var secretsPath = Path.Combine("C:\\DiscoveryData", profile.Name, "EntraIDSecrets.csv");
+                var secretsPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "EntraIDSecrets.csv");
                 if (File.Exists(secretsPath))
                 {
                     var lines = await File.ReadAllLinesAsync(secretsPath);
@@ -11890,7 +11893,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             // Helper methods
             private async Task<int> GetUserCount(CompanyProfile profile)
             {
-                var userDataPath = Path.Combine("C:\\DiscoveryData", profile.Name, "ADUsers.csv");
+                var userDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ADUsers.csv");
                 if (File.Exists(userDataPath))
                 {
                     var lines = await File.ReadAllLinesAsync(userDataPath);
@@ -11901,7 +11904,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 
             private async Task<int> GetDeviceCount(CompanyProfile profile)
             {
-                var deviceDataPath = Path.Combine("C\\DiscoveryData", profile.Name, "ADComputers.csv");
+                var deviceDataPath = IOPath.Combine("C\\DiscoveryData", profile.Name, "ADComputers.csv");
                 if (File.Exists(deviceDataPath))
                 {
                     var lines = await File.ReadAllLinesAsync(deviceDataPath);
@@ -11912,7 +11915,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 
             private async Task<int> GetApplicationCount(CompanyProfile profile)
             {
-                var appDataPath = Path.Combine("C\\DiscoveryData", profile.Name, "ApplicationCatalog.csv");
+                var appDataPath = IOPath.Combine("C\\DiscoveryData", profile.Name, "ApplicationCatalog.csv");
                 if (File.Exists(appDataPath))
                 {
                     var lines = await File.ReadAllLinesAsync(appDataPath);
@@ -12907,7 +12910,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
         {
             try
             {
-                var csvPath = Path.Combine(_outputPath, "AppRegistrations_Detailed.csv");
+                var csvPath = IOPath.Combine(_outputPath, "AppRegistrations_Detailed.csv");
                 var csv = new StringBuilder();
                 
                 // Header
@@ -12932,7 +12935,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
         {
             try
             {
-                var jsonPath = Path.Combine(_outputPath, "AppRegistrations_Detailed.json");
+                var jsonPath = IOPath.Combine(_outputPath, "AppRegistrations_Detailed.json");
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 var json = JsonSerializer.Serialize(appRegistrations, options);
                 File.WriteAllText(jsonPath, json);
@@ -12949,7 +12952,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             try
             {
                 // For now, create a tab-separated values file that can be opened in Excel
-                var excelPath = Path.Combine(_outputPath, "AppRegistrations_Detailed.tsv");
+                var excelPath = IOPath.Combine(_outputPath, "AppRegistrations_Detailed.tsv");
                 var tsv = new StringBuilder();
                 
                 // Header
@@ -13355,6 +13358,385 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             
             scrollViewer.Content = stackPanel;
             Content = scrollViewer;
+        }
+    }
+
+    // Network Topology Classes and Data Structures
+    public class NetworkNode
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string Type { get; set; } = ""; // Router, Switch, Firewall, Server, Workstation, Cloud
+        public string IPAddress { get; set; } = "";
+        public Point Position { get; set; } = new Point();
+        public string Status { get; set; } = "Unknown"; // Online, Offline, Warning, Critical
+        public List<string> ConnectedTo { get; set; } = new List<string>();
+        public string Icon { get; set; } = "🖥️";
+        public string Color { get; set; } = "#FF4299E1";
+    }
+
+    public class NetworkConnection
+    {
+        public string FromNodeId { get; set; } = "";
+        public string ToNodeId { get; set; } = "";
+        public string ConnectionType { get; set; } = ""; // Ethernet, WiFi, VPN, Internet
+        public string Status { get; set; } = "Active";
+        public int Bandwidth { get; set; } = 0;
+    }
+
+    public partial class MainWindow
+    {
+        private List<NetworkNode> networkNodes = new List<NetworkNode>();
+        private List<NetworkConnection> networkConnections = new List<NetworkConnection>();
+        private bool isTopologyLoaded = false;
+
+        // Network Topology Visualization Methods
+        private async void RefreshTopology_Click(object sender, RoutedEventArgs e)
+        {
+            await LoadNetworkTopology();
+        }
+
+        private void AutoLayoutTopology_Click(object sender, RoutedEventArgs e)
+        {
+            if (networkNodes.Count > 0)
+            {
+                ApplyAutoLayout();
+                RenderNetworkTopology();
+            }
+        }
+
+        private async Task LoadNetworkTopology()
+        {
+            try
+            {
+                // Show loading indicator
+                TopologyLoadingPanel.Visibility = Visibility.Visible;
+                TopologyNoDataPanel.Visibility = Visibility.Collapsed;
+                NetworkTopologyCanvas.Children.Clear();
+
+                // Load network data from discovery files
+                var currentProfile = CompanySelector.SelectedItem as CompanyProfile;
+                if (currentProfile == null)
+                {
+                    ShowNoTopologyData();
+                    return;
+                }
+
+                networkNodes.Clear();
+                networkConnections.Clear();
+
+                // Load from various discovery sources
+                await LoadNetworkInfrastructureData(currentProfile);
+                await LoadPaloAltoFirewallData(currentProfile);
+                await LoadAzureNetworkData(currentProfile);
+
+                if (networkNodes.Count == 0)
+                {
+                    ShowNoTopologyData();
+                    return;
+                }
+
+                // Apply auto-layout and render
+                ApplyAutoLayout();
+                RenderNetworkTopology();
+                isTopologyLoaded = true;
+
+                TopologyLoadingPanel.Visibility = Visibility.Collapsed;
+            }
+            catch (Exception ex)
+            {
+                TopologyLoadingPanel.Visibility = Visibility.Collapsed;
+                ShowNoTopologyData();
+                System.Diagnostics.Debug.WriteLine($"Error loading network topology: {ex.Message}");
+            }
+        }
+
+        private async Task LoadNetworkInfrastructureData(CompanyProfile profile)
+        {
+            // Load infrastructure data from CSV files
+            var infrastructureFile = IOPath.Combine("C:\\DiscoveryData", profile.Name, "NetworkInfrastructure.csv");
+            if (File.Exists(infrastructureFile))
+            {
+                var lines = File.ReadAllLines(infrastructureFile);
+                for (int i = 1; i < lines.Length; i++) // Skip header
+                {
+                    var parts = lines[i].Split(',');
+                    if (parts.Length >= 4)
+                    {
+                        var node = new NetworkNode
+                        {
+                            Id = $"infra_{i}",
+                            Name = parts[0].Trim('"'),
+                            Type = DetermineNodeType(parts[1].Trim('"')),
+                            IPAddress = parts[2].Trim('"'),
+                            Status = parts[3].Trim('"'),
+                            Icon = GetNodeIcon(parts[1].Trim('"')),
+                            Color = GetNodeColor(parts[1].Trim('"'))
+                        };
+                        networkNodes.Add(node);
+                    }
+                }
+            }
+        }
+
+        private async Task LoadPaloAltoFirewallData(CompanyProfile profile)
+        {
+            // Load Palo Alto firewall data
+            var paloAltoFile = IOPath.Combine("C:\\DiscoveryData", profile.Name, "PaloAlto_DiscoveryData.csv");
+            if (File.Exists(paloAltoFile))
+            {
+                var lines = File.ReadAllLines(paloAltoFile);
+                for (int i = 1; i < lines.Length; i++) // Skip header
+                {
+                    var parts = lines[i].Split(',');
+                    if (parts.Length >= 3)
+                    {
+                        var node = new NetworkNode
+                        {
+                            Id = $"palo_{i}",
+                            Name = parts[0].Trim('"'),
+                            Type = "Firewall",
+                            IPAddress = parts[1].Trim('"'),
+                            Status = "Online",
+                            Icon = "🔥",
+                            Color = "#FFF56565"
+                        };
+                        networkNodes.Add(node);
+                    }
+                }
+            }
+        }
+
+        private async Task LoadAzureNetworkData(CompanyProfile profile)
+        {
+            // Load Azure network resources
+            var azureFile = IOPath.Combine("C:\\DiscoveryData", profile.Name, "AzureResourceGroups.csv");
+            if (File.Exists(azureFile))
+            {
+                // Add cloud node to represent Azure
+                var cloudNode = new NetworkNode
+                {
+                    Id = "azure_cloud",
+                    Name = "Azure Cloud",
+                    Type = "Cloud",
+                    IPAddress = "Cloud",
+                    Status = "Online",
+                    Icon = "☁️",
+                    Color = "#FF9F7AEA"
+                };
+                networkNodes.Add(cloudNode);
+            }
+        }
+
+        private string DetermineNodeType(string deviceType)
+        {
+            var type = deviceType.ToLower();
+            if (type.Contains("router")) return "Router";
+            if (type.Contains("switch")) return "Switch";
+            if (type.Contains("firewall")) return "Firewall";
+            if (type.Contains("server")) return "Server";
+            if (type.Contains("workstation") || type.Contains("computer")) return "Workstation";
+            return "Unknown";
+        }
+
+        private string GetNodeIcon(string deviceType)
+        {
+            var type = deviceType.ToLower();
+            if (type.Contains("router")) return "🔄";
+            if (type.Contains("switch")) return "🔗";
+            if (type.Contains("firewall")) return "🔥";
+            if (type.Contains("server")) return "🖥️";
+            if (type.Contains("workstation")) return "💻";
+            return "🖥️";
+        }
+
+        private string GetNodeColor(string deviceType)
+        {
+            var type = deviceType.ToLower();
+            if (type.Contains("router")) return "#FFED8936";
+            if (type.Contains("switch")) return "#FF4299E1";
+            if (type.Contains("firewall")) return "#FFF56565";
+            if (type.Contains("server")) return "#FF48BB78";
+            if (type.Contains("workstation")) return "#FF9F7AEA";
+            return "#FF4299E1";
+        }
+
+        private void ApplyAutoLayout()
+        {
+            if (networkNodes.Count == 0) return;
+
+            var canvasWidth = NetworkTopologyCanvas.ActualWidth > 0 ? NetworkTopologyCanvas.ActualWidth : 500;
+            var canvasHeight = NetworkTopologyCanvas.ActualHeight > 0 ? NetworkTopologyCanvas.ActualHeight : 280;
+
+            // Simple circular layout algorithm
+            var centerX = canvasWidth / 2;
+            var centerY = canvasHeight / 2;
+            var radius = Math.Min(canvasWidth, canvasHeight) * 0.3;
+
+            for (int i = 0; i < networkNodes.Count; i++)
+            {
+                var angle = (2 * Math.PI * i) / networkNodes.Count;
+                var x = centerX + radius * Math.Cos(angle);
+                var y = centerY + radius * Math.Sin(angle);
+
+                networkNodes[i].Position = new Point(x, y);
+            }
+
+            // Special positioning for certain node types
+            foreach (var node in networkNodes)
+            {
+                switch (node.Type)
+                {
+                    case "Cloud":
+                        node.Position = new Point(centerX, 30);
+                        break;
+                    case "Router":
+                        node.Position = new Point(centerX, centerY - 60);
+                        break;
+                    case "Firewall":
+                        node.Position = new Point(centerX, centerY);
+                        break;
+                }
+            }
+        }
+
+        private void RenderNetworkTopology()
+        {
+            NetworkTopologyCanvas.Children.Clear();
+
+            // Render connections first (so they appear behind nodes)
+            RenderConnections();
+
+            // Render nodes
+            foreach (var node in networkNodes)
+            {
+                RenderNetworkNode(node);
+            }
+        }
+
+        private void RenderConnections()
+        {
+            // Auto-generate connections based on network topology
+            for (int i = 0; i < networkNodes.Count - 1; i++)
+            {
+                for (int j = i + 1; j < networkNodes.Count; j++)
+                {
+                    var node1 = networkNodes[i];
+                    var node2 = networkNodes[j];
+
+                    // Simple logic: connect different types of devices
+                    if (ShouldConnect(node1, node2))
+                    {
+                        RenderConnection(node1.Position, node2.Position);
+                    }
+                }
+            }
+        }
+
+        private bool ShouldConnect(NetworkNode node1, NetworkNode node2)
+        {
+            // Basic connection logic - can be enhanced with real network data
+            if (node1.Type == "Cloud" && (node2.Type == "Router" || node2.Type == "Firewall")) return true;
+            if (node1.Type == "Router" && node2.Type == "Firewall") return true;
+            if (node1.Type == "Firewall" && (node2.Type == "Switch" || node2.Type == "Server")) return true;
+            if (node1.Type == "Switch" && (node2.Type == "Server" || node2.Type == "Workstation")) return true;
+            
+            return false;
+        }
+
+        private void RenderConnection(Point from, Point to)
+        {
+            var line = new Line
+            {
+                X1 = from.X,
+                Y1 = from.Y,
+                X2 = to.X,
+                Y2 = to.Y,
+                Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF4A5568")),
+                StrokeThickness = 2,
+                StrokeDashArray = new DoubleCollection { 5, 5 }
+            };
+
+            NetworkTopologyCanvas.Children.Add(line);
+        }
+
+        private void RenderNetworkNode(NetworkNode node)
+        {
+            var border = new Border
+            {
+                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(node.Color)),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(8, 4, 8, 4),
+                BorderBrush = GetStatusBrush(node.Status),
+                BorderThickness = new Thickness(2)
+            };
+
+            var stackPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal
+            };
+
+            var iconText = new TextBlock
+            {
+                Text = node.Icon,
+                FontSize = 12,
+                Margin = new Thickness(0, 0, 4, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var nameText = new TextBlock
+            {
+                Text = node.Name,
+                Foreground = Brushes.White,
+                FontSize = 10,
+                FontWeight = FontWeights.Medium,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            stackPanel.Children.Add(iconText);
+            stackPanel.Children.Add(nameText);
+            border.Child = stackPanel;
+
+            // Position the node
+            Canvas.SetLeft(border, node.Position.X - 40);
+            Canvas.SetTop(border, node.Position.Y - 15);
+
+            // Add tooltip
+            var tooltip = new ToolTip
+            {
+                Content = $"{node.Name}\nType: {node.Type}\nIP: {node.IPAddress}\nStatus: {node.Status}"
+            };
+            border.ToolTip = tooltip;
+
+            NetworkTopologyCanvas.Children.Add(border);
+        }
+
+        private Brush GetStatusBrush(string status)
+        {
+            switch (status.ToLower())
+            {
+                case "online": return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF48BB78"));
+                case "offline": return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFF56565"));
+                case "warning": return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFED8936"));
+                case "critical": return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFF56565"));
+                default: return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF718096"));
+            }
+        }
+
+        private void ShowNoTopologyData()
+        {
+            TopologyLoadingPanel.Visibility = Visibility.Collapsed;
+            TopologyNoDataPanel.Visibility = Visibility.Visible;
+            NetworkTopologyCanvas.Children.Clear();
+        }
+
+        // Initialize topology when Infrastructure view is loaded
+        private async void InitializeNetworkTopology()
+        {
+            if (!isTopologyLoaded)
+            {
+                await LoadNetworkTopology();
+            }
         }
     }
 }
