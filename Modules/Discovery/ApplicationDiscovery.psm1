@@ -25,6 +25,8 @@ Import-Module (Join-Path $PSScriptRoot "DiscoveryBase.psm1") -Force
 $script:ApplicationCache = @{}
 $script:DNSCache = @{}
 $script:MetadataCache = @{}
+$script:LicenseCache = @{}
+$script:SoftwareInventoryCache = @{}
 
 #region Core Application Discovery Functions
 
@@ -1180,6 +1182,502 @@ function Get-RollbackPlan {
 
 #endregion
 
+#region Software License Discovery Functions
+
+<#
+.SYNOPSIS
+    Discovers installed software and license information from local systems.
+.DESCRIPTION
+    Scans for installed software using registry, WMI, and file system analysis
+    to build comprehensive software inventory with license compliance data.
+#>
+function Get-SoftwareLicenseInventory {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [string[]]$ComputerNames = @($env:COMPUTERNAME),
+        
+        [Parameter(Mandatory=$false)]
+        [hashtable]$KnownLicenses = @{},
+        
+        [Parameter(Mandatory=$false)]
+        [switch]$IncludeSystemComponents,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$SessionId
+    )
+    
+    $softwareInventory = @()
+    
+    foreach ($computerName in $ComputerNames) {
+        try {
+            Write-Host "Scanning software on $computerName..." -ForegroundColor Cyan
+            
+            # Get installed software from registry (64-bit)
+            $software64 = Get-InstalledSoftwareFromRegistry -ComputerName $computerName -RegistryPath "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+            
+            # Get installed software from registry (32-bit on 64-bit systems)
+            $software32 = Get-InstalledSoftwareFromRegistry -ComputerName $computerName -RegistryPath "SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+            
+            # Get software from WMI
+            $softwareWMI = Get-InstalledSoftwareFromWMI -ComputerName $computerName
+            
+            # Combine and deduplicate
+            $allSoftware = @()
+            $allSoftware += $software64
+            $allSoftware += $software32
+            $allSoftware += $softwareWMI
+            
+            # Deduplicate based on DisplayName and Version
+            $uniqueSoftware = $allSoftware | Sort-Object DisplayName, Version | Group-Object DisplayName, Version | ForEach-Object { $_.Group | Select-Object -First 1 }
+            
+            foreach ($software in $uniqueSoftware) {
+                if (-not $IncludeSystemComponents -and $software.Publisher -in @("Microsoft Corporation", "Intel Corporation", "NVIDIA Corporation") -and $software.DisplayName -like "*Runtime*") {
+                    continue
+                }
+                
+                $licenseInfo = Get-SoftwareLicenseInfo -Software $software -KnownLicenses $KnownLicenses
+                
+                $softwareInventory += [PSCustomObject]@{
+                    ComputerName = $computerName
+                    DisplayName = $software.DisplayName
+                    Version = $software.Version
+                    Publisher = $software.Publisher
+                    InstallDate = $software.InstallDate
+                    InstallLocation = $software.InstallLocation
+                    UninstallString = $software.UninstallString
+                    DisplayIcon = $software.DisplayIcon
+                    EstimatedSize = $software.EstimatedSize
+                    VersionMajor = $software.VersionMajor
+                    VersionMinor = $software.VersionMinor
+                    WindowsInstaller = $software.WindowsInstaller
+                    Source = $software.Source
+                    LicenseType = $licenseInfo.LicenseType
+                    LicenseKey = $licenseInfo.LicenseKey
+                    LicenseStatus = $licenseInfo.LicenseStatus
+                    ComplianceStatus = $licenseInfo.ComplianceStatus
+                    LicenseCost = $licenseInfo.LicenseCost
+                    SupportExpiration = $licenseInfo.SupportExpiration
+                    LastUsed = $licenseInfo.LastUsed
+                    UsageFrequency = $licenseInfo.UsageFrequency
+                    SecurityRating = $licenseInfo.SecurityRating
+                    SessionId = $SessionId
+                }
+            }
+            
+        } catch {
+            Write-Warning "Failed to scan software on $computerName`: $($_.Exception.Message)"
+        }
+    }
+    
+    return $softwareInventory
+}
+
+function Get-InstalledSoftwareFromRegistry {
+    [CmdletBinding()]
+    param(
+        [string]$ComputerName,
+        [string]$RegistryPath
+    )
+    
+    $software = @()
+    
+    try {
+        if ($ComputerName -eq $env:COMPUTERNAME) {
+            $registry = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey('LocalMachine', $ComputerName)
+        } else {
+            # For remote computers, would need additional setup
+            return $software
+        }
+        
+        $uninstallKey = $registry.OpenSubKey($RegistryPath)
+        if ($uninstallKey) {
+            foreach ($subKeyName in $uninstallKey.GetSubKeyNames()) {
+                $subKey = $uninstallKey.OpenSubKey($subKeyName)
+                if ($subKey) {
+                    $displayName = $subKey.GetValue("DisplayName")
+                    if ($displayName) {
+                        $software += [PSCustomObject]@{
+                            DisplayName = $displayName
+                            Version = $subKey.GetValue("DisplayVersion")
+                            Publisher = $subKey.GetValue("Publisher")
+                            InstallDate = $subKey.GetValue("InstallDate")
+                            InstallLocation = $subKey.GetValue("InstallLocation")
+                            UninstallString = $subKey.GetValue("UninstallString")
+                            DisplayIcon = $subKey.GetValue("DisplayIcon")
+                            EstimatedSize = $subKey.GetValue("EstimatedSize")
+                            VersionMajor = $subKey.GetValue("VersionMajor")
+                            VersionMinor = $subKey.GetValue("VersionMinor")
+                            WindowsInstaller = $subKey.GetValue("WindowsInstaller")
+                            Source = "Registry-$RegistryPath"
+                        }
+                    }
+                    $subKey.Close()
+                }
+            }
+            $uninstallKey.Close()
+        }
+        $registry.Close()
+        
+    } catch {
+        Write-Warning "Failed to read registry path $RegistryPath on $ComputerName`: $($_.Exception.Message)"
+    }
+    
+    return $software
+}
+
+function Get-InstalledSoftwareFromWMI {
+    [CmdletBinding()]
+    param([string]$ComputerName)
+    
+    $software = @()
+    
+    try {
+        $wmiSoftware = Get-CimInstance -ClassName Win32_Product -ComputerName $ComputerName -ErrorAction SilentlyContinue
+        foreach ($item in $wmiSoftware) {
+            $software += [PSCustomObject]@{
+                DisplayName = $item.Name
+                Version = $item.Version
+                Publisher = $item.Vendor
+                InstallDate = $item.InstallDate
+                InstallLocation = $item.InstallLocation
+                UninstallString = $null
+                DisplayIcon = $null
+                EstimatedSize = $null
+                VersionMajor = $null
+                VersionMinor = $null
+                WindowsInstaller = $true
+                Source = "WMI-Win32_Product"
+            }
+        }
+    } catch {
+        Write-Warning "Failed to query WMI on $ComputerName`: $($_.Exception.Message)"
+    }
+    
+    return $software
+}
+
+function Get-SoftwareLicenseInfo {
+    [CmdletBinding()]
+    param(
+        [PSCustomObject]$Software,
+        [hashtable]$KnownLicenses = @{}
+    )
+    
+    $licenseInfo = @{
+        LicenseType = "Unknown"
+        LicenseKey = $null
+        LicenseStatus = "Unknown"
+        ComplianceStatus = "Unknown"
+        LicenseCost = $null
+        SupportExpiration = $null
+        LastUsed = $null
+        UsageFrequency = "Unknown"
+        SecurityRating = "Unknown"
+    }
+    
+    # Check against known licenses database
+    if ($KnownLicenses.ContainsKey($Software.DisplayName)) {
+        $knownLicense = $KnownLicenses[$Software.DisplayName]
+        $licenseInfo.LicenseType = $knownLicense.LicenseType
+        $licenseInfo.LicenseCost = $knownLicense.Cost
+        $licenseInfo.SupportExpiration = $knownLicense.SupportExpiration
+    }
+    
+    # Detect license type based on software characteristics
+    $licenseInfo.LicenseType = Get-DetectedLicenseType -Software $Software
+    
+    # Try to find license keys from common locations
+    $licenseInfo.LicenseKey = Get-SoftwareLicenseKey -Software $Software
+    
+    # Determine compliance status
+    $licenseInfo.ComplianceStatus = Get-LicenseComplianceStatus -Software $Software -LicenseInfo $licenseInfo
+    
+    # Get usage information
+    $usageInfo = Get-SoftwareUsageInfo -Software $Software
+    $licenseInfo.LastUsed = $usageInfo.LastUsed
+    $licenseInfo.UsageFrequency = $usageInfo.Frequency
+    
+    # Get security rating
+    $licenseInfo.SecurityRating = Get-SoftwareSecurityRating -Software $Software
+    
+    return $licenseInfo
+}
+
+function Get-DetectedLicenseType {
+    [CmdletBinding()]
+    param([PSCustomObject]$Software)
+    
+    $displayName = $Software.DisplayName.ToLower()
+    $publisher = $Software.Publisher
+    
+    # Common license type detection patterns
+    if ($displayName -match "trial|evaluation|demo") {
+        return "Trial"
+    } elseif ($displayName -match "free|freeware") {
+        return "Freeware"
+    } elseif ($displayName -match "open source|opensource") {
+        return "Open Source"
+    } elseif ($publisher -eq "Microsoft Corporation" -and $displayName -match "office|excel|word|powerpoint|outlook") {
+        return "Microsoft Office License"
+    } elseif ($publisher -eq "Microsoft Corporation" -and $displayName -match "windows|microsoft") {
+        return "Microsoft Windows License"
+    } elseif ($publisher -eq "Adobe Inc." -or $publisher -eq "Adobe Systems Incorporated") {
+        return "Adobe Creative License"
+    } elseif ($displayName -match "vmware") {
+        return "VMware License"
+    } elseif ($displayName -match "antivirus|security|endpoint") {
+        return "Security Software License"
+    } else {
+        return "Commercial"
+    }
+}
+
+function Get-SoftwareLicenseKey {
+    [CmdletBinding()]
+    param([PSCustomObject]$Software)
+    
+    # This is a placeholder - in reality, you would need to implement
+    # specific logic for each software to find license keys
+    # Note: License key extraction should only be done with proper authorization
+    
+    try {
+        # Example: For some Microsoft products, keys might be in registry
+        if ($Software.Publisher -eq "Microsoft Corporation") {
+            # Placeholder for Microsoft license key extraction
+            return "Not Implemented - License Key Extraction"
+        }
+        
+        return $null
+    } catch {
+        return $null
+    }
+}
+
+function Get-LicenseComplianceStatus {
+    [CmdletBinding()]
+    param(
+        [PSCustomObject]$Software,
+        [hashtable]$LicenseInfo
+    )
+    
+    # Basic compliance checks
+    if ($LicenseInfo.LicenseType -eq "Trial" -or $LicenseInfo.LicenseType -eq "Evaluation") {
+        return "Review Required - Trial Software"
+    } elseif ($LicenseInfo.LicenseType -eq "Freeware" -or $LicenseInfo.LicenseType -eq "Open Source") {
+        return "Compliant - Free License"
+    } elseif ($LicenseInfo.LicenseKey) {
+        return "Licensed - Key Found"
+    } else {
+        return "Review Required - No License Key"
+    }
+}
+
+function Get-SoftwareUsageInfo {
+    [CmdletBinding()]
+    param([PSCustomObject]$Software)
+    
+    $usageInfo = @{
+        LastUsed = $null
+        Frequency = "Unknown"
+    }
+    
+    try {
+        # Try to get last access time from executable
+        if ($Software.InstallLocation -and (Test-Path $Software.InstallLocation)) {
+            $exeFiles = Get-ChildItem -Path $Software.InstallLocation -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 5
+            if ($exeFiles) {
+                $latestAccess = ($exeFiles | Sort-Object LastAccessTime -Descending | Select-Object -First 1).LastAccessTime
+                $usageInfo.LastUsed = $latestAccess
+                
+                # Determine frequency based on last access
+                $daysSinceLastUse = (Get-Date) - $latestAccess
+                if ($daysSinceLastUse.Days -le 7) {
+                    $usageInfo.Frequency = "High"
+                } elseif ($daysSinceLastUse.Days -le 30) {
+                    $usageInfo.Frequency = "Medium"
+                } elseif ($daysSinceLastUse.Days -le 90) {
+                    $usageInfo.Frequency = "Low"
+                } else {
+                    $usageInfo.Frequency = "Unused"
+                }
+            }
+        }
+    } catch {
+        # Ignore errors in usage detection
+    }
+    
+    return $usageInfo
+}
+
+function Get-SoftwareSecurityRating {
+    [CmdletBinding()]
+    param([PSCustomObject]$Software)
+    
+    # Basic security rating based on publisher and software type
+    $publisher = $Software.Publisher
+    $displayName = $Software.DisplayName.ToLower()
+    
+    if ($publisher -in @("Microsoft Corporation", "Apple Inc.", "Google LLC", "Adobe Inc.")) {
+        return "High"
+    } elseif ($displayName -match "antivirus|security|firewall") {
+        return "High"
+    } elseif ($displayName -match "browser|chrome|firefox|edge") {
+        return "Medium"
+    } elseif ($Software.Version -and $Software.Version -match "^\d+\.\d+") {
+        # Check if version is relatively recent (simplified check)
+        try {
+            $versionParts = $Software.Version.Split('.')
+            $majorVersion = [int]$versionParts[0]
+            if ($majorVersion -ge 10) {
+                return "Medium"
+            } else {
+                return "Low"
+            }
+        } catch {
+            return "Unknown"
+        }
+    } else {
+        return "Unknown"
+    }
+}
+
+function Export-SoftwareLicenseReport {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [array]$SoftwareInventory,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$OutputPath,
+        
+        [Parameter(Mandatory=$false)]
+        [switch]$IncludeLicenseOptimization
+    )
+    
+    try {
+        # Export basic inventory
+        $basicReport = $SoftwareInventory | Select-Object ComputerName, DisplayName, Version, Publisher, LicenseType, ComplianceStatus, LastUsed, UsageFrequency
+        $basicReportPath = Join-Path $OutputPath "SoftwareLicenseInventory.csv"
+        $basicReport | Export-Csv -Path $basicReportPath -NoTypeInformation -Encoding UTF8
+        
+        # Generate compliance summary
+        $complianceSummary = $SoftwareInventory | Group-Object ComplianceStatus | Select-Object @{Name="ComplianceStatus";Expression={$_.Name}}, @{Name="Count";Expression={$_.Count}}
+        $compliancePath = Join-Path $OutputPath "LicenseComplianceSummary.csv"
+        $complianceSummary | Export-Csv -Path $compliancePath -NoTypeInformation -Encoding UTF8
+        
+        # Generate license optimization report if requested
+        if ($IncludeLicenseOptimization) {
+            $optimizationReport = $SoftwareInventory | Where-Object { $_.UsageFrequency -eq "Unused" -or $_.UsageFrequency -eq "Low" } |
+                Select-Object ComputerName, DisplayName, Publisher, LicenseType, LastUsed, UsageFrequency, LicenseCost |
+                Sort-Object LicenseCost -Descending
+            
+            $optimizationPath = Join-Path $OutputPath "LicenseOptimizationOpportunities.csv"
+            $optimizationReport | Export-Csv -Path $optimizationPath -NoTypeInformation -Encoding UTF8
+        }
+        
+        Write-Host "Software license reports exported to: $OutputPath" -ForegroundColor Green
+        
+    } catch {
+        Write-Error "Failed to export software license report: $($_.Exception.Message)"
+    }
+}
+
+#endregion
+
+#region Main Discovery Function
+
+<#
+.SYNOPSIS
+    Main application discovery function that orchestrates comprehensive application discovery
+.DESCRIPTION
+    Orchestrates application discovery from multiple sources including Intune, DNS, and internet-based discovery
+    to build a complete application catalog for M&A migration planning.
+.PARAMETER Configuration
+    Hashtable containing discovery configuration settings
+.PARAMETER Context
+    Hashtable containing discovery context and session information
+.PARAMETER SessionId
+    Unique identifier for the discovery session
+#>
+function Invoke-ApplicationDiscovery {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
+    )
+
+    # Define discovery script
+    $discoveryScript = {
+        param($Configuration, $Context, $SessionId, $Connections, $Result)
+        
+        $allDiscoveredData = [System.Collections.ArrayList]::new()
+        
+        try {
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Starting comprehensive application discovery..." -Level "INFO"
+            
+            # Get Intune applications
+            if ($Configuration.ContainsKey('IncludeIntuneApps') -and $Configuration.IncludeIntuneApps) {
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovering Intune applications..." -Level "INFO"
+                $intuneApps = Get-IntuneApplications -Configuration $Configuration -IncludeAssignments -IncludeUsageStats
+                $allDiscoveredData.AddRange($intuneApps)
+            }
+            
+            # Get DNS-based applications
+            if ($Configuration.ContainsKey('IncludeDNSApps') -and $Configuration.IncludeDNSApps) {
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovering DNS-based applications..." -Level "INFO"
+                $dnsApps = Get-DNSApplications -Configuration $Configuration
+                $allDiscoveredData.AddRange($dnsApps)
+            }
+            
+            # Create application catalog
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Creating application catalog..." -Level "INFO"
+            $applicationCatalog = New-ApplicationCatalog -Applications $allDiscoveredData -Configuration $Configuration
+            
+            # Test connectivity for critical applications
+            if ($Configuration.ContainsKey('TestConnectivity') -and $Configuration.TestConnectivity) {
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Testing application connectivity..." -Level "INFO"
+                $applicationCatalog | ForEach-Object {
+                    $connectivity = Test-ApplicationConnectivity -Application $_ -DetailedCheck
+                    $_.ConnectivityStatus = $connectivity
+                }
+            }
+            
+            # Export results
+            $outputPath = $Context.OutputPath
+            if ($outputPath) {
+                Export-ApplicationCatalog -Applications $applicationCatalog -OutputPath $outputPath -Format "CSV"
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Application catalog exported to: $outputPath" -Level "INFO"
+            }
+            
+            $Result.ItemCount = $applicationCatalog.Count
+            $Result.Status = "Completed"
+            $Result.Summary = "Discovered $($applicationCatalog.Count) applications from multiple sources"
+            $Result.Data = $applicationCatalog
+            
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Application discovery completed successfully. Found $($applicationCatalog.Count) applications." -Level "INFO"
+            
+        } catch {
+            $errorMessage = "Application discovery failed: $($_.Exception.Message)"
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message $errorMessage -Level "ERROR"
+            $Result.Status = "Failed"
+            $Result.ErrorMessage = $errorMessage
+            $Result.ItemCount = 0
+        }
+    }
+
+    # Execute discovery using the base framework
+    return Invoke-DiscoveryWithRetry -ModuleName "ApplicationDiscovery" -DiscoveryScript $discoveryScript -Configuration $Configuration -Context $Context -SessionId $SessionId
+}
+
+#endregion
+
 # Export module functions
 Export-ModuleMember -Function @(
     'Get-IntuneApplications',
@@ -1189,5 +1687,8 @@ Export-ModuleMember -Function @(
     'Get-ApplicationMigrationPath',
     'Update-ApplicationMetadata',
     'Export-ApplicationCatalog',
-    'Test-ApplicationConnectivity'
+    'Test-ApplicationConnectivity',
+    'Get-SoftwareLicenseInventory',
+    'Export-SoftwareLicenseReport',
+    'Invoke-ApplicationDiscovery'
 )

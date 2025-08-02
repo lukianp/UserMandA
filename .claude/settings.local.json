@@ -43,7 +43,11 @@
       "Bash(Start-Process \"C:\\enterprisediscovery\\bin\\net6.0-windows\\MandADiscoverySuite.exe\" -WindowStyle Normal)",
       "Bash(findstr:*)",
       "Bash(find:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(xcopy:*)",
+      "Bash(cmd.exe /c robocopy \"D:\\Scripts\\UserMandA\\Modules\" \"C:\\enterprisediscovery\\Modules\" /E /XO)",
+      "Bash(robocopy:*)",
+      "Bash(if exist \"C:\\enterprisediscovery\\Modules\" rmdir /s /q \"C:\\enterprisediscovery\\Modules\")"
     ],
     "deny": []
   }

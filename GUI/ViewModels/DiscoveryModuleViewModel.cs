@@ -1,0 +1,389 @@
+using System;
+using System.Windows.Input;
+using MandADiscoverySuite.Models;
+
+namespace MandADiscoverySuite.ViewModels
+{
+    /// <summary>
+    /// View model for discovery module configuration and status
+    /// </summary>
+    public class DiscoveryModuleViewModel : BaseViewModel
+    {
+        #region Private Fields
+
+        private bool _isEnabled;
+        private DiscoveryModuleStatus _status;
+        private double _progress;
+        private string _lastMessage;
+        private DateTime? _lastRunTime;
+        private TimeSpan? _lastRunDuration;
+        private int _lastRunItemCount;
+        private bool _hasConfiguration;
+        private string _configurationSummary;
+
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Unique identifier for the module
+        /// </summary>
+        public string ModuleName { get; }
+
+        /// <summary>
+        /// Display name for the module
+        /// </summary>
+        public string DisplayName { get; }
+
+        /// <summary>
+        /// Description of what the module discovers
+        /// </summary>
+        public string Description { get; }
+
+        /// <summary>
+        /// Icon or emoji representing the module
+        /// </summary>
+        public string Icon { get; }
+
+        /// <summary>
+        /// Category of the module (Identity, Infrastructure, Applications, etc.)
+        /// </summary>
+        public string Category { get; }
+
+        /// <summary>
+        /// Whether the module is enabled for discovery
+        /// </summary>
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set => SetProperty(ref _isEnabled, value, OnEnabledChanged);
+        }
+
+        /// <summary>
+        /// Current status of the module
+        /// </summary>
+        public DiscoveryModuleStatus Status
+        {
+            get => _status;
+            set => SetProperty(ref _status, value, () => OnPropertiesChanged(nameof(StatusText), nameof(StatusColor)));
+        }
+
+        /// <summary>
+        /// Progress of current operation (0-100)
+        /// </summary>
+        public double Progress
+        {
+            get => _progress;
+            set => SetProperty(ref _progress, value);
+        }
+
+        /// <summary>
+        /// Last status message from the module
+        /// </summary>
+        public string LastMessage
+        {
+            get => _lastMessage;
+            set => SetProperty(ref _lastMessage, value);
+        }
+
+        /// <summary>
+        /// Time of last successful run
+        /// </summary>
+        public DateTime? LastRunTime
+        {
+            get => _lastRunTime;
+            set => SetProperty(ref _lastRunTime, value, () => OnPropertiesChanged(nameof(LastRunTimeText), nameof(HasLastRun)));
+        }
+
+        /// <summary>
+        /// Duration of last run
+        /// </summary>
+        public TimeSpan? LastRunDuration
+        {
+            get => _lastRunDuration;
+            set => SetProperty(ref _lastRunDuration, value, () => OnPropertyChanged(nameof(LastRunDurationText)));
+        }
+
+        /// <summary>
+        /// Number of items discovered in last run
+        /// </summary>
+        public int LastRunItemCount
+        {
+            get => _lastRunItemCount;
+            set => SetProperty(ref _lastRunItemCount, value, () => OnPropertyChanged(nameof(LastRunItemCountText)));
+        }
+
+        /// <summary>
+        /// Whether the module has configurable options
+        /// </summary>
+        public bool HasConfiguration
+        {
+            get => _hasConfiguration;
+            set => SetProperty(ref _hasConfiguration, value);
+        }
+
+        /// <summary>
+        /// Summary of current configuration
+        /// </summary>
+        public string ConfigurationSummary
+        {
+            get => _configurationSummary;
+            set => SetProperty(ref _configurationSummary, value);
+        }
+
+        /// <summary>
+        /// Text representation of current status
+        /// </summary>
+        public string StatusText
+        {
+            get
+            {
+                return Status switch
+                {
+                    DiscoveryModuleStatus.Ready => "Ready",
+                    DiscoveryModuleStatus.Running => "Running",
+                    DiscoveryModuleStatus.Completed => "Completed",
+                    DiscoveryModuleStatus.Failed => "Failed",
+                    DiscoveryModuleStatus.Cancelled => "Cancelled",
+                    DiscoveryModuleStatus.Disabled => "Disabled",
+                    _ => "Unknown"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Color associated with current status
+        /// </summary>
+        public string StatusColor
+        {
+            get
+            {
+                return Status switch
+                {
+                    DiscoveryModuleStatus.Ready => "#4CAF50",      // Green
+                    DiscoveryModuleStatus.Running => "#2196F3",    // Blue
+                    DiscoveryModuleStatus.Completed => "#4CAF50",  // Green
+                    DiscoveryModuleStatus.Failed => "#F44336",     // Red
+                    DiscoveryModuleStatus.Cancelled => "#FF9800",  // Orange
+                    DiscoveryModuleStatus.Disabled => "#9E9E9E",   // Gray
+                    _ => "#9E9E9E"                                  // Gray
+                };
+            }
+        }
+
+        /// <summary>
+        /// Formatted last run time text
+        /// </summary>
+        public string LastRunTimeText
+        {
+            get
+            {
+                if (!LastRunTime.HasValue)
+                    return "Never run";
+
+                var timeAgo = DateTime.Now - LastRunTime.Value;
+                if (timeAgo.TotalMinutes < 1)
+                    return "Just now";
+                if (timeAgo.TotalHours < 1)
+                    return $"{(int)timeAgo.TotalMinutes} minutes ago";
+                if (timeAgo.TotalDays < 1)
+                    return $"{(int)timeAgo.TotalHours} hours ago";
+                if (timeAgo.TotalDays < 7)
+                    return $"{(int)timeAgo.TotalDays} days ago";
+                
+                return LastRunTime.Value.ToString("yyyy-MM-dd HH:mm");
+            }
+        }
+
+        /// <summary>
+        /// Formatted last run duration text
+        /// </summary>
+        public string LastRunDurationText
+        {
+            get
+            {
+                if (!LastRunDuration.HasValue)
+                    return "N/A";
+
+                var duration = LastRunDuration.Value;
+                if (duration.TotalSeconds < 60)
+                    return $"{(int)duration.TotalSeconds}s";
+                if (duration.TotalMinutes < 60)
+                    return $"{(int)duration.TotalMinutes}m {duration.Seconds}s";
+                return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+            }
+        }
+
+        /// <summary>
+        /// Formatted last run item count text
+        /// </summary>
+        public string LastRunItemCountText
+        {
+            get
+            {
+                if (LastRunItemCount == 0)
+                    return "No items";
+                if (LastRunItemCount == 1)
+                    return "1 item";
+                return $"{LastRunItemCount:N0} items";
+            }
+        }
+
+        /// <summary>
+        /// Whether the module has been run before
+        /// </summary>
+        public bool HasLastRun => LastRunTime.HasValue;
+
+        /// <summary>
+        /// Whether the module is currently running
+        /// </summary>
+        public bool IsRunning => Status == DiscoveryModuleStatus.Running;
+
+        /// <summary>
+        /// Whether the module can be configured
+        /// </summary>
+        public bool CanConfigure => HasConfiguration && !IsRunning;
+
+        /// <summary>
+        /// Whether the module can be toggled
+        /// </summary>
+        public bool CanToggle => !IsRunning;
+
+        #endregion
+
+        #region Commands
+
+        public ICommand ToggleEnabledCommand { get; }
+        public ICommand ConfigureCommand { get; }
+        public ICommand ViewResultsCommand { get; }
+        public ICommand ViewLogsCommand { get; }
+
+        #endregion
+
+        #region Constructor
+
+        public DiscoveryModuleViewModel(string moduleName, string displayName, string description, bool isEnabled = false)
+        {
+            ModuleName = moduleName ?? throw new ArgumentNullException(nameof(moduleName));
+            DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
+            Description = description ?? throw new ArgumentNullException(nameof(description));
+            
+            _isEnabled = isEnabled;
+            _status = isEnabled ? DiscoveryModuleStatus.Ready : DiscoveryModuleStatus.Disabled;
+            _progress = 0;
+            _lastMessage = "Module initialized";
+
+            // Set icon and category based on module name
+            (Icon, Category) = GetModuleIconAndCategory(moduleName);
+
+            // Initialize commands
+            ToggleEnabledCommand = new RelayCommand(() => IsEnabled = !IsEnabled, () => CanToggle);
+            ConfigureCommand = new RelayCommand(OnConfigure, () => CanConfigure);
+            ViewResultsCommand = new RelayCommand(OnViewResults, () => HasLastRun);
+            ViewLogsCommand = new RelayCommand(OnViewLogs);
+
+            // Set default configuration
+            _hasConfiguration = true;
+            _configurationSummary = "Default configuration";
+        }
+
+        #endregion
+
+        #region Event Handlers
+
+        private void OnEnabledChanged()
+        {
+            Status = IsEnabled ? DiscoveryModuleStatus.Ready : DiscoveryModuleStatus.Disabled;
+            LastMessage = IsEnabled ? "Module enabled" : "Module disabled";
+            
+            OnPropertiesChanged(nameof(CanToggle), nameof(CanConfigure));
+        }
+
+        private void OnConfigure()
+        {
+            // TODO: Show configuration dialog
+            LastMessage = "Configuration dialog would open here";
+        }
+
+        private void OnViewResults()
+        {
+            // TODO: Show results for this module
+            LastMessage = "Results viewer would open here";
+        }
+
+        private void OnViewLogs()
+        {
+            // TODO: Show logs for this module
+            LastMessage = "Log viewer would open here";
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        private static (string Icon, string Category) GetModuleIconAndCategory(string moduleName)
+        {
+            return moduleName.ToLowerInvariant() switch
+            {
+                "activedirectory" => ("👥", "Identity"),
+                "azuread" => ("☁️", "Identity"),
+                "exchange" => ("📧", "Collaboration"),
+                "sharepoint" => ("📚", "Collaboration"),
+                "teams" => ("💬", "Collaboration"),
+                "intune" => ("📱", "Device Management"),
+                "networkinfrastructure" => ("🌐", "Infrastructure"),
+                "sqlserver" => ("🗄️", "Data"),
+                "fileservers" => ("📁", "Storage"),
+                "applications" => ("📦", "Applications"),
+                "certificates" => ("🔐", "Security"),
+                "printers" => ("🖨️", "Infrastructure"),
+                "vmware" => ("💻", "Virtualization"),
+                "dataclassification" => ("🏷️", "Data"),
+                "securitygroups" => ("🔒", "Security"),
+                _ => ("⚙️", "Other")
+            };
+        }
+
+        /// <summary>
+        /// Updates the module with results from a discovery run
+        /// </summary>
+        /// <param name="itemCount">Number of items discovered</param>
+        /// <param name="duration">Duration of the run</param>
+        /// <param name="message">Final status message</param>
+        public void UpdateRunResults(int itemCount, TimeSpan duration, string message = null)
+        {
+            LastRunTime = DateTime.Now;
+            LastRunDuration = duration;
+            LastRunItemCount = itemCount;
+            
+            if (!string.IsNullOrWhiteSpace(message))
+                LastMessage = message;
+            
+            Progress = 100;
+            Status = DiscoveryModuleStatus.Completed;
+        }
+
+        /// <summary>
+        /// Marks the module as failed with an error message
+        /// </summary>
+        /// <param name="errorMessage">Error message</param>
+        public void MarkAsFailed(string errorMessage)
+        {
+            Status = DiscoveryModuleStatus.Failed;
+            LastMessage = errorMessage;
+            Progress = 0;
+        }
+
+        /// <summary>
+        /// Resets the module to ready state
+        /// </summary>
+        public void Reset()
+        {
+            Status = IsEnabled ? DiscoveryModuleStatus.Ready : DiscoveryModuleStatus.Disabled;
+            Progress = 0;
+            LastMessage = "Module reset";
+        }
+
+        #endregion
+    }
+}

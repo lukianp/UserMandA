@@ -199,6 +199,76 @@ function Invoke-ActiveDirectoryDiscovery {
         } catch {
             $result.AddWarning("Failed to discover OUs: $($_.Exception.Message)", @{Section="OUs"})
         }
+        
+        # Discover Domain Trusts
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "Discovering Domain Trusts..." -Context $Context
+            $trusts = Get-ADTrustsData -Configuration $Configuration -Context $Context -ServerParams $serverParams
+            if ($trusts.Count -gt 0) {
+                $trusts | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Trust' -Force }
+                $null = $allDiscoveredData.AddRange($trusts)
+                $result.Metadata["TrustCount"] = $trusts.Count
+            }
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Discovered $($trusts.Count) domain trusts" -Context $Context
+        } catch {
+            $result.AddWarning("Failed to discover trusts: $($_.Exception.Message)", @{Section="Trusts"})
+        }
+        
+        # Discover AD Sites
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "Discovering AD Sites..." -Context $Context
+            $sites = Get-ADSitesData -Configuration $Configuration -Context $Context -ServerParams $serverParams
+            if ($sites.Count -gt 0) {
+                $sites | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Site' -Force }
+                $null = $allDiscoveredData.AddRange($sites)
+                $result.Metadata["SiteCount"] = $sites.Count
+            }
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Discovered $($sites.Count) AD sites" -Context $Context
+        } catch {
+            $result.AddWarning("Failed to discover sites: $($_.Exception.Message)", @{Section="Sites"})
+        }
+        
+        # Discover AD Subnets
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "Discovering AD Subnets..." -Context $Context
+            $subnets = Get-ADSubnetsData -Configuration $Configuration -Context $Context -ServerParams $serverParams
+            if ($subnets.Count -gt 0) {
+                $subnets | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Subnet' -Force }
+                $null = $allDiscoveredData.AddRange($subnets)
+                $result.Metadata["SubnetCount"] = $subnets.Count
+            }
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Discovered $($subnets.Count) AD subnets" -Context $Context
+        } catch {
+            $result.AddWarning("Failed to discover subnets: $($_.Exception.Message)", @{Section="Subnets"})
+        }
+        
+        # Discover FSMO Roles
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "Discovering FSMO Roles..." -Context $Context
+            $fsmoRoles = Get-ADFSMORolesData -Configuration $Configuration -Context $Context -ServerParams $serverParams
+            if ($fsmoRoles.Count -gt 0) {
+                $fsmoRoles | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'FSMORole' -Force }
+                $null = $allDiscoveredData.AddRange($fsmoRoles)
+                $result.Metadata["FSMORoleCount"] = $fsmoRoles.Count
+            }
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Discovered $($fsmoRoles.Count) FSMO roles" -Context $Context
+        } catch {
+            $result.AddWarning("Failed to discover FSMO roles: $($_.Exception.Message)", @{Section="FSMORoles"})
+        }
+        
+        # Discover Domain Controllers
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "Discovering Domain Controllers..." -Context $Context
+            $domainControllers = Get-ADDomainControllersData -Configuration $Configuration -Context $Context -ServerParams $serverParams
+            if ($domainControllers.Count -gt 0) {
+                $domainControllers | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'DomainController' -Force }
+                $null = $allDiscoveredData.AddRange($domainControllers)
+                $result.Metadata["DomainControllerCount"] = $domainControllers.Count
+            }
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Discovered $($domainControllers.Count) domain controllers" -Context $Context
+        } catch {
+            $result.AddWarning("Failed to discover domain controllers: $($_.Exception.Message)", @{Section="DomainControllers"})
+        }
 
         # 6. EXPORT DATA TO CSV
         if ($allDiscoveredData.Count -gt 0) {
@@ -219,6 +289,11 @@ function Invoke-ActiveDirectoryDiscovery {
                     'GroupMember' = 'ADGroupMembers.csv'
                     'Computer' = 'ADComputers.csv'
                     'OU' = 'ADOrganizationalUnits.csv'
+                    'Trust' = 'ADTrusts.csv'
+                    'Site' = 'ADSites.csv'
+                    'Subnet' = 'ADSubnets.csv'
+                    'FSMORole' = 'ADFSMORoles.csv'
+                    'DomainController' = 'ADDomainControllers.csv'
                 }
                 
                 $fileName = if ($fileMap.ContainsKey($dataType)) { $fileMap[$dataType] } else { "AD_$dataType.csv" }
@@ -566,6 +641,217 @@ function Get-PasswordExpiryDate {
     } catch {
         return "Conversion Error"
     }
+}
+
+function Get-ADTrustsData {
+    [CmdletBinding()]
+    param(
+        [hashtable]$Configuration,
+        [hashtable]$Context,
+        [hashtable]$ServerParams
+    )
+    
+    $trusts = @()
+    try {
+        $domainTrusts = Get-ADTrust -Filter * @ServerParams
+        foreach ($trust in $domainTrusts) {
+            $trusts += [PSCustomObject]@{
+                Source = $trust.Source
+                Target = $trust.Target
+                Direction = $trust.Direction
+                TrustType = $trust.TrustType
+                TrustAttributes = $trust.TrustAttributes
+                SelectiveAuthentication = $trust.SelectiveAuthentication
+                SIDFilteringForestAware = $trust.SIDFilteringForestAware
+                SIDFilteringQuarantined = $trust.SIDFilteringQuarantined
+                UplevelOnly = $trust.UplevelOnly
+                UsesRC4Encryption = $trust.UsesRC4Encryption
+                UsesAESKeys = $trust.UsesAESKeys
+                TGTDelegation = $trust.TGTDelegation
+                TrustedPolicy = $trust.TrustedPolicy
+                TrustingPolicy = $trust.TrustingPolicy
+                CreatedDate = $trust.whenCreated
+                ModifiedDate = $trust.whenChanged
+                DistinguishedName = $trust.DistinguishedName
+            }
+        }
+    } catch {
+        Write-ActiveDirectoryLog -Level "WARN" -Message "Could not retrieve trust information: $($_.Exception.Message)"
+    }
+    return $trusts
+}
+
+function Get-ADSitesData {
+    [CmdletBinding()]
+    param(
+        [hashtable]$Configuration,
+        [hashtable]$Context,
+        [hashtable]$ServerParams
+    )
+    
+    $sites = @()
+    try {
+        $adSites = Get-ADReplicationSite -Filter * @ServerParams
+        foreach ($site in $adSites) {
+            $siteLinks = Get-ADReplicationSiteLink -Filter "SitesIncluded -eq '$($site.DistinguishedName)'" @ServerParams -ErrorAction SilentlyContinue
+            $subnets = Get-ADReplicationSubnet -Filter "Site -eq '$($site.DistinguishedName)'" @ServerParams -ErrorAction SilentlyContinue
+            
+            $sites += [PSCustomObject]@{
+                Name = $site.Name
+                Description = $site.Description
+                Location = $site.Location
+                ManagedBy = $site.ManagedBy
+                CreatedDate = $site.whenCreated
+                ModifiedDate = $site.whenChanged
+                DistinguishedName = $site.DistinguishedName
+                InterSiteTopologyGenerator = $site.InterSiteTopologyGenerator
+                SiteLinkCount = if ($siteLinks) { $siteLinks.Count } else { 0 }
+                SubnetCount = if ($subnets) { $subnets.Count } else { 0 }
+                SiteLinks = if ($siteLinks) { ($siteLinks.Name -join '; ') } else { 'None' }
+                AssignedSubnets = if ($subnets) { ($subnets.Name -join '; ') } else { 'None' }
+            }
+        }
+    } catch {
+        Write-ActiveDirectoryLog -Level "WARN" -Message "Could not retrieve site information: $($_.Exception.Message)"
+    }
+    return $sites
+}
+
+function Get-ADSubnetsData {
+    [CmdletBinding()]
+    param(
+        [hashtable]$Configuration,
+        [hashtable]$Context,
+        [hashtable]$ServerParams
+    )
+    
+    $subnets = @()
+    try {
+        $adSubnets = Get-ADReplicationSubnet -Filter * @ServerParams
+        foreach ($subnet in $adSubnets) {
+            $subnets += [PSCustomObject]@{
+                Name = $subnet.Name
+                Site = $subnet.Site
+                Description = $subnet.Description
+                Location = $subnet.Location
+                CreatedDate = $subnet.whenCreated
+                ModifiedDate = $subnet.whenChanged
+                DistinguishedName = $subnet.DistinguishedName
+            }
+        }
+    } catch {
+        Write-ActiveDirectoryLog -Level "WARN" -Message "Could not retrieve subnet information: $($_.Exception.Message)"
+    }
+    return $subnets
+}
+
+function Get-ADFSMORolesData {
+    [CmdletBinding()]
+    param(
+        [hashtable]$Configuration,
+        [hashtable]$Context,
+        [hashtable]$ServerParams
+    )
+    
+    $fsmoRoles = @()
+    try {
+        $domain = Get-ADDomain @ServerParams
+        $forest = Get-ADForest @ServerParams
+        
+        # Domain-level FSMO roles
+        $fsmoRoles += [PSCustomObject]@{
+            RoleName = "PDC Emulator"
+            RoleLevel = "Domain"
+            RoleHolder = $domain.PDCEmulator
+            Domain = $domain.DNSRoot
+            Forest = $forest.Name
+            OperationMasterRole = "PDCEmulator"
+        }
+        
+        $fsmoRoles += [PSCustomObject]@{
+            RoleName = "RID Master"
+            RoleLevel = "Domain"
+            RoleHolder = $domain.RIDMaster
+            Domain = $domain.DNSRoot
+            Forest = $forest.Name
+            OperationMasterRole = "RIDMaster"
+        }
+        
+        $fsmoRoles += [PSCustomObject]@{
+            RoleName = "Infrastructure Master"
+            RoleLevel = "Domain"
+            RoleHolder = $domain.InfrastructureMaster
+            Domain = $domain.DNSRoot
+            Forest = $forest.Name
+            OperationMasterRole = "InfrastructureMaster"
+        }
+        
+        # Forest-level FSMO roles
+        $fsmoRoles += [PSCustomObject]@{
+            RoleName = "Schema Master"
+            RoleLevel = "Forest"
+            RoleHolder = $forest.SchemaMaster
+            Domain = $domain.DNSRoot
+            Forest = $forest.Name
+            OperationMasterRole = "SchemaMaster"
+        }
+        
+        $fsmoRoles += [PSCustomObject]@{
+            RoleName = "Domain Naming Master"
+            RoleLevel = "Forest"
+            RoleHolder = $forest.DomainNamingMaster
+            Domain = $domain.DNSRoot
+            Forest = $forest.Name
+            OperationMasterRole = "DomainNamingMaster"
+        }
+        
+    } catch {
+        Write-ActiveDirectoryLog -Level "WARN" -Message "Could not retrieve FSMO role information: $($_.Exception.Message)"
+    }
+    return $fsmoRoles
+}
+
+function Get-ADDomainControllersData {
+    [CmdletBinding()]
+    param(
+        [hashtable]$Configuration,
+        [hashtable]$Context,
+        [hashtable]$ServerParams
+    )
+    
+    $domainControllers = @()
+    try {
+        $dcs = Get-ADDomainController -Filter * @ServerParams
+        foreach ($dc in $dcs) {
+            $domainControllers += [PSCustomObject]@{
+                Name = $dc.Name
+                HostName = $dc.HostName
+                IPv4Address = $dc.IPv4Address
+                IPv6Address = $dc.IPv6Address
+                Domain = $dc.Domain
+                Forest = $dc.Forest
+                Site = $dc.Site
+                OperatingSystem = $dc.OperatingSystem
+                OperatingSystemVersion = $dc.OperatingSystemVersion
+                OperatingSystemServicePack = $dc.OperatingSystemServicePack
+                IsGlobalCatalog = $dc.IsGlobalCatalog
+                IsReadOnly = $dc.IsReadOnly
+                Enabled = $dc.Enabled
+                LdapPort = $dc.LdapPort
+                SslPort = $dc.SslPort
+                Partitions = ($dc.Partitions -join '; ')
+                ServerObjectDN = $dc.ServerObjectDN
+                ServerObjectGuid = $dc.ServerObjectGuid
+                ComputerObjectDN = $dc.ComputerObjectDN
+                NTDSSettingsObjectDN = $dc.NTDSSettingsObjectDN
+                DefaultPartition = $dc.DefaultPartition
+                InvocationId = $dc.InvocationId
+            }
+        }
+    } catch {
+        Write-ActiveDirectoryLog -Level "WARN" -Message "Could not retrieve domain controller information: $($_.Exception.Message)"
+    }
+    return $domainControllers
 }
 
 # --- Module Export ---

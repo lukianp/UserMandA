@@ -427,6 +427,36 @@ class CompanyProfileManager {
         Write-Host "Active profile set to: $companyName" -ForegroundColor Green
     }
     
+    [hashtable] GetProfile() {
+        if (!$this.CompanyName -or !$this.ProfilePath) {
+            throw "Company profile not initialized"
+        }
+        
+        $metadataPath = Join-Path $this.ProfilePath "profile-metadata.json"
+        if (Test-Path $metadataPath) {
+            $metadata = Get-Content -Path $metadataPath -Raw | ConvertFrom-Json
+            return @{
+                CompanyName = $this.CompanyName
+                ProfilePath = $this.ProfilePath
+                Metadata = $metadata
+                Paths = $this.GetProfilePaths()
+            }
+        }
+        
+        return @{
+            CompanyName = $this.CompanyName
+            ProfilePath = $this.ProfilePath
+            Paths = $this.GetProfilePaths()
+        }
+    }
+    
+    [string] GetProfileDataPath() {
+        if (!$this.ProfilePath) {
+            throw "Company profile not initialized"
+        }
+        return $this.ProfilePath
+    }
+
     [void] GenerateDirectoryReport() {
         $reportPath = Join-Path $this.ProfilePath "Reports\directory-structure.txt"
         $report = @()

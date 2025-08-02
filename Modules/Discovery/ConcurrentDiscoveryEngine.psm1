@@ -27,9 +27,9 @@ Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\ErrorHand
 Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\PerformanceMetrics.psm1") -Force
 
 class ConcurrentDiscoveryEngine {
-    [int]$MaxConcurrentJobs = 4
+    [int]$MaxConcurrentJobs = 8  # Increased for better performance
     [int]$BatchSize = 100
-    [int]$ThrottleDelayMs = 100
+    [int]$ThrottleDelayMs = 50   # Reduced for better responsiveness
     [hashtable]$ActiveJobs = @{}
     [hashtable]$JobResults = @{}
     [hashtable]$Configuration
@@ -41,6 +41,10 @@ class ConcurrentDiscoveryEngine {
     [int]$TotalItemsProcessed = 0
     [int]$TotalItemsQueued = 0
     [bool]$IsRunning = $false
+    [System.Management.Automation.Runspaces.RunspacePool]$RunspacePool
+    [System.Threading.Semaphore]$ResourceSemaphore
+    [hashtable]$ResourceUsage = @{}
+    [hashtable]$JobPriorities = @{}
     
     ConcurrentDiscoveryEngine([hashtable]$Config, [hashtable]$Ctx, [string]$Session) {
         $this.Configuration = $Config
@@ -51,6 +55,26 @@ class ConcurrentDiscoveryEngine {
         
         # Configure concurrency based on system resources
         $this.ConfigureConcurrency()
+        
+        # Initialize runspace pool for better performance
+        $this.InitializeRunspacePool()
+        
+        # Initialize resource management
+        $this.ResourceSemaphore = [System.Threading.Semaphore]::new($this.MaxConcurrentJobs, $this.MaxConcurrentJobs)
+        
+        # Set job priorities (higher number = higher priority)
+        $this.JobPriorities = @{
+            'ActiveDirectory' = 10
+            'NetworkInfrastructure' = 9
+            'SecurityInfrastructure' = 8
+            'Exchange' = 7
+            'SharePoint' = 6
+            'Teams' = 5
+            'FileServer' = 4
+            'Application' = 3
+            'Certificate' = 2
+            'Default' = 1
+        }
     }
     
     [void]ConfigureConcurrency() {
@@ -331,6 +355,89 @@ return @{ Status = "Unknown job type"; Data = $Data }
         Write-Host "  Average Job Time: $($summary.AverageJobTime.ToString('F2'))s" -ForegroundColor White
         
         return $summary
+    }
+    
+    [void]InitializeRunspacePool() {
+        # Create initial session state
+        $initialSessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
+        
+        # Add modules that will be available in all runspaces
+        $modulePaths = @(
+            (Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\EnhancedLogging.psm1"),
+            (Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\ErrorHandling.psm1"),
+            (Join-Path (Split-Path $PSScriptRoot -Parent) "Core\ClassDefinitions.psm1")
+        )
+        
+        foreach ($modulePath in $modulePaths) {
+            if (Test-Path $modulePath) {
+                $initialSessionState.ImportPSModule($modulePath)
+            }
+        }
+        
+        # Create the runspace pool
+        $this.RunspacePool = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspacePool(
+            1, $this.MaxConcurrentJobs, $initialSessionState, $Host
+        )
+        $this.RunspacePool.Open()
+        
+        Write-Host "Runspace pool initialized with $($this.MaxConcurrentJobs) maximum runspaces" -ForegroundColor Green
+    }
+    
+    [void]QueueJobWithPriority([hashtable]$Job) {
+        # Add priority to job
+        $jobType = if ($Job.Type) { $Job.Type } else { 'Default' }
+        $priority = if ($this.JobPriorities.ContainsKey($jobType)) { $this.JobPriorities[$jobType] } else { $this.JobPriorities['Default'] }
+        $Job.Priority = $priority
+        
+        # Convert queue to array, add job, sort by priority, then recreate queue
+        $queueArray = @()
+        while ($this.JobQueue.Count -gt 0) {
+            $queueArray += $this.JobQueue.Dequeue()
+        }
+        
+        $queueArray += $Job
+        $sortedJobs = $queueArray | Sort-Object -Property Priority -Descending
+        
+        $this.JobQueue = [System.Collections.Generic.Queue[PSObject]]::new()
+        foreach ($sortedJob in $sortedJobs) {
+            $this.JobQueue.Enqueue($sortedJob)
+        }
+        
+        $this.TotalItemsQueued++
+    }
+    
+    [hashtable]GetResourceUsage() {
+        $cpuUsage = (Get-Counter "\Processor(_Total)\% Processor Time" -SampleInterval 1 -MaxSamples 1).CounterSamples.CookedValue
+        $memoryUsage = [Math]::Round(((Get-Counter "\Memory\Available MBytes").CounterSamples.CookedValue / 1024), 2)
+        
+        return @{
+            CPUUsage = [Math]::Round(100 - $cpuUsage, 2)
+            MemoryUsageGB = $memoryUsage
+            ActiveJobs = $this.ActiveJobs.Count
+            QueuedJobs = $this.JobQueue.Count
+            ResourceSemaphoreCount = $this.ResourceSemaphore.Release(); $this.ResourceSemaphore.WaitOne(0); $this.ResourceSemaphore.Release()
+        }
+    }
+    
+    [void]AdaptiveConcurrencyControl() {
+        $usage = $this.GetResourceUsage()
+        
+        # Adaptive concurrency based on system load
+        if ($usage.CPUUsage -gt 80 -and $this.MaxConcurrentJobs -gt 2) {
+            $this.MaxConcurrentJobs--
+            Write-Host "High CPU usage detected, reducing concurrency to $($this.MaxConcurrentJobs)" -ForegroundColor Yellow
+        } elseif ($usage.CPUUsage -lt 50 -and $this.MaxConcurrentJobs -lt 12) {
+            $this.MaxConcurrentJobs++
+            Write-Host "Low CPU usage detected, increasing concurrency to $($this.MaxConcurrentJobs)" -ForegroundColor Green
+        }
+        
+        # Memory-based throttling
+        if ($usage.MemoryUsageGB -lt 2) {
+            $this.ThrottleDelayMs = 200
+            Write-Host "Low memory detected, increasing throttle delay" -ForegroundColor Yellow
+        } elseif ($usage.MemoryUsageGB -gt 8) {
+            $this.ThrottleDelayMs = 25
+        }
     }
     
     [void]Stop() {

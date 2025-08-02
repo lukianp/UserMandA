@@ -7,7 +7,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>MandADiscoverySuite</AssemblyName>
     <RootNamespace>MandADiscoverySuite</RootNamespace>
-    <Nullable>enable</Nullable>
+    <Nullable>disable</Nullable>
     <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>

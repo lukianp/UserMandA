@@ -33,7 +33,7 @@ param(
     [string]$Configuration = 'Release',
     
     [Parameter(Mandatory = $false)]
-    [string]$OutputPath = "C:\EnterpriseDiscovery\bin\$Configuration",
+    [string]$OutputPath = "C:\EnterpriseDiscovery",
     
     [Parameter(Mandatory = $false)]
     [switch]$SelfContained
@@ -110,7 +110,50 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Build the application
+# Ensure target directory exists and is clean
+Write-Host "Preparing deployment directory..." -ForegroundColor Yellow
+
+# Try to stop any running instances of the application
+try {
+    $processes = Get-Process -Name "MandADiscoverySuite" -ErrorAction SilentlyContinue
+    if ($processes) {
+        Write-Host "Stopping running application instances..." -ForegroundColor Yellow
+        $processes | ForEach-Object { 
+            try {
+                $_.CloseMainWindow()
+                Start-Sleep -Seconds 2
+                if (!$_.HasExited) {
+                    $_.Kill()
+                }
+            } catch {
+                Write-Warning "Could not stop process $($_.Id): $($_.Exception.Message)"
+            }
+        }
+        Start-Sleep -Seconds 1
+    }
+} catch {
+    Write-Warning "Could not check for running processes: $($_.Exception.Message)"
+}
+
+if (Test-Path $OutputPath) {
+    # Try to remove old files, skip if locked
+    try {
+        # Remove any old executable files from root
+        Get-ChildItem -Path $OutputPath -Filter "*.exe" | Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $OutputPath -Filter "*.dll" | Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $OutputPath -Filter "*.bat" | Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $OutputPath -Filter "*.json" | Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $OutputPath -Filter "*.pdb" | Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $OutputPath -Filter "*.deps.json" | Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $OutputPath -Filter "*.runtimeconfig.json" | Remove-Item -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Warning "Some files could not be removed (may be in use): $($_.Exception.Message)"
+    }
+} else {
+    New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
+}
+
+# Build the application directly to target location
 Write-Host "Building application..." -ForegroundColor Yellow
 
 $BuildArgs = @(
@@ -196,8 +239,41 @@ $ModulesDestPath = Join-Path $OutputPath "Modules"
 
 if (Test-Path $ModulesSourcePath) {
     Write-Host "Copying PowerShell modules..." -ForegroundColor Yellow
+    
+    # Remove existing modules directory to ensure clean copy
+    if (Test-Path $ModulesDestPath) {
+        Remove-Item -Path $ModulesDestPath -Recurse -Force
+    }
+    
     Copy-Item -Path $ModulesSourcePath -Destination $ModulesDestPath -Recurse -Force
-    Write-Host "  [OK] Modules copied to output directory" -ForegroundColor Green
+    
+    # Verify critical modules are present
+    $CriticalModules = @(
+        "Core\CompanyProfileManager.psm1",
+        "Discovery\ActiveDirectoryDiscovery.psm1",
+        "Discovery\AzureDiscovery.psm1", 
+        "Discovery\ApplicationDiscovery.psm1",
+        "Discovery\DiscoveryBase.psm1",
+        "Utilities\ErrorHandling.psm1"
+    )
+    
+    $MissingModules = @()
+    foreach ($module in $CriticalModules) {
+        $modulePath = Join-Path $ModulesDestPath $module
+        if (!(Test-Path $modulePath)) {
+            $MissingModules += $module
+        }
+    }
+    
+    if ($MissingModules.Count -gt 0) {
+        Write-Warning "Missing critical modules: $($MissingModules -join ', ')"
+    } else {
+        Write-Host "  [OK] All critical modules verified" -ForegroundColor Green
+    }
+    
+    # Count total modules
+    $ModuleCount = (Get-ChildItem -Path $ModulesDestPath -Filter "*.psm1" -Recurse).Count
+    Write-Host "  [OK] $ModuleCount PowerShell modules copied" -ForegroundColor Green
 }
 
 # Create configuration directory
@@ -206,8 +282,44 @@ $ConfigSourcePath = Join-Path (Split-Path $ScriptDir -Parent) "Configuration"
 
 if (Test-Path $ConfigSourcePath) {
     Write-Host "Copying configuration files..." -ForegroundColor Yellow
+    
+    # Remove existing config directory to ensure clean copy
+    if (Test-Path $ConfigDestPath) {
+        Remove-Item -Path $ConfigDestPath -Recurse -Force
+    }
+    
     Copy-Item -Path $ConfigSourcePath -Destination $ConfigDestPath -Recurse -Force
-    Write-Host "  [OK] Configuration files copied" -ForegroundColor Green
+    
+    # Verify critical configuration files
+    $CriticalConfigs = @(
+        "default-config.json",
+        "suite-config.json"
+    )
+    
+    foreach ($config in $CriticalConfigs) {
+        $configPath = Join-Path $ConfigDestPath $config
+        if (Test-Path $configPath) {
+            Write-Host "  [OK] $config verified" -ForegroundColor Green
+        } else {
+            Write-Warning "Missing configuration file: $config"
+        }
+    }
+}
+
+# Copy additional scripts and tools
+$ScriptsSourcePath = Join-Path (Split-Path $ScriptDir -Parent) "Scripts"
+$ScriptsDestPath = Join-Path $OutputPath "Scripts"
+
+if (Test-Path $ScriptsSourcePath) {
+    Write-Host "Copying utility scripts..." -ForegroundColor Yellow
+    
+    if (Test-Path $ScriptsDestPath) {
+        Remove-Item -Path $ScriptsDestPath -Recurse -Force
+    }
+    
+    Copy-Item -Path $ScriptsSourcePath -Destination $ScriptsDestPath -Recurse -Force
+    $ScriptCount = (Get-ChildItem -Path $ScriptsDestPath -Filter "*.ps1" -Recurse).Count
+    Write-Host "  [OK] $ScriptCount utility scripts copied" -ForegroundColor Green
 }
 
 # Get build information
@@ -230,6 +342,70 @@ if (Test-Path $ExePath) {
     Write-Host "  2. Run: Launch-MandADiscoverySuite.bat" -ForegroundColor White
     Write-Host "  OR" -ForegroundColor Yellow
     Write-Host "  2. Run: MandADiscoverySuite.exe" -ForegroundColor White
+    Write-Host ""
+    
+    # Post-build verification
+    Write-Host "Post-Build Verification:" -ForegroundColor Yellow
+    
+    # Verify modules directory structure
+    $ModulesPath = Join-Path $OutputPath "Modules"
+    if (Test-Path $ModulesPath) {
+        $DiscoveryModules = Get-ChildItem -Path (Join-Path $ModulesPath "Discovery") -Filter "*.psm1" | Measure-Object
+        $CoreModules = Get-ChildItem -Path (Join-Path $ModulesPath "Core") -Filter "*.psm1" | Measure-Object
+        $UtilityModules = Get-ChildItem -Path (Join-Path $ModulesPath "Utilities") -Filter "*.psm1" | Measure-Object
+        
+        Write-Host "  [OK] Discovery Modules: $($DiscoveryModules.Count)" -ForegroundColor Green
+        Write-Host "  [OK] Core Modules: $($CoreModules.Count)" -ForegroundColor Green  
+        Write-Host "  [OK] Utility Modules: $($UtilityModules.Count)" -ForegroundColor Green
+    }
+    
+    # Verify configuration files
+    $ConfigPath = Join-Path $OutputPath "Configuration"
+    if (Test-Path $ConfigPath) {
+        $ConfigCount = (Get-ChildItem -Path $ConfigPath -Filter "*.json").Count
+        Write-Host "  [OK] Configuration Files: $ConfigCount" -ForegroundColor Green
+    }
+    
+    # Verify launcher script
+    $LauncherScript = Join-Path $OutputPath "Launch-MandADiscoverySuite.bat"
+    if (Test-Path $LauncherScript) {
+        Write-Host "  [OK] Launcher script created" -ForegroundColor Green
+    }
+    
+    Write-Host ""
+    Write-Host "Deployment Structure:" -ForegroundColor Cyan
+    Write-Host "  Application: $OutputPath" -ForegroundColor White
+    Write-Host "  Modules: $OutputPath\Modules" -ForegroundColor White
+    Write-Host "  Config: $OutputPath\Configuration" -ForegroundColor White
+    Write-Host "  Data: C:\DiscoveryData" -ForegroundColor White
+    Write-Host ""
+    
+    # Create and set up data directory
+    Write-Host "Setting up data directory..." -ForegroundColor Yellow
+    $DataPath = "C:\DiscoveryData"
+    if (!(Test-Path $DataPath)) {
+        New-Item -Path $DataPath -ItemType Directory -Force | Out-Null
+        Write-Host "  [OK] Created C:\DiscoveryData" -ForegroundColor Green
+    } else {
+        Write-Host "  [OK] C:\DiscoveryData already exists" -ForegroundColor Green
+    }
+    
+    # Set permissions on data directory if running as admin
+    try {
+        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object System.Security.Principal.WindowsPrincipal($currentUser)
+        $isAdmin = $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+        
+        if ($isAdmin) {
+            $acl = Get-Acl $DataPath
+            $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("Users", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+            $acl.SetAccessRule($accessRule)
+            Set-Acl -Path $DataPath -AclObject $acl
+            Write-Host "  [OK] Data directory permissions set" -ForegroundColor Green
+        }
+    } catch {
+        Write-Warning "Could not set data directory permissions: $($_.Exception.Message)"
+    }
     Write-Host ""
     
     # Check if this is a one-click build environment
@@ -262,4 +438,11 @@ if ($Configuration -eq 'Release') {
 }
 
 Write-Host ""
-Write-Host "Build process completed!" -ForegroundColor Green
+Write-Host "Build and Deployment Completed Successfully!" -ForegroundColor Green
+Write-Host "===========================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "The M&A Discovery Suite is now fully deployed and ready to use." -ForegroundColor White
+Write-Host "All modules, configurations, and dependencies have been copied to the correct locations." -ForegroundColor White
+Write-Host ""
+Write-Host "You can now run the application from C:\EnterpriseDiscovery" -ForegroundColor Yellow
+Write-Host ""

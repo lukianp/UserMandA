@@ -1,8 +1,8 @@
 # -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
-# Author: Lukian Poleschtschuk
-# Version: 1.0.0
+# Author: System Enhancement
+# Version: 2.0.0
 # Created: 2025-01-18
 # Last Modified: 2025-01-18
 

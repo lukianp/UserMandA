@@ -283,7 +283,7 @@ function Invoke-CertificateAuthorityDiscovery {
                     $store.Close()
                     
                 } catch {
-                    Write-ModuleLog -ModuleName "CertificateAuthority" -Message "Failed to read certificate store $storeName: $($_.Exception.Message)" -Level "DEBUG"
+                    Write-ModuleLog -ModuleName "CertificateAuthority" -Message "Failed to read certificate store $storeName`: $($_.Exception.Message)" -Level "DEBUG"
                 }
             }
             

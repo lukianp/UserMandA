@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -19,6 +20,7 @@ using IOPath = System.IO.Path;
 using System.Text.Json;
 using System.Windows.Data;
 using System.DirectoryServices;
+using MandADiscoverySuite.Models;
 
 namespace MandADiscoverySuite
 {
@@ -38,6 +40,11 @@ namespace MandADiscoverySuite
         private readonly Dictionary<string, Queue<double>> metricsHistory = new Dictionary<string, Queue<double>>();
         private ResponsiveDesignEngine responsiveEngine;
         private AdaptiveThemeEngine themeEngine;
+        
+        // Async UI enhancements
+        private readonly SemaphoreSlim uiUpdateSemaphore = new SemaphoreSlim(1, 1);
+        private readonly ConcurrentDictionary<string, Task> backgroundTasks = new ConcurrentDictionary<string, Task>();
+        private volatile bool isRefreshingProfiles = false;
 
         public MainWindow()
         {
@@ -462,7 +469,7 @@ namespace MandADiscoverySuite
                     {
                         var profile = new CompanyProfile
                         {
-                            Name = dirName,
+                            CompanyName = dirName,
                             Path = dir
                         };
                         
@@ -481,7 +488,7 @@ namespace MandADiscoverySuite
             // No dummy company - start with real profiles only
             
             // Always add the create new profile option
-            companyProfiles.Add(new CompanyProfile { Name = "+ Create New Profile", Path = "" });
+            companyProfiles.Add(new CompanyProfile { CompanyName = "+ Create New Profile", Path = "" });
             
             // Refresh the ComboBox display
             Dispatcher.BeginInvoke(new Action(() =>
@@ -591,6 +598,7 @@ namespace MandADiscoverySuite
         {
             return new[]
             {
+                // Core Infrastructure Discovery
                 new DiscoveryModule
                 {
                     Name = "Active Directory",
@@ -602,13 +610,24 @@ namespace MandADiscoverySuite
                 },
                 new DiscoveryModule
                 {
-                    Name = "Azure AD / Entra ID",
+                    Name = "Azure Infrastructure",
                     ModuleName = "Azure",
                     Icon = "☁️",
-                    Description = "Discover cloud identities, groups, applications, conditional access policies, and service principals",
+                    Description = "Discover Azure subscriptions, resource groups, VMs, storage accounts, networking, and cloud resources",
                     Status = "Not Started",
                     StatusColor = "#FF808080"
                 },
+                new DiscoveryModule
+                {
+                    Name = "Network Infrastructure",
+                    ModuleName = "NetworkInfrastructure",
+                    Icon = "🌐",
+                    Description = "Discover switches, routers, VLANs, subnets, network topology, and performance metrics",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                
+                // Microsoft 365 & Cloud Services
                 new DiscoveryModule
                 {
                     Name = "Exchange Online",
@@ -638,16 +657,25 @@ namespace MandADiscoverySuite
                 },
                 new DiscoveryModule
                 {
-                    Name = "Palo Alto Networks",
-                    ModuleName = "PaloAlto",
-                    Icon = "🔥",
-                    Description = "Discover Palo Alto firewalls, Panorama servers, security policies, and network topology with HA configurations",
+                    Name = "Intune Device Management",
+                    ModuleName = "Intune",
+                    Icon = "📱",
+                    Description = "Discover managed devices, compliance policies, configuration profiles, mobile apps, and protection policies",
                     Status = "Not Started",
                     StatusColor = "#FF808080"
                 },
                 new DiscoveryModule
                 {
-                    Name = "Enterprise Applications",
+                    Name = "Power Platform",
+                    ModuleName = "PowerPlatform",
+                    Icon = "⚡",
+                    Description = "Discover Power Apps, Power Automate flows, Power BI workspaces, dataflows, and governance policies",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                new DiscoveryModule
+                {
+                    Name = "Entra ID Applications",
                     ModuleName = "EntraIDApp",
                     Icon = "🔐",
                     Description = "Discover enterprise applications, app registrations, secrets, certificates, and API permissions",
@@ -656,10 +684,21 @@ namespace MandADiscoverySuite
                 },
                 new DiscoveryModule
                 {
-                    Name = "File Servers",
-                    ModuleName = "FileServer",
-                    Icon = "💾",
-                    Description = "Discover file shares, NTFS permissions, DFS namespaces, and storage utilization metrics",
+                    Name = "Licensing Discovery",
+                    ModuleName = "Licensing",
+                    Icon = "📋",
+                    Description = "Discover Microsoft 365 licenses, SKUs, assignments, and usage analytics",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                
+                // Applications & Data
+                new DiscoveryModule
+                {
+                    Name = "Application Discovery",
+                    ModuleName = "Application",
+                    Icon = "📦",
+                    Description = "Comprehensive application catalog discovery from Intune, DNS, and network scanning",
                     Status = "Not Started",
                     StatusColor = "#FF808080"
                 },
@@ -674,34 +713,24 @@ namespace MandADiscoverySuite
                 },
                 new DiscoveryModule
                 {
-                    Name = "Network Infrastructure",
-                    ModuleName = "NetworkInfrastructure",
-                    Icon = "🌐",
-                    Description = "Discover switches, routers, VLANs, subnets, network topology, and performance metrics",
-                    Status = "Not Started",
-                    StatusColor = "#FF808080"
-                },
-
-                new DiscoveryModule
-                {
-                    Name = "Office 365 Tenant",
-                    ModuleName = "Office365Tenant",
-                    Icon = "🏢",
-                    Description = "Discover O365 tenant configuration, licensing, domains, compliance policies, and governance settings",
+                    Name = "File Servers",
+                    ModuleName = "FileServer",
+                    Icon = "💾",
+                    Description = "Discover file shares, NTFS permissions, DFS namespaces, and storage utilization metrics",
                     Status = "Not Started",
                     StatusColor = "#FF808080"
                 },
                 
+                // Security Infrastructure
                 new DiscoveryModule
                 {
-                    Name = "Intune Device Management",
-                    ModuleName = "IntuneDevice",
-                    Icon = "📱",
-                    Description = "Discover managed devices, compliance policies, configuration profiles, mobile apps, and protection policies",
+                    Name = "Palo Alto Networks",
+                    ModuleName = "PaloAlto",
+                    Icon = "🔥",
+                    Description = "Discover Palo Alto firewalls, Panorama servers, security policies, and network topology with HA configurations",
                     Status = "Not Started",
                     StatusColor = "#FF808080"
                 },
-                
                 new DiscoveryModule
                 {
                     Name = "Certificate Authority",
@@ -711,7 +740,17 @@ namespace MandADiscoverySuite
                     Status = "Not Started",
                     StatusColor = "#FF808080"
                 },
+                new DiscoveryModule
+                {
+                    Name = "Security Infrastructure",
+                    ModuleName = "SecurityInfrastructure",
+                    Icon = "🛡️",
+                    Description = "Comprehensive security infrastructure discovery including firewalls, IDS/IPS, and security appliances",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
                 
+                // Network Services
                 new DiscoveryModule
                 {
                     Name = "DNS & DHCP",
@@ -722,12 +761,69 @@ namespace MandADiscoverySuite
                     StatusColor = "#FF808080"
                 },
                 
+                // Virtualization & Infrastructure
                 new DiscoveryModule
                 {
-                    Name = "Power Platform",
-                    ModuleName = "PowerPlatform",
-                    Icon = "⚡",
-                    Description = "Discover Power Apps, Power Automate flows, Power BI workspaces, dataflows, and governance policies",
+                    Name = "VMware Infrastructure",
+                    ModuleName = "VMware",
+                    Icon = "💻",
+                    Description = "Discover VMware vCenter, ESXi hosts, virtual machines, clusters, and resource allocation",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                new DiscoveryModule
+                {
+                    Name = "Virtualization Discovery",
+                    ModuleName = "Virtualization",
+                    Icon = "🖥️",
+                    Description = "Cross-platform virtualization discovery including Hyper-V, VMware, and cloud instances",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                new DiscoveryModule
+                {
+                    Name = "Physical Servers",
+                    ModuleName = "PhysicalServer",
+                    Icon = "🏗️",
+                    Description = "Discover physical server hardware, specifications, installed software, and performance metrics",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                
+                // Advanced Discovery Features
+                new DiscoveryModule
+                {
+                    Name = "Multi-Domain Forest",
+                    ModuleName = "MultiDomainForest",
+                    Icon = "🌳",
+                    Description = "Cross-domain and forest discovery for complex Active Directory environments",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                new DiscoveryModule
+                {
+                    Name = "Application Dependencies",
+                    ModuleName = "ApplicationDependencyMapping",
+                    Icon = "🔗",
+                    Description = "Map application dependencies, service relationships, and integration points",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                new DiscoveryModule
+                {
+                    Name = "Data Classification",
+                    ModuleName = "DataClassification",
+                    Icon = "🏷️",
+                    Description = "Automated data discovery and classification for compliance and governance",
+                    Status = "Not Started",
+                    StatusColor = "#FF808080"
+                },
+                new DiscoveryModule
+                {
+                    Name = "External Identity",
+                    ModuleName = "ExternalIdentity",
+                    Icon = "🔑",
+                    Description = "Discover external identity providers, federated domains, and guest user access",
                     Status = "Not Started",
                     StatusColor = "#FF808080"
                 }
@@ -1027,8 +1123,8 @@ namespace MandADiscoverySuite
                 
                 var script = $@"
                     Set-Location '{rootPath}'
-                    Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-                    Import-Module '.\Modules\Discovery\PaloAltoDiscovery.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\PaloAltoDiscovery.psm1' -Force
                     
                     $paloAltoDiscovery = Get-PaloAltoDiscovery
                     $paloAltoDiscovery.SetParameters(@{{
@@ -1067,20 +1163,20 @@ namespace MandADiscoverySuite
                         
                         result.Success = true;
                         result.Summary = $"Discovered {deviceCount} Palo Alto devices and {panoramaCount} Panorama servers";
-                        result.DataCount = deviceCount + panoramaCount;
+                        result.ItemCount = deviceCount + panoramaCount;
                     }
                     catch
                     {
                         result.Success = true;
                         result.Summary = "Discovery completed successfully";
-                        result.DataCount = 0;
+                        result.ItemCount = 0;
                     }
                 }
                 else
                 {
                     result.Success = true;
                     result.Summary = "Discovery completed - no devices found";
-                    result.DataCount = 0;
+                    result.ItemCount = 0;
                 }
                 
                 Dispatcher.Invoke(() => UpdateProgress("Palo Alto discovery completed", 100));
@@ -1109,12 +1205,12 @@ namespace MandADiscoverySuite
                 
                 var script = $@"
                     Set-Location '{rootPath}'
-                    Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-                    Import-Module '.\Modules\Discovery\EntraIDAppDiscovery.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\EntraIDAppDiscovery.psm1' -Force
                     
                     # Get the company profile
                     $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
-                    $outputPath = $profileManager.GetProfileDataPath()
+                    $outputPath = $profilePaths.RawDataPath
                     
                     # Ensure output directory exists
                     if (-not (Test-Path $outputPath)) {{
@@ -1243,7 +1339,7 @@ namespace MandADiscoverySuite
                                            $"Expiring Secrets: {expiringSecrets:N0}\\n" +
                                            $"Expiring Certificates: {expiringCertificates:N0}\\n" +
                                            $"\\nTotal Records: {recordCount:N0}";
-                            result.DataCount = recordCount;
+                            result.ItemCount = recordCount;
                         }
                         else
                         {
@@ -1289,8 +1385,8 @@ namespace MandADiscoverySuite
                 
                 var script = $@"
                     Set-Location '{rootPath}'
-                    Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-                    Import-Module '.\Modules\Discovery\AzureDiscovery.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\AzureDiscovery.psm1' -Force
                     
                     # Get the company profile and create discovery context
                     $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
@@ -1298,7 +1394,7 @@ namespace MandADiscoverySuite
                     # Create discovery context
                     $context = @{{
                         Paths = @{{
-                            RawDataOutput = $profileManager.GetProfileDataPath()
+                            RawDataOutput = $profilePaths.RawDataPath
                         }}
                         CompanyName = '{companyName}'
                         DiscoverySession = [guid]::NewGuid().ToString()
@@ -1394,7 +1490,7 @@ namespace MandADiscoverySuite
                                            $"Databases: {databaseCount:N0}\\n" +
                                            $"Estimated Monthly Cost: ${totalCost:F2}\\n" +
                                            $"\\nErrors: {errorCount}, Warnings: {warningCount}";
-                            result.DataCount = subscriptionCount + resourceGroupCount + vmCount + storageCount + networkCount + keyVaultCount + appServiceCount + databaseCount;
+                            result.ItemCount = subscriptionCount + resourceGroupCount + vmCount + storageCount + networkCount + keyVaultCount + appServiceCount + databaseCount;
                         }
                         else
                         {
@@ -1439,9 +1535,8 @@ namespace MandADiscoverySuite
                 
                 var script = $@"
                     Set-Location '{rootPath}'
-                    Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-                    Import-Module '.\Modules\Core\Discovery.psm1' -Force
-                    Import-Module '.\Modules\Discovery\ActiveDirectoryDiscovery.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\ActiveDirectoryDiscovery.psm1' -Force
                     
                     # Get the company profile and create discovery context
                     $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
@@ -1449,7 +1544,7 @@ namespace MandADiscoverySuite
                     # Create discovery context with credential info for hybrid scenarios
                     $context = @{{
                         Paths = @{{
-                            RawDataOutput = $profileManager.GetProfileDataPath()
+                            RawDataOutput = $profilePaths.RawDataPath
                         }}
                         CompanyName = '{companyName}'
                         DiscoverySession = [guid]::NewGuid().ToString()
@@ -1530,7 +1625,7 @@ namespace MandADiscoverySuite
                                            $"Organizational Units: {ouCount:N0}\\n" +
                                            $"Group Memberships: {membershipCount:N0}\\n" +
                                            $"\\nErrors: {errorCount}, Warnings: {warningCount}";
-                            result.DataCount = userCount + groupCount + computerCount + ouCount;
+                            result.ItemCount = userCount + groupCount + computerCount + ouCount;
                         }
                         else
                         {
@@ -1575,9 +1670,8 @@ namespace MandADiscoverySuite
                 
                 var script = $@"
                     Set-Location '{rootPath}'
-                    Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-                    Import-Module '.\Modules\Core\Discovery.psm1' -Force
-                    Import-Module '.\Modules\Discovery\ExchangeDiscovery.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\ExchangeDiscovery.psm1' -Force
                     
                     # Get the company profile and create discovery context
                     $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
@@ -1585,7 +1679,7 @@ namespace MandADiscoverySuite
                     # Create discovery context
                     $context = @{{
                         Paths = @{{
-                            RawDataOutput = $profileManager.GetProfileDataPath()
+                            RawDataOutput = $profilePaths.RawDataPath
                         }}
                         CompanyName = '{companyName}'
                         DiscoverySession = [guid]::NewGuid().ToString()
@@ -1667,7 +1761,7 @@ namespace MandADiscoverySuite
                                            $"Retention Policies: {retentionPolicyCount:N0}\\n" +
                                            $"Total Emails Analyzed: {totalEmails:N0}\\n" +
                                            $"\\nErrors: {errorCount}, Warnings: {warningCount}";
-                            result.DataCount = mailboxCount + distributionGroupCount + mailEnabledGroupCount + mailFlowRuleCount;
+                            result.ItemCount = mailboxCount + distributionGroupCount + mailEnabledGroupCount + mailFlowRuleCount;
                         }
                         else
                         {
@@ -1712,9 +1806,8 @@ namespace MandADiscoverySuite
                 
                 var script = $@"
                     Set-Location '{rootPath}'
-                    Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-                    Import-Module '.\Modules\Core\Discovery.psm1' -Force
-                    Import-Module '.\Modules\Discovery\SharePointDiscovery.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\SharePointDiscovery.psm1' -Force
                     
                     # Get the company profile and create discovery context
                     $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
@@ -1722,7 +1815,7 @@ namespace MandADiscoverySuite
                     # Create discovery context
                     $context = @{{
                         Paths = @{{
-                            RawDataOutput = $profileManager.GetProfileDataPath()
+                            RawDataOutput = $profilePaths.RawDataPath
                         }}
                         CompanyName = '{companyName}'
                         DiscoverySession = [guid]::NewGuid().ToString()
@@ -1810,7 +1903,7 @@ namespace MandADiscoverySuite
                                            $"Site Collection Admins: {adminCount:N0}\\n" +
                                            $"Total Storage: {storageUsed / (1024 * 1024 * 1024):F2} GB\\n" +
                                            $"\\nErrors: {errorCount}, Warnings: {warningCount}";
-                            result.DataCount = siteCount + listCount + libraryCount + permissionCount;
+                            result.ItemCount = siteCount + listCount + libraryCount + permissionCount;
                         }
                         else
                         {
@@ -1855,9 +1948,8 @@ namespace MandADiscoverySuite
                 
                 var script = $@"
                     Set-Location '{rootPath}'
-                    Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-                    Import-Module '.\Modules\Core\Discovery.psm1' -Force
-                    Import-Module '.\Modules\Discovery\TeamsDiscovery.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\TeamsDiscovery.psm1' -Force
                     
                     # Get the company profile and create discovery context
                     $profileManager = Get-CompanyProfileManager -CompanyName '{companyName}'
@@ -1865,7 +1957,7 @@ namespace MandADiscoverySuite
                     # Create discovery context
                     $context = @{{
                         Paths = @{{
-                            RawDataOutput = $profileManager.GetProfileDataPath()
+                            RawDataOutput = $profilePaths.RawDataPath
                         }}
                         CompanyName = '{companyName}'
                         DiscoverySession = [guid]::NewGuid().ToString()
@@ -1951,7 +2043,7 @@ namespace MandADiscoverySuite
                                            $"Apps: {appsCount:N0}\\n" +
                                            $"Tabs: {tabsCount:N0}\\n" +
                                            $"\\nErrors: {errorCount}, Warnings: {warningCount}";
-                            result.DataCount = teamsCount + channelsCount + membersCount + appsCount;
+                            result.ItemCount = teamsCount + channelsCount + membersCount + appsCount;
                         }
                         else
                         {
@@ -2010,18 +2102,18 @@ Set-Location '{rootPath}'
 
 # Import required modules
 Write-Host 'Loading modules...' -ForegroundColor Yellow
-Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-Import-Module '.\Modules\Discovery\ActiveDirectoryDiscovery.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\ActiveDirectoryDiscovery.psm1' -Force
 
 # Get the company profile and create discovery context
 Write-Host 'Initializing company profile...' -ForegroundColor Yellow
 $profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
-$companyProfile = $profileManager.GetProfile()
+$profilePaths = $profileManager.GetProfilePaths()
 
 # Create discovery context
 $context = @{{
     Paths = @{{
-        RawDataOutput = $profileManager.GetProfileDataPath()
+        RawDataOutput = $profilePaths.RawDataPath
     }}
     CompanyName = '{companyProfile.Name}'
     DiscoverySession = [guid]::NewGuid().ToString()
@@ -2104,8 +2196,8 @@ if ($discoveryResult.Success) {{
     if ($discoveryResult.Errors.Count -gt 0) {{
         Write-Host ''
         Write-Host 'Errors:' -ForegroundColor Red
-        foreach ($error in $discoveryResult.Errors) {{
-            Write-Host ""  $($error.Message)"" -ForegroundColor Red
+        foreach ($errorItem in $discoveryResult.Errors) {{
+            Write-Host ""  $($errorItem.Message)"" -ForegroundColor Red
         }}
     }}
     
@@ -2178,18 +2270,18 @@ Set-Location '{rootPath}'
 
 # Import required modules
 Write-Host 'Loading modules...' -ForegroundColor Yellow
-Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-Import-Module '.\Modules\Discovery\ExchangeDiscovery.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\ExchangeDiscovery.psm1' -Force
 
 # Get the company profile and create discovery context
 Write-Host 'Initializing company profile...' -ForegroundColor Yellow
 $profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
-$companyProfile = $profileManager.GetProfile()
+$profilePaths = $profileManager.GetProfilePaths()
 
 # Create discovery context
 $context = @{{
     Paths = @{{
-        RawDataOutput = $profileManager.GetProfileDataPath()
+        RawDataOutput = $profilePaths.RawDataPath
     }}
     CompanyName = '{companyProfile.Name}'
     DiscoverySession = [guid]::NewGuid().ToString()
@@ -2278,8 +2370,8 @@ if ($discoveryResult.Success) {{
     if ($discoveryResult.Errors.Count -gt 0) {{
         Write-Host ''
         Write-Host 'Errors:' -ForegroundColor Red
-        foreach ($error in $discoveryResult.Errors) {{
-            Write-Host ""  $($error.Message)"" -ForegroundColor Red
+        foreach ($errorItem in $discoveryResult.Errors) {{
+            Write-Host ""  $($errorItem.Message)"" -ForegroundColor Red
         }}
     }}
     
@@ -2352,18 +2444,18 @@ Set-Location '{rootPath}'
 
 # Import required modules
 Write-Host 'Loading modules...' -ForegroundColor Yellow
-Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-Import-Module '.\Modules\Discovery\SharePointDiscovery.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\SharePointDiscovery.psm1' -Force
 
 # Get the company profile and create discovery context
 Write-Host 'Initializing company profile...' -ForegroundColor Yellow
 $profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
-$companyProfile = $profileManager.GetProfile()
+$profilePaths = $profileManager.GetProfilePaths()
 
 # Create discovery context
 $context = @{{
     Paths = @{{
-        RawDataOutput = $profileManager.GetProfileDataPath()
+        RawDataOutput = $profilePaths.RawDataPath
     }}
     CompanyName = '{companyProfile.Name}'
     DiscoverySession = [guid]::NewGuid().ToString()
@@ -2463,8 +2555,8 @@ if ($discoveryResult.Success) {{
     if ($discoveryResult.Errors.Count -gt 0) {{
         Write-Host ''
         Write-Host 'Errors:' -ForegroundColor Red
-        foreach ($error in $discoveryResult.Errors) {{
-            Write-Host ""  $($error.Message)"" -ForegroundColor Red
+        foreach ($errorItem in $discoveryResult.Errors) {{
+            Write-Host ""  $($errorItem.Message)"" -ForegroundColor Red
         }}
     }}
     
@@ -2537,18 +2629,18 @@ Set-Location '{rootPath}'
 
 # Import required modules
 Write-Host 'Loading modules...' -ForegroundColor Yellow
-Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-Import-Module '.\Modules\Discovery\TeamsDiscovery.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\TeamsDiscovery.psm1' -Force
 
 # Get the company profile and create discovery context
 Write-Host 'Initializing company profile...' -ForegroundColor Yellow
 $profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
-$companyProfile = $profileManager.GetProfile()
+$profilePaths = $profileManager.GetProfilePaths()
 
 # Create discovery context
 $context = @{{
     Paths = @{{
-        RawDataOutput = $profileManager.GetProfileDataPath()
+        RawDataOutput = $profilePaths.RawDataPath
     }}
     CompanyName = '{companyProfile.Name}'
     DiscoverySession = [guid]::NewGuid().ToString()
@@ -2644,8 +2736,8 @@ if ($discoveryResult.Success) {{
     if ($discoveryResult.Errors.Count -gt 0) {{
         Write-Host ''
         Write-Host 'Errors:' -ForegroundColor Red
-        foreach ($error in $discoveryResult.Errors) {{
-            Write-Host ""  $($error.Message)"" -ForegroundColor Red
+        foreach ($errorItem in $discoveryResult.Errors) {{
+            Write-Host ""  $($errorItem.Message)"" -ForegroundColor Red
         }}
     }}
     
@@ -2718,19 +2810,18 @@ Set-Location '{rootPath}'
 
 # Import required modules
 Write-Host 'Loading modules...' -ForegroundColor Yellow
-Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-Import-Module '.\Modules\Core\Discovery.psm1' -Force
-Import-Module '.\Modules\Discovery\AzureDiscovery.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\AzureDiscovery.psm1' -Force
 
 # Get the company profile and create discovery context
 Write-Host 'Initializing company profile...' -ForegroundColor Yellow
 $profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
-$companyProfile = $profileManager.GetProfile()
+$profilePaths = $profileManager.GetProfilePaths()
 
 # Create discovery context
 $context = @{{
     Paths = @{{
-        RawDataOutput = $profileManager.GetProfileDataPath()
+        RawDataOutput = $profilePaths.RawDataPath
     }}
     CompanyName = '{companyProfile.Name}'
     DiscoverySession = [guid]::NewGuid().ToString()
@@ -2841,8 +2932,8 @@ if ($discoveryResult.Success) {{
     if ($discoveryResult.Errors.Count -gt 0) {{
         Write-Host ''
         Write-Host 'Errors:' -ForegroundColor Red
-        foreach ($error in $discoveryResult.Errors) {{
-            Write-Host ""  $($error.Message)"" -ForegroundColor Red
+        foreach ($errorItem in $discoveryResult.Errors) {{
+            Write-Host ""  $($errorItem.Message)"" -ForegroundColor Red
         }}
     }}
     
@@ -2915,14 +3006,14 @@ Set-Location '{rootPath}'
 
 # Import required modules
 Write-Host 'Loading modules...' -ForegroundColor Yellow
-Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-Import-Module '.\Modules\Discovery\EntraIDAppDiscovery.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\EntraIDAppDiscovery.psm1' -Force
 
 # Get the company profile
 Write-Host 'Initializing company profile...' -ForegroundColor Yellow
 $profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
-$companyProfile = $profileManager.GetProfile()
-$outputPath = $profileManager.GetProfileDataPath()
+$profilePaths = $profileManager.GetProfilePaths()
+$outputPath = $profilePaths.RawDataPath
 
 Write-Host 'Discovery context created:' -ForegroundColor Green
 Write-Host ""Path: $outputPath"" -ForegroundColor Gray
@@ -3411,7 +3502,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 
                 string script = $@"
                     Set-Location '{rootPath}'
-                    Import-Module .\Modules\Core\CompanyProfileManager.psm1 -Force
+                    Import-Module C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1 -Force
                     
                     $profilePath = '{selectedProfile.Path}'
                     $credentialsPath = Join-Path $profilePath 'credentials-template.json'
@@ -3992,11 +4083,11 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 // Update status
                 if (dataFiles.Count > 0)
                 {
-                    StatusDetails.Text = $"Profile: {profile.Name} | Loaded: {string.Join(", ", dataFiles)} ({totalRecords} total)";
+                    StatusDetails.Text = $"Profile: {profile.CompanyName} | Loaded: {string.Join(", ", dataFiles)} ({totalRecords} total)";
                 }
                 else
                 {
-                    StatusDetails.Text = $"Profile: {profile.Name} | No discovery data found - all values set to zero";
+                    StatusDetails.Text = $"Profile: {profile.CompanyName} | No discovery data found - all values set to zero";
                 }
                 
                 // Update dashboard statistics with real counts
@@ -4004,7 +4095,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
             }
             catch (Exception ex)
             {
-                StatusDetails.Text = $"Error loading {profile.Name}: {ex.Message}";
+                StatusDetails.Text = $"Error loading {profile.CompanyName}: {ex.Message}";
             }
         }
 
@@ -6812,7 +6903,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 // Now run the PowerShell script for additional setup
                 var script = $@"
                     Set-Location '{rootPath}'
-                    Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force -ErrorAction SilentlyContinue
+                    Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force -ErrorAction SilentlyContinue
                     $env:MANDA_DISCOVERY_PATH = '{GetDiscoveryDataPath()}'
                     # Profile directory already created, just set up additional configurations
                     Write-Output 'Profile directory structure created successfully'
@@ -6885,7 +6976,7 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
         {
             try
             {
-                string profilePath = IOPath.Combine(GetDiscoveryDataPath(), profile.Name);
+                string profilePath = IOPath.Combine(GetDiscoveryDataPath(), profile.CompanyName);
                 
                 // Load from various discovery CSV files
                 var applications = new List<DiscoveredApplication>();
@@ -6937,11 +7028,11 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
                 // If no applications found, show a message
                 if (applicationsData.Count == 0)
                 {
-                    StatusDetails.Text = $"Profile: {profile.Name} | No applications discovered yet";
+                    StatusDetails.Text = $"Profile: {profile.CompanyName} | No applications discovered yet";
                 }
                 else
                 {
-                    StatusDetails.Text = $"Profile: {profile.Name} | Loaded {applicationsData.Count} applications";
+                    StatusDetails.Text = $"Profile: {profile.CompanyName} | Loaded {applicationsData.Count} applications";
                 }
             }
             catch (Exception ex)
@@ -7352,8 +7443,8 @@ Set-Location '{rootPath}'
 
 # Import required modules
 Write-Host 'Loading discovery modules...' -ForegroundColor Gray
-Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-Import-Module '.\Modules\Discovery\ApplicationDiscovery.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\ApplicationDiscovery.psm1' -Force
 
 # Initialize profile manager
 $profileManager = Get-CompanyProfileManager -CompanyName '{currentProfile.Name}'
@@ -7368,7 +7459,7 @@ Write-Host ''
 # Create discovery context
 $context = @{{
     Paths = @{{
-        RawDataOutput = $profileManager.GetProfileDataPath()
+        RawDataOutput = $profilePaths.RawDataPath
     }}
     CompanyName = '{currentProfile.Name}'
     DiscoverySession = [guid]::NewGuid().ToString()
@@ -7380,7 +7471,7 @@ Write-Host ""Session: $($context.DiscoverySession)"" -ForegroundColor Gray
 Write-Host ''
 
 # Create configuration for Application discovery
-$companyProfile = $profileManager.GetProfile()
+$profilePaths = $profileManager.GetProfilePaths()
 $configuration = @{{
     TenantId = $companyProfile.AzureConfig.TenantId
     ClientId = $companyProfile.AzureConfig.ClientId
@@ -7497,18 +7588,18 @@ Set-Location '{rootPath}'
 
 # Import required modules
 Write-Host 'Loading modules...' -ForegroundColor Yellow
-Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-Import-Module '.\Modules\Discovery\LicensingDiscovery.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\LicensingDiscovery.psm1' -Force
 
 # Get the company profile and create discovery context
 Write-Host 'Initializing company profile...' -ForegroundColor Yellow
 $profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
-$companyProfile = $profileManager.GetProfile()
+$profilePaths = $profileManager.GetProfilePaths()
 
 # Create discovery context
 $context = @{{
     Paths = @{{
-        RawDataOutput = $profileManager.GetProfileDataPath()
+        RawDataOutput = $profilePaths.RawDataPath
     }}
     CompanyName = '{companyProfile.Name}'
     DiscoverySession = [guid]::NewGuid().ToString()
@@ -7598,69 +7689,23 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
             
             try
             {
-                var script = $@"
-# Intune Device Management Discovery Script for {companyProfile.Name}
-# Generated by M&A Discovery Suite
+                // Check if discovery launcher script exists
+                string launcherScriptPath = IOPath.Combine(GetRootPath(), "Scripts", "DiscoveryModuleLauncher.ps1");
+                if (!File.Exists(launcherScriptPath))
+                {
+                    MessageBox.Show($"Discovery launcher script not found at:\n{launcherScriptPath}\n\nPlease ensure the DiscoveryModuleLauncher.ps1 script is present in the Scripts directory.", 
+                        "Script Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
 
-Write-Host '=== Intune Device Management Discovery ===' -ForegroundColor Cyan
-Write-Host 'Company: {companyProfile.Name}' -ForegroundColor White
-Write-Host 'Starting discovery...' -ForegroundColor Green
-Write-Host ''
-
-Set-Location '{rootPath}'
-
-Write-Host 'Loading modules...' -ForegroundColor Yellow
-Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-Import-Module '.\Modules\Discovery\IntuneDiscovery.psm1' -Force
-
-$profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
-$companyProfile = $profileManager.GetProfile()
-
-$context = @{{
-    Paths = @{{
-        RawDataOutput = $profileManager.GetProfileDataPath()
-    }}
-    CompanyName = '{companyProfile.Name}'
-    DiscoverySession = [guid]::NewGuid().ToString()
-}}
-
-$configuration = @{{
-    tenantId = $companyProfile.AzureConfig.TenantId
-    discovery = @{{
-        includeManagedDevices = $true
-        includeCompliancePolicies = $true
-        includeConfigurationProfiles = $true
-        includeMobileApps = $true
-        includeAppProtectionPolicies = $true
-    }}
-}}
-
-Write-Host 'Starting Intune Device Management discovery...' -ForegroundColor Cyan
-Write-Host 'This will discover managed devices, policies, and mobile applications...' -ForegroundColor Yellow
-Write-Host ''
-
-$discoveryResult = Invoke-IntuneDeviceDiscovery -Configuration $configuration -Context $context -SessionId $context.DiscoverySession
-
-Write-Host ''
-Write-Host '=== Discovery Results ===' -ForegroundColor Cyan
-if ($discoveryResult -and $discoveryResult.Count -gt 0) {{
-    Write-Host 'Status: SUCCESS' -ForegroundColor Green
-    Write-Host ""Total Records: $($discoveryResult.Count)"" -ForegroundColor White
-}} else {{
-    Write-Host 'Status: NO DATA' -ForegroundColor Yellow
-}}
-
-Write-Host ''
-Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
-";
-
-                // Write script to temp file
-                string tempScriptPath = IOPath.Combine(IOPath.GetTempPath(), $"IntuneDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.ps1");
-                File.WriteAllText(tempScriptPath, script);
-                
-                // Launch the discovery script in a dedicated PowerShell window
-                var powerShellWindow = new PowerShellWindow(tempScriptPath, "Intune Device Management Discovery", 
-                    $"Comprehensive Intune device management discovery for {companyProfile.Name}")
+                // Launch the discovery using the universal launcher
+                var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Intune Device Management Discovery", 
+                    $"Comprehensive Intune device management discovery for {companyProfile.Name}",
+                    "-ModuleName", "IntuneDiscovery",
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", companyProfile.TenantId ?? "",
+                    "-ClientId", "",
+                    "-ClientSecret", "")
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -7701,15 +7746,15 @@ Write-Host ''
 Set-Location '{rootPath}'
 
 Write-Host 'Loading modules...' -ForegroundColor Yellow
-Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-Import-Module '.\Modules\Discovery\CertificateAuthorityDiscovery.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\CertificateAuthorityDiscovery.psm1' -Force
 
 $profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
-$companyProfile = $profileManager.GetProfile()
+$profilePaths = $profileManager.GetProfilePaths()
 
 $context = @{{
     Paths = @{{
-        RawDataOutput = $profileManager.GetProfileDataPath()
+        RawDataOutput = $profilePaths.RawDataPath
     }}
     CompanyName = '{companyProfile.Name}'
     DiscoverySession = [guid]::NewGuid().ToString()
@@ -7794,15 +7839,15 @@ Write-Host ''
 Set-Location '{rootPath}'
 
 Write-Host 'Loading modules...' -ForegroundColor Yellow
-Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-Import-Module '.\Modules\Discovery\DNSDHCPDiscovery.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\DNSDHCPDiscovery.psm1' -Force
 
 $profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
-$companyProfile = $profileManager.GetProfile()
+$profilePaths = $profileManager.GetProfilePaths()
 
 $context = @{{
     Paths = @{{
-        RawDataOutput = $profileManager.GetProfileDataPath()
+        RawDataOutput = $profilePaths.RawDataPath
     }}
     CompanyName = '{companyProfile.Name}'
     DiscoverySession = [guid]::NewGuid().ToString()
@@ -7888,15 +7933,15 @@ Write-Host ''
 Set-Location '{rootPath}'
 
 Write-Host 'Loading modules...' -ForegroundColor Yellow
-Import-Module '.\Modules\Core\CompanyProfileManager.psm1' -Force
-Import-Module '.\Modules\Discovery\PowerPlatformDiscovery.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\PowerPlatformDiscovery.psm1' -Force
 
 $profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
-$companyProfile = $profileManager.GetProfile()
+$profilePaths = $profileManager.GetProfilePaths()
 
 $context = @{{
     Paths = @{{
-        RawDataOutput = $profileManager.GetProfileDataPath()
+        RawDataOutput = $profilePaths.RawDataPath
     }}
     CompanyName = '{companyProfile.Name}'
     DiscoverySession = [guid]::NewGuid().ToString()
@@ -8455,7 +8500,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 // Create mappings data structure
                 var mappingsData = new
                 {
-                    CompanyName = profile.Name,
+                    CompanyName = profile.CompanyName,
                     CreatedDate = DateTime.Now,
                     LastUpdated = DateTime.Now,
                     TotalMappings = mappedGroups.Count,
@@ -8729,54 +8774,161 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 
         #region Profile Management and App Registration
 
-        private void ProfileRefreshTimer_Tick(object sender, EventArgs e)
+        private async void ProfileRefreshTimer_Tick(object sender, EventArgs e)
         {
-            // Check for new profiles in the background
-            Task.Run(() =>
+            // Prevent multiple concurrent refresh operations
+            if (isRefreshingProfiles)
+                return;
+                
+            isRefreshingProfiles = true;
+            
+            try
+            {
+                await RefreshCompanyProfilesAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't crash the UI
+                System.Diagnostics.Debug.WriteLine($"Profile refresh error: {ex.Message}");
+            }
+            finally
+            {
+                isRefreshingProfiles = false;
+            }
+        }
+        
+        private async Task RefreshCompanyProfilesAsync()
+        {
+            await Task.Run(async () =>
             {
                 string discoveryPath = GetDiscoveryDataPath();
-                if (Directory.Exists(discoveryPath))
+                if (!Directory.Exists(discoveryPath))
+                    return;
+                    
+                var currentDirectories = Directory.GetDirectories(discoveryPath);
+                var currentProfileCount = companyProfiles.Count - 1; // Exclude "Create New Profile"
+                var actualProfileCount = 0;
+                var foundProfiles = new List<CompanyProfile>();
+                
+                // Process directories in parallel for better performance
+                var tasks = currentDirectories.Select(async dir =>
                 {
-                    var currentDirectories = Directory.GetDirectories(discoveryPath);
-                    var currentProfileCount = companyProfiles.Count - 1; // Exclude "Create New Profile"
-                    var actualProfileCount = 0;
-                    
-                    foreach (var dir in currentDirectories)
-                    {
-                        string dirName = IOPath.GetFileName(dir);
-                        if (dirName.StartsWith(".") || dirName.StartsWith("$"))
-                            continue;
-                            
-                        string credentialsPath = IOPath.Combine(dir, "credentials.json");
-                        bool hasCsvFiles = Directory.GetFiles(dir, "*.csv", SearchOption.AllDirectories).Length > 0;
-                        bool hasRawData = Directory.Exists(IOPath.Combine(dir, "Raw"));
-                        bool hasLogs = Directory.Exists(IOPath.Combine(dir, "Logs"));
+                    string dirName = IOPath.GetFileName(dir);
+                    if (dirName.StartsWith(".") || dirName.StartsWith("$"))
+                        return null;
                         
-                        if (File.Exists(credentialsPath) || hasCsvFiles || hasRawData || hasLogs)
-                        {
-                            actualProfileCount++;
-                        }
-                    }
+                    string credentialsPath = IOPath.Combine(dir, "credentials.json");
+                    bool hasCsvFiles = Directory.GetFiles(dir, "*.csv", SearchOption.AllDirectories).Length > 0;
+                    bool hasRawData = Directory.Exists(IOPath.Combine(dir, "Raw"));
+                    bool hasLogs = Directory.Exists(IOPath.Combine(dir, "Logs"));
                     
-                    // If count changed, refresh on UI thread
-                    if (actualProfileCount != currentProfileCount)
+                    if (File.Exists(credentialsPath) || hasCsvFiles || hasRawData || hasLogs)
                     {
-                        Dispatcher.BeginInvoke(new Action(() =>
+                        // Check if this profile is already in our collection
+                        bool profileExists = false;
+                        await Dispatcher.InvokeAsync(() =>
                         {
-                            var selectedProfile = CompanySelector.SelectedItem as CompanyProfile;
-                            LoadCompanyProfiles();
-                            
-                            // Try to restore selection
-                            if (selectedProfile != null && selectedProfile.Name != "+ Create New Profile")
-                            {
-                                var restored = companyProfiles.FirstOrDefault(p => p.Name == selectedProfile.Name);
-                                if (restored != null)
-                                {
-                                    CompanySelector.SelectedItem = restored;
-                                }
-                            }
-                        }));
+                            profileExists = companyProfiles.Any(p => p.Name.Equals(dirName, StringComparison.OrdinalIgnoreCase));
+                        });
+                        
+                        if (!profileExists)
+                        {
+                            return await LoadProfileMetadataAsync(dir);
+                        }
+                        actualProfileCount++;
                     }
+                    return null;
+                });
+                
+                var results = await Task.WhenAll(tasks);
+                var newProfiles = results.Where(p => p != null).ToList();
+                
+                // Update UI on the dispatcher thread
+                if (newProfiles.Any() || actualProfileCount != currentProfileCount)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        var selectedProfile = CompanySelector.SelectedItem as CompanyProfile;
+                        
+                        foreach (var profile in newProfiles)
+                        {
+                            // Insert before "Create New Profile" option
+                            companyProfiles.Insert(companyProfiles.Count - 1, profile);
+                        }
+                        
+                        // Restore selection if needed
+                        if (selectedProfile != null && selectedProfile.Name != "+ Create New Profile")
+                        {
+                            var restored = companyProfiles.FirstOrDefault(p => p.Name == selectedProfile.Name);
+                            if (restored != null)
+                            {
+                                CompanySelector.SelectedItem = restored;
+                            }
+                        }
+                    });
+                }
+            });
+        }
+        
+        private async Task<CompanyProfile> LoadProfileMetadataAsync(string profilePath)
+        {
+            var profile = new CompanyProfile
+            {
+                CompanyName = IOPath.GetFileName(profilePath),
+                Path = profilePath
+            };
+            
+            try
+            {
+                // Load metadata asynchronously
+                string metadataPath = IOPath.Combine(profilePath, "profile-metadata.json");
+                if (File.Exists(metadataPath))
+                {
+                    string jsonContent = await File.ReadAllTextAsync(metadataPath);
+                    // Parse metadata and update profile properties
+                    var metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonContent);
+                    if (metadata.ContainsKey("Description"))
+                        profile.Description = metadata["Description"]?.ToString();
+                }
+                
+                // Load discovery statistics
+                await LoadProfileStatisticsAsync(profile);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading profile metadata: {ex.Message}");
+            }
+            
+            return profile;
+        }
+        
+        private async Task LoadProfileStatisticsAsync(CompanyProfile profile)
+        {
+            await Task.Run(() =>
+            {
+                try
+                {
+                    string rawDataPath = IOPath.Combine(profile.Path, "Raw");
+                    if (Directory.Exists(rawDataPath))
+                    {
+                        var csvFiles = Directory.GetFiles(rawDataPath, "*.csv");
+                        int totalRecords = 0;
+                        
+                        foreach (var csvFile in csvFiles)
+                        {
+                            var lines = File.ReadAllLines(csvFile);
+                            totalRecords += Math.Max(0, lines.Length - 1); // Subtract header row
+                        }
+                        
+                        profile.RecordCount = totalRecords;
+                        profile.LastDiscovery = csvFiles.Length > 0 
+                            ? File.GetLastWriteTime(csvFiles.OrderByDescending(f => File.GetLastWriteTime(f)).First())
+                            : (DateTime?)null;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error loading profile statistics: {ex.Message}");
                 }
             });
         }
@@ -8887,32 +9039,6 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
         }
     }
 
-    public class CompanyProfile
-    {
-        public string Name { get; set; }
-        public string Path { get; set; }
-        public string Industry { get; set; } = "";
-        public bool IsHybrid { get; set; } = false;
-        public bool HasDatabases { get; set; } = false;
-        public int EstimatedUserCount { get; set; } = 0;
-        public int EstimatedDeviceCount { get; set; } = 0;
-        public long EstimatedDataSize { get; set; } = 0;
-        public List<string> Locations { get; set; } = new List<string>();
-        
-        public override string ToString()
-        {
-            return Name;
-        }
-    }
-    
-    public class DiscoveryResult
-    {
-        public bool Success { get; set; }
-        public string Summary { get; set; } = "";
-        public string ErrorMessage { get; set; } = "";
-        public int DataCount { get; set; } = 0;
-        public Dictionary<string, object> AdditionalData { get; set; } = new Dictionary<string, object>();
-    }
     
     public class ProcessResult
     {
@@ -9166,7 +9292,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
         private int CalculateUserCount(CompanyProfile profile)
         {
             // Only show data from actual discovery modules - no estimated or dummy data
-            var userDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ADUsers.csv");
+            var userDataPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "ADUsers.csv");
             if (File.Exists(userDataPath))
             {
                 try
@@ -9184,7 +9310,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
         private int CalculateDeviceCount(CompanyProfile profile)
         {
             // Only show data from actual discovery modules - no estimated or dummy data
-            var deviceDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ADComputers.csv");
+            var deviceDataPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "ADComputers.csv");
             if (File.Exists(deviceDataPath))
             {
                 try
@@ -9204,7 +9330,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             // Count various infrastructure components
             int count = 0;
             
-            var basePath = IOPath.Combine("C:\\DiscoveryData", profile.Name);
+            var basePath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName);
             var infraFiles = new[] { "AzureResourceGroups.csv", "AzureSubscriptions.csv", "SharePointSites.csv" };
             
             foreach (var file in infraFiles)
@@ -9334,7 +9460,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             {
                 var assessment = new RiskAssessmentResult
                 {
-                    ProfileName = profile.Name,
+                    ProfileName = profile.CompanyName,
                     AssessmentDate = DateTime.Now,
                     DetailedRisks = new Dictionary<string, RiskFactor>()
                 };
@@ -9372,7 +9498,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 };
 
                 // Analyze application inventory for legacy systems
-                var appDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ApplicationCatalog.csv");
+                var appDataPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "ApplicationCatalog.csv");
                 var legacyCount = 0;
                 var totalApps = 0;
 
@@ -9422,7 +9548,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var riskPoints = 0.0;
 
                 // Analyze Entra ID app security
-                var appSecPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "EntraIDSecrets.csv");
+                var appSecPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "EntraIDSecrets.csv");
                 if (File.Exists(appSecPath))
                 {
                     try
@@ -9455,7 +9581,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Analyze certificate security
-                var certPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "EntraIDCertificates.csv");
+                var certPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "EntraIDCertificates.csv");
                 if (File.Exists(certPath))
                 {
                     try
@@ -9473,7 +9599,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Check for privileged access issues
-                var userDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ADUsers.csv");
+                var userDataPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "ADUsers.csv");
                 if (File.Exists(userDataPath))
                 {
                     try
@@ -9521,7 +9647,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var riskPoints = 0.0;
 
                 // Check for data retention policies
-                var exchangePath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ExchangeMailboxes.csv");
+                var exchangePath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "ExchangeMailboxes.csv");
                 if (File.Exists(exchangePath))
                 {
                     try
@@ -9545,7 +9671,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Check SharePoint compliance
-                var spPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "SharePointSites.csv");
+                var spPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "SharePointSites.csv");
                 if (File.Exists(spPath))
                 {
                     try
@@ -9602,7 +9728,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var riskPoints = 0.0;
 
                 // Analyze application dependencies
-                var appPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ApplicationCatalog.csv");
+                var appPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "ApplicationCatalog.csv");
                 if (File.Exists(appPath))
                 {
                     try
@@ -9628,7 +9754,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Analyze infrastructure complexity
-                var infraPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "AzureResourceGroups.csv");
+                var infraPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "AzureResourceGroups.csv");
                 if (File.Exists(infraPath))
                 {
                     try
@@ -9646,8 +9772,8 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Hybrid environment complexity
-                var adPath = IOPath.Combine("C\\DiscoveryData", profile.Name, "ADUsers.csv");
-                var cloudPath = IOPath.Combine("C\\DiscoveryData", profile.Name, "AzureTenant.csv");
+                var adPath = IOPath.Combine("C\\DiscoveryData", profile.CompanyName, "ADUsers.csv");
+                var cloudPath = IOPath.Combine("C\\DiscoveryData", profile.CompanyName, "AzureTenant.csv");
                 if (File.Exists(adPath) && File.Exists(cloudPath))
                 {
                     complexityFactors.Add("Hybrid on-premises and cloud environment");
@@ -9680,7 +9806,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var riskPoints = 0.0;
 
                 // Assess Exchange data volume
-                var exchangePath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ExchangeMailboxes.csv");
+                var exchangePath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "ExchangeMailboxes.csv");
                 if (File.Exists(exchangePath))
                 {
                     try
@@ -9705,7 +9831,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 }
 
                 // Assess SharePoint data volume
-                var spPath = IOPath.Combine("C\\DiscoveryData", profile.Name, "SharePointSites.csv");
+                var spPath = IOPath.Combine("C\\DiscoveryData", profile.CompanyName, "SharePointSites.csv");
                 if (File.Exists(spPath))
                 {
                     try
@@ -9834,7 +9960,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 try
                 {
                     // Create reports directory structure
-                    var reportsDir = IOPath.Combine("C:\\DiscoveryData", profile.Name, "Reports");
+                    var reportsDir = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "Reports");
                     var reportTypeDir = IOPath.Combine(reportsDir, reportType.Replace(" ", "_"));
                     Directory.CreateDirectory(reportTypeDir);
 
@@ -9868,7 +9994,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var sb = new StringBuilder();
 
                 // HTML Header with advanced styling
-                sb.AppendLine(GenerateHtmlHeader(reportName, profile.Name));
+                sb.AppendLine(GenerateHtmlHeader(reportName, profile.CompanyName));
 
                 // Executive Summary
                 sb.AppendLine(await GenerateExecutiveSummary(profile));
@@ -9986,7 +10112,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                     <div class='metric-label'>Estimated Data</div>
                 </div>
             </div>
-            <p>This comprehensive migration assessment for <strong>{profile.Name}</strong> covers all critical aspects of the digital transformation initiative. The analysis includes infrastructure inventory, security posture, compliance requirements, and migration readiness across all technology domains.</p>
+            <p>This comprehensive migration assessment for <strong>{profile.CompanyName}</strong> covers all critical aspects of the digital transformation initiative. The analysis includes infrastructure inventory, security posture, compliance requirements, and migration readiness across all technology domains.</p>
         </div>";
             }
 
@@ -10308,7 +10434,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             {
                 try
                 {
-                    var filePath = IOPath.Combine("C:\\DiscoveryData", profile.Name, fileName);
+                    var filePath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, fileName);
                     if (!File.Exists(filePath)) return GetDefaultCount(fileName);
                     
                     var lines = await File.ReadAllLinesAsync(filePath);
@@ -10350,7 +10476,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 
                 foreach (var file in files)
                 {
-                    var filePath = IOPath.Combine("C:\\DiscoveryData", profile.Name, file);
+                    var filePath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, file);
                     if (File.Exists(filePath)) return "Completed";
                 }
 
@@ -10396,7 +10522,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             {
                 var reportData = new
                 {
-                    Profile = profile.Name,
+                    Profile = profile.CompanyName,
                     GeneratedAt = DateTime.Now,
                     ReportName = reportName,
                     Summary = new
@@ -10464,7 +10590,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             {
                 var result = new PredictiveRiskResult
                 {
-                    ProfileName = profile.Name,
+                    ProfileName = profile.CompanyName,
                     PredictionDate = DateTime.Now,
                     Predictions = new Dictionary<string, MLPrediction>()
                 };
@@ -10631,7 +10757,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             // Helper methods for feature calculation
             private async Task<double> GetNormalizedUserCount(CompanyProfile profile)
             {
-                var userDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ADUsers.csv");
+                var userDataPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "ADUsers.csv");
                 var count = 0;
                 if (File.Exists(userDataPath))
                 {
@@ -10649,7 +10775,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 
             private async Task<double> GetNormalizedDeviceCount(CompanyProfile profile)
             {
-                var deviceDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ADComputers.csv");
+                var deviceDataPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "ADComputers.csv");
                 var count = 0;
                 if (File.Exists(deviceDataPath))
                 {
@@ -10666,7 +10792,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 
             private async Task<double> GetNormalizedAppCount(CompanyProfile profile)
             {
-                var appDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ApplicationCatalog.csv");
+                var appDataPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "ApplicationCatalog.csv");
                 var count = 0;
                 if (File.Exists(appDataPath))
                 {
@@ -10699,7 +10825,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var complexity = 0.0;
                 
                 // Check for multiple resource groups
-                var azureRgPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "AzureResourceGroups.csv");
+                var azureRgPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "AzureResourceGroups.csv");
                 if (File.Exists(azureRgPath))
                 {
                     var lines = await File.ReadAllLinesAsync(azureRgPath);
@@ -10719,7 +10845,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var filesToCheck = new[] { "ADUsers.csv", "ExchangeMailboxes.csv", "SharePointSites.csv", "TeamsTeams.csv", "AzureResourceGroups.csv" };
                 foreach (var file in filesToCheck)
                 {
-                    var filePath = IOPath.Combine("C:\\DiscoveryData", profile.Name, file);
+                    var filePath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, file);
                     if (File.Exists(filePath)) points += 0.2;
                 }
                 
@@ -10731,7 +10857,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
                 var posture = 0.7; // Start with reasonable baseline
                 
                 // Check for security issues
-                var secretsPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "EntraIDSecrets.csv");
+                var secretsPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "EntraIDSecrets.csv");
                 if (File.Exists(secretsPath))
                 {
                     var lines = await File.ReadAllLinesAsync(secretsPath);
@@ -11516,7 +11642,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             {
                 var result = new CostOptimizationResult
                 {
-                    ProfileName = profile.Name,
+                    ProfileName = profile.CompanyName,
                     AnalysisDate = DateTime.Now,
                     CostBreakdown = new Dictionary<string, CostAnalysis>(),
                     OptimizationOpportunities = new List<OptimizationOpportunity>(),
@@ -11893,7 +12019,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             // Helper methods
             private async Task<int> GetUserCount(CompanyProfile profile)
             {
-                var userDataPath = IOPath.Combine("C:\\DiscoveryData", profile.Name, "ADUsers.csv");
+                var userDataPath = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "ADUsers.csv");
                 if (File.Exists(userDataPath))
                 {
                     var lines = await File.ReadAllLinesAsync(userDataPath);
@@ -11904,7 +12030,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 
             private async Task<int> GetDeviceCount(CompanyProfile profile)
             {
-                var deviceDataPath = IOPath.Combine("C\\DiscoveryData", profile.Name, "ADComputers.csv");
+                var deviceDataPath = IOPath.Combine("C\\DiscoveryData", profile.CompanyName, "ADComputers.csv");
                 if (File.Exists(deviceDataPath))
                 {
                     var lines = await File.ReadAllLinesAsync(deviceDataPath);
@@ -11915,7 +12041,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
 
             private async Task<int> GetApplicationCount(CompanyProfile profile)
             {
-                var appDataPath = IOPath.Combine("C\\DiscoveryData", profile.Name, "ApplicationCatalog.csv");
+                var appDataPath = IOPath.Combine("C\\DiscoveryData", profile.CompanyName, "ApplicationCatalog.csv");
                 if (File.Exists(appDataPath))
                 {
                     var lines = await File.ReadAllLinesAsync(appDataPath);
@@ -13454,7 +13580,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
         private async Task LoadNetworkInfrastructureData(CompanyProfile profile)
         {
             // Load infrastructure data from CSV files
-            var infrastructureFile = IOPath.Combine("C:\\DiscoveryData", profile.Name, "NetworkInfrastructure.csv");
+            var infrastructureFile = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "NetworkInfrastructure.csv");
             if (File.Exists(infrastructureFile))
             {
                 var lines = File.ReadAllLines(infrastructureFile);
@@ -13482,7 +13608,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
         private async Task LoadPaloAltoFirewallData(CompanyProfile profile)
         {
             // Load Palo Alto firewall data
-            var paloAltoFile = IOPath.Combine("C:\\DiscoveryData", profile.Name, "PaloAlto_DiscoveryData.csv");
+            var paloAltoFile = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "PaloAlto_DiscoveryData.csv");
             if (File.Exists(paloAltoFile))
             {
                 var lines = File.ReadAllLines(paloAltoFile);
@@ -13510,7 +13636,7 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
         private async Task LoadAzureNetworkData(CompanyProfile profile)
         {
             // Load Azure network resources
-            var azureFile = IOPath.Combine("C:\\DiscoveryData", profile.Name, "AzureResourceGroups.csv");
+            var azureFile = IOPath.Combine("C:\\DiscoveryData", profile.CompanyName, "AzureResourceGroups.csv");
             if (File.Exists(azureFile))
             {
                 // Add cloud node to represent Azure
