@@ -91,20 +91,6 @@ param(
     [int]$SecretValidityYears = 2
 )
 
-#region Helper Functions
-function Test-IsWindows {
-    # Helper function to determine if running on Windows
-    if ($PSVersionTable.PSVersion.Major -ge 6) {
-        # PowerShell Core/7+ has $IsWindows variable
-        return $IsWindows
-    } else {
-        # PowerShell 5.1 and below - check Platform or OS
-        return ([System.Environment]::OSVersion.Platform -eq 'Win32NT') -or 
-               ($PSVersionTable.Platform -eq 'Win32NT') -or
-               ($env:OS -match 'Windows')
-    }
-}
-
 #region Company Setup and Directory Management
 function Get-CompanyName {
     param([string]$CurrentCompanyName)
@@ -347,20 +333,34 @@ function Write-EnhancedLog {
     $cleanedMessage = $Message -replace "`[\r\n`]+", " "
     $logMessage = "$timestamp[$Level] $cleanedMessage"
     
-    # Enhanced colorful console output with new levels
-    $colorParams = if ($script:ColorScheme.ContainsKey($Level)) { $script:ColorScheme[$Level] } else { $script:ColorScheme["Info"] }
+    # Enhanced colorful console output with awesome color scheme
+    $colorParams = @{
+        ForegroundColor = switch ($Level) {
+            "SUCCESS" { "Green" }
+            "ERROR" { "Red" }
+            "WARN" { "Yellow" }
+            "CRITICAL" { "Red" }
+            "IMPORTANT" { "Magenta" }
+            "PROGRESS" { "Cyan" }
+            "DEBUG" { "Gray" }
+            "HEADER" { "Blue" }
+            "INFO" { "White" }
+            default { "White" }
+        }
+    }
     
-    # Add icons for better visibility
+    # Add awesome icons with status indicators
     $icon = switch ($Level) {
-        "SUCCESS" { "[OK]" }
-        "ERROR" { "[X]" }
-        "WARN" { "[!]?" }
-        "CRITICAL" { "??" }
-        "IMPORTANT" { "??" }
-        "PROGRESS" { "??" }
-        "DEBUG" { "??" }
-        "HEADER" { "??" }
-        default { "[i]?" }
+        "SUCCESS" { "[COMPLETED]" }
+        "ERROR" { "[FAILED]" }
+        "WARN" { "[WARNING]" }
+        "CRITICAL" { "[CRITICAL]" }
+        "IMPORTANT" { "[IMPORTANT]" }
+        "PROGRESS" { "[IN PROGRESS]" }
+        "DEBUG" { "[DEBUG]" }
+        "HEADER" { "[HEADER]" }
+        "INFO" { "[INFO]" }
+        default { "[NOTICE]" }
     }
     
     $displayMessage = "$icon $logMessage"
@@ -470,7 +470,7 @@ function Test-Prerequisites {
         
         # Administrator privileges check (cross-platform)
         $isAdmin = $false
-        if (Test-IsWindows) {
+        if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
             $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
             $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
             $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -1523,7 +1523,7 @@ function Save-EnhancedCredentials {
         }
         
         # Cross-platform encryption
-        if (Test-IsWindows) {
+        if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
             Write-EnhancedLog "Encrypting credentials using Windows DPAPI..." -Level PROGRESS
             Write-EnhancedLog "  Target User: $env:USERNAME" -Level INFO
             Write-EnhancedLog "  Target Computer: $env:COMPUTERNAME" -Level INFO
@@ -1535,15 +1535,12 @@ function Save-EnhancedCredentials {
         
         $jsonData = $credentialData | ConvertTo-Json -Depth 4
         
-        if (Test-IsWindows) {
+        if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
             # Windows: Use DPAPI encryption
-            Write-EnhancedLog "Encrypting credentials using Windows DPAPI..." -Level INFO
             $secureString = ConvertTo-SecureString -String $jsonData -AsPlainText -Force
             $encryptedData = $secureString | ConvertFrom-SecureString
-            Write-EnhancedLog "Credentials encrypted successfully" -Level SUCCESS
         } else {
             # Linux/macOS: Store as plain JSON (rely on file permissions for security)
-            Write-EnhancedLog "Non-Windows OS detected. Storing as protected JSON file." -Level WARN
             $encryptedData = $jsonData
         }
         
@@ -1565,7 +1562,7 @@ function Save-EnhancedCredentials {
         
         # Apply secure file permissions
         try {
-            if (Test-IsWindows) {
+            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
                 # Windows-specific ACL permissions
                 $acl = Get-Acl $EncryptedOutputPath
                 $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance, remove existing
@@ -1840,6 +1837,7 @@ PowerShell: $($PSVersionTable.PSVersion)
             Write-EnhancedLog "Could not save metrics: $($_.Exception.Message)" -Level WARN
         }
     }
+    
     
     Write-EnhancedLog "Cleanup completed. Full log: $LogPath" -Level SUCCESS
 }

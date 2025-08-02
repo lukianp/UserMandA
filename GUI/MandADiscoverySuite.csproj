@@ -11,6 +11,8 @@
     <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>
+    <OutputPath>C:\enterprisediscovery\</OutputPath>
+    <BaseOutputPath>C:\enterprisediscovery\</BaseOutputPath>
   </PropertyGroup>
 
   <!-- Copy all PowerShell modules to output directory -->
@@ -27,6 +29,21 @@
   <!-- Copy QuickStart.ps1 from root -->
   <ItemGroup>
     <None Include="..\QuickStart.ps1" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Copy Configuration files -->
+  <ItemGroup>
+    <None Include="..\Configuration\*.json" CopyToOutputDirectory="PreserveNewest" Link="Configuration\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Copy Core orchestrator scripts -->
+  <ItemGroup>
+    <None Include="..\Core\*.ps1" CopyToOutputDirectory="PreserveNewest" Link="Core\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Copy Tools directory -->
+  <ItemGroup>
+    <None Include="..\Tools\*.ps1" CopyToOutputDirectory="PreserveNewest" Link="Tools\%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- Ensure Company Profile data stays in C:\DiscoveryData -->
