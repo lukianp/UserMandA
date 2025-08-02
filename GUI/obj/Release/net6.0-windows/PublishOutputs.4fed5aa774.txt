@@ -66,6 +66,11 @@ C:\EnterpriseDiscovery\bin\Release\Scripts\Run-DiscoverySetup.ps1
 C:\EnterpriseDiscovery\bin\Release\Scripts\Set-SuiteEnvironment.ps1
 C:\EnterpriseDiscovery\bin\Release\Scripts\Test-PreFlightValidation.ps1
 C:\EnterpriseDiscovery\bin\Release\QuickStart.ps1
+C:\EnterpriseDiscovery\bin\Release\Configuration\config.schema.json
+C:\EnterpriseDiscovery\bin\Release\Configuration\default-config.json
+C:\EnterpriseDiscovery\bin\Release\Configuration\demo-config.json
+C:\EnterpriseDiscovery\bin\Release\Core\MandA-Orchestrator.ps1
+C:\EnterpriseDiscovery\bin\Release\Tools\AutomatedFunctionalTester.ps1
 C:\EnterpriseDiscovery\bin\Release\MandADiscoverySuite.dll
 C:\EnterpriseDiscovery\bin\Release\MandADiscoverySuite.deps.json
 C:\EnterpriseDiscovery\bin\Release\MandADiscoverySuite.runtimeconfig.json

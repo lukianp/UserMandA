@@ -4,12 +4,12 @@
 winexe
 C#
 .cs
-D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\
+D:\Scripts\UserMandA\gui\obj\Release\net6.0-windows\
 MandADiscoverySuite
 none
 false
 TRACE;RELEASE;NET;NET6_0;NETCOREAPP
-D:\Scripts\UserMandA\GUI\App.xaml
+D:\Scripts\UserMandA\gui\App.xaml
 41838501703
 
 51215373148

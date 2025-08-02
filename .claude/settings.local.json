@@ -30,7 +30,20 @@
       "Bash(pwsh:*)",
       "Bash(timeout:*)",
       "Bash(.Build-GUI.ps1)",
-      "Bash(.Launch-MandADiscoverySuite.bat)"
+      "Bash(.Launch-MandADiscoverySuite.bat)",
+      "Bash(if exist \"GUI\\bin\" rmdir /s /q \"GUI\\bin\")",
+      "Bash(if exist \"GUI\\obj\" rmdir /s /q \"GUI\\obj\")",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(Start-Process \"D:\\Scripts\\UserMandA\\GUI\\bin\\Release\\net6.0-windows\\MandADiscoverySuite.exe\" -WindowStyle Normal)",
+      "Bash(./GUI/bin/Release/net6.0-windows/MandADiscoverySuite.exe)",
+      "Bash(dir:*)",
+      "Bash(\"./GUI/bin/Release/net6.0-windows/MandADiscoverySuite.exe\")",
+      "Bash(./GUI/Build-GUI.ps1)",
+      "Bash(Start-Process \"C:\\enterprisediscovery\\bin\\net6.0-windows\\MandADiscoverySuite.exe\" -WindowStyle Normal)",
+      "Bash(findstr:*)",
+      "Bash(find:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

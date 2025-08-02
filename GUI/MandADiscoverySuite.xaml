@@ -306,6 +306,14 @@
             <Setter Property="Margin" Value="0,0,0,16"/>
         </Style>
         
+        <!-- Page Header Style -->
+        <Style x:Key="PageHeaderStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFF7FAFC"/>
+            <Setter Property="FontSize" Value="28"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        
         <!-- Progress Ring Style -->
         <Style x:Key="ProgressRingStyle" TargetType="ProgressBar">
             <Setter Property="Background" Value="#FF2D3748"/>
@@ -329,8 +337,8 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 
@@ -351,6 +359,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             
                             <ComboBox Grid.Column="0" x:Name="CompanySelector" 
@@ -358,7 +367,6 @@
                                       Height="40"
                                       FontSize="14"
                                       Margin="0,0,8,0"
-                                      DisplayMemberPath="Name"
                                       SelectionChanged="CompanySelector_SelectionChanged">
                             </ComboBox>
                             
@@ -367,6 +375,7 @@
                                     Background="{StaticResource AccentGradient}"
                                     BorderThickness="0"
                                     Width="40" Height="40"
+                                    Margin="0,0,4,0"
                                     ToolTip="Create New Company Profile">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
@@ -385,6 +394,38 @@
                                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                                             <GradientStop Color="#FF5A9FD4" Offset="0"/>
                                                             <GradientStop Color="#FF4A8BC2" Offset="1"/>
+                                                        </LinearGradientBrush>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                            
+                            <Button Grid.Column="2" x:Name="DeleteProfileButton"
+                                    Click="DeleteProfile_Click"
+                                    Background="{StaticResource DangerGradient}"
+                                    BorderThickness="0"
+                                    Width="40" Height="40"
+                                    ToolTip="Delete Selected Company Profile">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" 
+                                                CornerRadius="8"
+                                                x:Name="DeleteButtonBorder">
+                                            <TextBlock Text="×" FontSize="24" FontWeight="Bold"
+                                                      Foreground="White" 
+                                                      HorizontalAlignment="Center" 
+                                                      VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="DeleteButtonBorder" Property="Background">
+                                                    <Setter.Value>
+                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                            <GradientStop Color="#FFE57373" Offset="0"/>
+                                                            <GradientStop Color="#FFD32F2F" Offset="1"/>
                                                         </LinearGradientBrush>
                                                     </Setter.Value>
                                                 </Setter>
@@ -504,47 +545,13 @@
                     </StackPanel>
                 </Border>
                 
-                <!-- Quick Stats Panel -->
-                <Border Grid.Row="3" Margin="16,8,16,16" Background="#FF2D3748" CornerRadius="8" Padding="16">
+                <!-- Navigation Buttons with Scroll Support -->
+                <ScrollViewer Grid.Row="4" Margin="0,8,0,0" 
+                              VerticalScrollBarVisibility="Auto" 
+                              HorizontalScrollBarVisibility="Disabled"
+                              PanningMode="VerticalOnly">
                     <StackPanel>
-                        <TextBlock Text="Discovery Stats" Foreground="#FFE2E8F0" FontSize="13" FontWeight="Medium" Margin="0,0,0,12"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <StackPanel Grid.Row="0" Grid.Column="0">
-                                <TextBlock Text="1,247" Foreground="#FF4299E1" FontSize="18" FontWeight="Bold"/>
-                                <TextBlock Text="Users" Foreground="#FFA0AEC0" FontSize="10"/>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Row="0" Grid.Column="1">
-                                <TextBlock Text="156" Foreground="#FF48BB78" FontSize="18" FontWeight="Bold"/>
-                                <TextBlock Text="Devices" Foreground="#FFA0AEC0" FontSize="10"/>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,8,0,0">
-                                <TextBlock Text="23" Foreground="#FFED8936" FontSize="18" FontWeight="Bold"/>
-                                <TextBlock Text="Infra" Foreground="#FFA0AEC0" FontSize="10"/>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,8,0,0">
-                                <TextBlock Text="89%" Foreground="#FF9F7AEA" FontSize="18" FontWeight="Bold"/>
-                                <TextBlock Text="Complete" Foreground="#FFA0AEC0" FontSize="10"/>
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-                
-                <!-- Navigation Buttons -->
-                <StackPanel Grid.Row="4" Margin="0,8,0,0">
-                    <Button x:Name="DashboardButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
+                        <Button x:Name="DashboardButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📊" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -594,6 +601,46 @@
                         </StackPanel>
                     </Button>
                     
+                    <Button x:Name="DomainDiscoveryButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔍" FontSize="18" Margin="0,0,16,0"/>
+                            <StackPanel>
+                                <TextBlock Text="Domain Discovery"/>
+                                <TextBlock Text="DNS &amp; Domain Enumeration" FontSize="10" Foreground="#FFA0AEC0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="FileServersButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📁" FontSize="18" Margin="0,0,16,0"/>
+                            <StackPanel>
+                                <TextBlock Text="File Servers"/>
+                                <TextBlock Text="File Shares &amp; Storage" FontSize="10" Foreground="#FFA0AEC0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="DatabasesButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🗄️" FontSize="18" Margin="0,0,16,0"/>
+                            <StackPanel>
+                                <TextBlock Text="Databases"/>
+                                <TextBlock Text="SQL &amp; Database Discovery" FontSize="10" Foreground="#FFA0AEC0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="SecurityButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔒" FontSize="18" Margin="0,0,16,0"/>
+                            <StackPanel>
+                                <TextBlock Text="Group Policy &amp; Security"/>
+                                <TextBlock Text="Security Assessment &amp; GPO Analysis" FontSize="10" Foreground="#FFA0AEC0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+
                     <Button x:Name="ApplicationsButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📱" FontSize="18" Margin="0,0,16,0"/>
@@ -640,6 +687,7 @@
                         </StackPanel>
                     </Button>
                 </StackPanel>
+            </ScrollViewer>
                 
                 <!-- Spacer -->
                 <Grid Grid.Row="5"/>
@@ -652,6 +700,10 @@
                             <TextBlock Text="System Ready" Foreground="White" FontSize="13" FontWeight="Medium"/>
                         </StackPanel>
                         <TextBlock x:Name="StatusDetails" Text="Last discovery: 2 hours ago" Foreground="White" FontSize="11" Opacity="0.8"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <TextBlock x:Name="DomainInfo" Text="Domain: Not detected" Foreground="White" FontSize="11" Opacity="0.8" Margin="0,0,16,0"/>
+                            <TextBlock x:Name="EnvironmentType" Text="Environment: Unknown" Foreground="White" FontSize="11" Opacity="0.8"/>
+                        </StackPanel>
                         <ProgressBar x:Name="StatusProgressBar" Style="{StaticResource ProgressRingStyle}" Value="0" Margin="0,8,0,0" Visibility="Collapsed"/>
                     </StackPanel>
                 </Border>
@@ -941,11 +993,79 @@
                     </StackPanel>
                     
                     <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,32">
-                        <Button Content="Active Directory" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,12,8"/>
-                        <Button Content="Azure AD / Entra" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8"/>
-                        <Button Content="Infrastructure" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8"/>
-                        <Button Content="Applications" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8"/>
-                        <Button Content="Show All" Style="{StaticResource ModernButtonStyle}" Background="Transparent" BorderBrush="#FF4A5568" BorderThickness="1"/>
+                        <Button x:Name="ADDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Active Directory" Foreground="White"/>
+                                    <Ellipse x:Name="ADStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock x:Name="ADStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="EntraDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Azure AD / Entra" Foreground="White"/>
+                                    <Ellipse x:Name="EntraStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock x:Name="EntraStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="InfraDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Infrastructure" Foreground="White"/>
+                                    <Ellipse x:Name="InfraStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock x:Name="InfraStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="AppsDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Applications" Foreground="White"/>
+                                    <Ellipse x:Name="AppsStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock x:Name="AppsStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="DomainDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Domain Discovery" Foreground="White"/>
+                                    <Ellipse x:Name="DomainStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock x:Name="DomainStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="FileServersDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="File Servers" Foreground="White"/>
+                                    <Ellipse x:Name="FileServersStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock x:Name="FileServersStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="DatabasesDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Databases" Foreground="White"/>
+                                    <Ellipse x:Name="DatabasesStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock x:Name="DatabasesStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="SecurityDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Security" Foreground="White"/>
+                                    <Ellipse x:Name="SecurityStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock x:Name="SecurityStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Content="Show All" Style="{StaticResource ModernButtonStyle}" Background="Transparent" BorderBrush="#FF4A5568" BorderThickness="1" Click="ShowAllDiscoveryData_Click"/>
                     </WrapPanel>
                     
                     <ItemsControl Grid.Row="2" x:Name="DiscoveryModules">
@@ -2372,5 +2492,441 @@
                 </Grid>
             </Border>
         </Grid>
+
+            <!-- Domain Discovery View -->
+            <Grid x:Name="DomainDiscoveryView" Visibility="Collapsed" Margin="32">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Header -->
+                <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
+                    <StackPanel>
+                        <TextBlock Text="Domain Discovery &amp; DNS Enumeration" Style="{StaticResource PageHeaderStyle}"/>
+                        <TextBlock Text="Discover and enumerate domain names, DNS records, and related infrastructure"
+                                   Foreground="#FFA0AEC0" FontSize="14" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Content -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Domain Discovery Actions -->
+                        <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Domain Discovery Tools" Style="{StaticResource SectionHeaderStyle}"/>
+                                <TextBlock Text="Run comprehensive domain and DNS enumeration scans"
+                                           Foreground="#FFA0AEC0" FontSize="13" Margin="0,0,0,16"/>
+                                
+                                <WrapPanel>
+                                    <Button x:Name="RunDomainScanButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="{StaticResource AccentGradient}"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="RunDomainScan_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🔍" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Full Domain Scan"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button x:Name="DnsLookupButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FF48BB78" Foreground="White"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="DnsLookup_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🌐" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="DNS Lookup"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button x:Name="SubdomainEnumButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FF9F7AEA" Foreground="White"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="SubdomainEnum_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🔗" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Subdomain Enumeration"/>
+                                        </StackPanel>
+                                    </Button>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Domain Results -->
+                        <Border Style="{StaticResource ModernCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Discovered Domains" Style="{StaticResource SectionHeaderStyle}"/>
+                                <DataGrid x:Name="DomainsDataGrid" Style="{StaticResource ModernDataGridStyle}"
+                                          Margin="0,16,0,0" Height="300">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Domain Name" Binding="{Binding DomainName}" Width="200"/>
+                                        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="100"/>
+                                        <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="150"/>
+                                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                                        <DataGridTextColumn Header="Last Checked" Binding="{Binding LastChecked}" Width="150"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- File Servers View -->
+            <Grid x:Name="FileServersView" Visibility="Collapsed" Margin="32">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Header -->
+                <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
+                    <StackPanel>
+                        <TextBlock Text="File Servers &amp; Storage Discovery" Style="{StaticResource PageHeaderStyle}"/>
+                        <TextBlock Text="Discover and analyze file servers, shares, and storage infrastructure"
+                                   Foreground="#FFA0AEC0" FontSize="14" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Content -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- File Server Discovery Actions -->
+                        <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="File Server Discovery Tools" Style="{StaticResource SectionHeaderStyle}"/>
+                                <TextBlock Text="Scan network for file servers and analyze storage usage"
+                                           Foreground="#FFA0AEC0" FontSize="13" Margin="0,0,0,16"/>
+                                
+                                <WrapPanel>
+                                    <Button x:Name="ScanFileServersButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="{StaticResource AccentGradient}"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="ScanFileServers_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🔍" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Scan File Servers"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button x:Name="AnalyzeSharesButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FF48BB78" Foreground="White"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="AnalyzeShares_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="📊" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Analyze Shares"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button x:Name="StorageReportButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FF9F7AEA" Foreground="White"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="StorageReport_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="📈" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Storage Report"/>
+                                        </StackPanel>
+                                    </Button>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- File Servers Results -->
+                        <Border Style="{StaticResource ModernCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Discovered File Servers" Style="{StaticResource SectionHeaderStyle}"/>
+                                <DataGrid x:Name="FileServersDataGrid" Style="{StaticResource ModernDataGridStyle}"
+                                          Margin="0,16,0,0" Height="350">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Server Name" Binding="{Binding ServerName}" Width="150"/>
+                                        <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="120"/>
+                                        <DataGridTextColumn Header="Share Count" Binding="{Binding ShareCount}" Width="100"/>
+                                        <DataGridTextColumn Header="Total Size" Binding="{Binding TotalSize}" Width="120"/>
+                                        <DataGridTextColumn Header="Used Space" Binding="{Binding UsedSpace}" Width="120"/>
+                                        <DataGridTextColumn Header="Free Space" Binding="{Binding FreeSpace}" Width="120"/>
+                                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                                        <DataGridTextColumn Header="Last Scanned" Binding="{Binding LastScanned}" Width="150"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Databases View -->
+            <Grid x:Name="DatabasesView" Visibility="Collapsed" Margin="32">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Header -->
+                <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
+                    <StackPanel>
+                        <TextBlock Text="Database Discovery &amp; Analysis" Style="{StaticResource PageHeaderStyle}"/>
+                        <TextBlock Text="Discover SQL Server, Oracle, MySQL, and other database systems across your infrastructure"
+                                   Foreground="#FFA0AEC0" FontSize="14" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Content -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Database Discovery Actions -->
+                        <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Database Discovery Tools" Style="{StaticResource SectionHeaderStyle}"/>
+                                <TextBlock Text="Scan network for database servers and analyze database configurations"
+                                           Foreground="#FFA0AEC0" FontSize="13" Margin="0,0,0,16"/>
+                                
+                                <WrapPanel>
+                                    <Button x:Name="ScanDatabasesButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="{StaticResource AccentGradient}"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="ScanDatabases_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🔍" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Scan Database Servers"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button x:Name="AnalyzeSQLButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FF48BB78" Foreground="White"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="AnalyzeSQL_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🗃️" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Analyze SQL Servers"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button x:Name="DatabaseReportButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FF9F7AEA" Foreground="White"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="DatabaseReport_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="📊" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Database Report"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button x:Name="CheckDatabaseVersionsButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FFE53E3E" Foreground="White"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="CheckDatabaseVersions_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="⚠️" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Check Versions"/>
+                                        </StackPanel>
+                                    </Button>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Database Results -->
+                        <Border Style="{StaticResource ModernCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Discovered Database Servers" Style="{StaticResource SectionHeaderStyle}"/>
+                                <DataGrid x:Name="DatabasesDataGrid" Style="{StaticResource ModernDataGridStyle}"
+                                          Margin="0,16,0,0" Height="350">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Server Name" Binding="{Binding ServerName}" Width="150"/>
+                                        <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="120"/>
+                                        <DataGridTextColumn Header="Database Type" Binding="{Binding DatabaseType}" Width="100"/>
+                                        <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="120"/>
+                                        <DataGridTextColumn Header="Instance Name" Binding="{Binding InstanceName}" Width="120"/>
+                                        <DataGridTextColumn Header="Database Count" Binding="{Binding DatabaseCount}" Width="100"/>
+                                        <DataGridTextColumn Header="Total Size" Binding="{Binding TotalSize}" Width="120"/>
+                                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                                        <DataGridTextColumn Header="Last Scanned" Binding="{Binding LastScanned}" Width="150"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Security View -->
+            <Grid x:Name="SecurityView" Visibility="Collapsed" Margin="32">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Header -->
+                <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
+                    <StackPanel>
+                        <TextBlock Text="Group Policy &amp; Security Discovery" Style="{StaticResource PageHeaderStyle}"/>
+                        <TextBlock Text="Analyze Group Policy settings, security configurations, and compliance posture across your domain"
+                                   Foreground="#FFA0AEC0" FontSize="14" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Content -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Security Discovery Actions -->
+                        <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Security Assessment Tools" Style="{StaticResource SectionHeaderStyle}"/>
+                                <TextBlock Text="Analyze Group Policy Objects, security settings, and compliance status"
+                                           Foreground="#FFA0AEC0" FontSize="13" Margin="0,0,0,16"/>
+                                
+                                <WrapPanel>
+                                    <Button x:Name="ScanGPOButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="{StaticResource AccentGradient}"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="ScanGPO_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🔍" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Scan Group Policies"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button x:Name="SecurityAuditButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FFE53E3E" Foreground="White"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="SecurityAudit_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🛡️" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Security Audit"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button x:Name="ComplianceCheckButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FF48BB78" Foreground="White"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="ComplianceCheck_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="✅" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Compliance Check"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button x:Name="VulnerabilityAssessmentButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FF9F7AEA" Foreground="White"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="VulnerabilityAssessment_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="⚠️" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Vulnerability Scan"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button x:Name="PasswordPolicyButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FFED8936" Foreground="White"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="PasswordPolicy_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🔐" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Password Policies"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button x:Name="FirewallAnalysisButton" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FF38B2AC" Foreground="White"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Click="FirewallAnalysis_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🔥" FontSize="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Firewall Analysis"/>
+                                        </StackPanel>
+                                    </Button>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Security Results Tabs -->
+                        <Border Style="{StaticResource ModernCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Security Assessment Results" Style="{StaticResource SectionHeaderStyle}"/>
+                                
+                                <!-- Tab Headers -->
+                                <StackPanel Orientation="Horizontal" Margin="0,16,0,16">
+                                    <Button x:Name="GPOTabButton" Content="Group Policies" Style="{StaticResource ModernButtonStyle}"
+                                            Background="{StaticResource AccentGradient}" Margin="0,0,8,0" Padding="16,8"
+                                            Click="SecurityTab_Click" Tag="GPO"/>
+                                    <Button x:Name="SecurityTabButton" Content="Security Issues" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FF4A5568" Margin="0,0,8,0" Padding="16,8"
+                                            Click="SecurityTab_Click" Tag="Security"/>
+                                    <Button x:Name="ComplianceTabButton" Content="Compliance" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FF4A5568" Margin="0,0,8,0" Padding="16,8"
+                                            Click="SecurityTab_Click" Tag="Compliance"/>
+                                    <Button x:Name="VulnerabilitiesTabButton" Content="Vulnerabilities" Style="{StaticResource ModernButtonStyle}"
+                                            Background="#FF4A5568" Margin="0,0,8,0" Padding="16,8"
+                                            Click="SecurityTab_Click" Tag="Vulnerabilities"/>
+                                </StackPanel>
+                                
+                                <!-- GPO Results -->
+                                <Grid x:Name="GPOResultsPanel" Visibility="Visible">
+                                    <DataGrid x:Name="GPODataGrid" Style="{StaticResource ModernDataGridStyle}"
+                                              Height="300">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="GPO Name" Binding="{Binding Name}" Width="200"/>
+                                            <DataGridTextColumn Header="Domain" Binding="{Binding Domain}" Width="150"/>
+                                            <DataGridTextColumn Header="Linked To" Binding="{Binding LinkedTo}" Width="200"/>
+                                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                                            <DataGridTextColumn Header="Settings Count" Binding="{Binding SettingsCount}" Width="120"/>
+                                            <DataGridTextColumn Header="Risk Level" Binding="{Binding RiskLevel}" Width="100"/>
+                                            <DataGridTextColumn Header="Last Modified" Binding="{Binding LastModified}" Width="150"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                                
+                                <!-- Security Issues Results -->
+                                <Grid x:Name="SecurityResultsPanel" Visibility="Collapsed">
+                                    <DataGrid x:Name="SecurityIssuesDataGrid" Style="{StaticResource ModernDataGridStyle}"
+                                              Height="300">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Issue Type" Binding="{Binding IssueType}" Width="150"/>
+                                            <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="100"/>
+                                            <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="300"/>
+                                            <DataGridTextColumn Header="Affected System" Binding="{Binding AffectedSystem}" Width="200"/>
+                                            <DataGridTextColumn Header="Recommendation" Binding="{Binding Recommendation}" Width="250"/>
+                                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                                
+                                <!-- Compliance Results -->
+                                <Grid x:Name="ComplianceResultsPanel" Visibility="Collapsed">
+                                    <DataGrid x:Name="ComplianceDataGrid" Style="{StaticResource ModernDataGridStyle}"
+                                              Height="300">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Control ID" Binding="{Binding ControlId}" Width="100"/>
+                                            <DataGridTextColumn Header="Control Name" Binding="{Binding ControlName}" Width="200"/>
+                                            <DataGridTextColumn Header="Framework" Binding="{Binding Framework}" Width="120"/>
+                                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                                            <DataGridTextColumn Header="Score" Binding="{Binding Score}" Width="80"/>
+                                            <DataGridTextColumn Header="Evidence" Binding="{Binding Evidence}" Width="200"/>
+                                            <DataGridTextColumn Header="Gap Analysis" Binding="{Binding GapAnalysis}" Width="250"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                                
+                                <!-- Vulnerabilities Results -->
+                                <Grid x:Name="VulnerabilitiesResultsPanel" Visibility="Collapsed">
+                                    <DataGrid x:Name="VulnerabilitiesDataGrid" Style="{StaticResource ModernDataGridStyle}"
+                                              Height="300">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="CVE ID" Binding="{Binding CveId}" Width="120"/>
+                                            <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="250"/>
+                                            <DataGridTextColumn Header="CVSS Score" Binding="{Binding CvssScore}" Width="100"/>
+                                            <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="100"/>
+                                            <DataGridTextColumn Header="Affected Systems" Binding="{Binding AffectedSystems}" Width="200"/>
+                                            <DataGridTextColumn Header="Patch Available" Binding="{Binding PatchAvailable}" Width="120"/>
+                                            <DataGridTextColumn Header="Exploit Available" Binding="{Binding ExploitAvailable}" Width="120"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
     </Grid>
 </Window>
