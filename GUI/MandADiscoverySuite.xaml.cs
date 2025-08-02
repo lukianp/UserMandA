@@ -4015,6 +4015,23 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
             
             // Clear migration waves data
             if (WavesDataGrid != null) WavesDataGrid.ItemsSource = null;
+            
+            // Clear dashboard summary boxes
+            Dispatcher.Invoke(() =>
+            {
+                if (TotalUsersTextBlock != null) TotalUsersTextBlock.Text = "0";
+                if (TotalDevicesTextBlock != null) TotalDevicesTextBlock.Text = "0";
+                if (TotalInfrastructureTextBlock != null) TotalInfrastructureTextBlock.Text = "0";
+                if (DiscoveryProgressTextBlock != null) DiscoveryProgressTextBlock.Text = "0%";
+                if (DiscoveryProgressBar != null) DiscoveryProgressBar.Value = 0;
+                
+                // Clear view-specific headers
+                if (UsersViewTotalTextBlock != null) UsersViewTotalTextBlock.Text = "0";
+                if (ActiveUsersTextBlock != null) ActiveUsersTextBlock.Text = "0";
+                if (ComputersViewTotalTextBlock != null) ComputersViewTotalTextBlock.Text = "0";
+                if (ServersTextBlock != null) ServersTextBlock.Text = "0";
+                if (InfrastructureServersTextBlock != null) InfrastructureServersTextBlock.Text = "0";
+            });
         }
 
         private async Task UpdateDomainAndEnvironmentInfo()
@@ -6643,6 +6660,26 @@ Write-Host 'You can now refresh the GUI to see the discovered data.' -Foreground
             int serverCount = InfrastructureDataGrid?.Items?.Count ?? 0;
             int appCount = ApplicationsGrid?.Items?.Count ?? 0;
             
+            // Update dashboard summary boxes immediately
+            Dispatcher.Invoke(() =>
+            {
+                if (TotalUsersTextBlock != null)
+                    TotalUsersTextBlock.Text = userCount.ToString("N0");
+                
+                if (TotalDevicesTextBlock != null)
+                    TotalDevicesTextBlock.Text = computerCount.ToString("N0");
+                
+                if (TotalInfrastructureTextBlock != null)
+                    TotalInfrastructureTextBlock.Text = serverCount.ToString("N0");
+                
+                // Update view-specific headers
+                if (UsersViewTotalTextBlock != null)
+                    UsersViewTotalTextBlock.Text = userCount.ToString("N0");
+                
+                if (ComputersViewTotalTextBlock != null)
+                    ComputersViewTotalTextBlock.Text = computerCount.ToString("N0");
+            });
+            
             // Update the status to include real counts
             StatusDetails.Text += $" | Stats: {userCount}u, {computerCount}c, {serverCount}s, {appCount}a";
         }
@@ -9072,12 +9109,41 @@ Write-Host '=== Discovery Complete ===' -ForegroundColor Cyan
             // Update the dashboard UI elements with real-time data
             Dispatcher.Invoke(() =>
             {
-                // Find and update metric cards in the dashboard
-                UpdateMetricCard("Users", totalUsers, "→", "#FFED8936");
-                UpdateMetricCard("Devices", totalDevices, "→", "#FFED8936");
-                UpdateMetricCard("Infrastructure", infrastructureCount, "→", "#FFED8936");
+                // Update dashboard summary boxes with real data
+                if (TotalUsersTextBlock != null)
+                    TotalUsersTextBlock.Text = totalUsers.ToString("N0");
+                
+                if (TotalDevicesTextBlock != null)
+                    TotalDevicesTextBlock.Text = totalDevices.ToString("N0");
+                
+                if (TotalInfrastructureTextBlock != null)
+                    TotalInfrastructureTextBlock.Text = infrastructureCount.ToString("N0");
+                
+                if (DiscoveryProgressTextBlock != null)
+                    DiscoveryProgressTextBlock.Text = $"{discoveryProgress:F0}%";
+                
+                if (DiscoveryProgressBar != null)
+                    DiscoveryProgressBar.Value = discoveryProgress;
 
-                UpdateDiscoveryProgressMetric(discoveryProgress);
+                // Update view-specific headers
+                if (UsersViewTotalTextBlock != null)
+                    UsersViewTotalTextBlock.Text = totalUsers.ToString("N0");
+                
+                if (ActiveUsersTextBlock != null)
+                {
+                    // Count active users from actual data
+                    var activeUsers = UsersDataGrid?.ItemsSource?.Cast<object>()?.Count() ?? 0;
+                    ActiveUsersTextBlock.Text = activeUsers.ToString("N0");
+                }
+                
+                if (ComputersViewTotalTextBlock != null)
+                    ComputersViewTotalTextBlock.Text = totalDevices.ToString("N0");
+                
+                if (ServersTextBlock != null)
+                    ServersTextBlock.Text = infrastructureCount.ToString("N0");
+                
+                if (InfrastructureServersTextBlock != null)
+                    InfrastructureServersTextBlock.Text = infrastructureCount.ToString("N0");
             });
         }
 

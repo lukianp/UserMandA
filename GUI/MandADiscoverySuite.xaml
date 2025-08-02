@@ -741,7 +741,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="👥" FontSize="24" Margin="0,0,12,0"/>
                                     <StackPanel>
-                                        <TextBlock Text="1,247" Foreground="#FF4299E1" FontSize="28" FontWeight="Bold"/>
+                                        <TextBlock x:Name="TotalUsersTextBlock" Text="0" Foreground="#FF4299E1" FontSize="28" FontWeight="Bold"/>
                                         <TextBlock Text="Total Users" Foreground="#FFA0AEC0" FontSize="12"/>
                                     </StackPanel>
                                 </StackPanel>
@@ -757,7 +757,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="💻" FontSize="24" Margin="0,0,12,0"/>
                                     <StackPanel>
-                                        <TextBlock Text="156" Foreground="#FF48BB78" FontSize="28" FontWeight="Bold"/>
+                                        <TextBlock x:Name="TotalDevicesTextBlock" Text="0" Foreground="#FF48BB78" FontSize="28" FontWeight="Bold"/>
                                         <TextBlock Text="Devices" Foreground="#FFA0AEC0" FontSize="12"/>
                                     </StackPanel>
                                 </StackPanel>
@@ -773,7 +773,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="🌐" FontSize="24" Margin="0,0,12,0"/>
                                     <StackPanel>
-                                        <TextBlock Text="23" Foreground="#FFED8936" FontSize="28" FontWeight="Bold"/>
+                                        <TextBlock x:Name="TotalInfrastructureTextBlock" Text="0" Foreground="#FFED8936" FontSize="28" FontWeight="Bold"/>
                                         <TextBlock Text="Infrastructure" Foreground="#FFA0AEC0" FontSize="12"/>
                                     </StackPanel>
                                 </StackPanel>
@@ -789,11 +789,11 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="✅" FontSize="24" Margin="0,0,12,0"/>
                                     <StackPanel>
-                                        <TextBlock Text="89%" Foreground="#FF9F7AEA" FontSize="28" FontWeight="Bold"/>
+                                        <TextBlock x:Name="DiscoveryProgressTextBlock" Text="0%" Foreground="#FF9F7AEA" FontSize="28" FontWeight="Bold"/>
                                         <TextBlock Text="Discovery Complete" Foreground="#FFA0AEC0" FontSize="12"/>
                                     </StackPanel>
                                 </StackPanel>
-                                <ProgressBar Value="89" Maximum="100" Height="4" Background="#FF2D3748" Foreground="#FF9F7AEA" BorderThickness="0"/>
+                                <ProgressBar x:Name="DiscoveryProgressBar" Value="0" Maximum="100" Height="4" Background="#FF2D3748" Foreground="#FF9F7AEA" BorderThickness="0"/>
                             </StackPanel>
                         </Border>
                     </UniformGrid>
@@ -1149,13 +1149,13 @@
                     <UniformGrid Grid.Row="1" Columns="5" Margin="0,0,0,24">
                         <Border Style="{StaticResource MetricCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="1,247" Foreground="#FF4299E1" FontSize="24" FontWeight="Bold"/>
+                                <TextBlock x:Name="UsersViewTotalTextBlock" Text="0" Foreground="#FF4299E1" FontSize="24" FontWeight="Bold"/>
                                 <TextBlock Text="Total Users" Foreground="#FFA0AEC0" FontSize="11"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource MetricCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="1,156" Foreground="#FF48BB78" FontSize="24" FontWeight="Bold"/>
+                                <TextBlock x:Name="ActiveUsersTextBlock" Text="0" Foreground="#FF48BB78" FontSize="24" FontWeight="Bold"/>
                                 <TextBlock Text="Active Users" Foreground="#FFA0AEC0" FontSize="11"/>
                             </StackPanel>
                         </Border>
@@ -1167,7 +1167,7 @@
                         </Border>
                         <Border Style="{StaticResource MetricCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="234" Foreground="#FF9F7AEA" FontSize="24" FontWeight="Bold"/>
+                                <TextBlock x:Name="ServiceAccountsTextBlock" Text="0" Foreground="#FF9F7AEA" FontSize="24" FontWeight="Bold"/>
                                 <TextBlock Text="Service Accounts" Foreground="#FFA0AEC0" FontSize="11"/>
                             </StackPanel>
                         </Border>
@@ -1233,7 +1233,7 @@
                     <UniformGrid Grid.Row="1" Columns="6" Margin="0,0,0,24">
                         <Border Style="{StaticResource MetricCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="156" Foreground="#FF4299E1" FontSize="24" FontWeight="Bold"/>
+                                <TextBlock x:Name="ComputersViewTotalTextBlock" Text="0" Foreground="#FF4299E1" FontSize="24" FontWeight="Bold"/>
                                 <TextBlock Text="Total Devices" Foreground="#FFA0AEC0" FontSize="11"/>
                             </StackPanel>
                         </Border>
@@ -1263,7 +1263,7 @@
                         </Border>
                         <Border Style="{StaticResource MetricCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="23" Foreground="#FF4299E1" FontSize="24" FontWeight="Bold"/>
+                                <TextBlock x:Name="ServersTextBlock" Text="0" Foreground="#FF4299E1" FontSize="24" FontWeight="Bold"/>
                                 <TextBlock Text="Servers" Foreground="#FFA0AEC0" FontSize="11"/>
                             </StackPanel>
                         </Border>
@@ -1352,7 +1352,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="🖥️" FontSize="20" Margin="0,0,8,0"/>
                                     <StackPanel>
-                                        <TextBlock Text="23" Foreground="#FF48BB78" FontSize="24" FontWeight="Bold"/>
+                                        <TextBlock x:Name="InfrastructureServersTextBlock" Text="0" Foreground="#FF48BB78" FontSize="24" FontWeight="Bold"/>
                                         <TextBlock Text="Servers" Foreground="#FFA0AEC0" FontSize="11"/>
                                     </StackPanel>
                                 </StackPanel>
@@ -1575,7 +1575,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="⚡" FontSize="20" Margin="0,0,8,0"/>
                                     <StackPanel>
-                                        <TextBlock Text="234" Foreground="#FF48BB78" FontSize="24" FontWeight="Bold"/>
+                                        <TextBlock x:Name="HighPriorityUsersTextBlock" Text="0" Foreground="#FF48BB78" FontSize="24" FontWeight="Bold"/>
                                         <TextBlock Text="High Priority Users" Foreground="#FFA0AEC0" FontSize="11"/>
                                     </StackPanel>
                                 </StackPanel>
@@ -1655,7 +1655,7 @@
                                                 DragLeave="WaveDropZone_DragLeave" CornerRadius="4" BorderThickness="2" BorderBrush="Transparent">
                                             <StackPanel>
                                                 <TextBlock Text="Wave 1 - Executive &amp; IT" Foreground="#FF4299E1" FontSize="13" FontWeight="Medium"/>
-                                                <TextBlock x:Name="Wave1UserCount" Text="Week 1-2 • 234 users" Foreground="#FFA0AEC0" FontSize="11"/>
+                                                <TextBlock x:Name="Wave1UserCount" Text="Week 1-2 • 0 users" Foreground="#FFA0AEC0" FontSize="11"/>
                                                 <ProgressBar Value="100" Maximum="100" Height="4" Background="#FF1A202C" Foreground="#FF4299E1" BorderThickness="0" Margin="0,4,0,0"/>
                                             </StackPanel>
                                         </Border>
