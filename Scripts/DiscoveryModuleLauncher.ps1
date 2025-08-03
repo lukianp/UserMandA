@@ -96,7 +96,7 @@ try {
         if (-not $expiryCheck.Valid) {
             throw "Credential validation failed: $($expiryCheck.Message)"
         }
-        if ($expiryCheck.Warning) {
+        if ($expiryCheck.ContainsKey('Warning') -and $expiryCheck.Warning) {
             Write-Warning $expiryCheck.Message
         }
     }
@@ -123,11 +123,30 @@ try {
     Write-Host "Client ID: $($credentials.ClientId -replace '.', '*')" -ForegroundColor Gray
     Write-Host ""
     
+    # Initialize authentication service
+    Write-Host "Initializing authentication..." -ForegroundColor Yellow
+    
+    # Re-import AuthenticationService to ensure functions are available
+    Import-Module (Join-Path $ModulesPath "Authentication\AuthenticationService.psm1") -Force
+    
+    try {
+        $authResult = Initialize-AuthenticationService -Configuration $configuration
+        if (-not $authResult.Success) {
+            throw "Authentication initialization failed: $($authResult.Error)"
+        }
+        Write-Host "Authentication initialized successfully" -ForegroundColor Green
+        
+        # Update context with authenticated session ID
+        $context.DiscoverySession = $authResult.SessionId
+    } catch {
+        Write-Host "Authentication failed: $($_.Exception.Message)" -ForegroundColor Red
+        throw
+    }
+    
     # Execute discovery based on module name
     $functionName = "Invoke-$ModuleName"
     
     Write-Host "Starting $ModuleName discovery..." -ForegroundColor Cyan
-    Write-Host "Please ensure you have appropriate permissions and authentication..." -ForegroundColor Yellow
     Write-Host ""
     
     # Call the discovery function

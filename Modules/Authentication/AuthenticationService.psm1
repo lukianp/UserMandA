@@ -61,39 +61,59 @@ function Initialize-AuthenticationService {
     try {
         Write-Verbose "[AuthService] Initializing authentication service..."
         
-        # Get credentials using existing credential management
+        # Handle credentials from configuration or credential management system
+        $credentials = $null
+        
+        # Try credential management system first if available
         if (Get-Command Get-SecureCredentials -ErrorAction SilentlyContinue) {
-            $credentials = Get-SecureCredentials -Configuration $Configuration
-            
-            if (-not $credentials -or -not $credentials.Success) {
-                throw "Failed to retrieve credentials: $($credentials.Error)"
-            }
-            
-            # Convert client secret to SecureString
-            $secureSecret = if ($credentials.ClientSecret -is [SecureString]) {
-                $credentials.ClientSecret
-            } else {
-                ConvertTo-SecureString $credentials.ClientSecret -AsPlainText -Force
-            }
-            
-            # Create new authentication session
-            $sessionId = New-AuthenticationSession -TenantId $credentials.TenantId -ClientId $credentials.ClientId -ClientSecret $secureSecret
-            
-            if ($sessionId) {
-                $script:CurrentSessionId = $sessionId
-                $result.Success = $true
-                $result.SessionId = $sessionId
-                
-                Write-Verbose "[AuthService] Authentication session created: $sessionId"
-                
-                if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
-                    Write-MandALog "Authentication service initialized successfully" -Level "SUCCESS" -Component "AuthenticationService" -Context $Context
+            try {
+                $credentials = Get-SecureCredentials -Configuration $Configuration
+                if (-not $credentials -or -not $credentials.Success) {
+                    Write-Verbose "[AuthService] Credential management system failed, using direct configuration"
+                    $credentials = $null
                 }
-            } else {
-                throw "Failed to create authentication session"
+            } catch {
+                Write-Verbose "[AuthService] Credential management system error, using direct configuration: $($_.Exception.Message)"
+                $credentials = $null
+            }
+        }
+        
+        # Fall back to direct configuration if credential management isn't available or failed
+        if (-not $credentials) {
+            if (-not $Configuration.TenantId -or -not $Configuration.ClientId -or -not $Configuration.ClientSecret) {
+                throw "Required credentials not provided: TenantId, ClientId, and ClientSecret are required"
+            }
+            
+            $credentials = @{
+                TenantId = $Configuration.TenantId
+                ClientId = $Configuration.ClientId
+                ClientSecret = $Configuration.ClientSecret
+                Success = $true
+            }
+        }
+        
+        # Convert client secret to SecureString
+        $secureSecret = if ($credentials.ClientSecret -is [SecureString]) {
+            $credentials.ClientSecret
+        } else {
+            ConvertTo-SecureString $credentials.ClientSecret -AsPlainText -Force
+        }
+        
+        # Create new authentication session
+        $sessionId = New-AuthenticationSession -TenantId $credentials.TenantId -ClientId $credentials.ClientId -ClientSecret $secureSecret
+        
+        if ($sessionId) {
+            $script:CurrentSessionId = $sessionId
+            $result.Success = $true
+            $result.SessionId = $sessionId
+            
+            Write-Verbose "[AuthService] Authentication session created: $sessionId"
+            
+            if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+                Write-MandALog "Authentication service initialized successfully" -Level "SUCCESS" -Component "AuthenticationService" -Context $Context
             }
         } else {
-            throw "Credential management functions not available"
+            throw "Failed to create authentication session"
         }
         
     } catch {

@@ -1,6 +1,7 @@
 C:\enterprisediscovery\net6.0-windows\Modules\AI\MachineLearningDataClassification.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\API\RESTAPIIntegration.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Assessment\EnvironmentRiskScoring.psm1
+C:\enterprisediscovery\net6.0-windows\Modules\Authentication\AuthenticationService.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Authentication\AuthSession.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Authentication\CredentialManagement.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Authentication\SessionManager.psm1
@@ -12,6 +13,8 @@ C:\enterprisediscovery\net6.0-windows\Modules\Compliance\ComplianceAssessmentFra
 C:\enterprisediscovery\net6.0-windows\Modules\Core\ClassDefinitions.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Core\CompanyProfileManager.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Core\ConfigurationManager.psm1
+C:\enterprisediscovery\net6.0-windows\Modules\Core\CredentialLoader.psm1
+C:\enterprisediscovery\net6.0-windows\Modules\Core\CredentialSecurity.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Core\StandardizedAuthentication.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\DataMapping\DataLineageDependencyEngine.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\DataProcessing\DataDeduplicationEngine.psm1
@@ -118,9 +121,6 @@ C:\enterprisediscovery\net6.0-windows\Configuration\demo-config.json
 C:\enterprisediscovery\net6.0-windows\Configuration\suite-config.json
 C:\enterprisediscovery\net6.0-windows\Core\MandA-Orchestrator.ps1
 C:\enterprisediscovery\net6.0-windows\Tools\AutomatedFunctionalTester.ps1
-C:\enterprisediscovery\net6.0-windows\Modules\Authentication\AuthenticationService.psm1
-C:\enterprisediscovery\net6.0-windows\Modules\Core\CredentialLoader.psm1
-C:\enterprisediscovery\net6.0-windows\Modules\Core\CredentialSecurity.psm1
 C:\enterprisediscovery\net6.0-windows\MandADiscoverySuite.exe
 C:\enterprisediscovery\net6.0-windows\MandADiscoverySuite.deps.json
 C:\enterprisediscovery\net6.0-windows\MandADiscoverySuite.runtimeconfig.json

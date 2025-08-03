@@ -45,7 +45,16 @@ function Invoke-AzureDiscovery {
         
         # Get Graph connection from $Connections
         $graphConnection = $Connections["Graph"]
-        $azureConnection = $Connections["Azure"] # Azure connection might be null if not connected
+        
+        # Try to get Azure connection optionally
+        $azureConnection = $null
+        try {
+            Write-ModuleLog -ModuleName "Azure" -Message "Attempting to connect to Azure service..." -Level "INFO"
+            $azureConnection = Get-AuthenticationForService -Service "Azure" -SessionId $SessionId
+            Write-ModuleLog -ModuleName "Azure" -Message "Connected to Azure successfully" -Level "SUCCESS"
+        } catch {
+            Write-ModuleLog -ModuleName "Azure" -Message "Azure connection failed, continuing with Graph-only discovery: $($_.Exception.Message)" -Level "WARNING"
+        }
         
         # STEP 1: PERFORM DISCOVERY
         Write-ModuleLog -ModuleName "Azure" -Message "Starting data discovery" -Level "HEADER"
@@ -364,7 +373,7 @@ function Invoke-AzureDiscovery {
         -Configuration $Configuration `
         -Context $Context `
         -SessionId $SessionId `
-        -RequiredServices @('Graph', 'Azure') `
+        -RequiredServices @('Graph') `
         -DiscoveryScript $discoveryScript
 }
 

@@ -52,7 +52,13 @@
       "Bash(copy:*)",
       "Bash(rg:*)",
       "Bash(Start-Process \"dotnet\" -ArgumentList \"run\" -PassThru)",
-      "Bash(Test-Path \"C:\\DiscoveryData\\ljpops\\Credentials\\discoverycredentials.config\")"
+      "Bash(Test-Path \"C:\\DiscoveryData\\ljpops\\Credentials\\discoverycredentials.config\")",
+      "Bash(Test-Path \"C:\\enterprisediscovery\\Modules\")",
+      "Bash(for file in *Discovery.psm1)",
+      "Bash(do if ! grep -q \"Start-DiscoveryModule\" \"$file\")",
+      "Bash(then echo \"$file\")",
+      "Bash(fi)",
+      "Bash(done)"
     ],
     "deny": []
   }
