@@ -1092,7 +1092,7 @@ namespace MandADiscoverySuite
                 case "Azure":
                     RunAzureDiscoveryWindow_Click(sender, e);
                     break;
-                case "EntraApps":
+                case "EntraIDApp":
                     RunEntraIDAppDiscoveryWindow_Click(sender, e);
                     break;
                 case "Office365":
@@ -1109,6 +1109,48 @@ namespace MandADiscoverySuite
                     break;
                 case "PowerPlatform":
                     RunPowerPlatformDiscoveryWindow_Click(sender, e);
+                    break;
+                case "NetworkInfrastructure":
+                    RunNetworkInfrastructureDiscoveryWindow_Click(sender, e);
+                    break;
+                case "Licensing":
+                    RunLicensingDiscoveryWindow_Click(sender, e);
+                    break;
+                case "Application":
+                    RunApplicationDiscoveryWindow_Click(sender, e);
+                    break;
+                case "SQLServer":
+                    RunSQLServerDiscoveryWindow_Click(sender, e);
+                    break;
+                case "FileServer":
+                    RunFileServerDiscoveryWindow_Click(sender, e);
+                    break;
+                case "PaloAlto":
+                    RunPaloAltoDiscoveryWindow_Click(sender, e);
+                    break;
+                case "SecurityInfrastructure":
+                    RunSecurityInfrastructureDiscoveryWindow_Click(sender, e);
+                    break;
+                case "VMware":
+                    RunVMwareDiscoveryWindow_Click(sender, e);
+                    break;
+                case "Virtualization":
+                    RunVirtualizationDiscoveryWindow_Click(sender, e);
+                    break;
+                case "PhysicalServer":
+                    RunPhysicalServerDiscoveryWindow_Click(sender, e);
+                    break;
+                case "MultiDomainForest":
+                    RunMultiDomainForestDiscoveryWindow_Click(sender, e);
+                    break;
+                case "ApplicationDependencyMapping":
+                    RunApplicationDependencyMappingDiscoveryWindow_Click(sender, e);
+                    break;
+                case "DataClassification":
+                    RunDataClassificationDiscoveryWindow_Click(sender, e);
+                    break;
+                case "ExternalIdentity":
+                    RunExternalIdentityDiscoveryWindow_Click(sender, e);
                     break;
                 default:
                     MessageBox.Show($"Discovery module '{moduleName}' is not yet implemented.", 
@@ -1246,7 +1288,7 @@ namespace MandADiscoverySuite
                 Dispatcher.Invoke(() => UpdateProgress("Connecting to Entra ID...", 20));
                 
                 var script = $@"
-                    & 'C:\EnterpriseDiscovery\Scripts\DiscoveryModuleLauncher.ps1' -ModuleName 'EntraIDAppDiscovery' -CompanyName '{companyName}'
+                    & 'C:\EnterpriseDiscovery\Scripts\DiscoveryModuleLauncher.ps1' -ModuleName 'EntraIDApp' -CompanyName '{companyName}'
                 ";
                 
                 Dispatcher.Invoke(() => UpdateProgress("Discovering Entra ID applications...", 60));
@@ -2318,7 +2360,7 @@ namespace MandADiscoverySuite
                 // Launch the discovery using the universal launcher
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Entra ID Application Discovery", 
                     $"Comprehensive Entra ID application discovery for {companyProfile.Name}",
-                    "-ModuleName", "EntraIDAppDiscovery",
+                    "-ModuleName", "EntraIDApp",
                     "-CompanyName", companyProfile.Name)
                 {
                     Owner = this,
@@ -2333,6 +2375,142 @@ namespace MandADiscoverySuite
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        private async void RunNetworkInfrastructureDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("NetworkInfrastructure", "Network Infrastructure Discovery", 
+                "Comprehensive network infrastructure discovery including switches, routers, and network devices");
+        }
+
+        private async void RunLicensingDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("Licensing", "Licensing Discovery", 
+                "Microsoft 365 and software licensing analysis and optimization");
+        }
+
+        private async void RunApplicationDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("Application", "Application Discovery", 
+                "Comprehensive application inventory and dependency mapping");
+        }
+
+        private async void RunSQLServerDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("SQLServer", "SQL Server Discovery", 
+                "SQL Server instance discovery and database inventory");
+        }
+
+        private async void RunFileServerDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("FileServer", "File Server Discovery", 
+                "File server discovery and share analysis");
+        }
+
+        private async void RunVirtualizationDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("Virtualization", "Virtualization Discovery", 
+                "Virtual machine and hypervisor discovery");
+        }
+
+        private async void RunPhysicalServerDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("PhysicalServer", "Physical Server Discovery", 
+                "Physical server hardware and configuration discovery");
+        }
+
+        private async void RunMultiDomainForestDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("MultiDomainForest", "Multi-Domain Forest Discovery", 
+                "Active Directory multi-domain forest topology discovery");
+        }
+
+        private async void RunApplicationDependencyMappingDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("ApplicationDependencyMapping", "Application Dependency Mapping", 
+                "Application dependency mapping and network flow analysis");
+        }
+
+        private async void RunDataClassificationDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("DataClassification", "Data Classification Discovery", 
+                "Data classification and sensitivity label discovery");
+        }
+
+        private async void RunExternalIdentityDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("ExternalIdentity", "External Identity Discovery", 
+                "External identity provider and B2B collaboration discovery");
+        }
+
+        private async Task LaunchDiscoveryModule(string moduleName, string displayName, string description)
+        {
+            if (CompanySelector.SelectedItem == null || 
+                ((CompanyProfile)CompanySelector.SelectedItem).Name == "+ Create New Profile")
+            {
+                MessageBox.Show("Please select or create a company profile first.", "No Profile Selected", 
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var companyProfile = (CompanyProfile)CompanySelector.SelectedItem;
+            
+            try
+            {
+                // Check if discovery launcher script exists
+                string launcherScriptPath = IOPath.Combine(GetRootPath(), "Scripts", "DiscoveryModuleLauncher.ps1");
+                if (!File.Exists(launcherScriptPath))
+                {
+                    MessageBox.Show($"Discovery launcher script not found at:\n{launcherScriptPath}\n\nPlease ensure the DiscoveryModuleLauncher.ps1 script is present in the Scripts directory.", 
+                        "Script Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Load credentials for the company
+                var credentials = GetCompanyCredentials(companyProfile.Name);
+                if (credentials == null)
+                {
+                    MessageBox.Show($"No credentials found for {companyProfile.Name}. Please configure credentials first.", 
+                        "Credentials Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Launch the discovery using the universal launcher
+                var powerShellWindow = new PowerShellWindow(launcherScriptPath, displayName, 
+                    $"{description} for {companyProfile.Name}",
+                    "-ModuleName", moduleName,
+                    "-CompanyName", companyProfile.Name)
+                {
+                    Owner = this,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                powerShellWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error launching {displayName}: {ex.Message}", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void RunPaloAltoDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("PaloAlto", "Palo Alto Discovery", 
+                "Discovers Palo Alto firewall configurations and security policies");
+        }
+
+        private async void RunSecurityInfrastructureDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("SecurityInfrastructure", "Security Infrastructure Discovery", 
+                "Discovers security infrastructure components and configurations");
+        }
+
+        private async void RunVMwareDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            await LaunchDiscoveryModule("VMware", "VMware Discovery", 
+                "Discovers VMware virtual infrastructure and configurations");
+        }
+
 
         private void SelectUsers_Click(object sender, RoutedEventArgs e)
         {

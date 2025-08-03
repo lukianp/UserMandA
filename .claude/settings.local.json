@@ -60,7 +60,11 @@
       "Bash(fi)",
       "Bash(done)",
       "Bash(Start-Process \"C:\\EnterpriseDiscovery\\MandADiscoverySuite.exe\" -WindowStyle Normal)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(for module in *.psm1)",
+      "Bash(do if grep -q \"Start-DiscoveryModule\" \"$module\")",
+      "Bash(then echo \"✅ Framework: $module\")",
+      "Bash(else echo \"❌ Needs mapping: $module\")"
     ],
     "deny": []
   }

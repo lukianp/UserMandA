@@ -21,6 +21,29 @@
     Requires: PowerShell 5.1+, ActiveDirectory module, Windows authentication
 #>
 
+# Fallback logging function if Write-MandALog is not available
+if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
+    function Write-MandALog {
+        param(
+            [string]$Message,
+            [string]$Level = "INFO",
+            [string]$Component = "Discovery",
+            [hashtable]$Context = @{}
+        )
+        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        Write-Host "[$timestamp] [$Level] [$Component] $Message" -ForegroundColor $(
+            switch ($Level) {
+                'ERROR' { 'Red' }
+                'WARN' { 'Yellow' }
+                'SUCCESS' { 'Green' }
+                'HEADER' { 'Cyan' }
+                'DEBUG' { 'Gray' }
+                default { 'White' }
+            }
+        )
+    }
+}
+
 function Get-AuthInfoFromConfiguration {
     [CmdletBinding()]
     param(
