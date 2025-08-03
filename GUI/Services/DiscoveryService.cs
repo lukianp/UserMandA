@@ -152,7 +152,7 @@ namespace MandADiscoverySuite.Services
 
             try
             {
-                var outputPath = Path.Combine(_scriptsPath, "Output", profile.CompanyName, "RawData");
+                var outputPath = Path.Combine("C:\\DiscoveryData", profile.CompanyName, "Raw");
                 
                 if (!Directory.Exists(outputPath))
                     return results;
@@ -194,7 +194,7 @@ namespace MandADiscoverySuite.Services
             if (profile == null || !results?.Any() == true)
                 return;
 
-            var exportPath = Path.Combine(_scriptsPath, "Output", profile.CompanyName, "Exports");
+            var exportPath = Path.Combine("C:\\DiscoveryData", profile.CompanyName, "Exports");
             Directory.CreateDirectory(exportPath);
 
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -224,7 +224,8 @@ namespace MandADiscoverySuite.Services
             return new List<string>
             {
                 "ActiveDirectory",
-                "AzureAD",
+                "AzureDiscovery",
+                "AzureResourceDiscovery",
                 "Exchange",
                 "SharePoint",
                 "Teams",
@@ -272,7 +273,7 @@ namespace MandADiscoverySuite.Services
                 _moduleConfigurations[moduleName] = new ModuleConfiguration
                 {
                     ModuleName = moduleName,
-                    IsEnabled = moduleName == "ActiveDirectory" || moduleName == "AzureAD" || moduleName == "Exchange",
+                    IsEnabled = moduleName == "ActiveDirectory" || moduleName == "AzureDiscovery" || moduleName == "AzureResourceDiscovery" || moduleName == "Exchange",
                     Priority = GetModulePriority(moduleName),
                     Timeout = GetModuleTimeout(moduleName),
                     ParallelExecution = true
@@ -438,7 +439,8 @@ namespace MandADiscoverySuite.Services
             return moduleName switch
             {
                 "ActiveDirectory" => "Active Directory",
-                "AzureAD" => "Azure AD",
+                "AzureDiscovery" => "Azure AD (Graph API)",
+                "AzureResourceDiscovery" => "Azure Resources (Infrastructure)",
                 "Exchange" => "Exchange",
                 "SharePoint" => "SharePoint",
                 "Teams" => "Microsoft Teams",
@@ -461,7 +463,8 @@ namespace MandADiscoverySuite.Services
             return moduleName switch
             {
                 "ActiveDirectory" => 1,
-                "AzureAD" => 1,
+                "AzureDiscovery" => 1,
+                "AzureResourceDiscovery" => 2,
                 "Exchange" => 2,
                 "SharePoint" => 3,
                 "Teams" => 3,
@@ -474,12 +477,13 @@ namespace MandADiscoverySuite.Services
         {
             return moduleName switch
             {
-                "ActiveDirectory" => 600,  // 10 minutes
-                "AzureAD" => 300,          // 5 minutes
-                "Exchange" => 900,         // 15 minutes
-                "SharePoint" => 1200,      // 20 minutes
-                "FileServers" => 1800,     // 30 minutes
-                _ => 300                   // 5 minutes default
+                "ActiveDirectory" => 600,         // 10 minutes
+                "AzureDiscovery" => 300,          // 5 minutes
+                "AzureResourceDiscovery" => 900,  // 15 minutes (resource enumeration can take longer)
+                "Exchange" => 900,                // 15 minutes
+                "SharePoint" => 1200,             // 20 minutes
+                "FileServers" => 1800,            // 30 minutes
+                _ => 300                          // 5 minutes default
             };
         }
 

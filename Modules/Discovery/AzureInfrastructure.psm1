@@ -494,7 +494,7 @@ function Invoke-AzureInfrastructure {
                                 RoleDefinitionName = $ra.RoleDefinitionName
                                 RoleDefinitionId = $ra.RoleDefinitionId
                                 ObjectId = $ra.ObjectId
-                                ObjectType = $ra.ObjectType
+                                PrincipalType = $ra.ObjectType
                                 CanDelegate = $ra.CanDelegate
                                 Description = $ra.Description
                                 ConditionVersion = $ra.ConditionVersion

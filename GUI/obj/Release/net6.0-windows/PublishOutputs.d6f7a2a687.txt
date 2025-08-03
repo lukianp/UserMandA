@@ -23,9 +23,9 @@ C:\EnterpriseDiscovery\Modules\Discovery\ActiveDirectoryDiscovery.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\Application.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\ApplicationDependencyMapping.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\ApplicationDiscovery.psm1
-C:\EnterpriseDiscovery\Modules\Discovery\Azure.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\AzureDiscovery.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\AzureInfrastructure.psm1
+C:\EnterpriseDiscovery\Modules\Discovery\AzureResourceDiscovery.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\BackupRecoveryDiscovery.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\CertificateAuthorityDiscovery.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\CertificateDiscovery.psm1
@@ -115,6 +115,7 @@ C:\EnterpriseDiscovery\Modules\Utilities\ProgressDisplay.psm1
 C:\EnterpriseDiscovery\Modules\Utilities\ProgressTracking.psm1
 C:\EnterpriseDiscovery\Modules\Utilities\UnifiedErrorHandling.psm1
 C:\EnterpriseDiscovery\Modules\Utilities\ValidationHelpers.psm1
+C:\EnterpriseDiscovery\Scripts\AzureResourceDiscoveryLauncher.ps1
 C:\EnterpriseDiscovery\Scripts\DiscoveryCreateAppRegistration.ps1
 C:\EnterpriseDiscovery\Scripts\DiscoveryModuleLauncher.ps1
 C:\EnterpriseDiscovery\Scripts\Fix-AppRegistrationScript.ps1
@@ -127,6 +128,7 @@ C:\EnterpriseDiscovery\Scripts\PurviewRecover.ps1
 C:\EnterpriseDiscovery\Scripts\Purviewtest.ps1
 C:\EnterpriseDiscovery\Scripts\Run-DiscoverySetup.ps1
 C:\EnterpriseDiscovery\Scripts\Set-SuiteEnvironment.ps1
+C:\EnterpriseDiscovery\Scripts\Start-Discovery.ps1
 C:\EnterpriseDiscovery\Scripts\Test-PreFlightValidation.ps1
 C:\EnterpriseDiscovery\QuickStart.ps1
 C:\EnterpriseDiscovery\Configuration\config.schema.json

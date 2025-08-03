@@ -64,7 +64,10 @@
       "Bash(for module in *.psm1)",
       "Bash(do if grep -q \"Start-DiscoveryModule\" \"$module\")",
       "Bash(then echo \"✅ Framework: $module\")",
-      "Bash(else echo \"❌ Needs mapping: $module\")"
+      "Bash(else echo \"❌ Needs mapping: $module\")",
+      "Bash(Start-Process \"GUI/bin/Release/net6.0-windows/MandADiscoverySuite.exe\" -WindowStyle Normal)",
+      "Bash(Start-Process \"bin\\Release\\net6.0-windows\\MandADiscoverySuite.exe\" -WindowStyle Normal)",
+      "Bash(./bin/Release/net6.0-windows/MandADiscoverySuite.exe)"
     ],
     "deny": []
   }

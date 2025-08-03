@@ -17,7 +17,7 @@ class CompanyProfileManager {
     CompanyProfileManager([string]$companyName) {
         $this.RootPath = $this.GetSourceDirectory()
         $this.CompanyName = $companyName
-        $this.ProfilePath = Join-Path $this.RootPath "Profiles\$companyName"
+        $this.ProfilePath = Join-Path $this.RootPath $companyName
         $this.InitializeDirectoryStructure()
     }
     
@@ -131,7 +131,7 @@ class CompanyProfileManager {
     
     [void] CreateCompanyProfile([string]$companyName) {
         $this.CompanyName = $companyName
-        $this.ProfilePath = Join-Path $this.RootPath "Profiles\$companyName"
+        $this.ProfilePath = Join-Path $this.RootPath $companyName
         
         Write-Host "Creating company profile for: $companyName" -ForegroundColor Green
         
@@ -415,7 +415,7 @@ class CompanyProfileManager {
     
     [void] SetActiveProfile([string]$companyName) {
         $this.CompanyName = $companyName
-        $this.ProfilePath = Join-Path $this.RootPath "Profiles\$companyName"
+        $this.ProfilePath = Join-Path $this.RootPath $companyName
         
         if (!(Test-Path $this.ProfilePath)) {
             throw "Company profile not found: $companyName"

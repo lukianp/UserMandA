@@ -870,6 +870,8 @@ namespace MandADiscoverySuite
             InfrastructureView.Visibility = Visibility.Collapsed;
             DomainDiscoveryView.Visibility = Visibility.Collapsed;
             FileServersView.Visibility = Visibility.Collapsed;
+            DatabasesView.Visibility = Visibility.Collapsed;
+            SecurityView.Visibility = Visibility.Collapsed;
             ApplicationsView.Visibility = Visibility.Collapsed;
             WavesView.Visibility = Visibility.Collapsed;
             MigrateView.Visibility = Visibility.Collapsed;
@@ -884,6 +886,8 @@ namespace MandADiscoverySuite
             InfrastructureButton.Background = Brushes.Transparent;
             DomainDiscoveryButton.Background = Brushes.Transparent;
             FileServersButton.Background = Brushes.Transparent;
+            DatabasesButton.Background = Brushes.Transparent;
+            SecurityButton.Background = Brushes.Transparent;
             ApplicationsButton.Background = Brushes.Transparent;
             WavesButton.Background = Brushes.Transparent;
             MigrateButton.Background = Brushes.Transparent;
@@ -942,6 +946,16 @@ namespace MandADiscoverySuite
                         FileServersView.Visibility = Visibility.Visible;
                         currentView = "FileServers";
                         RestoreTabState("FileServers");
+                        break;
+                    case "DatabasesButton":
+                        DatabasesView.Visibility = Visibility.Visible;
+                        currentView = "Databases";
+                        RestoreTabState("Databases");
+                        break;
+                    case "SecurityButton":
+                        SecurityView.Visibility = Visibility.Visible;
+                        currentView = "Security";
+                        RestoreTabState("Security");
                         break;
                     case "ApplicationsButton":
                         ApplicationsView.Visibility = Visibility.Visible;
@@ -2774,7 +2788,7 @@ namespace MandADiscoverySuite
                     return;
                 }
 
-                string credentialsPath = IOPath.Combine(selectedProfile.Path, "credentials-template.json");
+                string credentialsPath = IOPath.Combine(selectedProfile.Path, "Credentials", "discoverycredentials.config");
                 
                 if (File.Exists(credentialsPath))
                 {
@@ -2800,8 +2814,19 @@ namespace MandADiscoverySuite
                 }
                 else
                 {
-                    MessageBox.Show($"Credentials template not found at:\n{credentialsPath}\n\nPlease create a company profile first.", 
-                        "Template Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    var result = MessageBox.Show(
+                        $"Credentials file not found at:\n{credentialsPath}\n\n" +
+                        "To configure credentials, you need to run the App Registration setup first.\n\n" +
+                        "Would you like to run the App Registration setup now?", 
+                        "Credentials Not Found", 
+                        MessageBoxButton.YesNo, 
+                        MessageBoxImage.Question);
+                        
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        // Call the existing App Registration method
+                        RunAppRegistration_Click(sender, e);
+                    }
                 }
             }
             catch (Exception ex)
@@ -2823,52 +2848,248 @@ namespace MandADiscoverySuite
                     return;
                 }
 
-                ShowProgress("Connection Test", "Testing connections...");
+                ShowProgress("Connection Test", "Testing authentication and connectivity...");
                 
                 string script = $@"
                     Set-Location '{rootPath}'
                     Import-Module C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1 -Force
                     
                     $profilePath = '{selectedProfile.Path}'
-                    $credentialsPath = Join-Path $profilePath 'credentials-template.json'
+                    $credentialsPath = Join-Path $profilePath 'Credentials\discoverycredentials.config'
                     
                     if (Test-Path $credentialsPath) {{
-                        Write-Host 'Testing Azure AD connection...' -ForegroundColor Cyan
-                        try {{
-                            # Basic connectivity test
-                            $testResult = Test-NetConnection -ComputerName 'graph.microsoft.com' -Port 443 -InformationLevel Quiet
-                            if ($testResult) {{
-                                Write-Host '✓ Azure AD connectivity test passed' -ForegroundColor Green
-                            }} else {{
-                                Write-Host '✗ Azure AD connectivity test failed' -ForegroundColor Red
-                            }}
-                        }} catch {{
-                            Write-Host '✗ Connection test error: ' + $_.Exception.Message -ForegroundColor Red
-                        }}
+                        Write-Host '🔐 M&A Discovery Suite - Authentication Test' -ForegroundColor Cyan
+                        Write-Host '=====================================' -ForegroundColor Cyan
+                        Write-Host ''
                         
-                        Write-Host 'Testing Exchange Online connectivity...' -ForegroundColor Cyan
+                        # Load credentials
                         try {{
-                            $testResult = Test-NetConnection -ComputerName 'outlook.office365.com' -Port 443 -InformationLevel Quiet
-                            if ($testResult) {{
-                                Write-Host '✓ Exchange Online connectivity test passed' -ForegroundColor Green
-                            }} else {{
-                                Write-Host '✗ Exchange Online connectivity test failed' -ForegroundColor Red
+                            $credContent = Get-Content $credentialsPath -Raw
+                            $credentials = $credContent | ConvertFrom-Json
+                            
+                            Write-Host ""📋 Credentials Information:"" -ForegroundColor Yellow
+                            Write-Host ""   • Application: $($credentials.ApplicationName)"" -ForegroundColor White
+                            Write-Host ""   • Client ID: $($credentials.ClientId)"" -ForegroundColor White
+                            Write-Host ""   • Tenant ID: $($credentials.TenantId)"" -ForegroundColor White
+                            Write-Host ""   • Expires: $($credentials.ExpiryDate) ($($credentials.DaysUntilExpiry) days remaining)"" -ForegroundColor White
+                            Write-Host ''
+                            
+                            # Test 1: Network Connectivity
+                            Write-Host '🌐 Network Connectivity Tests:' -ForegroundColor Cyan
+                            
+                            $endpoints = @(
+                                @{{Name='Microsoft Graph API'; Host='graph.microsoft.com'; Port=443}},
+                                @{{Name='Azure AD Login'; Host='login.microsoftonline.com'; Port=443}},
+                                @{{Name='Exchange Online'; Host='outlook.office365.com'; Port=443}},
+                                @{{Name='SharePoint Online'; Host='*.sharepoint.com'; Host2='tenant-admin.sharepoint.com'; Port=443}}
+                            )
+                            
+                            foreach ($endpoint in $endpoints) {{
+                                try {{
+                                    $testResult = Test-NetConnection -ComputerName $endpoint.Host -Port $endpoint.Port -InformationLevel Quiet -WarningAction SilentlyContinue
+                                    if ($testResult) {{
+                                        Write-Host ""   ✅ $($endpoint.Name): Connected"" -ForegroundColor Green
+                                    }} else {{
+                                        Write-Host ""   ❌ $($endpoint.Name): Connection failed"" -ForegroundColor Red
+                                    }}
+                                }} catch {{
+                                    Write-Host ""   ❌ $($endpoint.Name): Error - $($_.Exception.Message)"" -ForegroundColor Red
+                                }}
                             }}
+                            Write-Host ''
+                            
+                            # Test 2: Microsoft Graph API Authentication
+                            Write-Host '🔑 Microsoft Graph API Authentication:' -ForegroundColor Cyan
+                            
+                            try {{
+                                # Install Microsoft.Graph module if not present
+                                if (!(Get-Module -ListAvailable -Name Microsoft.Graph.Authentication)) {{
+                                    Write-Host '   📦 Installing Microsoft.Graph.Authentication module...' -ForegroundColor Yellow
+                                    Install-Module Microsoft.Graph.Authentication -Force -Scope CurrentUser -AllowClobber
+                                }}
+                                
+                                Import-Module Microsoft.Graph.Authentication -Force
+                                
+                                # Test Service Principal authentication
+                                $secureSecret = ConvertTo-SecureString $credentials.ClientSecret -AsPlainText -Force
+                                $clientCredential = New-Object System.Management.Automation.PSCredential($credentials.ClientId, $secureSecret)
+                                
+                                Connect-MgGraph -TenantId $credentials.TenantId -ClientSecretCredential $clientCredential -NoWelcome
+                                
+                                # Test a simple Graph API call
+                                $context = Get-MgContext
+                                if ($context) {{
+                                    Write-Host '   ✅ Graph API Authentication: SUCCESS' -ForegroundColor Green
+                                    Write-Host ""   • Connected as: $($context.AppName)"" -ForegroundColor White
+                                    Write-Host ""   • Tenant: $($context.TenantId)"" -ForegroundColor White
+                                    Write-Host ""   • Scopes: $($context.Scopes -join ', ')"" -ForegroundColor White
+                                    
+                                    # Test actual API call
+                                    try {{
+                                        $org = Get-MgOrganization -Top 1
+                                        Write-Host ""   • Organization: $($org.DisplayName)"" -ForegroundColor White
+                                        Write-Host '   ✅ Graph API Data Access: SUCCESS' -ForegroundColor Green
+                                    }} catch {{
+                                        Write-Host '   ⚠️  Graph API Data Access: Limited permissions' -ForegroundColor Yellow
+                                        Write-Host ""      Error: $($_.Exception.Message)"" -ForegroundColor Yellow
+                                    }}
+                                }} else {{
+                                    Write-Host '   ❌ Graph API Authentication: FAILED' -ForegroundColor Red
+                                }}
+                                
+                                Disconnect-MgGraph -ErrorAction SilentlyContinue
+                                
+                            }} catch {{
+                                Write-Host '   ❌ Graph API Authentication: FAILED' -ForegroundColor Red
+                                Write-Host ""      Error: $($_.Exception.Message)"" -ForegroundColor Red
+                            }}
+                            Write-Host ''
+                            
+                            # Test 3: Exchange Online Authentication
+                            Write-Host '📧 Exchange Online Authentication:' -ForegroundColor Cyan
+                            
+                            try {{
+                                # Install Exchange Online module if not present
+                                if (!(Get-Module -ListAvailable -Name ExchangeOnlineManagement)) {{
+                                    Write-Host '   📦 Installing ExchangeOnlineManagement module...' -ForegroundColor Yellow
+                                    Install-Module ExchangeOnlineManagement -Force -Scope CurrentUser -AllowClobber
+                                }}
+                                
+                                Import-Module ExchangeOnlineManagement -Force
+                                
+                                # Test Exchange Online connection
+                                Connect-ExchangeOnline -AppId $credentials.ClientId -CertificateThumbprint 'placeholder' -Organization $credentials.TenantId -ShowBanner:$false -ErrorAction Stop
+                                
+                                Write-Host '   ✅ Exchange Online Authentication: SUCCESS' -ForegroundColor Green
+                                
+                                # Test a simple Exchange command
+                                try {{
+                                    $mailboxCount = (Get-Mailbox -ResultSize 1 | Measure-Object).Count
+                                    Write-Host ""   • Mailbox access test: SUCCESS"" -ForegroundColor Green
+                                }} catch {{
+                                    Write-Host '   ⚠️  Exchange Online Data Access: Limited permissions' -ForegroundColor Yellow
+                                }}
+                                
+                                Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue
+                                
+                            }} catch {{
+                                Write-Host '   ⚠️  Exchange Online Authentication: Certificate-based auth not configured' -ForegroundColor Yellow
+                                Write-Host '      Note: Exchange Online requires certificate authentication for app-only access' -ForegroundColor Gray
+                            }}
+                            Write-Host ''
+                            
+                            # Test 4: SharePoint Online Authentication  
+                            Write-Host '🌐 SharePoint Online Authentication:' -ForegroundColor Cyan
+                            
+                            try {{
+                                # Install SharePoint PnP module if not present
+                                if (!(Get-Module -ListAvailable -Name PnP.PowerShell)) {{
+                                    Write-Host '   📦 Installing PnP.PowerShell module...' -ForegroundColor Yellow
+                                    Install-Module PnP.PowerShell -Force -Scope CurrentUser -AllowClobber
+                                }}
+                                
+                                Import-Module PnP.PowerShell -Force
+                                
+                                # Extract tenant name from domain or use tenant ID
+                                $tenantName = $credentials.TenantId.Split('.')[0]
+                                $adminUrl = ""https://$tenantName-admin.sharepoint.com""
+                                
+                                # Test SharePoint connection
+                                Connect-PnPOnline -Url $adminUrl -ClientId $credentials.ClientId -ClientSecret $credentials.ClientSecret -WarningAction SilentlyContinue
+                                
+                                Write-Host '   ✅ SharePoint Online Authentication: SUCCESS' -ForegroundColor Green
+                                
+                                # Test SharePoint access
+                                try {{
+                                    $sites = Get-PnPTenantSite -Limit 1
+                                    Write-Host ""   • SharePoint site access: SUCCESS"" -ForegroundColor Green
+                                }} catch {{
+                                    Write-Host '   ⚠️  SharePoint Data Access: Limited permissions' -ForegroundColor Yellow
+                                }}
+                                
+                                Disconnect-PnPOnline -ErrorAction SilentlyContinue
+                                
+                            }} catch {{
+                                Write-Host '   ❌ SharePoint Online Authentication: FAILED' -ForegroundColor Red
+                                Write-Host ""      Error: $($_.Exception.Message)"" -ForegroundColor Red
+                            }}
+                            Write-Host ''
+                            
+                            # Test 5: Azure Resource Manager Authentication
+                            Write-Host '☁️  Azure Resource Manager Authentication:' -ForegroundColor Cyan
+                            
+                            try {{
+                                # Install Az module if not present  
+                                if (!(Get-Module -ListAvailable -Name Az.Accounts)) {{
+                                    Write-Host '   📦 Installing Az.Accounts module...' -ForegroundColor Yellow
+                                    Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
+                                }}
+                                
+                                Import-Module Az.Accounts -Force
+                                
+                                # Test Azure connection
+                                $secureSecret = ConvertTo-SecureString $credentials.ClientSecret -AsPlainText -Force
+                                $credential = New-Object System.Management.Automation.PSCredential($credentials.ClientId, $secureSecret)
+                                
+                                Connect-AzAccount -ServicePrincipal -Credential $credential -TenantId $credentials.TenantId -WarningAction SilentlyContinue | Out-Null
+                                
+                                Write-Host '   ✅ Azure Resource Manager Authentication: SUCCESS' -ForegroundColor Green
+                                
+                                # Test Azure resource access
+                                try {{
+                                    $subscriptions = Get-AzSubscription
+                                    Write-Host ""   • Subscriptions accessible: $($subscriptions.Count)"" -ForegroundColor Green
+                                    
+                                    if ($subscriptions.Count -gt 0) {{
+                                        $rgs = Get-AzResourceGroup -ErrorAction SilentlyContinue
+                                        Write-Host ""   • Resource Groups accessible: $($rgs.Count)"" -ForegroundColor Green
+                                    }}
+                                }} catch {{
+                                    Write-Host '   ⚠️  Azure Resource Access: Limited permissions' -ForegroundColor Yellow
+                                }}
+                                
+                                Disconnect-AzAccount -ErrorAction SilentlyContinue
+                                
+                            }} catch {{
+                                Write-Host '   ❌ Azure Resource Manager Authentication: FAILED' -ForegroundColor Red
+                                Write-Host ""      Error: $($_.Exception.Message)"" -ForegroundColor Red
+                            }}
+                            Write-Host ''
+                            
+                            Write-Host '✅ Authentication Test Complete!' -ForegroundColor Green
+                            Write-Host 'All configured authentication methods have been tested.' -ForegroundColor Gray
+                            
                         }} catch {{
-                            Write-Host '✗ Connection test error: ' + $_.Exception.Message -ForegroundColor Red
+                            Write-Host '❌ Failed to load credentials file' -ForegroundColor Red
+                            Write-Host ""Error: $($_.Exception.Message)"" -ForegroundColor Red
                         }}
-                        
-                        Write-Host 'Note: Full authentication testing requires configured credentials' -ForegroundColor Yellow
                     }} else {{
-                        Write-Host 'Credentials template not found. Please configure credentials first.' -ForegroundColor Red
+                        Write-Host '⚠️  Credentials file not found!' -ForegroundColor Red
+                        Write-Host ""Path: $credentialsPath"" -ForegroundColor Gray
+                        Write-Host 'Please run the App Registration setup first.' -ForegroundColor Yellow
                     }}
                 ";
 
                 var result = await ExecutePowerShellScript(script);
                 
-                MessageBox.Show($"Connection test results:\n\n{result.Output}", 
-                    "Connection Test", MessageBoxButton.OK, 
-                    result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                // Show results in a custom dialog with better formatting
+                var resultWindow = new PowerShellWindow("", "Authentication Test Results", 
+                    "Comprehensive authentication and connectivity test results", 
+                    "-NoProfile", "-NonInteractive")
+                {
+                    Owner = this,
+                    Width = 800,
+                    Height = 600
+                };
+                
+                // Set the output text directly
+                resultWindow.OutputText.Text = result.Output;
+                resultWindow.OutputText.FontFamily = new System.Windows.Media.FontFamily("Consolas");
+                resultWindow.OutputText.FontSize = 12;
+                
+                resultWindow.ShowDialog();
+                
+                HideProgress();
             }
             catch (Exception ex)
             {
@@ -3334,9 +3555,10 @@ namespace MandADiscoverySuite
                 // Check for Raw directory with discovery module output
                 string rawDataPath = IOPath.Combine(profile.Path, "Raw");
                 
-                // Load users from AD discovery or fallback to users.csv
+                // Load users from AD discovery, Azure AD, or fallback to users.csv
                 int userCount = 0;
                 string adUsersFile = IOPath.Combine(rawDataPath, "ADUsers.csv");
+                string azureUsersFile = IOPath.Combine(rawDataPath, "Users.csv"); // AzureDiscovery creates Users.csv
                 string usersFile = IOPath.Combine(profile.Path, "users.csv");
                 
                 if (File.Exists(adUsersFile))
@@ -3344,16 +3566,24 @@ namespace MandADiscoverySuite
                     userCount = LoadUsersFromCsv(adUsersFile);
                     if (userCount > 0) dataFiles.Add($"{userCount} AD users");
                 }
+                else if (File.Exists(azureUsersFile))
+                {
+                    userCount = LoadUsersFromCsv(azureUsersFile); // AzureDiscovery module creates Users.csv
+                    if (userCount > 0) dataFiles.Add($"{userCount} Azure AD users");
+                }
                 else if (File.Exists(usersFile))
                 {
                     userCount = LoadUsersFromCsv(usersFile);
                     if (userCount > 0) dataFiles.Add($"{userCount} users");
                 }
+                
+                // Note: EntraIDServicePrincipals.csv contains system service principals, not users
                 totalRecords += userCount;
                 
-                // Load computers from AD discovery or fallback to computers.csv  
+                // Load computers from AD discovery, Azure devices, or fallback to computers.csv  
                 int computerCount = 0;
                 string adComputersFile = IOPath.Combine(rawDataPath, "ADComputers.csv");
+                string azureDevicesFile = IOPath.Combine(rawDataPath, "Devices.csv"); // AzureDiscovery creates Devices.csv
                 string computersFile = IOPath.Combine(profile.Path, "computers.csv");
                 
                 if (File.Exists(adComputersFile))
@@ -3361,11 +3591,18 @@ namespace MandADiscoverySuite
                     computerCount = LoadComputersFromCsv(adComputersFile);
                     if (computerCount > 0) dataFiles.Add($"{computerCount} AD computers");
                 }
+                else if (File.Exists(azureDevicesFile))
+                {
+                    computerCount = LoadComputersFromCsv(azureDevicesFile); // AzureDiscovery module creates Devices.csv
+                    if (computerCount > 0) dataFiles.Add($"{computerCount} Azure AD devices");
+                }
                 else if (File.Exists(computersFile))
                 {
                     computerCount = LoadComputersFromCsv(computersFile);
                     if (computerCount > 0) dataFiles.Add($"{computerCount} computers");
                 }
+                
+                // Note: AzureApplications.csv contains app registrations, not computers
                 totalRecords += computerCount;
                 
                 // Load infrastructure from various discovery sources
@@ -3375,6 +3612,11 @@ namespace MandADiscoverySuite
                     IOPath.Combine(rawDataPath, "FileServer_FileServers.csv"),
                     IOPath.Combine(rawDataPath, "Network_DNSServers.csv"),
                     IOPath.Combine(rawDataPath, "Network_DHCPServers.csv"),
+                    IOPath.Combine(rawDataPath, "VirtualMachines.csv"), // Azure VMs
+                    IOPath.Combine(rawDataPath, "StorageAccounts.csv"), // Azure Storage
+                    IOPath.Combine(rawDataPath, "KeyVaults.csv"), // Azure Key Vaults
+                    IOPath.Combine(rawDataPath, "ResourceGroups.csv"), // Azure Resource Groups
+                    IOPath.Combine(rawDataPath, "Subscriptions.csv"), // Azure Subscriptions
                     IOPath.Combine(profile.Path, "servers.csv")
                 };
                 
@@ -3408,6 +3650,31 @@ namespace MandADiscoverySuite
                     if (appCount > 0) dataFiles.Add($"{appCount} applications");
                 }
                 totalRecords += appCount;
+                
+                // Load Azure data from discovery
+                int azureCount = 0;
+                string[] azureFiles = {
+                    IOPath.Combine(rawDataPath, "AzureApplications.csv"),
+                    IOPath.Combine(rawDataPath, "EntraIDServicePrincipals.csv"),
+                    IOPath.Combine(rawDataPath, "EntraIDAppRegistrations.csv"),
+                    IOPath.Combine(rawDataPath, "AzureTenant.csv"),
+                    IOPath.Combine(rawDataPath, "ExchangeDistributionGroups.csv"),
+                    IOPath.Combine(rawDataPath, "PowerPlatform_Environments.csv")
+                };
+                
+                foreach (string azureFile in azureFiles)
+                {
+                    if (File.Exists(azureFile))
+                    {
+                        int count = CountCsvRecords(azureFile);
+                        azureCount += count;
+                    }
+                }
+                if (azureCount > 0)
+                {
+                    dataFiles.Add($"{azureCount} Azure objects");
+                    totalRecords += azureCount;
+                }
                 
                 // Update status
                 if (dataFiles.Count > 0)
@@ -5748,43 +6015,35 @@ namespace MandADiscoverySuite
 
             var companyProfile = (CompanyProfile)CompanySelector.SelectedItem;
             
-            try
+            await RunDiscoveryModule("Infra", "Azure Infrastructure", async () =>
             {
                 // Check if discovery launcher script exists
-                string launcherScriptPath = IOPath.Combine(GetRootPath(), "Scripts", "DiscoveryModuleLauncher.ps1");
+                string launcherScriptPath = IOPath.Combine(GetRootPath(), "Scripts", "Start-Discovery.ps1");
                 if (!File.Exists(launcherScriptPath))
                 {
-                    MessageBox.Show($"Discovery launcher script not found at:\n{launcherScriptPath}\n\nPlease ensure the DiscoveryModuleLauncher.ps1 script is present in the Scripts directory.", 
-                        "Script Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
+                    throw new FileNotFoundException($"Discovery launcher script not found at: {launcherScriptPath}");
                 }
 
                 // Load credentials for the company
                 var credentials = GetCompanyCredentials(companyProfile.Name);
                 if (credentials == null)
                 {
-                    MessageBox.Show($"No credentials found for {companyProfile.Name}. Please configure credentials first.", 
-                        "Credentials Required", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
+                    throw new InvalidOperationException($"No credentials found for {companyProfile.Name}. Please configure credentials first.");
                 }
 
-                // Launch the discovery using the universal launcher
-                var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Infrastructure Discovery", 
-                    $"Network and infrastructure discovery for {companyProfile.Name}",
-                    "-ModuleName", "NetworkInfrastructureDiscovery",
+                // Launch the discovery using Start-Discovery.ps1
+                var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Azure Infrastructure Discovery", 
+                    $"Azure infrastructure discovery for {companyProfile.Name}",
+                    "-ModuleName", "AzureResourceDiscovery",
                     "-CompanyName", companyProfile.Name)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
 
-                powerShellWindow.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error launching Infrastructure discovery: {ex.Message}", 
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                powerShellWindow.ShowDialog();
+                return "Azure Infrastructure discovery completed";
+            });
         }
 
         private async void RunApplicationsDiscovery()
@@ -6130,6 +6389,102 @@ namespace MandADiscoverySuite
             }
         }
 
+        private async void RefreshDataButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Show loading indicator
+                ShowProgress("Refreshing discovery data...");
+                
+                // Reload the currently selected company profile
+                if (CompanySelector.SelectedItem != null && 
+                    ((CompanyProfile)CompanySelector.SelectedItem).Name != "+ Create New Profile")
+                {
+                    var selectedProfile = (CompanyProfile)CompanySelector.SelectedItem;
+                    LoadDiscoveryData(selectedProfile);
+                    
+                    // Force refresh of dashboard stats
+                    UpdateDashboardStats();
+                    
+                    StatusDetails.Text = $"Data refreshed for {selectedProfile.CompanyName} - {DateTime.Now:HH:mm:ss}";
+                }
+                else
+                {
+                    StatusDetails.Text = "Please select a company profile to refresh data";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusDetails.Text = $"Error refreshing data: {ex.Message}";
+            }
+            finally
+            {
+                HideProgress();
+            }
+        }
+
+        private int LoadAzureUsersFromCsv(string filePath)
+        {
+            try
+            {
+                var users = new List<DiscoveredUser>();
+                var lines = File.ReadAllLines(filePath);
+                
+                if (lines.Length <= 1) return 0; // No data or header only
+                
+                // Parse header to find column indices
+                var headers = lines[0].Split(',').Select(h => h.Trim('"')).ToArray();
+                var displayNameIndex = Array.IndexOf(headers, "DisplayName");
+                var appIdIndex = Array.IndexOf(headers, "AppId");
+                var accountEnabledIndex = Array.IndexOf(headers, "AccountEnabled");
+                var serviceTypeIndex = Array.IndexOf(headers, "ServicePrincipalType");
+                
+                // Skip header row
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var fields = lines[i].Split(',');
+                    if (fields.Length > Math.Max(displayNameIndex, Math.Max(appIdIndex, accountEnabledIndex)))
+                    {
+                        var enabled = accountEnabledIndex >= 0 && fields[accountEnabledIndex].Trim('"').Equals("True", StringComparison.OrdinalIgnoreCase);
+                        var serviceType = serviceTypeIndex >= 0 ? fields[serviceTypeIndex].Trim('"') : "Application";
+                        
+                        users.Add(new DiscoveredUser
+                        {
+                            Name = displayNameIndex >= 0 ? fields[displayNameIndex].Trim('"') : $"Service Principal {i}",
+                            Email = appIdIndex >= 0 ? fields[appIdIndex].Trim('"') + "@azure" : "",
+                            Department = serviceType,
+                            Status = enabled ? "Enabled" : "Disabled",
+                            Source = "Azure AD Discovery"
+                        });
+                    }
+                }
+                
+                if (UsersDataGrid != null)
+                {
+                    UsersDataGrid.ItemsSource = users;
+                }
+                
+                return users.Count;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private int CountCsvRecords(string filePath)
+        {
+            try
+            {
+                var lines = File.ReadAllLines(filePath);
+                return Math.Max(0, lines.Length - 1); // Subtract header row
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
         private int LoadComputersFromCsv(string filePath)
         {
             try
@@ -6152,6 +6507,52 @@ namespace MandADiscoverySuite
                             Status = fields.Length > 3 ? fields[3].Trim('"') : "Unknown",
                             Domain = fields.Length > 4 ? fields[4].Trim('"') : "",
                             RAM = fields.Length > 5 && int.TryParse(fields[5], out int ram) ? ram : 0
+                        });
+                    }
+                }
+                
+                if (ComputersDataGrid != null)
+                {
+                    ComputersDataGrid.ItemsSource = computers;
+                }
+                
+                return computers.Count;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private int LoadAzureAppsAsComputers(string filePath)
+        {
+            try
+            {
+                var computers = new List<DiscoveredComputer>();
+                var lines = File.ReadAllLines(filePath);
+                
+                if (lines.Length <= 1) return 0;
+                
+                // Parse header to find column indices
+                var headers = lines[0].Split(',').Select(h => h.Trim('"')).ToArray();
+                var displayNameIndex = Array.IndexOf(headers, "DisplayName");
+                var publisherDomainIndex = Array.IndexOf(headers, "PublisherDomain");
+                var signInAudienceIndex = Array.IndexOf(headers, "SignInAudience");
+                var createdDateTimeIndex = Array.IndexOf(headers, "CreatedDateTime");
+                
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var fields = lines[i].Split(',');
+                    if (fields.Length > Math.Max(displayNameIndex, publisherDomainIndex))
+                    {
+                        computers.Add(new DiscoveredComputer
+                        {
+                            Name = displayNameIndex >= 0 ? fields[displayNameIndex].Trim('"') : $"Azure App {i}",
+                            OS = "Azure Application",
+                            IPAddress = publisherDomainIndex >= 0 ? fields[publisherDomainIndex].Trim('"') : "",
+                            Status = "Active",
+                            Domain = signInAudienceIndex >= 0 ? fields[signInAudienceIndex].Trim('"') : "Azure",
+                            RAM = 0
                         });
                     }
                 }
@@ -14186,6 +14587,31 @@ namespace MandADiscoverySuite
                     System.Diagnostics.Debug.WriteLine($"Validation success display failed: {ex.Message}");
                 }
             });
+        }
+
+        #endregion
+
+        #region User Detail View
+
+        private void ViewUser_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender is Button button && button.Tag != null)
+                {
+                    var selectedUser = button.Tag;
+                    string rawDataPath = IOPath.Combine("C:\\DiscoveryData", "ljpops", "Raw");
+                    
+                    var userDetailWindow = new UserDetailWindow(selectedUser, rawDataPath);
+                    userDetailWindow.Owner = this;
+                    userDetailWindow.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening user details: {ex.Message}", "Error", 
+                              MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         #endregion

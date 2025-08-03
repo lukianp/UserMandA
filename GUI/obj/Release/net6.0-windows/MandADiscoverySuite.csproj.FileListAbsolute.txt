@@ -22,9 +22,9 @@ C:\enterprisediscovery\net6.0-windows\Modules\Discovery\ActiveDirectoryDiscovery
 C:\enterprisediscovery\net6.0-windows\Modules\Discovery\Application.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Discovery\ApplicationDependencyMapping.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Discovery\ApplicationDiscovery.psm1
-C:\enterprisediscovery\net6.0-windows\Modules\Discovery\Azure.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Discovery\AzureDiscovery.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Discovery\AzureInfrastructure.psm1
+C:\enterprisediscovery\net6.0-windows\Modules\Discovery\AzureResourceDiscovery.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Discovery\BackupRecoveryDiscovery.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Discovery\CertificateAuthorityDiscovery.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Discovery\CertificateDiscovery.psm1
@@ -114,6 +114,7 @@ C:\enterprisediscovery\net6.0-windows\Modules\Utilities\ProgressDisplay.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Utilities\ProgressTracking.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Utilities\UnifiedErrorHandling.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Utilities\ValidationHelpers.psm1
+C:\enterprisediscovery\net6.0-windows\Scripts\AzureResourceDiscoveryLauncher.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\DiscoveryCreateAppRegistration.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\DiscoveryModuleLauncher.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\Fix-AppRegistrationScript.ps1
@@ -126,6 +127,7 @@ C:\enterprisediscovery\net6.0-windows\Scripts\PurviewRecover.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\Purviewtest.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\Run-DiscoverySetup.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\Set-SuiteEnvironment.ps1
+C:\enterprisediscovery\net6.0-windows\Scripts\Start-Discovery.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\Test-PreFlightValidation.ps1
 C:\enterprisediscovery\net6.0-windows\QuickStart.ps1
 C:\enterprisediscovery\net6.0-windows\Configuration\config.schema.json
@@ -150,6 +152,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\PasswordGeneratorDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\PowerShellWindow.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Themes\ThemeStyles.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\UserDetailWindow.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\ProfileDropZone.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\ProgressIndicator.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\SimpleChart.g.cs
@@ -160,6 +163,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\ManagerSelectionDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\PasswordGeneratorDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\PowerShellWindow.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\UserDetailWindow.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\App.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\GeneratedInternalTypeHelper.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite_MarkupCompile.cache

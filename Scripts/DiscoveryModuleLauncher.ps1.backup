@@ -159,40 +159,22 @@ try {
         # Import the Export-DiscoveryResults function
         Import-Module (Join-Path $ModulesPath "Discovery\DiscoveryBase.psm1") -Force
         
-        # Check if data is already grouped (like AzureDiscovery) or raw array (like EntraIDApp)
+        # Process each data group and save as CSV
         $totalExported = 0
-        
-        # Check if this is grouped data by looking for both Group and Name properties on first item
-        $isGroupedData = $false
-        if ($discoveryResult.Data -and $discoveryResult.Data.Count -gt 0) {
-            $firstItem = $discoveryResult.Data[0]
-            $propertyNames = $firstItem.PSObject.Properties | ForEach-Object { $_.Name }
-            if ("Group" -in $propertyNames -and "Name" -in $propertyNames) {
-                $isGroupedData = $true
-            }
-        }
-        
-        if ($isGroupedData) {
-            # Process each data group and save as CSV (AzureDiscovery style)
-            foreach ($dataGroup in $discoveryResult.Data) {
-                if ($dataGroup.Group -and $dataGroup.Group.Count -gt 0) {
-                    $fileName = "$($dataGroup.Name).csv"
-                    $exported = Export-DiscoveryResults -Data $dataGroup.Group -FileName $fileName -OutputPath $context.Paths.RawDataOutput -ModuleName $ModuleName -SessionId $context.DiscoverySession
-                    if ($exported) {
-                        Write-Host "Saved $($dataGroup.Group.Count) $($dataGroup.Name) records to $fileName" -ForegroundColor Green
-                        $totalExported += $dataGroup.Group.Count
-                    } else {
-                        Write-Host "Failed to save $($dataGroup.Name) data" -ForegroundColor Red
-                    }
+        foreach ($dataGroup in $discoveryResult.Data) {
+            if ($dataGroup.Group -and $dataGroup.Group.Count -gt 0) {
+                $fileName = "$($dataGroup.Name).csv"
+                $exported = Export-DiscoveryResults -Data $dataGroup.Group -FileName $fileName -OutputPath $context.Paths.RawDataOutput -ModuleName $ModuleName -SessionId $context.DiscoverySession
+                if ($exported) {
+                    Write-Host "✓ Saved $($dataGroup.Group.Count) $($dataGroup.Name) records to $fileName" -ForegroundColor Green
+                    $totalExported += $dataGroup.Group.Count
+                } else {
+                    Write-Host "✗ Failed to save $($dataGroup.Name) data" -ForegroundColor Red
                 }
             }
-        } else {
-            # Data is raw array - module likely exported its own files (EntraIDApp style)
-            Write-Host "Module has already exported its data to CSV files" -ForegroundColor Green
-            $totalExported = if ($discoveryResult.Data) { $discoveryResult.Data.Count } else { 0 }
         }
         
-        Write-Host "Successfully processed $totalExported total records" -ForegroundColor Green
+        Write-Host "Successfully exported $totalExported total records to CSV files" -ForegroundColor Green
         Write-Host ""
     }
     
