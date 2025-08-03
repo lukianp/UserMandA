@@ -41,8 +41,17 @@ function Get-CompanyCredentials {
         # Fallback to basic credential loading
         # If no path provided, use default company profile path
         if (-not $CredentialsPath) {
-            $profilePath = "C:\DiscoveryData\Profiles\$CompanyName"
-            $CredentialsPath = Join-Path $profilePath "Credentials\discoverycredentials.config"
+            # Try both possible path structures
+            $primaryPath = "C:\DiscoveryData\$CompanyName\Credentials\discoverycredentials.config"
+            $fallbackPath = "C:\DiscoveryData\Profiles\$CompanyName\Credentials\discoverycredentials.config"
+            
+            if (Test-Path $primaryPath) {
+                $CredentialsPath = $primaryPath
+            } elseif (Test-Path $fallbackPath) {
+                $CredentialsPath = $fallbackPath
+            } else {
+                $CredentialsPath = $primaryPath  # Use primary path for error message consistency
+            }
         }
         
         # Check if credentials file exists

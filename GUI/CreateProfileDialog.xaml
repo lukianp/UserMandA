@@ -3,8 +3,17 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Create Company Profile" Height="200" Width="400"
         WindowStartupLocation="CenterOwner"
-        Background="#FF1A202C"
-        ResizeMode="NoResize">
+        Background="{DynamicResource BackgroundBrush}"
+        ResizeMode="NoResize"
+        Style="{DynamicResource ThemedWindowStyle}">
+    
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/ThemeStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -15,49 +24,33 @@
         </Grid.RowDefinitions>
         
         <TextBlock Grid.Row="0" Text="Create New Company Profile" 
-                   Foreground="#FFF7FAFC" FontSize="18" FontWeight="SemiBold"
-                   Margin="0,0,0,20"/>
+                   Style="{StaticResource ThemedHeaderTextStyle}"
+                   FontSize="18" Margin="0,0,0,20"/>
         
         <TextBlock Grid.Row="1" Text="Company Name:" 
-                   Foreground="#FFE2E8F0" FontSize="14"
+                   Style="{StaticResource ThemedTextBlockStyle}"
                    Margin="0,0,0,8"/>
         
-        <TextBox Grid.Row="2" x:Name="ProfileNameTextBox" 
-                 Background="#FF2D3748" Foreground="#FFE2E8F0"
-                 BorderBrush="#FF4A5568" BorderThickness="1"
-                 Padding="10,8" FontSize="14"
-                 Margin="0,0,0,20"
-                 KeyDown="ProfileNameTextBox_KeyDown"/>
+        <StackPanel Grid.Row="2">
+            <TextBox x:Name="ProfileNameTextBox" 
+                     Style="{StaticResource ThemedTextBoxStyle}"
+                     Padding="10,8"
+                     KeyDown="ProfileNameTextBox_KeyDown"
+                     TextChanged="ProfileNameTextBox_TextChanged"/>
+            <TextBlock x:Name="ProfileNameValidationText" 
+                       Style="{StaticResource ThemedValidationErrorTextStyle}"
+                       Margin="0,4,0,16"
+                       Visibility="Collapsed"/>
+        </StackPanel>
         
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"
-                    Background="#FF4A5568" Foreground="White"
-                    BorderThickness="0" Padding="20,8"
-                    Margin="0,0,10,0">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+                    Style="{StaticResource ThemedSecondaryButtonStyle}"
+                    Padding="20,8" Margin="0,0,10,0"/>
             
             <Button Content="Create" Click="Create_Click" IsDefault="True"
-                    Background="#FF4299E1" Foreground="White"
-                    BorderThickness="0" Padding="20,8">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+                    Style="{StaticResource ThemedButtonStyle}"
+                    Padding="20,8"/>
         </StackPanel>
     </Grid>
 </Window>

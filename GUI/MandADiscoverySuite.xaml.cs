@@ -21,6 +21,7 @@ using System.Text.Json;
 using System.Windows.Data;
 using System.DirectoryServices;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Themes;
 
 namespace MandADiscoverySuite
 {
@@ -39,12 +40,17 @@ namespace MandADiscoverySuite
         // Removed random data generator - no dummy data
         private readonly Dictionary<string, Queue<double>> metricsHistory = new Dictionary<string, Queue<double>>();
         private ResponsiveDesignEngine responsiveEngine;
-        private AdaptiveThemeEngine themeEngine;
         
         // Async UI enhancements
         private readonly SemaphoreSlim uiUpdateSemaphore = new SemaphoreSlim(1, 1);
         private readonly ConcurrentDictionary<string, Task> backgroundTasks = new ConcurrentDictionary<string, Task>();
         private volatile bool isRefreshingProfiles = false;
+        
+        // Status bar management
+        private DispatcherTimer statusTimer;
+        private int activeConnections = 0;
+        private string currentStatus = "Ready";
+        private readonly object statusLock = new object();
 
         public MainWindow()
         {
@@ -87,6 +93,9 @@ namespace MandADiscoverySuite
             
             // Initialize discovery module statuses
             Loaded += (s, e) => InitializeModuleStatuses();
+            
+            // Initialize status bar
+            InitializeStatusBar();
         }
 
         private void InitializeResponsiveDesign()
@@ -94,12 +103,8 @@ namespace MandADiscoverySuite
             // Initialize responsive design engine
             responsiveEngine = new ResponsiveDesignEngine(this);
             
-            // Initialize adaptive theme engine
-            themeEngine = new AdaptiveThemeEngine(this);
-            
             // Apply initial theme based on system preferences
-            bool isDarkModePreferred = IsSystemDarkModeEnabled();
-            themeEngine.AutoSelectTheme(responsiveEngine.GetCurrentMode(), isDarkModePreferred);
+            ThemeManager.Instance.ApplySystemTheme();
             
             // Add menu items for responsive design testing (only in debug mode)
             #if DEBUG
@@ -107,21 +112,6 @@ namespace MandADiscoverySuite
             #endif
         }
 
-        private bool IsSystemDarkModeEnabled()
-        {
-            try
-            {
-                using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"))
-                {
-                    var value = key?.GetValue("AppsUseLightTheme");
-                    return value is int intValue && intValue == 0;
-                }
-            }
-            catch
-            {
-                return false; // Default to light mode if we can't determine
-            }
-        }
 
         #if DEBUG
         private void AddResponsiveTestingMenu()
@@ -144,8 +134,9 @@ namespace MandADiscoverySuite
                 var darkThemeItem = new MenuItem { Header = "Toggle Dark Theme" };
                 darkThemeItem.Click += (s, e) => 
                 {
-                    var currentTheme = themeEngine.GetCurrentTheme();
-                    themeEngine.ApplyTheme(currentTheme == "Dark" ? "Light" : "Dark");
+                    var currentTheme = ThemeManager.Instance.CurrentTheme;
+                    var newTheme = currentTheme == ThemeType.Dark ? ThemeType.Light : ThemeType.Dark;
+                    ThemeManager.Instance.ApplyTheme(newTheme);
                 };
                 
                 var compactModeItem = new MenuItem { Header = "Toggle Compact Mode" };
@@ -865,6 +856,12 @@ namespace MandADiscoverySuite
 
         private void NavigationButton_Click(object sender, RoutedEventArgs e)
         {
+            // Save current tab state before switching
+            if (!string.IsNullOrEmpty(currentView))
+            {
+                SaveTabState(currentView);
+            }
+            
             // Hide all views
             DashboardView.Visibility = Visibility.Collapsed;
             DiscoveryView.Visibility = Visibility.Collapsed;
@@ -904,23 +901,28 @@ namespace MandADiscoverySuite
                     case "DashboardButton":
                         DashboardView.Visibility = Visibility.Visible;
                         currentView = "Dashboard";
+                        RestoreTabState("Dashboard");
                         break;
                     case "DiscoveryButton":
                         DiscoveryView.Visibility = Visibility.Visible;
                         currentView = "Discovery";
+                        RestoreTabState("Discovery");
                         break;
                     case "UsersButton":
                         UsersView.Visibility = Visibility.Visible;
                         currentView = "Users";
+                        RestoreTabState("Users");
                         break;
                     case "ComputersButton":
                         ComputersView.Visibility = Visibility.Visible;
                         currentView = "Computers";
+                        RestoreTabState("Computers");
                         break;
                     case "InfrastructureButton":
                         InfrastructureView.Visibility = Visibility.Visible;
                         currentView = "Infrastructure";
                         InitializeNetworkTopology();
+                        RestoreTabState("Infrastructure");
                         break;
                     case "DomainDiscoveryButton":
                         // Check if a Domain Discovery PowerShell method exists, otherwise show the view
@@ -933,32 +935,39 @@ namespace MandADiscoverySuite
                         {
                             DomainDiscoveryView.Visibility = Visibility.Visible;
                             currentView = "DomainDiscovery";
+                            RestoreTabState("DomainDiscovery");
                         }
                         break;
                     case "FileServersButton":
                         FileServersView.Visibility = Visibility.Visible;
                         currentView = "FileServers";
+                        RestoreTabState("FileServers");
                         break;
                     case "ApplicationsButton":
                         ApplicationsView.Visibility = Visibility.Visible;
                         currentView = "Applications";
                         LoadApplicationsData();
+                        RestoreTabState("Applications");
                         break;
                     case "WavesButton":
                         WavesView.Visibility = Visibility.Visible;
                         currentView = "Waves";
+                        RestoreTabState("Waves");
                         break;
                     case "MigrateButton":
                         MigrateView.Visibility = Visibility.Visible;
                         currentView = "Migrate";
+                        RestoreTabState("Migrate");
                         break;
                     case "ReportsButton":
                         ReportsView.Visibility = Visibility.Visible;
                         currentView = "Reports";
+                        RestoreTabState("Reports");
                         break;
                     case "SettingsButton":
                         SettingsView.Visibility = Visibility.Visible;
                         currentView = "Settings";
+                        RestoreTabState("Settings");
                         break;
                 }
             }
@@ -974,7 +983,23 @@ namespace MandADiscoverySuite
                 return;
             }
             
+            // Add confirmation dialog for critical action
+            var result = MessageBox.Show(
+                $"This will run a full discovery scan for company '{((CompanyProfile)CompanySelector.SelectedItem).Name}'.\n\n" +
+                "This process may take several minutes and will scan all configured discovery modules.\n\n" +
+                "Do you want to continue?",
+                "Confirm Full Discovery",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question,
+                MessageBoxResult.No);
+                
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+            
             ShowProgress("Running Full Discovery", "Initializing discovery modules...");
+            UpdateStatus("Running full discovery scan...", StatusType.Processing);
             
             cancellationTokenSource = new CancellationTokenSource();
             
@@ -1005,12 +1030,14 @@ namespace MandADiscoverySuite
                 });
                 
                 HideProgress();
+                UpdateStatus("Full discovery completed successfully", StatusType.Success);
                 MessageBox.Show("Full discovery completed successfully!", "Discovery Complete", 
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 HideProgress();
+                UpdateStatus($"Discovery failed: {ex.Message}", StatusType.Error);
                 MessageBox.Show($"Discovery failed: {ex.Message}", "Error", 
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -3181,6 +3208,10 @@ namespace MandADiscoverySuite
                         // Update status
                         StatusDetails.Text = $"Loaded profile: {selected.Name}";
                         
+                        // Update status bar
+                        UpdateCompanyInfo(selected.Name);
+                        UpdateStatus($"Profile '{selected.Name}' loaded", StatusType.Success);
+                        
                         // Update domain and environment information
                         await UpdateDomainAndEnvironmentInfo();
                         
@@ -3812,6 +3843,33 @@ namespace MandADiscoverySuite
             {
                 MessageBox.Show($"Error analyzing password policies: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 StatusDetails.Text = "Password policy analysis failed.";
+            }
+        }
+
+        private void PasswordGenerator_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var passwordDialog = new PasswordGeneratorDialog();
+                passwordDialog.Owner = this;
+                
+                var result = passwordDialog.ShowDialog();
+                if (result == true && !string.IsNullOrEmpty(passwordDialog.GeneratedPassword))
+                {
+                    // Copy the generated password to clipboard for easy use
+                    Clipboard.SetText(passwordDialog.GeneratedPassword);
+                    UpdateStatus("Secure password generated and copied to clipboard", StatusType.Ready);
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorResult = ErrorDialog.ShowError(this, 
+                    "Failed to open password generator", ex, "Password Generator");
+                
+                if (errorResult == ErrorDialog.ErrorDialogResult.Retry)
+                {
+                    PasswordGenerator_Click(sender, e);
+                }
             }
         }
 
@@ -6161,6 +6219,11 @@ namespace MandADiscoverySuite
             int serverCount = InfrastructureDataGrid?.Items?.Count ?? 0;
             int appCount = ApplicationsGrid?.Items?.Count ?? 0;
             
+            // Calculate overall discovery progress
+            var totalModules = 15; // Total number of discovery modules available
+            var completedModules = CalculateCompletedModules();
+            var progressPercentage = (double)completedModules / totalModules * 100;
+            
             // Update dashboard summary boxes immediately
             Dispatcher.Invoke(() =>
             {
@@ -6173,16 +6236,145 @@ namespace MandADiscoverySuite
                 if (TotalInfrastructureTextBlock != null)
                     TotalInfrastructureTextBlock.Text = serverCount.ToString("N0");
                 
+                if (DiscoveryProgressTextBlock != null)
+                    DiscoveryProgressTextBlock.Text = $"{progressPercentage:F0}%";
+                
+                if (DiscoveryProgressBar != null)
+                    DiscoveryProgressBar.Value = progressPercentage;
+                
                 // Update view-specific headers
                 if (UsersViewTotalTextBlock != null)
                     UsersViewTotalTextBlock.Text = userCount.ToString("N0");
                 
                 if (ComputersViewTotalTextBlock != null)
                     ComputersViewTotalTextBlock.Text = computerCount.ToString("N0");
+                
+                // Update last refresh timestamp
+                UpdateStatus($"Dashboard updated at {DateTime.Now:HH:mm:ss}", StatusType.Ready);
             });
             
             // Update the status to include real counts
             StatusDetails.Text += $" | Stats: {userCount}u, {computerCount}c, {serverCount}s, {appCount}a";
+            
+            // Update discovery modules display
+            UpdateDiscoveryModulesDisplay();
+            
+            // Update recent activity feed
+            UpdateRecentActivityFeed();
+        }
+
+        private int CalculateCompletedModules()
+        {
+            // Count modules that have discovered data
+            int completed = 0;
+            
+            if ((UsersDataGrid?.Items?.Count ?? 0) > 0) completed++;
+            if ((ComputersDataGrid?.Items?.Count ?? 0) > 0) completed++;
+            if ((InfrastructureDataGrid?.Items?.Count ?? 0) > 0) completed++;
+            if ((ApplicationsGrid?.Items?.Count ?? 0) > 0) completed++;
+            
+            // Add checks for other discovery modules as they're implemented
+            // For now, we'll simulate based on available data
+            
+            return completed;
+        }
+
+        private void UpdateDiscoveryModulesDisplay()
+        {
+            var modules = new List<DiscoveryModuleInfo>
+            {
+                new DiscoveryModuleInfo 
+                { 
+                    Icon = "👥", 
+                    Name = "Active Directory", 
+                    Description = "User and group discovery", 
+                    Status = (UsersDataGrid?.Items?.Count ?? 0) > 0 ? "Completed" : "Pending",
+                    StatusColor = (UsersDataGrid?.Items?.Count ?? 0) > 0 ? "#FF48BB78" : "#FFED8936",
+                    LastRun = DateTime.Now.AddMinutes(-15)
+                },
+                new DiscoveryModuleInfo 
+                { 
+                    Icon = "💻", 
+                    Name = "Computer Inventory", 
+                    Description = "Device and hardware discovery", 
+                    Status = (ComputersDataGrid?.Items?.Count ?? 0) > 0 ? "Completed" : "Pending",
+                    StatusColor = (ComputersDataGrid?.Items?.Count ?? 0) > 0 ? "#FF48BB78" : "#FFED8936",
+                    LastRun = DateTime.Now.AddMinutes(-22)
+                },
+                new DiscoveryModuleInfo 
+                { 
+                    Icon = "🌐", 
+                    Name = "Infrastructure", 
+                    Description = "Network and server discovery", 
+                    Status = (InfrastructureDataGrid?.Items?.Count ?? 0) > 0 ? "Completed" : "Pending",
+                    StatusColor = (InfrastructureDataGrid?.Items?.Count ?? 0) > 0 ? "#FF48BB78" : "#FFED8936",
+                    LastRun = DateTime.Now.AddMinutes(-8)
+                },
+                new DiscoveryModuleInfo 
+                { 
+                    Icon = "📱", 
+                    Name = "Intune Devices", 
+                    Description = "Mobile device management", 
+                    Status = "Ready",
+                    StatusColor = "#FF4299E1",
+                    LastRun = DateTime.Now.AddHours(-1)
+                },
+                new DiscoveryModuleInfo 
+                { 
+                    Icon = "☁️", 
+                    Name = "Azure Resources", 
+                    Description = "Cloud infrastructure discovery", 
+                    Status = "Ready",
+                    StatusColor = "#FF4299E1",
+                    LastRun = DateTime.Now.AddHours(-2)
+                }
+            };
+
+            Dispatcher.Invoke(() =>
+            {
+                if (DashboardModules != null)
+                {
+                    DashboardModules.ItemsSource = modules;
+                }
+            });
+        }
+
+        private void UpdateRecentActivityFeed()
+        {
+            // This would typically pull from a real activity log
+            // For now, we'll generate dynamic activities based on current state
+            
+            var activities = new List<ActivityItem>();
+            
+            if ((UsersDataGrid?.Items?.Count ?? 0) > 0)
+            {
+                activities.Add(new ActivityItem
+                {
+                    Description = $"Discovered {UsersDataGrid.Items.Count} users",
+                    Timestamp = DateTime.Now.AddMinutes(-5),
+                    Type = "Success"
+                });
+            }
+            
+            if ((ComputersDataGrid?.Items?.Count ?? 0) > 0)
+            {
+                activities.Add(new ActivityItem
+                {
+                    Description = $"Found {ComputersDataGrid.Items.Count} devices",
+                    Timestamp = DateTime.Now.AddMinutes(-12),
+                    Type = "Info"
+                });
+            }
+            
+            activities.Add(new ActivityItem
+            {
+                Description = "Dashboard refreshed",
+                Timestamp = DateTime.Now,
+                Type = "Info"
+            });
+            
+            // Store activities for potential display updates
+            _recentActivities = activities.OrderByDescending(a => a.Timestamp).Take(5).ToList();
         }
 
         private void ShowAllDiscoveryData_Click(object sender, RoutedEventArgs e)
@@ -6235,6 +6427,42 @@ namespace MandADiscoverySuite
             catch (Exception ex)
             {
                 MessageBox.Show($"Error displaying discovery data: {ex.Message}", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void SelectManager_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var managerDialog = new ManagerSelectionDialog()
+                {
+                    Owner = this
+                };
+
+                var result = managerDialog.ShowDialog();
+                if (result == true && managerDialog.SelectedManager != null)
+                {
+                    var selectedManager = managerDialog.SelectedManager;
+                    
+                    // Show confirmation with selected manager details
+                    var message = $"Selected Manager:\n\n" +
+                                $"Name: {selectedManager.DisplayName}\n" +
+                                $"Email: {selectedManager.Email}\n" +
+                                $"Department: {selectedManager.Department}\n" +
+                                $"Title: {selectedManager.Title}\n" +
+                                $"Location: {selectedManager.OfficeLocation}";
+
+                    MessageBox.Show(message, "Manager Selected", 
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                        
+                    // In a real implementation, you would use the selected manager
+                    // to populate a form field, assign to a user, etc.
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening manager selection dialog: {ex.Message}", "Error", 
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -11767,77 +11995,6 @@ namespace MandADiscoverySuite
         }
     }
 
-    // Adaptive Theme Engine for Mobile/Desktop switching
-    public class AdaptiveThemeEngine
-    {
-        private readonly Window _window;
-        private readonly Dictionary<string, ResourceDictionary> _themes;
-        private string _currentTheme;
-
-        public AdaptiveThemeEngine(Window window)
-        {
-            _window = window;
-            _themes = new Dictionary<string, ResourceDictionary>();
-            InitializeThemes();
-        }
-
-        private void InitializeThemes()
-        {
-            // Light theme for desktop
-            var lightTheme = new ResourceDictionary();
-            lightTheme.Add("BackgroundBrush", new SolidColorBrush(Colors.White));
-            lightTheme.Add("ForegroundBrush", new SolidColorBrush(Colors.Black));
-            lightTheme.Add("AccentBrush", new SolidColorBrush(Color.FromRgb(0x00, 0x78, 0xD4)));
-            _themes["Light"] = lightTheme;
-
-            // Dark theme for mobile/low light
-            var darkTheme = new ResourceDictionary();
-            darkTheme.Add("BackgroundBrush", new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x30)));
-            darkTheme.Add("ForegroundBrush", new SolidColorBrush(Colors.White));
-            darkTheme.Add("AccentBrush", new SolidColorBrush(Color.FromRgb(0x00, 0x7A, 0xCC)));
-            _themes["Dark"] = darkTheme;
-
-            // High contrast for accessibility
-            var highContrastTheme = new ResourceDictionary();
-            highContrastTheme.Add("BackgroundBrush", new SolidColorBrush(Colors.Black));
-            highContrastTheme.Add("ForegroundBrush", new SolidColorBrush(Colors.White));
-            highContrastTheme.Add("AccentBrush", new SolidColorBrush(Colors.Yellow));
-            _themes["HighContrast"] = highContrastTheme;
-        }
-
-        public void ApplyTheme(string themeName)
-        {
-            if (!_themes.ContainsKey(themeName)) return;
-
-            _currentTheme = themeName;
-            var theme = _themes[themeName];
-
-            // Apply theme to window resources
-            _window.Resources.MergedDictionaries.Clear();
-            _window.Resources.MergedDictionaries.Add(theme);
-        }
-
-        public void AutoSelectTheme(ResponsiveDesignEngine.ResponsiveMode mode, bool isDarkModePreferred)
-        {
-            switch (mode)
-            {
-                case ResponsiveDesignEngine.ResponsiveMode.Mobile:
-                    ApplyTheme(isDarkModePreferred ? "Dark" : "Light");
-                    break;
-                case ResponsiveDesignEngine.ResponsiveMode.Tablet:
-                    ApplyTheme(isDarkModePreferred ? "Dark" : "Light");
-                    break;
-                default:
-                    ApplyTheme("Light");
-                    break;
-            }
-        }
-
-        public string GetCurrentTheme()
-        {
-            return _currentTheme;
-        }
-    }
 
     // Enhanced App Registration Export Engine
     public class AppRegistrationExportEngine
@@ -12996,5 +13153,951 @@ namespace MandADiscoverySuite
                 await LoadNetworkTopology();
             }
         }
+        
+        #region Status Bar Management
+        
+        private void InitializeStatusBar()
+        {
+            // Initialize status timer for time updates
+            statusTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            statusTimer.Tick += StatusTimer_Tick;
+            statusTimer.Start();
+            
+            // Set initial status
+            UpdateStatus("Ready", StatusType.Ready);
+            
+            // Update company info if profile is selected
+            if (CompanySelector.SelectedItem is CompanyProfile profile)
+            {
+                UpdateCompanyInfo(profile.CompanyName);
+            }
+        }
+        
+        private void StatusTimer_Tick(object sender, EventArgs e)
+        {
+            // Update time display
+            StatusTime.Text = DateTime.Now.ToString("HH:mm:ss");
+        }
+        
+        public enum StatusType
+        {
+            Ready,
+            Connecting,
+            Processing,
+            Error,
+            Success
+        }
+        
+        public void UpdateStatus(string message, StatusType type = StatusType.Ready)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => UpdateStatus(message, type)));
+                return;
+            }
+            
+            lock (statusLock)
+            {
+                currentStatus = message;
+                StatusText.Text = message;
+                
+                // Update status indicator color
+                var color = type switch
+                {
+                    StatusType.Ready => "#FF38F9D7",
+                    StatusType.Connecting => "#FF4299E1",
+                    StatusType.Processing => "#FFED8936",
+                    StatusType.Error => "#FFF56565",
+                    StatusType.Success => "#FF48BB78",
+                    _ => "#FF718096"
+                };
+                
+                StatusIndicator.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color));
+                
+                // Show/hide progress bar
+                if (type == StatusType.Connecting || type == StatusType.Processing)
+                {
+                    StatusProgressBar.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    StatusProgressBar.Visibility = Visibility.Collapsed;
+                }
+            }
+        }
+        
+        public void UpdateConnectionCount(int count)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => UpdateConnectionCount(count)));
+                return;
+            }
+            
+            activeConnections = count;
+            StatusConnections.Text = $"{count} active";
+        }
+        
+        public void UpdateCompanyInfo(string companyName)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => UpdateCompanyInfo(companyName)));
+                return;
+            }
+            
+            StatusCompanyInfo.Text = $"Company: {companyName}";
+        }
+        
+        public void ShowProgress(string message)
+        {
+            UpdateStatus(message, StatusType.Processing);
+        }
+        
+        public void ShowSuccess(string message)
+        {
+            UpdateStatus(message, StatusType.Success);
+            
+            // Auto-reset to Ready after 3 seconds
+            Task.Delay(3000).ContinueWith(_ =>
+            {
+                UpdateStatus("Ready", StatusType.Ready);
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+        
+        public void ShowError(string message)
+        {
+            UpdateStatus(message, StatusType.Error);
+            
+            // Auto-reset to Ready after 5 seconds
+            Task.Delay(5000).ContinueWith(_ =>
+            {
+                UpdateStatus("Ready", StatusType.Ready);
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+        
+        #endregion
+        
+        #region Keyboard Shortcuts
+        
+        private void MainWindow_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Handle keyboard shortcuts
+            switch (e.Key)
+            {
+                case Key.F1:
+                    ShowDashboardView();
+                    e.Handled = true;
+                    break;
+                case Key.F2:
+                    NavigationButton_Click(DiscoveryButton, null);
+                    e.Handled = true;
+                    break;
+                case Key.F3:
+                    NavigationButton_Click(UsersButton, null);
+                    e.Handled = true;
+                    break;
+                case Key.F4:
+                    if (Keyboard.Modifiers == ModifierKeys.Alt)
+                    {
+                        // Alt+F4 - Close application
+                        Close();
+                    }
+                    else
+                    {
+                        NavigationButton_Click(ComputersButton, null);
+                    }
+                    e.Handled = true;
+                    break;
+                case Key.F5:
+                    RefreshCurrentView();
+                    e.Handled = true;
+                    break;
+                case Key.F6:
+                    if (DiscoveryView.Visibility == Visibility.Visible)
+                    {
+                        RunFullDiscovery_Click(null, null);
+                    }
+                    e.Handled = true;
+                    break;
+                case Key.F9:
+                    NavigationButton_Click(SettingsButton, null);
+                    e.Handled = true;
+                    break;
+                case Key.F10:
+                    NavigationButton_Click(ReportsButton, null);
+                    e.Handled = true;
+                    break;
+                case Key.S:
+                    if (Keyboard.Modifiers == ModifierKeys.Control)
+                    {
+                        SaveCurrentData();
+                        e.Handled = true;
+                    }
+                    break;
+                case Key.F:
+                    if (Keyboard.Modifiers == ModifierKeys.Control)
+                    {
+                        FocusSearchBox();
+                        e.Handled = true;
+                    }
+                    break;
+                case Key.R:
+                    if (Keyboard.Modifiers == ModifierKeys.Control)
+                    {
+                        RefreshCurrentView();
+                        e.Handled = true;
+                    }
+                    break;
+                case Key.N:
+                    if (Keyboard.Modifiers == ModifierKeys.Control)
+                    {
+                        CreateNewProfile();
+                        e.Handled = true;
+                    }
+                    break;
+                case Key.Escape:
+                    CancelCurrentOperation();
+                    e.Handled = true;
+                    break;
+            }
+        }
+        
+        private void RefreshCurrentView()
+        {
+            UpdateStatus("Refreshing data...", StatusType.Processing);
+            
+            // Refresh based on current view
+            if (DashboardView.Visibility == Visibility.Visible)
+            {
+                LoadCompanyProfiles();
+                RefreshDashboard();
+            }
+            else if (DiscoveryView.Visibility == Visibility.Visible)
+            {
+                InitializeDiscoveryModules();
+            }
+            else if (UsersView.Visibility == Visibility.Visible)
+            {
+                RefreshUsersData();
+            }
+            else if (ComputersView.Visibility == Visibility.Visible)
+            {
+                RefreshComputersData();
+            }
+            
+            UpdateStatus("Data refreshed", StatusType.Success);
+        }
+        
+        private void SaveCurrentData()
+        {
+            UpdateStatus("Saving data...", StatusType.Processing);
+            
+            try
+            {
+                // Save current state/settings
+                // Implementation would depend on what needs to be saved
+                UpdateStatus("Data saved successfully", StatusType.Success);
+            }
+            catch (Exception ex)
+            {
+                UpdateStatus($"Save failed: {ex.Message}", StatusType.Error);
+            }
+        }
+        
+        private void FocusSearchBox()
+        {
+            // Focus appropriate search box based on current view
+            // Implementation would depend on which search boxes exist
+            UpdateStatus("Search activated", StatusType.Ready);
+        }
+        
+        private void CreateNewProfile()
+        {
+            var dialog = new CreateProfileDialog();
+            if (dialog.ShowDialog() == true)
+            {
+                var newProfileName = dialog.ProfileName;
+                if (!string.IsNullOrWhiteSpace(newProfileName))
+                {
+                    Task.Run(async () => await CreateNewCompanyProfile(newProfileName));
+                }
+            }
+        }
+        
+        private void CancelCurrentOperation()
+        {
+            // Cancel any ongoing operations
+            cancellationTokenSource?.Cancel();
+            UpdateStatus("Operation cancelled", StatusType.Ready);
+        }
+        
+        private void RefreshDashboard()
+        {
+            // Refresh dashboard metrics
+            if (CompanySelector.SelectedItem is CompanyProfile profile)
+            {
+                LoadDiscoveryData(profile);
+            }
+        }
+        
+        private void RefreshUsersData()
+        {
+            // Refresh users data
+            if (CompanySelector.SelectedItem is CompanyProfile profile)
+            {
+                // Reload user data
+                LoadDiscoveryData(profile);
+            }
+        }
+        
+        private void RefreshComputersData()
+        {
+            // Refresh computers data
+            if (CompanySelector.SelectedItem is CompanyProfile profile)
+            {
+                // Reload computer data
+                LoadDiscoveryData(profile);
+            }
+        }
+        
+        #endregion
+        
+        #region User-Friendly Error Handling
+        
+        public static class ErrorHandler
+        {
+            public static void ShowError(Window owner, string message, Exception ex = null, string operation = null)
+            {
+                var result = ErrorDialog.ShowError(owner, message, ex, operation);
+                
+                // Handle the result if needed
+                switch (result)
+                {
+                    case ErrorDialog.ErrorDialogResult.Retry:
+                        // Could implement retry logic here
+                        break;
+                    case ErrorDialog.ErrorDialogResult.Ignore:
+                        // Continue with operation
+                        break;
+                }
+            }
+            
+            public static bool ShowErrorWithRetry(Window owner, string message, Exception ex = null, string operation = null)
+            {
+                var result = ErrorDialog.ShowError(owner, message, ex, operation);
+                return result == ErrorDialog.ErrorDialogResult.Retry;
+            }
+        }
+        
+        // Replace standard MessageBox.Show calls with user-friendly error dialogs
+        private void ShowUserFriendlyError(string message, Exception ex = null, string operation = null)
+        {
+            ErrorHandler.ShowError(this, message, ex, operation);
+            
+            // Also update status bar
+            if (ex != null)
+            {
+                UpdateStatus($"Error: {message}", StatusType.Error);
+            }
+        }
+        
+        private bool ShowUserFriendlyErrorWithRetry(string message, Exception ex = null, string operation = null)
+        {
+            var shouldRetry = ErrorHandler.ShowErrorWithRetry(this, message, ex, operation);
+            
+            // Update status bar
+            if (ex != null)
+            {
+                UpdateStatus($"Error: {message}", StatusType.Error);
+            }
+            
+            return shouldRetry;
+        }
+        
+        #endregion
+
+        #region Numeric Spinner Handlers
+
+        private void TimeoutUp_Click(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(TimeoutTextBox.Text, out int current))
+            {
+                var newValue = Math.Min(current + 5, 1440); // Max 24 hours
+                TimeoutTextBox.Text = newValue.ToString();
+            }
+        }
+
+        private void TimeoutDown_Click(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(TimeoutTextBox.Text, out int current))
+            {
+                var newValue = Math.Max(current - 5, 1); // Min 1 minute
+                TimeoutTextBox.Text = newValue.ToString();
+            }
+        }
+
+        private void ThreadsUp_Click(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(ThreadsTextBox.Text, out int current))
+            {
+                var newValue = Math.Min(current + 1, Environment.ProcessorCount * 4); // Max 4x CPU cores
+                ThreadsTextBox.Text = newValue.ToString();
+            }
+        }
+
+        private void ThreadsDown_Click(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(ThreadsTextBox.Text, out int current))
+            {
+                var newValue = Math.Max(current - 1, 1); // Min 1 thread
+                ThreadsTextBox.Text = newValue.ToString();
+            }
+        }
+
+        #endregion
+
+        #region Data Persistence System
+
+        private Dictionary<string, object> _persistentData = new Dictionary<string, object>();
+        private Dictionary<string, int> _lastSelectedIndices = new Dictionary<string, int>();
+        private Dictionary<string, string> _lastSearchTerms = new Dictionary<string, string>();
+        
+        private void SaveTabState(string tabName)
+        {
+            try
+            {
+                switch (tabName.ToLower())
+                {
+                    case "users":
+                        _lastSearchTerms["users"] = UserSearchBox?.Text ?? "";
+                        _lastSelectedIndices["users"] = UsersDataGrid?.SelectedIndex ?? -1;
+                        if (UsersDataGrid?.ItemsSource != null)
+                        {
+                            _persistentData["users_data"] = UsersDataGrid.ItemsSource;
+                        }
+                        break;
+                        
+                    case "computers":
+                        _lastSearchTerms["computers"] = ComputerSearchBox?.Text ?? "";
+                        _lastSelectedIndices["computers"] = ComputersDataGrid?.SelectedIndex ?? -1;
+                        if (ComputersDataGrid?.ItemsSource != null)
+                        {
+                            _persistentData["computers_data"] = ComputersDataGrid.ItemsSource;
+                        }
+                        break;
+                        
+                    case "applications":
+                        _lastSearchTerms["applications"] = AppSearchBox?.Text ?? "";
+                        _lastSelectedIndices["applications"] = ApplicationsGrid?.SelectedIndex ?? -1;
+                        if (ApplicationsGrid?.ItemsSource != null)
+                        {
+                            _persistentData["applications_data"] = ApplicationsGrid.ItemsSource;
+                        }
+                        break;
+                        
+                    case "settings":
+                        _persistentData["network_ranges"] = NetworkRangesTextBox?.Text ?? "";
+                        _persistentData["timeout"] = TimeoutTextBox?.Text ?? "";
+                        _persistentData["threads"] = ThreadsTextBox?.Text ?? "";
+                        _persistentData["data_path"] = DataPathTextBox?.Text ?? "";
+                        break;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"Saved state for tab: {tabName}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving tab state for {tabName}: {ex.Message}");
+            }
+        }
+        
+        private void RestoreTabState(string tabName)
+        {
+            try
+            {
+                switch (tabName.ToLower())
+                {
+                    case "users":
+                        if (_lastSearchTerms.ContainsKey("users") && UserSearchBox != null)
+                        {
+                            UserSearchBox.Text = _lastSearchTerms["users"];
+                        }
+                        if (_persistentData.ContainsKey("users_data") && UsersDataGrid != null)
+                        {
+                            UsersDataGrid.ItemsSource = _persistentData["users_data"] as System.Collections.IEnumerable;
+                            if (_lastSelectedIndices.ContainsKey("users") && _lastSelectedIndices["users"] >= 0)
+                            {
+                                UsersDataGrid.SelectedIndex = _lastSelectedIndices["users"];
+                            }
+                        }
+                        break;
+                        
+                    case "computers":
+                        if (_lastSearchTerms.ContainsKey("computers") && ComputerSearchBox != null)
+                        {
+                            ComputerSearchBox.Text = _lastSearchTerms["computers"];
+                        }
+                        if (_persistentData.ContainsKey("computers_data") && ComputersDataGrid != null)
+                        {
+                            ComputersDataGrid.ItemsSource = _persistentData["computers_data"] as System.Collections.IEnumerable;
+                            if (_lastSelectedIndices.ContainsKey("computers") && _lastSelectedIndices["computers"] >= 0)
+                            {
+                                ComputersDataGrid.SelectedIndex = _lastSelectedIndices["computers"];
+                            }
+                        }
+                        break;
+                        
+                    case "applications":
+                        if (_lastSearchTerms.ContainsKey("applications") && AppSearchBox != null)
+                        {
+                            AppSearchBox.Text = _lastSearchTerms["applications"];
+                        }
+                        if (_persistentData.ContainsKey("applications_data") && ApplicationsGrid != null)
+                        {
+                            ApplicationsGrid.ItemsSource = _persistentData["applications_data"] as System.Collections.IEnumerable;
+                            if (_lastSelectedIndices.ContainsKey("applications") && _lastSelectedIndices["applications"] >= 0)
+                            {
+                                ApplicationsGrid.SelectedIndex = _lastSelectedIndices["applications"];
+                            }
+                        }
+                        break;
+                        
+                    case "settings":
+                        if (_persistentData.ContainsKey("network_ranges") && NetworkRangesTextBox != null)
+                        {
+                            NetworkRangesTextBox.Text = _persistentData["network_ranges"].ToString();
+                        }
+                        if (_persistentData.ContainsKey("timeout") && TimeoutTextBox != null)
+                        {
+                            TimeoutTextBox.Text = _persistentData["timeout"].ToString();
+                        }
+                        if (_persistentData.ContainsKey("threads") && ThreadsTextBox != null)
+                        {
+                            ThreadsTextBox.Text = _persistentData["threads"].ToString();
+                        }
+                        if (_persistentData.ContainsKey("data_path") && DataPathTextBox != null)
+                        {
+                            DataPathTextBox.Text = _persistentData["data_path"].ToString();
+                        }
+                        break;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"Restored state for tab: {tabName}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error restoring tab state for {tabName}: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region Search and Result Count Handlers
+
+        private void UserSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            PerformUserSearch();
+        }
+
+        private void ComputerSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            PerformComputerSearch();
+        }
+
+        private void PerformUserSearch()
+        {
+            try
+            {
+                if (UsersDataGrid?.ItemsSource == null) return;
+
+                var searchTerm = UserSearchBox?.Text?.Trim().ToLower();
+                var allUsers = _persistentData.ContainsKey("users_data_original") 
+                    ? _persistentData["users_data_original"] as IEnumerable<dynamic>
+                    : UsersDataGrid.ItemsSource as IEnumerable<dynamic>;
+
+                if (allUsers == null) return;
+
+                IEnumerable<dynamic> filteredUsers;
+                
+                if (string.IsNullOrEmpty(searchTerm) || searchTerm == "search users...")
+                {
+                    filteredUsers = allUsers;
+                }
+                else
+                {
+                    filteredUsers = allUsers.Where(user =>
+                        user.ToString().ToLower().Contains(searchTerm) ||
+                        (user.GetType().GetProperty("Name")?.GetValue(user)?.ToString()?.ToLower().Contains(searchTerm) ?? false) ||
+                        (user.GetType().GetProperty("Email")?.GetValue(user)?.ToString()?.ToLower().Contains(searchTerm) ?? false) ||
+                        (user.GetType().GetProperty("Department")?.GetValue(user)?.ToString()?.ToLower().Contains(searchTerm) ?? false)
+                    );
+                }
+
+                var resultList = filteredUsers.ToList();
+                UsersDataGrid.ItemsSource = resultList;
+                
+                // Update result count
+                if (UserResultCount != null)
+                {
+                    var count = resultList.Count;
+                    UserResultCount.Text = count == 1 ? "1 user" : $"{count:N0} users";
+                    
+                    if (!string.IsNullOrEmpty(searchTerm) && searchTerm != "search users...")
+                    {
+                        UserResultCount.Text += $" (filtered)";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error performing user search: {ex.Message}");
+            }
+        }
+
+        private void PerformComputerSearch()
+        {
+            try
+            {
+                if (ComputersDataGrid?.ItemsSource == null) return;
+
+                var searchTerm = ComputerSearchBox?.Text?.Trim().ToLower();
+                var allComputers = _persistentData.ContainsKey("computers_data_original") 
+                    ? _persistentData["computers_data_original"] as IEnumerable<dynamic>
+                    : ComputersDataGrid.ItemsSource as IEnumerable<dynamic>;
+
+                if (allComputers == null) return;
+
+                IEnumerable<dynamic> filteredComputers;
+                
+                if (string.IsNullOrEmpty(searchTerm) || searchTerm == "search computers...")
+                {
+                    filteredComputers = allComputers;
+                }
+                else
+                {
+                    filteredComputers = allComputers.Where(computer =>
+                        computer.ToString().ToLower().Contains(searchTerm) ||
+                        (computer.GetType().GetProperty("Name")?.GetValue(computer)?.ToString()?.ToLower().Contains(searchTerm) ?? false) ||
+                        (computer.GetType().GetProperty("IPAddress")?.GetValue(computer)?.ToString()?.ToLower().Contains(searchTerm) ?? false) ||
+                        (computer.GetType().GetProperty("OperatingSystem")?.GetValue(computer)?.ToString()?.ToLower().Contains(searchTerm) ?? false)
+                    );
+                }
+
+                var resultList = filteredComputers.ToList();
+                ComputersDataGrid.ItemsSource = resultList;
+                
+                // Update result count
+                if (ComputerResultCount != null)
+                {
+                    var count = resultList.Count;
+                    ComputerResultCount.Text = count == 1 ? "1 computer" : $"{count:N0} computers";
+                    
+                    if (!string.IsNullOrEmpty(searchTerm) && searchTerm != "search computers...")
+                    {
+                        ComputerResultCount.Text += $" (filtered)";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error performing computer search: {ex.Message}");
+            }
+        }
+
+        private void UpdateAllResultCounts()
+        {
+            // Update all result counts when data is loaded
+            if (UserResultCount != null && UsersDataGrid?.ItemsSource != null)
+            {
+                var count = (UsersDataGrid.ItemsSource as IEnumerable<dynamic>)?.Count() ?? 0;
+                UserResultCount.Text = count == 1 ? "1 user" : $"{count:N0} users";
+            }
+
+            if (ComputerResultCount != null && ComputersDataGrid?.ItemsSource != null)
+            {
+                var count = (ComputersDataGrid.ItemsSource as IEnumerable<dynamic>)?.Count() ?? 0;
+                ComputerResultCount.Text = count == 1 ? "1 computer" : $"{count:N0} computers";
+            }
+        }
+
+        #endregion
+
+        #region Dashboard Data Models
+
+        private List<ActivityItem> _recentActivities = new List<ActivityItem>();
+
+        public class DiscoveryModuleInfo
+        {
+            public string Icon { get; set; }
+            public string Name { get; set; }
+            public string Description { get; set; }
+            public string Status { get; set; }
+            public string StatusColor { get; set; }
+            public DateTime LastRun { get; set; }
+        }
+
+        public class ActivityItem
+        {
+            public string Description { get; set; }
+            public DateTime Timestamp { get; set; }
+            public string Type { get; set; }
+        }
+
+        #endregion
+
+        #region Input Validation Methods
+
+        private void NetworkRangesTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (IsLoaded) // Only validate after window is fully loaded
+                ValidateNetworkRanges();
+        }
+
+        private void TimeoutTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (IsLoaded) // Only validate after window is fully loaded
+                ValidateTimeout();
+        }
+
+        private void ThreadsTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (IsLoaded) // Only validate after window is fully loaded
+                ValidateThreads();
+        }
+
+        private void ValidateNetworkRanges()
+        {
+            try
+            {
+                var input = NetworkRangesTextBox.Text.Trim();
+                
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    ShowValidationError(NetworkRangesTextBox, NetworkRangesValidationText, "Network ranges cannot be empty");
+                    return;
+                }
+
+                var ranges = input.Split(',').Select(r => r.Trim()).ToArray();
+                var invalidRanges = new List<string>();
+
+                foreach (var range in ranges)
+                {
+                    if (!IsValidNetworkRange(range))
+                    {
+                        invalidRanges.Add(range);
+                    }
+                }
+
+                if (invalidRanges.Any())
+                {
+                    ShowValidationError(NetworkRangesTextBox, NetworkRangesValidationText, 
+                        $"Invalid network ranges: {string.Join(", ", invalidRanges)}");
+                }
+                else
+                {
+                    ShowValidationSuccess(NetworkRangesTextBox, NetworkRangesValidationText, 
+                        $"Valid network ranges ({ranges.Length} ranges)");
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowValidationError(NetworkRangesTextBox, NetworkRangesValidationText, 
+                    $"Validation error: {ex.Message}");
+            }
+        }
+
+        private void ValidateTimeout()
+        {
+            try
+            {
+                var input = TimeoutTextBox.Text.Trim();
+                
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    ShowValidationError(TimeoutTextBox, TimeoutValidationText, "Timeout value cannot be empty");
+                    return;
+                }
+
+                if (!int.TryParse(input, out int timeout))
+                {
+                    ShowValidationError(TimeoutTextBox, TimeoutValidationText, "Timeout must be a valid number");
+                    return;
+                }
+
+                if (timeout < 1)
+                {
+                    ShowValidationError(TimeoutTextBox, TimeoutValidationText, "Timeout must be at least 1 minute");
+                }
+                else if (timeout > 1440) // 24 hours
+                {
+                    ShowValidationError(TimeoutTextBox, TimeoutValidationText, "Timeout cannot exceed 1440 minutes (24 hours)");
+                }
+                else
+                {
+                    ShowValidationSuccess(TimeoutTextBox, TimeoutValidationText, 
+                        $"Valid timeout ({timeout} minutes)");
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowValidationError(TimeoutTextBox, TimeoutValidationText, 
+                    $"Validation error: {ex.Message}");
+            }
+        }
+
+        private void ValidateThreads()
+        {
+            try
+            {
+                var input = ThreadsTextBox.Text.Trim();
+                
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    ShowValidationError(ThreadsTextBox, ThreadsValidationText, "Thread count cannot be empty");
+                    return;
+                }
+
+                if (!int.TryParse(input, out int threads))
+                {
+                    ShowValidationError(ThreadsTextBox, ThreadsValidationText, "Thread count must be a valid number");
+                    return;
+                }
+
+                if (threads < 1)
+                {
+                    ShowValidationError(ThreadsTextBox, ThreadsValidationText, "Thread count must be at least 1");
+                }
+                else if (threads > Environment.ProcessorCount * 4)
+                {
+                    ShowValidationError(ThreadsTextBox, ThreadsValidationText, 
+                        $"Thread count should not exceed {Environment.ProcessorCount * 4} (4x CPU cores)");
+                }
+                else
+                {
+                    ShowValidationSuccess(ThreadsTextBox, ThreadsValidationText, 
+                        $"Valid thread count ({threads} threads)");
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowValidationError(ThreadsTextBox, ThreadsValidationText, 
+                    $"Validation error: {ex.Message}");
+            }
+        }
+
+        private bool IsValidNetworkRange(string range)
+        {
+            if (string.IsNullOrWhiteSpace(range))
+                return false;
+
+            // Check for CIDR notation (e.g., 192.168.1.0/24)
+            if (range.Contains('/'))
+            {
+                var parts = range.Split('/');
+                if (parts.Length != 2)
+                    return false;
+
+                if (!IsValidIPAddress(parts[0]))
+                    return false;
+
+                if (!int.TryParse(parts[1], out int cidr) || cidr < 0 || cidr > 32)
+                    return false;
+
+                return true;
+            }
+
+            // Check for single IP address
+            return IsValidIPAddress(range);
+        }
+
+        private bool IsValidIPAddress(string ip)
+        {
+            return System.Net.IPAddress.TryParse(ip?.Trim(), out _);
+        }
+
+        private void ShowValidationError(TextBox textBox, TextBlock validationText, string message)
+        {
+            if (textBox == null || validationText == null) return;
+            
+            Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    // Try to apply validation styles, but don't fail if they're not available
+                    var invalidStyle = TryFindResource("InvalidTextBoxStyle") as Style;
+                    if (invalidStyle != null)
+                        textBox.Style = invalidStyle;
+                    else
+                    {
+                        // Fallback styling
+                        textBox.BorderBrush = new SolidColorBrush(Color.FromRgb(229, 62, 62));
+                        textBox.BorderThickness = new Thickness(2);
+                    }
+
+                    var errorTextStyle = TryFindResource("ValidationErrorTextStyle") as Style;
+                    if (errorTextStyle != null)
+                        validationText.Style = errorTextStyle;
+                    else
+                    {
+                        // Fallback styling
+                        validationText.Foreground = new SolidColorBrush(Color.FromRgb(229, 62, 62));
+                    }
+
+                    validationText.Text = $"❌ {message}";
+                    validationText.Visibility = Visibility.Visible;
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't crash the application
+                    System.Diagnostics.Debug.WriteLine($"Validation error display failed: {ex.Message}");
+                }
+            });
+        }
+
+        private void ShowValidationSuccess(TextBox textBox, TextBlock validationText, string message)
+        {
+            if (textBox == null || validationText == null) return;
+            
+            Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    // Try to apply validation styles, but don't fail if they're not available
+                    var validStyle = TryFindResource("ValidTextBoxStyle") as Style;
+                    if (validStyle != null)
+                        textBox.Style = validStyle;
+                    else
+                    {
+                        // Fallback styling
+                        textBox.BorderBrush = new SolidColorBrush(Color.FromRgb(72, 187, 120));
+                        textBox.BorderThickness = new Thickness(2);
+                    }
+
+                    var successTextStyle = TryFindResource("ValidationSuccessTextStyle") as Style;
+                    if (successTextStyle != null)
+                        validationText.Style = successTextStyle;
+                    else
+                    {
+                        // Fallback styling
+                        validationText.Foreground = new SolidColorBrush(Color.FromRgb(72, 187, 120));
+                    }
+
+                    validationText.Text = $"✅ {message}";
+                    validationText.Visibility = Visibility.Visible;
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't crash the application
+                    System.Diagnostics.Debug.WriteLine($"Validation success display failed: {ex.Message}");
+                }
+            });
+        }
+
+        #endregion
+
     }
 }

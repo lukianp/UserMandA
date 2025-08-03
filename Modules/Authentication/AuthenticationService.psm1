@@ -21,10 +21,9 @@
     Requires: PowerShell 5.1+, AuthSession module, SessionManager module, Microsoft Graph modules, Azure modules
 #>
 
-# Import required modules (SessionManager should already be loaded by caller)
+# Import required modules
 Import-Module (Join-Path $PSScriptRoot "AuthSession.psm1") -Force
-# Note: SessionManager is imported by the caller with explicit function specification
-# to avoid scoping conflicts. We rely on those functions being available.
+Import-Module (Join-Path $PSScriptRoot "SessionManager.psm1") -Force
 
 # Module-scope variables
 $script:CurrentSessionId = $null

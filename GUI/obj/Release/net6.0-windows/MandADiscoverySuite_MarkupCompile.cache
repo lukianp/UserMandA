@@ -10,11 +10,11 @@ none
 false
 TRACE;RELEASE;NET;NET6_0;NETCOREAPP
 D:\Scripts\UserMandA\GUI\App.xaml
-7-1944421446
+11-1684296413
 
-171936403392
+2184941536
 203155564505
-Controls\ProfileDropZone.xaml;Controls\ProgressIndicator.xaml;Controls\SimpleChart.xaml;CreateProfileDialog.xaml;DebugLogWindow.xaml;MandADiscoverySuite.xaml;PowerShellWindow.xaml;
+Controls\ProfileDropZone.xaml;Controls\ProgressIndicator.xaml;Controls\SimpleChart.xaml;CreateProfileDialog.xaml;DebugLogWindow.xaml;ErrorDialog.xaml;ManagerSelectionDialog.xaml;MandADiscoverySuite.xaml;PasswordGeneratorDialog.xaml;PowerShellWindow.xaml;Themes\ThemeStyles.xaml;
 
 False
 

@@ -515,4 +515,128 @@ namespace MandADiscoverySuite.Models
             DefaultExportFormat = "CSV";
         }
     }
+
+    /// <summary>
+    /// User information model for Active Directory users
+    /// </summary>
+    public class UserInfo : INotifyPropertyChanged
+    {
+        private string _displayName;
+        private string _email;
+        private string _department;
+        private string _title;
+        private string _officeLocation;
+        private string _manager;
+        private string _status;
+        private string _source;
+        private DateTime? _lastLogon;
+        private string _groups;
+
+        public string DisplayName
+        {
+            get => _displayName;
+            set
+            {
+                _displayName = value;
+                OnPropertyChanged(nameof(DisplayName));
+            }
+        }
+
+        public string Email
+        {
+            get => _email;
+            set
+            {
+                _email = value;
+                OnPropertyChanged(nameof(Email));
+            }
+        }
+
+        public string Department
+        {
+            get => _department;
+            set
+            {
+                _department = value;
+                OnPropertyChanged(nameof(Department));
+            }
+        }
+
+        public string Title
+        {
+            get => _title;
+            set
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+
+        public string OfficeLocation
+        {
+            get => _officeLocation;
+            set
+            {
+                _officeLocation = value;
+                OnPropertyChanged(nameof(OfficeLocation));
+            }
+        }
+
+        public string Manager
+        {
+            get => _manager;
+            set
+            {
+                _manager = value;
+                OnPropertyChanged(nameof(Manager));
+            }
+        }
+
+        public string Status
+        {
+            get => _status;
+            set
+            {
+                _status = value;
+                OnPropertyChanged(nameof(Status));
+            }
+        }
+
+        public string Source
+        {
+            get => _source;
+            set
+            {
+                _source = value;
+                OnPropertyChanged(nameof(Source));
+            }
+        }
+
+        public DateTime? LastLogon
+        {
+            get => _lastLogon;
+            set
+            {
+                _lastLogon = value;
+                OnPropertyChanged(nameof(LastLogon));
+            }
+        }
+
+        public string Groups
+        {
+            get => _groups;
+            set
+            {
+                _groups = value;
+                OnPropertyChanged(nameof(Groups));
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
 }

@@ -49,7 +49,10 @@
       "Bash(robocopy:*)",
       "Bash(if exist \"C:\\enterprisediscovery\\Modules\" rmdir /s /q \"C:\\enterprisediscovery\\Modules\")",
       "Bash(.GUIBuild-GUI.ps1)",
-      "Bash(copy:*)"
+      "Bash(copy:*)",
+      "Bash(rg:*)",
+      "Bash(Start-Process \"dotnet\" -ArgumentList \"run\" -PassThru)",
+      "Bash(Test-Path \"C:\\DiscoveryData\\ljpops\\Credentials\\discoverycredentials.config\")"
     ],
     "deny": []
   }
