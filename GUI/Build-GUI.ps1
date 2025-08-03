@@ -8,7 +8,7 @@
     This script compiles the WPF application using .NET 6 and creates a self-contained executable
     that can be distributed and run on Windows systems without requiring .NET to be installed.
 
-.PARAMETER Configuration
+.PARAMETER Configurationmake sure
     Build configuration: Debug or Release (default: Release)
 
 .PARAMETER OutputPath

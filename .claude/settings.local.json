@@ -47,7 +47,9 @@
       "Bash(xcopy:*)",
       "Bash(cmd.exe /c robocopy \"D:\\Scripts\\UserMandA\\Modules\" \"C:\\enterprisediscovery\\Modules\" /E /XO)",
       "Bash(robocopy:*)",
-      "Bash(if exist \"C:\\enterprisediscovery\\Modules\" rmdir /s /q \"C:\\enterprisediscovery\\Modules\")"
+      "Bash(if exist \"C:\\enterprisediscovery\\Modules\" rmdir /s /q \"C:\\enterprisediscovery\\Modules\")",
+      "Bash(.GUIBuild-GUI.ps1)",
+      "Bash(copy:*)"
     ],
     "deny": []
   }

@@ -54,19 +54,15 @@ function Invoke-FileServerDiscovery {
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # Initialize result object
-    if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
-        $result = [DiscoveryResult]::new('FileServer')
-    } else {
-        $result = @{
-            Success = $true; ModuleName = 'FileServer'; RecordCount = 0;
-            Errors = [System.Collections.ArrayList]::new(); 
-            Warnings = [System.Collections.ArrayList]::new(); 
-            Metadata = @{}; StartTime = Get-Date; EndTime = $null; 
-            ExecutionId = [guid]::NewGuid().ToString();
-            AddError = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
-            AddWarning = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-            Complete = { $this.EndTime = Get-Date }.GetNewClosure()
+    # Ensure ClassDefinitions module is loaded
+    try {
+        if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+            Import-Module -Name "$PSScriptRoot\..\Core\ClassDefinitions.psm1" -Force -ErrorAction Stop
         }
+        $result = [DiscoveryResult]::new('FileServer')
+    } catch {
+        Write-FileServerLog -Level "ERROR" -Message "Failed to load DiscoveryResult class: $($_.Exception.Message)" -Context $Context
+        throw "Critical error: Cannot load required DiscoveryResult class. Discovery cannot proceed."
     }
 
     try {

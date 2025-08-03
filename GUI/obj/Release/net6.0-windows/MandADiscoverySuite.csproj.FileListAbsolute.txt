@@ -13,6 +13,8 @@ C:\enterprisediscovery\net6.0-windows\Modules\Compliance\ComplianceAssessmentFra
 C:\enterprisediscovery\net6.0-windows\Modules\Core\ClassDefinitions.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Core\CompanyProfileManager.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Core\ConfigurationManager.psm1
+C:\enterprisediscovery\net6.0-windows\Modules\Core\CredentialLoader.psm1
+C:\enterprisediscovery\net6.0-windows\Modules\Core\CredentialSecurity.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\DataMapping\DataLineageDependencyEngine.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\DataProcessing\DataDeduplicationEngine.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Discovery\ActiveDirectoryDiscovery.psm1
@@ -105,6 +107,7 @@ C:\enterprisediscovery\net6.0-windows\Scripts\Fix-CommentBlock.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\Fix-ModuleConflicts.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\Interactive-Menu.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\Launch-InteractiveMenu.ps1
+C:\enterprisediscovery\net6.0-windows\Scripts\Protect-CompanyCredentials.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\PurviewRecover.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\Purviewtest.ps1
 C:\enterprisediscovery\net6.0-windows\Scripts\Run-DiscoverySetup.ps1
@@ -117,6 +120,7 @@ C:\enterprisediscovery\net6.0-windows\Configuration\demo-config.json
 C:\enterprisediscovery\net6.0-windows\Configuration\suite-config.json
 C:\enterprisediscovery\net6.0-windows\Core\MandA-Orchestrator.ps1
 C:\enterprisediscovery\net6.0-windows\Tools\AutomatedFunctionalTester.ps1
+C:\enterprisediscovery\net6.0-windows\Modules\Core\StandardizedAuthentication.psm1
 C:\enterprisediscovery\net6.0-windows\MandADiscoverySuite.exe
 C:\enterprisediscovery\net6.0-windows\MandADiscoverySuite.deps.json
 C:\enterprisediscovery\net6.0-windows\MandADiscoverySuite.runtimeconfig.json

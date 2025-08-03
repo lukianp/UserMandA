@@ -59,7 +59,11 @@ try {
     
     # Import required modules
     Write-Host "Loading modules..." -ForegroundColor Yellow
+    Import-Module (Join-Path $ModulesPath "Core\ClassDefinitions.psm1") -Force
     Import-Module (Join-Path $ModulesPath "Core\CompanyProfileManager.psm1") -Force
+    Import-Module (Join-Path $ModulesPath "Core\CredentialLoader.psm1") -Force
+    Import-Module (Join-Path $ModulesPath "Authentication\SessionManager.psm1") -Force
+    Import-Module (Join-Path $ModulesPath "Authentication\AuthenticationService.psm1") -Force
     Import-Module (Join-Path $ModulesPath "Discovery\$ModuleName.psm1") -Force
     
     # Initialize company profile
@@ -70,7 +74,7 @@ try {
     # Create discovery context
     $context = @{
         Paths = @{
-            RawDataOutput = $profilePaths.RawDataPath
+            RawDataOutput = $profilePaths.Raw
         }
         CompanyName = $CompanyName
         DiscoverySession = [guid]::NewGuid().ToString()
@@ -81,18 +85,42 @@ try {
     Write-Host "Session: $($context.DiscoverySession)" -ForegroundColor Gray
     Write-Host ""
     
+    # Load credentials from company profile
+    Write-Host "Loading credentials..." -ForegroundColor Yellow
+    try {
+        $credentials = Get-CompanyCredentials -CompanyName $CompanyName
+        Write-Host "Credentials loaded successfully" -ForegroundColor Green
+        
+        # Test credential expiry
+        $expiryCheck = Test-CredentialExpiry -Credentials $credentials
+        if (-not $expiryCheck.Valid) {
+            throw "Credential validation failed: $($expiryCheck.Message)"
+        }
+        if ($expiryCheck.Warning) {
+            Write-Warning $expiryCheck.Message
+        }
+    }
+    catch {
+        Write-Host "Failed to load credentials from profile, falling back to parameters..." -ForegroundColor Yellow
+        $credentials = @{
+            TenantId = $TenantId
+            ClientId = $ClientId
+            ClientSecret = $ClientSecret
+        }
+    }
+    
     # Create configuration
     $configuration = @{
-        TenantId = $TenantId
-        ClientId = $ClientId
-        ClientSecret = $ClientSecret
+        TenantId = $credentials.TenantId
+        ClientId = $credentials.ClientId
+        ClientSecret = $credentials.ClientSecret
         CompanyName = $CompanyName
     }
     
     # Display configuration (without secrets)
     Write-Host "Configuration:" -ForegroundColor Yellow
-    Write-Host "Tenant ID: $($TenantId -replace '.', '*')" -ForegroundColor Gray
-    Write-Host "Client ID: $($ClientId -replace '.', '*')" -ForegroundColor Gray
+    Write-Host "Tenant ID: $($credentials.TenantId -replace '.', '*')" -ForegroundColor Gray
+    Write-Host "Client ID: $($credentials.ClientId -replace '.', '*')" -ForegroundColor Gray
     Write-Host ""
     
     # Execute discovery based on module name

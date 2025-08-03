@@ -14,6 +14,9 @@ C:\EnterpriseDiscovery\Modules\Compliance\ComplianceAssessmentFramework.psm1
 C:\EnterpriseDiscovery\Modules\Core\ClassDefinitions.psm1
 C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1
 C:\EnterpriseDiscovery\Modules\Core\ConfigurationManager.psm1
+C:\EnterpriseDiscovery\Modules\Core\CredentialLoader.psm1
+C:\EnterpriseDiscovery\Modules\Core\CredentialSecurity.psm1
+C:\EnterpriseDiscovery\Modules\Core\StandardizedAuthentication.psm1
 C:\EnterpriseDiscovery\Modules\DataMapping\DataLineageDependencyEngine.psm1
 C:\EnterpriseDiscovery\Modules\DataProcessing\DataDeduplicationEngine.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\ActiveDirectoryDiscovery.psm1
@@ -106,6 +109,7 @@ C:\EnterpriseDiscovery\Scripts\Fix-CommentBlock.ps1
 C:\EnterpriseDiscovery\Scripts\Fix-ModuleConflicts.ps1
 C:\EnterpriseDiscovery\Scripts\Interactive-Menu.ps1
 C:\EnterpriseDiscovery\Scripts\Launch-InteractiveMenu.ps1
+C:\EnterpriseDiscovery\Scripts\Protect-CompanyCredentials.ps1
 C:\EnterpriseDiscovery\Scripts\PurviewRecover.ps1
 C:\EnterpriseDiscovery\Scripts\Purviewtest.ps1
 C:\EnterpriseDiscovery\Scripts\Run-DiscoverySetup.ps1

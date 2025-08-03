@@ -23,6 +23,7 @@
 
 # Import required modules
 Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Core\ClassDefinitions.psm1") -Force
+Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Authentication\SessionManager.psm1") -Force
 Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Authentication\AuthenticationService.psm1") -Force
 
 function Start-DiscoveryModule {

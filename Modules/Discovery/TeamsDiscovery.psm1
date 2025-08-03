@@ -74,21 +74,15 @@ function Invoke-TeamsDiscovery {
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # 1. INITIALIZE RESULT OBJECT
-    if (([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
-        $result = [DiscoveryResult]::new('Teams')
-    } else {
-        # Fallback to hashtable
-        $result = @{
-            Success      = $true; ModuleName = 'Teams'; RecordCount = 0;
-            Errors       = [System.Collections.ArrayList]::new(); 
-            Warnings     = [System.Collections.ArrayList]::new(); 
-            Metadata     = @{};
-            StartTime    = Get-Date; EndTime = $null; 
-            ExecutionId  = [guid]::NewGuid().ToString();
-            AddError     = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
-            AddWarning   = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-            Complete     = { $this.EndTime = Get-Date }.GetNewClosure()
+    # Ensure ClassDefinitions module is loaded
+    try {
+        if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+            Import-Module -Name "$PSScriptRoot\..\Core\ClassDefinitions.psm1" -Force -ErrorAction Stop
         }
+        $result = [DiscoveryResult]::new('Teams')
+    } catch {
+        Write-TeamsLog -Level "ERROR" -Message "Failed to load DiscoveryResult class: $($_.Exception.Message)" -Context $Context
+        throw "Critical error: Cannot load required DiscoveryResult class. Discovery cannot proceed."
     }
 
     try {
@@ -463,9 +457,7 @@ function Invoke-TeamsDiscovery {
         $result.Complete()
         
         # Ensure RecordCount is properly set
-        if ($result -is [hashtable]) {
-            $result['RecordCount'] = $allDiscoveredData.Count
-        }
+        $result.RecordCount = $allDiscoveredData.Count
         
         Write-TeamsLog -Level $(if($result.Success){"SUCCESS"}else{"ERROR"}) -Message "Discovery completed with $($result.RecordCount) records" -Context $Context
         Write-TeamsLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context

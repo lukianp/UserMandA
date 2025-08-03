@@ -330,21 +330,6 @@ namespace MandADiscoverySuite
             public string ApplicationName { get; set; }
             public string ExpiryDate { get; set; }
             public int DaysUntilExpiry { get; set; }
-            public string ApplicationObjectId { get; set; }
-            public int PermissionCount { get; set; }
-            public string SecretKeyId { get; set; }
-            public string CreatedDate { get; set; }
-            public string ScriptVersion { get; set; }
-            public int ValidityYears { get; set; }
-            public string AzureRoles { get; set; }
-            public int AzureSubscriptionCount { get; set; }
-            public string ComputerName { get; set; }
-            public string Domain { get; set; }
-            public string PowerShellVersion { get; set; }
-            public string CreatedBy { get; set; }
-            public string CreatedOnComputer { get; set; }
-            public bool RoleAssignmentSuccess { get; set; }
-            public string[] AzureADRoles { get; set; }
         }
 
         private MandACredentials GetCompanyCredentials(string companyName)
@@ -445,8 +430,8 @@ namespace MandADiscoverySuite
                 }
 
                 // Log successful credential loading (without exposing secrets)
-                var maskedClientId = credentials.ClientId.Length > 8 ? credentials.ClientId.Substring(0, 8) + "****" : "****";
-                var maskedTenantId = credentials.TenantId.Length > 8 ? credentials.TenantId.Substring(0, 8) + "****" : "****";
+                var maskedClientId = credentials.ClientId.Substring(0, 8) + "****";
+                var maskedTenantId = credentials.TenantId.Substring(0, 8) + "****";
                 System.Diagnostics.Debug.WriteLine($"Successfully loaded credentials for {companyName} - ClientId: {maskedClientId}, TenantId: {maskedTenantId}");
 
                 return credentials;
@@ -2124,7 +2109,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Active Directory Discovery", 
                     $"Comprehensive Active Directory discovery for {companyProfile.Name}",
                     "-ModuleName", "ActiveDirectoryDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -2175,7 +2163,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Exchange Online Discovery", 
                     $"Comprehensive Exchange Online discovery for {companyProfile.Name}",
                     "-ModuleName", "ExchangeDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -2226,7 +2217,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "SharePoint Online Discovery", 
                     $"Comprehensive SharePoint Online discovery for {companyProfile.Name}",
                     "-ModuleName", "SharePointDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -2277,7 +2271,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Microsoft Teams Discovery", 
                     $"Comprehensive Microsoft Teams discovery for {companyProfile.Name}",
                     "-ModuleName", "TeamsDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -2328,7 +2325,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Azure Infrastructure Discovery", 
                     $"Comprehensive Azure infrastructure discovery for {companyProfile.Name}",
                     "-ModuleName", "AzureDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -2379,13 +2379,130 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Entra ID Application Discovery", 
                     $"Comprehensive Entra ID application discovery for {companyProfile.Name}",
                     "-ModuleName", "EntraIDAppDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
 
                 powerShellWindow.Show();
+# Generated by M&A Discovery Suite
+
+Write-Host '=== Entra ID Application Discovery ===' -ForegroundColor Cyan
+Write-Host 'Company: {companyProfile.Name}' -ForegroundColor White
+Write-Host 'Starting discovery...' -ForegroundColor Green
+Write-Host ''
+
+# Set execution location
+Set-Location '{rootPath}'
+
+# Import required modules
+Write-Host 'Loading modules...' -ForegroundColor Yellow
+Import-Module 'C:\EnterpriseDiscovery\Modules\Core\CompanyProfileManager.psm1' -Force
+Import-Module 'C:\EnterpriseDiscovery\Modules\Discovery\EntraIDAppDiscovery.psm1' -Force
+
+# Get the company profile
+Write-Host 'Initializing company profile...' -ForegroundColor Yellow
+$profileManager = Get-CompanyProfileManager -CompanyName '{companyProfile.Name}'
+$profilePaths = $profileManager.GetProfilePaths()
+$outputPath = $profilePaths.RawDataPath
+
+Write-Host 'Discovery context created:' -ForegroundColor Green
+Write-Host ""Path: $outputPath"" -ForegroundColor Gray
+
+# Ensure output directory exists
+if (-not (Test-Path $outputPath)) {{
+    New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
+}}
+
+# Create discovery context
+$context = @{{
+    Paths = @{{
+        RawDataOutput = $outputPath
+    }}
+    CompanyName = '{companyProfile.Name}'
+    DiscoverySession = [guid]::NewGuid().ToString()
+}}
+
+Write-Host 'Discovery context created:' -ForegroundColor Green
+Write-Host ""Session: $($context.DiscoverySession)"" -ForegroundColor Gray
+Write-Host ''
+
+# Create configuration for Entra ID App discovery
+$configuration = @{{
+    TenantId = $companyProfile.AzureConfig.TenantId
+    ClientId = $companyProfile.AzureConfig.ClientId
+    GraphScopes = @(
+        'Application.Read.All',
+        'Directory.Read.All',
+        'Policy.Read.All',
+        'IdentityProvider.Read.All',
+        'Organization.Read.All',
+        'User.Read.All',
+        'Group.Read.All',
+        'RoleManagement.Read.All'
+    )
+}}
+
+Write-Host 'Configuration:' -ForegroundColor Green
+Write-Host ""Tenant ID: $($configuration.TenantId)"" -ForegroundColor Gray
+Write-Host ""Client ID: $($configuration.ClientId)"" -ForegroundColor Gray
+Write-Host ''
+
+Write-Host 'Required Graph API permissions:' -ForegroundColor Yellow
+foreach ($scope in $configuration.GraphScopes) {{
+    Write-Host ""  - $scope"" -ForegroundColor Gray
+}}
+
+# Execute discovery
+Write-Host ''
+Write-Host 'Starting Entra ID application discovery...' -ForegroundColor Green
+Write-Host 'This may take several minutes depending on the number of applications...' -ForegroundColor Yellow
+Write-Host ''
+
+try {{
+    $discoveryData = Invoke-EntraIDAppDiscovery -Configuration $configuration -Context $context -SessionId $context.DiscoverySession
+    
+    Write-Host 'Discovery completed successfully!' -ForegroundColor Green
+    Write-Host ''
+    
+    # Export individual data types to CSV files
+    Write-Host 'Exporting data files...' -ForegroundColor Yellow
+    
+    if ($discoveryData.AppRegistrations -and $discoveryData.AppRegistrations.Count -gt 0) {{
+        $appRegFile = Join-Path $outputPath 'EntraIDAppRegistrations.csv'
+        $discoveryData.AppRegistrations | Export-Csv -Path $appRegFile -NoTypeInformation -Encoding UTF8
+        Write-Host ""  ✓ App registrations: $appRegFile"" -ForegroundColor Gray
+    }}
+    
+    if ($discoveryData.EnterpriseApps -and $discoveryData.EnterpriseApps.Count -gt 0) {{
+        $entAppFile = Join-Path $outputPath 'EntraIDEnterpriseApps.csv'
+        $discoveryData.EnterpriseApps | Export-Csv -Path $entAppFile -NoTypeInformation -Encoding UTF8
+        Write-Host ""  ✓ Enterprise applications: $entAppFile"" -ForegroundColor Gray
+    }}
+    
+    if ($discoveryData.ServicePrincipals -and $discoveryData.ServicePrincipals.Count -gt 0) {{
+        $spFile = Join-Path $outputPath 'EntraIDServicePrincipals.csv'
+        $discoveryData.ServicePrincipals | Export-Csv -Path $spFile -NoTypeInformation -Encoding UTF8
+        Write-Host ""  ✓ Service principals: $spFile"" -ForegroundColor Gray
+    }}
+    
+    if ($discoveryData.CertificateInventory -and $discoveryData.CertificateInventory.Count -gt 0) {{
+        $certFile = Join-Path $outputPath 'EntraIDCertificates.csv'
+        $discoveryData.CertificateInventory | Export-Csv -Path $certFile -NoTypeInformation -Encoding UTF8
+        Write-Host ""  ✓ Certificates: $certFile"" -ForegroundColor Gray
+    }}
+    
+    if ($discoveryData.SecretInventory -and $discoveryData.SecretInventory.Count -gt 0) {{
+        $secretFile = Join-Path $outputPath 'EntraIDSecrets.csv'
+        $discoveryData.SecretInventory | Export-Csv -Path $secretFile -NoTypeInformation -Encoding UTF8
+        Write-Host ""  ✓ Secrets: $secretFile"" -ForegroundColor Gray
+    }}
+    
+
             }
             catch (Exception ex)
             {
@@ -5623,7 +5740,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Infrastructure Discovery", 
                     $"Network and infrastructure discovery for {companyProfile.Name}",
                     "-ModuleName", "NetworkInfrastructureDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -5685,7 +5805,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Domain Discovery", 
                     $"Multi-domain forest discovery for {companyProfile.Name}",
                     "-ModuleName", "MultiDomainForestDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -5736,7 +5859,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "File Server Discovery", 
                     $"File server and storage discovery for {companyProfile.Name}",
                     "-ModuleName", "FileServerDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -5787,7 +5913,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Database Discovery", 
                     $"SQL Server and database discovery for {companyProfile.Name}",
                     "-ModuleName", "SQLServerDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -5838,7 +5967,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Security Discovery", 
                     $"Group Policy and security analysis for {companyProfile.Name}",
                     "-ModuleName", "SecurityGroupAnalysis",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -6849,7 +6981,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Application Discovery", 
                     $"Comprehensive application discovery for {companyProfile.Name}",
                     "-ModuleName", "ApplicationDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", companyProfile.TenantId ?? "",
+                    "-ClientId", "",
+                    "-ClientSecret", "")
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -6911,7 +7046,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Office 365 Tenant Discovery", 
                     $"Comprehensive Office 365 tenant discovery for {companyProfile.Name}",
                     "-ModuleName", "Office365Discovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -6963,7 +7101,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Intune Device Management Discovery", 
                     $"Comprehensive Intune device management discovery for {companyProfile.Name}",
                     "-ModuleName", "IntuneDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -7014,7 +7155,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Certificate Authority Discovery", 
                     $"PKI and Certificate Authority discovery for {companyProfile.Name}",
                     "-ModuleName", "CertificateAuthorityDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -7065,7 +7209,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "DNS & DHCP Discovery", 
                     $"DNS and DHCP network services discovery for {companyProfile.Name}",
                     "-ModuleName", "DNSDHCPDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -7116,7 +7263,10 @@ namespace MandADiscoverySuite
                 var powerShellWindow = new PowerShellWindow(launcherScriptPath, "Power Platform Discovery", 
                     $"Power Platform and Power BI discovery for {companyProfile.Name}",
                     "-ModuleName", "PowerPlatformDiscovery",
-                    "-CompanyName", companyProfile.Name)
+                    "-CompanyName", companyProfile.Name,
+                    "-TenantId", credentials.TenantId,
+                    "-ClientId", credentials.ClientId,
+                    "-ClientSecret", credentials.ClientSecret)
                 {
                     Owner = this,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner

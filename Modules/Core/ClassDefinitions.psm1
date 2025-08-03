@@ -103,6 +103,11 @@ public class DiscoveryResult {
                 this.RecordCount = ((System.Collections.ICollection)this.Data).Count;
             }
         }
+        
+        // Mark as failed if there are any errors
+        if (this.Errors.Count > 0) {
+            this.Success = false;
+        }
     }
     
     public string ToJsonString() {
