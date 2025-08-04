@@ -257,6 +257,7 @@ $script:AppConfig = @{
         "TeamSettings.Read.All" = "Read team settings and configuration"
         "Channel.ReadBasic.All" = "Read basic channel information"
         "ChannelMember.Read.All" = "Read channel members"
+        "AppCatalog.Read.All" = "Read Teams app catalog for application inventory"
         
         # Advanced features
         "Directory.ReadWrite.All" = "Read and write directory data (for migration scenarios)"
@@ -1470,6 +1471,151 @@ function New-EnhancedClientSecret {
     }
 }
 
+function Add-ServicePrincipalToAllSubscriptions {
+    param(
+        [Parameter(Mandatory=$true)]
+        [Microsoft.Graph.PowerShell.Models.MicrosoftGraphServicePrincipal]$ServicePrincipal
+    )
+    
+    Write-ProgressHeader "SUBSCRIPTION OBJECT ID ASSIGNMENT" "Adding service principal ObjectId to all Azure subscriptions"
+    
+    try {
+        if (-not $script:ConnectionStatus.Azure.Connected) {
+            Write-EnhancedLog "Azure connection not available - skipping subscription ObjectId assignment" -Level WARN
+            return
+        }
+        
+        Write-EnhancedLog "Adding service principal ObjectId to all subscriptions..." -Level PROGRESS
+        Write-EnhancedLog "Service Principal ObjectId: $($ServicePrincipal.Id)" -Level INFO
+        
+        # Get all subscriptions
+        $subscriptions = Get-AzSubscription -ErrorAction Stop
+        $enabledSubscriptions = $subscriptions | Where-Object { $_.State -eq "Enabled" }
+        
+        if (-not $enabledSubscriptions -or $enabledSubscriptions.Count -eq 0) {
+            Write-EnhancedLog "No enabled subscriptions found" -Level WARN
+            return
+        }
+        
+        Write-EnhancedLog "Found $($enabledSubscriptions.Count) enabled subscriptions" -Level SUCCESS
+        
+        $successCount = 0
+        $skipCount = 0
+        $errorCount = 0
+        $results = @()
+        
+        for ($i = 0; $i -lt $enabledSubscriptions.Count; $i++) {
+            $subscription = $enabledSubscriptions[$i]
+            $subscriptionName = $subscription.Name
+            $subscriptionId = $subscription.Id
+            
+            Write-Progress -Activity "Adding ObjectId to Subscriptions" -Status "Processing $subscriptionName - $($i+1) of $($enabledSubscriptions.Count)" -PercentComplete (($i / $enabledSubscriptions.Count) * 100)
+            Write-EnhancedLog "Processing subscription [$($i+1)/$($enabledSubscriptions.Count)]: $subscriptionName" -Level PROGRESS
+            
+            try {
+                # Set context to specific subscription
+                Set-AzContext -SubscriptionId $subscriptionId -ErrorAction Stop | Out-Null
+                
+                # Check if service principal already has access to this subscription
+                $existingAssignments = Get-AzRoleAssignment -ObjectId $ServicePrincipal.Id -ErrorAction SilentlyContinue
+                
+                if ($existingAssignments) {
+                    Write-EnhancedLog "  ObjectId already exists in subscription: $subscriptionName" -Level INFO
+                    $skipCount++
+                    $results += @{
+                        SubscriptionName = $subscriptionName
+                        SubscriptionId = $subscriptionId
+                        Status = "Already Present"
+                        RoleCount = $existingAssignments.Count
+                    }
+                } else {
+                    # The service principal ObjectId is automatically added when role assignments are made
+                    # Since we've already done role assignments, the ObjectId should be present
+                    # This is just a verification step
+                    Write-EnhancedLog "  Verifying ObjectId presence in subscription: $subscriptionName" -Level INFO
+                    
+                    # Try to get any role assignment for this service principal
+                    $roleCheck = Get-AzRoleAssignment -ObjectId $ServicePrincipal.Id -Scope "/subscriptions/$subscriptionId" -ErrorAction SilentlyContinue
+                    
+                    if ($roleCheck) {
+                        Write-EnhancedLog "  ObjectId confirmed present via role assignments: $subscriptionName" -Level SUCCESS
+                        $successCount++
+                        $results += @{
+                            SubscriptionName = $subscriptionName
+                            SubscriptionId = $subscriptionId
+                            Status = "Confirmed Present"
+                            RoleCount = $roleCheck.Count
+                        }
+                    } else {
+                        Write-EnhancedLog "  ObjectId not found in subscription: $subscriptionName" -Level WARN
+                        $errorCount++
+                        $results += @{
+                            SubscriptionName = $subscriptionName
+                            SubscriptionId = $subscriptionId
+                            Status = "Not Found"
+                            RoleCount = 0
+                        }
+                    }
+                }
+                
+            } catch {
+                $errorMsg = $_.Exception.Message
+                Write-EnhancedLog "  Failed to process subscription $subscriptionName : $errorMsg" -Level ERROR
+                $errorCount++
+                $results += @{
+                    SubscriptionName = $subscriptionName
+                    SubscriptionId = $subscriptionId
+                    Status = "Error"
+                    Error = $errorMsg
+                }
+            }
+        }
+        
+        Write-Progress -Activity "Adding ObjectId to Subscriptions" -Completed
+        
+        # Summary
+        Write-EnhancedLog "Subscription ObjectId assignment summary:" -Level INFO
+        Write-EnhancedLog "  Total Subscriptions: $($enabledSubscriptions.Count)" -Level INFO
+        Write-EnhancedLog "  Confirmed Present: $successCount" -Level SUCCESS
+        Write-EnhancedLog "  Already Present: $skipCount" -Level INFO
+        Write-EnhancedLog "  Errors: $errorCount" -Level $(if ($errorCount -gt 0) { "WARN" } else { "INFO" })
+        
+        # Detailed results
+        if ($results.Count -gt 0) {
+            Write-EnhancedLog "Detailed results:" -Level INFO
+            foreach ($result in $results) {
+                $statusColor = switch ($result.Status) {
+                    "Confirmed Present" { "SUCCESS" }
+                    "Already Present" { "INFO" }
+                    "Not Found" { "WARN" }
+                    "Error" { "ERROR" }
+                    default { "INFO" }
+                }
+                
+                if ($result.Status -eq "Error") {
+                    Write-EnhancedLog "  $($result.SubscriptionName): $($result.Status) - $($result.Error)" -Level $statusColor
+                } elseif ($result.RoleCount -and $result.RoleCount -gt 0) {
+                    Write-EnhancedLog "  $($result.SubscriptionName): $($result.Status) ($($result.RoleCount) roles)" -Level $statusColor
+                } else {
+                    Write-EnhancedLog "  $($result.SubscriptionName): $($result.Status)" -Level $statusColor
+                }
+            }
+        }
+        
+        if ($successCount + $skipCount -eq $enabledSubscriptions.Count) {
+            Write-EnhancedLog "Service principal ObjectId successfully verified in all subscriptions!" -Level SUCCESS
+        } elseif ($successCount + $skipCount -gt 0) {
+            Write-EnhancedLog "Service principal ObjectId verified in $($successCount + $skipCount) of $($enabledSubscriptions.Count) subscriptions" -Level WARN
+        } else {
+            Write-EnhancedLog "Failed to verify service principal ObjectId in any subscriptions" -Level ERROR
+        }
+        
+    } catch {
+        Write-EnhancedLog "Failed to process subscription ObjectId assignments: $($_.Exception.Message)" -Level ERROR
+        throw
+    }
+}
+
 function Save-EnhancedCredentials {
     param(
         [Parameter(Mandatory=$true)]
@@ -1732,6 +1878,9 @@ PowerShell: $($PSVersionTable.PSVersion)
     
     # Assign roles
     Set-EnhancedRoleAssignments -ServicePrincipal $servicePrincipal
+    
+    # Add service principal ObjectId to all subscriptions
+    Add-ServicePrincipalToAllSubscriptions -ServicePrincipal $servicePrincipal
     
     # Create client secret
     $clientSecret = New-EnhancedClientSecret -AppRegistration $appRegistration

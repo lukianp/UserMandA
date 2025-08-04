@@ -5,8 +5,10 @@ using System.Windows.Input;
 using System.Linq;
 using Microsoft.Win32;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -17,6 +19,11 @@ namespace MandADiscoverySuite.ViewModels
         
         public UserDetailViewModel(dynamic selectedUser, string rawDataPath)
         {
+            if (selectedUser == null)
+                throw new ArgumentNullException(nameof(selectedUser));
+            if (string.IsNullOrWhiteSpace(rawDataPath))
+                throw new ArgumentException("Raw data path cannot be null or empty", nameof(rawDataPath));
+
             _rawDataPath = rawDataPath;
             GroupMemberships = new ObservableCollection<GroupMembership>();
             ApplicationAssignments = new ObservableCollection<ApplicationAssignment>();
@@ -143,6 +150,12 @@ namespace MandADiscoverySuite.ViewModels
         
         private void LoadUserData(dynamic selectedUser)
         {
+            if (selectedUser == null)
+            {
+                DisplayName = "Unknown User";
+                return;
+            }
+
             try
             {
                 _userData = new UserDetailData
@@ -181,12 +194,15 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading user data: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ErrorHandlingService.Instance.HandleException(ex, "Loading user data", true);
             }
         }
         
         private string GetPropertyValue(dynamic obj, string propertyName)
         {
+            if (obj == null || string.IsNullOrWhiteSpace(propertyName))
+                return null;
+
             try
             {
                 var prop = obj.GetType().GetProperty(propertyName);
@@ -200,37 +216,58 @@ namespace MandADiscoverySuite.ViewModels
         
         private void LoadGroupMemberships()
         {
-            try
+            // Execute on background thread to avoid blocking UI
+            Task.Run(async () =>
             {
-                GroupMemberships.Clear();
-                string groupsFile = Path.Combine(_rawDataPath, "Groups.csv");
-                
-                if (File.Exists(groupsFile))
+                try
                 {
-                    var groupLines = File.ReadAllLines(groupsFile).Skip(1);
-                    foreach (var line in groupLines)
+                    await LoadGroupMembershipsAsync();
+                }
+                catch (Exception ex)
+                {
+                    ErrorHandlingService.Instance.HandleException(ex, "Loading group memberships");
+                }
+            });
+        }
+
+        private async Task LoadGroupMembershipsAsync()
+        {
+            var tempMemberships = new List<GroupMembership>();
+            string groupsFile = Path.Combine(_rawDataPath, "Groups.csv");
+            
+            if (File.Exists(groupsFile))
+            {
+                var allLines = await File.ReadAllLinesAsync(groupsFile);
+                var groupLines = allLines.Skip(1);
+                foreach (var line in groupLines)
+                {
+                    var parts = ParseCsvLine(line);
+                    if (parts.Length > 10)
                     {
-                        var parts = ParseCsvLine(line);
-                        if (parts.Length > 10)
+                        string sampleMembers = parts.Length > 15 ? parts[15] : "";
+                        if (!string.IsNullOrEmpty(sampleMembers) && 
+                            !string.IsNullOrEmpty(_userData?.Id) &&
+                            sampleMembers.Contains(_userData.Id, StringComparison.OrdinalIgnoreCase))
                         {
-                            string sampleMembers = parts.Length > 15 ? parts[15] : "";
-                            if (!string.IsNullOrEmpty(sampleMembers) && 
-                                sampleMembers.Contains(_userData.Id, StringComparison.OrdinalIgnoreCase))
+                            tempMemberships.Add(new GroupMembership
                             {
-                                GroupMemberships.Add(new GroupMembership
-                                {
-                                    DisplayName = parts[2],
-                                    GroupType = parts[4].Contains("Unified") ? "Microsoft 365" : "Security"
-                                });
-                            }
+                                DisplayName = parts[2],
+                                GroupType = parts[4].Contains("Unified") ? "Microsoft 365" : "Security"
+                            });
                         }
                     }
                 }
             }
-            catch (Exception ex)
+            
+            // Update UI on main thread
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading group memberships: {ex.Message}");
-            }
+                GroupMemberships.Clear();
+                foreach (var membership in tempMemberships)
+                {
+                    GroupMemberships.Add(membership);
+                }
+            });
         }
         
         private void LoadApplicationAssignments()
@@ -365,8 +402,7 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error exporting profile: {ex.Message}", "Export Error", 
-                              MessageBoxButton.OK, MessageBoxImage.Error);
+                ErrorHandlingService.Instance.HandleException(ex, "Exporting user profile", true);
             }
         }
         
@@ -406,6 +442,9 @@ Last Sign-In: {LastSignIn}
         
         private string[] ParseCsvLine(string line)
         {
+            if (string.IsNullOrEmpty(line))
+                return new string[0];
+
             var result = new List<string>();
             bool inQuotes = false;
             string currentField = "";
@@ -431,6 +470,28 @@ Last Sign-In: {LastSignIn}
             
             result.Add(currentField.Trim('"'));
             return result.ToArray();
+        }
+
+        protected override void OnDisposing()
+        {
+            try
+            {
+                // Clear collections
+                GroupMemberships?.Clear();
+                ApplicationAssignments?.Clear();
+                DeviceRelationships?.Clear();
+                DirectoryRoles?.Clear();
+                LicenseAssignments?.Clear();
+                
+                // Clear user data
+                _userData = null;
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "UserDetailViewModel disposal");
+            }
+            
+            base.OnDisposing();
         }
     }
 }

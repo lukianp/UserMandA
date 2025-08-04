@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Themes;
+using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite
 {
@@ -17,8 +18,17 @@ namespace MandADiscoverySuite
         {
             InitializeComponent();
             
-            // Initialize ViewModel and set as DataContext
-            ViewModel = new MainViewModel();
+            // Initialize ViewModel using dependency injection and set as DataContext
+            try
+            {
+                ViewModel = SimpleServiceLocator.GetService<MainViewModel>();
+            }
+            catch (Exception)
+            {
+                // Fallback to direct instantiation if DI fails
+                ViewModel = new MainViewModel();
+            }
+            
             DataContext = ViewModel;
             
             // Apply initial theme

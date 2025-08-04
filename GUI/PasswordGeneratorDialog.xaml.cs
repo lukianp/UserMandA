@@ -7,6 +7,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using MandADiscoverySuite.Themes;
+using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite
 {
@@ -70,8 +71,7 @@ namespace MandADiscoverySuite
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to copy password: {ex.Message}", "Copy Failed", 
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                ErrorHandlingService.Instance.HandleException(ex, "Copying password to clipboard", true);
             }
         }
 
@@ -86,8 +86,7 @@ namespace MandADiscoverySuite
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Failed to copy password: {ex.Message}", "Copy Failed", 
-                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    ErrorHandlingService.Instance.HandleException(ex, "Copying individual password to clipboard", true);
                 }
             }
         }
@@ -138,8 +137,7 @@ namespace MandADiscoverySuite
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to save passwords: {ex.Message}", "Save Failed", 
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                ErrorHandlingService.Instance.HandleException(ex, "Saving passwords to file", true);
             }
         }
 

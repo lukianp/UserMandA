@@ -2,12 +2,17 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using MandADiscoverySuite.Themes;
+using MandADiscoverySuite.Services;
+using MandADiscoverySuite.Models;
 
 namespace MandADiscoverySuite
 {
     public partial class CreateProfileDialog : Window
     {
         public string ProfileName { get; private set; } = "";
+        public CompanyProfile Profile { get; private set; }
+
+        private bool _isEditMode = false;
 
         public CreateProfileDialog()
         {
@@ -17,6 +22,19 @@ namespace MandADiscoverySuite
             ThemeManager.Instance.ApplyThemeToWindow(this);
             
             ProfileNameTextBox.Focus();
+        }
+
+        public CreateProfileDialog(CompanyProfile existingProfile) : this()
+        {
+            if (existingProfile != null)
+            {
+                _isEditMode = true;
+                Profile = existingProfile;
+                ProfileName = existingProfile.CompanyName;
+                ProfileNameTextBox.Text = existingProfile.CompanyName;
+                Title = "Edit Company Profile";
+                CreateButton.Content = "Update";
+            }
         }
 
         private void Create_Click(object sender, RoutedEventArgs e)
@@ -29,6 +47,26 @@ namespace MandADiscoverySuite
             }
 
             ProfileName = ProfileNameTextBox.Text.Trim();
+            
+            if (_isEditMode)
+            {
+                // Update existing profile
+                Profile.CompanyName = ProfileName;
+                Profile.LastModified = System.DateTime.Now;
+            }
+            else
+            {
+                // Create new profile
+                Profile = new CompanyProfile
+                {
+                    Id = System.Guid.NewGuid().ToString(),
+                    CompanyName = ProfileName,
+                    Created = System.DateTime.Now,
+                    LastModified = System.DateTime.Now,
+                    IsActive = true
+                };
+            }
+            
             DialogResult = true;
             Close();
         }
@@ -60,47 +98,26 @@ namespace MandADiscoverySuite
         {
             try
             {
-                var input = ProfileNameTextBox.Text.Trim();
+                var input = ProfileNameTextBox.Text;
+                var validationResult = InputValidationService.Instance.ValidateCompanyName(input);
                 
-                if (string.IsNullOrWhiteSpace(input))
+                if (!validationResult.IsValid)
                 {
-                    ShowValidationError("Company name cannot be empty");
-                    return;
+                    ShowValidationError(validationResult.GetSummaryMessage());
                 }
-
-                if (input.Length < 2)
+                else if (validationResult.HasWarnings)
                 {
-                    ShowValidationError("Company name must be at least 2 characters long");
-                    return;
+                    ShowValidationWarning(validationResult.GetSummaryMessage());
                 }
-
-                if (input.Length > 100)
+                else
                 {
-                    ShowValidationError("Company name cannot exceed 100 characters");
-                    return;
+                    ShowValidationSuccess(validationResult.GetSummaryMessage());
                 }
-
-                // Check for invalid characters
-                char[] invalidChars = { '<', '>', '"', '|', '?', '*', ':', '\\', '/', '\0' };
-                if (input.Any(c => invalidChars.Contains(c)))
-                {
-                    ShowValidationError("Company name contains invalid characters");
-                    return;
-                }
-
-                // Check for reserved names
-                string[] reservedNames = { "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9" };
-                if (reservedNames.Contains(input.ToUpper()))
-                {
-                    ShowValidationError("Company name cannot be a reserved system name");
-                    return;
-                }
-
-                ShowValidationSuccess($"Valid company name ({input.Length} characters)");
             }
             catch (System.Exception ex)
             {
-                ShowValidationError($"Validation error: {ex.Message}");
+                var errorMessage = ErrorHandlingService.Instance.HandleException(ex, "Profile name validation");
+                ShowValidationError(errorMessage);
             }
         }
 
@@ -113,6 +130,19 @@ namespace MandADiscoverySuite
                 ProfileNameTextBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(60, 31, 31));
                 ProfileNameValidationText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(229, 62, 62));
                 ProfileNameValidationText.Text = $"❌ {message}";
+                ProfileNameValidationText.Visibility = Visibility.Visible;
+            });
+        }
+
+        private void ShowValidationWarning(string message)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                ProfileNameTextBox.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(237, 137, 54));
+                ProfileNameTextBox.BorderThickness = new Thickness(2);
+                ProfileNameTextBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(45, 55, 72));
+                ProfileNameValidationText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(237, 137, 54));
+                ProfileNameValidationText.Text = $"⚠️ {message}";
                 ProfileNameValidationText.Visibility = Visibility.Visible;
             });
         }

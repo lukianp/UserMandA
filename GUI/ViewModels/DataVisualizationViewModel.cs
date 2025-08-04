@@ -2,8 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Services;
+using MandADiscoverySuite.Constants;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -90,14 +94,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Available time periods
         /// </summary>
-        public List<string> TimePeriods { get; } = new List<string>
-        {
-            "All",
-            "Last 24 Hours",
-            "Last 7 Days",
-            "Last 30 Days",
-            "Last 90 Days"
-        };
+        public List<string> TimePeriods { get; } = AppConstants.TimePeriods.ToList();
 
         /// <summary>
         /// Total items discovered
@@ -155,36 +152,52 @@ namespace MandADiscoverySuite.ViewModels
                 return;
             }
 
-            var filteredData = FilterDataByTimePeriod(DataSource);
-            
-            switch (SelectedChartType)
+            // Execute heavy data processing on background thread to avoid blocking UI
+            Task.Run(() =>
             {
-                case "ModuleBreakdown":
-                    GenerateModuleBreakdownChart(filteredData);
-                    break;
+                try
+                {
+                    // Capture current state to avoid collection modification issues
+                    var dataSnapshot = DataSource?.ToList() ?? new List<DiscoveryResult>();
+                    var chartType = SelectedChartType;
+                    
+                    var filteredData = FilterDataByTimePeriod(dataSnapshot);
+                    
+                    // Process chart data on background thread
+                    switch (chartType)
+                    {
+                        case AppConstants.ChartTypes.ModuleBreakdown:
+                            GenerateModuleBreakdownChart(filteredData);
+                            break;
 
-                case "ItemDistribution":
-                    GenerateItemDistributionChart(filteredData);
-                    break;
+                        case AppConstants.ChartTypes.ItemDistribution:
+                            GenerateItemDistributionChart(filteredData);
+                            break;
 
-                case "Timeline":
-                    GenerateTimelineChart(filteredData);
-                    break;
+                        case AppConstants.ChartTypes.Timeline:
+                            GenerateTimelineChart(filteredData);
+                            break;
 
-                case "StatusOverview":
-                    GenerateStatusOverviewChart(filteredData);
-                    break;
+                        case AppConstants.ChartTypes.StatusOverview:
+                            GenerateStatusOverviewChart(filteredData);
+                            break;
 
-                case "Performance":
-                    GeneratePerformanceChart(filteredData);
-                    break;
+                        case AppConstants.ChartTypes.Performance:
+                            GeneratePerformanceChart(filteredData);
+                            break;
 
-                case "Trends":
-                    GenerateTrendsChart(filteredData);
-                    break;
-            }
+                        case AppConstants.ChartTypes.Trends:
+                            GenerateTrendsChart(filteredData);
+                            break;
+                    }
 
-            UpdateStatistics(filteredData);
+                    UpdateStatistics(filteredData);
+                }
+                catch (Exception ex)
+                {
+                    ErrorHandlingService.Instance.HandleException(ex, "Updating data visualization");
+                }
+            });
         }
 
         private IEnumerable<DiscoveryResult> FilterDataByTimePeriod(IEnumerable<DiscoveryResult> data)
@@ -205,8 +218,6 @@ namespace MandADiscoverySuite.ViewModels
 
         private void GenerateModuleBreakdownChart(IEnumerable<DiscoveryResult> data)
         {
-            ChartData.Clear();
-            
             var moduleGroups = data.GroupBy(r => r.DisplayName)
                                   .Select(g => new ChartDataPoint
                                   {
@@ -216,42 +227,40 @@ namespace MandADiscoverySuite.ViewModels
                                       Category = "Module"
                                   })
                                   .OrderByDescending(p => p.Value)
-                                  .Take(10);
-
-            foreach (var point in moduleGroups)
-            {
-                ChartData.Add(point);
-            }
+                                  .Take(10)
+                                  .ToList();
 
             if (ShowPercentages)
             {
-                var total = ChartData.Sum(p => p.Value);
-                foreach (var point in ChartData)
+                var total = moduleGroups.Sum(p => p.Value);
+                foreach (var point in moduleGroups)
                 {
                     point.Percentage = total > 0 ? (point.Value / total) * 100 : 0;
                 }
             }
+
+            // Update UI on main thread
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                ChartData.Clear();
+                foreach (var point in moduleGroups)
+                {
+                    ChartData.Add(point);
+                }
+            });
         }
 
         private void GenerateItemDistributionChart(IEnumerable<DiscoveryResult> data)
         {
-            ChartData.Clear();
-            
-            var ranges = new[]
-            {
-                new { Label = "0-100", Min = 0, Max = 100 },
-                new { Label = "101-1K", Min = 101, Max = 1000 },
-                new { Label = "1K-10K", Min = 1001, Max = 10000 },
-                new { Label = "10K-100K", Min = 10001, Max = 100000 },
-                new { Label = "100K+", Min = 100001, Max = int.MaxValue }
-            };
+            var ranges = AppConstants.DataRanges.ItemDistributionRanges;
 
+            var chartPoints = new List<ChartDataPoint>();
             foreach (var range in ranges)
             {
                 var count = data.Count(r => r.ItemCount >= range.Min && r.ItemCount <= range.Max);
                 if (count > 0)
                 {
-                    ChartData.Add(new ChartDataPoint
+                    chartPoints.Add(new ChartDataPoint
                     {
                         Label = range.Label,
                         Value = count,
@@ -260,12 +269,20 @@ namespace MandADiscoverySuite.ViewModels
                     });
                 }
             }
+
+            // Update UI on main thread
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                ChartData.Clear();
+                foreach (var point in chartPoints)
+                {
+                    ChartData.Add(point);
+                }
+            });
         }
 
         private void GenerateTimelineChart(IEnumerable<DiscoveryResult> data)
         {
-            TimeSeriesData.Clear();
-            
             var dailyData = data.GroupBy(r => r.DiscoveryTime.Date)
                                .Select(g => new TimeSeriesDataPoint
                                {
@@ -273,18 +290,22 @@ namespace MandADiscoverySuite.ViewModels
                                    Value = g.Sum(r => r.ItemCount),
                                    Count = g.Count()
                                })
-                               .OrderBy(p => p.Date);
+                               .OrderBy(p => p.Date)
+                               .ToList();
 
-            foreach (var point in dailyData)
+            // Update UI on main thread
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                TimeSeriesData.Add(point);
-            }
+                TimeSeriesData.Clear();
+                foreach (var point in dailyData)
+                {
+                    TimeSeriesData.Add(point);
+                }
+            });
         }
 
         private void GenerateStatusOverviewChart(IEnumerable<DiscoveryResult> data)
         {
-            ChartData.Clear();
-            
             var statusGroups = data.GroupBy(r => r.Status)
                                   .Select(g => new ChartDataPoint
                                   {
@@ -292,18 +313,22 @@ namespace MandADiscoverySuite.ViewModels
                                       Value = g.Count(),
                                       Color = GetStatusColor(g.Key),
                                       Category = "Status"
-                                  });
+                                  })
+                                  .ToList();
 
-            foreach (var point in statusGroups)
+            // Update UI on main thread
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                ChartData.Add(point);
-            }
+                ChartData.Clear();
+                foreach (var point in statusGroups)
+                {
+                    ChartData.Add(point);
+                }
+            });
         }
 
         private void GeneratePerformanceChart(IEnumerable<DiscoveryResult> data)
         {
-            ChartData.Clear();
-            
             var performanceData = data.Where(r => r.Duration.TotalSeconds > 0)
                                      .Select(r => new ChartDataPoint
                                      {
@@ -313,18 +338,22 @@ namespace MandADiscoverySuite.ViewModels
                                          Color = GetModuleColor(r.DisplayName),
                                          Category = "Performance"
                                      })
-                                     .OrderByDescending(p => p.SecondaryValue);
+                                     .OrderByDescending(p => p.SecondaryValue)
+                                     .ToList();
 
-            foreach (var point in performanceData)
+            // Update UI on main thread
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                ChartData.Add(point);
-            }
+                ChartData.Clear();
+                foreach (var point in performanceData)
+                {
+                    ChartData.Add(point);
+                }
+            });
         }
 
         private void GenerateTrendsChart(IEnumerable<DiscoveryResult> data)
         {
-            TimeSeriesData.Clear();
-            
             var weeklyData = data.GroupBy(r => GetWeekStartDate(r.DiscoveryTime))
                                 .Select(g => new TimeSeriesDataPoint
                                 {
@@ -333,40 +362,52 @@ namespace MandADiscoverySuite.ViewModels
                                     Count = g.Count(),
                                     AverageValue = g.Average(r => r.ItemCount)
                                 })
-                                .OrderBy(p => p.Date);
+                                .OrderBy(p => p.Date)
+                                .ToList();
 
-            foreach (var point in weeklyData)
+            // Update UI on main thread
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                TimeSeriesData.Add(point);
-            }
+                TimeSeriesData.Clear();
+                foreach (var point in weeklyData)
+                {
+                    TimeSeriesData.Add(point);
+                }
+            });
         }
 
         private void UpdateStatistics(IEnumerable<DiscoveryResult> data)
         {
-            Statistics.Clear();
-            
             var dataList = data.ToList();
             
-            Statistics.Add(new StatisticItem("Total Items", dataList.Sum(r => r.ItemCount).ToString("N0"), "📊"));
-            Statistics.Add(new StatisticItem("Total Modules", dataList.Count.ToString(), "🔧"));
-            Statistics.Add(new StatisticItem("Avg Items/Module", dataList.Count > 0 ? (dataList.Sum(r => r.ItemCount) / (double)dataList.Count).ToString("N0") : "0", "📈"));
-            Statistics.Add(new StatisticItem("Success Rate", dataList.Count > 0 ? $"{(dataList.Count(r => r.Status == "Completed") / (double)dataList.Count * 100):F1}%" : "0%", "✅"));
+            var statisticItems = new List<StatisticItem>
+            {
+                new StatisticItem("Total Items", dataList.Sum(r => r.ItemCount).ToString("N0"), "📊"),
+                new StatisticItem("Total Modules", dataList.Count.ToString(), "🔧"),
+                new StatisticItem("Avg Items/Module", dataList.Count > 0 ? (dataList.Sum(r => r.ItemCount) / (double)dataList.Count).ToString("N0") : "0", "📈"),
+                new StatisticItem("Success Rate", dataList.Count > 0 ? $"{(dataList.Count(r => r.Status == "Completed") / (double)dataList.Count * 100):F1}%" : "0%", "✅")
+            };
             
             if (dataList.Any())
             {
-                Statistics.Add(new StatisticItem("Latest Discovery", dataList.Max(r => r.DiscoveryTime).ToString("yyyy-MM-dd HH:mm"), "🕐"));
-                Statistics.Add(new StatisticItem("Largest Module", dataList.OrderByDescending(r => r.ItemCount).First().DisplayName, "🎯"));
+                statisticItems.Add(new StatisticItem("Latest Discovery", dataList.Max(r => r.DiscoveryTime).ToString("yyyy-MM-dd HH:mm"), "🕐"));
+                statisticItems.Add(new StatisticItem("Largest Module", dataList.OrderByDescending(r => r.ItemCount).First().DisplayName, "🎯"));
             }
+
+            // Update UI on main thread
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                Statistics.Clear();
+                foreach (var item in statisticItems)
+                {
+                    Statistics.Add(item);
+                }
+            });
         }
 
         private string GetModuleColor(string moduleName)
         {
-            var colors = new[]
-            {
-                "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF",
-                "#FF9F40", "#FF6384", "#C9CBCF", "#4BC0C0", "#FF6384"
-            };
-            
+            var colors = AppConstants.Colors.ChartPalette;
             return colors[Math.Abs(moduleName.GetHashCode()) % colors.Length];
         }
 
@@ -387,11 +428,11 @@ namespace MandADiscoverySuite.ViewModels
         {
             return status switch
             {
-                "Completed" => "#4BC0C0",
-                "Failed" => "#FF6384",
-                "Running" => "#36A2EB",
-                "Cancelled" => "#FFCE56",
-                _ => "#C9CBCF"
+                "Completed" => AppConstants.Colors.StatusCompleted,
+                "Failed" => AppConstants.Colors.StatusFailed,
+                "Running" => AppConstants.Colors.StatusRunning,
+                "Cancelled" => AppConstants.Colors.StatusCancelled,
+                _ => AppConstants.Colors.StatusDisabled
             };
         }
 
@@ -419,17 +460,137 @@ namespace MandADiscoverySuite.ViewModels
 
         private void ExportChart()
         {
-            // TODO: Implement chart export functionality
-            // This could export to PNG, PDF, or Excel formats
+            try
+            {
+                var saveDialog = new Microsoft.Win32.SaveFileDialog
+                {
+                    Filter = "CSV files (*.csv)|*.csv|JSON files (*.json)|*.json|All files (*.*)|*.*",
+                    FileName = $"ChartData_{DateTime.Now:yyyyMMdd_HHmmss}"
+                };
+
+                if (saveDialog.ShowDialog() == true)
+                {
+                    var extension = System.IO.Path.GetExtension(saveDialog.FileName).ToLower();
+                    if (extension == ".json")
+                    {
+                        ExportToJson(saveDialog.FileName);
+                    }
+                    else
+                    {
+                        ExportToCsv(saveDialog.FileName);
+                    }
+                    
+                    MessageBox.Show("Chart data exported successfully!", "Export Complete", 
+                                  MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Exporting chart data", true);
+            }
+        }
+        
+        private void ExportToCsv(string filePath)
+        {
+            var lines = new List<string> { "Label,Value,Category,Percentage" };
+            
+            foreach (var point in ChartData)
+            {
+                lines.Add($"{EscapeCsv(point.Label)},{point.Value},{EscapeCsv(point.Category)},{point.Percentage:F2}");
+            }
+            
+            System.IO.File.WriteAllLines(filePath, lines);
+        }
+        
+        private void ExportToJson(string filePath)
+        {
+            var data = ChartData.Select(p => new
+            {
+                Label = p.Label,
+                Value = p.Value,
+                Category = p.Category,
+                Percentage = p.Percentage,
+                Color = p.Color
+            }).ToList();
+            
+            var json = System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+            
+            System.IO.File.WriteAllText(filePath, json);
+        }
+        
+        private string EscapeCsv(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "";
+            if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
+            {
+                return $"\"{value.Replace("\"", "\"\"")}\";";
+            }
+            return value;
         }
 
         private void DrillDown(ChartDataPoint dataPoint)
         {
-            if (dataPoint != null)
+            if (dataPoint == null) return;
+            
+            try
             {
-                // TODO: Implement drill-down functionality
-                // This could show detailed data for the selected point
+                // Filter data source to show only items related to the selected data point
+                var filteredResults = new List<DiscoveryResult>();
+                
+                if (DataSource != null)
+                {
+                    switch (dataPoint.Category)
+                    {
+                        case "Module":
+                            filteredResults = DataSource.Where(r => r.DisplayName == dataPoint.Label).ToList();
+                            break;
+                        case "Status":
+                            filteredResults = DataSource.Where(r => r.Status == dataPoint.Label).ToList();
+                            break;
+                        case "Range":
+                            // Parse range and filter by item count
+                            var (min, max) = ParseRange(dataPoint.Label);
+                            filteredResults = DataSource.Where(r => r.ItemCount >= min && r.ItemCount <= max).ToList();
+                            break;
+                        default:
+                            filteredResults = DataSource.ToList();
+                            break;
+                    }
+                }
+                
+                // Show filtered results in a message box for now
+                // In a full implementation, this would open a detailed view window
+                var message = $"Drill-down for {dataPoint.Label}:\n\n";
+                message += $"Total Results: {filteredResults.Count}\n";
+                message += $"Total Items: {filteredResults.Sum(r => r.ItemCount):N0}\n\n";
+                
+                if (filteredResults.Any())
+                {
+                    message += "Top 5 Results:\n";
+                    foreach (var result in filteredResults.OrderByDescending(r => r.ItemCount).Take(5))
+                    {
+                        message += $"- {result.DisplayName}: {result.ItemCount:N0} items\n";
+                    }
+                }
+                
+                MessageBox.Show(message, $"Drill-down: {dataPoint.Label}", 
+                              MessageBoxButton.OK, MessageBoxImage.Information);
             }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Chart drill-down", true);
+            }
+        }
+        
+        private (int min, int max) ParseRange(string range)
+        {
+            var rangeData = AppConstants.DataRanges.ItemDistributionRanges
+                .FirstOrDefault(r => r.Label == range);
+            
+            return rangeData.Label != null ? (rangeData.Min, rangeData.Max) : (0, int.MaxValue);
         }
 
         #endregion

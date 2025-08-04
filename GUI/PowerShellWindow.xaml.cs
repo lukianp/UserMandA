@@ -129,8 +129,11 @@ namespace MandADiscoverySuite
 
             powerShellProcess = new Process { StartInfo = startInfo };
 
-            // Handle output
-            powerShellProcess.OutputDataReceived += (sender, e) =>
+            // Store event handlers for proper cleanup
+            DataReceivedEventHandler outputHandler = null;
+            DataReceivedEventHandler errorHandler = null;
+            
+            outputHandler = (sender, e) =>
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
@@ -138,7 +141,7 @@ namespace MandADiscoverySuite
                 }
             };
 
-            powerShellProcess.ErrorDataReceived += (sender, e) =>
+            errorHandler = (sender, e) =>
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
@@ -146,45 +149,63 @@ namespace MandADiscoverySuite
                 }
             };
 
-            AppendOutput("Launching PowerShell process...", Colors.Cyan);
-            
-            powerShellProcess.Start();
-            powerShellProcess.BeginOutputReadLine();
-            powerShellProcess.BeginErrorReadLine();
-
-            // Wait for completion or cancellation
-            while (!powerShellProcess.HasExited && !cancellationToken.IsCancellationRequested)
+            try
             {
-                await Task.Delay(100, cancellationToken);
-            }
+                // Handle output
+                powerShellProcess.OutputDataReceived += outputHandler;
+                powerShellProcess.ErrorDataReceived += errorHandler;
 
-            if (cancellationToken.IsCancellationRequested && !powerShellProcess.HasExited)
-            {
-                try
-                {
-                    powerShellProcess.Kill();
-                    AppendOutput("PowerShell process terminated.", Colors.Yellow);
-                }
-                catch (Exception ex)
-                {
-                    AppendOutput($"Error terminating process: {ex.Message}", Colors.Red);
-                }
-            }
-            else if (powerShellProcess.HasExited)
-            {
-                var exitCode = powerShellProcess.ExitCode;
-                if (exitCode == 0)
-                {
-                    AppendOutput("Script completed successfully!", Colors.Green);
-                }
-                else
-                {
-                    AppendOutput($"Script completed with exit code: {exitCode}", Colors.Yellow);
-                }
-            }
+                AppendOutput("Launching PowerShell process...", Colors.Cyan);
+                
+                powerShellProcess.Start();
+                powerShellProcess.BeginOutputReadLine();
+                powerShellProcess.BeginErrorReadLine();
 
-            powerShellProcess?.Dispose();
-            powerShellProcess = null;
+                // Wait for completion or cancellation
+                while (!powerShellProcess.HasExited && !cancellationToken.IsCancellationRequested)
+                {
+                    await Task.Delay(100, cancellationToken);
+                }
+
+                if (cancellationToken.IsCancellationRequested && !powerShellProcess.HasExited)
+                {
+                    try
+                    {
+                        powerShellProcess.Kill();
+                        AppendOutput("PowerShell process terminated.", Colors.Yellow);
+                    }
+                    catch (Exception ex)
+                    {
+                        AppendOutput($"Error terminating process: {ex.Message}", Colors.Red);
+                    }
+                }
+                else if (powerShellProcess.HasExited)
+                {
+                    var exitCode = powerShellProcess.ExitCode;
+                    if (exitCode == 0)
+                    {
+                        AppendOutput("Script completed successfully!", Colors.Green);
+                    }
+                    else
+                    {
+                        AppendOutput($"Script completed with exit code: {exitCode}", Colors.Yellow);
+                    }
+                }
+            }
+            finally
+            {
+                // Unsubscribe event handlers to prevent memory leaks
+                if (powerShellProcess != null)
+                {
+                    if (outputHandler != null)
+                        powerShellProcess.OutputDataReceived -= outputHandler;
+                    if (errorHandler != null)
+                        powerShellProcess.ErrorDataReceived -= errorHandler;
+                    
+                    powerShellProcess.Dispose();
+                    powerShellProcess = null;
+                }
+            }
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
@@ -263,11 +284,14 @@ namespace MandADiscoverySuite
                     // Reset button content after 2 seconds
                     var timer = new System.Windows.Threading.DispatcherTimer();
                     timer.Interval = TimeSpan.FromSeconds(2);
-                    timer.Tick += (s, args) =>
+                    EventHandler tickHandler = null;
+                    tickHandler = (s, args) =>
                     {
                         CopyButton.Content = originalContent;
                         timer.Stop();
+                        timer.Tick -= tickHandler; // Unsubscribe to prevent memory leak
                     };
+                    timer.Tick += tickHandler;
                     timer.Start();
                 }
                 else
@@ -313,10 +337,35 @@ namespace MandADiscoverySuite
 
         protected override void OnClosed(EventArgs e)
         {
-            // Clean up
-            cancellationTokenSource?.Cancel();
-            powerShellProcess?.Kill();
-            powerShellProcess?.Dispose();
+            try
+            {
+                // Clean up resources
+                if (cancellationTokenSource != null && !cancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    cancellationTokenSource.Cancel();
+                }
+                
+                if (powerShellProcess != null && !powerShellProcess.HasExited)
+                {
+                    try
+                    {
+                        powerShellProcess.Kill();
+                    }
+                    catch (Exception)
+                    {
+                        // Process may already be terminated, ignore
+                    }
+                }
+                
+                powerShellProcess?.Dispose();
+                cancellationTokenSource?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                // Log disposal errors but don't throw
+                System.Diagnostics.Debug.WriteLine($"PowerShellWindow disposal error: {ex.Message}");
+            }
+            
             base.OnClosed(e);
         }
     }

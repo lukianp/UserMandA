@@ -7,9 +7,9 @@ using System.Windows.Input;
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
-    /// Base view model class that implements INotifyPropertyChanged
+    /// Base view model class that implements INotifyPropertyChanged and IDisposable
     /// </summary>
-    public abstract class BaseViewModel : INotifyPropertyChanged
+    public abstract class BaseViewModel : INotifyPropertyChanged, IDisposable
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -71,6 +71,58 @@ namespace MandADiscoverySuite.ViewModels
                 OnPropertyChanged(propertyName);
             }
         }
+
+        #region IDisposable
+
+        private bool _disposed = false;
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Releases the unmanaged resources used by the BaseViewModel and optionally releases the managed resources
+        /// </summary>
+        /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources here
+                    // Derived classes should override this method to dispose their resources
+                    OnDisposing();
+                }
+                
+                _disposed = true;
+            }
+        }
+
+        /// <summary>
+        /// Called when the view model is being disposed. Override in derived classes to dispose resources
+        /// </summary>
+        protected virtual void OnDisposing()
+        {
+            // Base implementation does nothing
+            // Derived classes should override this to dispose their specific resources
+        }
+
+        /// <summary>
+        /// Throws an ObjectDisposedException if this instance has been disposed
+        /// </summary>
+        protected void ThrowIfDisposed()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(GetType().Name);
+        }
+
+        #endregion
     }
 
     /// <summary>

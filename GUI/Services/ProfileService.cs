@@ -11,7 +11,7 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Service for managing company profiles
     /// </summary>
-    public class ProfileService
+    public class ProfileService : IDisposable
     {
         private readonly string _profilesPath;
         private readonly string _profilesFile;
@@ -32,6 +32,8 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<List<CompanyProfile>> GetProfilesAsync()
         {
+            ThrowIfDisposed();
+            
             try
             {
                 if (File.Exists(_profilesFile))
@@ -55,8 +57,7 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                // Log error and return cached profiles or empty list
-                System.Diagnostics.Debug.WriteLine($"Error loading profiles: {ex.Message}");
+                ErrorHandlingService.Instance.HandleException(ex, "Loading company profiles");
                 return _cachedProfiles ?? new List<CompanyProfile>();
             }
         }
@@ -66,6 +67,9 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<CompanyProfile> GetProfileAsync(string profileId)
         {
+            if (string.IsNullOrWhiteSpace(profileId))
+                throw new ArgumentException("Profile ID cannot be null or empty", nameof(profileId));
+
             var profiles = await GetProfilesAsync();
             return profiles.FirstOrDefault(p => p.Id == profileId);
         }
@@ -75,6 +79,8 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<CompanyProfile> CreateProfileAsync(CompanyProfile profile)
         {
+            ThrowIfDisposed();
+            
             if (profile == null)
                 throw new ArgumentNullException(nameof(profile));
 
@@ -130,6 +136,9 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<bool> DeleteProfileAsync(string profileId)
         {
+            if (string.IsNullOrWhiteSpace(profileId))
+                throw new ArgumentException("Profile ID cannot be null or empty", nameof(profileId));
+
             var profile = _cachedProfiles.FirstOrDefault(p => p.Id == profileId);
             if (profile == null)
                 return false;
@@ -148,7 +157,7 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error deleting profile data: {ex.Message}");
+                ErrorHandlingService.Instance.HandleException(ex, "Deleting profile data directory");
             }
 
             return true;
@@ -159,6 +168,8 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<CompanyProfile> ImportProfileAsync(string filePath)
         {
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
             if (!File.Exists(filePath))
                 throw new FileNotFoundException($"Profile file not found: {filePath}");
 
@@ -202,6 +213,11 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task ExportProfileAsync(string profileId, string filePath)
         {
+            if (string.IsNullOrWhiteSpace(profileId))
+                throw new ArgumentException("Profile ID cannot be null or empty", nameof(profileId));
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+
             var profile = await GetProfileAsync(profileId);
             if (profile == null)
                 throw new InvalidOperationException($"Profile with ID '{profileId}' not found");
@@ -220,6 +236,9 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public string GetProfileDataPath(string companyName)
         {
+            if (string.IsNullOrWhiteSpace(companyName))
+                throw new ArgumentException("Company name cannot be null or empty", nameof(companyName));
+
             // Profile data is stored in C:\discoverydata\{companyName}
             return Path.Combine(@"C:\discoverydata", companyName);
         }
@@ -227,9 +246,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates profile configuration
         /// </summary>
-        public ValidationResult ValidateProfile(CompanyProfile profile)
+        public ProfileValidationResult ValidateProfile(CompanyProfile profile)
         {
-            var result = new ValidationResult();
+            var result = new ProfileValidationResult();
 
             if (profile == null)
             {
@@ -263,6 +282,9 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<ProfileStatistics> GetProfileStatisticsAsync(string profileId)
         {
+            if (string.IsNullOrWhiteSpace(profileId))
+                throw new ArgumentException("Profile ID cannot be null or empty", nameof(profileId));
+
             var profile = await GetProfileAsync(profileId);
             if (profile == null)
                 return null;
@@ -296,7 +318,7 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error saving profiles: {ex.Message}");
+                ErrorHandlingService.Instance.HandleException(ex, "Saving profiles to file");
                 throw;
             }
         }
@@ -333,6 +355,9 @@ namespace MandADiscoverySuite.Services
 
         private DateTime? GetLastDiscoveryRunTime(string companyName)
         {
+            if (string.IsNullOrWhiteSpace(companyName))
+                return null;
+
             try
             {
                 var dataPath = GetProfileDataPath(companyName);
@@ -353,6 +378,9 @@ namespace MandADiscoverySuite.Services
 
         private int GetTotalDiscoveryRuns(string companyName)
         {
+            if (string.IsNullOrWhiteSpace(companyName))
+                return 0;
+
             try
             {
                 var dataPath = GetProfileDataPath(companyName);
@@ -372,6 +400,9 @@ namespace MandADiscoverySuite.Services
 
         private long GetProfileDataSize(string companyName)
         {
+            if (string.IsNullOrWhiteSpace(companyName))
+                return 0;
+
             try
             {
                 var dataPath = GetProfileDataPath(companyName);
@@ -388,12 +419,44 @@ namespace MandADiscoverySuite.Services
         }
 
         #endregion
+
+        #region IDisposable
+
+        private bool _disposed = false;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources
+                    _cachedProfiles?.Clear();
+                }
+                
+                _disposed = true;
+            }
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(ProfileService));
+        }
+
+        #endregion
     }
 
     /// <summary>
     /// Profile validation result
     /// </summary>
-    public class ValidationResult
+    public class ProfileValidationResult
     {
         public List<string> Errors { get; } = new List<string>();
         public List<string> Warnings { get; } = new List<string>();

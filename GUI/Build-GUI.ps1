@@ -296,6 +296,27 @@ if (Test-Path $ConfigSourcePath) {
         "suite-config.json"
     )
     
+    # Also copy GUI-specific configuration files
+    $GUIConfigSource = Join-Path $ScriptDir "Configuration"
+    if (Test-Path $GUIConfigSource) {
+        Write-Host "Copying GUI configuration files..." -ForegroundColor Yellow
+        Copy-Item -Path "$GUIConfigSource\*" -Destination $ConfigDestPath -Force
+        
+        # Verify GUI config files
+        $GUIConfigs = @(
+            "ModuleRegistry.json"
+        )
+        
+        foreach ($config in $GUIConfigs) {
+            $configPath = Join-Path $ConfigDestPath $config
+            if (Test-Path $configPath) {
+                Write-Host "  [OK] $config verified" -ForegroundColor Green
+            } else {
+                Write-Warning "Missing GUI configuration file: $config"
+            }
+        }
+    }
+    
     foreach ($config in $CriticalConfigs) {
         $configPath = Join-Path $ConfigDestPath $config
         if (Test-Path $configPath) {

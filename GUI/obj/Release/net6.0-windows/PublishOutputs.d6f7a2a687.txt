@@ -24,7 +24,6 @@ C:\EnterpriseDiscovery\Modules\Discovery\Application.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\ApplicationDependencyMapping.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\ApplicationDiscovery.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\AzureDiscovery.psm1
-C:\EnterpriseDiscovery\Modules\Discovery\AzureInfrastructure.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\AzureResourceDiscovery.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\BackupRecoveryDiscovery.psm1
 C:\EnterpriseDiscovery\Modules\Discovery\CertificateAuthorityDiscovery.psm1

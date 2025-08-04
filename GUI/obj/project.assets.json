@@ -13,11 +13,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\Scripts\\UserMandA-1\\gui\\MandADiscoverySuite.csproj",
+      "projectUniqueName": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
       "projectName": "MandADiscoverySuite",
-      "projectPath": "D:\\Scripts\\UserMandA-1\\gui\\MandADiscoverySuite.csproj",
+      "projectPath": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
       "packagesPath": "C:\\Users\\lukia\\.nuget\\packages\\",
-      "outputPath": "D:\\Scripts\\UserMandA-1\\gui\\obj\\",
+      "outputPath": "D:\\Scripts\\UserMandA\\GUI\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\lukia\\AppData\\Roaming\\NuGet\\NuGet.Config"

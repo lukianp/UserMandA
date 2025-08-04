@@ -12,6 +12,16 @@ namespace MandADiscoverySuite.Themes
         HighContrast
     }
 
+    /// <summary>
+    /// App theme enum for compatibility
+    /// </summary>
+    public enum AppTheme
+    {
+        Light = ThemeType.Light,
+        Dark = ThemeType.Dark,
+        HighContrast = ThemeType.HighContrast
+    }
+
     public class ThemeManager
     {
         private static ThemeManager _instance;
@@ -119,6 +129,14 @@ namespace MandADiscoverySuite.Themes
 
             // Notify theme changed
             ThemeChanged?.Invoke(this, new ThemeChangedEventArgs(theme));
+        }
+
+        /// <summary>
+        /// Set theme using AppTheme enum for compatibility
+        /// </summary>
+        public void SetTheme(AppTheme theme)
+        {
+            ApplyTheme((ThemeType)theme);
         }
 
         public void ApplyThemeToWindow(Window window, ResourceDictionary themeResources = null)

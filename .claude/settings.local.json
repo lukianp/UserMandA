@@ -73,7 +73,12 @@
       "Bash(pwsh:*)",
       "Bash(.Build-GUI.ps1)",
       "Bash(dir \"C:\\EnterpriseDiscovery\\Scripts\\DiscoveryModuleLauncher.ps1\")",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(diff:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(csc:*)",
+      "Bash(Test-Path \"C:\\EnterpriseDiscovery\\Modules\\Discovery\\AzureDiscovery.psm1\")",
+      "Bash(Test-Path \"D:\\Scripts\\UserMandA\\GUI\\Configuration\\ModuleRegistry.json\")"
     ],
     "deny": []
   }

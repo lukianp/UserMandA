@@ -12,7 +12,7 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Service for managing discovery operations
     /// </summary>
-    public class DiscoveryService
+    public class DiscoveryService : IDisposable
     {
         private readonly string _rootPath;
         private readonly string _scriptsPath;
@@ -20,8 +20,9 @@ namespace MandADiscoverySuite.Services
 
         public DiscoveryService()
         {
-            _rootPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            _scriptsPath = Path.Combine(Path.GetDirectoryName(_rootPath), "Scripts", "UserMandA");
+            var config = ConfigurationService.Instance;
+            _rootPath = config.EnterpriseDiscoveryRootPath;
+            _scriptsPath = config.ScriptsPath;
             _moduleConfigurations = new Dictionary<string, ModuleConfiguration>();
             
             InitializeModuleConfigurations();
@@ -36,10 +37,13 @@ namespace MandADiscoverySuite.Services
             IProgress<DiscoveryProgress> progress,
             CancellationToken cancellationToken)
         {
+            ThrowIfDisposed();
+            
             if (profile == null)
                 throw new ArgumentNullException(nameof(profile));
-
-            if (!enabledModules?.Any() == true)
+            if (enabledModules == null)
+                throw new ArgumentNullException(nameof(enabledModules));
+            if (!enabledModules.Any())
                 throw new ArgumentException("No modules specified for discovery", nameof(enabledModules));
 
             var sessionId = Guid.NewGuid().ToString();
@@ -145,14 +149,16 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<List<DiscoveryResult>> GetResultsAsync(CompanyProfile profile)
         {
-            var results = new List<DiscoveryResult>();
-
+            ThrowIfDisposed();
+            
             if (profile == null)
-                return results;
+                throw new ArgumentNullException(nameof(profile));
+
+            var results = new List<DiscoveryResult>();
 
             try
             {
-                var outputPath = Path.Combine("C:\\DiscoveryData", profile.CompanyName, "Raw");
+                var outputPath = ConfigurationService.Instance.GetCompanyRawDataPath(profile.CompanyName);
                 
                 if (!Directory.Exists(outputPath))
                     return results;
@@ -179,8 +185,7 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                // Log error but don't throw - return empty results
-                Debug.WriteLine($"Error loading results: {ex.Message}");
+                ErrorHandlingService.Instance.HandleException(ex, "Discovery results loading");
             }
 
             return results.OrderByDescending(r => r.DiscoveryTime).ToList();
@@ -191,10 +196,16 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task ExportResultsAsync(CompanyProfile profile, List<DiscoveryResult> results, string format = "CSV")
         {
-            if (profile == null || !results?.Any() == true)
+            if (profile == null)
+                throw new ArgumentNullException(nameof(profile));
+            if (results == null)
+                throw new ArgumentNullException(nameof(results));
+            if (!results.Any())
                 return;
+            if (string.IsNullOrWhiteSpace(format))
+                format = "CSV";
 
-            var exportPath = Path.Combine("C:\\DiscoveryData", profile.CompanyName, "Exports");
+            var exportPath = ConfigurationService.Instance.GetCompanyExportsPath(profile.CompanyName);
             Directory.CreateDirectory(exportPath);
 
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -223,22 +234,61 @@ namespace MandADiscoverySuite.Services
         {
             return new List<string>
             {
+                // Core Infrastructure
                 "ActiveDirectory",
-                "AzureDiscovery",
-                "AzureResourceDiscovery",
-                "Exchange",
-                "SharePoint",
-                "Teams",
-                "Intune",
-                "NetworkInfrastructure",
-                "SQLServer",
-                "FileServers",
-                "Applications",
-                "Certificates",
-                "Printers",
-                "VMware",
+                "AzureDiscovery",        // Azure AD / Entra ID with Graph API
+                "AzureResourceDiscovery", // Azure Infrastructure & Resources
+                "PhysicalServerDiscovery", // Physical hardware inventory
+                "NetworkInfrastructureDiscovery",
+                "SQLServerDiscovery",
+                "FileServerDiscovery",
+                "VMwareDiscovery",
+                "StorageArrayDiscovery", // SAN/NAS storage systems
+                
+                // Microsoft 365 & Cloud
+                "ExchangeDiscovery",
+                "SharePointDiscovery",
+                "TeamsDiscovery",
+                "IntuneDiscovery",
+                "PowerPlatformDiscovery", // Power Platform apps and flows
+                
+                // Applications & Dependencies
+                "ApplicationDiscovery",
+                "ApplicationDependencyMapping", // App dependency analysis
+                "DatabaseSchemaDiscovery", // Database schema mapping
+                
+                // Security & Compliance
+                "SecurityInfrastructureDiscovery", // Security appliances and configurations
+                "SecurityGroupAnalysis",
+                "CertificateDiscovery",
+                "ThreatDetectionEngine", // Security threat analysis
+                "Compliance\\ComplianceAssessmentFramework", // Regulatory compliance
+                
+                // Data Governance
                 "DataClassification",
-                "SecurityGroups"
+                "DataGovernanceMetadataManagement", // Data governance
+                "DataLineageDependencyEngine", // Data lineage tracking
+                
+                // External Systems
+                "ExternalIdentityDiscovery", // External identity providers
+                "PaloAltoDiscovery", // Palo Alto Networks discovery
+                
+                // Infrastructure Discovery
+                "BackupRecoveryDiscovery", // Backup infrastructure
+                "ContainerOrchestration", // Kubernetes/Docker discovery
+                "PrinterDiscovery",
+                "ScheduledTaskDiscovery", // Scheduled task inventory
+                
+                // Cloud & Multi-Cloud
+                "CloudDiscovery\\MultiCloudDiscoveryEngine", // Multi-cloud infrastructure discovery
+                "GraphDiscovery", // Enhanced Microsoft Graph API discovery
+                
+                // Phase 1 High-Value Modules
+                "Assessment\\EnvironmentRiskScoring", // Critical M&A risk assessment
+                "EntraIDAppDiscovery", // Enhanced Entra ID application discovery
+                "LicensingDiscovery", // Software licensing compliance
+                "MultiDomainForestDiscovery", // Complex AD forest environments
+                "GPODiscovery" // Group Policy discovery and analysis
             };
         }
 
@@ -247,6 +297,9 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public ModuleConfiguration GetModuleConfiguration(string moduleName)
         {
+            if (string.IsNullOrWhiteSpace(moduleName))
+                throw new ArgumentException("Module name cannot be null or empty", nameof(moduleName));
+
             _moduleConfigurations.TryGetValue(moduleName, out var config);
             return config ?? new ModuleConfiguration { ModuleName = moduleName, IsEnabled = false };
         }
@@ -256,10 +309,12 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public void UpdateModuleConfiguration(ModuleConfiguration configuration)
         {
-            if (configuration?.ModuleName != null)
-            {
-                _moduleConfigurations[configuration.ModuleName] = configuration;
-            }
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+            if (string.IsNullOrWhiteSpace(configuration.ModuleName))
+                throw new ArgumentException("Configuration module name cannot be null or empty");
+
+            _moduleConfigurations[configuration.ModuleName] = configuration;
         }
 
         #region Private Methods
@@ -273,7 +328,7 @@ namespace MandADiscoverySuite.Services
                 _moduleConfigurations[moduleName] = new ModuleConfiguration
                 {
                     ModuleName = moduleName,
-                    IsEnabled = moduleName == "ActiveDirectory" || moduleName == "AzureDiscovery" || moduleName == "AzureResourceDiscovery" || moduleName == "Exchange",
+                    IsEnabled = IsHighPriorityModule(moduleName),
                     Priority = GetModulePriority(moduleName),
                     Timeout = GetModuleTimeout(moduleName),
                     ParallelExecution = true
@@ -281,11 +336,59 @@ namespace MandADiscoverySuite.Services
             }
         }
 
+        /// <summary>
+        /// Determines if a module should be enabled by default
+        /// </summary>
+        private bool IsHighPriorityModule(string moduleName)
+        {
+            var highPriorityModules = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                // Core Infrastructure (must-have for M&A discovery)
+                "ActiveDirectory",
+                "PhysicalServerDiscovery",
+                "NetworkInfrastructureDiscovery",
+                "SQLServerDiscovery",
+                "FileServerDiscovery",
+                
+                // Microsoft 365 & Cloud (essential for modern enterprises)
+                "AzureDiscovery",
+                "AzureResourceDiscovery",
+                "ExchangeDiscovery",
+                "SharePointDiscovery",
+                
+                // Security & Compliance (critical for risk assessment)
+                "SecurityInfrastructureDiscovery",
+                "SecurityGroupAnalysis",
+                "CertificateDiscovery",
+                
+                // Applications & Dependencies (essential for migration planning)
+                "ApplicationDiscovery",
+                "ApplicationDependencyMapping",
+                
+                // Data Governance (regulatory compliance)
+                "DataClassification",
+                
+                // Phase 1 High-Value Modules (enabled by default)
+                "Assessment\\EnvironmentRiskScoring",
+                "EntraIDAppDiscovery", 
+                "LicensingDiscovery",
+                "MultiDomainForestDiscovery",
+                "GPODiscovery"
+            };
+            
+            return highPriorityModules.Contains(moduleName);
+        }
+
         private string BuildPowerShellArguments(CompanyProfile profile, string sessionId)
         {
+            if (profile == null)
+                throw new ArgumentNullException(nameof(profile));
+            if (string.IsNullOrWhiteSpace(sessionId))
+                throw new ArgumentException("Session ID cannot be null or empty", nameof(sessionId));
+
             var args = new List<string>
             {
-                $"-CompanyName '{profile.CompanyName}'",
+                $"-CompanyName '{profile.CompanyName ?? "Unknown"}'",
                 $"-SessionId '{sessionId}'"
             };
 
@@ -305,7 +408,14 @@ namespace MandADiscoverySuite.Services
             IProgress<DiscoveryProgress> progress,
             CancellationToken cancellationToken)
         {
-            var scriptPath = Path.Combine(_scriptsPath, "Start-Discovery.ps1");
+            if (string.IsNullOrWhiteSpace(moduleName))
+                throw new ArgumentException("Module name cannot be null or empty", nameof(moduleName));
+            if (string.IsNullOrWhiteSpace(baseArgs))
+                throw new ArgumentException("Base arguments cannot be null or empty", nameof(baseArgs));
+            if (moduleProgress == null)
+                throw new ArgumentNullException(nameof(moduleProgress));
+
+            var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
             
             if (!File.Exists(scriptPath))
                 throw new FileNotFoundException($"Discovery script not found: {scriptPath}");
@@ -429,31 +539,37 @@ namespace MandADiscoverySuite.Services
 
         private string ExtractModuleNameFromFile(string fileName)
         {
+            if (string.IsNullOrWhiteSpace(fileName))
+                return "Unknown";
+
             // Extract module name from file name patterns like "ActiveDirectory_Users.csv"
             var parts = fileName.Split('_');
-            return parts[0];
+            return parts.Length > 0 ? parts[0] : "Unknown";
         }
 
         private string GetModuleDisplayName(string moduleName)
         {
+            if (string.IsNullOrWhiteSpace(moduleName))
+                return "Unknown Module";
+
             return moduleName switch
             {
                 "ActiveDirectory" => "Active Directory",
-                "AzureDiscovery" => "Azure AD (Graph API)",
-                "AzureResourceDiscovery" => "Azure Resources (Infrastructure)",
-                "Exchange" => "Exchange",
-                "SharePoint" => "SharePoint",
-                "Teams" => "Microsoft Teams",
-                "Intune" => "Intune",
-                "NetworkInfrastructure" => "Network Infrastructure",
-                "SQLServer" => "SQL Server",
-                "FileServers" => "File Servers",
-                "Applications" => "Applications",
-                "Certificates" => "Certificates",
-                "Printers" => "Printers",
-                "VMware" => "VMware",
+                "AzureDiscovery" => "Azure AD / Entra ID (Graph API)",
+                "AzureResourceDiscovery" => "Azure Infrastructure & Resources",
+                "ExchangeDiscovery" => "Exchange",
+                "SharePointDiscovery" => "SharePoint",
+                "TeamsDiscovery" => "Microsoft Teams",
+                "IntuneDiscovery" => "Intune",
+                "NetworkInfrastructureDiscovery" => "Network Infrastructure",
+                "SQLServerDiscovery" => "SQL Server",
+                "FileServerDiscovery" => "File Servers",
+                "ApplicationDiscovery" => "Applications",
+                "CertificateDiscovery" => "Certificates",
+                "PrinterDiscovery" => "Printers",
+                "VMwareDiscovery" => "VMware",
                 "DataClassification" => "Data Classification",
-                "SecurityGroups" => "Security Groups",
+                "SecurityGroupAnalysis" => "Security Groups",
                 _ => moduleName
             };
         }
@@ -465,10 +581,10 @@ namespace MandADiscoverySuite.Services
                 "ActiveDirectory" => 1,
                 "AzureDiscovery" => 1,
                 "AzureResourceDiscovery" => 2,
-                "Exchange" => 2,
-                "SharePoint" => 3,
-                "Teams" => 3,
-                "Intune" => 2,
+                "ExchangeDiscovery" => 2,
+                "SharePointDiscovery" => 3,
+                "TeamsDiscovery" => 3,
+                "IntuneDiscovery" => 2,
                 _ => 5
             };
         }
@@ -478,17 +594,22 @@ namespace MandADiscoverySuite.Services
             return moduleName switch
             {
                 "ActiveDirectory" => 600,         // 10 minutes
-                "AzureDiscovery" => 300,          // 5 minutes
-                "AzureResourceDiscovery" => 900,  // 15 minutes (resource enumeration can take longer)
-                "Exchange" => 900,                // 15 minutes
-                "SharePoint" => 1200,             // 20 minutes
-                "FileServers" => 1800,            // 30 minutes
+                "AzureDiscovery" => 300,          // 5 minutes - Graph API calls
+                "AzureResourceDiscovery" => 1200, // 20 minutes - comprehensive resource enumeration
+                "ExchangeDiscovery" => 900,                // 15 minutes
+                "SharePointDiscovery" => 1200,             // 20 minutes
+                "FileServerDiscovery" => 1800,            // 30 minutes
                 _ => 300                          // 5 minutes default
             };
         }
 
         private async Task ExportToCsvAsync(List<DiscoveryResult> results, string filePath)
         {
+            if (results == null)
+                throw new ArgumentNullException(nameof(results));
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+
             var lines = new List<string>
             {
                 "ModuleName,DisplayName,ItemCount,DiscoveryTime,Duration,Status,FilePath"
@@ -504,6 +625,11 @@ namespace MandADiscoverySuite.Services
 
         private async Task ExportToJsonAsync(List<DiscoveryResult> results, string filePath)
         {
+            if (results == null)
+                throw new ArgumentNullException(nameof(results));
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+
             var json = System.Text.Json.JsonSerializer.Serialize(results, new System.Text.Json.JsonSerializerOptions 
             { 
                 WriteIndented = true 
@@ -513,6 +639,11 @@ namespace MandADiscoverySuite.Services
 
         private async Task ExportToXmlAsync(List<DiscoveryResult> results, string filePath)
         {
+            if (results == null)
+                throw new ArgumentNullException(nameof(results));
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+
             var xml = new System.Text.StringBuilder();
             xml.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
             xml.AppendLine("<DiscoveryResults>");
@@ -532,6 +663,48 @@ namespace MandADiscoverySuite.Services
 
             xml.AppendLine("</DiscoveryResults>");
             await File.WriteAllTextAsync(filePath, xml.ToString());
+        }
+
+        /// <summary>
+        /// Helper method to get module ID from ModuleInfo (handles path-based IDs)
+        /// </summary>
+        private string GetModuleIdFromInfo(ModuleInfo moduleInfo)
+        {
+            // For modules in subdirectories, use just the filename as ID
+            var fileName = Path.GetFileNameWithoutExtension(moduleInfo.FilePath);
+            return fileName;
+        }
+        
+        #endregion
+
+        #region IDisposable
+
+        private bool _disposed = false;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources
+                    _moduleConfigurations?.Clear();
+                }
+                
+                _disposed = true;
+            }
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(DiscoveryService));
         }
 
         #endregion

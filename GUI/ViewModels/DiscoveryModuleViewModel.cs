@@ -309,20 +309,115 @@ namespace MandADiscoverySuite.ViewModels
 
         private void OnConfigure()
         {
-            // TODO: Show configuration dialog
-            LastMessage = "Configuration dialog would open here";
+            try
+            {
+                // Create a simple configuration dialog
+                var configDialog = new System.Windows.Window
+                {
+                    Title = $"Configure {DisplayName}",
+                    Width = 400,
+                    Height = 300,
+                    WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner,
+                    Owner = System.Windows.Application.Current.MainWindow
+                };
+                
+                var textBlock = new System.Windows.Controls.TextBlock
+                {
+                    Text = $"Configuration options for {DisplayName} module:\n\n" +
+                           "• Module is currently using default settings\n" +
+                           "• Advanced configuration will be available in future versions\n" +
+                           "• Contact your administrator for custom settings",
+                    Margin = new System.Windows.Thickness(20),
+                    TextWrapping = System.Windows.TextWrapping.Wrap
+                };
+                
+                configDialog.Content = textBlock;
+                configDialog.ShowDialog();
+                
+                LastMessage = "Configuration dialog displayed";
+            }
+            catch (Exception ex)
+            {
+                LastMessage = $"Failed to show configuration: {ex.Message}";
+            }
         }
 
         private void OnViewResults()
         {
-            // TODO: Show results for this module
-            LastMessage = "Results viewer would open here";
+            try
+            {
+                // Get the results path for this module
+                var rootPath = GetRootPath();
+                var resultsPath = System.IO.Path.Combine(rootPath, "Results", ModuleName);
+                
+                if (System.IO.Directory.Exists(resultsPath))
+                {
+                    // Open results folder in Windows Explorer
+                    System.Diagnostics.Process.Start("explorer.exe", resultsPath);
+                    LastMessage = "Results folder opened in Explorer";
+                }
+                else
+                {
+                    var message = $"No results found for {DisplayName}.\n\n" +
+                                  $"Expected location: {resultsPath}\n\n" +
+                                  "Run a discovery to generate results.";
+                    
+                    System.Windows.MessageBox.Show(message, "No Results Found", 
+                                                  System.Windows.MessageBoxButton.OK, 
+                                                  System.Windows.MessageBoxImage.Information);
+                    LastMessage = "No results found";
+                }
+            }
+            catch (Exception ex)
+            {
+                LastMessage = $"Failed to view results: {ex.Message}";
+            }
         }
 
         private void OnViewLogs()
         {
-            // TODO: Show logs for this module
-            LastMessage = "Log viewer would open here";
+            try
+            {
+                // Get the logs path for this module
+                var rootPath = GetRootPath();
+                var logsPath = System.IO.Path.Combine(rootPath, "Logs", $"{ModuleName}.log");
+                
+                if (System.IO.File.Exists(logsPath))
+                {
+                    // Open log file with default text editor
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = logsPath,
+                        UseShellExecute = true
+                    });
+                    LastMessage = "Log file opened";
+                }
+                else
+                {
+                    // Check for general log directory
+                    var logDir = System.IO.Path.GetDirectoryName(logsPath);
+                    if (System.IO.Directory.Exists(logDir))
+                    {
+                        System.Diagnostics.Process.Start("explorer.exe", logDir);
+                        LastMessage = "Logs directory opened";
+                    }
+                    else
+                    {
+                        var message = $"No logs found for {DisplayName}.\n\n" +
+                                      $"Expected location: {logsPath}\n\n" +
+                                      "Run a discovery to generate logs.";
+                        
+                        System.Windows.MessageBox.Show(message, "No Logs Found", 
+                                                      System.Windows.MessageBoxButton.OK, 
+                                                      System.Windows.MessageBoxImage.Information);
+                        LastMessage = "No logs found";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LastMessage = $"Failed to view logs: {ex.Message}";
+            }
         }
 
         private async Task OnRunDiscoveryAsync()
@@ -485,21 +580,62 @@ namespace MandADiscoverySuite.ViewModels
         {
             return moduleName.ToLowerInvariant() switch
             {
+                // Core Infrastructure
                 "activedirectory" => ("👥", "Identity"),
+                "physicalserverdiscovery" => ("🖥️", "Infrastructure"),
+                "networkinfrastructurediscovery" => ("🌐", "Infrastructure"),
+                "sqlserverdiscovery" => ("🗄️", "Data"),
+                "fileserverdiscovery" => ("📁", "Storage"),
+                "vmwarediscovery" => ("💻", "Virtualization"),
+                "storagearraydiscovery" => ("💾", "Storage"),
+                
+                // Microsoft 365 & Cloud Services
                 "azuread" => ("☁️", "Identity"),
-                "exchange" => ("📧", "Collaboration"),
-                "sharepoint" => ("📚", "Collaboration"),
-                "teams" => ("💬", "Collaboration"),
-                "intune" => ("📱", "Device Management"),
-                "networkinfrastructure" => ("🌐", "Infrastructure"),
-                "sqlserver" => ("🗄️", "Data"),
-                "fileservers" => ("📁", "Storage"),
-                "applications" => ("📦", "Applications"),
-                "certificates" => ("🔐", "Security"),
-                "printers" => ("🖨️", "Infrastructure"),
-                "vmware" => ("💻", "Virtualization"),
+                "azureresourcediscovery" => ("🔷", "Cloud"),
+                "exchangediscovery" => ("📧", "Collaboration"),
+                "sharepointdiscovery" => ("📚", "Collaboration"),
+                "teamsdiscovery" => ("💬", "Collaboration"),
+                "intunediscovery" => ("📱", "Device Management"),
+                "powerplatformdiscovery" => ("⚡", "Collaboration"),
+                
+                // Applications & Dependencies
+                "applicationdiscovery" => ("📦", "Applications"),
+                "applicationdependencymapping" => ("🔗", "Applications"),
+                "databaseschemadiscovery" => ("🗂️", "Data"),
+                
+                // Security & Compliance
+                "securityinfrastructurediscovery" => ("🛡️", "Security"),
+                "securitygroupanalysis" => ("🔒", "Security"),
+                "certificatediscovery" => ("🔐", "Security"),
+                "threatdetectionengine" => ("🚨", "Security"),
+                "complianceassessmentframework" => ("📋", "Compliance"),
+                
+                // Data Governance & Classification
                 "dataclassification" => ("🏷️", "Data"),
-                "securitygroups" => ("🔒", "Security"),
+                "datagovernancemetadatamanagement" => ("📊", "Data Governance"),
+                "datalineagedependencyengine" => ("🔄", "Data Governance"),
+                
+                // External Systems & Identity
+                "externalidentitydiscovery" => ("🔑", "Identity"),
+                "paloaltodiscovery" => ("🔥", "Security"),
+                
+                // Infrastructure & Operations
+                "backuprecoverydiscovery" => ("💿", "Infrastructure"),
+                "containerorchestration" => ("📦", "Cloud"),
+                "printerdiscovery" => ("🖨️", "Infrastructure"),
+                "scheduledtaskdiscovery" => ("⏰", "Operations"),
+                
+                // Cloud & Multi-Platform
+                "multiclouddiscoveryengine" => ("☁️", "Cloud"),
+                "graphdiscovery" => ("📈", "Identity"),
+                
+                // Phase 1 High-Value Modules
+                "environmentriskscoring" => ("⚖️", "Risk Assessment"),
+                "entraidappdiscovery" => ("🔷", "Identity"),
+                "licensingdiscovery" => ("📄", "Compliance"),
+                "multidomainforestdiscovery" => ("🌳", "Identity"),
+                "gpodiscovery" => ("📋", "Security"),
+                
                 _ => ("⚙️", "Other")
             };
         }

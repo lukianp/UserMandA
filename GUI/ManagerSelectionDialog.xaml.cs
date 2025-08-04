@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using MandADiscoverySuite.Themes;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite
 {
@@ -83,11 +84,12 @@ namespace MandADiscoverySuite
             }
             catch (Exception ex)
             {
+                var errorMessage = ErrorHandlingService.Instance.HandleException(ex, "Loading managers from directory");
                 Dispatcher.Invoke(() =>
                 {
                     LoadingPanel.Visibility = Visibility.Collapsed;
                     ManagerDataGrid.Visibility = Visibility.Collapsed;
-                    NoResultsTextBlock.Text = $"Error loading managers: {ex.Message}";
+                    NoResultsTextBlock.Text = errorMessage;
                     NoResultsTextBlock.Visibility = Visibility.Visible;
                 });
             }
@@ -287,7 +289,23 @@ namespace MandADiscoverySuite
 
         protected override void OnClosed(EventArgs e)
         {
-            _searchTimer?.Stop();
+            try
+            {
+                if (_searchTimer != null)
+                {
+                    _searchTimer.Stop();
+                    _searchTimer.Tick -= SearchTimer_Tick;
+                }
+                
+                // Clear collections to help GC
+                _allManagers?.Clear();
+                _filteredManagers?.Clear();
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "ManagerSelectionDialog cleanup");
+            }
+            
             base.OnClosed(e);
         }
     }
