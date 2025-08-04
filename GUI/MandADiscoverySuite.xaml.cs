@@ -847,7 +847,7 @@ namespace MandADiscoverySuite
         private void InitializeDataGrids()
         {
             // Initialize empty data grids - data will be loaded when a company is selected
-            if (UsersDataGrid != null) UsersDataGrid.ItemsSource = new List<UserAccount>();
+            if (UsersDataGrid != null) UsersDataGrid.ItemsSource = new List<DiscoveredUser>();
             if (ComputersDataGrid != null) ComputersDataGrid.ItemsSource = new List<ComputerAccount>();
             if (InfrastructureDataGrid != null) InfrastructureDataGrid.ItemsSource = new List<InfrastructureDevice>();
             if (WavesDataGrid != null) WavesDataGrid.ItemsSource = new List<MigrationWave>();
@@ -6359,20 +6359,94 @@ namespace MandADiscoverySuite
                 
                 if (lines.Length <= 1) return 0; // No data or header only
                 
-                // Skip header row
+                // Parse header to get column indices
+                var headers = ParseCsvLine(lines[0]);
+                var headerDict = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    headerDict[headers[i].Trim('"')] = i;
+                }
+                
+                // Helper function to safely get value from fields
+                string GetFieldValue(string[] fields, string columnName, string defaultValue = "")
+                {
+                    if (headerDict.TryGetValue(columnName, out int index) && index < fields.Length)
+                    {
+                        return fields[index].Trim('"');
+                    }
+                    return defaultValue;
+                }
+                
+                // Process data rows
                 for (int i = 1; i < lines.Length; i++)
                 {
-                    var fields = lines[i].Split(',');
-                    if (fields.Length >= 5) // Minimum required fields
+                    var fields = ParseCsvLine(lines[i]);
+                    if (fields.Length > 0)
                     {
-                        users.Add(new DiscoveredUser
+                        var user = new DiscoveredUser
                         {
-                            Name = fields[0].Trim('"'),
-                            Email = fields.Length > 1 ? fields[1].Trim('"') : "",
-                            Department = fields.Length > 2 ? fields[2].Trim('"') : "",
-                            Status = fields.Length > 3 ? fields[3].Trim('"') : "Unknown",
-                            Source = fields.Length > 4 ? fields[4].Trim('"') : "CSV Import"
-                        });
+                            Name = !string.IsNullOrEmpty(GetFieldValue(fields, "DisplayName")) ? GetFieldValue(fields, "DisplayName") :
+                                   !string.IsNullOrEmpty(GetFieldValue(fields, "Name")) ? GetFieldValue(fields, "Name") :
+                                   GetFieldValue(fields, "UserPrincipalName"),
+                            Email = !string.IsNullOrEmpty(GetFieldValue(fields, "Mail")) ? GetFieldValue(fields, "Mail") :
+                                    !string.IsNullOrEmpty(GetFieldValue(fields, "UserPrincipalName")) ? GetFieldValue(fields, "UserPrincipalName") :
+                                    GetFieldValue(fields, "Email"),
+                            Department = GetFieldValue(fields, "Department"),
+                            Title = !string.IsNullOrEmpty(GetFieldValue(fields, "JobTitle")) ? GetFieldValue(fields, "JobTitle") :
+                                    GetFieldValue(fields, "Title"),
+                            Manager = !string.IsNullOrEmpty(GetFieldValue(fields, "ManagerDisplayName")) ? GetFieldValue(fields, "ManagerDisplayName") :
+                                      GetFieldValue(fields, "Manager"),
+                            Location = !string.IsNullOrEmpty(GetFieldValue(fields, "OfficeLocation")) ? GetFieldValue(fields, "OfficeLocation") :
+                                       !string.IsNullOrEmpty(GetFieldValue(fields, "City")) ? GetFieldValue(fields, "City") :
+                                       GetFieldValue(fields, "Location"),
+                            Status = GetFieldValue(fields, "AccountEnabled") == "True" ? "Active" : 
+                                     GetFieldValue(fields, "AccountEnabled") == "False" ? "Inactive" :
+                                     GetFieldValue(fields, "Status", "Unknown"),
+                            Source = !string.IsNullOrEmpty(GetFieldValue(fields, "_DiscoveryModule")) ? GetFieldValue(fields, "_DiscoveryModule") :
+                                     GetFieldValue(fields, "Source", "Azure AD"),
+                            UserPrincipalName = GetFieldValue(fields, "UserPrincipalName"),
+                            GivenName = GetFieldValue(fields, "GivenName"),
+                            Surname = GetFieldValue(fields, "Surname"),
+                            EmployeeId = GetFieldValue(fields, "EmployeeId"),
+                            MobilePhone = GetFieldValue(fields, "MobilePhone"),
+                            BusinessPhone = GetFieldValue(fields, "BusinessPhones"),
+                            UserType = GetFieldValue(fields, "UserType"),
+                            Country = GetFieldValue(fields, "Country"),
+                            State = GetFieldValue(fields, "State"),
+                            PostalCode = GetFieldValue(fields, "PostalCode"),
+                            CompanyName = GetFieldValue(fields, "CompanyName"),
+                            Id = GetFieldValue(fields, "Id"),
+                            OnPremisesSamAccountName = GetFieldValue(fields, "OnPremisesSamAccountName")
+                        };
+                        
+                        // Parse numeric fields
+                        if (int.TryParse(GetFieldValue(fields, "GroupMembershipCount"), out int groupCount))
+                        {
+                            user.GroupMembershipCount = groupCount;
+                        }
+                        
+                        // Parse boolean fields
+                        if (bool.TryParse(GetFieldValue(fields, "OnPremisesSyncEnabled"), out bool syncEnabled))
+                        {
+                            user.OnPremisesSyncEnabled = syncEnabled;
+                        }
+                        
+                        // Parse date fields
+                        if (DateTime.TryParse(GetFieldValue(fields, "LastSignInDateTime"), out DateTime lastSignIn))
+                        {
+                            user.LastSignInDateTime = lastSignIn;
+                        }
+                        
+                        if (DateTime.TryParse(GetFieldValue(fields, "CreatedDateTime"), out DateTime created))
+                        {
+                            user.CreatedDateTime = created;
+                        }
+                        
+                        // Only add if we have at least a name
+                        if (!string.IsNullOrWhiteSpace(user.Name))
+                        {
+                            users.Add(user);
+                        }
                     }
                 }
                 
@@ -6383,8 +6457,9 @@ namespace MandADiscoverySuite
                 
                 return users.Count;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"Error loading users from CSV: {ex.Message}");
                 return 0;
             }
         }
@@ -8993,6 +9068,23 @@ namespace MandADiscoverySuite
         public string Manager { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Location { get; set; } = string.Empty;
+        public string UserPrincipalName { get; set; } = string.Empty;
+        public string GivenName { get; set; } = string.Empty;
+        public string Surname { get; set; } = string.Empty;
+        public string EmployeeId { get; set; } = string.Empty;
+        public string MobilePhone { get; set; } = string.Empty;
+        public string BusinessPhone { get; set; } = string.Empty;
+        public string UserType { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+        public string State { get; set; } = string.Empty;
+        public string PostalCode { get; set; } = string.Empty;
+        public string CompanyName { get; set; } = string.Empty;
+        public DateTime? LastSignInDateTime { get; set; }
+        public DateTime? CreatedDateTime { get; set; }
+        public int GroupMembershipCount { get; set; }
+        public string OnPremisesSamAccountName { get; set; } = string.Empty;
+        public bool? OnPremisesSyncEnabled { get; set; }
+        public string Id { get; set; } = string.Empty;
     }
 
     public class DiscoveredComputer
