@@ -175,4 +175,55 @@ namespace MandADiscoverySuite.ViewModels
 
         public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
     }
+
+    /// <summary>
+    /// Async drop command for drag-drop operations
+    /// </summary>
+    public class AsyncDropCommand : ICommand
+    {
+        private readonly Func<string[], System.Threading.Tasks.Task> _execute;
+        private readonly Func<string[], bool> _canExecute;
+        private bool _isExecuting;
+
+        public AsyncDropCommand(Func<string[], System.Threading.Tasks.Task> execute, Func<string[], bool> canExecute = null)
+        {
+            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _canExecute = canExecute;
+        }
+
+        public event EventHandler CanExecuteChanged
+        {
+            add { CommandManager.RequerySuggested += value; }
+            remove { CommandManager.RequerySuggested -= value; }
+        }
+
+        public bool CanExecute(object parameter)
+        {
+            if (_isExecuting) return false;
+            if (parameter is string[] files)
+                return _canExecute == null || _canExecute(files);
+            return false;
+        }
+
+        public async void Execute(object parameter)
+        {
+            if (parameter is string[] files)
+            {
+                _isExecuting = true;
+                RaiseCanExecuteChanged();
+
+                try
+                {
+                    await _execute(files);
+                }
+                finally
+                {
+                    _isExecuting = false;
+                    RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
+    }
 }

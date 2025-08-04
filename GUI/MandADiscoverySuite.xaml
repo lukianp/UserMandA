@@ -13,6 +13,10 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Themes/ThemeStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            
+        <!-- Converters -->
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        
         <!-- Modern Gradient Brushes -->
         <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#FF1e3c72" Offset="0"/>
@@ -440,11 +444,13 @@
                                       Height="40"
                                       FontSize="14"
                                       Margin="0,0,8,0"
-                                      SelectionChanged="CompanySelector_SelectionChanged">
+                                      ItemsSource="{Binding CompanyProfiles}"
+                                      SelectedItem="{Binding SelectedProfile}"
+                                      DisplayMemberPath="CompanyName">
                             </ComboBox>
                             
                             <Button Grid.Column="1" x:Name="CreateProfileButton"
-                                    Click="CreateNewProfile_Click"
+                                    Command="{Binding CreateProfileCommand}"
                                     Background="{StaticResource AccentGradient}"
                                     BorderThickness="0"
                                     Width="40" Height="40"
@@ -477,7 +483,7 @@
                             </Button>
                             
                             <Button Grid.Column="2" x:Name="DeleteProfileButton"
-                                    Click="DeleteProfile_Click"
+                                    Command="{Binding DeleteProfileCommand}" CommandParameter="{Binding SelectedProfile}"
                                     Background="{StaticResource DangerGradient}"
                                     BorderThickness="0"
                                     Width="40" Height="40"
@@ -522,7 +528,7 @@
                         <TextBlock Text="🚀 Quick Actions" Foreground="#FFE2E8F0" FontSize="13" FontWeight="Medium" Margin="0,0,0,12"/>
                         
                         <Button x:Name="QuickAppRegistrationButton" 
-                                Click="RunAppRegistration_Click"
+                                Command="{Binding RunAppRegistrationCommand}"
                                 Background="{StaticResource AccentGradient}"
                                 BorderThickness="0"
                                 Height="36"
@@ -556,7 +562,7 @@
                         </Button>
                         
                         <Button x:Name="QuickFullDiscoveryButton" 
-                                Click="RunFullDiscovery_Click"
+                                Command="{Binding StartDiscoveryCommand}"
                                 Background="{StaticResource SuccessGradient}"
                                 BorderThickness="0"
                                 Height="36"
@@ -590,8 +596,8 @@
                         </Button>
                         
                         <Button x:Name="QuickReportsButton" 
-                                Click="NavigationButton_Click"
-                                Tag="Reports"
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="Reports"
                                 Background="#FF6B46C1"
                                 BorderThickness="0"
                                 Height="36"
@@ -624,7 +630,7 @@
                               HorizontalScrollBarVisibility="Disabled"
                               PanningMode="VerticalOnly">
                     <StackPanel>
-                        <Button x:Name="DashboardButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click"
+                        <Button x:Name="DashboardButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Dashboard"
                                 ToolTip="View company overview, statistics, and key metrics">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📊" FontSize="18" Margin="0,0,16,0"/>
@@ -635,7 +641,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="DiscoveryButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click"
+                    <Button x:Name="DiscoveryButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Discovery"
                             ToolTip="Run automated discovery modules to scan and analyze IT infrastructure">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🔍" FontSize="18" Margin="0,0,16,0"/>
@@ -646,7 +652,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="UsersButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click"
+                    <Button x:Name="UsersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Users"
                             ToolTip="Manage user accounts, view profiles, and analyze user permissions">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="👥" FontSize="18" Margin="0,0,16,0"/>
@@ -657,7 +663,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="ComputersButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click"
+                    <Button x:Name="ComputersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Computers"
                             ToolTip="View computer inventory, hardware specifications, and device status">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="💻" FontSize="18" Margin="0,0,16,0"/>
@@ -668,7 +674,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="InfrastructureButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click"
+                    <Button x:Name="InfrastructureButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Infrastructure"
                             ToolTip="Explore network topology, infrastructure components, and connectivity">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🌐" FontSize="18" Margin="0,0,16,0"/>
@@ -679,7 +685,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="DomainDiscoveryButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
+                    <Button x:Name="DomainDiscoveryButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="DomainDiscovery">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🔍" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -689,7 +695,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="FileServersButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
+                    <Button x:Name="FileServersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="FileServers">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📁" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -699,7 +705,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="DatabasesButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
+                    <Button x:Name="DatabasesButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Databases">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🗄️" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -709,7 +715,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="SecurityButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
+                    <Button x:Name="SecurityButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Security">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🔒" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -719,7 +725,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="ApplicationsButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
+                    <Button x:Name="ApplicationsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Applications">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📱" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -729,7 +735,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="WavesButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
+                    <Button x:Name="WavesButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Waves">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🚀" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -739,7 +745,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="MigrateButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click">
+                    <Button x:Name="MigrateButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Migrate">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="⚡" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -751,7 +757,7 @@
                     
                     <Separator Margin="24,16" Background="#FF2D3748"/>
                     
-                    <Button x:Name="ReportsButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click"
+                    <Button x:Name="ReportsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Reports"
                             ToolTip="Generate comprehensive reports and analytics for discovered data">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📄" FontSize="18" Margin="0,0,16,0"/>
@@ -762,7 +768,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="SettingsButton" Style="{StaticResource NavButtonStyle}" Click="NavigationButton_Click"
+                    <Button x:Name="SettingsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Settings"
                             ToolTip="Configure application settings, authentication, and discovery parameters">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="⚙️" FontSize="18" Margin="0,0,16,0"/>
@@ -790,7 +796,7 @@
                             <TextBlock x:Name="DomainInfo" Text="Domain: Not detected" Foreground="White" FontSize="11" Opacity="0.8" Margin="0,0,16,0"/>
                             <TextBlock x:Name="EnvironmentType" Text="Environment: Unknown" Foreground="White" FontSize="11" Opacity="0.8"/>
                         </StackPanel>
-                        <ProgressBar x:Name="DashboardProgressBar" Style="{StaticResource ProgressRingStyle}" Value="0" Margin="0,8,0,0" Visibility="Collapsed"/>
+                        <ProgressBar x:Name="DashboardProgressBar" Style="{StaticResource ProgressRingStyle}" Value="{Binding OverallProgress}" Margin="0,8,0,0" Visibility="{Binding IsDiscoveryRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -801,9 +807,10 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <!-- Dashboard View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="DashboardView" Visibility="Visible" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="DashboardView" Visibility="{Binding IsDashboardVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -819,8 +826,8 @@
                             <TextBlock Text="Real-time insights into your M&amp;A discovery progress" Foreground="#FFA0AEC0" FontSize="16"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
-                            <Button Content="Export Report" Style="{StaticResource ModernButtonStyle}" Margin="0,0,12,0"/>
-                            <Button x:Name="RefreshDataButton" Content="Refresh Data" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Click="RefreshDataButton_Click"/>
+                            <Button Content="Export Report" Command="{Binding ExportResultsCommand}" Style="{StaticResource ModernButtonStyle}" Margin="0,0,12,0"/>
+                            <Button x:Name="RefreshDataButton" Content="Refresh Data" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Command="{Binding RefreshDataCommand}"/>
                         </StackPanel>
                     </StackPanel>
                     
@@ -883,7 +890,7 @@
                                         <TextBlock Text="Discovery Complete" Foreground="#FFA0AEC0" FontSize="12"/>
                                     </StackPanel>
                                 </StackPanel>
-                                <ProgressBar x:Name="DiscoveryProgressBar" Value="0" Maximum="100" Height="4" Background="#FF2D3748" Foreground="#FF9F7AEA" BorderThickness="0"/>
+                                <ProgressBar x:Name="DiscoveryProgressBar" Value="{Binding OverallProgress}" Maximum="100" Height="4" Background="#FF2D3748" Foreground="#FF9F7AEA" BorderThickness="0"/>
                             </StackPanel>
                         </Border>
                     </UniformGrid>
@@ -984,13 +991,13 @@
                             
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="Quick Actions" Style="{StaticResource SectionHeaderStyle}"/>
-                                <Button x:Name="RunFullDiscoveryButton" Click="RunFullDiscovery_Click" Style="{StaticResource ModernButtonStyle}" Margin="0,0,0,12">
+                                <Button x:Name="RunFullDiscoveryButton" Command="{Binding StartDiscoveryCommand}" Style="{StaticResource ModernButtonStyle}" Margin="0,0,0,12">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="🔍" FontSize="16" Margin="0,0,8,0"/>
                                         <TextBlock Text="Run Full Discovery"/>
                                     </StackPanel>
                                 </Button>
-                                <Button x:Name="ImportDataButton" Click="ImportData_Click" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,0,12">
+                                <Button x:Name="ImportDataButton" Command="{Binding ImportDataCommand}" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,0,12">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="📂" FontSize="16" Margin="0,0,8,0"/>
                                         <TextBlock Text="Import Existing Data"/>
@@ -1065,7 +1072,7 @@
             </ScrollViewer>
             
             <!-- Discovery View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="DiscoveryView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="DiscoveryView" Visibility="{Binding IsDiscoveryVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -1078,12 +1085,16 @@
                             <TextBlock Text="Discovery Modules" Style="{StaticResource HeaderTextStyle}"/>
                             <TextBlock Text="Run discovery modules to gather comprehensive organizational data" Foreground="#FFA0AEC0" FontSize="16"/>
                         </StackPanel>
-                        <Button x:Name="RunAllDiscoveryButton" Content="Run All Modules" Style="{StaticResource ModernButtonStyle}" 
-                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
+                            <Button Content="Refresh Data" Style="{StaticResource ModernButtonStyle}" 
+                                    Background="{StaticResource AccentGradient}" Command="{Binding RefreshDataCommand}" 
+                                    Margin="0,0,12,0"/>
+                            <Button x:Name="RunAllDiscoveryButton" Content="Run All Modules" Style="{StaticResource ModernButtonStyle}"/>
+                        </StackPanel>
                     </StackPanel>
                     
                     <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,32">
-                        <Button x:Name="ADDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                        <Button x:Name="ADDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,12,8" Command="{Binding ToggleModuleCommand}" CommandParameter="ActiveDirectory">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Active Directory" Foreground="White"/>
@@ -1092,7 +1103,7 @@
                                 <TextBlock x:Name="ADStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="EntraDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                        <Button x:Name="EntraDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding ToggleModuleCommand}" CommandParameter="AzureAD">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Azure AD / Entra" Foreground="White"/>
@@ -1101,7 +1112,7 @@
                                 <TextBlock x:Name="EntraStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="InfraDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                        <Button x:Name="InfraDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding ToggleModuleCommand}" CommandParameter="NetworkInfrastructure">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Infrastructure" Foreground="White"/>
@@ -1110,7 +1121,7 @@
                                 <TextBlock x:Name="InfraStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="AppsDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                        <Button x:Name="AppsDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding ToggleModuleCommand}" CommandParameter="Applications">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Applications" Foreground="White"/>
@@ -1119,7 +1130,7 @@
                                 <TextBlock x:Name="AppsStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="DomainDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                        <Button x:Name="DomainDiscoveryBtn" Command="{Binding NavigateCommand}" CommandParameter="DomainDiscovery" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Domain Discovery" Foreground="White"/>
@@ -1128,7 +1139,7 @@
                                 <TextBlock x:Name="DomainStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="FileServersDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                        <Button x:Name="FileServersDiscoveryBtn" Command="{Binding NavigateCommand}" CommandParameter="FileServers" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="File Servers" Foreground="White"/>
@@ -1137,7 +1148,7 @@
                                 <TextBlock x:Name="FileServersStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="DatabasesDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                        <Button x:Name="DatabasesDiscoveryBtn" Command="{Binding NavigateCommand}" CommandParameter="Databases" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Databases" Foreground="White"/>
@@ -1146,7 +1157,7 @@
                                 <TextBlock x:Name="DatabasesStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="SecurityDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Click="DiscoveryModule_Click">
+                        <Button x:Name="SecurityDiscoveryBtn" Command="{Binding NavigateCommand}" CommandParameter="Security" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Security" Foreground="White"/>
@@ -1155,11 +1166,11 @@
                                 <TextBlock x:Name="SecurityStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Content="Show All" Style="{StaticResource ModernButtonStyle}" Background="Transparent" BorderBrush="#FF4A5568" BorderThickness="1" Click="ShowAllDiscoveryData_Click"/>
-                        <Button Content="Select Manager" Style="{StaticResource ModernButtonStyle}" Background="#FF9F7AEA" Margin="12,0,0,8" Click="SelectManager_Click" ToolTip="Demo: Manager Selection Dialog"/>
+                        <Button Content="Show All" Style="{StaticResource ModernButtonStyle}" Background="Transparent" BorderBrush="#FF4A5568" BorderThickness="1" Command="{Binding ShowAllDiscoveryDataCommand}"/>
+                        <Button Content="Select Manager" Style="{StaticResource ModernButtonStyle}" Background="#FF9F7AEA" Margin="12,0,0,8" Command="{Binding SelectManagerCommand}" ToolTip="Demo: Manager Selection Dialog"/>
                     </WrapPanel>
                     
-                    <ItemsControl Grid.Row="2" x:Name="DiscoveryModules">
+                    <ItemsControl Grid.Row="2" x:Name="DiscoveryModules" ItemsSource="{Binding DiscoveryModules}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel/>
@@ -1179,10 +1190,10 @@
                                         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
                                             <TextBlock Text="{Binding Icon}" FontSize="32" Margin="0,0,16,0"/>
                                             <StackPanel>
-                                                <TextBlock Text="{Binding Name}" Foreground="#FFE2E8F0" FontSize="18" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding DisplayName}" Foreground="#FFE2E8F0" FontSize="18" FontWeight="SemiBold"/>
                                                 <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                                     <Ellipse Width="8" Height="8" Fill="{Binding StatusColor}" Margin="0,0,8,0"/>
-                                                    <TextBlock Text="{Binding Status}" Foreground="#FFA0AEC0" FontSize="12"/>
+                                                    <TextBlock Text="{Binding StatusText}" Foreground="#FFA0AEC0" FontSize="12"/>
                                                 </StackPanel>
                                             </StackPanel>
                                         </StackPanel>
@@ -1198,13 +1209,16 @@
                                         
                                         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
                                             <Button Content="Configure" 
-                                                    Background="#FF2D3748" Foreground="#FFE2E8F0"
-                                                    BorderThickness="0" Padding="16,8" 
-                                                    FontSize="12" Margin="0,0,8,0"/>
+                                                    Command="{Binding ConfigureCommand}"
+                                                    Style="{StaticResource ModernButtonStyle}"
+                                                    Background="#FF4A5568" Foreground="#FFE2E8F0"
+                                                    FontSize="12" Padding="16,8" Margin="0,0,8,0"
+                                                    IsEnabled="{Binding CanConfigure}"/>
                                             <Button Content="Run Discovery" 
-                                                    Click="RunModule_Click" Tag="{Binding ModuleName}"
+                                                    Command="{Binding RunDiscoveryCommand}"
                                                     Style="{StaticResource ModernButtonStyle}" 
-                                                    FontSize="12" Padding="16,8"/>
+                                                    FontSize="12" Padding="16,8"
+                                                    IsEnabled="{Binding CanRun}"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -1215,7 +1229,7 @@
             </ScrollViewer>
             
             <!-- Enhanced Users View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="UsersView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="UsersView" Visibility="{Binding IsUsersVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -1308,7 +1322,7 @@
                                                     BorderThickness="0" 
                                                     Padding="8,4" 
                                                     FontSize="10"
-                                                    Click="ViewUser_Click"
+                                                    Command="{Binding ViewUserCommand}"
                                                     Tag="{Binding}"
                                                     Cursor="Hand"/>
                                         </DataTemplate>
@@ -1321,7 +1335,7 @@
             </ScrollViewer>
             
             <!-- Enhanced Computers View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="ComputersView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="ComputersView" Visibility="{Binding IsComputersVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -1420,7 +1434,7 @@
             </ScrollViewer>
             
             <!-- Enhanced Infrastructure View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="InfrastructureView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="InfrastructureView" Visibility="{Binding IsInfrastructureVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -1508,11 +1522,11 @@
                                     <Button x:Name="RefreshTopologyButton" Content="🔄 Refresh" 
                                             Style="{StaticResource ModernButtonStyle}" 
                                             Background="#FF4299E1" Margin="16,0,0,0" Padding="8,4"
-                                            Click="RefreshTopology_Click" FontSize="12"/>
+                                            Command="{Binding RefreshTopologyCommand}" FontSize="12"/>
                                     <Button x:Name="AutoLayoutButton" Content="📐 Auto Layout" 
                                             Style="{StaticResource ModernButtonStyle}" 
                                             Background="#FF48BB78" Margin="8,0,0,0" Padding="8,4"
-                                            Click="AutoLayoutTopology_Click" FontSize="12"/>
+                                            Command="{Binding AutoLayoutTopologyCommand}" FontSize="12"/>
                                 </StackPanel>
                                 <Border Background="#FF2D3748" CornerRadius="8" Height="300" Padding="10">
                                     <Grid>
@@ -1640,7 +1654,7 @@
             </ScrollViewer>
             
             <!-- Enhanced Migration Waves View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="WavesView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="WavesView" Visibility="{Binding IsWavesVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -1654,8 +1668,11 @@
                             <TextBlock Text="Strategic migration planning with dependency mapping and timeline visualization" Foreground="#FFA0AEC0" FontSize="16"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
-                            <Button Content="Generate Waves" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,12,0"/>
-                            <Button Content="Timeline View" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource SuccessGradient}"/>
+                            <Button Content="Refresh Data" Style="{StaticResource ModernButtonStyle}" 
+                                    Background="{StaticResource AccentGradient}" Command="{Binding RefreshDataCommand}" 
+                                    Margin="0,0,12,0"/>
+                            <Button Content="Generate Waves" Command="{Binding GenerateWavesCommand}" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,12,0"/>
+                            <Button Content="Timeline View" Command="{Binding TimelineViewCommand}" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource SuccessGradient}"/>
                         </StackPanel>
                     </StackPanel>
                     
@@ -1838,7 +1855,7 @@
             </ScrollViewer>
             
             <!-- Migrate View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="MigrateView" Visibility="Collapsed" Margin="30">
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="MigrateView" Visibility="{Binding IsMigrateVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="30">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -1889,13 +1906,13 @@
                                        Foreground="White" FontSize="18" Margin="0,0,0,20"/>
                             
                             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,20">
-                                <Button Content="Select Users" Click="SelectUsers_Click"
+                                <Button Content="Select Users" Command="{Binding SelectUsersCommand}"
                                         Background="#FF3E3E42" Foreground="White"
                                         Padding="15,8" Margin="0,0,10,0" BorderThickness="0"/>
-                                <Button Content="Map Security Groups" Click="MapSecurityGroups_Click"
+                                <Button Content="Map Security Groups" Command="{Binding MapSecurityGroupsCommand}"
                                         Background="#FF3E3E42" Foreground="White"
                                         Padding="15,8" Margin="0,0,10,0" BorderThickness="0"/>
-                                <Button Content="Start Migration" Click="StartUserMigration_Click"
+                                <Button Content="Start Migration" Command="{Binding StartUserMigrationCommand}"
                                         Background="#FF007ACC" Foreground="White"
                                         Padding="15,8" BorderThickness="0"/>
                             </StackPanel>
@@ -1933,7 +1950,7 @@
             </Grid>
             
             <!-- Reports View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="ReportsView" Visibility="Collapsed" Margin="32">
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="ReportsView" Visibility="{Binding IsReportsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -1954,7 +1971,7 @@
                                     <Button Style="{StaticResource ModernButtonStyle}" 
                                             Background="{StaticResource AccentGradient}"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="GenerateDiscoverySummary_Click">
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Discovery Summary">
                                         <StackPanel>
                                             <TextBlock Text="📊" FontSize="24" Margin="0,0,0,4"/>
                                             <TextBlock Text="Discovery Summary"/>
@@ -1964,7 +1981,7 @@
                                     <Button Style="{StaticResource ModernButtonStyle}" 
                                             Background="#FF2D3748"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="GenerateUserAnalytics_Click">
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="User Analytics">
                                         <StackPanel>
                                             <TextBlock Text="📈" FontSize="24" Margin="0,0,0,4"/>
                                             <TextBlock Text="User Analytics"/>
@@ -1974,7 +1991,7 @@
                                     <Button Style="{StaticResource ModernButtonStyle}" 
                                             Background="#FF2D3748"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="GenerateInfrastructureReport_Click">
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Infrastructure Report">
                                         <StackPanel>
                                             <TextBlock Text="🏢" FontSize="24" Margin="0,0,0,4"/>
                                             <TextBlock Text="Infrastructure Report"/>
@@ -1984,7 +2001,7 @@
                                     <Button Style="{StaticResource ModernButtonStyle}" 
                                             Background="#FF2D3748"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="GenerateMigrationReadiness_Click">
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Migration Readiness">
                                         <StackPanel>
                                             <TextBlock Text="📉" FontSize="24" Margin="0,0,0,4"/>
                                             <TextBlock Text="Migration Readiness"/>
@@ -2005,7 +2022,7 @@
                                     <Button Style="{StaticResource ModernButtonStyle}" 
                                             Background="#FF2D3748"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="GenerateSecurityAudit_Click">
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Security Audit">
                                         <StackPanel>
                                             <TextBlock Text="🔒" FontSize="24" Margin="0,0,0,4"/>
                                             <TextBlock Text="Security Audit"/>
@@ -2015,7 +2032,7 @@
                                     <Button Style="{StaticResource ModernButtonStyle}" 
                                             Background="#FF2D3748"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="GenerateDependencyMap_Click">
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Dependency Map">
                                         <StackPanel>
                                             <TextBlock Text="🔗" FontSize="24" Margin="0,0,0,4"/>
                                             <TextBlock Text="Dependency Map"/>
@@ -2025,7 +2042,7 @@
                                     <Button Style="{StaticResource ModernButtonStyle}" 
                                             Background="#FF2D3748"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="GenerateConfigurationReport_Click">
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Configuration Report">
                                         <StackPanel>
                                             <TextBlock Text="🔧" FontSize="24" Margin="0,0,0,4"/>
                                             <TextBlock Text="Configuration Report"/>
@@ -2035,7 +2052,7 @@
                                     <Button Style="{StaticResource ModernButtonStyle}" 
                                             Background="#FF2D3748"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="GenerateNetworkTopology_Click">
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Network Topology">
                                         <StackPanel>
                                             <TextBlock Text="📡" FontSize="24" Margin="0,0,0,4"/>
                                             <TextBlock Text="Network Topology"/>
@@ -2082,7 +2099,7 @@
                                             Style="{StaticResource ModernButtonStyle}" 
                                             Background="{StaticResource SuccessGradient}"
                                             VerticalAlignment="Bottom" Margin="16,0,0,0"
-                                            Click="GenerateCustomReport_Click"/>
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Custom Report"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -2091,7 +2108,7 @@
             </Grid>
             
             <!-- Settings View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="SettingsView" Visibility="Collapsed" Margin="32">
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="SettingsView" Visibility="{Binding IsSettingsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -2126,7 +2143,7 @@
                                              Text="C:\DiscoveryData" IsReadOnly="True"/>
                                     
                                     <Button Grid.Column="2" Content="Change Path" 
-                                            Click="ChangeDataPath_Click"
+                                            Command="{Binding ChangeDataPathCommand}"
                                             Style="{StaticResource ModernButtonStyle}" 
                                             Margin="12,0,0,0"/>
                                 </Grid>
@@ -2145,7 +2162,7 @@
                                 
                                 <WrapPanel>
                                     <Button Content="Run App Registration Script" 
-                                            Click="RunAppRegistration_Click"
+                                            Command="{Binding RunAppRegistrationCommand}"
                                             Style="{StaticResource ModernButtonStyle}" 
                                             Background="{StaticResource AccentGradient}"
                                             Margin="0,0,12,8">
@@ -2157,7 +2174,7 @@
                                     </Button>
                                     
                                     <Button Content="🔐 App Registration" 
-                                            Click="AppRegistration_Click"
+                                            Command="{Binding AppRegistrationCommand}"
                                             Style="{StaticResource ModernButtonStyle}" 
                                             Background="#FF6B46C1"
                                             Margin="0,0,12,8">
@@ -2170,7 +2187,7 @@
                                     </Button>
                                     
                                     <Button Content="Configure Credentials" 
-                                            Click="ConfigureCredentials_Click"
+                                            Command="{Binding ConfigureCredentialsCommand}"
                                             Style="{StaticResource ModernButtonStyle}" 
                                             Background="#FF2D3748"
                                             Margin="0,0,12,8">
@@ -2182,7 +2199,7 @@
                                     </Button>
                                     
                                     <Button Content="Test Connection" 
-                                            Click="TestConnection_Click"
+                                            Command="{Binding TestConnectionCommand}"
                                             Style="{StaticResource ModernButtonStyle}" 
                                             Background="#FF2D3748">
                                         <Button.ToolTip>
@@ -2266,11 +2283,11 @@
                                                     <Button Content="▲" FontSize="8" Height="12" Width="16" 
                                                             Background="Transparent" Foreground="#FF4299E1" 
                                                             BorderThickness="0" Padding="0" Margin="1,0" 
-                                                            Click="TimeoutUp_Click"/>
+                                                            Command="{Binding TimeoutUpCommand}"/>
                                                     <Button Content="▼" FontSize="8" Height="12" Width="16"
                                                             Background="Transparent" Foreground="#FF4299E1" 
                                                             BorderThickness="0" Padding="0" Margin="1,0"
-                                                            Click="TimeoutDown_Click"/>
+                                                            Command="{Binding TimeoutDownCommand}"/>
                                                 </StackPanel>
                                             </Grid>
                                         </Border>
@@ -2302,11 +2319,11 @@
                                                     <Button Content="▲" FontSize="8" Height="12" Width="16" 
                                                             Background="Transparent" Foreground="#FF4299E1" 
                                                             BorderThickness="0" Padding="0" Margin="1,0" 
-                                                            Click="ThreadsUp_Click"/>
+                                                            Command="{Binding ThreadsUpCommand}"/>
                                                     <Button Content="▼" FontSize="8" Height="12" Width="16"
                                                             Background="Transparent" Foreground="#FF4299E1" 
                                                             BorderThickness="0" Padding="0" Margin="1,0"
-                                                            Click="ThreadsDown_Click"/>
+                                                            Command="{Binding ThreadsDownCommand}"/>
                                                 </StackPanel>
                                             </Grid>
                                         </Border>
@@ -2317,7 +2334,7 @@
                                 </Grid>
                                 
                                 <Button Content="Save Module Settings" 
-                                        Click="SaveModuleSettings_Click"
+                                        Command="{Binding SaveModuleSettingsCommand}"
                                         Style="{StaticResource ModernButtonStyle}" 
                                         HorizontalAlignment="Right" Margin="0,16,0,0"/>
                             </StackPanel>
@@ -2327,13 +2344,18 @@
             </Grid>
             
             <!-- Applications View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="ApplicationsView" Visibility="Collapsed" Margin="32">
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="ApplicationsView" Visibility="{Binding IsApplicationsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             
-            <TextBlock Grid.Row="0" Text="Application Discovery &amp; Catalog" Style="{StaticResource HeaderTextStyle}"/>
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,24">
+                <TextBlock Text="Application Discovery &amp; Catalog" Style="{StaticResource HeaderTextStyle}"/>
+                <Button Content="Refresh Data" Style="{StaticResource ModernButtonStyle}" 
+                        Background="{StaticResource AccentGradient}" Command="{Binding RefreshDataCommand}" 
+                        HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0"/>
+            </StackPanel>
             
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
@@ -2398,7 +2420,7 @@
                                 <Button x:Name="RunAppDiscoveryButton" Style="{StaticResource ModernButtonStyle}" 
                                         Background="{StaticResource AccentGradient}"
                                         Margin="0,0,12,12" Padding="20,12"
-                                        Click="RunAppDiscovery_Click">
+                                        Command="{Binding RunAppDiscoveryCommand}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="🔍" FontSize="16" Margin="0,0,8,0"/>
                                         <TextBlock Text="Run Full App Discovery"/>
@@ -2408,7 +2430,7 @@
                                 <Button x:Name="ImportAppListButton" Style="{StaticResource ModernButtonStyle}" 
                                         Background="#FF48BB78" Foreground="White"
                                         Margin="0,0,12,12" Padding="20,12"
-                                        Click="ImportAppList_Click">
+                                        Command="{Binding ImportAppListCommand}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="📂" FontSize="16" Margin="0,0,8,0"/>
                                         <TextBlock Text="Import App List"/>
@@ -2418,7 +2440,7 @@
                                 <Button x:Name="RefreshAppsButton" Style="{StaticResource ModernButtonStyle}" 
                                         Background="#FF805AD5" Foreground="White"
                                         Margin="0,0,12,12" Padding="20,12"
-                                        Click="RefreshApps_Click">
+                                        Command="{Binding RefreshAppsCommand}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="🔄" FontSize="16" Margin="0,0,8,0"/>
                                         <TextBlock Text="Refresh Data"/>
@@ -2605,7 +2627,7 @@
                                     <Button x:Name="AnalyzeDependenciesButton" Style="{StaticResource ModernButtonStyle}" 
                                             Background="{StaticResource AccentGradient}" 
                                             Padding="16,8" HorizontalAlignment="Stretch"
-                                            Click="AnalyzeDependencies_Click">
+                                            Command="{Binding AnalyzeDependenciesCommand}">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                             <TextBlock Text="🔍" FontSize="14" Margin="0,0,6,0"/>
                                             <TextBlock Text="Analyze Dependencies"/>
@@ -2659,7 +2681,7 @@
                     </StackPanel>
                     
                     <Button Grid.Row="4" Content="Cancel Operation" 
-                            Click="CancelOperation_Click"
+                            Command="{Binding CancelOperationCommand}"
                             Background="{StaticResource DangerGradient}" Foreground="White"
                             Padding="24,10" BorderThickness="0"
                             HorizontalAlignment="Center" Style="{StaticResource ModernButtonStyle}"/>
@@ -2668,7 +2690,7 @@
         </Grid>
 
             <!-- Domain Discovery View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="DomainDiscoveryView" Visibility="Collapsed" Margin="32">
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="DomainDiscoveryView" Visibility="{Binding IsDomainDiscoveryVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -2676,11 +2698,20 @@
                 
                 <!-- Header -->
                 <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
-                    <StackPanel>
-                        <TextBlock Text="Domain Discovery &amp; DNS Enumeration" Style="{StaticResource PageHeaderStyle}"/>
-                        <TextBlock Text="Discover and enumerate domain names, DNS records, and related infrastructure"
-                                   Foreground="#FFA0AEC0" FontSize="14" Margin="0,8,0,0"/>
-                    </StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Domain Discovery &amp; DNS Enumeration" Style="{StaticResource PageHeaderStyle}"/>
+                            <TextBlock Text="Discover and enumerate domain names, DNS records, and related infrastructure"
+                                       Foreground="#FFA0AEC0" FontSize="14" Margin="0,8,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Refresh Data" Style="{StaticResource ModernButtonStyle}" 
+                                Background="{StaticResource AccentGradient}" Command="{Binding RefreshDataCommand}" 
+                                VerticalAlignment="Bottom"/>
+                    </Grid>
                 </Border>
                 
                 <!-- Content -->
@@ -2697,7 +2728,7 @@
                                     <Button x:Name="RunDomainScanButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="{StaticResource AccentGradient}"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="RunDomainScan_Click">
+                                            Command="{Binding RunDomainScanCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="🔍" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Full Domain Scan"/>
@@ -2707,7 +2738,7 @@
                                     <Button x:Name="DnsLookupButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF48BB78" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="DnsLookup_Click">
+                                            Command="{Binding DnsLookupCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="🌐" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="DNS Lookup"/>
@@ -2717,7 +2748,7 @@
                                     <Button x:Name="SubdomainEnumButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF9F7AEA" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="SubdomainEnum_Click">
+                                            Command="{Binding SubdomainEnumCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="🔗" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Subdomain Enumeration"/>
@@ -2748,7 +2779,7 @@
             </Grid>
 
             <!-- File Servers View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="FileServersView" Visibility="Collapsed" Margin="32">
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="FileServersView" Visibility="{Binding IsFileServersVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -2756,11 +2787,20 @@
                 
                 <!-- Header -->
                 <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
-                    <StackPanel>
-                        <TextBlock Text="File Servers &amp; Storage Discovery" Style="{StaticResource PageHeaderStyle}"/>
-                        <TextBlock Text="Discover and analyze file servers, shares, and storage infrastructure"
-                                   Foreground="#FFA0AEC0" FontSize="14" Margin="0,8,0,0"/>
-                    </StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="File Servers &amp; Storage Discovery" Style="{StaticResource PageHeaderStyle}"/>
+                            <TextBlock Text="Discover and analyze file servers, shares, and storage infrastructure"
+                                       Foreground="#FFA0AEC0" FontSize="14" Margin="0,8,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Refresh Data" Style="{StaticResource ModernButtonStyle}" 
+                                Background="{StaticResource AccentGradient}" Command="{Binding RefreshDataCommand}" 
+                                VerticalAlignment="Bottom"/>
+                    </Grid>
                 </Border>
                 
                 <!-- Content -->
@@ -2777,7 +2817,7 @@
                                     <Button x:Name="ScanFileServersButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="{StaticResource AccentGradient}"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="ScanFileServers_Click">
+                                            Command="{Binding ScanFileServersCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="🔍" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Scan File Servers"/>
@@ -2787,7 +2827,7 @@
                                     <Button x:Name="AnalyzeSharesButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF48BB78" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="AnalyzeShares_Click">
+                                            Command="{Binding AnalyzeSharesCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="📊" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Analyze Shares"/>
@@ -2797,7 +2837,7 @@
                                     <Button x:Name="StorageReportButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF9F7AEA" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="StorageReport_Click">
+                                            Command="{Binding StorageReportCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="📈" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Storage Report"/>
@@ -2831,7 +2871,7 @@
             </Grid>
 
             <!-- Databases View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="DatabasesView" Visibility="Collapsed" Margin="32">
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="DatabasesView" Visibility="{Binding IsDatabasesVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -2839,11 +2879,20 @@
                 
                 <!-- Header -->
                 <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
-                    <StackPanel>
-                        <TextBlock Text="Database Discovery &amp; Analysis" Style="{StaticResource PageHeaderStyle}"/>
-                        <TextBlock Text="Discover SQL Server, Oracle, MySQL, and other database systems across your infrastructure"
-                                   Foreground="#FFA0AEC0" FontSize="14" Margin="0,8,0,0"/>
-                    </StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Database Discovery &amp; Analysis" Style="{StaticResource PageHeaderStyle}"/>
+                            <TextBlock Text="Discover SQL Server, Oracle, MySQL, and other database systems across your infrastructure"
+                                       Foreground="#FFA0AEC0" FontSize="14" Margin="0,8,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Refresh Data" Style="{StaticResource ModernButtonStyle}" 
+                                Background="{StaticResource AccentGradient}" Command="{Binding RefreshDataCommand}" 
+                                VerticalAlignment="Bottom"/>
+                    </Grid>
                 </Border>
                 
                 <!-- Content -->
@@ -2860,7 +2909,7 @@
                                     <Button x:Name="ScanDatabasesButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="{StaticResource AccentGradient}"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="ScanDatabases_Click">
+                                            Command="{Binding ScanDatabasesCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="🔍" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Scan Database Servers"/>
@@ -2870,7 +2919,7 @@
                                     <Button x:Name="AnalyzeSQLButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF48BB78" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="AnalyzeSQL_Click">
+                                            Command="{Binding AnalyzeSQLCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="🗃️" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Analyze SQL Servers"/>
@@ -2880,7 +2929,7 @@
                                     <Button x:Name="DatabaseReportButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF9F7AEA" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="DatabaseReport_Click">
+                                            Command="{Binding DatabaseReportCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="📊" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Database Report"/>
@@ -2890,7 +2939,7 @@
                                     <Button x:Name="CheckDatabaseVersionsButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FFE53E3E" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="CheckDatabaseVersions_Click">
+                                            Command="{Binding CheckDatabaseVersionsCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="⚠️" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Check Versions"/>
@@ -2925,7 +2974,7 @@
             </Grid>
 
             <!-- Security View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="SecurityView" Visibility="Collapsed" Margin="32">
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="SecurityView" Visibility="{Binding IsSecurityVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -2933,11 +2982,20 @@
                 
                 <!-- Header -->
                 <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
-                    <StackPanel>
-                        <TextBlock Text="Group Policy &amp; Security Discovery" Style="{StaticResource PageHeaderStyle}"/>
-                        <TextBlock Text="Analyze Group Policy settings, security configurations, and compliance posture across your domain"
-                                   Foreground="#FFA0AEC0" FontSize="14" Margin="0,8,0,0"/>
-                    </StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Group Policy &amp; Security Discovery" Style="{StaticResource PageHeaderStyle}"/>
+                            <TextBlock Text="Analyze Group Policy settings, security configurations, and compliance posture across your domain"
+                                       Foreground="#FFA0AEC0" FontSize="14" Margin="0,8,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Refresh Data" Style="{StaticResource ModernButtonStyle}" 
+                                Background="{StaticResource AccentGradient}" Command="{Binding RefreshDataCommand}" 
+                                VerticalAlignment="Bottom"/>
+                    </Grid>
                 </Border>
                 
                 <!-- Content -->
@@ -2954,7 +3012,7 @@
                                     <Button x:Name="ScanGPOButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="{StaticResource AccentGradient}"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="ScanGPO_Click">
+                                            Command="{Binding ScanGPOCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="🔍" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Scan Group Policies"/>
@@ -2964,7 +3022,7 @@
                                     <Button x:Name="SecurityAuditButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FFE53E3E" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="SecurityAudit_Click">
+                                            Command="{Binding SecurityAuditCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="🛡️" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Security Audit"/>
@@ -2974,7 +3032,7 @@
                                     <Button x:Name="ComplianceCheckButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF48BB78" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="ComplianceCheck_Click">
+                                            Command="{Binding ComplianceCheckCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="✅" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Compliance Check"/>
@@ -2984,7 +3042,7 @@
                                     <Button x:Name="VulnerabilityAssessmentButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF9F7AEA" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="VulnerabilityAssessment_Click">
+                                            Command="{Binding VulnerabilityAssessmentCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="⚠️" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Vulnerability Scan"/>
@@ -2994,7 +3052,7 @@
                                     <Button x:Name="PasswordPolicyButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FFED8936" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="PasswordPolicy_Click">
+                                            Command="{Binding PasswordPolicyCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="🔐" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Password Policies"/>
@@ -3004,7 +3062,7 @@
                                     <Button x:Name="PasswordGeneratorButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF9F7AEA" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="PasswordGenerator_Click">
+                                            Command="{Binding PasswordGeneratorCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="🎲" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Password Generator"/>
@@ -3014,7 +3072,7 @@
                                     <Button x:Name="FirewallAnalysisButton" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF38B2AC" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
-                                            Click="FirewallAnalysis_Click">
+                                            Command="{Binding FirewallAnalysisCommand}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="🔥" FontSize="16" Margin="0,0,8,0"/>
                                             <TextBlock Text="Firewall Analysis"/>
@@ -3033,16 +3091,16 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,16,0,16">
                                     <Button x:Name="GPOTabButton" Content="Group Policies" Style="{StaticResource ModernButtonStyle}"
                                             Background="{StaticResource AccentGradient}" Margin="0,0,8,0" Padding="16,8"
-                                            Click="SecurityTab_Click" Tag="GPO"/>
+                                            Command="{Binding SecurityTabCommand}" CommandParameter="GPO"/>
                                     <Button x:Name="SecurityTabButton" Content="Security Issues" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF4A5568" Margin="0,0,8,0" Padding="16,8"
-                                            Click="SecurityTab_Click" Tag="Security"/>
+                                            Command="{Binding SecurityTabCommand}" CommandParameter="Security"/>
                                     <Button x:Name="ComplianceTabButton" Content="Compliance" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF4A5568" Margin="0,0,8,0" Padding="16,8"
-                                            Click="SecurityTab_Click" Tag="Compliance"/>
+                                            Command="{Binding SecurityTabCommand}" CommandParameter="Compliance"/>
                                     <Button x:Name="VulnerabilitiesTabButton" Content="Vulnerabilities" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF4A5568" Margin="0,0,8,0" Padding="16,8"
-                                            Click="SecurityTab_Click" Tag="Vulnerabilities"/>
+                                            Command="{Binding SecurityTabCommand}" CommandParameter="Vulnerabilities"/>
                                 </StackPanel>
                                 
                                 <!-- GPO Results -->
@@ -3113,8 +3171,17 @@
                 </ScrollViewer>
             </Grid>
             
+            <!-- Notification Area -->
+            <Border Grid.Row="1" Background="#FF2D3748" BorderBrush="#FF4A5568" BorderThickness="0,1,0,0" Height="24"
+                    Visibility="{Binding HasNotification, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="ℹ️" FontSize="12" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding NotificationMessage}" Foreground="#FFE2E8F0" FontSize="11" FontWeight="Medium"/>
+                </StackPanel>
+            </Border>
+            
             <!-- Status Bar -->
-            <Border Grid.Row="1" Background="#FF1A202C" BorderBrush="#FF2D3748" BorderThickness="0,1,0,0" Height="28">
+            <Border Grid.Row="2" Background="#FF1A202C" BorderBrush="#FF2D3748" BorderThickness="0,1,0,0" Height="28">
                 <Grid Margin="16,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -3127,11 +3194,11 @@
                     <!-- Status Text -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <Ellipse x:Name="StatusIndicator" Width="8" Height="8" Fill="#FF38F9D7" Margin="0,0,8,0"/>
-                        <TextBlock x:Name="StatusText" Text="Ready" Foreground="#FFA0AEC0" FontSize="12" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="StatusText" Text="{Binding StatusMessage}" Foreground="#FFA0AEC0" FontSize="12" VerticalAlignment="Center"/>
                     </StackPanel>
                     
                     <!-- Progress Indicator -->
-                    <ProgressBar x:Name="StatusProgressBar" Grid.Column="1" Height="3" Margin="16,0" 
+                    <ProgressBar x:Name="StatusProgressBar" Grid.Column="1" Height="3" Margin="16,0" Value="{Binding OverallProgress}" 
                                 Background="Transparent" Foreground="#FF4299E1" 
                                 Visibility="Collapsed" IsIndeterminate="True"/>
                     

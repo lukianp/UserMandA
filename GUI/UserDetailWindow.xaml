@@ -98,7 +98,7 @@
                             BorderThickness="0" 
                             FontSize="16" 
                             Padding="12,8" 
-                            Click="CloseButton_Click"
+                            Command="{Binding CloseCommand}"
                             Cursor="Hand"/>
                 </Grid>
             </Border>
@@ -135,28 +135,28 @@
                                     </Grid.RowDefinitions>
 
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Email:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="EmailText" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="EmailText" Text="{Binding Email}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
 
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Job Title:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="JobTitleText" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="JobTitleText" Text="{Binding JobTitle}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
 
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Department:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="DepartmentText" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="DepartmentText" Text="{Binding Department}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
 
                                     <TextBlock Grid.Row="3" Grid.Column="0" Text="Manager:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Grid.Row="3" Grid.Column="1" x:Name="ManagerText" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Grid.Row="3" Grid.Column="1" x:Name="ManagerText" Text="{Binding Manager}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
 
                                     <TextBlock Grid.Row="4" Grid.Column="0" Text="Location:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Grid.Row="4" Grid.Column="1" x:Name="LocationText" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Grid.Row="4" Grid.Column="1" x:Name="LocationText" Text="{Binding Location}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
 
                                     <TextBlock Grid.Row="5" Grid.Column="0" Text="Account Enabled:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Grid.Row="5" Grid.Column="1" x:Name="AccountEnabledText" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Grid.Row="5" Grid.Column="1" x:Name="AccountEnabledText" Text="{Binding AccountEnabled}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
 
                                     <TextBlock Grid.Row="6" Grid.Column="0" Text="Created:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Grid.Row="6" Grid.Column="1" x:Name="CreatedDateText" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Grid.Row="6" Grid.Column="1" x:Name="CreatedDateText" Text="{Binding CreatedDate}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
 
                                     <TextBlock Grid.Row="7" Grid.Column="0" Text="Last Sign-In:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Grid.Row="7" Grid.Column="1" x:Name="LastSignInText" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Grid.Row="7" Grid.Column="1" x:Name="LastSignInText" Text="{Binding LastSignIn}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -165,7 +165,7 @@
                         <Border Style="{StaticResource ModernCardStyle}">
                             <StackPanel>
                                 <TextBlock Text="👥 Group Memberships" Style="{StaticResource SectionHeaderStyle}"/>
-                                <DataGrid x:Name="GroupMembershipsGrid" Style="{StaticResource CompactDataGridStyle}" MaxHeight="200">
+                                <DataGrid x:Name="GroupMembershipsGrid" ItemsSource="{Binding GroupMemberships}" Style="{StaticResource CompactDataGridStyle}" MaxHeight="200">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Group Name" Binding="{Binding DisplayName}" Width="*"/>
                                         <DataGridTextColumn Header="Type" Binding="{Binding GroupType}" Width="80"/>
@@ -178,7 +178,7 @@
                         <Border Style="{StaticResource ModernCardStyle}">
                             <StackPanel>
                                 <TextBlock Text="📱 Application Access" Style="{StaticResource SectionHeaderStyle}"/>
-                                <DataGrid x:Name="ApplicationsGrid" Style="{StaticResource CompactDataGridStyle}" MaxHeight="200">
+                                <DataGrid x:Name="ApplicationsGrid" ItemsSource="{Binding ApplicationAssignments}" Style="{StaticResource CompactDataGridStyle}" MaxHeight="200">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Application" Binding="{Binding DisplayName}" Width="*"/>
                                         <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="100"/>
@@ -196,7 +196,7 @@
                         <Border Style="{StaticResource ModernCardStyle}">
                             <StackPanel>
                                 <TextBlock Text="💻 Associated Devices" Style="{StaticResource SectionHeaderStyle}"/>
-                                <DataGrid x:Name="DevicesGrid" Style="{StaticResource CompactDataGridStyle}" MaxHeight="200">
+                                <DataGrid x:Name="DevicesGrid" ItemsSource="{Binding DeviceRelationships}" Style="{StaticResource CompactDataGridStyle}" MaxHeight="200">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Device Name" Binding="{Binding DisplayName}" Width="*"/>
                                         <DataGridTextColumn Header="OS" Binding="{Binding OperatingSystem}" Width="100"/>
@@ -210,7 +210,7 @@
                         <Border Style="{StaticResource ModernCardStyle}">
                             <StackPanel>
                                 <TextBlock Text="🛡️ Directory Roles" Style="{StaticResource SectionHeaderStyle}"/>
-                                <DataGrid x:Name="DirectoryRolesGrid" Style="{StaticResource CompactDataGridStyle}" MaxHeight="150">
+                                <DataGrid x:Name="DirectoryRolesGrid" ItemsSource="{Binding DirectoryRoles}" Style="{StaticResource CompactDataGridStyle}" MaxHeight="150">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Role" Binding="{Binding DisplayName}" Width="*"/>
                                         <DataGridTextColumn Header="Scope" Binding="{Binding Description}" Width="150"/>
@@ -223,7 +223,7 @@
                         <Border Style="{StaticResource ModernCardStyle}">
                             <StackPanel>
                                 <TextBlock Text="📄 License Assignments" Style="{StaticResource SectionHeaderStyle}"/>
-                                <DataGrid x:Name="LicensesGrid" Style="{StaticResource CompactDataGridStyle}" MaxHeight="150">
+                                <DataGrid x:Name="LicensesGrid" ItemsSource="{Binding LicenseAssignments}" Style="{StaticResource CompactDataGridStyle}" MaxHeight="150">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="License" Binding="{Binding SkuPartNumber}" Width="*"/>
                                         <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80"/>
@@ -249,16 +249,16 @@
                                     </Grid.RowDefinitions>
 
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="MFA Enabled:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="MFAStatusText" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="MFAStatusText" Text="{Binding MfaStatus}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
 
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Risk Level:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="RiskLevelText" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="RiskLevelText" Text="{Binding RiskLevel}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
 
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Auth Methods:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="AuthMethodsText" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="AuthMethodsText" Text="{Binding AuthMethods}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
 
                                     <TextBlock Grid.Row="3" Grid.Column="0" Text="Last Password Change:" Style="{StaticResource LabelStyle}"/>
-                                    <TextBox Grid.Row="3" Grid.Column="1" x:Name="PasswordChangeText" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Grid.Row="3" Grid.Column="1" x:Name="PasswordChangeText" Text="{Binding PasswordChange}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -276,14 +276,14 @@
                             BorderThickness="0" 
                             Padding="16,8" 
                             Margin="0,0,12,0"
-                            Click="ExportProfile_Click"
+                            Command="{Binding ExportProfileCommand}"
                             Cursor="Hand"/>
                     <Button Content="Close" 
                             Background="#FF6B7280" 
                             Foreground="White" 
                             BorderThickness="0" 
                             Padding="16,8"
-                            Click="CloseButton_Click"
+                            Command="{Binding CloseCommand}"
                             Cursor="Hand"/>
                 </StackPanel>
             </Border>

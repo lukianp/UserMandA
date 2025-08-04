@@ -4,15 +4,15 @@
 winexe
 C#
 .cs
-D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\
+D:\Scripts\UserMandA-1\gui\obj\Release\net6.0-windows\
 MandADiscoverySuite
 none
 false
 TRACE;RELEASE;NET;NET6_0;NETCOREAPP
-D:\Scripts\UserMandA\GUI\App.xaml
+D:\Scripts\UserMandA-1\gui\App.xaml
 121017916337
 
-22-320446090
+23998236278
 203155564505
 Controls\ProfileDropZone.xaml;Controls\ProgressIndicator.xaml;Controls\SimpleChart.xaml;CreateProfileDialog.xaml;DebugLogWindow.xaml;ErrorDialog.xaml;ManagerSelectionDialog.xaml;MandADiscoverySuite.xaml;PasswordGeneratorDialog.xaml;PowerShellWindow.xaml;Themes\ThemeStyles.xaml;UserDetailWindow.xaml;
 

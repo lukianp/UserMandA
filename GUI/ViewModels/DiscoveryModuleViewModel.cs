@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using MandADiscoverySuite.Models;
 
@@ -65,7 +66,7 @@ namespace MandADiscoverySuite.ViewModels
         public DiscoveryModuleStatus Status
         {
             get => _status;
-            set => SetProperty(ref _status, value, () => OnPropertiesChanged(nameof(StatusText), nameof(StatusColor)));
+            set => SetProperty(ref _status, value, () => OnPropertiesChanged(nameof(StatusText), nameof(StatusColor), nameof(IsRunning), nameof(CanToggle), nameof(CanConfigure), nameof(CanRun)));
         }
 
         /// <summary>
@@ -249,6 +250,11 @@ namespace MandADiscoverySuite.ViewModels
         /// </summary>
         public bool CanToggle => !IsRunning;
 
+        /// <summary>
+        /// Whether the module can be run
+        /// </summary>
+        public bool CanRun => IsEnabled && !IsRunning;
+
         #endregion
 
         #region Commands
@@ -257,6 +263,7 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ConfigureCommand { get; }
         public ICommand ViewResultsCommand { get; }
         public ICommand ViewLogsCommand { get; }
+        public ICommand RunDiscoveryCommand { get; }
 
         #endregion
 
@@ -281,6 +288,7 @@ namespace MandADiscoverySuite.ViewModels
             ConfigureCommand = new RelayCommand(OnConfigure, () => CanConfigure);
             ViewResultsCommand = new RelayCommand(OnViewResults, () => HasLastRun);
             ViewLogsCommand = new RelayCommand(OnViewLogs);
+            RunDiscoveryCommand = new AsyncRelayCommand(OnRunDiscoveryAsync, () => IsEnabled && !IsRunning);
 
             // Set default configuration
             _hasConfiguration = true;
@@ -296,7 +304,7 @@ namespace MandADiscoverySuite.ViewModels
             Status = IsEnabled ? DiscoveryModuleStatus.Ready : DiscoveryModuleStatus.Disabled;
             LastMessage = IsEnabled ? "Module enabled" : "Module disabled";
             
-            OnPropertiesChanged(nameof(CanToggle), nameof(CanConfigure));
+            OnPropertiesChanged(nameof(CanToggle), nameof(CanConfigure), nameof(CanRun));
         }
 
         private void OnConfigure()
@@ -317,9 +325,161 @@ namespace MandADiscoverySuite.ViewModels
             LastMessage = "Log viewer would open here";
         }
 
+        private async Task OnRunDiscoveryAsync()
+        {
+            try
+            {
+                // Set status immediately to prevent multiple concurrent launches
+                if (Status == DiscoveryModuleStatus.Running)
+                {
+                    LastMessage = "Discovery already running";
+                    return;
+                }
+
+                Status = DiscoveryModuleStatus.Running;
+                LastMessage = "Initializing discovery...";
+
+                // Perform path validation asynchronously, but create window on UI thread
+                string launcherScriptPath = null;
+                string companyName = "DefaultCompany";
+
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        // Get the root path for scripts
+                        var rootPath = GetRootPath();
+                        launcherScriptPath = System.IO.Path.Combine(rootPath, "Scripts", "DiscoveryModuleLauncher.ps1");
+                        
+                        if (!System.IO.File.Exists(launcherScriptPath))
+                        {
+                            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                LastMessage = "Discovery launcher script not found";
+                                Status = DiscoveryModuleStatus.Failed;
+                            });
+                            launcherScriptPath = null;
+                            return;
+                        }
+
+                        // Get selected profile from MainWindow
+                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            try
+                            {
+                                var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+                                if (mainWindow?.ViewModel?.SelectedProfile != null)
+                                {
+                                    companyName = mainWindow.ViewModel.SelectedProfile.CompanyName;
+                                }
+                            }
+                            catch
+                            {
+                                // Fallback to default if we can't access the main window
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            LastMessage = $"Failed to validate script path: {ex.Message}";
+                            Status = DiscoveryModuleStatus.Failed;
+                        });
+                        launcherScriptPath = null;
+                    }
+                });
+
+                // If validation failed, exit early
+                if (string.IsNullOrEmpty(launcherScriptPath))
+                {
+                    return;
+                }
+
+                // Create and show PowerShell window on UI thread
+                try
+                {
+                    LastMessage = $"Creating PowerShell window for script: {launcherScriptPath}";
+                    
+                    var powerShellWindow = new PowerShellWindow(
+                        launcherScriptPath,
+                        $"{DisplayName}",
+                        $"{Description} for {companyName}",
+                        "-ModuleName", ModuleName,
+                        "-CompanyName", companyName
+                    );
+                    
+                    LastMessage = "PowerShell window created, attempting to show...";
+                    powerShellWindow.Show();
+                    LastMessage = "Discovery window launched successfully";
+                }
+                catch (Exception showEx)
+                {
+                    LastMessage = $"Failed to show window: {showEx.Message} | Stack: {showEx.StackTrace}";
+                    Status = DiscoveryModuleStatus.Failed;
+                }
+            }
+            catch (Exception ex)
+            {
+                LastMessage = $"Failed to launch discovery: {ex.Message}";
+                Status = DiscoveryModuleStatus.Failed;
+            }
+        }
+
         #endregion
 
         #region Helper Methods
+
+        private static string GetRootPath()
+        {
+            // Priority order for application path resolution:
+            // 1. Environment variable MANDA_APP_PATH
+            // 2. Registry setting (for enterprise deployment)
+            // 3. Executable directory (portable mode)
+            // 4. Default system location
+            
+            string appPath = null;
+            
+            // Try environment variable first
+            appPath = Environment.GetEnvironmentVariable("MANDA_APP_PATH");
+            if (!string.IsNullOrEmpty(appPath) && System.IO.Directory.Exists(appPath))
+            {
+                return appPath;
+            }
+            
+            // Try registry setting (for enterprise installations)
+            try
+            {
+                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\MandADiscoverySuite"))
+                {
+                    appPath = key?.GetValue("InstallPath") as string;
+                    if (!string.IsNullOrEmpty(appPath) && System.IO.Directory.Exists(appPath))
+                    {
+                        return appPath;
+                    }
+                }
+            }
+            catch { /* Registry access may fail in restricted environments */ }
+            
+            // Try portable mode (executable directory)
+            var exeDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            var modulesPath = System.IO.Path.Combine(exeDir, "Modules");
+            if (System.IO.Directory.Exists(modulesPath))
+            {
+                return exeDir;
+            }
+            
+            // Try current working directory
+            var currentDir = System.IO.Directory.GetCurrentDirectory();
+            modulesPath = System.IO.Path.Combine(currentDir, "Modules");
+            if (System.IO.Directory.Exists(modulesPath))
+            {
+                return currentDir;
+            }
+            
+            // Default to system location
+            return @"C:\enterprisediscovery";
+        }
 
         private static (string Icon, string Category) GetModuleIconAndCategory(string moduleName)
         {

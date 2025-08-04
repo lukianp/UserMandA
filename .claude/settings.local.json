@@ -67,7 +67,13 @@
       "Bash(else echo \"❌ Needs mapping: $module\")",
       "Bash(Start-Process \"GUI/bin/Release/net6.0-windows/MandADiscoverySuite.exe\" -WindowStyle Normal)",
       "Bash(Start-Process \"bin\\Release\\net6.0-windows\\MandADiscoverySuite.exe\" -WindowStyle Normal)",
-      "Bash(./bin/Release/net6.0-windows/MandADiscoverySuite.exe)"
+      "Bash(./bin/Release/net6.0-windows/MandADiscoverySuite.exe)",
+      "Bash(copy:*)",
+      "Bash(mv:*)",
+      "Bash(pwsh:*)",
+      "Bash(.Build-GUI.ps1)",
+      "Bash(dir \"C:\\EnterpriseDiscovery\\Scripts\\DiscoveryModuleLauncher.ps1\")",
+      "Bash(find:*)"
     ],
     "deny": []
   }

@@ -215,13 +215,13 @@ namespace MandADiscoverySuite.Services
         }
 
         /// <summary>
-        /// Gets the data directory path for a profile
+        /// Gets the data directory path for a profile - points to C:\discoverydata for storing results
+        /// Discovery modules (.psm1) are loaded from the build directory, not from here
         /// </summary>
         public string GetProfileDataPath(string companyName)
         {
-            var rootPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            var scriptsPath = Path.Combine(Path.GetDirectoryName(rootPath), "Scripts", "UserMandA");
-            return Path.Combine(scriptsPath, "Output", companyName);
+            // Profile data is stored in C:\discoverydata\{companyName}
+            return Path.Combine(@"C:\discoverydata", companyName);
         }
 
         /// <summary>
