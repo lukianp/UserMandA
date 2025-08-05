@@ -75,13 +75,13 @@
             <!-- Header with Icon and Title -->
             <StackPanel Orientation="Horizontal" 
                         Margin="0,0,0,8"
-                        Visibility="{Binding Title, Converter={StaticResource StringToVisibilityConverter}}">
+>
                 
                 <TextBlock Text="{Binding Icon}" 
                            FontSize="14"
                            VerticalAlignment="Center"
                            Margin="0,0,6,0"
-                           Visibility="{Binding Icon, Converter={StaticResource StringToVisibilityConverter}}"/>
+/>
                 
                 <TextBlock Text="{Binding Title}" 
                            FontSize="13"
@@ -120,10 +120,10 @@
                            Foreground="{DynamicResource MutedForegroundBrush}"
                            TextWrapping="Wrap"
                            Margin="0,0,0,8"
-                           Visibility="{Binding Content, Converter={StaticResource StringToVisibilityConverter}}"/>
+/>
 
                 <!-- Keyboard Shortcuts -->
-                <StackPanel Visibility="{Binding KeyboardShortcuts, Converter={StaticResource CollectionToVisibilityConverter}}">
+                <StackPanel>
                     <TextBlock Text="Keyboard Shortcuts:" Style="{StaticResource SectionHeaderStyle}"/>
                     <ItemsControl ItemsSource="{Binding KeyboardShortcuts}">
                         <ItemsControl.ItemsPanel>
@@ -145,13 +145,12 @@
                 </StackPanel>
 
                 <!-- Tips -->
-                <StackPanel Visibility="{Binding Tips, Converter={StaticResource CollectionToVisibilityConverter}}"
-                            Margin="0,8,0,0">
+                <StackPanel Margin="0,8,0,0">
                     <TextBlock Text="💡 Tips:" Style="{StaticResource SectionHeaderStyle}"/>
                     <ItemsControl ItemsSource="{Binding Tips}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding, StringFormat='• {0}'}" 
+                                <TextBlock Text="{Binding}" 
                                            Style="{StaticResource SectionContentStyle}"/>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -221,7 +220,7 @@
                        TextWrapping="Wrap"
                        HorizontalAlignment="Right"
                        Margin="0,8,0,0"
-                       Visibility="{Binding Footer, Converter={StaticResource StringToVisibilityConverter}}"/>
+/>
         </StackPanel>
     </Border>
 </UserControl>

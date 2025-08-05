@@ -18,28 +18,28 @@ namespace MandADiscoverySuite.Services
         /// Gets all available company profiles
         /// </summary>
         /// <returns>Collection of company profiles</returns>
-        Task<IEnumerable<CompanyProfile>> GetProfilesAsync();
+        Task<IEnumerable<ServiceCompanyProfile>> GetProfilesAsync();
 
         /// <summary>
         /// Gets a specific company profile by name
         /// </summary>
         /// <param name="profileName">Profile name</param>
         /// <returns>Company profile or null if not found</returns>
-        Task<CompanyProfile> GetProfileAsync(string profileName);
+        Task<ServiceCompanyProfile> GetProfileAsync(string profileName);
 
         /// <summary>
         /// Creates a new company profile
         /// </summary>
         /// <param name="profile">Profile to create</param>
         /// <returns>Created profile</returns>
-        Task<CompanyProfile> CreateProfileAsync(CompanyProfile profile);
+        Task<ServiceCompanyProfile> CreateProfileAsync(ServiceCompanyProfile profile);
 
         /// <summary>
         /// Updates an existing company profile
         /// </summary>
         /// <param name="profile">Profile to update</param>
         /// <returns>Updated profile</returns>
-        Task<CompanyProfile> UpdateProfileAsync(CompanyProfile profile);
+        Task<ServiceCompanyProfile> UpdateProfileAsync(ServiceCompanyProfile profile);
 
         /// <summary>
         /// Deletes a company profile
@@ -79,7 +79,7 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Company profile model
     /// </summary>
-    public class CompanyProfile
+    public class ServiceCompanyProfile
     {
         public string Name { get; set; }
         public string DisplayName { get; set; }

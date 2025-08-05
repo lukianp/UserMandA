@@ -91,7 +91,7 @@
                                    Margin="0,8,0,0"/>
                     </StackPanel>
 
-                    <!-- Step 2: Format & Options -->
+                    <!-- Step 2: Format &amp; Options -->
                     <StackPanel Grid.Column="1" HorizontalAlignment="Center">
                         <Border Style="{StaticResource ProgressStepStyle}" 
                                 DataContext="{Binding Steps[1]}">
@@ -101,14 +101,14 @@
                                        Foreground="White" 
                                        FontWeight="Bold"/>
                         </Border>
-                        <TextBlock Text="Format & Options" 
+                        <TextBlock Text="Format &amp; Options" 
                                    FontSize="12" 
                                    HorizontalAlignment="Center"
                                    Foreground="{DynamicResource MutedForegroundBrush}"
                                    Margin="0,8,0,0"/>
                     </StackPanel>
 
-                    <!-- Step 3: Schedule & Filters -->
+                    <!-- Step 3: Schedule &amp; Filters -->
                     <StackPanel Grid.Column="2" HorizontalAlignment="Center">
                         <Border Style="{StaticResource ProgressStepStyle}" 
                                 DataContext="{Binding Steps[2]}">
@@ -118,7 +118,7 @@
                                        Foreground="White" 
                                        FontWeight="Bold"/>
                         </Border>
-                        <TextBlock Text="Schedule & Filters" 
+                        <TextBlock Text="Schedule &amp; Filters" 
                                    FontSize="12" 
                                    HorizontalAlignment="Center"
                                    Foreground="{DynamicResource MutedForegroundBrush}"
@@ -147,7 +147,8 @@
 
         <!-- Wizard Content -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <!-- Step 1: Data Selection -->
+            <StackPanel>
+                <!-- Step 1: Data Selection -->
             <Border Style="{StaticResource WizardStepStyle}" 
                     Visibility="{Binding IsStep1Visible, Converter={StaticResource BoolToVisibilityConverter}}">
                 <StackPanel>
@@ -211,11 +212,11 @@
                 </StackPanel>
             </Border>
 
-            <!-- Step 2: Format & Options -->
+            <!-- Step 2: Format &amp; Options -->
             <Border Style="{StaticResource WizardStepStyle}" 
                     Visibility="{Binding IsStep2Visible, Converter={StaticResource BoolToVisibilityConverter}}">
                 <StackPanel>
-                    <TextBlock Text="Step 2: Export Format & Options" Style="{StaticResource StepHeaderStyle}"/>
+                    <TextBlock Text="Step 2: Export Format &amp; Options" Style="{StaticResource StepHeaderStyle}"/>
                     
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -285,11 +286,11 @@
                 </StackPanel>
             </Border>
 
-            <!-- Step 3: Schedule & Filters -->
+            <!-- Step 3: Schedule &amp; Filters -->
             <Border Style="{StaticResource WizardStepStyle}" 
                     Visibility="{Binding IsStep3Visible, Converter={StaticResource BoolToVisibilityConverter}}">
                 <StackPanel>
-                    <TextBlock Text="Step 3: Schedule & Data Filters" Style="{StaticResource StepHeaderStyle}"/>
+                    <TextBlock Text="Step 3: Schedule &amp; Data Filters" Style="{StaticResource StepHeaderStyle}"/>
                     
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -432,6 +433,7 @@
                     </Grid>
                 </StackPanel>
             </Border>
+            </StackPanel>
         </ScrollViewer>
 
         <!-- Wizard Navigation -->

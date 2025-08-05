@@ -227,7 +227,7 @@
                            VerticalAlignment="Center"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <TextBlock Text="{Binding TabCount, StringFormat='{0} tabs'}" 
+                    <TextBlock Text="{Binding TabCount, StringFormat={}{0} tabs}" 
                                FontSize="11"
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                VerticalAlignment="Center"

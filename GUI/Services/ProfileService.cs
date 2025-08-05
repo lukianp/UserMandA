@@ -453,42 +453,4 @@ namespace MandADiscoverySuite.Services
         #endregion
     }
 
-    /// <summary>
-    /// Profile validation result
-    /// </summary>
-    public class ProfileValidationResult
-    {
-        public List<string> Errors { get; } = new List<string>();
-        public List<string> Warnings { get; } = new List<string>();
-        public bool IsValid => !Errors.Any();
-
-        public void AddError(string error) => Errors.Add(error);
-        public void AddWarning(string warning) => Warnings.Add(warning);
-    }
-
-    /// <summary>
-    /// Profile statistics
-    /// </summary>
-    public class ProfileStatistics
-    {
-        public string ProfileId { get; set; }
-        public string CompanyName { get; set; }
-        public DateTime Created { get; set; }
-        public DateTime LastModified { get; set; }
-        public DateTime? LastDiscoveryRun { get; set; }
-        public int TotalDiscoveryRuns { get; set; }
-        public long DataSizeBytes { get; set; }
-
-        public string DataSizeText
-        {
-            get
-            {
-                if (DataSizeBytes == 0) return "0 B";
-                if (DataSizeBytes < 1024) return $"{DataSizeBytes} B";
-                if (DataSizeBytes < 1024 * 1024) return $"{DataSizeBytes / 1024.0:F1} KB";
-                if (DataSizeBytes < 1024 * 1024 * 1024) return $"{DataSizeBytes / (1024.0 * 1024):F1} MB";
-                return $"{DataSizeBytes / (1024.0 * 1024 * 1024):F1} GB";
-            }
-        }
-    }
 }

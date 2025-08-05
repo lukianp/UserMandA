@@ -255,7 +255,7 @@
                            Foreground="White"
                            VerticalAlignment="Center"
                            Margin="0,0,4,0"/>
-                <TextBlock Text="{Binding ActiveActionCount, StringFormat='{0} actions'}"
+                <TextBlock Text="{Binding ActiveActionCount, StringFormat={}{0} actions}"
                            FontSize="10"
                            Foreground="White"
                            VerticalAlignment="Center"/>

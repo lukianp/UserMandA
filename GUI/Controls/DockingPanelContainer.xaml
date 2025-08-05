@@ -43,7 +43,6 @@
                 <Setter Property="Opacity" Value="0.3"/>
                 <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                 <Setter Property="BorderThickness" Value="2"/>
-                <Setter Property="BorderStyle" Value="Dashed"/>
                 <Setter Property="Visibility" Value="Collapsed"/>
             </Style>
         </ResourceDictionary>

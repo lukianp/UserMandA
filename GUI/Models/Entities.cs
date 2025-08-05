@@ -42,13 +42,13 @@ namespace MandADiscoverySuite.Models
         public DateTime? LastUsed { get; set; }
 
         // Navigation properties
-        public virtual ICollection<DiscoveryResult> DiscoveryResults { get; set; } = new List<DiscoveryResult>();
+        public virtual ICollection<DiscoveryResultEntity> DiscoveryResults { get; set; } = new List<DiscoveryResultEntity>();
     }
 
     /// <summary>
     /// Discovery result entity
     /// </summary>
-    public class DiscoveryResult : BaseEntity<string>
+    public class DiscoveryResultEntity : BaseEntity<string>
     {
         [Required]
         public string ProfileId { get; set; }

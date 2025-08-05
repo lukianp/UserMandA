@@ -129,9 +129,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Adds a success notification
         /// </summary>
-        public void AddSuccess(string title, string message, TimeSpan? autoHideDelay = TimeSpan.FromSeconds(5))
+        public void AddSuccess(string title, string message, TimeSpan? autoHideDelay = null)
         {
-            AddNotification(title, message, NotificationType.Success, autoHideDelay);
+            AddNotification(title, message, NotificationType.Success, autoHideDelay ?? TimeSpan.FromSeconds(5));
         }
 
         /// <summary>
@@ -145,17 +145,17 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Adds a warning notification
         /// </summary>
-        public void AddWarning(string title, string message, TimeSpan? autoHideDelay = TimeSpan.FromSeconds(10))
+        public void AddWarning(string title, string message, TimeSpan? autoHideDelay = null)
         {
-            AddNotification(title, message, NotificationType.Warning, autoHideDelay);
+            AddNotification(title, message, NotificationType.Warning, autoHideDelay ?? TimeSpan.FromSeconds(10));
         }
 
         /// <summary>
         /// Adds an information notification
         /// </summary>
-        public void AddInfo(string title, string message, TimeSpan? autoHideDelay = TimeSpan.FromSeconds(7))
+        public void AddInfo(string title, string message, TimeSpan? autoHideDelay = null)
         {
-            AddNotification(title, message, NotificationType.Information, autoHideDelay);
+            AddNotification(title, message, NotificationType.Information, autoHideDelay ?? TimeSpan.FromSeconds(7));
         }
 
         /// <summary>

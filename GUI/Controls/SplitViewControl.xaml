@@ -146,7 +146,7 @@
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,12,0"/>
-                    <TextBlock Text="{Binding PaneCount, StringFormat='{0} panes'}" 
+                    <TextBlock Text="{Binding PaneCount, StringFormat={}{0} panes}" 
                                FontSize="12"
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                VerticalAlignment="Center"/>

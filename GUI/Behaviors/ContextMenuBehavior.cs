@@ -12,7 +12,7 @@ namespace MandADiscoverySuite.Behaviors
     public class ContextMenuBehavior : Behavior<FrameworkElement>
     {
         public static readonly DependencyProperty ContextMenuServiceProperty =
-            DependencyProperty.Register(nameof(ContextMenuService), typeof(ContextMenuService), typeof(ContextMenuBehavior));
+            DependencyProperty.Register(nameof(ContextMenuService), typeof(Services.ContextMenuService), typeof(ContextMenuBehavior));
 
         public static readonly DependencyProperty DataContextProperty =
             DependencyProperty.Register(nameof(DataContext), typeof(object), typeof(ContextMenuBehavior));
@@ -20,9 +20,9 @@ namespace MandADiscoverySuite.Behaviors
         public static readonly DependencyProperty IsEnabledProperty =
             DependencyProperty.Register(nameof(IsEnabled), typeof(bool), typeof(ContextMenuBehavior), new PropertyMetadata(true));
 
-        public ContextMenuService ContextMenuService
+        public Services.ContextMenuService ContextMenuService
         {
-            get => (ContextMenuService)GetValue(ContextMenuServiceProperty);
+            get => (Services.ContextMenuService)GetValue(ContextMenuServiceProperty);
             set => SetValue(ContextMenuServiceProperty, value);
         }
 
@@ -111,12 +111,12 @@ namespace MandADiscoverySuite.Behaviors
             obj.SetValue(EnableContextMenuProperty, value);
         }
 
-        public static ContextMenuService GetContextMenuService(DependencyObject obj)
+        public static Services.ContextMenuService GetContextMenuService(DependencyObject obj)
         {
-            return (ContextMenuService)obj.GetValue(ContextMenuServiceProperty);
+            return (Services.ContextMenuService)obj.GetValue(ContextMenuServiceProperty);
         }
 
-        public static void SetContextMenuService(DependencyObject obj, ContextMenuService value)
+        public static void SetContextMenuService(DependencyObject obj, Services.ContextMenuService value)
         {
             obj.SetValue(ContextMenuServiceProperty, value);
         }

@@ -52,7 +52,6 @@
         <ScrollViewer x:Name="MainScrollViewer"
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Auto"
-                      ZoomMode="Enabled"
                       ScrollChanged="MainScrollViewer_ScrollChanged"
                       PreviewMouseWheel="MainScrollViewer_PreviewMouseWheel">
             

@@ -495,43 +495,6 @@ namespace MandADiscoverySuite.Services
         #endregion
     }
 
-    /// <summary>
-    /// Extended validation result with additional info messages
-    /// </summary>
-    public class ValidationResult
-    {
-        public List<string> Errors { get; } = new List<string>();
-        public List<string> Warnings { get; } = new List<string>();
-        public List<string> InfoMessages { get; } = new List<string>();
-        public bool IsValid => !Errors.Any();
-        public bool HasWarnings => Warnings.Any();
-
-        public void AddError(string error) => Errors.Add(error);
-        public void AddWarning(string warning) => Warnings.Add(warning);
-        public void AddInfo(string info) => InfoMessages.Add(info);
-
-        public string GetSummaryMessage()
-        {
-            if (!IsValid)
-                return string.Join("; ", Errors);
-            
-            if (HasWarnings)
-                return string.Join("; ", Warnings);
-            
-            return InfoMessages.Any() ? InfoMessages.First() : "Valid";
-        }
-
-        public string GetFormattedMessage()
-        {
-            var messages = new List<string>();
-            
-            messages.AddRange(Errors.Select(e => $"❌ {e}"));
-            messages.AddRange(Warnings.Select(w => $"⚠️ {w}"));
-            messages.AddRange(InfoMessages.Select(i => $"✅ {i}"));
-
-            return string.Join("\n", messages);
-        }
-    }
 
     #region User Information Validation Extensions
 

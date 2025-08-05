@@ -166,7 +166,7 @@
                                  Margin="0,0,0,16"/>
 
                     <!-- Progress Percentage -->
-                    <TextBlock Text="{Binding ProgressPercentage, StringFormat='{0:P0}'}"
+                    <TextBlock Text="{Binding ProgressPercentage, StringFormat={}{0:P0}}"
                                HorizontalAlignment="Center"
                                FontSize="14"
                                FontWeight="SemiBold"
@@ -222,7 +222,7 @@
                 </ItemsControl>
 
                 <!-- Elapsed Time -->
-                <TextBlock Text="{Binding ElapsedTime, StringFormat='Elapsed: {0}'}"
+                <TextBlock Text="{Binding ElapsedTime, StringFormat={}Elapsed: {0}}"
                            HorizontalAlignment="Center"
                            FontSize="11"
                            Foreground="{DynamicResource MutedForegroundBrush}"

@@ -206,7 +206,7 @@
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
                             
-                            <TextBlock Text="{Binding RecordCount, StringFormat='{0:N0} records available'}" 
+                            <TextBlock Text="{Binding RecordCount, StringFormat={}{0:N0} records available}" 
                                        VerticalAlignment="Center"
                                        Foreground="{DynamicResource MutedForegroundBrush}"/>
                         </StackPanel>
@@ -395,10 +395,10 @@
 
                 <!-- Results Summary -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding FilteredRecordCount, StringFormat='Showing {0:N0} of'}" 
+                    <TextBlock Text="{Binding FilteredRecordCount, StringFormat={}Showing {0:N0} of}" 
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                Margin="0,0,4,0"/>
-                    <TextBlock Text="{Binding TotalRecordCount, StringFormat='{0:N0} records'}" 
+                    <TextBlock Text="{Binding TotalRecordCount, StringFormat={}{0:N0} records}" 
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                Margin="0,0,16,0"/>
                     
@@ -406,7 +406,7 @@
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                Margin="0,0,16,0"/>
                     
-                    <TextBlock Text="{Binding FilterExecutionTime, StringFormat='Filter executed in {0}ms'}" 
+                    <TextBlock Text="{Binding FilterExecutionTime, StringFormat={}Filter executed in {0}ms}" 
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                FontSize="11"/>
                 </StackPanel>

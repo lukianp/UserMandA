@@ -82,7 +82,8 @@
       "Bash(\"C:\\EnterpriseDiscovery\\MandADiscoverySuite.exe\")",
       "Bash(dotnet nuget list:*)",
       "Bash(dotnet nuget add source:*)",
-      "Bash(del \"GUI\\Controls\\ThemeToggleButton.xaml\")"
+      "Bash(del \"GUI\\Controls\\ThemeToggleButton.xaml\")",
+      "Bash(del \"GUI\\Messages\\NavigationMessage.cs\")"
     ],
     "deny": []
   }

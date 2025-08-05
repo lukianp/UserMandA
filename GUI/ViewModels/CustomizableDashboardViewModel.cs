@@ -170,7 +170,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        public void ShowDropZones(bool show)
+        public void SetDropZonesVisibility(bool show)
         {
             ShowDropZones = show;
             
@@ -653,13 +653,6 @@ namespace MandADiscoverySuite.ViewModels
     {
         public DateTime Date { get; set; }
         public int Value { get; set; }
-    }
-
-    public class QuickAction
-    {
-        public string Title { get; set; }
-        public string Icon { get; set; }
-        public string Action { get; set; }
     }
 
     public class SystemStatusInfo

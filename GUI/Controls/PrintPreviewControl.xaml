@@ -128,7 +128,7 @@
                             Padding="6"
                             FontSize="12"/>
                     
-                    <TextBlock Text="{Binding ZoomLevel, StringFormat='{0:F0}%'}"
+                    <TextBlock Text="{Binding ZoomLevel, StringFormat={}{0:F0}%}"
                                VerticalAlignment="Center"
                                FontSize="11"
                                Margin="8,0,0,0"/>
@@ -173,9 +173,7 @@
         <ScrollViewer Grid.Row="1"
                       Background="#F5F5F5"
                       HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto"
-                      ZoomMode="Enabled"
-                      Zoom="{Binding ZoomLevel, Converter={StaticResource PercentageToZoomConverter}}">
+                      VerticalScrollBarVisibility="Auto">
             
             <!-- Pages Container -->
             <ItemsControl ItemsSource="{Binding PreviewPages}">
@@ -192,7 +190,7 @@
                             <!-- Page Number -->
                             <Border Style="{StaticResource PageNumberStyle}"
                                     Margin="0,0,0,4">
-                                <TextBlock Text="{Binding PageNumber, StringFormat='Page {0}'}"/>
+                                <TextBlock Text="{Binding PageNumber, StringFormat={}Page {0}}"/>
                             </Border>
                             
                             <!-- Page Content -->
@@ -276,25 +274,25 @@
 
                 <!-- Print Info -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <TextBlock Text="{Binding PageCount, StringFormat='Pages: {0}'}"
+                    <TextBlock Text="{Binding PageCount, StringFormat={}Pages: {0}}"
                                FontSize="11"
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,16,0"/>
                     
-                    <TextBlock Text="{Binding SelectedPageSize, StringFormat='Size: {0}'}"
+                    <TextBlock Text="{Binding SelectedPageSize, StringFormat={}Size: {0}}"
                                FontSize="11"
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,16,0"/>
                     
-                    <TextBlock Text="{Binding SelectedOrientation, StringFormat='Orientation: {0}'}"
+                    <TextBlock Text="{Binding SelectedOrientation, StringFormat={}Orientation: {0}}"
                                FontSize="11"
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,16,0"/>
                     
-                    <TextBlock Text="{Binding PrinterName, StringFormat='Printer: {0}'}"
+                    <TextBlock Text="{Binding PrinterName, StringFormat={}Printer: {0}}"
                                FontSize="11"
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                VerticalAlignment="Center"/>
@@ -318,7 +316,7 @@
                             FontSize="10"
                             Margin="0,0,2,0"/>
                     
-                    <TextBlock Text="{Binding CurrentPageIndex, StringFormat='Page {0}'}"
+                    <TextBlock Text="{Binding CurrentPageIndex, StringFormat={}Page {0}}"
                                VerticalAlignment="Center"
                                FontSize="11"
                                Margin="8,0"/>

@@ -916,4 +916,170 @@ namespace MandADiscoverySuite.Models
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
+
+    /// <summary>
+    /// Application data model for discovered applications
+    /// </summary>
+    public class ApplicationData : INotifyPropertyChanged
+    {
+        private string _name;
+        private string _version;
+        private string _publisher;
+        private string _installDate;
+        private string _size;
+        private bool _isSelected;
+
+        public string Id { get; set; }
+        public string ObjectType { get; set; }
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set { _isSelected = value; OnPropertyChanged(); }
+        }
+
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
+
+        public string Version
+        {
+            get => _version;
+            set { _version = value; OnPropertyChanged(); }
+        }
+
+        public string Publisher
+        {
+            get => _publisher;
+            set { _publisher = value; OnPropertyChanged(); }
+        }
+
+        public string InstallDate
+        {
+            get => _installDate;
+            set { _installDate = value; OnPropertyChanged(); }
+        }
+
+        public string Size
+        {
+            get => _size;
+            set { _size = value; OnPropertyChanged(); }
+        }
+
+        // Additional properties
+        public string InstallLocation { get; set; }
+        public string UninstallString { get; set; }
+        public string DisplayIcon { get; set; }
+        public string Comments { get; set; }
+        public string Contact { get; set; }
+        public string DisplayVersion { get; set; }
+        public string HelpLink { get; set; }
+        public string URLInfoAbout { get; set; }
+        public string URLUpdateInfo { get; set; }
+        public string SystemComponent { get; set; }
+        public string NoModify { get; set; }
+        public string NoRepair { get; set; }
+        public string NoRemove { get; set; }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Discovery module configuration and metadata
+    /// </summary>
+    public class DiscoveryModule : INotifyPropertyChanged
+    {
+        private string _name;
+        private string _displayName;
+        private string _description;
+        private bool _isEnabled;
+        private DiscoveryModuleStatus _status;
+        private string _version;
+        private DateTime? _lastRun;
+        private TimeSpan? _lastDuration;
+        private int _priority;
+
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
+
+        public string DisplayName
+        {
+            get => _displayName;
+            set { _displayName = value; OnPropertyChanged(); }
+        }
+
+        public string Description
+        {
+            get => _description;
+            set { _description = value; OnPropertyChanged(); }
+        }
+
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set { _isEnabled = value; OnPropertyChanged(); }
+        }
+
+        public DiscoveryModuleStatus Status
+        {
+            get => _status;
+            set { _status = value; OnPropertyChanged(); }
+        }
+
+        public string Version
+        {
+            get => _version;
+            set { _version = value; OnPropertyChanged(); }
+        }
+
+        public DateTime? LastRun
+        {
+            get => _lastRun;
+            set { _lastRun = value; OnPropertyChanged(); }
+        }
+
+        public TimeSpan? LastDuration
+        {
+            get => _lastDuration;
+            set { _lastDuration = value; OnPropertyChanged(); }
+        }
+
+        public int Priority
+        {
+            get => _priority;
+            set { _priority = value; OnPropertyChanged(); }
+        }
+
+        // Additional properties
+        public string FilePath { get; set; }
+        public string Author { get; set; }
+        public string Category { get; set; }
+        public Dictionary<string, object> Configuration { get; set; } = new Dictionary<string, object>();
+        public string[] Dependencies { get; set; } = new string[0];
+        public string[] Tags { get; set; } = new string[0];
+        public bool RequiresElevation { get; set; }
+        public int TimeoutMinutes { get; set; } = 30;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public DiscoveryModule()
+        {
+            Status = DiscoveryModuleStatus.Ready;
+            IsEnabled = true;
+            Priority = 5;
+        }
+    }
 }

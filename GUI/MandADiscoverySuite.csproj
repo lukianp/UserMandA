@@ -24,6 +24,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.118" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.77" />
+    <PackageReference Include="Microsoft.Graph" Version="4.54.0" />
   </ItemGroup>
 
   <!-- Copy all PowerShell modules to output directory -->

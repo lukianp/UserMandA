@@ -241,7 +241,6 @@
                   RowStyle="{StaticResource CustomizableDataGridRowStyle}"
                   CellStyle="{StaticResource CustomizableDataGridCellStyle}"
                   ColumnReordered="MainDataGrid_ColumnReordered"
-                  ColumnResized="MainDataGrid_ColumnResized"
                   Sorting="MainDataGrid_Sorting">
             
             <!-- Dynamic columns will be added here programmatically -->

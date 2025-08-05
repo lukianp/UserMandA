@@ -40,7 +40,6 @@
                 <Setter Property="Foreground" Value="White"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Padding" Value="8,4"/>
-                <Setter Property="CornerRadius" Value="3"/>
                 <Setter Property="FontSize" Value="11"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Style.Triggers>
@@ -261,7 +260,7 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Column="0" 
-                               Text="{Binding NotificationCount, StringFormat='{0} total'}" 
+                               Text="{Binding NotificationCount, StringFormat={}{0} total}" 
                                FontSize="11"
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                VerticalAlignment="Center"/>

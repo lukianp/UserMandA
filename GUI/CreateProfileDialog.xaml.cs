@@ -10,7 +10,7 @@ namespace MandADiscoverySuite
     public partial class CreateProfileDialog : Window
     {
         public string ProfileName { get; private set; } = "";
-        public CompanyProfile Profile { get; private set; }
+        public Models.CompanyProfile Profile { get; private set; }
 
         private bool _isEditMode = false;
 
