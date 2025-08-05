@@ -1,0 +1,310 @@
+<UserControl x:Class="MandADiscoverySuite.Controls.CustomizableDataGrid"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="900">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Data Grid Style -->
+            <Style x:Key="CustomizableDataGridStyle" TargetType="DataGrid">
+                <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+                <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="AlternatingRowBackground" Value="{DynamicResource AlternateRowBrush}"/>
+                <Setter Property="CanUserResizeColumns" Value="True"/>
+                <Setter Property="CanUserReorderColumns" Value="True"/>
+                <Setter Property="CanUserSortColumns" Value="True"/>
+                <Setter Property="AutoGenerateColumns" Value="False"/>
+                <Setter Property="HeadersVisibility" Value="Column"/>
+            </Style>
+
+            <!-- Column Header Style -->
+            <Style x:Key="CustomizableColumnHeaderStyle" TargetType="{x:Type DataGridColumnHeader}">
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                <Setter Property="Padding" Value="8,6"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type DataGridColumnHeader}">
+                            <Grid>
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        Padding="{TemplateBinding Padding}">
+                                    
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Header Content -->
+                                        <ContentPresenter Grid.Column="0"
+                                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+
+                                        <!-- Sort Indicator -->
+                                        <Path Grid.Column="1"
+                                              x:Name="SortArrow"
+                                              Data="M 0 0 L 4 4 L 8 0 Z"
+                                              Fill="{DynamicResource AccentBrush}"
+                                              Margin="8,0,4,0"
+                                              VerticalAlignment="Center"
+                                              Visibility="Collapsed"/>
+
+                                        <!-- Column Menu Button -->
+                                        <Button Grid.Column="2"
+                                                x:Name="ColumnMenuButton"
+                                                Content="⋮"
+                                                ToolTip="Column Options"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="4,2"
+                                                FontSize="12"
+                                                FontWeight="Bold"
+                                                Cursor="Hand"
+                                                Opacity="0">
+                                            <Button.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Hide Column" 
+                                                              Command="{Binding DataContext.HideColumnCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                              CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=DataGridColumnHeader}}"/>
+                                                    <MenuItem Header="Resize to Fit" 
+                                                              Command="{Binding DataContext.ResizeToFitCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                              CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=DataGridColumnHeader}}"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Move Left" 
+                                                              Command="{Binding DataContext.MoveColumnLeftCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                              CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=DataGridColumnHeader}}"/>
+                                                    <MenuItem Header="Move Right" 
+                                                              Command="{Binding DataContext.MoveColumnRightCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                              CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=DataGridColumnHeader}}"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Column Settings..." 
+                                                              Command="{Binding DataContext.ShowColumnSettingsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                              CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=DataGridColumnHeader}}"/>
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                                
+                                <!-- Resize Grip -->
+                                <Thumb x:Name="PART_RightHeaderGripper"
+                                       Width="3"
+                                       HorizontalAlignment="Right"
+                                       Cursor="SizeWE"
+                                       Background="Transparent"/>
+                            </Grid>
+                            
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="ColumnMenuButton" Property="Opacity" Value="1"/>
+                                </Trigger>
+                                <Trigger Property="SortDirection" Value="Ascending">
+                                    <Setter TargetName="SortArrow" Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                                <Trigger Property="SortDirection" Value="Descending">
+                                    <Setter TargetName="SortArrow" Property="Visibility" Value="Visible"/>
+                                    <Setter TargetName="SortArrow" Property="Data" Value="M 0 4 L 4 0 L 8 4 Z"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Row Style -->
+            <Style x:Key="CustomizableDataGridRowStyle" TargetType="{x:Type DataGridRow}">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
+                    </Trigger>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- Cell Style -->
+            <Style x:Key="CustomizableDataGridCellStyle" TargetType="{x:Type DataGridCell}">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="8,4"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type DataGridCell}">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="12,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Grid Info -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="{Binding ItemCount, StringFormat='Items: {0:N0}'}"
+                               FontSize="12"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,16,0"/>
+                    
+                    <TextBlock Text="{Binding SelectedItemCount, StringFormat='Selected: {0:N0}'}"
+                               FontSize="12"
+                               Foreground="{DynamicResource AccentBrush}"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding HasSelectedItems, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
+
+                <!-- Column Controls -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="🏛️ Columns"
+                            ToolTip="Manage Columns"
+                            Command="{Binding ShowColumnManagerCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="8,4"
+                            Margin="0,0,8,0"/>
+                    
+                    <Button Content="💾 Save Layout"
+                            ToolTip="Save Column Layout"
+                            Command="{Binding SaveLayoutCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="8,4"
+                            Margin="0,0,8,0"/>
+                    
+                    <Button Content="📂 Load Layout"
+                            ToolTip="Load Column Layout"
+                            Command="{Binding LoadLayoutCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="8,4"
+                            Margin="0,0,8,0"/>
+                    
+                    <Button Content="🔄 Reset"
+                            ToolTip="Reset to Default Layout"
+                            Command="{Binding ResetLayoutCommand}"
+                            Style="{StaticResource ThemedDangerButtonStyle}"
+                            Padding="8,4"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Data Grid -->
+        <DataGrid Grid.Row="1"
+                  x:Name="MainDataGrid"
+                  ItemsSource="{Binding GridItems}"
+                  SelectedItem="{Binding SelectedItem}"
+                  Style="{StaticResource CustomizableDataGridStyle}"
+                  ColumnHeaderStyle="{StaticResource CustomizableColumnHeaderStyle}"
+                  RowStyle="{StaticResource CustomizableDataGridRowStyle}"
+                  CellStyle="{StaticResource CustomizableDataGridCellStyle}"
+                  ColumnReordered="MainDataGrid_ColumnReordered"
+                  ColumnResized="MainDataGrid_ColumnResized"
+                  Sorting="MainDataGrid_Sorting">
+            
+            <!-- Dynamic columns will be added here programmatically -->
+        </DataGrid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="12,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Status Info -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="{Binding VisibleColumnCount, StringFormat='Visible Columns: {0}'}"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,16,0"/>
+                    
+                    <TextBlock Text="{Binding TotalColumnCount, StringFormat='Total Columns: {0}'}"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,16,0"/>
+                    
+                    <TextBlock Text="{Binding CurrentLayout}"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Quick Actions -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="📊"
+                            ToolTip="Auto-size All Columns"
+                            Command="{Binding AutoSizeAllColumnsCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="4"
+                            FontSize="10"
+                            Margin="0,0,4,0"/>
+                    
+                    <Button Content="👁️"
+                            ToolTip="Show All Columns"
+                            Command="{Binding ShowAllColumnsCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="4"
+                            FontSize="10"
+                            Margin="0,0,4,0"/>
+                    
+                    <Button Content="🔍"
+                            ToolTip="Find Column"
+                            Command="{Binding FindColumnCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="4"
+                            FontSize="10"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
