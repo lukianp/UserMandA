@@ -52,7 +52,7 @@ namespace MandADiscoverySuite.Services
         /// Gets the current active profile
         /// </summary>
         /// <returns>Current active profile or null</returns>
-        Task<CompanyProfile> GetCurrentProfileAsync();
+        Task<ServiceCompanyProfile> GetCurrentProfileAsync();
 
         /// <summary>
         /// Sets the current active profile
@@ -66,7 +66,7 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         /// <param name="profile">Profile to validate</param>
         /// <returns>Validation result</returns>
-        Task<ProfileValidationResult> ValidateProfileAsync(CompanyProfile profile);
+        Task<ProfileValidationResult> ValidateProfileAsync(ServiceCompanyProfile profile);
 
         /// <summary>
         /// Gets profile statistics and health information
@@ -74,6 +74,13 @@ namespace MandADiscoverySuite.Services
         /// <param name="profileName">Profile name</param>
         /// <returns>Profile statistics</returns>
         Task<ProfileStatistics> GetProfileStatisticsAsync(string profileName);
+
+        /// <summary>
+        /// Imports a profile from a file
+        /// </summary>
+        /// <param name="filePath">Path to the profile file</param>
+        /// <returns>Imported profile or null if failed</returns>
+        Task<ServiceCompanyProfile> ImportProfileAsync(string filePath);
     }
 
     /// <summary>
@@ -128,6 +135,22 @@ namespace MandADiscoverySuite.Services
         public List<string> Errors { get; set; } = new List<string>();
         public List<string> Warnings { get; set; } = new List<string>();
         public List<string> Recommendations { get; set; } = new List<string>();
+        
+        public void AddError(string error)
+        {
+            Errors.Add(error);
+            IsValid = false;
+        }
+        
+        public void AddWarning(string warning)
+        {
+            Warnings.Add(warning);
+        }
+        
+        public void AddRecommendation(string recommendation)
+        {
+            Recommendations.Add(recommendation);
+        }
     }
 
     /// <summary>
@@ -135,8 +158,12 @@ namespace MandADiscoverySuite.Services
     /// </summary>
     public class ProfileStatistics
     {
+        public string ProfileId { get; set; }
         public string ProfileName { get; set; }
-        public DateTime LastDiscoveryRun { get; set; }
+        public string CompanyName { get; set; }
+        public DateTime Created { get; set; }
+        public DateTime LastModified { get; set; }
+        public DateTime? LastDiscoveryRun { get; set; }
         public int TotalDiscoveryRuns { get; set; }
         public Dictionary<string, DateTime> ModuleLastRunTimes { get; set; } = new Dictionary<string, DateTime>();
         public Dictionary<string, bool> ModuleHealthStatus { get; set; } = new Dictionary<string, bool>();

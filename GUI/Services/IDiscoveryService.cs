@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Models;
@@ -34,7 +35,7 @@ namespace MandADiscoverySuite.Services
         /// <param name="profileName">Company profile name</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Discovery result</returns>
-        Task<DiscoveryResult> ExecuteDiscoveryAsync(DiscoveryModule module, string profileName, CancellationToken cancellationToken = default);
+        Task<DiscoveryExecutionResult> ExecuteDiscoveryAsync(DiscoveryModule module, string profileName, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes multiple discovery modules in parallel
@@ -44,7 +45,7 @@ namespace MandADiscoverySuite.Services
         /// <param name="maxConcurrency">Maximum concurrent executions</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Collection of discovery results</returns>
-        Task<IEnumerable<DiscoveryResult>> ExecuteDiscoveryBatchAsync(
+        Task<IEnumerable<DiscoveryExecutionResult>> ExecuteDiscoveryBatchAsync(
             IEnumerable<DiscoveryModule> modules, 
             string profileName, 
             int maxConcurrency = 3,
@@ -64,6 +65,30 @@ namespace MandADiscoverySuite.Services
         /// <param name="profileName">Company profile name</param>
         /// <returns>Validation result</returns>
         Task<ValidationResult> ValidateEnvironmentAsync(string profileName);
+
+        /// <summary>
+        /// Gets discovery results for a profile
+        /// </summary>
+        /// <param name="profileName">Company profile name</param>
+        /// <returns>Collection of discovery results</returns>
+        Task<IEnumerable<DiscoveryExecutionResult>> GetResultsAsync(string profileName);
+
+        /// <summary>
+        /// Exports discovery results to specified format
+        /// </summary>
+        /// <param name="profileName">Company profile name</param>
+        /// <param name="exportPath">Export file path</param>
+        /// <param name="format">Export format</param>
+        /// <returns>True if successful</returns>
+        Task<bool> ExportResultsAsync(string profileName, string exportPath, string format = "CSV");
+
+        /// <summary>
+        /// Starts discovery for specified modules and profile
+        /// </summary>
+        /// <param name="profileName">Company profile name</param>
+        /// <param name="moduleNames">Module names to execute</param>
+        /// <returns>True if started successfully</returns>
+        Task<bool> StartDiscoveryAsync(string profileName, string[] moduleNames);
     }
 
     /// <summary>
@@ -98,13 +123,41 @@ namespace MandADiscoverySuite.Services
         public bool IsValid { get; set; }
         public List<string> Errors { get; set; } = new List<string>();
         public List<string> Warnings { get; set; } = new List<string>();
+        public List<string> Info { get; set; } = new List<string>();
         public Dictionary<string, object> Context { get; set; } = new Dictionary<string, object>();
+
+        public void AddError(string error)
+        {
+            Errors.Add(error);
+            IsValid = false;
+        }
+
+        public void AddWarning(string warning)
+        {
+            Warnings.Add(warning);
+        }
+
+        public void AddInfo(string info)
+        {
+            Info.Add(info);
+        }
+
+        public string GetSummaryMessage()
+        {
+            if (!IsValid && Errors.Any())
+                return string.Join("; ", Errors);
+            
+            if (Warnings.Any())
+                return string.Join("; ", Warnings);
+            
+            return IsValid ? "Valid" : "Invalid";
+        }
     }
 
     /// <summary>
     /// Discovery execution result
     /// </summary>
-    public class DiscoveryResult
+    public class DiscoveryExecutionResult
     {
         public string ModuleName { get; set; }
         public bool Success { get; set; }

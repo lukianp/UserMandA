@@ -1,0 +1,55 @@
+<UserControl x:Class="MandADiscoverySuite.Controls.GanttChart"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:MandADiscoverySuite.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Task List Header -->
+        <Border Grid.Row="0" Grid.Column="0" BorderBrush="Gray" BorderThickness="1">
+            <TextBlock Text="Tasks" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
+        </Border>
+
+        <!-- Time Header -->
+        <Border Grid.Row="0" Grid.Column="1" BorderBrush="Gray" BorderThickness="1">
+            <Canvas Name="TimeHeaderCanvas" Background="LightGray"/>
+        </Border>
+
+        <!-- Task List -->
+        <Border Grid.Row="1" Grid.Column="0" BorderBrush="Gray" BorderThickness="1">
+            <ScrollViewer Name="TaskListScroller" VerticalScrollBarVisibility="Hidden">
+                <ItemsControl ItemsSource="{Binding Tasks}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="LightGray" BorderThickness="0,0,0,1" Height="30">
+                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Margin="5,0"/>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Chart Area -->
+        <Border Grid.Row="1" Grid.Column="1" BorderBrush="Gray" BorderThickness="1">
+            <ScrollViewer Name="TimelineScroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                          ScrollChanged="TimelineScroller_ScrollChanged">
+                <Canvas Name="ChartCanvas" Background="White" Width="2000" Height="1000"
+                        MouseLeftButtonDown="ChartCanvas_MouseLeftButtonDown"
+                        MouseMove="ChartCanvas_MouseMove"
+                        MouseLeftButtonUp="ChartCanvas_MouseLeftButtonUp"/>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

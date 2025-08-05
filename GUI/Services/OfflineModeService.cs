@@ -481,7 +481,7 @@ namespace MandADiscoverySuite.Services
                     await SaveOfflineDataAsync("profiles", profiles);
 
                     // Cache recent discovery results
-                    var resultRepo = _unitOfWork.GetRepository<DiscoveryResult, string>();
+                    var resultRepo = _unitOfWork.GetRepository<DiscoveryResultEntity, string>();
                     var recentResults = await resultRepo.FindAsync(r => r.CreatedAt > DateTime.UtcNow.AddDays(-7));
                     await SaveOfflineDataAsync("results", recentResults);
 
@@ -543,8 +543,8 @@ namespace MandADiscoverySuite.Services
                         break;
                         
                     case nameof(DiscoveryResult):
-                        var resultRepo = _unitOfWork.GetRepository<DiscoveryResult, string>();
-                        var result = JsonConvert.DeserializeObject<DiscoveryResult>(operation.Data);
+                        var resultRepo = _unitOfWork.GetRepository<DiscoveryResultEntity, string>();
+                        var result = JsonConvert.DeserializeObject<DiscoveryResultEntity>(operation.Data);
                         await resultRepo.AddAsync(result);
                         break;
                         
@@ -575,8 +575,8 @@ namespace MandADiscoverySuite.Services
                         break;
                         
                     case nameof(DiscoveryResult):
-                        var resultRepo = _unitOfWork.GetRepository<DiscoveryResult, string>();
-                        var result = JsonConvert.DeserializeObject<DiscoveryResult>(operation.Data);
+                        var resultRepo = _unitOfWork.GetRepository<DiscoveryResultEntity, string>();
+                        var result = JsonConvert.DeserializeObject<DiscoveryResultEntity>(operation.Data);
                         await resultRepo.UpdateAsync(result);
                         break;
                         
@@ -606,7 +606,7 @@ namespace MandADiscoverySuite.Services
                         break;
                         
                     case nameof(DiscoveryResult):
-                        var resultRepo = _unitOfWork.GetRepository<DiscoveryResult, string>();
+                        var resultRepo = _unitOfWork.GetRepository<DiscoveryResultEntity, string>();
                         await resultRepo.RemoveAsync(operation.EntityId);
                         break;
                         

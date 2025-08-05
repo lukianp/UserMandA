@@ -389,6 +389,9 @@ namespace MandADiscoverySuite.Models
         public string ErrorMessage { get; set; } = "";
         public int DataCount => ItemCount;
         public Dictionary<string, object> AdditionalData { get; set; } = new Dictionary<string, object>();
+        
+        // Repository compatibility
+        public DateTime CreatedAt => DiscoveryTime;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -632,6 +635,9 @@ namespace MandADiscoverySuite.Models
             }
         }
 
+        // Computed properties
+        public bool CanDelete => !IsDefault;
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged(string propertyName)
@@ -765,6 +771,12 @@ namespace MandADiscoverySuite.Models
         public string LastSignInDateTime { get; set; }
         public string GroupMembershipCount { get; set; }
         public string AssignedLicenses { get; set; }
+        public string Domain { get; set; }
+        public bool Enabled => AccountEnabled;
+        public string Title => JobTitle;
+        public bool IsPrivileged { get; set; }
+        public DateTime? PasswordExpiryDate { get; set; }
+        public DateTime? LastLogonDate { get; set; }
 
         // Display properties
         public string Status => AccountEnabled ? "Active" : "Disabled";
@@ -830,6 +842,13 @@ namespace MandADiscoverySuite.Models
         public string Description { get; set; }
         public string Manufacturer { get; set; }
         public string Model { get; set; }
+        public string Domain { get; set; }
+        public bool IsServer { get; set; }
+        public DateTime? LastLogonDate { get; set; }
+        public bool IsOnline { get; set; }
+        public bool IsCritical { get; set; }
+        public bool IsSupported { get; set; }
+        public DateTime? LastUpdateDate { get; set; }
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
@@ -895,6 +914,7 @@ namespace MandADiscoverySuite.Models
         public string MemberCount { get; set; }
         public string OwnerCount { get; set; }
         public string Visibility { get; set; }
+        public string Domain { get; set; }
 
         // Display properties
         public string Type
@@ -982,6 +1002,8 @@ namespace MandADiscoverySuite.Models
         public string NoModify { get; set; }
         public string NoRepair { get; set; }
         public string NoRemove { get; set; }
+        public bool IsOutdated { get; set; }
+        public bool IsCompatible { get; set; }
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
@@ -1068,6 +1090,9 @@ namespace MandADiscoverySuite.Models
         public string[] Tags { get; set; } = new string[0];
         public bool RequiresElevation { get; set; }
         public int TimeoutMinutes { get; set; } = 30;
+        
+        // Computed properties
+        public bool IsRunning => Status == DiscoveryModuleStatus.Running;
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)

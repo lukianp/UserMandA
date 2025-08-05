@@ -285,7 +285,7 @@ namespace MandADiscoverySuite.ViewModels
             var groupList = groups.ToList();
             if (groupList.Any())
             {
-                var managedGroups = groupList.Count(g => g.MemberCount > 0 && !string.IsNullOrEmpty(g.Description));
+                var managedGroups = groupList.Count(g => !string.IsNullOrEmpty(g.MemberCount) && int.TryParse(g.MemberCount, out int count) && count > 0 && !string.IsNullOrEmpty(g.Description));
                 var groupFactor = (double)managedGroups / groupList.Count * 100;
                 factors.Add(groupFactor);
             }
@@ -571,7 +571,7 @@ namespace MandADiscoverySuite.ViewModels
             await ExecuteAsync(async () =>
             {
                 Logger?.LogInformation("Generating health assessment report");
-                SendMessage(new StatusMessage("Report generation functionality not yet implemented", StatusType.Information));
+                SendMessage(new StatusMessage("Report generation functionality not yet implemented", Messages.StatusType.Information));
                 
             }, "Generating report");
         }
@@ -581,7 +581,7 @@ namespace MandADiscoverySuite.ViewModels
             await ExecuteAsync(async () =>
             {
                 Logger?.LogInformation("Exporting health assessment data");
-                SendMessage(new StatusMessage("Export functionality not yet implemented", StatusType.Information));
+                SendMessage(new StatusMessage("Export functionality not yet implemented", Messages.StatusType.Information));
                 
             }, "Exporting data");
         }

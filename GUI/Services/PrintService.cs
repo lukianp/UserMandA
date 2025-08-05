@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Packaging;
+using System.Linq;
 using System.Printing;
 using System.Windows;
 using System.Windows.Controls;
@@ -243,7 +245,7 @@ namespace MandADiscoverySuite.Services
             try
             {
                 var capabilities = GetPrintCapabilities(printQueue);
-                return capabilities?.PageMediaSizeCapability ?? new List<PageMediaSize>();
+                return capabilities?.PageMediaSizeCapability ?? Enumerable.Empty<PageMediaSize>();
             }
             catch (Exception ex)
             {

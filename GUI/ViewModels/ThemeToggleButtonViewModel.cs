@@ -4,6 +4,7 @@ using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Messages;
 using MandADiscoverySuite.Services;
 
@@ -97,7 +98,7 @@ namespace MandADiscoverySuite.ViewModels
 
         public ThemeToggleButtonViewModel()
         {
-            _themeService = ServiceLocator.Current.GetService<ThemeService>();
+            _themeService = null; // Will be injected or resolved later
             
             // Register for theme change messages
             Messenger.Register<ThemeChangedMessage>(this);

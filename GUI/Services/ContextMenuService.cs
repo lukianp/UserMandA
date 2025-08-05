@@ -102,14 +102,14 @@ namespace MandADiscoverySuite.Services
             items.Add(CreateMenuItem("View Details", "\uE946", () => ViewUserDetails(user)));
             items.Add(CreateMenuItem("Edit User", "\uE70F", () => EditUser(user), user.CanEdit));
             
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Account Actions
             items.Add(CreateMenuItem("Reset Password", "\uE72E", () => ResetUserPassword(user), user.CanResetPassword));
             items.Add(CreateMenuItem(user.Enabled ? "Disable Account" : "Enable Account", 
                 user.Enabled ? "\uE8D8" : "\uE8AB", () => ToggleUserAccount(user), user.CanToggleAccount));
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Group Management
             var groupSubmenu = CreateSubmenu("Group Management", "\uE902");
@@ -125,13 +125,13 @@ namespace MandADiscoverySuite.Services
             migrationSubmenu.Items.Add(CreateMenuItem("View Migration Status", "\uE946", () => ViewMigrationStatus(user)));
             items.Add(migrationSubmenu);
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Export Actions
             items.Add(CreateMenuItem("Export User Data", "\uE74E", () => ExportUserData(user)));
             items.Add(CreateMenuItem("Generate Report", "\uE8A5", () => GenerateUserReport(user)));
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Advanced Actions
             var advancedSubmenu = CreateSubmenu("Advanced", "\uE8B5");
@@ -151,14 +151,14 @@ namespace MandADiscoverySuite.Services
             items.Add(CreateMenuItem("View Details", "\uE946", () => ViewInfrastructureDetails(infrastructure)));
             items.Add(CreateMenuItem("Edit Properties", "\uE70F", () => EditInfrastructure(infrastructure), infrastructure.CanEdit));
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // System Actions
             items.Add(CreateMenuItem("Ping System", "\uE774", () => PingSystem(infrastructure), infrastructure.IsOnline));
             items.Add(CreateMenuItem("Remote Desktop", "\uE977", () => RemoteDesktop(infrastructure), infrastructure.AllowsRDP));
             items.Add(CreateMenuItem("Browse File System", "\uE8DA", () => BrowseFileSystem(infrastructure), infrastructure.AllowsFileAccess));
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Assessment Actions
             var assessmentSubmenu = CreateSubmenu("Assessment", "\uE9A9");
@@ -174,13 +174,13 @@ namespace MandADiscoverySuite.Services
             migrationSubmenu.Items.Add(CreateMenuItem("Schedule Decommission", "\uE74D", () => ScheduleDecommission(infrastructure)));
             items.Add(migrationSubmenu);
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Monitoring Actions
             items.Add(CreateMenuItem("View Monitoring Data", "\uE9A9", () => ViewMonitoringData(infrastructure)));
             items.Add(CreateMenuItem("Set Alerts", "\uE7E7", () => SetInfrastructureAlerts(infrastructure)));
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Export Actions
             items.Add(CreateMenuItem("Export System Data", "\uE74E", () => ExportInfrastructureData(infrastructure)));
@@ -196,7 +196,7 @@ namespace MandADiscoverySuite.Services
             items.Add(CreateMenuItem("View Details", "\uE946", () => ViewGroupDetails(group)));
             items.Add(CreateMenuItem("Edit Group", "\uE70F", () => EditGroup(group), group.CanEdit));
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Membership Actions
             var membershipSubmenu = CreateSubmenu("Membership", "\uE716");
@@ -213,7 +213,7 @@ namespace MandADiscoverySuite.Services
             permissionsSubmenu.Items.Add(CreateMenuItem("Permission Analysis", "\uE9A9", () => AnalyzeGroupPermissions(group)));
             items.Add(permissionsSubmenu);
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Migration Actions
             items.Add(CreateMenuItem("Plan Group Migration", "\uE8F4", () => PlanGroupMigration(group)));
@@ -230,7 +230,7 @@ namespace MandADiscoverySuite.Services
             items.Add(CreateMenuItem("View Details", "\uE946", () => ViewApplicationDetails(application)));
             items.Add(CreateMenuItem("Edit Application", "\uE70F", () => EditApplication(application), application.CanEdit));
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Assessment Actions
             var assessmentSubmenu = CreateSubmenu("Assessment", "\uE9A9");
@@ -246,13 +246,13 @@ namespace MandADiscoverySuite.Services
                 items.Add(CreateMenuItem("Schedule Update", "\uE787", () => ScheduleApplicationUpdate(application)));
             }
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Migration Actions
             items.Add(CreateMenuItem("Plan Application Migration", "\uE8F4", () => PlanApplicationMigration(application)));
             items.Add(CreateMenuItem("Find Alternatives", "\uE721", () => FindApplicationAlternatives(application)));
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Export Actions
             items.Add(CreateMenuItem("Export Application Data", "\uE74E", () => ExportApplicationData(application)));
@@ -268,13 +268,13 @@ namespace MandADiscoverySuite.Services
             items.Add(CreateMenuItem("Switch to Profile", "\uE8AB", () => SwitchToProfile(profile)));
             items.Add(CreateMenuItem("Edit Profile", "\uE70F", () => EditProfile(profile)));
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Discovery Actions
             items.Add(CreateMenuItem("Run Full Discovery", "\uE768", () => RunFullDiscovery(profile)));
             items.Add(CreateMenuItem("Refresh Data", "\uE72C", () => RefreshProfileData(profile)));
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Analysis Actions
             var analysisSubmenu = CreateSubmenu("Analysis", "\uE9A9");
@@ -283,7 +283,7 @@ namespace MandADiscoverySuite.Services
             analysisSubmenu.Items.Add(CreateMenuItem("Migration Readiness", "\uE8F4", () => AssessMigrationReadiness(profile)));
             items.Add(analysisSubmenu);
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Export Actions
             items.Add(CreateMenuItem("Export All Data", "\uE74E", () => ExportAllProfileData(profile)));
@@ -292,7 +292,7 @@ namespace MandADiscoverySuite.Services
             // Danger Zone
             if (profile.CanDelete)
             {
-                items.Add(CreateSeparator());
+                // Separator placeholder
                 items.Add(CreateMenuItem("Delete Profile", "\uE74D", () => DeleteProfile(profile), true, true));
             }
 
@@ -307,7 +307,7 @@ namespace MandADiscoverySuite.Services
             items.Add(CreateMenuItem("View Configuration", "\uE946", () => ViewModuleConfiguration(module)));
             items.Add(CreateMenuItem("Edit Settings", "\uE70F", () => EditModuleSettings(module)));
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Execution Actions
             if (module.IsEnabled)
@@ -325,14 +325,14 @@ namespace MandADiscoverySuite.Services
                 items.Add(CreateMenuItem("Stop Module", "\uE769", () => StopDiscoveryModule(module)));
             }
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Data Actions
             items.Add(CreateMenuItem("View Results", "\uE8C4", () => ViewModuleResults(module)));
             items.Add(CreateMenuItem("Export Results", "\uE74E", () => ExportModuleResults(module)));
             items.Add(CreateMenuItem("Clear Results", "\uE74D", () => ClearModuleResults(module)));
 
-            items.Add(CreateSeparator());
+            // Separator placeholder
 
             // Management Actions
             items.Add(CreateMenuItem("View Logs", "\uE81C", () => ViewModuleLogs(module)));

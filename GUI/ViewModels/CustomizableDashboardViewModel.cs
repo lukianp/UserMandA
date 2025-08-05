@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Messaging;
@@ -577,9 +578,9 @@ namespace MandADiscoverySuite.ViewModels
         {
             return new List<QuickAction>
             {
-                new QuickAction { Title = "Run Discovery", Icon = "\uE768", Action = "RunDiscovery" },
-                new QuickAction { Title = "Export Data", Icon = "\uE74E", Action = "ExportData" },
-                new QuickAction { Title = "View Reports", Icon = "\uE8A5", Action = "ViewReports" }
+                new QuickAction { Id = "RunDiscovery", DisplayText = "Run Discovery", Tooltip = "Start discovery process" },
+                new QuickAction { Id = "ExportData", DisplayText = "Export Data", Tooltip = "Export discovery data" },
+                new QuickAction { Id = "ViewReports", DisplayText = "View Reports", Tooltip = "View discovery reports" }
             };
         }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -16,7 +17,7 @@ namespace MandADiscoverySuite.ViewModels
         private readonly IDiscoveryService _discoveryService;
         private readonly IDataService _dataService;
         private readonly IProfileService _profileService;
-        private readonly DispatcherTimer _statusUpdateTimer;
+        private DispatcherTimer _statusUpdateTimer;
         
         private DateTime _lastUpdated = DateTime.Now;
 
@@ -32,14 +33,14 @@ namespace MandADiscoverySuite.ViewModels
             _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
 
             // Initialize status indicators
-            DiscoveryServiceStatus = new StatusIndicatorViewModel(logger, messenger);
-            DataServiceStatus = new StatusIndicatorViewModel(logger, messenger);
-            ProfileServiceStatus = new StatusIndicatorViewModel(logger, messenger);
-            ConfigurationServiceStatus = new StatusIndicatorViewModel(logger, messenger);
-            CurrentOperationStatus = new StatusIndicatorViewModel(logger, messenger);
-            ConnectionStatus = new StatusIndicatorViewModel(logger, messenger);
-            MemoryUsageStatus = new StatusIndicatorViewModel(logger, messenger);
-            SystemHealthStatus = new StatusIndicatorViewModel(logger, messenger);
+            DiscoveryServiceStatus = new StatusIndicatorViewModel(null, messenger);
+            DataServiceStatus = new StatusIndicatorViewModel(null, messenger);
+            ProfileServiceStatus = new StatusIndicatorViewModel(null, messenger);
+            ConfigurationServiceStatus = new StatusIndicatorViewModel(null, messenger);
+            CurrentOperationStatus = new StatusIndicatorViewModel(null, messenger);
+            ConnectionStatus = new StatusIndicatorViewModel(null, messenger);
+            MemoryUsageStatus = new StatusIndicatorViewModel(null, messenger);
+            SystemHealthStatus = new StatusIndicatorViewModel(null, messenger);
 
             InitializeCommands();
             InitializeStatusUpdates();
@@ -499,7 +500,7 @@ namespace MandADiscoverySuite.ViewModels
             if (disposing)
             {
                 _statusUpdateTimer?.Stop();
-                _statusUpdateTimer?.Dispose();
+                _statusUpdateTimer = null;
             }
             base.Dispose(disposing);
         }

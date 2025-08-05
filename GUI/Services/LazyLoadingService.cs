@@ -191,7 +191,7 @@ namespace MandADiscoverySuite.Services
             string key,
             Func<Task<T>> factory,
             TimeSpan? cacheExpiration = null,
-            TaskPriority priority = TaskPriority.Low)
+            BackgroundTaskPriority priority = BackgroundTaskPriority.Low)
         {
             if (!IsEnabled)
                 return null;
@@ -394,7 +394,10 @@ namespace MandADiscoverySuite.Services
             {
                 // Remove context after a delay to allow for statistics gathering
                 _ = Task.Delay(TimeSpan.FromMinutes(1)).ContinueWith(_ => 
-                    _loadingContexts.TryRemove(key, out _));
+                {
+                    LazyLoadContext removed;
+                    _loadingContexts.TryRemove(key, out removed);
+                });
             }
         }
 
@@ -488,7 +491,7 @@ namespace MandADiscoverySuite.Services
         Task<IEnumerable<T>> LoadAsync(CancellationToken cancellationToken = default);
         Task<IEnumerable<T>> ReloadAsync(CancellationToken cancellationToken = default);
         void InvalidateCache();
-        string PreloadAsync(TaskPriority priority = TaskPriority.Low);
+        string PreloadAsync(BackgroundTaskPriority priority = BackgroundTaskPriority.Low);
     }
 
     /// <summary>
@@ -584,7 +587,7 @@ namespace MandADiscoverySuite.Services
             _isLoaded = false;
         }
 
-        public string PreloadAsync(TaskPriority priority = TaskPriority.Low)
+        public string PreloadAsync(BackgroundTaskPriority priority = BackgroundTaskPriority.Low)
         {
             return _service.PreloadAsync(_key, _dataFactory, _cacheExpiration, priority);
         }

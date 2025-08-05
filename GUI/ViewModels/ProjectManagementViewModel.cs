@@ -64,8 +64,8 @@ namespace MandADiscoverySuite.ViewModels
 
         // Quick Stats
         public int TotalTasks => CurrentProject?.Phases.SelectMany(p => p.Components).SelectMany(c => c.Tasks).Count() ?? 0;
-        public int CompletedTasks => CurrentProject?.Phases.SelectMany(p => p.Components).SelectMany(c => c.Tasks).Count(t => t.Status == TaskStatus.Completed) ?? 0;
-        public int InProgressTasks => CurrentProject?.Phases.SelectMany(p => p.Components).SelectMany(c => c.Tasks).Count(t => t.Status == TaskStatus.InProgress) ?? 0;
+        public int CompletedTasks => CurrentProject?.Phases.SelectMany(p => p.Components).SelectMany(c => c.Tasks).Count(t => t.Status == Models.TaskStatus.Completed) ?? 0;
+        public int InProgressTasks => CurrentProject?.Phases.SelectMany(p => p.Components).SelectMany(c => c.Tasks).Count(t => t.Status == Models.TaskStatus.InProgress) ?? 0;
         public int OverdueTaskCount => OverdueTasks.Count;
         public int HighRiskCount => ActiveRisks.Count(r => r.RiskScore >= 16);
 
@@ -103,7 +103,7 @@ namespace MandADiscoverySuite.ViewModels
         {
             NavigateToViewCommand = new RelayCommand<string>(NavigateToView);
             CreateNewProjectCommand = new AsyncRelayCommand(CreateNewProjectAsync);
-            LoadProjectCommand = new AsyncRelayCommand<string>(LoadProjectAsync);
+            LoadProjectCommand = new AsyncRelayCommand(async () => await LoadProjectAsync(null));
             SaveProjectCommand = new AsyncRelayCommand(SaveProjectAsync);
             AddPhaseCommand = new RelayCommand<IntegrationProject>(AddPhase);
             AddComponentCommand = new RelayCommand<ProjectPhase>(AddComponent);
@@ -235,7 +235,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 Name = $"New Task {component.Tasks.Count + 1}",
                 Description = "Task description",
-                Status = TaskStatus.NotStarted,
+                Status = Models.TaskStatus.NotStarted,
                 Priority = TaskPriority.Medium,
                 DueDate = DateTime.Now.AddDays(7)
             };
@@ -248,7 +248,7 @@ namespace MandADiscoverySuite.ViewModels
             if (task == null) return;
 
             // Update completion date if task is marked as completed
-            if (task.Status == TaskStatus.Completed && !task.CompletedDate.HasValue)
+            if (task.Status == Models.TaskStatus.Completed && !task.CompletedDate.HasValue)
             {
                 task.CompletedDate = DateTime.Now;
             }
@@ -538,11 +538,11 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     Name = $"{taskTemplates[i]} - {component.Name}",
                     Description = $"Task: {taskTemplates[i]} for component {component.Name}",
-                    Status = phaseIndex == 0 ? TaskStatus.Completed :
-                             phaseIndex == 1 && componentIndex < 2 ? TaskStatus.Completed :
-                             phaseIndex == 1 && componentIndex == 2 && i < 3 ? TaskStatus.Completed :
-                             phaseIndex == 1 && componentIndex == 2 && i == 3 ? TaskStatus.InProgress :
-                             TaskStatus.NotStarted,
+                    Status = phaseIndex == 0 ? MandADiscoverySuite.Models.TaskStatus.Completed :
+                             phaseIndex == 1 && componentIndex < 2 ? MandADiscoverySuite.Models.TaskStatus.Completed :
+                             phaseIndex == 1 && componentIndex == 2 && i < 3 ? MandADiscoverySuite.Models.TaskStatus.Completed :
+                             phaseIndex == 1 && componentIndex == 2 && i == 3 ? MandADiscoverySuite.Models.TaskStatus.InProgress :
+                             MandADiscoverySuite.Models.TaskStatus.NotStarted,
                     Priority = i < 2 ? TaskPriority.High : TaskPriority.Medium,
                     AssignedTo = i % 3 == 0 ? "IT Team" : i % 3 == 1 ? "Business Team" : "PMO Team",
                     DueDate = DateTime.Now.AddDays(i * 7 - (phaseIndex * 30)),

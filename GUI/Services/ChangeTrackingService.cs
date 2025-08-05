@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using MandADiscoverySuite.Models;
+using ModelsLogEntry = MandADiscoverySuite.Models.LogEntry;
 using MandADiscoverySuite.Repository;
 
 namespace MandADiscoverySuite.Services
@@ -421,14 +422,14 @@ namespace MandADiscoverySuite.Services
                 if (_unitOfWork == null)
                     return;
 
-                var logRepo = _unitOfWork.GetRepository<LogEntry, string>();
+                var logRepo = _unitOfWork.GetRepository<ModelsLogEntry, string>();
                 var histories = GetAllChangeHistories();
 
                 foreach (var history in histories)
                 {
                     foreach (var change in history.Changes)
                     {
-                        var logEntry = new LogEntry
+                        var logEntry = new ModelsLogEntry
                         {
                             Timestamp = change.Timestamp,
                             Level = "Info",
@@ -469,7 +470,7 @@ namespace MandADiscoverySuite.Services
                 if (_unitOfWork == null)
                     return new List<AuditTrailEntry>();
 
-                var logRepo = _unitOfWork.GetRepository<LogEntry, string>();
+                var logRepo = _unitOfWork.GetRepository<ModelsLogEntry, string>();
                 var logs = await logRepo.FindAsync(l => 
                     l.Category == "ChangeTracking" && 
                     l.Properties.Contains($"\"EntityId\":\"{entityId}\""));

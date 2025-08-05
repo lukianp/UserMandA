@@ -511,10 +511,10 @@ namespace MandADiscoverySuite.Services
             
             if (!forceRefresh && _cacheService != null)
             {
-                var cached = await _cacheService.GetAsync<List<UserData>>(cacheKey);
+                var cached = _cacheService.GetOrCreate<List<UserData>>(cacheKey, () => null);
                 if (cached != null)
                 {
-                    _logger?.LogInformation("Loaded {Count} users from cache for profile {ProfileName}", cached.Count, profileName);
+                    _logger?.LogInformation($"Loaded {cached.Count} users from cache for profile {profileName}");
                     return cached;
                 }
             }
@@ -527,7 +527,7 @@ namespace MandADiscoverySuite.Services
                 await _cacheService.SetAsync(cacheKey, users, TimeSpan.FromMinutes(15));
             }
 
-            _logger?.LogInformation("Loaded {Count} users for profile {ProfileName}", users.Count, profileName);
+            _logger?.LogInformation($"Loaded {users.Count} users for profile {profileName}");
             return users;
         }
 
@@ -537,10 +537,10 @@ namespace MandADiscoverySuite.Services
             
             if (!forceRefresh && _cacheService != null)
             {
-                var cached = await _cacheService.GetAsync<List<InfrastructureData>>(cacheKey);
+                var cached = _cacheService.GetOrCreate<List<InfrastructureData>>(cacheKey, () => null);
                 if (cached != null)
                 {
-                    _logger?.LogInformation("Loaded {Count} infrastructure items from cache for profile {ProfileName}", cached.Count, profileName);
+                    _logger?.LogInformation($"Loaded {cached.Count} infrastructure items from cache for profile {profileName}");
                     return cached;
                 }
             }
@@ -553,7 +553,7 @@ namespace MandADiscoverySuite.Services
                 await _cacheService.SetAsync(cacheKey, infrastructure, TimeSpan.FromMinutes(15));
             }
 
-            _logger?.LogInformation("Loaded {Count} infrastructure items for profile {ProfileName}", infrastructure.Count, profileName);
+            _logger?.LogInformation($"Loaded {infrastructure.Count} infrastructure items for profile {profileName}");
             return infrastructure;
         }
 
@@ -563,10 +563,10 @@ namespace MandADiscoverySuite.Services
             
             if (!forceRefresh && _cacheService != null)
             {
-                var cached = await _cacheService.GetAsync<List<GroupData>>(cacheKey);
+                var cached = _cacheService.GetOrCreate<List<GroupData>>(cacheKey, () => null);
                 if (cached != null)
                 {
-                    _logger?.LogInformation("Loaded {Count} groups from cache for profile {ProfileName}", cached.Count, profileName);
+                    _logger?.LogInformation($"Loaded {cached.Count} groups from cache for profile {profileName}");
                     return cached;
                 }
             }
@@ -579,7 +579,7 @@ namespace MandADiscoverySuite.Services
                 await _cacheService.SetAsync(cacheKey, groups, TimeSpan.FromMinutes(15));
             }
 
-            _logger?.LogInformation("Loaded {Count} groups for profile {ProfileName}", groups.Count, profileName);
+            _logger?.LogInformation($"Loaded {groups.Count} groups for profile {profileName}");
             return groups;
         }
 
@@ -589,10 +589,10 @@ namespace MandADiscoverySuite.Services
             
             if (!forceRefresh && _cacheService != null)
             {
-                var cached = await _cacheService.GetAsync<List<ApplicationData>>(cacheKey);
+                var cached = _cacheService.GetOrCreate<List<ApplicationData>>(cacheKey, () => null);
                 if (cached != null)
                 {
-                    _logger?.LogInformation("Loaded {Count} applications from cache for profile {ProfileName}", cached.Count, profileName);
+                    _logger?.LogInformation($"Loaded {cached.Count} applications from cache for profile {profileName}");
                     return cached;
                 }
             }
@@ -605,7 +605,7 @@ namespace MandADiscoverySuite.Services
                 await _cacheService.SetAsync(cacheKey, applications, TimeSpan.FromMinutes(15));
             }
 
-            _logger?.LogInformation("Loaded {Count} applications for profile {ProfileName}", applications.Count, profileName);
+            _logger?.LogInformation("Loaded " + applications.Count().ToString() + " applications for profile " + profileName);
             return applications;
         }
 

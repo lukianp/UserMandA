@@ -15,7 +15,7 @@ namespace MandADiscoverySuite.Services
     {
         private readonly ILogger<BackgroundTaskQueueService> _logger;
         private readonly NotificationService _notificationService;
-        private readonly ConcurrentDictionary<TaskPriority, ConcurrentQueue<BackgroundTaskItem>> _taskQueues;
+        private readonly ConcurrentDictionary<BackgroundTaskPriority, ConcurrentQueue<BackgroundTaskItem>> _taskQueues;
         private readonly ConcurrentDictionary<string, BackgroundTaskItem> _runningTasks;
         private readonly ConcurrentDictionary<string, BackgroundTaskItem> _completedTasks;
         private readonly Timer _processingTimer;
@@ -35,12 +35,12 @@ namespace MandADiscoverySuite.Services
             _notificationService = notificationService;
             _configuration = new BackgroundTaskConfiguration();
             
-            _taskQueues = new ConcurrentDictionary<TaskPriority, ConcurrentQueue<BackgroundTaskItem>>();
+            _taskQueues = new ConcurrentDictionary<BackgroundTaskPriority, ConcurrentQueue<BackgroundTaskItem>>();
             _runningTasks = new ConcurrentDictionary<string, BackgroundTaskItem>();
             _completedTasks = new ConcurrentDictionary<string, BackgroundTaskItem>();
             
             // Initialize queues for each priority level
-            foreach (TaskPriority priority in Enum.GetValues<TaskPriority>())
+            foreach (BackgroundTaskPriority priority in Enum.GetValues<BackgroundTaskPriority>())
             {
                 _taskQueues[priority] = new ConcurrentQueue<BackgroundTaskItem>();
             }
@@ -124,7 +124,7 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public string QueueTask(Func<CancellationToken, IProgress<TaskProgress>, Task> taskFunc, 
             string name, 
-            TaskPriority priority = TaskPriority.Normal,
+            BackgroundTaskPriority priority = BackgroundTaskPriority.Normal,
             string description = null,
             object metadata = null)
         {
@@ -141,7 +141,7 @@ namespace MandADiscoverySuite.Services
                     Priority = priority,
                     TaskFunction = taskFunc,
                     Metadata = metadata,
-                    Status = TaskStatus.Queued,
+                    Status = BackgroundTaskStatus.Queued,
                     QueuedAt = DateTime.UtcNow,
                     CancellationTokenSource = new CancellationTokenSource()
                 };
@@ -167,7 +167,7 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public string QueueTask<T>(Func<CancellationToken, IProgress<TaskProgress>, Task<T>> taskFunc,
             string name,
-            TaskPriority priority = TaskPriority.Normal,
+            BackgroundTaskPriority priority = BackgroundTaskPriority.Normal,
             string description = null,
             object metadata = null)
         {
@@ -192,7 +192,7 @@ namespace MandADiscoverySuite.Services
                 if (_runningTasks.TryGetValue(taskId, out var runningTask))
                 {
                     runningTask.CancellationTokenSource.Cancel();
-                    runningTask.Status = TaskStatus.Cancelled;
+                    runningTask.Status = BackgroundTaskStatus.Cancelled;
                     runningTask.CompletedAt = DateTime.UtcNow;
                     
                     _logger?.LogDebug("Cancelled running task: {TaskName} ({TaskId})", runningTask.Name, taskId);
@@ -226,7 +226,7 @@ namespace MandADiscoverySuite.Services
 
                     if (foundTask != null)
                     {
-                        foundTask.Status = TaskStatus.Cancelled;
+                        foundTask.Status = BackgroundTaskStatus.Cancelled;
                         foundTask.CompletedAt = DateTime.UtcNow;
                         _completedTasks.TryAdd(foundTask.Id, foundTask);
                         
@@ -247,7 +247,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Gets the status of a task
         /// </summary>
-        public BackgroundTaskItem GetTaskStatus(string taskId)
+        public BackgroundTaskItem GetBackgroundTaskStatus(string taskId)
         {
             if (string.IsNullOrEmpty(taskId))
                 return null;
@@ -276,7 +276,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Gets all tasks with optional status filter
         /// </summary>
-        public List<BackgroundTaskItem> GetTasks(TaskStatus? statusFilter = null)
+        public List<BackgroundTaskItem> GetTasks(BackgroundTaskStatus? statusFilter = null)
         {
             try
             {
@@ -356,7 +356,7 @@ namespace MandADiscoverySuite.Services
                     CompletedTasks = CompletedTaskCount,
                     MaxConcurrentTasks = MaxConcurrentTasks,
                     IsProcessing = IsProcessing,
-                    PriorityQueueStats = new Dictionary<TaskPriority, int>()
+                    PriorityQueueStats = new Dictionary<BackgroundTaskPriority, int>()
                 };
 
                 foreach (var kvp in _taskQueues)
@@ -454,7 +454,7 @@ namespace MandADiscoverySuite.Services
         private BackgroundTaskItem GetNextTask()
         {
             // Process tasks by priority (High -> Normal -> Low)
-            var priorities = new[] { TaskPriority.High, TaskPriority.Normal, TaskPriority.Low };
+            var priorities = new[] { BackgroundTaskPriority.High, BackgroundTaskPriority.Normal, BackgroundTaskPriority.Low };
 
             foreach (var priority in priorities)
             {
@@ -471,7 +471,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                taskItem.Status = TaskStatus.Running;
+                taskItem.Status = BackgroundTaskStatus.Running;
                 taskItem.StartedAt = DateTime.UtcNow;
                 
                 _runningTasks.TryAdd(taskItem.Id, taskItem);
@@ -492,7 +492,7 @@ namespace MandADiscoverySuite.Services
                     {
                         await taskItem.TaskFunction(taskItem.CancellationTokenSource.Token, progress);
                         
-                        taskItem.Status = TaskStatus.Completed;
+                        taskItem.Status = BackgroundTaskStatus.Completed;
                         taskItem.CompletedAt = DateTime.UtcNow;
                         
                         OnTaskCompleted?.Invoke(taskItem);
@@ -501,14 +501,14 @@ namespace MandADiscoverySuite.Services
                     }
                     catch (OperationCanceledException)
                     {
-                        taskItem.Status = TaskStatus.Cancelled;
+                        taskItem.Status = BackgroundTaskStatus.Cancelled;
                         taskItem.CompletedAt = DateTime.UtcNow;
                         
                         _logger?.LogDebug("Task cancelled: {TaskName} ({TaskId})", taskItem.Name, taskItem.Id);
                     }
                     catch (Exception ex)
                     {
-                        taskItem.Status = TaskStatus.Failed;
+                        taskItem.Status = BackgroundTaskStatus.Failed;
                         taskItem.CompletedAt = DateTime.UtcNow;
                         taskItem.ErrorMessage = ex.Message;
                         taskItem.Exception = ex;
@@ -534,7 +534,7 @@ namespace MandADiscoverySuite.Services
             {
                 _logger?.LogError(ex, "Error starting task: {TaskName} ({TaskId})", taskItem.Name, taskItem.Id);
                 
-                taskItem.Status = TaskStatus.Failed;
+                taskItem.Status = BackgroundTaskStatus.Failed;
                 taskItem.CompletedAt = DateTime.UtcNow;
                 taskItem.ErrorMessage = ex.Message;
                 taskItem.Exception = ex;
@@ -595,8 +595,8 @@ namespace MandADiscoverySuite.Services
         public string Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
-        public TaskPriority Priority { get; set; }
-        public TaskStatus Status { get; set; }
+        public BackgroundTaskPriority Priority { get; set; }
+        public BackgroundTaskStatus Status { get; set; }
         public DateTime QueuedAt { get; set; }
         public DateTime? StartedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
@@ -626,9 +626,9 @@ namespace MandADiscoverySuite.Services
     }
 
     /// <summary>
-    /// Task priorities
+    /// Background task priorities
     /// </summary>
-    public enum TaskPriority
+    public enum BackgroundTaskPriority
     {
         Low = 0,
         Normal = 1,
@@ -636,9 +636,9 @@ namespace MandADiscoverySuite.Services
     }
 
     /// <summary>
-    /// Task status enumeration
+    /// Background task status enumeration
     /// </summary>
-    public enum TaskStatus
+    public enum BackgroundTaskStatus
     {
         Queued,
         Running,
@@ -671,7 +671,7 @@ namespace MandADiscoverySuite.Services
         public int CompletedTasks { get; set; }
         public int MaxConcurrentTasks { get; set; }
         public bool IsProcessing { get; set; }
-        public Dictionary<TaskPriority, int> PriorityQueueStats { get; set; }
+        public Dictionary<BackgroundTaskPriority, int> PriorityQueueStats { get; set; }
     }
 
     #endregion

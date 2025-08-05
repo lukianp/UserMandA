@@ -167,6 +167,28 @@ namespace MandADiscoverySuite.Services
         }
 
         /// <summary>
+        /// Sets a value in the cache asynchronously
+        /// </summary>
+        /// <typeparam name="T">Type of value to cache</typeparam>
+        /// <param name="key">Cache key</param>
+        /// <param name="value">Value to cache</param>
+        /// <param name="ttl">Time to live (optional)</param>
+        public async Task SetAsync<T>(string key, T value, TimeSpan? ttl = null)
+        {
+            await Task.Run(() => Preload(key, value, ttl));
+        }
+
+        /// <summary>
+        /// Removes a cache entry asynchronously
+        /// </summary>
+        /// <param name="key">Cache key to remove</param>
+        /// <returns>True if the entry was removed, false if it didn't exist</returns>
+        public async Task<bool> RemoveAsync(string key)
+        {
+            return await Task.Run(() => _cache.TryRemove(key, out _));
+        }
+
+        /// <summary>
         /// Invalidates all cache entries matching a pattern
         /// </summary>
         /// <param name="pattern">Pattern to match (supports wildcards)</param>

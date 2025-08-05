@@ -78,7 +78,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Raised when pool statistics are updated
         /// </summary>
-        public event Action<ConnectionPoolStats> OnPoolStatsUpdated;
+        public event Action<ConnectionPoolingStats> OnPoolStatsUpdated;
 
         #endregion
 

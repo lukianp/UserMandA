@@ -533,7 +533,7 @@ namespace MandADiscoverySuite.ViewModels
                     SecondaryText = $"{app.Version} - {app.Publisher}",
                     StatusIcon = app.IsOutdated ? "\uE730" : "\uE73E",
                     StatusColor = app.IsOutdated ? "#FFEA580C" : "#FF059669",
-                    MetricValue = app.InstallDate?.ToString("MMM dd, yyyy") ?? "Unknown",
+                    MetricValue = app.InstallDate ?? "Unknown",
                     Tags = new[]
                     {
                         new DetailTag { Text = app.Publisher, Color = "#FF7C3AED" },
@@ -669,7 +669,7 @@ namespace MandADiscoverySuite.ViewModels
         {
             // Implementation for data export
             Logger?.LogInformation("Exporting drill-down data");
-            SendMessage(new StatusMessage("Export functionality not yet implemented", StatusType.Information));
+            SendMessage(new StatusMessage("Export functionality not yet implemented", Messages.StatusType.Information));
         }
 
         private void ShowSettings()

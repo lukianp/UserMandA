@@ -236,7 +236,7 @@ namespace MandADiscoverySuite.ViewModels
 
         private object CreateSamplePageContent(int pageNumber)
         {
-            var stackPanel = new StackPanel { Margin = new Thickness(0, 20) };
+            var stackPanel = new StackPanel { Margin = new Thickness(0, 20, 0, 0) };
             
             // Title
             var title = new TextBlock
@@ -269,13 +269,13 @@ namespace MandADiscoverySuite.ViewModels
             {
                 var table = new Grid
                 {
-                    Margin = new Thickness(0, 20)
+                    Margin = new Thickness(0, 20, 0, 0)
                 };
                 
                 // Define columns
-                table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                table.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                table.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                table.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 
                 // Define rows
                 for (int row = 0; row < 4; row++)

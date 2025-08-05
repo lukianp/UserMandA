@@ -10,11 +10,11 @@ none
 false
 TRACE;RELEASE;NET;NET6_0;NETCOREAPP
 D:\Scripts\UserMandA\GUI\App.xaml
-341274778392
+351827542134
 
 151-2035796688
 2491211873669
-AdvancedSearchDialog.xaml;ColumnVisibilityDialog.xaml;Controls\AdvancedFilteringUI.xaml;Controls\BreadcrumbNavigation.xaml;Controls\ChartControls.xaml;Controls\CustomizableDataGrid.xaml;Controls\DataExportWizard.xaml;Controls\DockingPanelContainer.xaml;Controls\EnhancedTooltipControl.xaml;Controls\KeyboardShortcutsDialog.xaml;Controls\NotificationCenter.xaml;Controls\PrintPreviewControl.xaml;Controls\ProfileDropZone.xaml;Controls\ProgressIndicator.xaml;Controls\ProgressOverlay.xaml;Controls\QuickActionsBar.xaml;Controls\SimpleChart.xaml;Controls\SplitViewControl.xaml;Controls\TabViewControl.xaml;Controls\ThemeToggleButton.xaml;Controls\VirtualizedListView.xaml;Controls\ZoomPanControl.xaml;CreateProfileDialog.xaml;DebugLogWindow.xaml;ErrorDialog.xaml;ManagerSelectionDialog.xaml;MandADiscoverySuite.xaml;PasswordGeneratorDialog.xaml;PowerShellWindow.xaml;RefreshSettingsDialog.xaml;Themes\DarkTheme.xaml;Themes\LightTheme.xaml;Themes\ThemeStyles.xaml;UserDetailWindow.xaml;
+AdvancedSearchDialog.xaml;ColumnVisibilityDialog.xaml;Controls\AdvancedFilteringUI.xaml;Controls\BreadcrumbNavigation.xaml;Controls\ChartControls.xaml;Controls\CustomizableDataGrid.xaml;Controls\DataExportWizard.xaml;Controls\DockingPanelContainer.xaml;Controls\EnhancedTooltipControl.xaml;Controls\GanttChart.xaml;Controls\KeyboardShortcutsDialog.xaml;Controls\NotificationCenter.xaml;Controls\PrintPreviewControl.xaml;Controls\ProfileDropZone.xaml;Controls\ProgressIndicator.xaml;Controls\ProgressOverlay.xaml;Controls\QuickActionsBar.xaml;Controls\SimpleChart.xaml;Controls\SplitViewControl.xaml;Controls\TabViewControl.xaml;Controls\ThemeToggleButton.xaml;Controls\VirtualizedListView.xaml;Controls\ZoomPanControl.xaml;CreateProfileDialog.xaml;DebugLogWindow.xaml;ErrorDialog.xaml;ManagerSelectionDialog.xaml;MandADiscoverySuite.xaml;PasswordGeneratorDialog.xaml;PowerShellWindow.xaml;RefreshSettingsDialog.xaml;Themes\DarkTheme.xaml;Themes\LightTheme.xaml;Themes\ThemeStyles.xaml;UserDetailWindow.xaml;
 
 True
 

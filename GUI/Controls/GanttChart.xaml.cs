@@ -221,5 +221,24 @@ namespace MandADiscoverySuite.Controls
             var dayOfYear = date.DayOfYear;
             return (dayOfYear + daysOffset - 1) / 7 + 1;
         }
+
+        private void ChartCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (_viewModel == null) return;
+            
+            var position = e.GetPosition(ChartCanvas);
+            _isDragging = true;
+            _dragStartPoint = position;
+            ChartCanvas.CaptureMouse();
+        }
+
+        private void ChartCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_isDragging)
+            {
+                _isDragging = false;
+                ChartCanvas.ReleaseMouseCapture();
+            }
+        }
     }
 }

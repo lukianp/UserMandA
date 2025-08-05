@@ -29,6 +29,7 @@ namespace MandADiscoverySuite.ViewModels
         private readonly IDiscoveryService _discoveryService;
         private readonly IProfileService _profileService;
         private readonly IDataService _dataService;
+        private readonly CsvDataService _csvDataService;
         private readonly ThemeService _themeService;
         private readonly DispatcherTimer _dashboardTimer;
         private readonly DispatcherTimer _progressTimer;
@@ -605,7 +606,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Constructor
 
-        public MainViewModel() : this(null, null, null, null, null, null)
+        public MainViewModel() : this(null, null, null, null, null, null, null)
         {
         }
 
@@ -615,6 +616,7 @@ namespace MandADiscoverySuite.ViewModels
             IDiscoveryService discoveryService,
             IProfileService profileService,
             IDataService dataService,
+            CsvDataService csvDataService,
             DataVisualizationViewModel dataVisualization,
             ThemeService themeService = null) : base(logger, messenger)
         {
@@ -638,6 +640,7 @@ namespace MandADiscoverySuite.ViewModels
             _discoveryService = discoveryService ?? ServiceLocator.GetService<IDiscoveryService>();
             _profileService = profileService ?? ServiceLocator.GetService<IProfileService>();
             _dataService = dataService ?? ServiceLocator.GetService<IDataService>();
+            _csvDataService = csvDataService ?? ServiceLocator.GetService<CsvDataService>();
             _themeService = themeService ?? ServiceLocator.GetService<ThemeService>();
             _asyncDataService = new AsyncDataService(_dataService as CsvDataService ?? new CsvDataService());
 
@@ -881,6 +884,22 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
+        private CompanyProfile ConvertServiceProfile(ServiceCompanyProfile serviceProfile)
+        {
+            return new CompanyProfile
+            {
+                Id = Guid.NewGuid().ToString(),
+                CompanyName = serviceProfile.Name,
+                Description = serviceProfile.Description,
+                DomainController = serviceProfile.PrimaryDomain,
+                TenantId = serviceProfile.TenantId,
+                IsActive = serviceProfile.IsActive,
+                Created = serviceProfile.CreatedDate,
+                LastModified = serviceProfile.LastModifiedDate,
+                Configuration = serviceProfile.Settings?.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value) ?? new Dictionary<string, object>()
+            };
+        }
+
         private async Task LoadCompanyProfilesAsync()
         {
             var profiles = await _profileService.GetProfilesAsync();
@@ -890,7 +909,7 @@ namespace MandADiscoverySuite.ViewModels
                 CompanyProfiles.Clear();
                 foreach (var profile in profiles)
                 {
-                    CompanyProfiles.Add(profile);
+                    CompanyProfiles.Add(ConvertServiceProfile(profile));
                 }
 
                 if (CompanyProfiles.Count > 0 && SelectedProfile == null)
@@ -1024,10 +1043,8 @@ namespace MandADiscoverySuite.ViewModels
                 var progress = new Progress<DiscoveryProgress>(UpdateDiscoveryProgress);
                 
                 await _discoveryService.StartDiscoveryAsync(
-                    SelectedProfile, 
-                    enabledModules.Select(m => m.ModuleName).ToList(),
-                    progress,
-                    _cancellationTokenSource.Token);
+                    SelectedProfile?.CompanyName, 
+                    enabledModules.Select(m => m.ModuleName).ToArray());
 
                 if (!_cancellationTokenSource.Token.IsCancellationRequested)
                 {
@@ -1107,14 +1124,25 @@ namespace MandADiscoverySuite.ViewModels
                     return;
                 }
                 
-                var results = await _discoveryService.GetResultsAsync(SelectedProfile);
+                var results = await _discoveryService.GetResultsAsync(SelectedProfile?.CompanyName);
                 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     DiscoveryResults.Clear();
                     foreach (var result in results)
                     {
-                        DiscoveryResults.Add(result);
+                        // Convert DiscoveryExecutionResult to DiscoveryResult
+                        var discoveryResult = new DiscoveryResult
+                        {
+                            ModuleName = result.ModuleName,
+                            DisplayName = result.ModuleName,
+                            ItemCount = result.ItemsDiscovered,
+                            DiscoveryTime = result.EndTime,
+                            Duration = result.Duration,
+                            Status = result.Success ? "Success" : "Failed",
+                            FilePath = result.OutputPath
+                        };
+                        DiscoveryResults.Add(discoveryResult);
                     }
                     
                     // Update dashboard metrics
@@ -1429,7 +1457,7 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     var companyName = createDialog.ProfileName;
                     
-                    var newProfile = new CompanyProfile
+                    var newProfile = new Models.CompanyProfile
                     {
                         CompanyName = companyName,
                         TenantId = Guid.NewGuid().ToString(),
@@ -1439,8 +1467,21 @@ namespace MandADiscoverySuite.ViewModels
                         Description = $"Profile for {companyName}"
                     };
 
+                    // Convert to service profile
+                    var serviceProfile = new Services.ServiceCompanyProfile
+                    {
+                        Name = newProfile.CompanyName,
+                        DisplayName = newProfile.CompanyName,
+                        Description = newProfile.Description,
+                        CreatedDate = newProfile.Created,
+                        LastModifiedDate = newProfile.LastModified,
+                        IsActive = newProfile.IsActive,
+                        TenantId = newProfile.TenantId,
+                        PrimaryDomain = ""
+                    };
+
                     // Save profile
-                    await _profileService.CreateProfileAsync(newProfile);
+                    await _profileService.CreateProfileAsync(serviceProfile);
                     
                     // Add to collection and select
                     Application.Current.Dispatcher.Invoke(() =>
@@ -1536,7 +1577,21 @@ This directory is strictly for storing discovery results and company data.
                 if (dialog.ShowDialog() == true && dialog.Profile != null)
                 {
                     var updatedProfile = dialog.Profile;
-                    await _profileService.UpdateProfileAsync(updatedProfile);
+                    
+                    // Convert to service profile
+                    var serviceProfile = new Services.ServiceCompanyProfile
+                    {
+                        Name = updatedProfile.CompanyName,
+                        DisplayName = updatedProfile.CompanyName,
+                        Description = updatedProfile.Description,
+                        CreatedDate = updatedProfile.Created,
+                        LastModifiedDate = updatedProfile.LastModified,
+                        IsActive = updatedProfile.IsActive,
+                        TenantId = updatedProfile.TenantId,
+                        PrimaryDomain = ""
+                    };
+                    
+                    await _profileService.UpdateProfileAsync(serviceProfile);
                     
                     // Refresh profiles list
                     await LoadCompanyProfilesAsync();
@@ -1661,7 +1716,8 @@ This directory is strictly for storing discovery results and company data.
                     return;
                 }
 
-                await _discoveryService.ExportResultsAsync(SelectedProfile, DiscoveryResults.ToList());
+                var exportPath = $"C:\\DiscoveryData\\{SelectedProfile?.CompanyName}\\export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                await _discoveryService.ExportResultsAsync(SelectedProfile?.CompanyName, exportPath);
                 StatusMessage = "Results exported successfully";
             }
             catch (Exception ex)
@@ -1704,10 +1760,21 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Importing profile...";
                 
-                var importedProfile = await _profileService.ImportProfileAsync(filePath);
+                var importedServiceProfile = await _profileService.ImportProfileAsync(filePath);
                 
-                if (importedProfile != null)
+                if (importedServiceProfile != null)
                 {
+                    // Convert ServiceCompanyProfile to Models.CompanyProfile
+                    var importedProfile = new Models.CompanyProfile
+                    {
+                        CompanyName = importedServiceProfile.DisplayName ?? importedServiceProfile.Name,
+                        Description = importedServiceProfile.Description,
+                        Created = importedServiceProfile.CreatedDate,
+                        LastModified = importedServiceProfile.LastModifiedDate,
+                        IsActive = importedServiceProfile.IsActive,
+                        TenantId = importedServiceProfile.TenantId
+                    };
+
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         CompanyProfiles.Add(importedProfile);

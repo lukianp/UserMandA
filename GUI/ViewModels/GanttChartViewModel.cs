@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Messaging;
@@ -712,7 +713,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 // Export timeline data
                 Logger?.LogInformation("Exporting timeline data");
-                SendMessage(new StatusMessage("Export functionality not yet implemented", StatusType.Information));
+                SendMessage(new StatusMessage("Export functionality not yet implemented", Messages.StatusType.Information));
                 
             }, "Exporting timeline");
         }
