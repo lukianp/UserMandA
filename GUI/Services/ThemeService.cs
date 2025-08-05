@@ -92,7 +92,7 @@ namespace MandADiscoverySuite.Services
                 SaveSettings();
             }
             
-            _messenger.Send(new ThemeChangedMessage(theme, CurrentAccentColor));
+            _messenger.Send(new ThemeChangedMessage(theme == ThemeMode.Dark, CurrentAccentColor.ToString()));
             _logger.LogInformation("Theme changed to: {Theme}", theme);
         }
 
@@ -110,7 +110,7 @@ namespace MandADiscoverySuite.Services
                 SaveSettings();
             }
             
-            _messenger.Send(new AccentColorChangedMessage(accentColor));
+            _messenger.Send(new AccentColorChangedMessage(accentColor.ToString()));
             _logger.LogInformation("Accent color changed to: {AccentColor}", accentColor);
         }
 
@@ -223,7 +223,7 @@ namespace MandADiscoverySuite.Services
                 SaveSettings();
             }
             
-            _messenger.Send(new ThemeChangedMessage(CurrentTheme, CurrentAccentColor));
+            _messenger.Send(new ThemeChangedMessage(CurrentTheme == ThemeMode.Dark, CurrentAccentColor.ToString()));
             _logger.LogInformation("Applied theme settings: {Theme}, {AccentColor}", CurrentTheme, CurrentAccentColor);
         }
 

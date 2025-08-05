@@ -24,6 +24,8 @@ namespace MandADiscoverySuite.Services
 
             try
             {
+                System.Diagnostics.Debug.WriteLine($"CsvDataService.LoadUsersAsync: Looking for user files in {rawDataPath}");
+                
                 // Look for user CSV files
                 var userFiles = new[]
                 {
@@ -32,20 +34,37 @@ namespace MandADiscoverySuite.Services
                     Path.Combine(rawDataPath, "ActiveDirectoryUsers.csv")
                 };
 
-                foreach (var filePath in userFiles.Where(File.Exists))
+                foreach (var filePath in userFiles)
                 {
-                    var fileUsers = await LoadUsersFromCsvAsync(filePath);
-                    users.AddRange(fileUsers);
+                    if (File.Exists(filePath))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"CsvDataService.LoadUsersAsync: Loading from {filePath}");
+                        try
+                        {
+                            var fileUsers = await LoadUsersFromCsvAsync(filePath);
+                            users.AddRange(fileUsers);
+                            System.Diagnostics.Debug.WriteLine($"CsvDataService.LoadUsersAsync: Loaded {fileUsers.Count} users from {Path.GetFileName(filePath)}");
+                        }
+                        catch (Exception fileEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"CsvDataService.LoadUsersAsync: Error loading {filePath}: {fileEx.Message}");
+                            ErrorHandlingService.Instance.HandleException(fileEx, $"Loading user data from {Path.GetFileName(filePath)}");
+                        }
+                    }
                 }
 
                 // Remove duplicates based on UserPrincipalName or SamAccountName
+                var originalCount = users.Count;
                 users = users
                     .GroupBy(u => u.UserPrincipalName ?? u.SamAccountName ?? u.Id)
                     .Select(g => g.First())
                     .ToList();
+                
+                System.Diagnostics.Debug.WriteLine($"CsvDataService.LoadUsersAsync: Deduplicated {originalCount} -> {users.Count} users");
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"CsvDataService.LoadUsersAsync: Exception: {ex.Message}");
                 ErrorHandlingService.Instance.HandleException(ex, "Loading user data from CSV");
             }
 
@@ -78,6 +97,44 @@ namespace MandADiscoverySuite.Services
             }
 
             return infrastructure;
+        }
+
+        /// <summary>
+        /// Loads application data from CSV files
+        /// </summary>
+        public async Task<List<ApplicationData>> LoadApplicationsAsync(string rawDataPath)
+        {
+            var applications = new List<ApplicationData>();
+
+            try
+            {
+                // Look for application CSV files
+                var applicationFiles = new[]
+                {
+                    Path.Combine(rawDataPath, "Applications.csv"),
+                    Path.Combine(rawDataPath, "InstalledApplications.csv"),
+                    Path.Combine(rawDataPath, "EntraIDAppRegistrations.csv"),
+                    Path.Combine(rawDataPath, "EntraIDEnterpriseApps.csv")
+                };
+
+                foreach (var filePath in applicationFiles.Where(File.Exists))
+                {
+                    var fileApplications = await LoadApplicationsFromCsvAsync(filePath);
+                    applications.AddRange(fileApplications);
+                }
+
+                // Remove duplicates based on Name or Id
+                applications = applications
+                    .GroupBy(a => a.Id ?? a.Name ?? Guid.NewGuid().ToString())
+                    .Select(g => g.First())
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Loading application data from CSV");
+            }
+
+            return applications;
         }
 
         /// <summary>
@@ -332,6 +389,109 @@ namespace MandADiscoverySuite.Services
             }
 
             return infrastructure;
+        }
+
+        private async Task<List<ApplicationData>> LoadApplicationsFromCsvAsync(string filePath)
+        {
+            var applications = new List<ApplicationData>();
+
+            try
+            {
+                var lines = await File.ReadAllLinesAsync(filePath);
+                if (lines.Length < 2) return applications;
+
+                var headers = ParseCsvLine(lines[0]);
+                
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    try
+                    {
+                        var values = ParseCsvLine(lines[i]);
+                        if (values.Length < headers.Length) continue;
+
+                        var application = new ApplicationData();
+                        
+                        // Map CSV columns to application properties
+                        for (int j = 0; j < headers.Length && j < values.Length; j++)
+                        {
+                            var header = headers[j].ToLowerInvariant();
+                            var value = values[j];
+
+                            switch (header)
+                            {
+                                case "id":
+                                case "appid":
+                                case "applicationid":
+                                    application.Id = value;
+                                    break;
+                                case "objecttype":
+                                    application.ObjectType = value;
+                                    break;
+                                case "name":
+                                case "displayname":
+                                case "applicationname":
+                                    application.Name = value;
+                                    break;
+                                case "version":
+                                    application.Version = value;
+                                    break;
+                                case "publisher":
+                                case "vendor":
+                                    application.Publisher = value;
+                                    break;
+                                case "installdate":
+                                case "installedon":
+                                    application.InstallDate = value;
+                                    break;
+                                case "size":
+                                case "filesize":
+                                    application.Size = value;
+                                    break;
+                                case "installlocation":
+                                    application.InstallLocation = value;
+                                    break;
+                                case "uninstallstring":
+                                    application.UninstallString = value;
+                                    break;
+                                case "displayicon":
+                                    application.DisplayIcon = value;
+                                    break;
+                                case "comments":
+                                    application.Comments = value;
+                                    break;
+                                case "contact":
+                                    application.Contact = value;
+                                    break;
+                                case "displayversion":
+                                    application.DisplayVersion = value;
+                                    break;
+                                case "helplink":
+                                    application.HelpLink = value;
+                                    break;
+                                case "urlinfoabout":
+                                    application.URLInfoAbout = value;
+                                    break;
+                            }
+                        }
+
+                        // Only add applications with meaningful data
+                        if (!string.IsNullOrWhiteSpace(application.Name))
+                        {
+                            applications.Add(application);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error parsing application row {i}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, $"Loading applications from {filePath}");
+            }
+
+            return applications;
         }
 
         private async Task<List<GroupData>> LoadGroupsFromCsvAsync(string filePath)

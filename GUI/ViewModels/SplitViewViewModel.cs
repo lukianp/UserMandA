@@ -134,7 +134,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Private Methods
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             SetLayoutCommand = new RelayCommand<string>(SetLayout);
             AddPaneCommand = new RelayCommand(AddPane);

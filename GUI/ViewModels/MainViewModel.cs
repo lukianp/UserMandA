@@ -55,6 +55,7 @@ namespace MandADiscoverySuite.ViewModels
         private List<UserData> _allUsers = new List<UserData>();
         private List<InfrastructureData> _allInfrastructure = new List<InfrastructureData>();
         private List<GroupData> _allGroups = new List<GroupData>();
+        private List<ApplicationData> _allApplications = new List<ApplicationData>();
         private PaginationService<UserData> _userPagination;
         private PaginationService<InfrastructureData> _infrastructurePagination;
         private PaginationService<GroupData> _groupPagination;
@@ -126,6 +127,11 @@ namespace MandADiscoverySuite.ViewModels
         /// Collection of group data (optimized for performance)
         /// </summary>
         public OptimizedObservableCollection<GroupData> Groups { get; }
+
+        /// <summary>
+        /// Collection of application data (optimized for performance)
+        /// </summary>
+        public OptimizedObservableCollection<ApplicationData> Applications { get; }
 
         /// <summary>
         /// Currently selected company profile
@@ -216,7 +222,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Current status message
         /// </summary>
-        public string StatusMessage
+        public new string StatusMessage
         {
             get => _statusMessage;
             set => SetProperty(ref _statusMessage, value);
@@ -628,6 +634,7 @@ namespace MandADiscoverySuite.ViewModels
             Users = new OptimizedObservableCollection<UserData>();
             Infrastructure = new OptimizedObservableCollection<InfrastructureData>();
             Groups = new OptimizedObservableCollection<GroupData>();
+            Applications = new OptimizedObservableCollection<ApplicationData>();
             
             // Initialize pagination services
             _userPagination = new PaginationService<UserData>();
@@ -835,7 +842,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Executes an async task with consistent error handling
         /// </summary>
-        private void ExecuteAsync(Func<Task> taskFactory, string operationName = "Operation")
+        private new void ExecuteAsync(Func<Task> taskFactory, string operationName = "Operation")
         {
             if (taskFactory == null)
                 throw new ArgumentNullException(nameof(taskFactory));
@@ -909,7 +916,7 @@ namespace MandADiscoverySuite.ViewModels
                 CompanyProfiles.Clear();
                 foreach (var profile in profiles)
                 {
-                    CompanyProfiles.Add(ConvertServiceProfile(profile));
+                    CompanyProfiles.Add(profile);
                 }
 
                 if (CompanyProfiles.Count > 0 && SelectedProfile == null)
@@ -1162,21 +1169,46 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                if (SelectedProfile == null) return;
+                if (SelectedProfile == null) 
+                {
+                    System.Diagnostics.Debug.WriteLine("LoadDetailedDataAsync: No profile selected");
+                    return;
+                }
 
                 var rawDataPath = ConfigurationService.Instance.GetCompanyRawDataPath(SelectedProfile.CompanyName);
-                if (!Directory.Exists(rawDataPath)) return;
+                System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Looking for data in path: {rawDataPath}");
+                
+                if (!Directory.Exists(rawDataPath)) 
+                {
+                    System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Raw data path does not exist: {rawDataPath}");
+                    StatusMessage = $"No discovery data found for {SelectedProfile.CompanyName}. Run discovery first.";
+                    return;
+                }
 
-                // Load users, infrastructure, and groups data in parallel
+                // Log available CSV files
+                var csvFiles = Directory.GetFiles(rawDataPath, "*.csv");
+                System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Found {csvFiles.Length} CSV files in {rawDataPath}");
+                foreach (var file in csvFiles)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  - {Path.GetFileName(file)}");
+                }
+
+                StatusMessage = "Loading discovery data...";
+
+                // Load users, infrastructure, groups, and applications data in parallel
                 var usersTask = _csvDataService.LoadUsersAsync(rawDataPath);
                 var infrastructureTask = _csvDataService.LoadInfrastructureAsync(rawDataPath);
                 var groupsTask = _csvDataService.LoadGroupsAsync(rawDataPath);
+                var applicationsTask = _csvDataService.LoadApplicationsAsync(rawDataPath);
 
-                await Task.WhenAll(usersTask, infrastructureTask, groupsTask);
+                await Task.WhenAll(usersTask, infrastructureTask, groupsTask, applicationsTask);
 
                 var users = await usersTask;
                 var infrastructure = await infrastructureTask;
                 var groups = await groupsTask;
+                var applications = await applicationsTask;
+
+                System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Loaded {users.Count} users, {infrastructure.Count} infrastructure items, {groups.Count} groups, {applications.Count} applications");
 
                 // Update collections on the UI thread
                 Application.Current.Dispatcher.Invoke(() =>
@@ -1184,21 +1216,27 @@ namespace MandADiscoverySuite.ViewModels
                     // Store all data for filtering
                     _allUsers = users;
                     _allInfrastructure = infrastructure;
+                    _allGroups = groups.ToList();
+                    _allApplications = applications.ToList();
                     
                     // Apply current filters
                     FilterUsers();
                     FilterInfrastructure();
-
-                    // Update Groups collection with filtering
-                    _allGroups = groups.ToList();
                     FilterGroups();
+                    FilterApplications();
 
                     // Update dashboard metrics with detailed counts
                     UpdateDetailedDashboardMetrics();
+                    
+                    System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: UI collections updated successfully");
                 });
+
+                StatusMessage = $"Loaded data: {users.Count} users, {infrastructure.Count} infrastructure, {groups.Count} groups, {applications.Count} applications";
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Exception occurred: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Stack trace: {ex.StackTrace}");
                 StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Detailed data loading");
             }
         }
@@ -1467,21 +1505,8 @@ namespace MandADiscoverySuite.ViewModels
                         Description = $"Profile for {companyName}"
                     };
 
-                    // Convert to service profile
-                    var serviceProfile = new Services.ServiceCompanyProfile
-                    {
-                        Name = newProfile.CompanyName,
-                        DisplayName = newProfile.CompanyName,
-                        Description = newProfile.Description,
-                        CreatedDate = newProfile.Created,
-                        LastModifiedDate = newProfile.LastModified,
-                        IsActive = newProfile.IsActive,
-                        TenantId = newProfile.TenantId,
-                        PrimaryDomain = ""
-                    };
-
-                    // Save profile
-                    await _profileService.CreateProfileAsync(serviceProfile);
+                    // Save profile directly
+                    await _profileService.CreateProfileAsync(newProfile);
                     
                     // Add to collection and select
                     Application.Current.Dispatcher.Invoke(() =>
@@ -1578,20 +1603,8 @@ This directory is strictly for storing discovery results and company data.
                 {
                     var updatedProfile = dialog.Profile;
                     
-                    // Convert to service profile
-                    var serviceProfile = new Services.ServiceCompanyProfile
-                    {
-                        Name = updatedProfile.CompanyName,
-                        DisplayName = updatedProfile.CompanyName,
-                        Description = updatedProfile.Description,
-                        CreatedDate = updatedProfile.Created,
-                        LastModifiedDate = updatedProfile.LastModified,
-                        IsActive = updatedProfile.IsActive,
-                        TenantId = updatedProfile.TenantId,
-                        PrimaryDomain = ""
-                    };
-                    
-                    await _profileService.UpdateProfileAsync(serviceProfile);
+                    // Update profile directly
+                    await _profileService.UpdateProfileAsync(updatedProfile);
                     
                     // Refresh profiles list
                     await LoadCompanyProfilesAsync();
@@ -1760,21 +1773,10 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Importing profile...";
                 
-                var importedServiceProfile = await _profileService.ImportProfileAsync(filePath);
+                var importedProfile = await _profileService.ImportProfileAsync(filePath);
                 
-                if (importedServiceProfile != null)
+                if (importedProfile != null)
                 {
-                    // Convert ServiceCompanyProfile to Models.CompanyProfile
-                    var importedProfile = new Models.CompanyProfile
-                    {
-                        CompanyName = importedServiceProfile.DisplayName ?? importedServiceProfile.Name,
-                        Description = importedServiceProfile.Description,
-                        Created = importedServiceProfile.CreatedDate,
-                        LastModified = importedServiceProfile.LastModifiedDate,
-                        IsActive = importedServiceProfile.IsActive,
-                        TenantId = importedServiceProfile.TenantId
-                    };
-
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         CompanyProfiles.Add(importedProfile);
@@ -3121,6 +3123,20 @@ This directory is strictly for storing discovery results and company data.
             
             _groupPagination.SetAllItems(filtered);
             RefreshGroupPage();
+        }
+
+        private void FilterApplications()
+        {
+            var filtered = _allApplications.AsEnumerable();
+            
+            // Applications don't have search text property yet, so just update the collection
+            // TODO: Add ApplicationSearchText property if needed
+            
+            Applications.Clear();
+            foreach (var app in filtered)
+            {
+                Applications.Add(app);
+            }
         }
 
         #endregion

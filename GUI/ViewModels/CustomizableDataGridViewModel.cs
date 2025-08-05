@@ -123,7 +123,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Private Methods
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             ShowColumnManagerCommand = new RelayCommand(ShowColumnManager);
             SaveLayoutCommand = new RelayCommand(SaveLayoutDialog);

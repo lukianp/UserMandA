@@ -491,7 +491,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 // Export dashboard configuration and data
                 Logger?.LogInformation("Exporting dashboard configuration");
-                SendMessage(new StatusMessage("Dashboard export functionality not yet implemented", StatusType.Information));
+                SendMessage(new StatusMessage("Dashboard export functionality not yet implemented", Messages.StatusType.Information));
                 
             }, "Exporting dashboard");
         }

@@ -11,11 +11,13 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Service for managing company profiles
     /// </summary>
-    public class ProfileService : IDisposable
+    public class ProfileService : IProfileService, IDisposable
     {
         private readonly string _profilesPath;
         private readonly string _profilesFile;
         private List<CompanyProfile> _cachedProfiles;
+
+        public event EventHandler ProfilesChanged;
 
         public ProfileService()
         {
@@ -30,7 +32,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Gets all company profiles
         /// </summary>
-        public async Task<List<CompanyProfile>> GetProfilesAsync()
+        public async Task<IEnumerable<CompanyProfile>> GetProfilesAsync()
         {
             ThrowIfDisposed();
             
@@ -416,6 +418,63 @@ namespace MandADiscoverySuite.Services
             {
                 return 0;
             }
+        }
+
+        #endregion
+
+        #region Missing Interface Methods
+
+        public async Task<CompanyProfile> GetCurrentProfileAsync()
+        {
+            var profiles = await GetProfilesAsync();
+            return profiles.FirstOrDefault(p => p.IsActive);  
+        }
+
+        public async Task<bool> SetCurrentProfileAsync(string profileName)
+        {
+            var profiles = await GetProfilesAsync();
+            var targetProfile = profiles.FirstOrDefault(p => p.CompanyName == profileName || p.Id == profileName);
+            
+            if (targetProfile == null)
+                return false;
+
+            // Set all profiles as inactive
+            foreach (var profile in profiles)
+            {
+                profile.IsActive = false;
+            }
+
+            // Set target profile as active
+            targetProfile.IsActive = true;
+            await SaveProfilesAsync();
+            ProfilesChanged?.Invoke(this, EventArgs.Empty);
+            
+            return true;
+        }
+
+        public async Task<ProfileValidationResult> ValidateProfileAsync(CompanyProfile profile)
+        {
+            var result = new ProfileValidationResult();
+            
+            if (string.IsNullOrWhiteSpace(profile?.CompanyName))
+            {
+                result.AddError("Company name is required");
+            }
+            
+            if (string.IsNullOrWhiteSpace(profile?.DomainController))
+            {
+                result.AddWarning("Domain controller is not specified");
+            }
+            
+            // Check for duplicate names
+            var existingProfiles = await GetProfilesAsync();
+            if (existingProfiles.Any(p => p.Id != profile.Id && p.CompanyName.Equals(profile.CompanyName, StringComparison.OrdinalIgnoreCase)))
+            {
+                result.AddError("A profile with this company name already exists");
+            }
+            
+            result.AddRecommendation("Profile validation completed");
+            return result;
         }
 
         #endregion

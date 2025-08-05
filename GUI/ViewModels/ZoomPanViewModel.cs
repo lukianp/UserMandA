@@ -178,7 +178,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Private Methods
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             ZoomInCommand = new RelayCommand(ZoomIn);
             ZoomOutCommand = new RelayCommand(ZoomOut);

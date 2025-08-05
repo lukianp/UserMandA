@@ -51,7 +51,7 @@ namespace MandADiscoverySuite.ViewModels
             set { _selectedRisk = value; OnPropertyChanged(); }
         }
 
-        public bool IsLoading
+        public new bool IsLoading
         {
             get => _isLoading;
             set { _isLoading = value; OnPropertyChanged(); }
@@ -99,7 +99,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Command Implementations
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             NavigateToViewCommand = new RelayCommand<string>(NavigateToView);
             CreateNewProjectCommand = new AsyncRelayCommand(CreateNewProjectAsync);

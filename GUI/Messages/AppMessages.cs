@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using MandADiscoverySuite.Models;
 
 namespace MandADiscoverySuite.Messages
@@ -87,6 +88,7 @@ namespace MandADiscoverySuite.Messages
     {
         public string ViewName { get; set; }
         public object Parameter { get; set; }
+        public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
 
         public NavigationMessage(string viewName, object parameter = null)
         {
@@ -169,6 +171,64 @@ namespace MandADiscoverySuite.Messages
         public ThemeChangedMessage(bool isDarkTheme)
         {
             IsDarkTheme = isDarkTheme;
+        }
+
+        public ThemeChangedMessage(bool isDarkTheme, string themeMode)
+        {
+            IsDarkTheme = isDarkTheme;
+            // Additional theme mode parameter for compatibility
+        }
+    }
+
+    /// <summary>
+    /// Message sent when accent color changes
+    /// </summary>
+    public class AccentColorChangedMessage : AppMessage
+    {
+        public string AccentColor { get; set; }
+
+        public AccentColorChangedMessage(string accentColor)
+        {
+            AccentColor = accentColor;
+        }
+    }
+
+    /// <summary>
+    /// Message sent when font size changes
+    /// </summary>
+    public class FontSizeChangedMessage : AppMessage
+    {
+        public double FontSize { get; set; }
+
+        public FontSizeChangedMessage(double fontSize)
+        {
+            FontSize = fontSize;
+        }
+    }
+
+    /// <summary>
+    /// Message sent when motion settings change
+    /// </summary>
+    public class MotionSettingsChangedMessage : AppMessage
+    {
+        public bool UseAnimations { get; set; }
+
+        public MotionSettingsChangedMessage(bool useAnimations)
+        {
+            UseAnimations = useAnimations;
+        }
+    }
+
+    /// <summary>
+    /// Message sent when high contrast settings change
+    /// </summary>
+    public class HighContrastChangedMessage : AppMessage
+    {
+        public bool IsHighContrast { get; set; }
+
+        public HighContrastChangedMessage(bool isHighContrast)
+        {
+            IsHighContrast = isHighContrast;
         }
     }
 

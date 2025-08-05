@@ -126,6 +126,8 @@ namespace MandADiscoverySuite.Services
         public List<string> Info { get; set; } = new List<string>();
         public Dictionary<string, object> Context { get; set; } = new Dictionary<string, object>();
 
+        public bool HasWarnings => Warnings?.Any() == true;
+
         public void AddError(string error)
         {
             Errors.Add(error);

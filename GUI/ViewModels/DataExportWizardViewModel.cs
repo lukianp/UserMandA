@@ -236,6 +236,29 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _maxRowsPerFile, value);
         }
 
+        public string SelectedFormat
+        {
+            get
+            {
+                if (_isExcelFormat) return "Excel";
+                if (_isCsvFormat) return "CSV";
+                if (_isJsonFormat) return "JSON";
+                if (_isXmlFormat) return "XML";
+                if (_isPdfFormat) return "PDF";
+                return "Excel";
+            }
+        }
+
+        public string ExportFileName
+        {
+            get
+            {
+                var format = SelectedFormat.ToLower();
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                return $"export_{timestamp}.{format}";
+            }
+        }
+
         // Step 3: Schedule & Filters Properties
         public bool IsOneTimeExport
         {
@@ -632,7 +655,13 @@ namespace MandADiscoverySuite.ViewModels
 
                 // Start export with progress updates
                 var progress = new Progress<ExportProgress>(OnExportProgress);
-                await _exportService.ExportDataAsync(config, progress);
+                var exportRequest = new ExportRequest
+                {
+                    Data = config,
+                    Format = SelectedFormat,
+                    FileName = ExportFileName
+                };
+                await _exportService.ExportDataAsync(exportRequest);
 
                 ExportStatus = "Export completed successfully!";
                 ExportProgress = 100;

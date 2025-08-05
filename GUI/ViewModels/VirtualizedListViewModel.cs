@@ -112,7 +112,7 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _displayedItems, value);
         }
 
-        public bool IsLoading
+        public new bool IsLoading
         {
             get => _isLoading;
             set => SetProperty(ref _isLoading, value);
@@ -166,7 +166,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Private Methods
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             RefreshCommand = new RelayCommand(RefreshData);
             ShowSettingsCommand = new RelayCommand(ShowSettings);
@@ -182,7 +182,7 @@ namespace MandADiscoverySuite.ViewModels
             RefreshData();
         }
 
-        private void RefreshData()
+        public void RefreshData()
         {
             Task.Run(async () =>
             {

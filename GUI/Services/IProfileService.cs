@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using MandADiscoverySuite.Models;
 
 namespace MandADiscoverySuite.Services
 {
@@ -18,28 +19,28 @@ namespace MandADiscoverySuite.Services
         /// Gets all available company profiles
         /// </summary>
         /// <returns>Collection of company profiles</returns>
-        Task<IEnumerable<ServiceCompanyProfile>> GetProfilesAsync();
+        Task<IEnumerable<CompanyProfile>> GetProfilesAsync();
 
         /// <summary>
         /// Gets a specific company profile by name
         /// </summary>
         /// <param name="profileName">Profile name</param>
         /// <returns>Company profile or null if not found</returns>
-        Task<ServiceCompanyProfile> GetProfileAsync(string profileName);
+        Task<CompanyProfile> GetProfileAsync(string profileName);
 
         /// <summary>
         /// Creates a new company profile
         /// </summary>
         /// <param name="profile">Profile to create</param>
         /// <returns>Created profile</returns>
-        Task<ServiceCompanyProfile> CreateProfileAsync(ServiceCompanyProfile profile);
+        Task<CompanyProfile> CreateProfileAsync(CompanyProfile profile);
 
         /// <summary>
         /// Updates an existing company profile
         /// </summary>
         /// <param name="profile">Profile to update</param>
         /// <returns>Updated profile</returns>
-        Task<ServiceCompanyProfile> UpdateProfileAsync(ServiceCompanyProfile profile);
+        Task<CompanyProfile> UpdateProfileAsync(CompanyProfile profile);
 
         /// <summary>
         /// Deletes a company profile
@@ -52,7 +53,7 @@ namespace MandADiscoverySuite.Services
         /// Gets the current active profile
         /// </summary>
         /// <returns>Current active profile or null</returns>
-        Task<ServiceCompanyProfile> GetCurrentProfileAsync();
+        Task<CompanyProfile> GetCurrentProfileAsync();
 
         /// <summary>
         /// Sets the current active profile
@@ -66,7 +67,7 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         /// <param name="profile">Profile to validate</param>
         /// <returns>Validation result</returns>
-        Task<ProfileValidationResult> ValidateProfileAsync(ServiceCompanyProfile profile);
+        Task<ProfileValidationResult> ValidateProfileAsync(CompanyProfile profile);
 
         /// <summary>
         /// Gets profile statistics and health information
@@ -80,7 +81,7 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         /// <param name="filePath">Path to the profile file</param>
         /// <returns>Imported profile or null if failed</returns>
-        Task<ServiceCompanyProfile> ImportProfileAsync(string filePath);
+        Task<CompanyProfile> ImportProfileAsync(string filePath);
     }
 
     /// <summary>

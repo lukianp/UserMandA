@@ -339,7 +339,7 @@ namespace MandADiscoverySuite.ViewModels
                     if (profile != null)
                     {
                         await _dataService.ClearCacheAsync(profile.Name);
-                        SendMessage(new StatusMessage("Data cache cleared successfully", StatusType.Success));
+                        SendMessage(new StatusMessage("Data cache cleared successfully", Messages.StatusType.Success));
                     }
                 }
             });

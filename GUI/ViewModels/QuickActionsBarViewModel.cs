@@ -131,7 +131,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Private Methods
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             ToggleVisibilityCommand = new RelayCommand(ToggleVisibility);
             NewDashboardCommand = new RelayCommand(NewDashboard);

@@ -79,7 +79,7 @@ namespace MandADiscoverySuite.Repository
 
                 foreach (var repository in _repositories.Values)
                 {
-                    if (repository is IRepository<IEntity<object>, object> repo)
+                    if (repository is IRepository<IEntity<string>, string> repo)
                     {
                         var changes = await repo.SaveChangesAsync();
                         totalChanges += changes;
@@ -201,7 +201,7 @@ namespace MandADiscoverySuite.Repository
                 // Start transactions on all repositories
                 foreach (var repository in _repositories)
                 {
-                    if (repository is IRepository<IEntity<object>, object> repo)
+                    if (repository is IRepository<IEntity<string>, string> repo)
                     {
                         var transaction = await repo.BeginTransactionAsync();
                         _transactions.Add(transaction);
@@ -285,23 +285,9 @@ namespace MandADiscoverySuite.Repository
             where TEntity : class, IEntity<TKey>
             where TKey : IEquatable<TKey>
         {
-            // Create appropriate repository based on key type
-            if (typeof(TKey) == typeof(string))
-            {
-                return (IRepository<TEntity, TKey>)new GenericStringRepository<TEntity>(_logger as ILogger<BaseRepository<TEntity, string>>, _cacheService);
-            }
-            else if (typeof(TKey) == typeof(int))
-            {
-                return (IRepository<TEntity, TKey>)new GenericIntRepository<TEntity>(_logger as ILogger<BaseRepository<TEntity, int>>, _cacheService);
-            }
-            else if (typeof(TKey) == typeof(Guid))
-            {
-                return (IRepository<TEntity, TKey>)new GenericGuidRepository<TEntity>(_logger as ILogger<BaseRepository<TEntity, Guid>>, _cacheService);
-            }
-            else
-            {
-                throw new NotSupportedException($"Key type {typeof(TKey)} is not supported");
-            }
+            // Generic repository creation is complex due to constraints
+            // Use specific factory methods for concrete entity types instead
+            throw new NotImplementedException("Use specific repository factory methods for concrete entity types");
         }
 
         public IUnitOfWork CreateUnitOfWork()

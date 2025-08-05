@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -47,7 +48,8 @@ namespace MandADiscoverySuite.Controls
                 e.Effects = DragDropEffects.Copy;
                 
                 // Show drop zones
-                _viewModel?.ShowDropZones(true);
+                if (_viewModel != null)
+                    _viewModel.ShowDropZones = true;
             }
             else
             {
@@ -79,7 +81,8 @@ namespace MandADiscoverySuite.Controls
             }
             
             // Hide drop zones
-            _viewModel?.ShowDropZones(false);
+            if (_viewModel != null)
+                _viewModel.ShowDropZones = false;
             e.Handled = true;
         }
 

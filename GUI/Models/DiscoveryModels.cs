@@ -107,6 +107,9 @@ namespace MandADiscoverySuite.Models
 
         // Legacy properties for backward compatibility
         public string Name => CompanyName;
+        public string DisplayName => CompanyName;
+        public DateTime CreatedDate => Created;
+        public DateTime LastModifiedDate => LastModified;
         public string Path { get; set; } = "";
         public string Industry { get; set; } = "";
         public bool IsHybrid { get; set; } = false;

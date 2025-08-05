@@ -73,7 +73,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Private Methods
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             NewTabCommand = new RelayCommand(CreateNewTab);
             CloseTabCommand = new RelayCommand<TabItemViewModel>(CloseTab);

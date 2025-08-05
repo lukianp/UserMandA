@@ -152,7 +152,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Private Methods
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             PrintCommand = new RelayCommand(Print);
             PageSetupCommand = new RelayCommand(ShowPageSetup);

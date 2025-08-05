@@ -141,6 +141,34 @@ namespace MandADiscoverySuite.Services
             return csv.ToString();
         }
 
+        public void CancelExport()
+        {
+            // Implementation for cancelling export operations
+            // This could involve cancelling async operations, cleaning up temp files, etc.
+        }
+
+        public async Task<bool> ExportDataAsync(ExportRequest request)
+        {
+            try
+            {
+                switch (request.Format?.ToLower())
+                {
+                    case "csv":
+                        return await ExportToCsvAsync((IEnumerable<object>)request.Data, request.FileName);
+                    case "json":
+                        return await ExportToJsonAsync((IEnumerable<object>)request.Data, request.FileName);
+                    default:
+                        throw new ArgumentException($"Unsupported export format: {request.Format}");
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = ErrorHandlingService.Instance.HandleException(ex, "Data export");
+                DialogService.Instance.ShowErrorDialog("Export Error", errorMessage);
+                return false;
+            }
+        }
+
         private string EscapeCsvField(string field)
         {
             if (string.IsNullOrEmpty(field))
@@ -153,5 +181,15 @@ namespace MandADiscoverySuite.Services
 
             return field;
         }
+    }
+
+    /// <summary>
+    /// Export request model
+    /// </summary>
+    public class ExportRequest
+    {
+        public object Data { get; set; }
+        public string Format { get; set; }
+        public string FileName { get; set; }
     }
 }

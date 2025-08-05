@@ -67,7 +67,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Private Methods
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             MarkReadCommand = new RelayCommand<Guid>(MarkNotificationRead);
             MarkAllReadCommand = new RelayCommand(MarkAllNotificationsRead);

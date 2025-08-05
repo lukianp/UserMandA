@@ -721,7 +721,10 @@ namespace MandADiscoverySuite.Services
         {
             if (!_disposed)
             {
-                GraphClient?.Dispose();
+                if (GraphClient is IDisposable disposableClient)
+                {
+                    disposableClient.Dispose();
+                }
                 GraphClient = null;
                 _disposed = true;
             }

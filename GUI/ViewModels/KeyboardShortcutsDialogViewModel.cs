@@ -61,7 +61,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Private Methods
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             ExportShortcutsCommand = new RelayCommand(ExportShortcuts);
             ResetToDefaultsCommand = new RelayCommand(ResetToDefaults);

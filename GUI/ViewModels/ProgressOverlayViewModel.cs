@@ -196,7 +196,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Private Methods
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             CancelCommand = new RelayCommand(Cancel);
             HideCommand = new RelayCommand(Hide);

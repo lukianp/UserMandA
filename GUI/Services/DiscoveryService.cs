@@ -12,11 +12,21 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Service for managing discovery operations
     /// </summary>
-    public class DiscoveryService : IDisposable
+    public class DiscoveryService : IDiscoveryService, IDisposable
     {
         private readonly string _rootPath;
         private readonly string _scriptsPath;
         private readonly Dictionary<string, ModuleConfiguration> _moduleConfigurations;
+
+        /// <summary>
+        /// Event raised when discovery progress changes
+        /// </summary>
+        public event EventHandler<DiscoveryProgressEventArgs> ProgressChanged;
+
+        /// <summary>
+        /// Event raised when discovery is completed
+        /// </summary>
+        public event EventHandler<DiscoveryCompletedEventArgs> DiscoveryCompleted;
 
         public DiscoveryService()
         {
@@ -317,6 +327,386 @@ namespace MandADiscoverySuite.Services
             _moduleConfigurations[configuration.ModuleName] = configuration;
         }
 
+        /// <summary>
+        /// Gets all available discovery modules
+        /// </summary>
+        /// <returns>Collection of discovery modules</returns>
+        public async Task<IEnumerable<DiscoveryModule>> GetDiscoveryModulesAsync()
+        {
+            await Task.CompletedTask; // Make it truly async
+            
+            var modules = new List<DiscoveryModule>();
+            var availableModules = GetAvailableModules();
+            
+            foreach (var moduleName in availableModules)
+            {
+                var config = GetModuleConfiguration(moduleName);
+                modules.Add(new DiscoveryModule
+                {
+                    Name = moduleName,
+                    DisplayName = GetModuleDisplayName(moduleName),
+                    Description = $"Discovery module for {GetModuleDisplayName(moduleName)}",
+                    IsEnabled = config.IsEnabled,
+                    Status = DiscoveryModuleStatus.Ready,
+                    Version = "1.0.0",
+                    Priority = config.Priority,
+                    TimeoutMinutes = config.Timeout / 60,
+                    Category = GetModuleCategory(moduleName),
+                    FilePath = GetModuleScriptPath(moduleName)
+                });
+            }
+            
+            return modules;
+        }
+
+        /// <summary>
+        /// Executes a specific discovery module
+        /// </summary>
+        /// <param name="module">Module to execute</param>
+        /// <param name="profileName">Company profile name</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Discovery result</returns>
+        public async Task<DiscoveryExecutionResult> ExecuteDiscoveryAsync(DiscoveryModule module, string profileName, CancellationToken cancellationToken = default)
+        {
+            if (module == null)
+                throw new ArgumentNullException(nameof(module));
+            if (string.IsNullOrWhiteSpace(profileName))
+                throw new ArgumentException("Profile name cannot be null or empty", nameof(profileName));
+
+            var startTime = DateTime.Now;
+            
+            try
+            {
+                // Raise progress event
+                ProgressChanged?.Invoke(this, new DiscoveryProgressEventArgs
+                {
+                    ModuleName = module.Name,
+                    ProgressPercentage = 0,
+                    CurrentOperation = $"Starting {module.DisplayName} discovery...",
+                    Elapsed = TimeSpan.Zero
+                });
+
+                // TODO: Implement actual module execution logic
+                // For now, simulate some work
+                await Task.Delay(1000, cancellationToken);
+                
+                var endTime = DateTime.Now;
+                var result = new DiscoveryExecutionResult
+                {
+                    ModuleName = module.Name,
+                    Success = true,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    ItemsDiscovered = 0, // TODO: Get actual count
+                    OutputPath = ConfigurationService.Instance.GetCompanyRawDataPath(profileName)
+                };
+
+                // Raise completed event
+                DiscoveryCompleted?.Invoke(this, new DiscoveryCompletedEventArgs
+                {
+                    ModuleName = module.Name,
+                    Success = true,
+                    Duration = result.Duration,
+                    ItemsDiscovered = result.ItemsDiscovered
+                });
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                var endTime = DateTime.Now;
+                var result = new DiscoveryExecutionResult
+                {
+                    ModuleName = module.Name,
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    ItemsDiscovered = 0
+                };
+
+                // Raise completed event with error
+                DiscoveryCompleted?.Invoke(this, new DiscoveryCompletedEventArgs
+                {
+                    ModuleName = module.Name,
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    Duration = result.Duration,
+                    ItemsDiscovered = 0
+                });
+
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Executes multiple discovery modules in parallel
+        /// </summary>
+        /// <param name="modules">Modules to execute</param>
+        /// <param name="profileName">Company profile name</param>
+        /// <param name="maxConcurrency">Maximum concurrent executions</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Collection of discovery results</returns>
+        public async Task<IEnumerable<DiscoveryExecutionResult>> ExecuteDiscoveryBatchAsync(
+            IEnumerable<DiscoveryModule> modules, 
+            string profileName, 
+            int maxConcurrency = 3,
+            CancellationToken cancellationToken = default)
+        {
+            if (modules == null)
+                throw new ArgumentNullException(nameof(modules));
+            if (string.IsNullOrWhiteSpace(profileName))
+                throw new ArgumentException("Profile name cannot be null or empty", nameof(profileName));
+
+            var moduleList = modules.ToList();
+            if (!moduleList.Any())
+                return new List<DiscoveryExecutionResult>();
+
+            var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+            var tasks = moduleList.Select(async module =>
+            {
+                await semaphore.WaitAsync(cancellationToken);
+                try
+                {
+                    return await ExecuteDiscoveryAsync(module, profileName, cancellationToken);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            var results = await Task.WhenAll(tasks);
+            semaphore.Dispose();
+            
+            return results;
+        }
+
+        /// <summary>
+        /// Gets the last discovery execution time for a module
+        /// </summary>
+        /// <param name="moduleName">Module name</param>
+        /// <param name="profileName">Company profile name</param>
+        /// <returns>Last execution time or null if never executed</returns>
+        public async Task<DateTime?> GetLastExecutionTimeAsync(string moduleName, string profileName)
+        {
+            await Task.CompletedTask; // Make it truly async
+            
+            if (string.IsNullOrWhiteSpace(moduleName))
+                throw new ArgumentException("Module name cannot be null or empty", nameof(moduleName));
+            if (string.IsNullOrWhiteSpace(profileName))
+                throw new ArgumentException("Profile name cannot be null or empty", nameof(profileName));
+
+            try
+            {
+                var outputPath = ConfigurationService.Instance.GetCompanyRawDataPath(profileName);
+                if (!Directory.Exists(outputPath))
+                    return null;
+
+                var files = Directory.GetFiles(outputPath, $"{moduleName}_*.csv", SearchOption.AllDirectories);
+                if (!files.Any())
+                    return null;
+
+                var mostRecentFile = files
+                    .Select(f => new FileInfo(f))
+                    .OrderByDescending(f => f.LastWriteTime)
+                    .FirstOrDefault();
+
+                return mostRecentFile?.LastWriteTime;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Validates discovery prerequisites and environment
+        /// </summary>
+        /// <param name="profileName">Company profile name</param>
+        /// <returns>Validation result</returns>
+        public async Task<ValidationResult> ValidateEnvironmentAsync(string profileName)
+        {
+            await Task.CompletedTask; // Make it truly async
+            
+            var result = new ValidationResult { IsValid = true };
+            
+            if (string.IsNullOrWhiteSpace(profileName))
+            {
+                result.AddError("Profile name cannot be null or empty");
+                return result;
+            }
+
+            try
+            {
+                // Validate PowerShell availability
+                if (!File.Exists("powershell.exe") && !IsCommandAvailable("powershell"))
+                {
+                    result.AddError("PowerShell is not available on this system");
+                }
+
+                // Validate scripts path
+                if (!Directory.Exists(_scriptsPath))
+                {
+                    result.AddError($"Scripts path does not exist: {_scriptsPath}");
+                }
+
+                // Validate output path can be created
+                var outputPath = ConfigurationService.Instance.GetCompanyRawDataPath(profileName);
+                try
+                {
+                    Directory.CreateDirectory(outputPath);
+                    result.AddInfo($"Output path validated: {outputPath}");
+                }
+                catch (Exception ex)
+                {
+                    result.AddError($"Cannot create output directory: {ex.Message}");
+                }
+
+                // Add warnings for optional components
+                result.AddWarning("Environment validation is basic - some modules may require additional prerequisites");
+            }
+            catch (Exception ex)
+            {
+                result.AddError($"Environment validation failed: {ex.Message}");
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Gets discovery results for a profile
+        /// </summary>
+        /// <param name="profileName">Company profile name</param>
+        /// <returns>Collection of discovery results</returns>
+        public async Task<IEnumerable<DiscoveryExecutionResult>> GetResultsAsync(string profileName)
+        {
+            if (string.IsNullOrWhiteSpace(profileName))
+                throw new ArgumentException("Profile name cannot be null or empty", nameof(profileName));
+
+            var results = new List<DiscoveryExecutionResult>();
+
+            try
+            {
+                var outputPath = ConfigurationService.Instance.GetCompanyRawDataPath(profileName);
+                
+                if (!Directory.Exists(outputPath))
+                    return results;
+
+                var files = Directory.GetFiles(outputPath, "*.csv", SearchOption.AllDirectories);
+
+                foreach (var file in files)
+                {
+                    var fileInfo = new FileInfo(file);
+                    var moduleName = ExtractModuleNameFromFile(fileInfo.Name);
+                    var itemCount = await CountCsvRowsAsync(file);
+
+                    results.Add(new DiscoveryExecutionResult
+                    {
+                        ModuleName = moduleName,
+                        Success = true,
+                        StartTime = fileInfo.CreationTime,
+                        EndTime = fileInfo.LastWriteTime,
+                        ItemsDiscovered = itemCount,
+                        OutputPath = file
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Discovery results loading");
+            }
+
+            return results.OrderByDescending(r => r.EndTime);
+        }
+
+        /// <summary>
+        /// Exports discovery results to specified format
+        /// </summary>
+        /// <param name="profileName">Company profile name</param>
+        /// <param name="exportPath">Export file path</param>
+        /// <param name="format">Export format</param>
+        /// <returns>True if successful</returns>
+        public async Task<bool> ExportResultsAsync(string profileName, string exportPath, string format = "CSV")
+        {
+            if (string.IsNullOrWhiteSpace(profileName))
+                throw new ArgumentException("Profile name cannot be null or empty", nameof(profileName));
+            if (string.IsNullOrWhiteSpace(exportPath))
+                throw new ArgumentException("Export path cannot be null or empty", nameof(exportPath));
+
+            try
+            {
+                var results = await GetResultsAsync(profileName);
+                var resultsList = results.ToList();
+                
+                if (!resultsList.Any())
+                    return false;
+
+                var exportDirectory = Path.GetDirectoryName(exportPath);
+                if (!string.IsNullOrEmpty(exportDirectory))
+                {
+                    Directory.CreateDirectory(exportDirectory);
+                }
+
+                switch (format.ToUpperInvariant())
+                {
+                    case "CSV":
+                        await ExportResultsToCsvAsync(resultsList, exportPath);
+                        break;
+                    case "JSON":
+                        await ExportResultsToJsonAsync(resultsList, exportPath);
+                        break;
+                    case "XML":
+                        await ExportResultsToXmlAsync(resultsList, exportPath);
+                        break;
+                    default:
+                        throw new ArgumentException($"Unsupported export format: {format}");
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Export results");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Starts discovery for specified modules and profile
+        /// </summary>
+        /// <param name="profileName">Company profile name</param>
+        /// <param name="moduleNames">Module names to execute</param>
+        /// <returns>True if started successfully</returns>
+        public async Task<bool> StartDiscoveryAsync(string profileName, string[] moduleNames)
+        {
+            if (string.IsNullOrWhiteSpace(profileName))
+                throw new ArgumentException("Profile name cannot be null or empty", nameof(profileName));
+            if (moduleNames == null || !moduleNames.Any())
+                throw new ArgumentException("Module names cannot be null or empty", nameof(moduleNames));
+
+            try
+            {
+                var allModules = await GetDiscoveryModulesAsync();
+                var modulesToRun = allModules.Where(m => moduleNames.Contains(m.Name)).ToList();
+                
+                if (!modulesToRun.Any())
+                {
+                    throw new ArgumentException("No valid modules found for the specified module names");
+                }
+
+                // Execute modules in batch
+                var results = await ExecuteDiscoveryBatchAsync(modulesToRun, profileName);
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Start discovery");
+                return false;
+            }
+        }
+
         #region Private Methods
 
         private void InitializeModuleConfigurations()
@@ -572,6 +962,98 @@ namespace MandADiscoverySuite.Services
                 "SecurityGroupAnalysis" => "Security Groups",
                 _ => moduleName
             };
+        }
+
+        private string GetModuleCategory(string moduleName)
+        {
+            return moduleName switch
+            {
+                "ActiveDirectory" or "AzureDiscovery" or "EntraIDAppDiscovery" => "Identity",
+                "AzureResourceDiscovery" or "NetworkInfrastructureDiscovery" or "VMwareDiscovery" => "Infrastructure",
+                "ExchangeDiscovery" or "SharePointDiscovery" or "TeamsDiscovery" => "Microsoft 365",
+                "SQLServerDiscovery" or "FileServerDiscovery" => "Data & Storage",
+                "ApplicationDiscovery" or "LicensingDiscovery" => "Applications",
+                "SecurityGroupAnalysis" or "CertificateDiscovery" => "Security",
+                _ => "General"
+            };
+        }
+
+        private string GetModuleScriptPath(string moduleName)
+        {
+            // Return the expected script path for the module
+            return Path.Combine(_scriptsPath, $"{moduleName}.ps1");
+        }
+
+        private bool IsCommandAvailable(string command)
+        {
+            try
+            {
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "where",
+                    Arguments = command,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(startInfo);
+                process?.WaitForExit();
+                return process?.ExitCode == 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async Task ExportResultsToCsvAsync(List<DiscoveryExecutionResult> results, string filePath)
+        {
+            var lines = new List<string>
+            {
+                "ModuleName,Success,StartTime,EndTime,Duration,ItemsDiscovered,OutputPath,ErrorMessage"
+            };
+
+            foreach (var result in results)
+            {
+                var line = $"{result.ModuleName},{result.Success},{result.StartTime:yyyy-MM-dd HH:mm:ss},{result.EndTime:yyyy-MM-dd HH:mm:ss},{result.Duration.TotalMinutes:F2},{result.ItemsDiscovered},\"{result.OutputPath}\",\"{result.ErrorMessage?.Replace("\"", "\\\"") ?? ""}\""; 
+                lines.Add(line);
+            }
+
+            await File.WriteAllLinesAsync(filePath, lines);
+        }
+
+        private async Task ExportResultsToJsonAsync(List<DiscoveryExecutionResult> results, string filePath)
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(results, new System.Text.Json.JsonSerializerOptions 
+            { 
+                WriteIndented = true 
+            });
+            await File.WriteAllTextAsync(filePath, json);
+        }
+
+        private async Task ExportResultsToXmlAsync(List<DiscoveryExecutionResult> results, string filePath)
+        {
+            var xml = new System.Text.StringBuilder();
+            xml.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+            xml.AppendLine("<DiscoveryResults>");
+
+            foreach (var result in results)
+            {
+                xml.AppendLine("  <Result>");
+                xml.AppendLine($"    <ModuleName>{System.Security.SecurityElement.Escape(result.ModuleName)}</ModuleName>");
+                xml.AppendLine($"    <Success>{result.Success}</Success>");
+                xml.AppendLine($"    <StartTime>{result.StartTime:yyyy-MM-dd HH:mm:ss}</StartTime>");
+                xml.AppendLine($"    <EndTime>{result.EndTime:yyyy-MM-dd HH:mm:ss}</EndTime>");
+                xml.AppendLine($"    <Duration>{result.Duration.TotalMinutes:F2}</Duration>");
+                xml.AppendLine($"    <ItemsDiscovered>{result.ItemsDiscovered}</ItemsDiscovered>");
+                xml.AppendLine($"    <OutputPath>{System.Security.SecurityElement.Escape(result.OutputPath ?? "")}</OutputPath>");
+                xml.AppendLine($"    <ErrorMessage>{System.Security.SecurityElement.Escape(result.ErrorMessage ?? "")}</ErrorMessage>");
+                xml.AppendLine("  </Result>");
+            }
+
+            xml.AppendLine("</DiscoveryResults>");
+            await File.WriteAllTextAsync(filePath, xml.ToString());
         }
 
         private int GetModulePriority(string moduleName)

@@ -12,38 +12,7 @@
                 <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Toggle Animation -->
-            <Storyboard x:Key="ToggleToLightAnimation">
-                <DoubleAnimation Storyboard.TargetName="ToggleThumb"
-                                 Storyboard.TargetProperty="(Canvas.Left)"
-                                 To="36" Duration="0:0:0.3">
-                    <DoubleAnimation.EasingFunction>
-                        <CubicEase EasingMode="EaseOut"/>
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="SunIcon"
-                                 Storyboard.TargetProperty="Opacity"
-                                 To="1" Duration="0:0:0.2"/>
-                <DoubleAnimation Storyboard.TargetName="MoonIcon"
-                                 Storyboard.TargetProperty="Opacity"
-                                 To="0" Duration="0:0:0.2"/>
-            </Storyboard>
-
-            <Storyboard x:Key="ToggleToDarkAnimation">
-                <DoubleAnimation Storyboard.TargetName="ToggleThumb"
-                                 Storyboard.TargetProperty="(Canvas.Left)"
-                                 To="4" Duration="0:0:0.3">
-                    <DoubleAnimation.EasingFunction>
-                        <CubicEase EasingMode="EaseOut"/>
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="SunIcon"
-                                 Storyboard.TargetProperty="Opacity"
-                                 To="0" Duration="0:0:0.2"/>
-                <DoubleAnimation Storyboard.TargetName="MoonIcon"
-                                 Storyboard.TargetProperty="Opacity"
-                                 To="1" Duration="0:0:0.2"/>
-            </Storyboard>
+            <!-- No animations in resource dictionary since they will be used in Style triggers -->
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -75,6 +44,7 @@
                     <Trigger Property="IsPressed" Value="True">
                         <Setter Property="Opacity" Value="0.6"/>
                     </Trigger>
+                    <!-- Remove animations from Style triggers since TargetName is not allowed -->
                 </Style.Triggers>
             </Style>
         </Button.Style>
@@ -129,18 +99,4 @@
             </Canvas>
         </Border>
     </Button>
-
-    <UserControl.Triggers>
-        <DataTrigger Binding="{Binding IsLightTheme}" Value="True">
-            <DataTrigger.EnterActions>
-                <BeginStoryboard Storyboard="{StaticResource ToggleToLightAnimation}"/>
-            </DataTrigger.EnterActions>
-        </DataTrigger>
-        
-        <DataTrigger Binding="{Binding IsLightTheme}" Value="False">
-            <DataTrigger.EnterActions>
-                <BeginStoryboard Storyboard="{StaticResource ToggleToDarkAnimation}"/>
-            </DataTrigger.EnterActions>
-        </DataTrigger>
-    </UserControl.Triggers>
 </UserControl>

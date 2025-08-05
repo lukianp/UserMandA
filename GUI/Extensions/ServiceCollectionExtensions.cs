@@ -22,7 +22,7 @@ namespace MandADiscoverySuite.Extensions
             {
                 builder.AddConsole();
                 builder.AddDebug();
-                builder.SetMinimumLevel(LogLevel.Information);
+                builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Debug);
             });
 
             // Register messaging bus
@@ -52,6 +52,7 @@ namespace MandADiscoverySuite.Extensions
                 provider.GetService<IDiscoveryService>(),
                 provider.GetService<IProfileService>(),
                 provider.GetService<IDataService>(),
+                provider.GetService<CsvDataService>(),
                 provider.GetService<DataVisualizationViewModel>(),
                 provider.GetService<ThemeService>()
             ));

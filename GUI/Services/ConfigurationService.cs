@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 
 namespace MandADiscoverySuite.Services
 {
@@ -51,14 +52,35 @@ namespace MandADiscoverySuite.Services
         public string DiscoveryDataRootPath { get; set; } = @"C:\DiscoveryData";
 
         /// <summary>
-        /// Gets the discovery data path for a specific company
+        /// Gets the discovery data path for a specific company (handles case insensitivity)
         /// </summary>
         public string GetCompanyDataPath(string companyName)
         {
             if (string.IsNullOrWhiteSpace(companyName))
                 throw new ArgumentException("Company name cannot be null or empty", nameof(companyName));
 
-            return Path.Combine(DiscoveryDataRootPath, companyName);
+            var exactPath = Path.Combine(DiscoveryDataRootPath, companyName);
+            
+            // If exact path exists, return it
+            if (Directory.Exists(exactPath))
+                return exactPath;
+
+            // Try to find case-insensitive match
+            if (Directory.Exists(DiscoveryDataRootPath))
+            {
+                var directories = Directory.GetDirectories(DiscoveryDataRootPath);
+                var matchingDir = directories.FirstOrDefault(dir => 
+                    Path.GetFileName(dir).Equals(companyName, StringComparison.OrdinalIgnoreCase));
+                
+                if (matchingDir != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Found case-insensitive match: {companyName} -> {Path.GetFileName(matchingDir)}");
+                    return matchingDir;
+                }
+            }
+
+            // Return original path if no match found
+            return exactPath;
         }
 
         /// <summary>

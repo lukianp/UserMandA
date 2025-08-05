@@ -131,19 +131,37 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                _themeService.ToggleTheme();
+                if (_themeService != null)
+                {
+                    _themeService.ToggleTheme();
+                }
+                else
+                {
+                    // Manual toggle if service not available
+                    IsLightTheme = !IsLightTheme;
+                    UpdateVisualState();
+                    UpdateTooltip();
+                }
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error toggling theme");
+                Logger?.LogError(ex, "Error toggling theme");
                 // Could show error notification here
             }
         }
 
         private void UpdateThemeState()
         {
-            var currentTheme = _themeService.CurrentTheme;
-            IsLightTheme = currentTheme == ThemeMode.Light;
+            if (_themeService == null)
+            {
+                // Default to dark theme if service not available
+                IsLightTheme = false;
+            }
+            else
+            {
+                var currentTheme = _themeService.CurrentTheme;
+                IsLightTheme = currentTheme == ThemeMode.Light;
+            }
             
             UpdateVisualState();
             UpdateTooltip();

@@ -299,7 +299,7 @@ namespace MandADiscoverySuite.Models
         [StringLength(20)]
         public string Type { get; set; } = "Info"; // Info, Success, Warning, Error
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public new DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public bool IsRead { get; set; }
         public DateTime? ReadAt { get; set; }
         public bool IsDismissed { get; set; }

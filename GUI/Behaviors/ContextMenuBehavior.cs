@@ -99,7 +99,7 @@ namespace MandADiscoverySuite.Behaviors
                 new PropertyMetadata(false, OnEnableContextMenuChanged));
 
         public static readonly DependencyProperty ContextMenuServiceProperty =
-            DependencyProperty.RegisterAttached("ContextMenuService", typeof(ContextMenuService), typeof(ContextMenuAttachedBehavior));
+            DependencyProperty.RegisterAttached("ContextMenuService", typeof(Services.ContextMenuService), typeof(ContextMenuAttachedBehavior));
 
         public static bool GetEnableContextMenu(DependencyObject obj)
         {

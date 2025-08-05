@@ -3,6 +3,21 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MandADiscoverySuite.xaml">
     <Application.Resources>
-         
+        <!-- Standard Converters -->
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        
+        <!-- Common Colors -->
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#4CAF50"/>
+        <SolidColorBrush x:Key="SecondaryBrush" Color="#2196F3"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#FF9800"/>
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#F5F5F5"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="White"/>
+        <SolidColorBrush x:Key="ForegroundBrush" Color="#333333"/>
+        
+        <!-- Dark Theme Colors -->
+        <SolidColorBrush x:Key="DarkBackgroundBrush" Color="#1E1E1E"/>
+        <SolidColorBrush x:Key="DarkSurfaceBrush" Color="#2D2D30"/>
+        <SolidColorBrush x:Key="DarkForegroundBrush" Color="#CCCCCC"/>
     </Application.Resources>
 </Application>
