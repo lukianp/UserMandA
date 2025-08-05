@@ -10,11 +10,11 @@ none
 false
 TRACE;RELEASE;NET;NET6_0;NETCOREAPP
 D:\Scripts\UserMandA\GUI\App.xaml
-16869630505
+191561905506
 
-61-564705413
-203155564505
-AdvancedSearchDialog.xaml;ColumnVisibilityDialog.xaml;Controls\ChartControls.xaml;Controls\ProfileDropZone.xaml;Controls\ProgressIndicator.xaml;Controls\SimpleChart.xaml;CreateProfileDialog.xaml;DebugLogWindow.xaml;ErrorDialog.xaml;ManagerSelectionDialog.xaml;MandADiscoverySuite.xaml;PasswordGeneratorDialog.xaml;PowerShellWindow.xaml;RefreshSettingsDialog.xaml;Themes\ThemeStyles.xaml;UserDetailWindow.xaml;
+1072068353394
+235911492268
+AdvancedSearchDialog.xaml;ColumnVisibilityDialog.xaml;Controls\ChartControls.xaml;Controls\ProfileDropZone.xaml;Controls\ProgressIndicator.xaml;Controls\SimpleChart.xaml;Controls\ThemeToggleButton.xaml;CreateProfileDialog.xaml;DebugLogWindow.xaml;ErrorDialog.xaml;ManagerSelectionDialog.xaml;MandADiscoverySuite.xaml;PasswordGeneratorDialog.xaml;PowerShellWindow.xaml;RefreshSettingsDialog.xaml;Themes\DarkTheme.xaml;Themes\LightTheme.xaml;Themes\ThemeStyles.xaml;UserDetailWindow.xaml;
 
-False
+True
 

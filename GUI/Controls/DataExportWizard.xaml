@@ -1,0 +1,473 @@
+<UserControl x:Class="MandADiscoverySuite.Controls.DataExportWizard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="900">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Wizard Step Style -->
+            <Style x:Key="WizardStepStyle" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="8"/>
+                <Setter Property="Padding" Value="24"/>
+                <Setter Property="Margin" Value="0,0,0,16"/>
+            </Style>
+
+            <!-- Step Header Style -->
+            <Style x:Key="StepHeaderStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="18"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                <Setter Property="Margin" Value="0,0,0,16"/>
+            </Style>
+
+            <!-- Progress Step Style -->
+            <Style x:Key="ProgressStepStyle" TargetType="Border">
+                <Setter Property="Width" Value="32"/>
+                <Setter Property="Height" Value="32"/>
+                <Setter Property="CornerRadius" Value="16"/>
+                <Setter Property="Background" Value="{DynamicResource MutedForegroundBrush}"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Wizard Header with Progress -->
+        <Border Grid.Row="0" Style="{StaticResource WizardStepStyle}" Margin="0,0,0,24">
+            <StackPanel>
+                <TextBlock Text="Data Export Wizard" 
+                           FontSize="24" 
+                           FontWeight="Bold" 
+                           Foreground="{DynamicResource ForegroundBrush}"
+                           Margin="0,0,0,16"/>
+                
+                <!-- Progress Indicator -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Step 1: Data Selection -->
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                        <Border Style="{StaticResource ProgressStepStyle}" 
+                                DataContext="{Binding Steps[0]}">
+                            <TextBlock Text="1" 
+                                       HorizontalAlignment="Center" 
+                                       VerticalAlignment="Center"
+                                       Foreground="White" 
+                                       FontWeight="Bold"/>
+                        </Border>
+                        <TextBlock Text="Data Selection" 
+                                   FontSize="12" 
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   Margin="0,8,0,0"/>
+                    </StackPanel>
+
+                    <!-- Step 2: Format & Options -->
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                        <Border Style="{StaticResource ProgressStepStyle}" 
+                                DataContext="{Binding Steps[1]}">
+                            <TextBlock Text="2" 
+                                       HorizontalAlignment="Center" 
+                                       VerticalAlignment="Center"
+                                       Foreground="White" 
+                                       FontWeight="Bold"/>
+                        </Border>
+                        <TextBlock Text="Format & Options" 
+                                   FontSize="12" 
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   Margin="0,8,0,0"/>
+                    </StackPanel>
+
+                    <!-- Step 3: Schedule & Filters -->
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                        <Border Style="{StaticResource ProgressStepStyle}" 
+                                DataContext="{Binding Steps[2]}">
+                            <TextBlock Text="3" 
+                                       HorizontalAlignment="Center" 
+                                       VerticalAlignment="Center"
+                                       Foreground="White" 
+                                       FontWeight="Bold"/>
+                        </Border>
+                        <TextBlock Text="Schedule & Filters" 
+                                   FontSize="12" 
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   Margin="0,8,0,0"/>
+                    </StackPanel>
+
+                    <!-- Step 4: Export -->
+                    <StackPanel Grid.Column="3" HorizontalAlignment="Center">
+                        <Border Style="{StaticResource ProgressStepStyle}" 
+                                DataContext="{Binding Steps[3]}">
+                            <TextBlock Text="4" 
+                                       HorizontalAlignment="Center" 
+                                       VerticalAlignment="Center"
+                                       Foreground="White" 
+                                       FontWeight="Bold"/>
+                        </Border>
+                        <TextBlock Text="Export" 
+                                   FontSize="12" 
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Wizard Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <!-- Step 1: Data Selection -->
+            <Border Style="{StaticResource WizardStepStyle}" 
+                    Visibility="{Binding IsStep1Visible, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="Step 1: Select Data to Export" Style="{StaticResource StepHeaderStyle}"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Data Sources -->
+                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                            <TextBlock Text="Data Sources" 
+                                       FontWeight="Medium" 
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       Margin="0,0,0,12"/>
+                            
+                            <CheckBox Content="User Accounts" 
+                                      IsChecked="{Binding IncludeUsers}"
+                                      Margin="0,0,0,8"/>
+                            <CheckBox Content="Computer Inventory" 
+                                      IsChecked="{Binding IncludeComputers}"
+                                      Margin="0,0,0,8"/>
+                            <CheckBox Content="Security Groups" 
+                                      IsChecked="{Binding IncludeGroups}"
+                                      Margin="0,0,0,8"/>
+                            <CheckBox Content="Application Inventory" 
+                                      IsChecked="{Binding IncludeApplications}"
+                                      Margin="0,0,0,8"/>
+                            <CheckBox Content="Network Infrastructure" 
+                                      IsChecked="{Binding IncludeNetwork}"
+                                      Margin="0,0,0,8"/>
+                            <CheckBox Content="Security Policies" 
+                                      IsChecked="{Binding IncludePolicies}"
+                                      Margin="0,0,0,8"/>
+                        </StackPanel>
+
+                        <!-- Data Preview -->
+                        <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                            <TextBlock Text="Data Preview" 
+                                       FontWeight="Medium" 
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       Margin="0,0,0,12"/>
+                            
+                            <Border Background="{DynamicResource CardBrush}" 
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" 
+                                    CornerRadius="4" 
+                                    Padding="12"
+                                    Height="200">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <TextBlock Text="{Binding DataPreview}" 
+                                               FontFamily="Consolas"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                </ScrollViewer>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Step 2: Format & Options -->
+            <Border Style="{StaticResource WizardStepStyle}" 
+                    Visibility="{Binding IsStep2Visible, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="Step 2: Export Format & Options" Style="{StaticResource StepHeaderStyle}"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Export Format -->
+                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                            <TextBlock Text="Export Format" 
+                                       FontWeight="Medium" 
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       Margin="0,0,0,12"/>
+                            
+                            <RadioButton Content="Excel (.xlsx)" 
+                                         IsChecked="{Binding IsExcelFormat}"
+                                         GroupName="ExportFormat"
+                                         Margin="0,0,0,8"/>
+                            <RadioButton Content="CSV (.csv)" 
+                                         IsChecked="{Binding IsCsvFormat}"
+                                         GroupName="ExportFormat"
+                                         Margin="0,0,0,8"/>
+                            <RadioButton Content="JSON (.json)" 
+                                         IsChecked="{Binding IsJsonFormat}"
+                                         GroupName="ExportFormat"
+                                         Margin="0,0,0,8"/>
+                            <RadioButton Content="XML (.xml)" 
+                                         IsChecked="{Binding IsXmlFormat}"
+                                         GroupName="ExportFormat"
+                                         Margin="0,0,0,8"/>
+                            <RadioButton Content="PDF Report" 
+                                         IsChecked="{Binding IsPdfFormat}"
+                                         GroupName="ExportFormat"
+                                         Margin="0,0,0,8"/>
+                        </StackPanel>
+
+                        <!-- Export Options -->
+                        <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                            <TextBlock Text="Export Options" 
+                                       FontWeight="Medium" 
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       Margin="0,0,0,12"/>
+                            
+                            <CheckBox Content="Include column headers" 
+                                      IsChecked="{Binding IncludeHeaders}"
+                                      Margin="0,0,0,8"/>
+                            <CheckBox Content="Include metadata" 
+                                      IsChecked="{Binding IncludeMetadata}"
+                                      Margin="0,0,0,8"/>
+                            <CheckBox Content="Compress output file" 
+                                      IsChecked="{Binding CompressOutput}"
+                                      Margin="0,0,0,8"/>
+                            <CheckBox Content="Split large files" 
+                                      IsChecked="{Binding SplitLargeFiles}"
+                                      Margin="0,0,0,8"/>
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                <TextBlock Text="Max rows per file:" 
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,8,0"/>
+                                <TextBox Text="{Binding MaxRowsPerFile}" 
+                                         Width="100"
+                                         IsEnabled="{Binding SplitLargeFiles}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Step 3: Schedule & Filters -->
+            <Border Style="{StaticResource WizardStepStyle}" 
+                    Visibility="{Binding IsStep3Visible, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="Step 3: Schedule & Data Filters" Style="{StaticResource StepHeaderStyle}"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Schedule Options -->
+                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                            <TextBlock Text="Export Schedule" 
+                                       FontWeight="Medium" 
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       Margin="0,0,0,12"/>
+                            
+                            <RadioButton Content="Export now (one-time)" 
+                                         IsChecked="{Binding IsOneTimeExport}"
+                                         GroupName="ScheduleType"
+                                         Margin="0,0,0,8"/>
+                            <RadioButton Content="Schedule recurring export" 
+                                         IsChecked="{Binding IsRecurringExport}"
+                                         GroupName="ScheduleType"
+                                         Margin="0,0,0,8"/>
+                            
+                            <StackPanel IsEnabled="{Binding IsRecurringExport}" Margin="20,8,0,0">
+                                <ComboBox SelectedItem="{Binding ScheduleFrequency}" 
+                                          Width="150" 
+                                          HorizontalAlignment="Left"
+                                          Margin="0,0,0,8">
+                                    <ComboBoxItem Content="Daily"/>
+                                    <ComboBoxItem Content="Weekly"/>
+                                    <ComboBoxItem Content="Monthly"/>
+                                </ComboBox>
+                                
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <TextBlock Text="Time:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBox Text="{Binding ScheduleTime}" Width="100"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Data Filters -->
+                        <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                            <TextBlock Text="Data Filters" 
+                                       FontWeight="Medium" 
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       Margin="0,0,0,12"/>
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Text="Date range:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <DatePicker SelectedDate="{Binding FilterDateFrom}" Width="120" Margin="0,0,8,0"/>
+                                <TextBlock Text="to" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <DatePicker SelectedDate="{Binding FilterDateTo}" Width="120"/>
+                            </StackPanel>
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <TextBlock Text="Department filter:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBox Text="{Binding DepartmentFilter}" Width="200"/>
+                            </StackPanel>
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <TextBlock Text="Location filter:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBox Text="{Binding LocationFilter}" Width="200"/>
+                            </StackPanel>
+                            
+                            <CheckBox Content="Active accounts only" 
+                                      IsChecked="{Binding ActiveAccountsOnly}"
+                                      Margin="0,16,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Step 4: Export -->
+            <Border Style="{StaticResource WizardStepStyle}" 
+                    Visibility="{Binding IsStep4Visible, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="Step 4: Export Data" Style="{StaticResource StepHeaderStyle}"/>
+                    
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Export Location -->
+                        <StackPanel Grid.Row="0" Margin="0,0,0,24">
+                            <TextBlock Text="Export Location" 
+                                       FontWeight="Medium" 
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       Margin="0,0,0,12"/>
+                            
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox Text="{Binding ExportPath}" 
+                                         Width="400" 
+                                         IsReadOnly="True"
+                                         Margin="0,0,12,0"/>
+                                <Button Content="Browse..." 
+                                        Command="{Binding BrowseExportPathCommand}"
+                                        Padding="16,8"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Export Summary -->
+                        <Border Grid.Row="1" 
+                                Background="{DynamicResource CardBrush}" 
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" 
+                                CornerRadius="4" 
+                                Padding="16"
+                                Margin="0,0,0,24">
+                            <StackPanel>
+                                <TextBlock Text="Export Summary" 
+                                           FontWeight="Medium" 
+                                           Foreground="{DynamicResource ForegroundBrush}"
+                                           Margin="0,0,0,12"/>
+                                
+                                <TextBlock Text="{Binding ExportSummary}" 
+                                           Foreground="{DynamicResource MutedForegroundBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Progress and Results -->
+                        <StackPanel Grid.Row="2" Visibility="{Binding IsExporting, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <TextBlock Text="Export Progress" 
+                                       FontWeight="Medium" 
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       Margin="0,0,0,12"/>
+                            
+                            <ProgressBar Value="{Binding ExportProgress}" 
+                                         Maximum="100" 
+                                         Height="8" 
+                                         Margin="0,0,0,12"/>
+                            
+                            <TextBlock Text="{Binding ExportStatus}" 
+                                       Foreground="{DynamicResource MutedForegroundBrush}"
+                                       Margin="0,0,0,12"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </ScrollViewer>
+
+        <!-- Wizard Navigation -->
+        <Border Grid.Row="2" 
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left side buttons -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button Content="Cancel" 
+                            Command="{Binding CancelCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Margin="0,0,12,0"/>
+                </StackPanel>
+
+                <!-- Right side buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="← Previous" 
+                            Command="{Binding PreviousStepCommand}"
+                            IsEnabled="{Binding CanGoPrevious}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Margin="0,0,12,0"/>
+                    
+                    <Button Content="{Binding NextButtonText}" 
+                            Command="{Binding NextStepCommand}"
+                            IsEnabled="{Binding CanGoNext}"
+                            Style="{StaticResource ThemedButtonStyle}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

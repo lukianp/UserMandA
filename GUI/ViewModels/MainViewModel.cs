@@ -10,6 +10,8 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Microsoft.Extensions.Logging;
+using CommunityToolkit.Mvvm.Messaging;
 using MandADiscoverySuite.Behaviors;
 using MandADiscoverySuite.Collections;
 using MandADiscoverySuite.Models;
@@ -24,15 +26,17 @@ namespace MandADiscoverySuite.ViewModels
     {
         #region Private Fields
 
-        private readonly DiscoveryService _discoveryService;
-        private readonly ProfileService _profileService;
-        private readonly CsvDataService _csvDataService;
+        private readonly IDiscoveryService _discoveryService;
+        private readonly IProfileService _profileService;
+        private readonly IDataService _dataService;
+        private readonly ThemeService _themeService;
         private readonly DispatcherTimer _dashboardTimer;
         private readonly DispatcherTimer _progressTimer;
         private readonly DispatcherTimer _dataRefreshTimer;
         private readonly RefreshService _refreshService;
         private readonly AdvancedSearchService _advancedSearchService;
         private readonly AsyncDataService _asyncDataService;
+        private readonly GlobalSearchViewModel _globalSearchViewModel;
         private CancellationTokenSource _cancellationTokenSource;
         
         private string _currentView = "Dashboard";
@@ -601,11 +605,18 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Constructor
 
-        public MainViewModel() : this(null, null, null)
+        public MainViewModel() : this(null, null, null, null, null, null)
         {
         }
 
-        public MainViewModel(DiscoveryService discoveryService = null, ProfileService profileService = null, DataVisualizationViewModel dataVisualization = null)
+        public MainViewModel(
+            ILogger<MainViewModel> logger,
+            IMessenger messenger,
+            IDiscoveryService discoveryService,
+            IProfileService profileService,
+            IDataService dataService,
+            DataVisualizationViewModel dataVisualization,
+            ThemeService themeService = null) : base(logger, messenger)
         {
             // Initialize collections (using optimized collections for data-heavy lists)
             CompanyProfiles = new ObservableCollection<CompanyProfile>();
@@ -623,11 +634,12 @@ namespace MandADiscoverySuite.ViewModels
             _userPagination.PageChanged += (s, e) => RefreshUserPage();
             _infrastructurePagination.PageChanged += (s, e) => RefreshInfrastructurePage();
 
-            // Initialize services with dependency injection support
-            _discoveryService = discoveryService ?? new DiscoveryService();
-            _profileService = profileService ?? new ProfileService();
-            _csvDataService = new CsvDataService();
-            _asyncDataService = new AsyncDataService(_csvDataService);
+            // Initialize services with dependency injection
+            _discoveryService = discoveryService ?? ServiceLocator.GetService<IDiscoveryService>();
+            _profileService = profileService ?? ServiceLocator.GetService<IProfileService>();
+            _dataService = dataService ?? ServiceLocator.GetService<IDataService>();
+            _themeService = themeService ?? ServiceLocator.GetService<ThemeService>();
+            _asyncDataService = new AsyncDataService(_dataService as CsvDataService ?? new CsvDataService());
 
             // Initialize search filter
             SearchFilter = new SearchFilterViewModel();
@@ -1777,7 +1789,15 @@ This directory is strictly for storing discovery results and company data.
 
         private void ToggleTheme()
         {
-            IsDarkTheme = !IsDarkTheme;
+            try
+            {
+                _themeService?.ToggleTheme();
+                IsDarkTheme = _themeService?.CurrentTheme == ThemeMode.Dark;
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error toggling theme");
+            }
         }
 
         private void SetAllModulesEnabled(bool enabled)

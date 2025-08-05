@@ -21,7 +21,7 @@ namespace MandADiscoverySuite
             // Initialize ViewModel using dependency injection and set as DataContext
             try
             {
-                ViewModel = SimpleServiceLocator.GetService<MainViewModel>();
+                ViewModel = ServiceLocator.GetService<MainViewModel>();
             }
             catch (Exception)
             {

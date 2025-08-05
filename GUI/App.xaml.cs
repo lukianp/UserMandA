@@ -10,8 +10,12 @@ namespace MandADiscoverySuite
         {
             try
             {
-                // Initialize simple service container
-                SimpleServiceLocator.Initialize();
+                // Initialize dependency injection container
+                ServiceLocator.Initialize();
+                
+                // Initialize theme service and apply saved theme
+                var themeService = ServiceLocator.GetService<ThemeService>();
+                themeService?.Initialize();
                 
                 base.OnStartup(e);
             }
@@ -28,7 +32,7 @@ namespace MandADiscoverySuite
             try
             {
                 // Clean up service container
-                SimpleServiceLocator.Clear();
+                ServiceLocator.Dispose();
             }
             catch
             {

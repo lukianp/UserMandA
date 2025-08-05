@@ -1,0 +1,284 @@
+<Window x:Class="MandADiscoverySuite.Controls.KeyboardShortcutsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Keyboard Shortcuts"
+        Height="600" Width="800"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BackgroundBrush}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Category Header Style -->
+            <Style x:Key="CategoryHeaderStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="16"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Margin" Value="0,16,0,8"/>
+            </Style>
+
+            <!-- Shortcut Item Style -->
+            <Style x:Key="ShortcutItemStyle" TargetType="Border">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Padding" Value="12,8"/>
+                <Setter Property="Margin" Value="0,0,0,1"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- Key Badge Style -->
+            <Style x:Key="KeyBadgeStyle" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="3"/>
+                <Setter Property="Padding" Value="6,3"/>
+                <Setter Property="Margin" Value="0,0,4,0"/>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="24,20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Keyboard Shortcuts" 
+                               FontSize="20" 
+                               FontWeight="Bold" 
+                               Foreground="{DynamicResource ForegroundBrush}"
+                               Margin="0,0,0,4"/>
+                    <TextBlock Text="Boost your productivity with these keyboard shortcuts" 
+                               FontSize="13" 
+                               Foreground="{DynamicResource MutedForegroundBrush}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBox Width="200" 
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ThemedTextBoxStyle}"
+                             Margin="0,0,12,0">
+                        <TextBox.Template>
+                            <ControlTemplate TargetType="TextBox">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="4">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <TextBlock Grid.Column="0" 
+                                                   Text="🔍" 
+                                                   VerticalAlignment="Center"
+                                                   Margin="8,0,4,0"
+                                                   Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                        
+                                        <ScrollViewer Grid.Column="1" 
+                                                      x:Name="PART_ContentHost" 
+                                                      VerticalAlignment="Center"
+                                                      Margin="0,0,8,0"/>
+                                        
+                                        <TextBlock Grid.Column="1" 
+                                                   Text="Search shortcuts..." 
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                                   Margin="0,0,8,0"
+                                                   IsHitTestVisible="False"
+                                                   Visibility="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Border>
+                            </ControlTemplate>
+                        </TextBox.Template>
+                    </TextBox>
+
+                    <Button Content="Export" 
+                            Command="{Binding ExportShortcutsCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Margin="0,0,8,0"/>
+                    
+                    <Button Content="Reset" 
+                            Command="{Binding ResetToDefaultsCommand}"
+                            Style="{StaticResource ThemedDangerButtonStyle}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Shortcuts List -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="24,16">
+                <ItemsControl ItemsSource="{Binding ShortcutCategories}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <!-- Category Header -->
+                                <TextBlock Text="{Binding CategoryName}" Style="{StaticResource CategoryHeaderStyle}"/>
+                                
+                                <!-- Shortcuts in Category -->
+                                <ItemsControl ItemsSource="{Binding Shortcuts}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource ShortcutItemStyle}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- Shortcut Description -->
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Text="{Binding Name}" 
+                                                                   FontWeight="Medium"
+                                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                                   Margin="0,0,0,2"/>
+                                                        <TextBlock Text="{Binding Description}" 
+                                                                   FontSize="12"
+                                                                   Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                                    </StackPanel>
+
+                                                    <!-- Key Combination -->
+                                                    <StackPanel Grid.Column="1" 
+                                                                Orientation="Horizontal" 
+                                                                VerticalAlignment="Center"
+                                                                Margin="16,0">
+                                                        <ItemsControl ItemsSource="{Binding KeyParts}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <StackPanel Orientation="Horizontal"/>
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <Border Style="{StaticResource KeyBadgeStyle}">
+                                                                            <TextBlock Text="{Binding}" 
+                                                                                       FontSize="11" 
+                                                                                       FontWeight="Medium"
+                                                                                       Foreground="{DynamicResource ForegroundBrush}"/>
+                                                                        </Border>
+                                                                        <TextBlock Text="+" 
+                                                                                   VerticalAlignment="Center"
+                                                                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                                                                   Margin="4,0"
+                                                                                   Visibility="{Binding IsLast, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                                                    </StackPanel>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+
+                                                    <!-- Edit Button -->
+                                                    <Button Grid.Column="2" 
+                                                            Content="✏️" 
+                                                            Command="{Binding DataContext.EditShortcutCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Padding="8"
+                                                            Cursor="Hand"
+                                                            ToolTip="Edit shortcut"
+                                                            Visibility="{Binding IsCustom, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Quick Tips -->
+                <Border Background="{DynamicResource CardBrush}" 
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1" 
+                        CornerRadius="6" 
+                        Padding="16"
+                        Margin="0,24,0,0">
+                    <StackPanel>
+                        <TextBlock Text="💡 Quick Tips" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="{DynamicResource ForegroundBrush}"
+                                   Margin="0,0,0,12"/>
+                        
+                        <StackPanel>
+                            <TextBlock Text="• Use Ctrl+Shift+P to open the Command Palette for quick access to all features" 
+                                       FontSize="12" 
+                                       Foreground="{DynamicResource MutedForegroundBrush}"
+                                       Margin="0,0,0,4"/>
+                            <TextBlock Text="• Press Ctrl+? to show this shortcuts dialog anytime" 
+                                       FontSize="12" 
+                                       Foreground="{DynamicResource MutedForegroundBrush}"
+                                       Margin="0,0,0,4"/>
+                            <TextBlock Text="• Most shortcuts work globally, even when focused on input fields" 
+                                       FontSize="12" 
+                                       Foreground="{DynamicResource MutedForegroundBrush}"
+                                       Margin="0,0,0,4"/>
+                            <TextBlock Text="• You can customize shortcuts by clicking the edit button next to each shortcut" 
+                                       FontSize="12" 
+                                       Foreground="{DynamicResource MutedForegroundBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" 
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" 
+                           Text="{Binding ShortcutCount, StringFormat='Showing {0} keyboard shortcuts'}" 
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource MutedForegroundBrush}"/>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="Print" 
+                            Command="{Binding PrintShortcutsCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Margin="0,0,12,0"/>
+                    
+                    <Button Content="Close" 
+                            IsCancel="True"
+                            Click="CloseButton_Click"
+                            Style="{StaticResource ThemedButtonStyle}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

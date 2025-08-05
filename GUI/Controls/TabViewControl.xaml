@@ -1,0 +1,246 @@
+<UserControl x:Class="MandADiscoverySuite.Controls.TabViewControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Tab Item Style -->
+            <Style x:Key="TabItemStyle" TargetType="TabItem">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Margin" Value="0"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TabItem">
+                            <Border x:Name="TabBorder" 
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="0,0,1,0"
+                                    Padding="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Tab Content -->
+                                    <StackPanel Grid.Column="0" 
+                                                Orientation="Horizontal" 
+                                                Margin="12,8">
+                                        <TextBlock Text="{Binding Icon}" 
+                                                   FontSize="12" 
+                                                   Margin="0,0,6,0"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Title}" 
+                                                   FontSize="12"
+                                                   VerticalAlignment="Center"
+                                                   MaxWidth="120"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <Ellipse Width="6" Height="6" 
+                                                 Fill="{DynamicResource AccentBrush}"
+                                                 Margin="6,0,0,0"
+                                                 VerticalAlignment="Center"
+                                                 Visibility="{Binding HasChanges, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    </StackPanel>
+
+                                    <!-- Close Button -->
+                                    <Button Grid.Column="1" 
+                                            x:Name="CloseButton"
+                                            Content="✕"
+                                            Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="6"
+                                            FontSize="10"
+                                            Cursor="Hand"
+                                            Opacity="0"
+                                            Margin="0,0,4,0"/>
+                                </Grid>
+                            </Border>
+
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                    <Setter TargetName="CloseButton" Property="Opacity" Value="1"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource HoverBrush}"/>
+                                    <Setter TargetName="CloseButton" Property="Opacity" Value="0.7"/>
+                                </Trigger>
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsSelected" Value="True"/>
+                                        <Condition Property="IsMouseOver" Value="True"/>
+                                    </MultiTrigger.Conditions>
+                                    <Setter TargetName="CloseButton" Property="Opacity" Value="1"/>
+                                </MultiTrigger>
+                                <Trigger SourceName="CloseButton" Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="CloseButton" Property="Background" Value="{DynamicResource DangerBrush}"/>
+                                    <Setter TargetName="CloseButton" Property="Foreground" Value="White"/>
+                                    <Setter TargetName="CloseButton" Property="Opacity" Value="1"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Tab Control Style -->
+            <Style x:Key="TabControlStyle" TargetType="TabControl">
+                <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TabControl">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Tab Headers -->
+                                <Border Grid.Row="0" 
+                                        Background="{DynamicResource CardBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="0,0,0,1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Tab Panel -->
+                                        <ScrollViewer Grid.Column="0" 
+                                                      HorizontalScrollBarVisibility="Auto"
+                                                      VerticalScrollBarVisibility="Disabled">
+                                            <TabPanel x:Name="HeaderPanel" 
+                                                      IsItemsHost="True" 
+                                                      Panel.ZIndex="1"/>
+                                        </ScrollViewer>
+
+                                        <!-- Tab Actions -->
+                                        <StackPanel Grid.Column="1" 
+                                                    Orientation="Horizontal" 
+                                                    Margin="8,4">
+                                            <Button Content="📋" 
+                                                    ToolTip="Show All Tabs"
+                                                    Command="{Binding ShowAllTabsCommand}"
+                                                    Style="{StaticResource ThemedSecondaryButtonStyle}"
+                                                    Padding="6"
+                                                    FontSize="12"
+                                                    Margin="0,0,4,0"/>
+                                            <Button Content="+" 
+                                                    ToolTip="New Tab"
+                                                    Command="{Binding NewTabCommand}"
+                                                    Style="{StaticResource ThemedButtonStyle}"
+                                                    Padding="6"
+                                                    FontSize="12"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Tab Content -->
+                                <Border Grid.Row="1" 
+                                        Background="{TemplateBinding Background}">
+                                    <ContentPresenter x:Name="PART_SelectedContentHost" 
+                                                      ContentSource="SelectedContent"/>
+                                </Border>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Tab Control -->
+        <TabControl Grid.Row="0"
+                    ItemsSource="{Binding Tabs}"
+                    SelectedItem="{Binding SelectedTab}"
+                    Style="{StaticResource TabControlStyle}">
+            <TabControl.ItemContainerStyle>
+                <Style TargetType="TabItem" BasedOn="{StaticResource TabItemStyle}"/>
+            </TabControl.ItemContainerStyle>
+            <TabControl.ContentTemplate>
+                <DataTemplate>
+                    <ContentPresenter Content="{Binding Content}"/>
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+        </TabControl>
+
+        <!-- Empty State -->
+        <StackPanel Grid.Row="0" 
+                    HorizontalAlignment="Center" 
+                    VerticalAlignment="Center"
+                    Visibility="{Binding HasTabs, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+            <TextBlock Text="📂" FontSize="64" HorizontalAlignment="Center" Opacity="0.3"/>
+            <TextBlock Text="No tabs open" 
+                       FontSize="18" 
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource MutedForegroundBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,16,0,0"/>
+            <TextBlock Text="Create a new tab to get started" 
+                       FontSize="14" 
+                       Foreground="{DynamicResource MutedForegroundBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,8,0,0"/>
+            <Button Content="New Tab" 
+                    Command="{Binding NewTabCommand}"
+                    Style="{StaticResource ThemedButtonStyle}"
+                    Margin="0,16,0,0"/>
+        </StackPanel>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="1" 
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="12,6"
+                Visibility="{Binding HasTabs, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" 
+                           Text="{Binding StatusText}" 
+                           FontSize="11"
+                           Foreground="{DynamicResource MutedForegroundBrush}"
+                           VerticalAlignment="Center"/>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="{Binding TabCount, StringFormat='{0} tabs'}" 
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"/>
+                    
+                    <Button Content="Close All" 
+                            Command="{Binding CloseAllTabsCommand}"
+                            Style="{StaticResource ThemedDangerButtonStyle}"
+                            FontSize="10"
+                            Padding="6,3"
+                            Visibility="{Binding CanCloseAllTabs, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

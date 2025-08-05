@@ -65,6 +65,7 @@ namespace MandADiscoverySuite.ViewModels
         // Quick Stats
         public int TotalTasks => CurrentProject?.Phases.SelectMany(p => p.Components).SelectMany(c => c.Tasks).Count() ?? 0;
         public int CompletedTasks => CurrentProject?.Phases.SelectMany(p => p.Components).SelectMany(c => c.Tasks).Count(t => t.Status == TaskStatus.Completed) ?? 0;
+        public int InProgressTasks => CurrentProject?.Phases.SelectMany(p => p.Components).SelectMany(c => c.Tasks).Count(t => t.Status == TaskStatus.InProgress) ?? 0;
         public int OverdueTaskCount => OverdueTasks.Count;
         public int HighRiskCount => ActiveRisks.Count(r => r.RiskScore >= 16);
 
@@ -85,6 +86,11 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand AddRiskCommand { get; private set; }
         public ICommand UpdateRiskCommand { get; private set; }
         public ICommand RefreshDashboardCommand { get; private set; }
+        public ICommand ExpandAllCommand { get; private set; }
+        public ICommand CollapseAllCommand { get; private set; }
+        public ICommand TogglePhaseExpandCommand { get; private set; }
+        public ICommand ToggleComponentExpandCommand { get; private set; }
+        public ICommand EditTaskCommand { get; private set; }
         public ICommand GenerateReportCommand { get; private set; }
         public ICommand ExportProjectCommand { get; private set; }
         public ICommand ImportProjectCommand { get; private set; }
@@ -108,6 +114,11 @@ namespace MandADiscoverySuite.ViewModels
             AddRiskCommand = new RelayCommand<IntegrationProject>(AddRisk);
             UpdateRiskCommand = new RelayCommand<ProjectRisk>(UpdateRisk);
             RefreshDashboardCommand = new AsyncRelayCommand(RefreshDashboardAsync);
+            ExpandAllCommand = new RelayCommand(ExpandAll);
+            CollapseAllCommand = new RelayCommand(CollapseAll);
+            TogglePhaseExpandCommand = new RelayCommand<ProjectPhase>(TogglePhaseExpand);
+            ToggleComponentExpandCommand = new RelayCommand<ProjectComponent>(ToggleComponentExpand);
+            EditTaskCommand = new RelayCommand<ProjectTask>(EditTask);
             GenerateReportCommand = new AsyncRelayCommand(GenerateReportAsync);
             ExportProjectCommand = new AsyncRelayCommand(ExportProjectAsync);
             ImportProjectCommand = new AsyncRelayCommand(ImportProjectAsync);
@@ -308,6 +319,55 @@ namespace MandADiscoverySuite.ViewModels
             }
 
             UpdateDashboardMetrics();
+        }
+
+        private void ExpandAll()
+        {
+            if (CurrentProject?.Phases == null) return;
+
+            foreach (var phase in CurrentProject.Phases)
+            {
+                phase.IsExpanded = true;
+                foreach (var component in phase.Components)
+                {
+                    component.IsExpanded = true;
+                }
+            }
+        }
+
+        private void CollapseAll()
+        {
+            if (CurrentProject?.Phases == null) return;
+
+            foreach (var phase in CurrentProject.Phases)
+            {
+                phase.IsExpanded = false;
+                foreach (var component in phase.Components)
+                {
+                    component.IsExpanded = false;
+                }
+            }
+        }
+
+        private void TogglePhaseExpand(ProjectPhase phase)
+        {
+            if (phase == null) return;
+            phase.IsExpanded = !phase.IsExpanded;
+        }
+
+        private void ToggleComponentExpand(ProjectComponent component)
+        {
+            if (component == null) return;
+            component.IsExpanded = !component.IsExpanded;
+        }
+
+        private void EditTask(ProjectTask task)
+        {
+            if (task == null) return;
+            
+            // TODO: Implement task editing dialog
+            // For now, just toggle the selected task
+            SelectedTask = task;
         }
 
         private async Task RefreshDashboardAsync()
@@ -610,6 +670,7 @@ namespace MandADiscoverySuite.ViewModels
             // Notify property changes for quick stats
             OnPropertyChanged(nameof(TotalTasks));
             OnPropertyChanged(nameof(CompletedTasks));
+            OnPropertyChanged(nameof(InProgressTasks));
             OnPropertyChanged(nameof(OverdueTaskCount));
             OnPropertyChanged(nameof(HighRiskCount));
         }

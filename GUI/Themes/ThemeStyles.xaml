@@ -243,4 +243,41 @@
         <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
     </Style>
 
+    <!-- Theme Toggle Button Styles -->
+    <Style x:Key="ThemeToggleButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="20"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Opacity" Value="0.8"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Opacity" Value="0.6"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Common animation easing functions -->
+    <CubicEase x:Key="EaseOutCubic" EasingMode="EaseOut"/>
+    <CubicEase x:Key="EaseInOutCubic" EasingMode="EaseInOut"/>
+    
+    <!-- Common durations -->
+    <Duration x:Key="ThemeToggleDuration">0:0:0.3</Duration>
+    <Duration x:Key="IconFadeDuration">0:0:0.2</Duration>
+
 </ResourceDictionary>

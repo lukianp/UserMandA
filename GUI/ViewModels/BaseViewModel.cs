@@ -4,8 +4,11 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Microsoft.Extensions.Logging;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -20,18 +23,67 @@ namespace MandADiscoverySuite.ViewModels
         private readonly object _notificationLock = new object();
         private bool _isNotificationScheduled;
         private readonly DispatcherTimer _notificationTimer;
+        
+        // Modern MVVM infrastructure
+        protected readonly ILogger Logger;
+        protected readonly IMessenger Messenger;
+
+        // Common state properties
+        private bool _isLoading;
+        private string _statusMessage = string.Empty;
+        private bool _hasErrors;
+        private string _errorMessage = string.Empty;
+
+        public bool IsLoading
+        {
+            get => _isLoading;
+            set => SetProperty(ref _isLoading, value);
+        }
+
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set => SetProperty(ref _statusMessage, value);
+        }
+
+        public bool HasErrors
+        {
+            get => _hasErrors;
+            set => SetProperty(ref _hasErrors, value);
+        }
+
+        public string ErrorMessage
+        {
+            get => _errorMessage;
+            set => SetProperty(ref _errorMessage, value);
+        }
 
         /// <summary>
-        /// Initializes the BaseViewModel with performance optimizations
+        /// Initializes the BaseViewModel with modern MVVM infrastructure
         /// </summary>
-        protected BaseViewModel()
+        protected BaseViewModel(ILogger logger = null, IMessenger messenger = null)
         {
+            Logger = logger;
+            Messenger = messenger ?? WeakReferenceMessenger.Default;
+            
             _notificationTimer = new DispatcherTimer(DispatcherPriority.Background)
             {
                 Interval = TimeSpan.FromMilliseconds(10) // Batch notifications every 10ms
             };
             _notificationTimer.Tick += ProcessPendingNotifications;
+
+            InitializeCommands();
         }
+
+        /// <summary>
+        /// Initializes common commands - override in derived classes to add specific commands
+        /// </summary>
+        protected virtual void InitializeCommands()
+        {
+            ClearErrorsCommand = new RelayCommand(ClearErrors);
+        }
+
+        public ICommand ClearErrorsCommand { get; private set; }
 
         /// <summary>
         /// Raises the PropertyChanged event immediately
@@ -153,6 +205,100 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
+        #region Modern MVVM Operations
+
+        /// <summary>
+        /// Executes an async operation with error handling and loading state management
+        /// </summary>
+        protected async Task ExecuteAsync(Func<Task> operation, string operationName = "Operation")
+        {
+            try
+            {
+                IsLoading = true;
+                HasErrors = false;
+                ErrorMessage = string.Empty;
+                StatusMessage = $"Executing {operationName}...";
+
+                Logger?.LogInformation("Starting {OperationName}", operationName);
+                await operation();
+                Logger?.LogInformation("Completed {OperationName}", operationName);
+
+                StatusMessage = $"{operationName} completed successfully";
+            }
+            catch (Exception ex)
+            {
+                HasErrors = true;
+                ErrorMessage = ex.Message;
+                StatusMessage = $"{operationName} failed: {ex.Message}";
+                Logger?.LogError(ex, "Error in {OperationName}", operationName);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// Executes an async operation with result and error handling
+        /// </summary>
+        protected async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, string operationName = "Operation", T defaultValue = default)
+        {
+            try
+            {
+                IsLoading = true;
+                HasErrors = false;
+                ErrorMessage = string.Empty;
+                StatusMessage = $"Executing {operationName}...";
+
+                Logger?.LogInformation("Starting {OperationName}", operationName);
+                var result = await operation();
+                Logger?.LogInformation("Completed {OperationName}", operationName);
+
+                StatusMessage = $"{operationName} completed successfully";
+                return result;
+            }
+            catch (Exception ex)
+            {
+                HasErrors = true;
+                ErrorMessage = ex.Message;
+                StatusMessage = $"{operationName} failed: {ex.Message}";
+                Logger?.LogError(ex, "Error in {OperationName}", operationName);
+                return defaultValue;
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// Clears any error state
+        /// </summary>
+        public virtual void ClearErrors()
+        {
+            HasErrors = false;
+            ErrorMessage = string.Empty;
+            StatusMessage = string.Empty;
+        }
+
+        /// <summary>
+        /// Sends a message via the messaging bus
+        /// </summary>
+        protected void SendMessage<T>(T message) where T : class
+        {
+            Messenger?.Send(message);
+        }
+
+        /// <summary>
+        /// Registers for a message type
+        /// </summary>
+        protected void RegisterForMessage<T>(MessageHandler<object, T> handler) where T : class
+        {
+            Messenger?.Register<T>(this, handler);
+        }
+
+        #endregion
+
         #region IDisposable
 
         private bool _disposed = false;
@@ -182,6 +328,9 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         _notificationTimer.Tick -= ProcessPendingNotifications;
                     }
+                    
+                    // Unregister from messaging
+                    Messenger?.UnregisterAll(this);
                     
                     // Derived classes should override this method to dispose their resources
                     OnDisposing();

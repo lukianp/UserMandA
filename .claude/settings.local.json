@@ -79,7 +79,10 @@
       "Bash(csc:*)",
       "Bash(Test-Path \"C:\\EnterpriseDiscovery\\Modules\\Discovery\\AzureDiscovery.psm1\")",
       "Bash(Test-Path \"D:\\Scripts\\UserMandA\\GUI\\Configuration\\ModuleRegistry.json\")",
-      "Bash(\"C:\\EnterpriseDiscovery\\MandADiscoverySuite.exe\")"
+      "Bash(\"C:\\EnterpriseDiscovery\\MandADiscoverySuite.exe\")",
+      "Bash(dotnet nuget list:*)",
+      "Bash(dotnet nuget add source:*)",
+      "Bash(del \"GUI\\Controls\\ThemeToggleButton.xaml\")"
     ],
     "deny": []
   }

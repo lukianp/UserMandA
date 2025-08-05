@@ -529,6 +529,9 @@
         <KeyBinding Key="R" Modifiers="Ctrl" Command="{Binding RefreshCommand}"/>
         <KeyBinding Key="N" Modifiers="Ctrl" Command="{Binding NewProfileCommand}"/>
         
+        <!-- Theme Toggle -->
+        <KeyBinding Key="T" Modifiers="Ctrl+Alt" Command="{Binding ToggleThemeCommand}"/>
+        
         <!-- Close/Exit -->
         <KeyBinding Key="F4" Modifiers="Alt" Command="{Binding ExitCommand}"/>
         <KeyBinding Key="Escape" Command="{Binding CancelCommand}"/>
@@ -952,20 +955,10 @@
                 <!-- Theme Toggle and Settings -->
                 <Border Grid.Row="5" Padding="24,16">
                     <StackPanel>
-                        <Button Command="{Binding ToggleThemeCommand}" 
-                                Style="{StaticResource NavButtonStyle}"
-                                Height="40"
-                                ToolTip="Toggle between light and dark theme (Ctrl+T)">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding IsDarkTheme, Converter={x:Static converters:BoolToThemeIconConverter.Instance}}" 
-                                           FontSize="16" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding IsDarkTheme, Converter={x:Static converters:BoolToThemeTextConverter.Instance}}" 
-                                               FontSize="13" FontWeight="Medium"/>
-                                    <TextBlock Text="Toggle Theme" FontSize="10" Foreground="#FFA0AEC0"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Button>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,16">
+                            <TextBlock Text="Theme" FontSize="13" FontWeight="Medium" Foreground="#FFA0AEC0" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                            <controls:ThemeToggleButton/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
                 
@@ -990,12 +983,16 @@
         <!-- Main Content Area -->
         <Grid Grid.Column="1" Background="#FF0F1419">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
+            
+            <!-- Breadcrumb Navigation -->
+            <controls:BreadcrumbNavigation Grid.Row="0"/>
             <!-- Dashboard View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="DashboardView" Visibility="{Binding IsDashboardVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="1" x:Name="DashboardView" Visibility="{Binding IsDashboardVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -1278,7 +1275,7 @@
             </ScrollViewer>
             
             <!-- Discovery View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="DiscoveryView" Visibility="{Binding IsDiscoveryVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="1" x:Name="DiscoveryView" Visibility="{Binding IsDiscoveryVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -1435,7 +1432,7 @@
             </ScrollViewer>
             
             <!-- Enhanced Users View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="UsersView" Visibility="{Binding IsUsersVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="1" x:Name="UsersView" Visibility="{Binding IsUsersVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -1732,7 +1729,7 @@
             </ScrollViewer>
             
             <!-- Enhanced Computers View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="ComputersView" Visibility="{Binding IsComputersVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="1" x:Name="ComputersView" Visibility="{Binding IsComputersVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -1833,7 +1830,7 @@
             </ScrollViewer>
             
             <!-- Enhanced Infrastructure View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="InfrastructureView" Visibility="{Binding IsInfrastructureVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="1" x:Name="InfrastructureView" Visibility="{Binding IsInfrastructureVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -2262,7 +2259,7 @@
             </ScrollViewer>
             
             <!-- Enhanced Groups View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="GroupsView" Visibility="{Binding IsGroupsVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="1" x:Name="GroupsView" Visibility="{Binding IsGroupsVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -2457,7 +2454,7 @@
             </ScrollViewer>
             
             <!-- Enhanced Migration Waves View -->
-            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="WavesView" Visibility="{Binding IsWavesVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="1" x:Name="WavesView" Visibility="{Binding IsWavesVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -2658,7 +2655,7 @@
             </ScrollViewer>
             
             <!-- Migrate View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="MigrateView" Visibility="{Binding IsMigrateVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="30">
+            <Grid Grid.Row="1" x:Name="MigrateView" Visibility="{Binding IsMigrateVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="30">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -2753,7 +2750,7 @@
             </Grid>
             
             <!-- Reports View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="ReportsView" Visibility="{Binding IsReportsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
+            <Grid Grid.Row="1" x:Name="ReportsView" Visibility="{Binding IsReportsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -2911,7 +2908,7 @@
             </Grid>
             
             <!-- Analytics View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="AnalyticsView" Visibility="{Binding IsAnalyticsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
+            <Grid Grid.Row="1" x:Name="AnalyticsView" Visibility="{Binding IsAnalyticsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
