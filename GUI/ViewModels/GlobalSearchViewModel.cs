@@ -208,7 +208,7 @@ namespace MandADiscoverySuite.ViewModels
                     OnPropertyChanged(nameof(ShowBothSuggestionsAndResults));
                 }
 
-            }, "Performing search", _searchCancellation.Token);
+            }, "Performing search");
         }
 
         public void SelectResult(SearchResultItem result)

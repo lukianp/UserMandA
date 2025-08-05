@@ -117,6 +117,10 @@ namespace MandADiscoverySuite.Models
         public List<string> Locations { get; set; } = new List<string>();
 
         public Dictionary<string, object> Configuration { get; set; } = new Dictionary<string, object>();
+        public bool IsDefault { get; set; } = false;
+        
+        // Computed properties
+        public bool CanDelete => !IsDefault;
         
         public override string ToString()
         {
@@ -637,6 +641,7 @@ namespace MandADiscoverySuite.Models
 
         // Computed properties
         public bool CanDelete => !IsDefault;
+        public bool IsDefault { get; set; } = false;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -777,6 +782,12 @@ namespace MandADiscoverySuite.Models
         public bool IsPrivileged { get; set; }
         public DateTime? PasswordExpiryDate { get; set; }
         public DateTime? LastLogonDate { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        
+        // Context menu properties
+        public bool CanEdit { get; set; } = true;
+        public bool CanResetPassword { get; set; } = true;
+        public bool CanToggleAccount { get; set; } = true;
 
         // Display properties
         public string Status => AccountEnabled ? "Active" : "Disabled";
@@ -849,6 +860,11 @@ namespace MandADiscoverySuite.Models
         public bool IsCritical { get; set; }
         public bool IsSupported { get; set; }
         public DateTime? LastUpdateDate { get; set; }
+        
+        // Context menu properties
+        public bool CanEdit { get; set; } = true;
+        public bool AllowsRDP { get; set; } = false;
+        public bool AllowsFileAccess { get; set; } = false;
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
@@ -915,6 +931,10 @@ namespace MandADiscoverySuite.Models
         public string OwnerCount { get; set; }
         public string Visibility { get; set; }
         public string Domain { get; set; }
+        
+        // Context menu properties
+        public bool CanEdit { get; set; } = true;
+        public bool CanEditPermissions { get; set; } = true;
 
         // Display properties
         public string Type
@@ -1004,6 +1024,9 @@ namespace MandADiscoverySuite.Models
         public string NoRemove { get; set; }
         public bool IsOutdated { get; set; }
         public bool IsCompatible { get; set; }
+        
+        // Context menu properties
+        public bool CanEdit { get; set; } = true;
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
