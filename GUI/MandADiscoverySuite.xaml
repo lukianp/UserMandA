@@ -148,6 +148,67 @@
             </Style.Triggers>
         </Style>
         
+        <!-- Section Border Style -->
+        <Style x:Key="SectionBorderStyle" TargetType="Border">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1" Opacity="0.9">
+                        <GradientStop Color="#FF1C2433" Offset="0"/>
+                        <GradientStop Color="#FF2D3748" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FF374151" Offset="0"/>
+                        <GradientStop Color="#FF4B5563" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="Black" Direction="270" ShadowDepth="2" BlurRadius="10" Opacity="0.3"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Modern TextBox Style -->
+        <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="#FF2D3748"/>
+            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ScrollViewer x:Name="PART_ContentHost" Padding="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" Value="#FF667EEA"/>
+                            </Trigger>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter Property="BorderBrush" Value="#FF667EEA"/>
+                                <Setter Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
         <!-- Modern Button Style -->
         <Style x:Key="ModernButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>
@@ -1638,9 +1699,9 @@
                                                 Margin="0,0,4,0">
                                             <TextBlock>
                                                 <Run Text="Page "/>
-                                                <Run Text="{Binding CurrentUserPage}"/>
+                                                <Run Text="{Binding CurrentUserPage, Mode=OneWay}"/>
                                                 <Run Text=" of "/>
-                                                <Run Text="{Binding TotalUserPages}"/>
+                                                <Run Text="{Binding TotalUserPages, Mode=OneWay}"/>
                                             </TextBlock>
                                         </Border>
                                         
@@ -2168,9 +2229,9 @@
                                                 Margin="0,0,4,0">
                                             <TextBlock>
                                                 <Run Text="Page "/>
-                                                <Run Text="{Binding CurrentInfrastructurePage}"/>
+                                                <Run Text="{Binding CurrentInfrastructurePage, Mode=OneWay}"/>
                                                 <Run Text=" of "/>
-                                                <Run Text="{Binding TotalInfrastructurePages}"/>
+                                                <Run Text="{Binding TotalInfrastructurePages, Mode=OneWay}"/>
                                             </TextBlock>
                                         </Border>
                                         
@@ -2366,9 +2427,9 @@
                                 <Border Background="#FF2D3748" CornerRadius="6" Padding="12,6" Margin="8,0">
                                     <TextBlock FontSize="14" Foreground="#FFA0AEC0" VerticalAlignment="Center">
                                         <Run Text="Page"/>
-                                        <Run Text="{Binding CurrentGroupPage}"/>
+                                        <Run Text="{Binding CurrentGroupPage, Mode=OneWay}"/>
                                         <Run Text="of"/>
-                                        <Run Text="{Binding TotalGroupPages}"/>
+                                        <Run Text="{Binding TotalGroupPages, Mode=OneWay}"/>
                                     </TextBlock>
                                 </Border>
                                 

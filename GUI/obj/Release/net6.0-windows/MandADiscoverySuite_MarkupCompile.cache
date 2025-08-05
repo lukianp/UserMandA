@@ -12,9 +12,9 @@ TRACE;RELEASE;NET;NET6_0;NETCOREAPP
 D:\Scripts\UserMandA\GUI\App.xaml
 16869630505
 
-6032413835
+61-564705413
 203155564505
 AdvancedSearchDialog.xaml;ColumnVisibilityDialog.xaml;Controls\ChartControls.xaml;Controls\ProfileDropZone.xaml;Controls\ProgressIndicator.xaml;Controls\SimpleChart.xaml;CreateProfileDialog.xaml;DebugLogWindow.xaml;ErrorDialog.xaml;ManagerSelectionDialog.xaml;MandADiscoverySuite.xaml;PasswordGeneratorDialog.xaml;PowerShellWindow.xaml;RefreshSettingsDialog.xaml;Themes\ThemeStyles.xaml;UserDetailWindow.xaml;
 
-True
+False
 

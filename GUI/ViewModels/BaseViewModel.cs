@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Windows.Input;
@@ -177,7 +178,10 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     // Dispose managed resources here
                     _notificationTimer?.Stop();
-                    _notificationTimer?.Tick -= ProcessPendingNotifications;
+                    if (_notificationTimer != null)
+                    {
+                        _notificationTimer.Tick -= ProcessPendingNotifications;
+                    }
                     
                     // Derived classes should override this method to dispose their resources
                     OnDisposing();

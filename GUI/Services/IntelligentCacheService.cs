@@ -205,7 +205,7 @@ namespace MandADiscoverySuite.Services
                 MostAccessedKeys = _cache.Values
                     .OrderByDescending(e => e.AccessCount)
                     .Take(10)
-                    .Select(e => new { Key = e.Key, AccessCount = e.AccessCount })
+                    .Select(e => (object)new { Key = e.Key, AccessCount = e.AccessCount })
                     .ToList()
             };
         }

@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite.ViewModels
@@ -12,12 +14,12 @@ namespace MandADiscoverySuite.ViewModels
     {
         #region Performance Services
 
-        private readonly DebouncedSearchService _debouncedSearchService;
-        private readonly IntelligentCacheService _cacheService;
-        private readonly MemoryOptimizationService _memoryOptimizationService;
-        private readonly SmartPaginationService<UserData> _smartUserPagination;
-        private readonly SmartPaginationService<InfrastructureData> _smartInfraPagination;
-        private readonly SmartPaginationService<GroupData> _smartGroupPagination;
+        private DebouncedSearchService _debouncedSearchService;
+        private IntelligentCacheService _cacheService;
+        private MemoryOptimizationService _memoryOptimizationService;
+        private SmartPaginationService<UserData> _smartUserPagination;
+        private SmartPaginationService<InfrastructureData> _smartInfraPagination;
+        private SmartPaginationService<GroupData> _smartGroupPagination;
 
         #endregion
 
@@ -153,7 +155,7 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         try
                         {
-                            var fileUsers = _csvDataService.LoadUserDataFromCsv(file);
+                            var fileUsers = Task.Run(async () => await _csvDataService.LoadUsersAsync(file)).GetAwaiter().GetResult();
                             allUsers.AddRange(fileUsers);
                         }
                         catch (Exception ex)
@@ -186,7 +188,7 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         try
                         {
-                            var fileData = _csvDataService.LoadInfrastructureDataFromCsv(file);
+                            var fileData = Task.Run(async () => await _csvDataService.LoadInfrastructureAsync(file)).GetAwaiter().GetResult();
                             allInfrastructure.AddRange(fileData);
                         }
                         catch (Exception ex)
@@ -219,7 +221,7 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         try
                         {
-                            var fileData = _csvDataService.LoadGroupDataFromCsv(file);
+                            var fileData = Task.Run(async () => await _csvDataService.LoadGroupsAsync(file)).GetAwaiter().GetResult();
                             allGroups.AddRange(fileData);
                         }
                         catch (Exception ex)
@@ -463,7 +465,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Enhanced cleanup with performance service disposal
         /// </summary>
-        protected override void OnDisposing()
+        private void DisposePerformanceServices()
         {
             _debouncedSearchService?.Dispose();
             _cacheService?.Dispose();
@@ -471,8 +473,6 @@ namespace MandADiscoverySuite.ViewModels
             _smartUserPagination?.Dispose();
             _smartInfraPagination?.Dispose();
             _smartGroupPagination?.Dispose();
-            
-            base.OnDisposing();
         }
 
         #endregion

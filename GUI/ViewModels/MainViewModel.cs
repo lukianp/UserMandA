@@ -3794,6 +3794,9 @@ This directory is strictly for storing discovery results and company data.
         {
             try
             {
+                // Dispose performance services first
+                DisposePerformanceServices();
+
                 // Stop timers and unsubscribe from events
                 if (_dashboardTimer != null)
                 {

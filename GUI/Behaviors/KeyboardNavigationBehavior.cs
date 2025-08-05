@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -322,45 +323,57 @@ namespace MandADiscoverySuite.Behaviors
 
         private static void HandleVirtualizedNavigation(ItemsControl itemsControl, Key key)
         {
-            if (itemsControl.SelectedItem == null) return;
-
-            var currentIndex = itemsControl.SelectedIndex;
-            var newIndex = currentIndex;
-
-            switch (key)
+            if (itemsControl is Selector selector)
             {
-                case Key.Up:
-                    newIndex = Math.Max(0, currentIndex - 1);
-                    break;
-                case Key.Down:
-                    newIndex = Math.Min(itemsControl.Items.Count - 1, currentIndex + 1);
-                    break;
-                case Key.Left:
-                    newIndex = Math.Max(0, currentIndex - 10);
-                    break;
-                case Key.Right:
-                    newIndex = Math.Min(itemsControl.Items.Count - 1, currentIndex + 10);
-                    break;
-            }
+                if (selector.SelectedItem == null) return;
 
-            if (newIndex != currentIndex)
-            {
-                itemsControl.SelectedIndex = newIndex;
-                itemsControl.ScrollIntoView(itemsControl.SelectedItem);
+                var currentIndex = selector.SelectedIndex;
+                var newIndex = currentIndex;
+
+                switch (key)
+                {
+                    case Key.Up:
+                        newIndex = Math.Max(0, currentIndex - 1);
+                        break;
+                    case Key.Down:
+                        newIndex = Math.Min(itemsControl.Items.Count - 1, currentIndex + 1);
+                        break;
+                    case Key.Left:
+                        newIndex = Math.Max(0, currentIndex - 10);
+                        break;
+                    case Key.Right:
+                        newIndex = Math.Min(itemsControl.Items.Count - 1, currentIndex + 10);
+                        break;
+                }
+
+                if (newIndex != currentIndex)
+                {
+                    selector.SelectedIndex = newIndex;
+                    if (itemsControl is ListBox listBox)
+                    {
+                        listBox.ScrollIntoView(selector.SelectedItem);
+                    }
+                }
             }
         }
 
         private static void HandleVirtualizedPageNavigation(ItemsControl itemsControl, bool pageDown)
         {
-            var currentIndex = itemsControl.SelectedIndex;
-            var pageSize = 20; // Configurable page size
+            if (itemsControl is Selector selector)
+            {
+                var currentIndex = selector.SelectedIndex;
+                var pageSize = 20; // Configurable page size
 
-            var newIndex = pageDown
-                ? Math.Min(itemsControl.Items.Count - 1, currentIndex + pageSize)
-                : Math.Max(0, currentIndex - pageSize);
+                var newIndex = pageDown
+                    ? Math.Min(itemsControl.Items.Count - 1, currentIndex + pageSize)
+                    : Math.Max(0, currentIndex - pageSize);
 
-            itemsControl.SelectedIndex = newIndex;
-            itemsControl.ScrollIntoView(itemsControl.SelectedItem);
+                selector.SelectedIndex = newIndex;
+                if (itemsControl is ListBox listBox)
+                {
+                    listBox.ScrollIntoView(selector.SelectedItem);
+                }
+            }
         }
 
         private static T FindChildByName<T>(DependencyObject parent, string name) where T : FrameworkElement

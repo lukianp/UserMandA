@@ -44,7 +44,7 @@ namespace MandADiscoverySuite.Services
                 collection,
                 dataPath,
                 "users*.csv",
-                _csvDataService.LoadUserDataFromCsv,
+                async (file) => await _csvDataService.LoadUsersAsync(file),
                 searchText,
                 progressCallback,
                 cancellationToken,
@@ -71,7 +71,7 @@ namespace MandADiscoverySuite.Services
                 collection,
                 dataPath,
                 "infrastructure*.csv",
-                _csvDataService.LoadInfrastructureDataFromCsv,
+                async (file) => await _csvDataService.LoadInfrastructureAsync(file),
                 searchText,
                 progressCallback,
                 cancellationToken,
@@ -98,7 +98,7 @@ namespace MandADiscoverySuite.Services
                 collection,
                 dataPath,
                 "groups*.csv",
-                _csvDataService.LoadGroupDataFromCsv,
+                async (file) => await _csvDataService.LoadGroupsAsync(file),
                 searchText,
                 progressCallback,
                 cancellationToken,
@@ -120,7 +120,7 @@ namespace MandADiscoverySuite.Services
             OptimizedObservableCollection<T> collection,
             string dataPath,
             string filePattern,
-            Func<string, List<T>> loadFunction,
+            Func<string, Task<List<T>>> loadFunction,
             string searchText,
             IProgress<LoadingProgress> progressCallback,
             CancellationToken cancellationToken,
@@ -169,7 +169,7 @@ namespace MandADiscoverySuite.Services
 
                         try
                         {
-                            var fileData = loadFunction(file);
+                            var fileData = loadFunction(file).GetAwaiter().GetResult();
                             allData.AddRange(fileData);
                         }
                         catch (Exception ex)
@@ -231,8 +231,8 @@ namespace MandADiscoverySuite.Services
             return (user.Name?.ToLowerInvariant().Contains(searchLower) ?? false) ||
                    (user.Email?.ToLowerInvariant().Contains(searchLower) ?? false) ||
                    (user.Department?.ToLowerInvariant().Contains(searchLower) ?? false) ||
-                   (user.Title?.ToLowerInvariant().Contains(searchLower) ?? false) ||
-                   (user.Manager?.ToLowerInvariant().Contains(searchLower) ?? false);
+                   (user.JobTitle?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                   (user.UserPrincipalName?.ToLowerInvariant().Contains(searchLower) ?? false);
         }
 
         private static bool FilterInfrastructure(InfrastructureData infrastructure, string searchText)
@@ -252,7 +252,7 @@ namespace MandADiscoverySuite.Services
             return (group.Name?.ToLowerInvariant().Contains(searchLower) ?? false) ||
                    (group.Description?.ToLowerInvariant().Contains(searchLower) ?? false) ||
                    (group.Type?.ToLowerInvariant().Contains(searchLower) ?? false) ||
-                   (group.Owner?.ToLowerInvariant().Contains(searchLower) ?? false);
+                   (group.GroupType?.ToLowerInvariant().Contains(searchLower) ?? false);
         }
     }
 

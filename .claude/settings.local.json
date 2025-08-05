@@ -78,7 +78,8 @@
       "Bash(dotnet restore:*)",
       "Bash(csc:*)",
       "Bash(Test-Path \"C:\\EnterpriseDiscovery\\Modules\\Discovery\\AzureDiscovery.psm1\")",
-      "Bash(Test-Path \"D:\\Scripts\\UserMandA\\GUI\\Configuration\\ModuleRegistry.json\")"
+      "Bash(Test-Path \"D:\\Scripts\\UserMandA\\GUI\\Configuration\\ModuleRegistry.json\")",
+      "Bash(\"C:\\EnterpriseDiscovery\\MandADiscoverySuite.exe\")"
     ],
     "deny": []
   }
