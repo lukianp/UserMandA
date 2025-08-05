@@ -39,10 +39,13 @@ namespace MandADiscoverySuite
 
         private void Create_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(ProfileNameTextBox.Text))
+            CreateButton.IsEnabled = false;
+            
+            var validationResult = InputValidationService.Instance.ValidateCompanyName(ProfileNameTextBox.Text);
+            if (!validationResult.IsValid)
             {
-                MessageBox.Show("Please enter a company name.", "Validation Error", 
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowValidationError(validationResult.GetSummaryMessage());
+                CreateButton.IsEnabled = true;
                 return;
             }
 
@@ -68,6 +71,7 @@ namespace MandADiscoverySuite
             }
             
             DialogResult = true;
+            CreateButton.IsEnabled = true;
             Close();
         }
 

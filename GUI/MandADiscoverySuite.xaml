@@ -3,15 +3,25 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:behaviors="clr-namespace:MandADiscoverySuite.Behaviors"
+        xmlns:converters="clr-namespace:MandADiscoverySuite.Converters"
+        xmlns:controls="clr-namespace:MandADiscoverySuite.Controls"
+        xmlns:collections="clr-namespace:MandADiscoverySuite.Collections"
+        xmlns:helpers="clr-namespace:MandADiscoverySuite.Helpers"
         mc:Ignorable="d"
         Title="M&amp;A Discovery Suite - Enterprise Edition" Height="1000" Width="1600"
         WindowStartupLocation="CenterScreen" WindowState="Maximized"
-        Background="#FF0F1419" KeyDown="MainWindow_KeyDown">
+        Background="#FF0F1419" KeyDown="MainWindow_KeyDown"
+        behaviors:KeyboardNavigationBehavior.EnableEnhancedNavigation="True"
+        behaviors:ResponsiveLayoutBehavior.EnableResponsiveLayout="True"
+        behaviors:ResponsiveLayoutBehavior.SmallScreenThreshold="800"
+        behaviors:ResponsiveLayoutBehavior.MediumScreenThreshold="1200">
     
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="Controls/ChartControls.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
         <!-- Converters -->
@@ -147,20 +157,51 @@
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Setter.Value>
+            </Setter>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
+                        <Border x:Name="ButtonBorder" 
+                                Background="{TemplateBinding Background}" 
                                 CornerRadius="8"
                                 Padding="{TemplateBinding Padding}">
+                            <Border.Effect>
+                                <DropShadowEffect ShadowDepth="2" Direction="270" BlurRadius="5" Opacity="0.3" Color="Black"/>
+                            </Border.Effect>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource AccentGradient}"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource AccentGradient}"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1.05" Duration="0:0:0.15"/>
+                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1.05" Duration="0:0:0.15"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.15"/>
+                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.15"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#FF4A5568"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FF4A5568"/>
+                                <Setter Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -207,11 +248,43 @@
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16"/>
             <Setter Property="Margin" Value="4"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Setter.Value>
+            </Setter>
             <Setter Property="Effect">
                 <Setter.Value>
                     <DropShadowEffect Color="#FF000000" Direction="270" ShadowDepth="2" BlurRadius="8" Opacity="0.2"/>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="#FF4A5568"/>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect Color="#FF000000" Direction="270" ShadowDepth="4" BlurRadius="12" Opacity="0.3"/>
+                        </Setter.Value>
+                    </Setter>
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1.02" Duration="0:0:0.2"/>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1.02" Duration="0:0:0.2"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.2"/>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.2"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </Style.Triggers>
         </Style>
         
         <!-- ComboBox Modern Style -->
@@ -685,6 +758,17 @@
                         </StackPanel>
                     </Button>
                     
+                    <Button x:Name="GroupsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Groups"
+                            ToolTip="Manage security groups, distribution lists, and group memberships">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="👥" FontSize="18" Margin="0,0,16,0"/>
+                            <StackPanel>
+                                <TextBlock Text="Groups"/>
+                                <TextBlock Text="Security &amp; Distribution" FontSize="10" Foreground="#FFA0AEC0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+                    
                     <Button x:Name="DomainDiscoveryButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="DomainDiscovery">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🔍" FontSize="18" Margin="0,0,16,0"/>
@@ -768,6 +852,17 @@
                         </StackPanel>
                     </Button>
                     
+                    <Button x:Name="AnalyticsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Analytics"
+                            ToolTip="Interactive data visualization and analytics dashboard">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📊" FontSize="18" Margin="0,0,16,0"/>
+                            <StackPanel>
+                                <TextBlock Text="Analytics"/>
+                                <TextBlock Text="Charts &amp; Graphs" FontSize="10" Foreground="#FFA0AEC0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+                    
                     <Button x:Name="SettingsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Settings"
                             ToolTip="Configure application settings, authentication, and discovery parameters">
                         <StackPanel Orientation="Horizontal">
@@ -778,11 +873,40 @@
                             </StackPanel>
                         </StackPanel>
                     </Button>
+                    
+                    <Button x:Name="HelpButton" Style="{StaticResource NavButtonStyle}" Click="HelpButton_Click"
+                            ToolTip="Show keyboard shortcuts and help information">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="❓" FontSize="18" Margin="0,0,16,0"/>
+                            <StackPanel>
+                                <TextBlock Text="Help"/>
+                                <TextBlock Text="Shortcuts &amp; Info" FontSize="10" Foreground="#FFA0AEC0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </ScrollViewer>
                 
                 <!-- Spacer -->
-                <Grid Grid.Row="5"/>
+                <!-- Theme Toggle and Settings -->
+                <Border Grid.Row="5" Padding="24,16">
+                    <StackPanel>
+                        <Button Command="{Binding ToggleThemeCommand}" 
+                                Style="{StaticResource NavButtonStyle}"
+                                Height="40"
+                                ToolTip="Toggle between light and dark theme (Ctrl+T)">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding IsDarkTheme, Converter={x:Static converters:BoolToThemeIconConverter.Instance}}" 
+                                           FontSize="16" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding IsDarkTheme, Converter={x:Static converters:BoolToThemeTextConverter.Instance}}" 
+                                               FontSize="13" FontWeight="Medium"/>
+                                    <TextBlock Text="Toggle Theme" FontSize="10" Foreground="#FFA0AEC0"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
                 
                 <!-- Enhanced Status Bar -->
                 <Border Grid.Row="6" Background="{StaticResource PrimaryGradient}" Padding="24,16">
@@ -826,8 +950,29 @@
                             <TextBlock Text="Real-time insights into your M&amp;A discovery progress" Foreground="#FFA0AEC0" FontSize="16"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
-                            <Button Content="Export Report" Command="{Binding ExportResultsCommand}" Style="{StaticResource ModernButtonStyle}" Margin="0,0,12,0"/>
-                            <Button x:Name="RefreshDataButton" Content="Refresh Data" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Command="{Binding RefreshDataCommand}"/>
+                            <!-- Refresh Status Indicator -->
+                            <Border Background="#FF2D3748" CornerRadius="4" Padding="8,6" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🕒" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding RefreshService.ViewStatuses[Dashboard].LastRefreshText}" 
+                                               Foreground="#FFA0AEC0" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <!-- Progress Bar -->
+                            <Border Background="#FF2D3748" CornerRadius="4" Padding="4" Margin="0,0,8,0"
+                                    Visibility="{Binding RefreshService.ViewStatuses[Dashboard].IsRefreshing, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <ProgressBar Width="60" Height="16" 
+                                           Value="{Binding RefreshService.ViewStatuses[Dashboard].RefreshProgress}"
+                                           Background="#FF1A202C" Foreground="#FF48BB78" BorderThickness="0"/>
+                            </Border>
+                            <!-- Refresh Button -->
+                            <Button Content="🔄" ToolTip="Refresh Dashboard" Style="{StaticResource ModernButtonStyle}" 
+                                    Background="{StaticResource AccentGradient}" Command="{Binding RefreshDashboardCommand}" 
+                                    Width="32" Height="32" Margin="0,0,8,0" FontSize="14"/>
+                            <Button Content="⚙️" ToolTip="Refresh Settings" Style="{StaticResource ModernButtonStyle}" 
+                                    Background="#FF4A5568" Command="{Binding ShowRefreshSettingsCommand}" 
+                                    Width="32" Height="32" Margin="0,0,8,0" FontSize="14"/>
+                            <Button Content="📊 Export Report" Command="{Binding ExportResultsCommand}" Style="{StaticResource ModernButtonStyle}"/>
                         </StackPanel>
                     </StackPanel>
                     
@@ -1086,10 +1231,10 @@
                             <TextBlock Text="Run discovery modules to gather comprehensive organizational data" Foreground="#FFA0AEC0" FontSize="16"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
-                            <Button Content="Refresh Data" Style="{StaticResource ModernButtonStyle}" 
+                            <Button Content="🔄 Refresh Data" Style="{StaticResource ModernButtonStyle}" 
                                     Background="{StaticResource AccentGradient}" Command="{Binding RefreshDataCommand}" 
                                     Margin="0,0,12,0"/>
-                            <Button x:Name="RunAllDiscoveryButton" Content="Run All Modules" Style="{StaticResource ModernButtonStyle}"/>
+                            <Button x:Name="RunAllDiscoveryButton" Content="▶️ Run All Modules" Style="{StaticResource ModernButtonStyle}"/>
                         </StackPanel>
                     </StackPanel>
                     
@@ -1166,8 +1311,8 @@
                                 <TextBlock x:Name="SecurityStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Content="Show All" Style="{StaticResource ModernButtonStyle}" Background="Transparent" BorderBrush="#FF4A5568" BorderThickness="1" Command="{Binding ShowAllDiscoveryDataCommand}"/>
-                        <Button Content="Select Manager" Style="{StaticResource ModernButtonStyle}" Background="#FF9F7AEA" Margin="12,0,0,8" Command="{Binding SelectManagerCommand}" ToolTip="Demo: Manager Selection Dialog"/>
+                        <Button Content="👁️ Show All" Style="{StaticResource ModernButtonStyle}" Background="Transparent" BorderBrush="#FF4A5568" BorderThickness="1" Command="{Binding ShowAllDiscoveryDataCommand}"/>
+                        <Button Content="👤 Select Manager" Style="{StaticResource ModernButtonStyle}" Background="#FF9F7AEA" Margin="12,0,0,8" Command="{Binding SelectManagerCommand}" ToolTip="Demo: Manager Selection Dialog"/>
                     </WrapPanel>
                     
                     <ItemsControl Grid.Row="2" x:Name="DiscoveryModules" ItemsSource="{Binding DiscoveryModules}">
@@ -1243,6 +1388,22 @@
                             <TextBlock Text="Comprehensive view of all discovered user accounts and profiles" Foreground="#FFA0AEC0" FontSize="16"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
+                            <!-- Refresh Status Indicator -->
+                            <Border Background="#FF2D3748" CornerRadius="4" Padding="8,6" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🕒" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding RefreshService.ViewStatuses[Users].LastRefreshText}" 
+                                               Foreground="#FFA0AEC0" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <!-- Progress Bar -->
+                            <Border Background="#FF2D3748" CornerRadius="4" Padding="4" Margin="0,0,8,0"
+                                    Visibility="{Binding RefreshService.ViewStatuses[Users].IsRefreshing, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <ProgressBar Width="60" Height="16" 
+                                           Value="{Binding RefreshService.ViewStatuses[Users].RefreshProgress}"
+                                           Background="#FF1A202C" Foreground="#FF48BB78" BorderThickness="0"/>
+                            </Border>
+                            <!-- User Count -->
                             <Border Background="#FF2D3748" CornerRadius="4" Padding="8,6" Margin="0,0,12,0">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="📊" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
@@ -1250,24 +1411,42 @@
                                                FontSize="12" FontWeight="Medium" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
+                            <!-- Refresh Buttons -->
+                            <Button Content="🔄" ToolTip="Refresh Users" Style="{StaticResource ModernButtonStyle}" 
+                                    Background="{StaticResource AccentGradient}" Command="{Binding RefreshUsersCommand}" 
+                                    Width="32" Height="32" Margin="0,0,8,0" FontSize="14"/>
+                            <Button Content="⚙️" ToolTip="Refresh Settings" Style="{StaticResource ModernButtonStyle}" 
+                                    Background="#FF4A5568" Command="{Binding ShowRefreshSettingsCommand}" 
+                                    Width="32" Height="32" Margin="0,0,12,0" FontSize="14"/>
                             <TextBox x:Name="UserSearchBox" Width="250" Height="32" 
                                      Background="#FF2D3748" Foreground="#FFE2E8F0" 
                                      BorderBrush="#FF4A5568" Padding="12,6"
-                                     FontSize="13" Text="Search users..." TextChanged="UserSearchBox_TextChanged"/>
-                            <Button Content="Export" Style="{StaticResource ModernButtonStyle}" Margin="12,0,0,0"/>
+                                     FontSize="13" Text="{Binding UserSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     behaviors:WatermarkBehavior.Watermark="Search users..."
+                                     behaviors:VisualFeedbackBehavior.EnableHoverEffect="True"
+                                     behaviors:VisualFeedbackBehavior.HoverScale="1.02"
+                                     behaviors:KeyboardNavigationBehavior.EnableEnhancedNavigation="True"/>
+                            <Button Content="☑️ Select All" Style="{StaticResource ModernButtonStyle}" Margin="12,0,0,0" Command="{Binding SelectAllUsersCommand}"/>
+                            <Button Content="☐ Deselect All" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding DeselectAllUsersCommand}"/>
+                            <Button Content="📤 Export Selected" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ExportSelectedUsersCommand}"/>
+                            <Button Content="📋 Copy Selected" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding CopySelectedUsersCommand}"/>
+                            <Button Content="📋 Copy All" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding CopyAllUsersCommand}"/>
+                            <Button Content="👁️ Columns" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="Users"/>
+                            <Button Content="🔍 Advanced Search" Style="{StaticResource ModernButtonStyle}" Background="#FF4299E1" Margin="8,0,0,0" Command="{Binding ShowUsersAdvancedSearchCommand}"/>
+                            <Button Content="🗑️ Delete Selected" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource DangerGradient}" Margin="8,0,0,0" Command="{Binding DeleteSelectedUsersCommand}"/>
                         </StackPanel>
                     </StackPanel>
                     
                     <UniformGrid Grid.Row="1" Columns="5" Margin="0,0,0,24">
                         <Border Style="{StaticResource MetricCardStyle}">
                             <StackPanel>
-                                <TextBlock x:Name="UsersViewTotalTextBlock" Text="0" Foreground="#FF4299E1" FontSize="24" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding Users.Count}" Foreground="#FF4299E1" FontSize="24" FontWeight="Bold"/>
                                 <TextBlock Text="Total Users" Foreground="#FFA0AEC0" FontSize="11"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource MetricCardStyle}">
                             <StackPanel>
-                                <TextBlock x:Name="ActiveUsersTextBlock" Text="0" Foreground="#FF48BB78" FontSize="24" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding Users.Count}" Foreground="#FF48BB78" FontSize="24" FontWeight="Bold"/>
                                 <TextBlock Text="Active Users" Foreground="#FFA0AEC0" FontSize="11"/>
                             </StackPanel>
                         </Border>
@@ -1292,44 +1471,201 @@
                     </UniformGrid>
                     
                     <Border Grid.Row="2" Style="{StaticResource ModernCardStyle}">
-                        <DataGrid x:Name="UsersDataGrid" Style="{StaticResource ModernDataGridStyle}">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Display Name" Binding="{Binding Name}" Width="180">
-                                    <DataGridTextColumn.HeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader">
-                                            <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>
-                                            <Setter Property="Foreground" Value="White"/>
-                                            <Setter Property="FontWeight" Value="SemiBold"/>
-                                            <Setter Property="Padding" Value="12,8"/>
-                                        </Style>
-                                    </DataGridTextColumn.HeaderStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="200"/>
-                                <DataGridTextColumn Header="Department" Binding="{Binding Department}" Width="150"/>
-                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
-                                <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="100"/>
-                                <DataGridTextColumn Header="Last Logon" Binding="{Binding LastSignInDateTime}" Width="140"/>
-                                <DataGridTextColumn Header="Groups" Binding="{Binding GroupMembershipCount}" Width="60"/>
-                                <DataGridTextColumn Header="Manager" Binding="{Binding Manager}" Width="150"/>
-                                <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="150"/>
-                                <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="120"/>
-                                <DataGridTemplateColumn Header="Actions" Width="80">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button Content="View" 
-                                                    Background="#FF4299E1" 
-                                                    Foreground="White" 
-                                                    BorderThickness="0" 
-                                                    Padding="8,4" 
-                                                    FontSize="10"
-                                                    Command="{Binding ViewUserCommand}"
-                                                    Tag="{Binding}"
-                                                    Cursor="Hand"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Loading Indicator for Users -->
+                            <Border Grid.Row="0" Background="#FF1A202C" Padding="10" 
+                                    Visibility="{Binding IsUsersLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="🔄" FontSize="16" Margin="0,0,10,0" RenderTransformOrigin="0.5,0.5">
+                                        <TextBlock.RenderTransform>
+                                            <RotateTransform x:Name="LoadingRotation"/>
+                                        </TextBlock.RenderTransform>
+                                        <TextBlock.Triggers>
+                                            <EventTrigger RoutedEvent="Loaded">
+                                                <BeginStoryboard>
+                                                    <Storyboard RepeatBehavior="Forever">
+                                                        <DoubleAnimation Storyboard.TargetName="LoadingRotation" 
+                                                                       Storyboard.TargetProperty="Angle" 
+                                                                       From="0" To="360" Duration="0:0:2"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </TextBlock.Triggers>
+                                    </TextBlock>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding UsersLoadingMessage}" Foreground="#FF67D391" FontWeight="Medium"/>
+                                        <ProgressBar Value="{Binding UsersLoadingProgress}" Maximum="100" Width="200" Height="4" 
+                                                   Background="#FF374151" Foreground="#FF10B981" Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <DataGrid x:Name="UsersDataGrid" Grid.Row="1" ItemsSource="{Binding Users}" Style="{StaticResource ModernDataGridStyle}" 
+                                      CanUserSortColumns="True" AutoGenerateColumns="False" SelectionMode="Extended"
+                                      behaviors:ColumnVisibilityBehavior.GridName="Users"
+                                      behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                      behaviors:VirtualizationBehavior.VirtualizationMode="Recycling"
+                                      behaviors:VirtualizationBehavior.ScrollUnit="Item"
+                                      behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                      behaviors:VirtualizationBehavior.EnableRowVirtualization="True"
+                                      behaviors:VisualFeedbackBehavior.EnableHoverEffect="True"
+                                      behaviors:VisualFeedbackBehavior.EnableLoadingState="True"
+                                      behaviors:VisualFeedbackBehavior.IsLoading="{Binding IsUsersLoading}"
+                                      behaviors:KeyboardNavigationBehavior.EnableVirtualizedNavigation="True"
+                                      behaviors:ResponsiveLayoutBehavior.AdaptiveColumns="True">
+                                <DataGrid.Columns>
+                                    <DataGridCheckBoxColumn Header="✓" Width="40" Binding="{Binding IsSelected, Mode=TwoWay}"/>
+                                    <DataGridTextColumn Header="Display Name" Binding="{Binding Name}" Width="180" CanUserSort="True" SortMemberPath="Name">
+                                        <DataGridTextColumn.HeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader">
+                                                <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="12,8"/>
+                                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                            </Style>
+                                        </DataGridTextColumn.HeaderStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="200" CanUserSort="True" SortMemberPath="Email"/>
+                                    <DataGridTextColumn Header="Department" Binding="{Binding Department}" Width="150" CanUserSort="True" SortMemberPath="Department"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" CanUserSort="True" SortMemberPath="Status"/>
+                                    <DataGridTextColumn Header="UPN" Binding="{Binding UserPrincipalName}" Width="200" CanUserSort="True" SortMemberPath="UserPrincipalName"/>
+                                    <DataGridTextColumn Header="Last Sign-In" Binding="{Binding LastSignInDateTime}" Width="140" CanUserSort="True" SortMemberPath="LastSignInDateTime"/>
+                                    <DataGridTextColumn Header="Groups" Binding="{Binding GroupMembershipCount}" Width="60" CanUserSort="True" SortMemberPath="GroupMembershipCount"/>
+                                    <DataGridTextColumn Header="Manager" Binding="{Binding ManagerDisplayName}" Width="150" CanUserSort="True" SortMemberPath="ManagerDisplayName"/>
+                                    <DataGridTextColumn Header="Job Title" Binding="{Binding JobTitle}" Width="150" CanUserSort="True" SortMemberPath="JobTitle"/>
+                                    <DataGridTextColumn Header="City" Binding="{Binding City}" Width="120" CanUserSort="True" SortMemberPath="City"/>
+                                    <DataGridTemplateColumn Header="Actions" Width="80">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="View" 
+                                                        Background="#FF4299E1" 
+                                                        Foreground="White" 
+                                                        BorderThickness="0" 
+                                                        Padding="8,4" 
+                                                        FontSize="10"
+                                                        Command="{Binding ViewUserCommand}"
+                                                        Tag="{Binding}"
+                                                        Cursor="Hand"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            
+                            <!-- Empty State Message -->
+                            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Users.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+                                <TextBlock Text="📄" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Opacity="0.3"/>
+                                <TextBlock Text="No users found" 
+                                           FontSize="18" 
+                                           FontWeight="SemiBold" 
+                                           Foreground="#FFA0AEC0" 
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,8"/>
+                                <TextBlock Text="Run a discovery operation to populate user data"
+                                           FontSize="14"
+                                           Foreground="#FF718096"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            
+                            <!-- Users Pagination Controls -->
+                            <Border Grid.Row="2" Background="#FF2D3748" Margin="0,8,0,0" CornerRadius="8" Padding="12,8">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Users.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- Page Info -->
+                                    <TextBlock Grid.Column="0" 
+                                               Text="{Binding UserPageInfo}" 
+                                               Foreground="#FFE2E8F0" 
+                                               VerticalAlignment="Center"
+                                               FontSize="13"/>
+                                    
+                                    <!-- Page Navigation -->
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <!-- First Page Button -->
+                                        <Button Content="⏮️" 
+                                                Command="{Binding FirstUserPageCommand}"
+                                                IsEnabled="{Binding HasPreviousUserPage}"
+                                                Style="{StaticResource ModernButtonStyle}"
+                                                Width="32" Height="32" 
+                                                Margin="0,0,4,0"
+                                                ToolTip="First Page"
+                                                FontSize="14"/>
+                                        
+                                        <!-- Previous Page Button -->
+                                        <Button Content="◀️" 
+                                                Command="{Binding PreviousUserPageCommand}"
+                                                IsEnabled="{Binding HasPreviousUserPage}"
+                                                Style="{StaticResource ModernButtonStyle}"
+                                                Width="32" Height="32" 
+                                                Margin="0,0,4,0"
+                                                ToolTip="Previous Page"
+                                                FontSize="14"/>
+                                        
+                                        <!-- Current Page Info -->
+                                        <Border Background="#FF4A5568" 
+                                                CornerRadius="4" 
+                                                Padding="8,4" 
+                                                Margin="0,0,4,0">
+                                            <TextBlock>
+                                                <Run Text="Page "/>
+                                                <Run Text="{Binding CurrentUserPage}"/>
+                                                <Run Text=" of "/>
+                                                <Run Text="{Binding TotalUserPages}"/>
+                                            </TextBlock>
+                                        </Border>
+                                        
+                                        <!-- Next Page Button -->
+                                        <Button Content="▶️" 
+                                                Command="{Binding NextUserPageCommand}"
+                                                IsEnabled="{Binding HasNextUserPage}"
+                                                Style="{StaticResource ModernButtonStyle}"
+                                                Width="32" Height="32" 
+                                                Margin="0,0,4,0"
+                                                ToolTip="Next Page"
+                                                FontSize="14"/>
+                                        
+                                        <!-- Last Page Button -->
+                                        <Button Content="⏭️" 
+                                                Command="{Binding LastUserPageCommand}"
+                                                IsEnabled="{Binding HasNextUserPage}"
+                                                Style="{StaticResource ModernButtonStyle}"
+                                                Width="32" Height="32"
+                                                ToolTip="Last Page"
+                                                FontSize="14"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
                     </Border>
                 </Grid>
             </ScrollViewer>
@@ -1359,8 +1695,10 @@
                             <TextBox x:Name="ComputerSearchBox" Width="250" Height="32" 
                                      Background="#FF2D3748" Foreground="#FFE2E8F0" 
                                      BorderBrush="#FF4A5568" Padding="12,6"
-                                     FontSize="13" Text="Search computers..." TextChanged="ComputerSearchBox_TextChanged"/>
-                            <Button Content="Health Check" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="12,0,0,0"/>
+                                     FontSize="13" Text="{Binding InfrastructureSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     behaviors:WatermarkBehavior.Watermark="Search computers..."/>
+                            <Button Content="📤 Export Infrastructure" Style="{StaticResource ModernButtonStyle}" Margin="12,0,0,0" Command="{Binding ExportInfrastructureCommand}"/>
+                            <Button Content="🏥 Health Check" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="12,0,0,0"/>
                         </StackPanel>
                     </StackPanel>
                     
@@ -1449,8 +1787,27 @@
                             <TextBlock Text="Network topology, security devices, and infrastructure components" Foreground="#FFA0AEC0" FontSize="16"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
-                            <Button Content="Network Map" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,12,0"/>
-                            <Button Content="Security Scan" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource DangerGradient}"/>
+                            <!-- Refresh Status Indicator -->
+                            <Border Background="#FF2D3748" CornerRadius="4" Padding="8,6" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🕒" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding RefreshService.ViewStatuses[Infrastructure].LastRefreshText}" 
+                                               Foreground="#FFA0AEC0" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <!-- Progress Bar -->
+                            <Border Background="#FF2D3748" CornerRadius="4" Padding="4" Margin="0,0,8,0"
+                                    Visibility="{Binding RefreshService.ViewStatuses[Infrastructure].IsRefreshing, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <ProgressBar Width="60" Height="16" 
+                                           Value="{Binding RefreshService.ViewStatuses[Infrastructure].RefreshProgress}"
+                                           Background="#FF1A202C" Foreground="#FF48BB78" BorderThickness="0"/>
+                            </Border>
+                            <!-- Refresh Button -->
+                            <Button Content="🔄" ToolTip="Refresh Infrastructure" Style="{StaticResource ModernButtonStyle}" 
+                                    Background="{StaticResource AccentGradient}" Command="{Binding RefreshInfrastructureCommand}" 
+                                    Width="32" Height="32" Margin="0,0,8,0" FontSize="14"/>
+                            <Button Content="🌐 Network Map" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,8,0"/>
+                            <Button Content="🔒 Security Scan" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource DangerGradient}"/>
                         </StackPanel>
                     </StackPanel>
                     
@@ -1486,7 +1843,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="🖥️" FontSize="20" Margin="0,0,8,0"/>
                                     <StackPanel>
-                                        <TextBlock x:Name="InfrastructureServersTextBlock" Text="0" Foreground="#FF48BB78" FontSize="24" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Infrastructure.Count}" Foreground="#FF48BB78" FontSize="24" FontWeight="Bold"/>
                                         <TextBlock Text="Servers" Foreground="#FFA0AEC0" FontSize="11"/>
                                     </StackPanel>
                                 </StackPanel>
@@ -1625,30 +1982,415 @@
                     
                     <!-- Infrastructure Device List -->
                     <Border Grid.Row="3" Style="{StaticResource ModernCardStyle}">
-                        <DataGrid x:Name="InfrastructureDataGrid" Style="{StaticResource ModernDataGridStyle}">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Device Name" Binding="{Binding Name}" Width="200">
-                                    <DataGridTextColumn.HeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader">
-                                            <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>
-                                            <Setter Property="Foreground" Value="White"/>
-                                            <Setter Property="FontWeight" Value="SemiBold"/>
-                                            <Setter Property="Padding" Value="12,8"/>
-                                        </Style>
-                                    </DataGridTextColumn.HeaderStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150"/>
-                                <DataGridTextColumn Header="Model" Binding="{Binding Model}" Width="140"/>
-                                <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="120"/>
-                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
-                                <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="120"/>
-                                <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="120"/>
-                                <DataGridTextColumn Header="Uptime" Binding="{Binding Uptime}" Width="120"/>
-                                <DataGridTextColumn Header="CPU Usage" Binding="{Binding CPUUsage}" Width="100"/>
-                                <DataGridTextColumn Header="Memory Usage" Binding="{Binding MemoryUsage}" Width="120"/>
-                                <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="120"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Infrastructure Toolbar -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <TextBlock Text="Infrastructure Devices" Style="{StaticResource SectionHeaderStyle}"/>
+                                    <TextBlock Text="Network devices, servers, and infrastructure components" Foreground="#FFA0AEC0" FontSize="12"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
+                                    <Border Background="#FF2D3748" CornerRadius="4" Padding="8,6" Margin="0,0,12,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="💻" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="InfrastructureResultCount" Text="0 devices" Foreground="#FF4299E1" 
+                                                       FontSize="12" FontWeight="Medium" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBox x:Name="InfrastructureSearchBox" Width="250" Height="32" 
+                                             Background="#FF2D3748" Foreground="#FFE2E8F0" 
+                                             BorderBrush="#FF4A5568" Padding="12,6"
+                                             FontSize="13" Text="{Binding InfrastructureSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             behaviors:WatermarkBehavior.Watermark="Search infrastructure..."
+                                             behaviors:VisualFeedbackBehavior.EnableHoverEffect="True"
+                                             behaviors:VisualFeedbackBehavior.HoverScale="1.02"
+                                             behaviors:KeyboardNavigationBehavior.EnableEnhancedNavigation="True"/>
+                                    <Button Content="☑️ Select All" Style="{StaticResource ModernButtonStyle}" Margin="12,0,0,0" Command="{Binding SelectAllInfrastructureCommand}"/>
+                                    <Button Content="☐ Deselect All" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding DeselectAllInfrastructureCommand}"/>
+                                    <Button Content="📤 Export Selected" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ExportSelectedInfrastructureCommand}"/>
+                                    <Button Content="📋 Copy Selected" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding CopySelectedInfrastructureCommand}"/>
+                                    <Button Content="📋 Copy All" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding CopyAllInfrastructureCommand}"/>
+                                    <Button Content="👁️ Columns" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="Infrastructure"/>
+                                    <Button Content="🔍 Advanced Search" Style="{StaticResource ModernButtonStyle}" Background="#FF4299E1" Margin="8,0,0,0" Command="{Binding ShowInfrastructureAdvancedSearchCommand}"/>
+                                </StackPanel>
+                            </StackPanel>
+                            
+                            <!-- Loading Indicator for Infrastructure -->
+                            <Border Grid.Row="1" Background="#FF1A202C" Padding="10" 
+                                    Visibility="{Binding IsInfrastructureLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="🔄" FontSize="16" Margin="0,0,10,0" RenderTransformOrigin="0.5,0.5">
+                                        <TextBlock.RenderTransform>
+                                            <RotateTransform x:Name="InfraLoadingRotation"/>
+                                        </TextBlock.RenderTransform>
+                                        <TextBlock.Triggers>
+                                            <EventTrigger RoutedEvent="Loaded">
+                                                <BeginStoryboard>
+                                                    <Storyboard RepeatBehavior="Forever">
+                                                        <DoubleAnimation Storyboard.TargetName="InfraLoadingRotation" 
+                                                                       Storyboard.TargetProperty="Angle" 
+                                                                       From="0" To="360" Duration="0:0:2"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </TextBlock.Triggers>
+                                    </TextBlock>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding InfrastructureLoadingMessage}" Foreground="#FF67D391" FontWeight="Medium"/>
+                                        <ProgressBar Value="{Binding InfrastructureLoadingProgress}" Maximum="100" Width="200" Height="4" 
+                                                   Background="#FF374151" Foreground="#FF10B981" Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            
+                            <DataGrid x:Name="InfrastructureDataGrid" Grid.Row="1" ItemsSource="{Binding Infrastructure}" Style="{StaticResource ModernDataGridStyle}"
+                                      CanUserSortColumns="True" AutoGenerateColumns="False" SelectionMode="Extended"
+                                      behaviors:ColumnVisibilityBehavior.GridName="Infrastructure"
+                                      behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                      behaviors:VirtualizationBehavior.VirtualizationMode="Recycling"
+                                      behaviors:VirtualizationBehavior.ScrollUnit="Item"
+                                      behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                      behaviors:VirtualizationBehavior.EnableRowVirtualization="True"
+                                      behaviors:VisualFeedbackBehavior.EnableHoverEffect="True"
+                                      behaviors:VisualFeedbackBehavior.EnableLoadingState="True"
+                                      behaviors:VisualFeedbackBehavior.IsLoading="{Binding IsInfrastructureLoading}"
+                                      behaviors:KeyboardNavigationBehavior.EnableVirtualizedNavigation="True"
+                                      behaviors:ResponsiveLayoutBehavior.AdaptiveColumns="True">
+                                <DataGrid.Columns>
+                                    <DataGridCheckBoxColumn Header="✓" Width="40" Binding="{Binding IsSelected, Mode=TwoWay}"/>
+                                    <DataGridTextColumn Header="Device Name" Binding="{Binding Name}" Width="200" CanUserSort="True" SortMemberPath="Name">
+                                        <DataGridTextColumn.HeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader">
+                                                <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="12,8"/>
+                                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                            </Style>
+                                        </DataGridTextColumn.HeaderStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150" CanUserSort="True" SortMemberPath="Type"/>
+                                    <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="120" CanUserSort="True" SortMemberPath="IPAddress"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" CanUserSort="True" SortMemberPath="Status"/>
+                                    <DataGridTextColumn Header="OS" Binding="{Binding OperatingSystem}" Width="150" CanUserSort="True" SortMemberPath="OperatingSystem"/>
+                                    <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="120" CanUserSort="True" SortMemberPath="Version"/>
+                                    <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="120" CanUserSort="True" SortMemberPath="Location"/>
+                                    <DataGridTextColumn Header="Manufacturer" Binding="{Binding Manufacturer}" Width="120" CanUserSort="True" SortMemberPath="Manufacturer"/>
+                                    <DataGridTextColumn Header="Model" Binding="{Binding Model}" Width="140" CanUserSort="True" SortMemberPath="Model"/>
+                                    <DataGridTextColumn Header="Last Seen" Binding="{Binding LastSeen}" Width="140" CanUserSort="True" SortMemberPath="LastSeen"/>
+                                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="200" CanUserSort="True" SortMemberPath="Description"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            
+                            <!-- Empty State Message -->
+                            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Infrastructure.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+                                <TextBlock Text="💻" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Opacity="0.3"/>
+                                <TextBlock Text="No infrastructure devices found" 
+                                           FontSize="18" 
+                                           FontWeight="SemiBold" 
+                                           Foreground="#FFA0AEC0" 
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,8"/>
+                                <TextBlock Text="Run a discovery operation to populate infrastructure data"
+                                           FontSize="14"
+                                           Foreground="#FF718096"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            
+                            <!-- Infrastructure Pagination Controls -->
+                            <Border Grid.Row="2" Background="#FF2D3748" Margin="0,8,0,0" CornerRadius="8" Padding="12,8">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Infrastructure.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- Page Info -->
+                                    <TextBlock Grid.Column="0" 
+                                               Text="{Binding InfrastructurePageInfo}" 
+                                               Foreground="#FFE2E8F0" 
+                                               VerticalAlignment="Center"
+                                               FontSize="13"/>
+                                    
+                                    <!-- Page Navigation -->
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <!-- First Page Button -->
+                                        <Button Content="⏮️" 
+                                                Command="{Binding FirstInfrastructurePageCommand}"
+                                                IsEnabled="{Binding HasPreviousInfrastructurePage}"
+                                                Style="{StaticResource ModernButtonStyle}"
+                                                Width="32" Height="32" 
+                                                Margin="0,0,4,0"
+                                                ToolTip="First Page"
+                                                FontSize="14"/>
+                                        
+                                        <!-- Previous Page Button -->
+                                        <Button Content="◀️" 
+                                                Command="{Binding PreviousInfrastructurePageCommand}"
+                                                IsEnabled="{Binding HasPreviousInfrastructurePage}"
+                                                Style="{StaticResource ModernButtonStyle}"
+                                                Width="32" Height="32" 
+                                                Margin="0,0,4,0"
+                                                ToolTip="Previous Page"
+                                                FontSize="14"/>
+                                        
+                                        <!-- Current Page Info -->
+                                        <Border Background="#FF4A5568" 
+                                                CornerRadius="4" 
+                                                Padding="8,4" 
+                                                Margin="0,0,4,0">
+                                            <TextBlock>
+                                                <Run Text="Page "/>
+                                                <Run Text="{Binding CurrentInfrastructurePage}"/>
+                                                <Run Text=" of "/>
+                                                <Run Text="{Binding TotalInfrastructurePages}"/>
+                                            </TextBlock>
+                                        </Border>
+                                        
+                                        <!-- Next Page Button -->
+                                        <Button Content="▶️" 
+                                                Command="{Binding NextInfrastructurePageCommand}"
+                                                IsEnabled="{Binding HasNextInfrastructurePage}"
+                                                Style="{StaticResource ModernButtonStyle}"
+                                                Width="32" Height="32" 
+                                                Margin="0,0,4,0"
+                                                ToolTip="Next Page"
+                                                FontSize="14"/>
+                                        
+                                        <!-- Last Page Button -->
+                                        <Button Content="⏭️" 
+                                                Command="{Binding LastInfrastructurePageCommand}"
+                                                IsEnabled="{Binding HasNextInfrastructurePage}"
+                                                Style="{StaticResource ModernButtonStyle}"
+                                                Width="32" Height="32"
+                                                ToolTip="Last Page"
+                                                FontSize="14"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </ScrollViewer>
+            
+            <!-- Enhanced Groups View -->
+            <ScrollViewer Grid.Row="0" Grid.Column="1" x:Name="GroupsView" Visibility="{Binding IsGroupsVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+                <Grid Margin="32">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Header -->
+                    <Border Grid.Row="0" Style="{StaticResource SectionBorderStyle}" Margin="0,0,0,24">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Groups" Style="{StaticResource HeaderTextStyle}"/>
+                                <TextBlock Text="Manage security groups, distribution lists, and group memberships" Foreground="#FFA0AEC0" FontSize="16"/>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+                                <!-- Refresh Status Indicator -->
+                                <Border Background="#FF2D3748" CornerRadius="4" Padding="8,6" Margin="0,0,8,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="🕒" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding RefreshService.ViewStatuses[Groups].LastRefreshText}" 
+                                                   Foreground="#FFA0AEC0" FontSize="11" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <!-- Progress Bar -->
+                                <Border Background="#FF2D3748" CornerRadius="4" Padding="4" Margin="0,0,8,0"
+                                        Visibility="{Binding RefreshService.ViewStatuses[Groups].IsRefreshing, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <ProgressBar Width="60" Height="16" 
+                                               Value="{Binding RefreshService.ViewStatuses[Groups].RefreshProgress}"
+                                               Background="#FF1A202C" Foreground="#FF48BB78" BorderThickness="0"/>
+                                </Border>
+                                <!-- Refresh Button -->
+                                <Button Content="🔄" ToolTip="Refresh Groups" Style="{StaticResource ModernButtonStyle}" 
+                                        Background="{StaticResource AccentGradient}" Command="{Binding RefreshGroupsCommand}" 
+                                        Width="32" Height="32" Margin="0,0,8,0" FontSize="14"/>
+                                <Button Content="📤 Export Groups" Style="{StaticResource ModernButtonStyle}" 
+                                        Background="{StaticResource AccentGradient}" Command="{Binding ExportGroupsCommand}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Toolbar -->
+                    <Border Grid.Row="1" Style="{StaticResource SectionBorderStyle}" Padding="20" Margin="0,0,0,16">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBox x:Name="GroupSearchBox" Width="300" Height="36" Padding="12,8"
+                                     Style="{StaticResource ModernTextBoxStyle}"
+                                     FontSize="13" Text="{Binding GroupSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     behaviors:WatermarkBehavior.Watermark="Search groups..."/>
+                            <Button Content="☑️ Select All" Style="{StaticResource ModernButtonStyle}" Margin="12,0,0,0" Command="{Binding SelectAllGroupsCommand}"/>
+                            <Button Content="☐ Deselect All" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding DeselectAllGroupsCommand}"/>
+                            <Button Content="📤 Export Selected" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ExportSelectedGroupsCommand}"/>
+                            <Button Content="📋 Copy Selected" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding CopySelectedGroupsCommand}"/>
+                            <Button Content="📋 Copy All" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding CopyAllGroupsCommand}"/>
+                            <Button Content="👁️ Columns" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="Groups"/>
+                            <Button Content="🔍 Advanced Search" Style="{StaticResource ModernButtonStyle}" Background="#FF4299E1" Margin="8,0,0,0" Command="{Binding ShowGroupsAdvancedSearchCommand}"/>
+                            <Button Content="🗑️ Delete Selected" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource DangerGradient}" Margin="8,0,0,0" Command="{Binding DeleteSelectedGroupsCommand}"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Data Grid -->
+                    <Border Grid.Row="2" Style="{StaticResource SectionBorderStyle}" Padding="0" Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Loading Indicator for Groups -->
+                            <Border Grid.Row="0" Background="#FF1A202C" Padding="10" 
+                                    Visibility="{Binding IsGroupsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="🔄" FontSize="16" Margin="0,0,10,0" RenderTransformOrigin="0.5,0.5">
+                                        <TextBlock.RenderTransform>
+                                            <RotateTransform x:Name="GroupsLoadingRotation"/>
+                                        </TextBlock.RenderTransform>
+                                        <TextBlock.Triggers>
+                                            <EventTrigger RoutedEvent="Loaded">
+                                                <BeginStoryboard>
+                                                    <Storyboard RepeatBehavior="Forever">
+                                                        <DoubleAnimation Storyboard.TargetName="GroupsLoadingRotation" 
+                                                                       Storyboard.TargetProperty="Angle" 
+                                                                       From="0" To="360" Duration="0:0:2"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </TextBlock.Triggers>
+                                    </TextBlock>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding GroupsLoadingMessage}" Foreground="#FF67D391" FontWeight="Medium"/>
+                                        <ProgressBar Value="{Binding GroupsLoadingProgress}" Maximum="100" Width="200" Height="4" 
+                                                   Background="#FF374151" Foreground="#FF10B981" Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            
+                            <DataGrid x:Name="GroupsDataGrid" Grid.Row="1" ItemsSource="{Binding Groups}" Style="{StaticResource ModernDataGridStyle}" 
+                                      CanUserSortColumns="True" AutoGenerateColumns="False" SelectionMode="Extended"
+                                      behaviors:ColumnVisibilityBehavior.GridName="Groups"
+                                      behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                      behaviors:VirtualizationBehavior.VirtualizationMode="Recycling"
+                                      behaviors:VirtualizationBehavior.ScrollUnit="Item"
+                                      behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                      behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
+                                <DataGrid.Columns>
+                                    <DataGridCheckBoxColumn Header="✓" Width="40" Binding="{Binding IsSelected, Mode=TwoWay}"/>
+                                    <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="200" CanUserSort="True" SortMemberPath="DisplayName"/>
+                                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="250" CanUserSort="True" SortMemberPath="Description"/>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="120" CanUserSort="True" SortMemberPath="Type"/>
+                                    <DataGridTextColumn Header="Email" Binding="{Binding Mail}" Width="200" CanUserSort="True" SortMemberPath="Mail"/>
+                                    <DataGridTextColumn Header="Members" Binding="{Binding MemberCount}" Width="80" CanUserSort="True" SortMemberPath="MemberCount"/>
+                                    <DataGridTextColumn Header="Owners" Binding="{Binding OwnerCount}" Width="80" CanUserSort="True" SortMemberPath="OwnerCount"/>
+                                    <DataGridTextColumn Header="Created" Binding="{Binding CreatedDateTime}" Width="140" CanUserSort="True" SortMemberPath="CreatedDateTime"/>
+                                    <DataGridTextColumn Header="Visibility" Binding="{Binding Visibility}" Width="100" CanUserSort="True" SortMemberPath="Visibility"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Pagination -->
+                    <Border Grid.Row="3" Style="{StaticResource SectionBorderStyle}" Padding="20">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Items Info -->
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="📊" FontSize="16" Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding GroupPageInfo}" 
+                                           FontSize="14" Foreground="#FFA0AEC0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            
+                            <!-- Navigation Controls -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                                <!-- First Page Button -->
+                                <Button Content="⏮️" 
+                                        Command="{Binding FirstGroupPageCommand}"
+                                        IsEnabled="{Binding HasPreviousGroupPage}"
+                                        Style="{StaticResource ModernButtonStyle}"
+                                        Width="32" Height="32"
+                                        ToolTip="First Page"
+                                        FontSize="14"/>
+                                
+                                <!-- Previous Page Button -->
+                                <Button Content="◀️" 
+                                        Command="{Binding PreviousGroupPageCommand}"
+                                        IsEnabled="{Binding HasPreviousGroupPage}"
+                                        Style="{StaticResource ModernButtonStyle}"
+                                        Width="32" Height="32"
+                                        ToolTip="Previous Page"
+                                        FontSize="14" Margin="4,0"/>
+                                
+                                <!-- Page Info -->
+                                <Border Background="#FF2D3748" CornerRadius="6" Padding="12,6" Margin="8,0">
+                                    <TextBlock FontSize="14" Foreground="#FFA0AEC0" VerticalAlignment="Center">
+                                        <Run Text="Page"/>
+                                        <Run Text="{Binding CurrentGroupPage}"/>
+                                        <Run Text="of"/>
+                                        <Run Text="{Binding TotalGroupPages}"/>
+                                    </TextBlock>
+                                </Border>
+                                
+                                <!-- Next Page Button -->
+                                <Button Content="▶️" 
+                                        Command="{Binding NextGroupPageCommand}"
+                                        IsEnabled="{Binding HasNextGroupPage}"
+                                        Style="{StaticResource ModernButtonStyle}"
+                                        Width="32" Height="32"
+                                        ToolTip="Next Page"
+                                        FontSize="14" Margin="4,0"/>
+                                
+                                <!-- Last Page Button -->
+                                <Button Content="⏭️" 
+                                        Command="{Binding LastGroupPageCommand}"
+                                        IsEnabled="{Binding HasNextGroupPage}"
+                                        Style="{StaticResource ModernButtonStyle}"
+                                        Width="32" Height="32"
+                                        ToolTip="Last Page"
+                                        FontSize="14"/>
+                            </StackPanel>
+                        </Grid>
                     </Border>
                 </Grid>
             </ScrollViewer>
@@ -1668,11 +2410,11 @@
                             <TextBlock Text="Strategic migration planning with dependency mapping and timeline visualization" Foreground="#FFA0AEC0" FontSize="16"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
-                            <Button Content="Refresh Data" Style="{StaticResource ModernButtonStyle}" 
+                            <Button Content="🔄 Refresh Data" Style="{StaticResource ModernButtonStyle}" 
                                     Background="{StaticResource AccentGradient}" Command="{Binding RefreshDataCommand}" 
                                     Margin="0,0,12,0"/>
-                            <Button Content="Generate Waves" Command="{Binding GenerateWavesCommand}" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,12,0"/>
-                            <Button Content="Timeline View" Command="{Binding TimelineViewCommand}" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource SuccessGradient}"/>
+                            <Button Content="🌊 Generate Waves" Command="{Binding GenerateWavesCommand}" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,12,0"/>
+                            <Button Content="📅 Timeline View" Command="{Binding TimelineViewCommand}" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource SuccessGradient}"/>
                         </StackPanel>
                     </StackPanel>
                     
@@ -2101,6 +2843,174 @@
                                             VerticalAlignment="Bottom" Margin="16,0,0,0"
                                             Command="{Binding GenerateReportCommand}" CommandParameter="Custom Report"/>
                                 </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+            
+            <!-- Analytics View -->
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="AnalyticsView" Visibility="{Binding IsAnalyticsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,24">
+                    <TextBlock Text="Analytics Dashboard" Style="{StaticResource HeaderTextStyle}" Margin="0,0,24,0"/>
+                    
+                    <!-- Chart Type Selector -->
+                    <ComboBox Width="200" Height="32" 
+                              Background="#FF2D3748" Foreground="#FFE2E8F0" 
+                              BorderBrush="#FF4A5568" Padding="12,6"
+                              FontSize="13" 
+                              ItemsSource="{Binding DataVisualization.ChartTypes}"
+                              SelectedValue="{Binding DataVisualization.SelectedChartType}"
+                              SelectedValuePath="Key"
+                              DisplayMemberPath="DisplayName"
+                              Margin="0,0,12,0"/>
+                    
+                    <!-- Time Period Selector -->
+                    <ComboBox Width="150" Height="32" 
+                              Background="#FF2D3748" Foreground="#FFE2E8F0" 
+                              BorderBrush="#FF4A5568" Padding="12,6"
+                              FontSize="13" 
+                              ItemsSource="{Binding DataVisualization.TimePeriods}"
+                              SelectedItem="{Binding DataVisualization.SelectedTimePeriod}"
+                              Margin="0,0,12,0"/>
+                    
+                    <!-- Refresh Button -->
+                    <Button Content="🔄 Refresh" Style="{StaticResource ModernButtonStyle}" 
+                            Background="{StaticResource AccentGradient}" 
+                            Command="{Binding DataVisualization.RefreshDataCommand}" 
+                            Width="100" Height="32" FontSize="13"/>
+                </StackPanel>
+                
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Key Statistics -->
+                        <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
+                            <StackPanel>
+                                <TextBlock Text="Key Statistics" Style="{StaticResource SectionHeaderStyle}"/>
+                                
+                                <UniformGrid Columns="4" Margin="0,16,0,0">
+                                    <Border Style="{StaticResource MetricCardStyle}" Margin="0,0,8,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DataVisualization.TotalItems}" Foreground="#FF4299E1" FontSize="24" FontWeight="Bold"/>
+                                            <TextBlock Text="Total Items" Foreground="#FFA0AEC0" FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+                                    
+                                    <Border Style="{StaticResource MetricCardStyle}" Margin="4,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DataVisualization.TotalModules}" Foreground="#FF48BB78" FontSize="24" FontWeight="Bold"/>
+                                            <TextBlock Text="Total Modules" Foreground="#FFA0AEC0" FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+                                    
+                                    <Border Style="{StaticResource MetricCardStyle}" Margin="4,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DataVisualization.AverageItemsPerModule, StringFormat=N0}" Foreground="#FFED8936" FontSize="24" FontWeight="Bold"/>
+                                            <TextBlock Text="Avg Items/Module" Foreground="#FFA0AEC0" FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+                                    
+                                    <Border Style="{StaticResource MetricCardStyle}" Margin="8,0,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DataVisualization.LastDiscoveryTime, StringFormat=MM/dd HH:mm}" Foreground="#FF9F7AEA" FontSize="16" FontWeight="Bold"/>
+                                            <TextBlock Text="Last Discovery" Foreground="#FFA0AEC0" FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Main Chart Area -->
+                        <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
+                            <StackPanel>
+                                <TextBlock Text="Data Visualization" Style="{StaticResource SectionHeaderStyle}"/>
+                                
+                                <Grid Height="400">
+                                    <!-- Pie Chart -->
+                                    <controls:PieChart x:Name="MainPieChart"
+                                                      Data="{Binding DataVisualization.ChartData}"
+                                                      ShowLabels="True"
+                                                      ShowLegend="True"
+                                                      Background="#FF1A202C"/>
+                                    
+                                    <!-- Bar Chart -->
+                                    <controls:BarChart x:Name="MainBarChart"
+                                                      Data="{Binding DataVisualization.ChartData}"
+                                                      ShowValues="True"
+                                                      ShowGrid="True"
+                                                      Background="#FF1A202C"
+                                                      Visibility="Collapsed"/>
+                                    
+                                    <!-- Line Chart -->
+                                    <controls:LineChart x:Name="MainLineChart"
+                                                       TimeSeriesData="{Binding DataVisualization.TimeSeriesData}"
+                                                       ShowPoints="True"
+                                                       ShowGrid="True"
+                                                       Background="#FF1A202C"
+                                                       Visibility="Collapsed"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Chart Export and Options -->
+                        <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
+                            <StackPanel>
+                                <TextBlock Text="Chart Options" Style="{StaticResource SectionHeaderStyle}"/>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                        <CheckBox Content="Show Percentages" IsChecked="{Binding DataVisualization.ShowPercentages}"
+                                                  Foreground="#FFE2E8F0" Margin="0,0,20,0"/>
+                                        <CheckBox Content="Auto Refresh" IsChecked="True"
+                                                  Foreground="#FFE2E8F0" Margin="0,0,20,0"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Content="📤 Export Chart" Style="{StaticResource ModernButtonStyle}" 
+                                                Background="#FF4299E1" Command="{Binding DataVisualization.ExportChartCommand}" 
+                                                Margin="0,0,12,0"/>
+                                        <Button Content="🔍 Drill Down" Style="{StaticResource ModernButtonStyle}" 
+                                                Background="#FF48BB78" Command="{Binding DataVisualization.DrillDownCommand}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Additional Statistics -->
+                        <Border Style="{StaticResource ModernCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Detailed Statistics" Style="{StaticResource SectionHeaderStyle}"/>
+                                
+                                <ItemsControl ItemsSource="{Binding DataVisualization.Statistics}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="3"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource MetricCardStyle}" Margin="4">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Icon}" FontSize="20" Margin="0,0,12,0"/>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Value}" Foreground="#FF4299E1" FontSize="18" FontWeight="Bold"/>
+                                                        <TextBlock Text="{Binding Name}" Foreground="#FFA0AEC0" FontSize="11"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </Border>
                     </StackPanel>

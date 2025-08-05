@@ -1,0 +1,242 @@
+<Window x:Class="MandADiscoverySuite.AdvancedSearchDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Advanced Search" Height="600" Width="800"
+        WindowStartupLocation="CenterOwner"
+        Background="#FF1A202C"
+        ResizeMode="CanResize">
+    
+    <Window.Resources>
+        <Style x:Key="ModernTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+        </Style>
+        
+        <Style x:Key="HeaderTextStyle" TargetType="TextBlock" BasedOn="{StaticResource ModernTextStyle}">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+        
+        <Style x:Key="ModernButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF4A5568"/>
+            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FF718096"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="#FF2D3748"/>
+            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        
+        <Style x:Key="ModernComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="#FF2D3748"/>
+            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        
+        <Style x:Key="ModernListBoxStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="#FF2D3748"/>
+            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="250"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Main Search Builder -->
+        <Border Grid.Column="0" Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,8,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Header -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
+                    <TextBlock Text="🔍 Search Builder" Style="{StaticResource HeaderTextStyle}"/>
+                    <TextBlock Text="{Binding ViewName}" Style="{StaticResource ModernTextStyle}" FontSize="16" 
+                               Foreground="#FF4299E1" Margin="16,2,0,0"/>
+                </StackPanel>
+                
+                <!-- Filter Name and Logic -->
+                <Grid Grid.Row="1" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="120"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBox x:Name="FilterNameTextBox" Grid.Column="0" 
+                             Style="{StaticResource ModernTextBoxStyle}" 
+                             Text="{Binding CurrentFilter.Name}">
+                        <TextBox.Tag>Filter name...</TextBox.Tag>
+                    </TextBox>
+                    
+                    <TextBlock Grid.Column="1" Text="Logic:" Style="{StaticResource ModernTextStyle}" 
+                               VerticalAlignment="Center" Margin="12,0,8,0"/>
+                    
+                    <ComboBox x:Name="LogicComboBox" Grid.Column="2" 
+                              Style="{StaticResource ModernComboBoxStyle}"
+                              SelectedIndex="{Binding CurrentFilter.LogicalOperator}">
+                        <ComboBoxItem Content="AND"/>
+                        <ComboBoxItem Content="OR"/>
+                    </ComboBox>
+                </Grid>
+                
+                <!-- Criteria List -->
+                <Border Grid.Row="2" Background="#FF1A202C" CornerRadius="4" Padding="8">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Text="Search Criteria" Style="{StaticResource ModernTextStyle}" 
+                                   FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="CriteriaList" ItemsSource="{Binding CurrentFilter.Criteria}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#FF2D3748" CornerRadius="4" Padding="12" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="30"/>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="150"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="80"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" 
+                                                          VerticalAlignment="Center"/>
+                                                
+                                                <ComboBox Grid.Column="1" Style="{StaticResource ModernComboBoxStyle}"
+                                                          ItemsSource="{Binding DataContext.AvailableFields, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          SelectedItem="{Binding Field}" Margin="4,0"/>
+                                                
+                                                <ComboBox Grid.Column="2" Style="{StaticResource ModernComboBoxStyle}"
+                                                          ItemsSource="{Binding DataContext.AvailableOperators, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          SelectedItem="{Binding Operator}" Margin="4,0"/>
+                                                
+                                                <TextBox Grid.Column="3" Style="{StaticResource ModernTextBoxStyle}"
+                                                         Text="{Binding Value}" Margin="4,0"/>
+                                                
+                                                <Button Grid.Column="4" Content="❌" Style="{StaticResource ModernButtonStyle}"
+                                                        Background="#FFE53E3E" Width="24" Height="24" FontSize="10"
+                                                        Click="RemoveCriteria_Click" Tag="{Binding}" Margin="4,0"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+                
+                <!-- Add Criteria Button -->
+                <Button Grid.Row="3" Content="➕ Add Criteria" Style="{StaticResource ModernButtonStyle}"
+                        Background="#FF48BB78" HorizontalAlignment="Left" Margin="0,8,0,0"
+                        Click="AddCriteria_Click"/>
+                
+                <!-- Action Buttons -->
+                <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                    <Button Content="Test Filter" Style="{StaticResource ModernButtonStyle}" 
+                            Background="#FF4299E1" Margin="0,0,8,0" Click="TestFilter_Click"/>
+                    <Button Content="Save Filter" Style="{StaticResource ModernButtonStyle}" 
+                            Background="#FF48BB78" Margin="0,0,8,0" Click="SaveFilter_Click"/>
+                    <Button Content="Apply" Style="{StaticResource ModernButtonStyle}" 
+                            Background="#FF48BB78" Margin="0,0,8,0" Click="ApplyFilter_Click"/>
+                    <Button Content="Cancel" Style="{StaticResource ModernButtonStyle}" 
+                            Click="Cancel_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Saved Filters Panel -->
+        <Border Grid.Column="1" Background="#FF2D3748" CornerRadius="8" Padding="16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Header -->
+                <TextBlock Grid.Row="0" Text="💾 Saved Filters" Style="{StaticResource ModernTextStyle}" 
+                           FontWeight="SemiBold" FontSize="16" Margin="0,0,0,12"/>
+                
+                <!-- Filters List -->
+                <ListBox Grid.Row="1" x:Name="SavedFiltersList" Style="{StaticResource ModernListBoxStyle}"
+                         ItemsSource="{Binding SavedFilters}" SelectedItem="{Binding SelectedSavedFilter}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#FF1A202C" CornerRadius="4" Padding="8" Margin="0,0,0,4">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Name}" Style="{StaticResource ModernTextStyle}" 
+                                                   FontWeight="SemiBold" FontSize="12"/>
+                                        <TextBlock Text="⭐" FontSize="12" Margin="4,0,0,0"
+                                                   Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Summary}" Style="{StaticResource ModernTextStyle}" 
+                                               FontSize="10" Foreground="#FFA0AEC0"/>
+                                    <TextBlock Text="{Binding LastUsed, StringFormat='Last used: {0:MM/dd HH:mm}'}" 
+                                               Style="{StaticResource ModernTextStyle}" FontSize="9" Foreground="#FF718096"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                
+                <!-- Filter Actions -->
+                <StackPanel Grid.Row="2" Margin="0,12,0,0">
+                    <Button Content="Load Filter" Style="{StaticResource ModernButtonStyle}" 
+                            Background="#FF4299E1" Margin="0,0,0,4" Click="LoadFilter_Click"/>
+                    <Button Content="Delete Filter" Style="{StaticResource ModernButtonStyle}" 
+                            Background="#FFE53E3E" Margin="0,0,0,4" Click="DeleteFilter_Click"/>
+                    <Button Content="Toggle Favorite" Style="{StaticResource ModernButtonStyle}" 
+                            Background="#FFED8936" Click="ToggleFavorite_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

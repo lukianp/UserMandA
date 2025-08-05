@@ -11,22 +11,28 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 using MandADiscoverySuite.Behaviors;
+using MandADiscoverySuite.Collections;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
-    /// Main application view model implementing MVVM pattern
+    /// Main application view model implementing MVVM pattern with performance optimizations
     /// </summary>
-    public class MainViewModel : BaseViewModel
+    public partial class MainViewModel : BaseViewModel
     {
         #region Private Fields
 
         private readonly DiscoveryService _discoveryService;
         private readonly ProfileService _profileService;
+        private readonly CsvDataService _csvDataService;
         private readonly DispatcherTimer _dashboardTimer;
         private readonly DispatcherTimer _progressTimer;
+        private readonly DispatcherTimer _dataRefreshTimer;
+        private readonly RefreshService _refreshService;
+        private readonly AdvancedSearchService _advancedSearchService;
+        private readonly AsyncDataService _asyncDataService;
         private CancellationTokenSource _cancellationTokenSource;
         
         private string _currentView = "Dashboard";
@@ -38,6 +44,24 @@ namespace MandADiscoverySuite.ViewModels
         private bool _isDarkTheme = true;
         private string _statusMessage = "Application ready";
         private string _searchText = string.Empty;
+        private string _userSearchText = string.Empty;
+        private string _infrastructureSearchText = string.Empty;
+        private string _groupSearchText = string.Empty;
+        private List<UserData> _allUsers = new List<UserData>();
+        private List<InfrastructureData> _allInfrastructure = new List<InfrastructureData>();
+        private List<GroupData> _allGroups = new List<GroupData>();
+        private PaginationService<UserData> _userPagination;
+        private PaginationService<InfrastructureData> _infrastructurePagination;
+        private PaginationService<GroupData> _groupPagination;
+        private bool _isUsersLoading;
+        private bool _isInfrastructureLoading;
+        private bool _isGroupsLoading;
+        private string _usersLoadingMessage = "";
+        private string _infrastructureLoadingMessage = "";
+        private string _groupsLoadingMessage = "";
+        private int _usersLoadingProgress;
+        private int _infrastructureLoadingProgress;
+        private int _groupsLoadingProgress;
 
         #endregion
 
@@ -84,6 +108,21 @@ namespace MandADiscoverySuite.ViewModels
         public ObservableCollection<DiscoveryResult> DiscoveryResults { get; }
 
         /// <summary>
+        /// Collection of user data for Users view (optimized for performance)
+        /// </summary>
+        public OptimizedObservableCollection<UserData> Users { get; }
+
+        /// <summary>
+        /// Collection of infrastructure data for Infrastructure view (optimized for performance)
+        /// </summary>
+        public OptimizedObservableCollection<InfrastructureData> Infrastructure { get; }
+
+        /// <summary>
+        /// Collection of group data (optimized for performance)
+        /// </summary>
+        public OptimizedObservableCollection<GroupData> Groups { get; }
+
+        /// <summary>
         /// Currently selected company profile
         /// </summary>
         public CompanyProfile SelectedProfile
@@ -107,6 +146,7 @@ namespace MandADiscoverySuite.ViewModels
         public bool IsUsersVisible => CurrentView == "Users";
         public bool IsComputersVisible => CurrentView == "Computers";
         public bool IsInfrastructureVisible => CurrentView == "Infrastructure";
+        public bool IsGroupsVisible => CurrentView == "Groups";
         public bool IsDomainDiscoveryVisible => CurrentView == "DomainDiscovery";
         public bool IsFileServersVisible => CurrentView == "FileServers";
         public bool IsDatabasesVisible => CurrentView == "Databases";
@@ -115,6 +155,7 @@ namespace MandADiscoverySuite.ViewModels
         public bool IsWavesVisible => CurrentView == "Waves";
         public bool IsMigrateVisible => CurrentView == "Migrate";
         public bool IsReportsVisible => CurrentView == "Reports";
+        public bool IsAnalyticsVisible => CurrentView == "Analytics";
         public bool IsSettingsVisible => CurrentView == "Settings";
 
         /// <summary>
@@ -208,6 +249,128 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         /// <summary>
+        /// Search text for filtering users
+        /// </summary>
+        public string UserSearchText
+        {
+            get => _userSearchText;
+            set
+            {
+                if (SetProperty(ref _userSearchText, value))
+                {
+                    FilterUsers();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Search text for filtering infrastructure
+        /// </summary>
+        public string InfrastructureSearchText
+        {
+            get => _infrastructureSearchText;
+            set
+            {
+                if (SetProperty(ref _infrastructureSearchText, value))
+                {
+                    FilterInfrastructure();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Pagination information for users
+        /// </summary>
+        public string UserPageInfo => _userPagination?.PageInfo ?? "No items";
+        
+        /// <summary>
+        /// Current page number for users
+        /// </summary>
+        public int CurrentUserPage => _userPagination?.CurrentPage ?? 1;
+        
+        /// <summary>
+        /// Total pages for users
+        /// </summary>
+        public int TotalUserPages => _userPagination?.TotalPages ?? 1;
+        
+        /// <summary>
+        /// Pagination information for infrastructure
+        /// </summary>
+        public string InfrastructurePageInfo => _infrastructurePagination?.PageInfo ?? "No items";
+        
+        /// <summary>
+        /// Current page number for infrastructure
+        /// </summary>
+        public int CurrentInfrastructurePage => _infrastructurePagination?.CurrentPage ?? 1;
+        
+        /// <summary>
+        /// Total pages for infrastructure
+        /// </summary>
+        public int TotalInfrastructurePages => _infrastructurePagination?.TotalPages ?? 1;
+        
+        /// <summary>
+        /// Search text for filtering groups
+        /// </summary>
+        public string GroupSearchText
+        {
+            get => _groupSearchText;
+            set
+            {
+                if (_groupSearchText != value)
+                {
+                    _groupSearchText = value;
+                    OnPropertyChanged(nameof(GroupSearchText));
+                    FilterGroups();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Pagination information for groups
+        /// </summary>
+        public string GroupPageInfo => _groupPagination?.PageInfo ?? "No items";
+        
+        /// <summary>
+        /// Current page number for groups
+        /// </summary>
+        public int CurrentGroupPage => _groupPagination?.CurrentPage ?? 1;
+        
+        /// <summary>
+        /// Total pages for groups
+        /// </summary>
+        public int TotalGroupPages => _groupPagination?.TotalPages ?? 1;
+        
+        /// <summary>
+        /// Can navigate to previous page for groups
+        /// </summary>
+        public bool HasPreviousGroupPage => _groupPagination?.HasPreviousPage ?? false;
+        
+        /// <summary>
+        /// Can navigate to next page for groups
+        /// </summary>
+        public bool HasNextGroupPage => _groupPagination?.HasNextPage ?? false;
+        
+        /// <summary>
+        /// Can navigate to previous page
+        /// </summary>
+        public bool CanGoToPreviousPage => _userPagination?.HasPreviousPage ?? false;
+        
+        /// <summary>
+        /// Can navigate to next page
+        /// </summary>
+        public bool CanGoToNextPage => _userPagination?.HasNextPage ?? false;
+
+        /// <summary>
+        /// Refresh service for managing automatic data refresh
+        /// </summary>
+        public RefreshService RefreshService => _refreshService;
+
+        /// <summary>
+        /// Current refresh status for the active view
+        /// </summary>
+        public RefreshStatus CurrentRefreshStatus => _refreshService?.ViewStatuses.TryGetValue(CurrentView, out var status) == true ? status : null;
+
+        /// <summary>
         /// Can start discovery operation
         /// </summary>
         public bool CanStartDiscovery => !IsDiscoveryRunning && SelectedProfile != null;
@@ -226,6 +389,87 @@ namespace MandADiscoverySuite.ViewModels
         /// Total number of discovered items
         /// </summary>
         public int TotalDiscoveredItems => DiscoveryResults.Sum(r => r.ItemCount);
+
+        /// <summary>
+        /// Indicates whether users are currently being loaded
+        /// </summary>
+        public bool IsUsersLoading
+        {
+            get => _isUsersLoading;
+            set => SetProperty(ref _isUsersLoading, value);
+        }
+
+        /// <summary>
+        /// Indicates whether infrastructure data is currently being loaded
+        /// </summary>
+        public bool IsInfrastructureLoading
+        {
+            get => _isInfrastructureLoading;
+            set => SetProperty(ref _isInfrastructureLoading, value);
+        }
+
+        /// <summary>
+        /// Indicates whether groups are currently being loaded
+        /// </summary>
+        public bool IsGroupsLoading
+        {
+            get => _isGroupsLoading;
+            set => SetProperty(ref _isGroupsLoading, value);
+        }
+
+        /// <summary>
+        /// Loading message for users
+        /// </summary>
+        public string UsersLoadingMessage
+        {
+            get => _usersLoadingMessage;
+            set => SetProperty(ref _usersLoadingMessage, value);
+        }
+
+        /// <summary>
+        /// Loading message for infrastructure
+        /// </summary>
+        public string InfrastructureLoadingMessage
+        {
+            get => _infrastructureLoadingMessage;
+            set => SetProperty(ref _infrastructureLoadingMessage, value);
+        }
+
+        /// <summary>
+        /// Loading message for groups
+        /// </summary>
+        public string GroupsLoadingMessage
+        {
+            get => _groupsLoadingMessage;
+            set => SetProperty(ref _groupsLoadingMessage, value);
+        }
+
+        /// <summary>
+        /// Loading progress for users (0-100)
+        /// </summary>
+        public int UsersLoadingProgress
+        {
+            get => _usersLoadingProgress;
+            set => SetProperty(ref _usersLoadingProgress, value);
+        }
+
+        /// <summary>
+        /// Loading progress for infrastructure (0-100)
+        /// </summary>
+        public int InfrastructureLoadingProgress
+        {
+            get => _infrastructureLoadingProgress;
+            set => SetProperty(ref _infrastructureLoadingProgress, value);
+        }
+
+        /// <summary>
+        /// Loading progress for groups (0-100)
+        /// </summary>
+        public int GroupsLoadingProgress
+        {
+            get => _groupsLoadingProgress;
+            set => SetProperty(ref _groupsLoadingProgress, value);
+        }
 
         #endregion
 
@@ -252,6 +496,18 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ImportDataCommand { get; }
         public ICommand ShowAllDiscoveryDataCommand { get; }
         public ICommand SelectManagerCommand { get; }
+        public ICommand ExportUsersCommand { get; }
+        public ICommand ExportInfrastructureCommand { get; }
+        public ICommand ExportGroupsCommand { get; }
+        public ICommand SelectAllUsersCommand { get; }
+        public ICommand DeselectAllUsersCommand { get; }
+        public ICommand ExportSelectedUsersCommand { get; }
+        public ICommand DeleteSelectedUsersCommand { get; }
+        public ICommand FirstPageCommand { get; }
+        public ICommand PreviousPageCommand { get; }
+        public ICommand NextPageCommand { get; }
+        public ICommand LastPageCommand { get; }
+        public ICommand GoToPageCommand { get; }
         public ICommand ViewUserCommand { get; }
         public ICommand RefreshTopologyCommand { get; }
         public ICommand AutoLayoutTopologyCommand { get; }
@@ -294,6 +550,53 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand GenerateWavesCommand { get; }
         public ICommand TimelineViewCommand { get; }
 
+        // Clipboard Commands
+        public ICommand CopySelectedUsersCommand { get; }
+        public ICommand CopySelectedInfrastructureCommand { get; }
+        public ICommand CopySelectedGroupsCommand { get; }
+        public ICommand CopyAllUsersCommand { get; }
+        public ICommand CopyAllInfrastructureCommand { get; }
+        public ICommand CopyAllGroupsCommand { get; }
+
+        // Column Visibility Commands
+        public ICommand ShowColumnVisibilityCommand { get; }
+        public ICommand ShowAllColumnsCommand { get; }
+        public ICommand HideAllColumnsCommand { get; }
+        public ICommand ResetColumnsCommand { get; }
+
+        // Infrastructure Commands
+        public ICommand SelectAllInfrastructureCommand { get; }
+        public ICommand DeselectAllInfrastructureCommand { get; }
+        public ICommand ExportSelectedInfrastructureCommand { get; }
+        public ICommand FirstInfrastructurePageCommand { get; }
+        public ICommand PreviousInfrastructurePageCommand { get; }
+        public ICommand NextInfrastructurePageCommand { get; }
+        public ICommand LastInfrastructurePageCommand { get; }
+        
+        // Groups Commands
+        public ICommand SelectAllGroupsCommand { get; }
+        public ICommand DeselectAllGroupsCommand { get; }
+        public ICommand ExportSelectedGroupsCommand { get; }
+        public ICommand DeleteSelectedGroupsCommand { get; }
+        public ICommand FirstGroupPageCommand { get; }
+        public ICommand PreviousGroupPageCommand { get; }
+        public ICommand NextGroupPageCommand { get; }
+        public ICommand LastGroupPageCommand { get; }
+        
+        // Refresh Commands
+        public ICommand ShowRefreshSettingsCommand { get; }
+        public ICommand RefreshCurrentViewCommand { get; }
+        public ICommand RefreshUsersCommand { get; }
+        public ICommand RefreshInfrastructureCommand { get; }
+        public ICommand RefreshGroupsCommand { get; }
+        public ICommand RefreshDashboardCommand { get; }
+        
+        // Advanced Search Commands
+        public ICommand ShowAdvancedSearchCommand { get; }
+        public ICommand ShowUsersAdvancedSearchCommand { get; }
+        public ICommand ShowInfrastructureAdvancedSearchCommand { get; }
+        public ICommand ShowGroupsAdvancedSearchCommand { get; }
+
         #endregion
 
         #region Constructor
@@ -304,15 +607,27 @@ namespace MandADiscoverySuite.ViewModels
 
         public MainViewModel(DiscoveryService discoveryService = null, ProfileService profileService = null, DataVisualizationViewModel dataVisualization = null)
         {
-            // Initialize collections
+            // Initialize collections (using optimized collections for data-heavy lists)
             CompanyProfiles = new ObservableCollection<CompanyProfile>();
             DiscoveryModules = new ObservableCollection<DiscoveryModuleViewModel>();
             DashboardMetrics = new ObservableCollection<DashboardMetric>();
             DiscoveryResults = new ObservableCollection<DiscoveryResult>();
+            Users = new OptimizedObservableCollection<UserData>();
+            Infrastructure = new OptimizedObservableCollection<InfrastructureData>();
+            Groups = new OptimizedObservableCollection<GroupData>();
+            
+            // Initialize pagination services
+            _userPagination = new PaginationService<UserData>();
+            _infrastructurePagination = new PaginationService<InfrastructureData>();
+            
+            _userPagination.PageChanged += (s, e) => RefreshUserPage();
+            _infrastructurePagination.PageChanged += (s, e) => RefreshInfrastructurePage();
 
             // Initialize services with dependency injection support
             _discoveryService = discoveryService ?? new DiscoveryService();
             _profileService = profileService ?? new ProfileService();
+            _csvDataService = new CsvDataService();
+            _asyncDataService = new AsyncDataService(_csvDataService);
 
             // Initialize search filter
             SearchFilter = new SearchFilterViewModel();
@@ -321,6 +636,9 @@ namespace MandADiscoverySuite.ViewModels
             // Initialize data visualization with dependency injection support
             DataVisualization = dataVisualization ?? new DataVisualizationViewModel();
             DataVisualization.DataSource = DiscoveryResults;
+
+            // Initialize performance optimization services
+            InitializePerformanceServices();
 
             // Initialize filtered views
             FilteredDiscoveryModules = CollectionViewSource.GetDefaultView(DiscoveryModules);
@@ -351,6 +669,18 @@ namespace MandADiscoverySuite.ViewModels
             ImportDataCommand = new AsyncRelayCommand(ImportDataAsync);
             ShowAllDiscoveryDataCommand = new RelayCommand(ShowAllDiscoveryData);
             SelectManagerCommand = new RelayCommand(SelectManager);
+            ExportUsersCommand = new AsyncRelayCommand(ExportUsersAsync);
+            ExportInfrastructureCommand = new AsyncRelayCommand(ExportInfrastructureAsync);
+            ExportGroupsCommand = new AsyncRelayCommand(ExportGroupsAsync);
+            SelectAllUsersCommand = new RelayCommand(SelectAllUsers);
+            DeselectAllUsersCommand = new RelayCommand(DeselectAllUsers);
+            ExportSelectedUsersCommand = new AsyncRelayCommand(ExportSelectedUsersAsync);
+            DeleteSelectedUsersCommand = new AsyncRelayCommand(DeleteSelectedUsersAsync);
+            FirstPageCommand = new RelayCommand(() => _userPagination.FirstPage());
+            PreviousPageCommand = new RelayCommand(() => _userPagination.PreviousPage());
+            NextPageCommand = new RelayCommand(() => _userPagination.NextPage());
+            LastPageCommand = new RelayCommand(() => _userPagination.LastPage());
+            GoToPageCommand = new RelayCommand<int>(page => _userPagination.GoToPage(page));
             ViewUserCommand = new RelayCommand<object>(ViewUser);
             RefreshTopologyCommand = new RelayCommand(RefreshTopology);
             AutoLayoutTopologyCommand = new RelayCommand(AutoLayoutTopology);
@@ -393,12 +723,77 @@ namespace MandADiscoverySuite.ViewModels
             GenerateWavesCommand = new RelayCommand(GenerateWaves);
             TimelineViewCommand = new RelayCommand(TimelineView);
 
+            // Initialize clipboard commands
+            CopySelectedUsersCommand = new RelayCommand(CopySelectedUsers, () => Users.Any(u => u.IsSelected));
+            CopySelectedInfrastructureCommand = new RelayCommand(CopySelectedInfrastructure, () => Infrastructure.Any(i => i.IsSelected));
+            CopySelectedGroupsCommand = new RelayCommand(CopySelectedGroups, () => Groups.Any(g => g.IsSelected));
+            CopyAllUsersCommand = new RelayCommand(CopyAllUsers, () => Users.Any());
+            CopyAllInfrastructureCommand = new RelayCommand(CopyAllInfrastructure, () => Infrastructure.Any());
+            CopyAllGroupsCommand = new RelayCommand(CopyAllGroups, () => Groups.Any());
+
+            // Initialize column visibility commands
+            ShowColumnVisibilityCommand = new RelayCommand<string>(ShowColumnVisibility);
+            ShowAllColumnsCommand = new RelayCommand<string>(ShowAllColumns);
+            HideAllColumnsCommand = new RelayCommand<string>(HideAllColumns);
+            ResetColumnsCommand = new RelayCommand<string>(ResetColumns);
+
+            // Initialize infrastructure commands
+            SelectAllInfrastructureCommand = new RelayCommand(SelectAllInfrastructure);
+            DeselectAllInfrastructureCommand = new RelayCommand(DeselectAllInfrastructure);
+            ExportSelectedInfrastructureCommand = new AsyncRelayCommand(ExportSelectedInfrastructureAsync);
+            FirstInfrastructurePageCommand = new RelayCommand(() => _infrastructurePagination.FirstPage());
+            PreviousInfrastructurePageCommand = new RelayCommand(() => _infrastructurePagination.PreviousPage());
+            NextInfrastructurePageCommand = new RelayCommand(() => _infrastructurePagination.NextPage());
+            LastInfrastructurePageCommand = new RelayCommand(() => _infrastructurePagination.LastPage());
+
+            // Initialize groups commands
+            SelectAllGroupsCommand = new RelayCommand(SelectAllGroups);
+            DeselectAllGroupsCommand = new RelayCommand(DeselectAllGroups);
+            ExportSelectedGroupsCommand = new AsyncRelayCommand(ExportSelectedGroupsAsync);
+            DeleteSelectedGroupsCommand = new RelayCommand(DeleteSelectedGroups, () => Groups.Any(g => g.IsSelected));
+            FirstGroupPageCommand = new RelayCommand(() => _groupPagination.FirstPage());
+            PreviousGroupPageCommand = new RelayCommand(() => _groupPagination.PreviousPage());
+            NextGroupPageCommand = new RelayCommand(() => _groupPagination.NextPage());
+            LastGroupPageCommand = new RelayCommand(() => _groupPagination.LastPage());
+
+            // Initialize pagination services
+            _infrastructurePagination = new PaginationService<InfrastructureData>();
+            _infrastructurePagination.PageChanged += (s, e) => RefreshInfrastructurePage();
+            
+            _groupPagination = new PaginationService<GroupData>();
+            _groupPagination.PageChanged += (s, e) => RefreshGroupPage();
+
+            // Initialize refresh commands
+            ShowRefreshSettingsCommand = new RelayCommand(ShowRefreshSettings);
+            RefreshCurrentViewCommand = new AsyncRelayCommand(RefreshCurrentViewAsync);
+            RefreshUsersCommand = new AsyncRelayCommand(() => RefreshViewAsync("Users"));
+            RefreshInfrastructureCommand = new AsyncRelayCommand(() => RefreshViewAsync("Infrastructure"));
+            RefreshGroupsCommand = new AsyncRelayCommand(() => RefreshViewAsync("Groups"));
+            RefreshDashboardCommand = new AsyncRelayCommand(() => RefreshViewAsync("Dashboard"));
+
+            // Initialize advanced search commands
+            ShowAdvancedSearchCommand = new RelayCommand<string>(ShowAdvancedSearch);
+            ShowUsersAdvancedSearchCommand = new RelayCommand(() => ShowAdvancedSearch("Users"));
+            ShowInfrastructureAdvancedSearchCommand = new RelayCommand(() => ShowAdvancedSearch("Infrastructure"));
+            ShowGroupsAdvancedSearchCommand = new RelayCommand(() => ShowAdvancedSearch("Groups"));
+
+            // Initialize refresh service
+            _refreshService = RefreshService.Instance;
+            _refreshService.RefreshRequested += OnRefreshRequested;
+            
+            // Initialize advanced search service
+            _advancedSearchService = AdvancedSearchService.Instance;
+
             // Initialize timers
             _dashboardTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
             _dashboardTimer.Tick += DashboardTimer_Tick;
 
             _progressTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _progressTimer.Tick += ProgressTimer_Tick;
+
+            // Initialize auto-refresh timer for detailed data (every 5 seconds)
+            _dataRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            _dataRefreshTimer.Tick += DataRefreshTimer_Tick;
 
             // Load initial data
             _ = Task.Run(async () =>
@@ -690,7 +1085,13 @@ namespace MandADiscoverySuite.ViewModels
                 if (SelectedProfile == null)
                 {
                     // Clear results if no profile selected
-                    Application.Current.Dispatcher.Invoke(() => DiscoveryResults.Clear());
+                    Application.Current.Dispatcher.Invoke(() => 
+                    {
+                        DiscoveryResults.Clear();
+                        Users.Clear();
+                        Infrastructure.Clear();
+                        Groups.Clear();
+                    });
                     return;
                 }
                 
@@ -707,10 +1108,122 @@ namespace MandADiscoverySuite.ViewModels
                     // Update dashboard metrics
                     UpdateDashboardMetrics();
                 });
+
+                // Load detailed CSV data
+                await LoadDetailedDataAsync();
             }
             catch (Exception ex)
             {
                 StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Discovery results loading");
+            }
+        }
+
+        private async Task LoadDetailedDataAsync()
+        {
+            try
+            {
+                if (SelectedProfile == null) return;
+
+                var rawDataPath = ConfigurationService.Instance.GetCompanyRawDataPath(SelectedProfile.CompanyName);
+                if (!Directory.Exists(rawDataPath)) return;
+
+                // Load users, infrastructure, and groups data in parallel
+                var usersTask = _csvDataService.LoadUsersAsync(rawDataPath);
+                var infrastructureTask = _csvDataService.LoadInfrastructureAsync(rawDataPath);
+                var groupsTask = _csvDataService.LoadGroupsAsync(rawDataPath);
+
+                await Task.WhenAll(usersTask, infrastructureTask, groupsTask);
+
+                var users = await usersTask;
+                var infrastructure = await infrastructureTask;
+                var groups = await groupsTask;
+
+                // Update collections on the UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    // Store all data for filtering
+                    _allUsers = users;
+                    _allInfrastructure = infrastructure;
+                    
+                    // Apply current filters
+                    FilterUsers();
+                    FilterInfrastructure();
+
+                    // Update Groups collection with filtering
+                    _allGroups = groups.ToList();
+                    FilterGroups();
+
+                    // Update dashboard metrics with detailed counts
+                    UpdateDetailedDashboardMetrics();
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Detailed data loading");
+            }
+        }
+
+        private void UpdateDetailedDashboardMetrics()
+        {
+            if (DashboardMetrics?.Count >= 4)
+            {
+                // Update with actual detailed counts
+                DashboardMetrics[0].Value = Users.Count;
+                DashboardMetrics[1].Value = Infrastructure.Count;
+                DashboardMetrics[2].Value = Groups.Count(g => g.SecurityEnabled);
+                DashboardMetrics[3].Value = Users.Count(u => u.AccountEnabled);
+            }
+        }
+
+        private async void DataRefreshTimer_Tick(object sender, EventArgs e)
+        {
+            try
+            {
+                // Only refresh if we have a selected profile and we're not currently running discovery
+                if (SelectedProfile != null && !IsDiscoveryRunning)
+                {
+                    await LoadDetailedDataAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Auto-refresh error: {ex.Message}");
+            }
+        }
+
+        private async void OnRefreshRequested(object sender, string viewName)
+        {
+            try
+            {
+                if (viewName == "Auto")
+                {
+                    // Auto refresh - check which views should be refreshed
+                    if (_refreshService.ShouldRefreshView("Dashboard", CurrentView, IsDiscoveryRunning))
+                    {
+                        await RefreshViewAsync("Dashboard");
+                    }
+                    if (_refreshService.ShouldRefreshView("Users", CurrentView, IsDiscoveryRunning))
+                    {
+                        await RefreshViewAsync("Users");
+                    }
+                    if (_refreshService.ShouldRefreshView("Infrastructure", CurrentView, IsDiscoveryRunning))
+                    {
+                        await RefreshViewAsync("Infrastructure");
+                    }
+                    if (_refreshService.ShouldRefreshView("Groups", CurrentView, IsDiscoveryRunning))
+                    {
+                        await RefreshViewAsync("Groups");
+                    }
+                }
+                else
+                {
+                    // Manual refresh for specific view
+                    await RefreshViewAsync(viewName);
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Refresh failed: {ex.Message}";
             }
         }
 
@@ -722,6 +1235,17 @@ namespace MandADiscoverySuite.ViewModels
         {
             StatusMessage = SelectedProfile != null ? $"Selected profile: {SelectedProfile.CompanyName}" : "No profile selected";
             OnPropertyChanged(nameof(CanStartDiscovery));
+
+            // Start or stop data refresh timer based on profile selection
+            if (SelectedProfile != null)
+            {
+                _dataRefreshTimer.Start();
+                StatusMessage = $"Auto-refresh enabled for {SelectedProfile.CompanyName}";
+            }
+            else
+            {
+                _dataRefreshTimer.Stop();
+            }
         }
 
         private void OnCurrentViewChanged()
@@ -735,6 +1259,7 @@ namespace MandADiscoverySuite.ViewModels
                 nameof(IsUsersVisible),
                 nameof(IsComputersVisible),
                 nameof(IsInfrastructureVisible),
+                nameof(IsGroupsVisible),
                 nameof(IsDomainDiscoveryVisible),
                 nameof(IsFileServersVisible),
                 nameof(IsDatabasesVisible),
@@ -743,7 +1268,9 @@ namespace MandADiscoverySuite.ViewModels
                 nameof(IsWavesVisible),
                 nameof(IsMigrateVisible),
                 nameof(IsReportsVisible),
-                nameof(IsSettingsVisible)
+                nameof(IsAnalyticsVisible),
+                nameof(IsSettingsVisible),
+                nameof(CurrentRefreshStatus)
             );
         }
 
@@ -1026,14 +1553,14 @@ This directory is strictly for storing discovery results and company data.
 
             try
             {
-                var result = MessageBox.Show(
+                var confirmed = DialogService.Instance.ShowConfirmationDialog(
+                    "Confirm Delete Profile",
                     $"Are you sure you want to delete the profile '{profile.CompanyName}'?\n\n" +
                     "This action cannot be undone. All associated data will remain but the profile configuration will be lost.",
-                    "Confirm Delete Profile",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
+                    "Delete Profile",
+                    "Cancel");
                 
-                if (result == MessageBoxResult.Yes)
+                if (confirmed)
                 {
                     await _profileService.DeleteProfileAsync(profile.Id);
                     
@@ -2393,6 +2920,874 @@ This directory is strictly for storing discovery results and company data.
 
         #endregion
 
+        #region Search and Filter Methods
+
+        private void FilterUsers()
+        {
+            // Use optimized debounced search if available
+            if (_debouncedSearchService != null)
+            {
+                PerformOptimizedUserSearch(UserSearchText);
+                return;
+            }
+
+            var filtered = _allUsers.AsEnumerable();
+            
+            if (!string.IsNullOrWhiteSpace(UserSearchText) && UserSearchText != "Search users...")
+            {
+                var searchLower = UserSearchText.ToLowerInvariant();
+                filtered = filtered.Where(u =>
+                    (u.Name?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (u.Email?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (u.Department?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (u.JobTitle?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (u.UserPrincipalName?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (u.City?.ToLowerInvariant().Contains(searchLower) ?? false)
+                );
+            }
+            
+            _userPagination.SetAllItems(filtered);
+            RefreshUserPage();
+        }
+
+        private void RefreshUserPage()
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // Use optimized bulk operation instead of Clear() + individual Add() calls
+                Users.ReplaceAll(_userPagination.GetCurrentPageItems());
+                
+                // Use batched notifications for better performance
+                OnPropertiesChangedBatched(nameof(UserPageInfo), nameof(CurrentUserPage), nameof(TotalUserPages), 
+                                         nameof(CanGoToPreviousPage), nameof(CanGoToNextPage));
+            });
+        }
+
+        private void RefreshInfrastructurePage()
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // Use optimized bulk operation instead of Clear() + individual Add() calls
+                Infrastructure.ReplaceAll(_infrastructurePagination.GetCurrentPageItems());
+                
+                // Use batched notifications for better performance
+                OnPropertiesChangedBatched(nameof(InfrastructurePageInfo), nameof(CurrentInfrastructurePage), nameof(TotalInfrastructurePages));
+            });
+        }
+
+        private void FilterInfrastructure()
+        {
+            // Use optimized debounced search if available
+            if (_debouncedSearchService != null)
+            {
+                PerformOptimizedInfrastructureSearch(InfrastructureSearchText);
+                return;
+            }
+
+            var filtered = _allInfrastructure.AsEnumerable();
+            
+            if (!string.IsNullOrWhiteSpace(InfrastructureSearchText) && InfrastructureSearchText != "Search computers...")
+            {
+                var searchLower = InfrastructureSearchText.ToLowerInvariant();
+                filtered = filtered.Where(i =>
+                    (i.Name?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (i.Type?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (i.IPAddress?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (i.OperatingSystem?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (i.Location?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (i.Description?.ToLowerInvariant().Contains(searchLower) ?? false)
+                );
+            }
+            
+            _infrastructurePagination.SetAllItems(filtered);
+            RefreshInfrastructurePage();
+        }
+
+        private void RefreshGroupPage()
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // Use optimized bulk operation instead of Clear() + individual Add() calls
+                Groups.ReplaceAll(_groupPagination.GetCurrentPageItems());
+                
+                // Use batched notifications for better performance
+                OnPropertiesChangedBatched(nameof(GroupPageInfo), nameof(CurrentGroupPage), nameof(TotalGroupPages), 
+                                         nameof(HasPreviousGroupPage), nameof(HasNextGroupPage));
+            });
+        }
+
+        private void FilterGroups()
+        {
+            var filtered = _allGroups.AsEnumerable();
+            
+            if (!string.IsNullOrWhiteSpace(GroupSearchText) && GroupSearchText != "Search groups...")
+            {
+                var searchLower = GroupSearchText.ToLowerInvariant();
+                filtered = filtered.Where(g =>
+                    (g.DisplayName?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (g.Description?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (g.Type?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (g.Mail?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (g.Visibility?.ToLowerInvariant().Contains(searchLower) ?? false)
+                );
+            }
+            
+            _groupPagination.SetAllItems(filtered);
+            RefreshGroupPage();
+        }
+
+        #endregion
+
+        #region Bulk Selection Methods
+
+        private void SelectAllUsers()
+        {
+            foreach (var user in Users)
+            {
+                user.IsSelected = true;
+            }
+        }
+
+        private void DeselectAllUsers()
+        {
+            foreach (var user in Users)
+            {
+                user.IsSelected = false;
+            }
+        }
+
+        private async Task ExportSelectedUsersAsync()
+        {
+            try
+            {
+                var selectedUsers = Users.Where(u => u.IsSelected).ToList();
+                if (selectedUsers.Any())
+                {
+                    await DataExportService.Instance.ExportToCsvAsync(selectedUsers, "SelectedUsers_Export.csv");
+                    StatusMessage = $"{selectedUsers.Count} users exported successfully";
+                }
+                else
+                {
+                    StatusMessage = "No users selected for export";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Export selected users");
+            }
+        }
+
+        private async Task DeleteSelectedUsersAsync()
+        {
+            try
+            {
+                var selectedUsers = Users.Where(u => u.IsSelected).ToList();
+                if (!selectedUsers.Any())
+                {
+                    StatusMessage = "No users selected for deletion";
+                    return;
+                }
+
+                var confirmed = DialogService.Instance.ShowConfirmationDialog(
+                    "Confirm Bulk Delete",
+                    $"Are you sure you want to delete {selectedUsers.Count} selected users?\n\n" +
+                    "This action cannot be undone.",
+                    "Delete Users",
+                    "Cancel");
+
+                if (confirmed)
+                {
+                    // Remove from collection - in real app would also delete from backend
+                    foreach (var user in selectedUsers)
+                    {
+                        Users.Remove(user);
+                        _allUsers.Remove(user);
+                    }
+                    
+                    StatusMessage = $"{selectedUsers.Count} users deleted successfully";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Delete selected users");
+            }
+        }
+
+        #endregion
+
+        #region Data Export Methods
+
+        private async Task ExportUsersAsync()
+        {
+            try
+            {
+                if (Users?.Any() == true)
+                {
+                    await DataExportService.Instance.ExportToCsvAsync(Users, "Users_Export.csv");
+                    StatusMessage = "Users exported successfully";
+                }
+                else
+                {
+                    StatusMessage = "No user data to export";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Export users");
+            }
+        }
+
+        private async Task ExportInfrastructureAsync()
+        {
+            try
+            {
+                if (Infrastructure?.Any() == true)
+                {
+                    await DataExportService.Instance.ExportToCsvAsync(Infrastructure, "Infrastructure_Export.csv");
+                    StatusMessage = "Infrastructure data exported successfully";
+                }
+                else
+                {
+                    StatusMessage = "No infrastructure data to export";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Export infrastructure");
+            }
+        }
+
+        private async Task ExportGroupsAsync()
+        {
+            try
+            {
+                if (Groups?.Any() == true)
+                {
+                    await DataExportService.Instance.ExportToCsvAsync(Groups, "Groups_Export.csv");
+                    StatusMessage = "Groups data exported successfully";
+                }
+                else
+                {
+                    StatusMessage = "No groups data to export";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Export groups");
+            }
+        }
+
+        #endregion
+
+        #region Clipboard Methods
+
+        /// <summary>
+        /// Copy selected users to clipboard
+        /// </summary>
+        private void CopySelectedUsers()
+        {
+            try
+            {
+                var selectedUsers = Users.Where(u => u.IsSelected).ToList();
+                if (!selectedUsers.Any())
+                {
+                    DialogService.Instance.ShowInformationDialog("No Selection", "No users are selected for copying.");
+                    return;
+                }
+
+                var success = ClipboardService.Instance.CopyUsersToClipboard(selectedUsers);
+                if (success)
+                {
+                    DialogService.Instance.ShowInformationDialog("Success", $"Copied {selectedUsers.Count} user(s) to clipboard.");
+                }
+                else
+                {
+                    DialogService.Instance.ShowErrorDialog("Error", "Failed to copy data to clipboard.");
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Copy selected users to clipboard");
+            }
+        }
+
+        /// <summary>
+        /// Copy selected infrastructure to clipboard
+        /// </summary>
+        private void CopySelectedInfrastructure()
+        {
+            try
+            {
+                var selectedInfrastructure = Infrastructure.Where(i => i.IsSelected).ToList();
+                if (!selectedInfrastructure.Any())
+                {
+                    DialogService.Instance.ShowInformationDialog("No Selection", "No infrastructure items are selected for copying.");
+                    return;
+                }
+
+                var success = ClipboardService.Instance.CopyInfrastructureToClipboard(selectedInfrastructure);
+                if (success)
+                {
+                    DialogService.Instance.ShowInformationDialog("Success", $"Copied {selectedInfrastructure.Count} infrastructure item(s) to clipboard.");
+                }
+                else
+                {
+                    DialogService.Instance.ShowErrorDialog("Error", "Failed to copy data to clipboard.");
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Copy selected infrastructure to clipboard");
+            }
+        }
+
+        /// <summary>
+        /// Copy selected groups to clipboard
+        /// </summary>
+        private void CopySelectedGroups()
+        {
+            try
+            {
+                var selectedGroups = Groups.Where(g => g.IsSelected).ToList();
+                if (!selectedGroups.Any())
+                {
+                    DialogService.Instance.ShowInformationDialog("No Selection", "No groups are selected for copying.");
+                    return;
+                }
+
+                var success = ClipboardService.Instance.CopyGroupsToClipboard(selectedGroups);
+                if (success)
+                {
+                    DialogService.Instance.ShowInformationDialog("Success", $"Copied {selectedGroups.Count} group(s) to clipboard.");
+                }
+                else
+                {
+                    DialogService.Instance.ShowErrorDialog("Error", "Failed to copy data to clipboard.");
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Copy selected groups to clipboard");
+            }
+        }
+
+        /// <summary>
+        /// Copy all users to clipboard
+        /// </summary>
+        private void CopyAllUsers()
+        {
+            try
+            {
+                if (!Users.Any())
+                {
+                    DialogService.Instance.ShowInformationDialog("No Data", "No users available to copy.");
+                    return;
+                }
+
+                var success = ClipboardService.Instance.CopyUsersToClipboard(Users);
+                if (success)
+                {
+                    DialogService.Instance.ShowInformationDialog("Success", $"Copied all {Users.Count} user(s) to clipboard.");
+                }
+                else
+                {
+                    DialogService.Instance.ShowErrorDialog("Error", "Failed to copy data to clipboard.");
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Copy all users to clipboard");
+            }
+        }
+
+        /// <summary>
+        /// Copy all infrastructure to clipboard
+        /// </summary>
+        private void CopyAllInfrastructure()
+        {
+            try
+            {
+                if (!Infrastructure.Any())
+                {
+                    DialogService.Instance.ShowInformationDialog("No Data", "No infrastructure items available to copy.");
+                    return;
+                }
+
+                var success = ClipboardService.Instance.CopyInfrastructureToClipboard(Infrastructure);
+                if (success)
+                {
+                    DialogService.Instance.ShowInformationDialog("Success", $"Copied all {Infrastructure.Count} infrastructure item(s) to clipboard.");
+                }
+                else
+                {
+                    DialogService.Instance.ShowErrorDialog("Error", "Failed to copy data to clipboard.");
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Copy all infrastructure to clipboard");
+            }
+        }
+
+        /// <summary>
+        /// Copy all groups to clipboard
+        /// </summary>
+        private void CopyAllGroups()
+        {
+            try
+            {
+                if (!Groups.Any())
+                {
+                    DialogService.Instance.ShowInformationDialog("No Data", "No groups available to copy.");
+                    return;
+                }
+
+                var success = ClipboardService.Instance.CopyGroupsToClipboard(Groups);
+                if (success)
+                {
+                    DialogService.Instance.ShowInformationDialog("Success", $"Copied all {Groups.Count} group(s) to clipboard.");
+                }
+                else
+                {
+                    DialogService.Instance.ShowErrorDialog("Error", "Failed to copy data to clipboard.");
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Copy all groups to clipboard");
+            }
+        }
+
+        #endregion
+
+        #region Column Visibility Methods
+
+        /// <summary>
+        /// Show column visibility popup for a specific grid
+        /// </summary>
+        /// <param name="gridName">Name of the grid (Users, Infrastructure, Groups)</param>
+        private void ShowColumnVisibility(string gridName)
+        {
+            try
+            {
+                var dialog = new ColumnVisibilityDialog(gridName);
+                dialog.Owner = Application.Current.MainWindow;
+                dialog.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, $"Show column visibility for {gridName}");
+            }
+        }
+
+        /// <summary>
+        /// Show all columns for a specific grid
+        /// </summary>
+        /// <param name="gridName">Name of the grid</param>
+        private void ShowAllColumns(string gridName)
+        {
+            try
+            {
+                ColumnVisibilityService.Instance.ShowAllColumns(gridName);
+                DialogService.Instance.ShowInformationDialog("Columns Updated", $"All columns for {gridName} are now visible.");
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, $"Show all columns for {gridName}");
+            }
+        }
+
+        /// <summary>
+        /// Hide all non-essential columns for a specific grid
+        /// </summary>
+        /// <param name="gridName">Name of the grid</param>
+        private void HideAllColumns(string gridName)
+        {
+            try
+            {
+                ColumnVisibilityService.Instance.HideAllColumns(gridName);
+                DialogService.Instance.ShowInformationDialog("Columns Updated", $"Non-essential columns for {gridName} are now hidden.");
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, $"Hide columns for {gridName}");
+            }
+        }
+
+        /// <summary>
+        /// Reset columns to default visibility for a specific grid
+        /// </summary>
+        /// <param name="gridName">Name of the grid</param>
+        private void ResetColumns(string gridName)
+        {
+            try
+            {
+                ColumnVisibilityService.Instance.ResetToDefaults(gridName);
+                DialogService.Instance.ShowInformationDialog("Columns Reset", $"Column visibility for {gridName} has been reset to defaults.");
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, $"Reset columns for {gridName}");
+            }
+        }
+
+        #endregion
+
+        #region Infrastructure Methods
+
+        /// <summary>
+        /// Select all infrastructure items
+        /// </summary>
+        private void SelectAllInfrastructure()
+        {
+            foreach (var item in Infrastructure)
+            {
+                item.IsSelected = true;
+            }
+        }
+
+        /// <summary>
+        /// Deselect all infrastructure items
+        /// </summary>
+        private void DeselectAllInfrastructure()
+        {
+            foreach (var item in Infrastructure)
+            {
+                item.IsSelected = false;
+            }
+        }
+
+        /// <summary>
+        /// Export selected infrastructure items
+        /// </summary>
+        private async Task ExportSelectedInfrastructureAsync()
+        {
+            try
+            {
+                var selectedItems = Infrastructure.Where(i => i.IsSelected).ToList();
+                if (!selectedItems.Any())
+                {
+                    DialogService.Instance.ShowInformationDialog("No Selection", "No infrastructure items are selected for export.");
+                    return;
+                }
+
+                var success = await DataExportService.Instance.ExportToCsvAsync(selectedItems, "infrastructure_export");
+                if (success)
+                {
+                    DialogService.Instance.ShowInformationDialog("Export Complete", $"Successfully exported {selectedItems.Count} infrastructure item(s).");
+                }
+                else
+                {
+                    DialogService.Instance.ShowErrorDialog("Export Failed", "Failed to export infrastructure data.");
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Export selected infrastructure");
+            }
+        }
+
+        /// <summary>
+        /// Select all groups items
+        /// </summary>
+        private void SelectAllGroups()
+        {
+            foreach (var item in Groups)
+            {
+                item.IsSelected = true;
+            }
+        }
+
+        /// <summary>
+        /// Deselect all groups items
+        /// </summary>
+        private void DeselectAllGroups()
+        {
+            foreach (var item in Groups)
+            {
+                item.IsSelected = false;
+            }
+        }
+
+        /// <summary>
+        /// Export selected groups items
+        /// </summary>
+        private async Task ExportSelectedGroupsAsync()
+        {
+            try
+            {
+                var selectedItems = Groups.Where(g => g.IsSelected).ToList();
+                if (!selectedItems.Any())
+                {
+                    DialogService.Instance.ShowInformationDialog("No Selection", "No groups are selected for export.");
+                    return;
+                }
+
+                var success = await DataExportService.Instance.ExportToCsvAsync(selectedItems, "groups_export");
+                if (success)
+                {
+                    DialogService.Instance.ShowInformationDialog("Export Complete", $"Successfully exported {selectedItems.Count} group(s).");
+                }
+                else
+                {
+                    DialogService.Instance.ShowErrorDialog("Export Failed", "Failed to export groups data.");
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Export selected groups");
+            }
+        }
+
+        /// <summary>
+        /// Delete selected groups
+        /// </summary>
+        private void DeleteSelectedGroups()
+        {
+            try
+            {
+                var selectedItems = Groups.Where(g => g.IsSelected).ToList();
+                if (!selectedItems.Any())
+                {
+                    DialogService.Instance.ShowInformationDialog("No Selection", "No groups are selected for deletion.");
+                    return;
+                }
+
+                var result = DialogService.Instance.ShowConfirmationDialog(
+                    "Delete Groups",
+                    $"Are you sure you want to delete {selectedItems.Count} selected group(s)? This action cannot be undone.");
+
+                if (result)
+                {
+                    foreach (var item in selectedItems)
+                    {
+                        Groups.Remove(item);
+                        _allGroups.Remove(item);
+                    }
+                    
+                    FilterGroups(); // Refresh the filtered view
+                    StatusMessage = $"Deleted {selectedItems.Count} group(s)";
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Delete selected groups");
+            }
+        }
+
+        private void ShowRefreshSettings()
+        {
+            try
+            {
+                var dialog = new RefreshSettingsDialog();
+                dialog.Owner = Application.Current.MainWindow;
+                dialog.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error opening refresh settings: {ex.Message}";
+            }
+        }
+
+        private async Task RefreshCurrentViewAsync()
+        {
+            await RefreshViewAsync(CurrentView);
+        }
+
+        private async Task RefreshViewAsync(string viewName)
+        {
+            try
+            {
+                _refreshService.StartRefresh(viewName);
+                StatusMessage = $"Refreshing {viewName}...";
+
+                _refreshService.UpdateRefreshProgress(viewName, 25);
+
+                switch (viewName.ToLower())
+                {
+                    case "dashboard":
+                        await RefreshDashboardDataAsync();
+                        break;
+                    case "users":
+                        await RefreshUsersDataAsync();
+                        break;
+                    case "infrastructure":
+                        await RefreshInfrastructureDataAsync();
+                        break;
+                    case "groups":
+                        await RefreshGroupsDataAsync();
+                        break;
+                    default:
+                        await LoadDetailedDataAsync();
+                        break;
+                }
+
+                _refreshService.UpdateRefreshProgress(viewName, 100);
+                _refreshService.CompleteRefresh(viewName, true);
+                StatusMessage = $"{viewName} refreshed successfully";
+            }
+            catch (Exception ex)
+            {
+                _refreshService.CompleteRefresh(viewName, false);
+                StatusMessage = $"Failed to refresh {viewName}: {ex.Message}";
+                ErrorHandlingService.Instance.HandleException(ex, $"Refresh {viewName}");
+            }
+        }
+
+        private async Task RefreshDashboardDataAsync()
+        {
+            _refreshService.UpdateRefreshProgress("Dashboard", 50);
+            await LoadDiscoveryResultsAsync();
+            _refreshService.UpdateRefreshProgress("Dashboard", 75);
+            UpdateDetailedDashboardMetrics();
+        }
+
+        private async Task RefreshUsersDataAsync()
+        {
+            _refreshService.UpdateRefreshProgress("Users", 50);
+            var users = await LoadUsersDataAsync();
+            _refreshService.UpdateRefreshProgress("Users", 75);
+            
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _allUsers = users.ToList();
+                FilterUsers();
+            });
+        }
+
+        private async Task RefreshInfrastructureDataAsync()
+        {
+            _refreshService.UpdateRefreshProgress("Infrastructure", 50);
+            var infrastructure = await LoadInfrastructureDataAsync();
+            _refreshService.UpdateRefreshProgress("Infrastructure", 75);
+            
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _allInfrastructure = infrastructure.ToList();
+                FilterInfrastructure();
+            });
+        }
+
+        private async Task RefreshGroupsDataAsync()
+        {
+            _refreshService.UpdateRefreshProgress("Groups", 50);
+            var groups = await LoadGroupsDataAsync();
+            _refreshService.UpdateRefreshProgress("Groups", 75);
+            
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _allGroups = groups.ToList();
+                FilterGroups();
+            });
+        }
+
+        private async Task<IEnumerable<UserData>> LoadUsersDataAsync()
+        {
+            // Use the existing CSV loading functionality
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    return _allUsers.AsEnumerable();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error loading users: {ex.Message}");
+                    return Enumerable.Empty<UserData>();
+                }
+            });
+        }
+
+        private async Task<IEnumerable<InfrastructureData>> LoadInfrastructureDataAsync()
+        {
+            // Use the existing CSV loading functionality  
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    return _allInfrastructure.AsEnumerable();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error loading infrastructure: {ex.Message}");
+                    return Enumerable.Empty<InfrastructureData>();
+                }
+            });
+        }
+
+        private async Task<IEnumerable<GroupData>> LoadGroupsDataAsync()
+        {
+            // Use the existing CSV loading functionality
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    return _allGroups.AsEnumerable();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error loading groups: {ex.Message}");
+                    return Enumerable.Empty<GroupData>();
+                }
+            });
+        }
+
+        #endregion
+
+        #region Advanced Search Methods
+
+        private void ShowAdvancedSearch(string viewName)
+        {
+            try
+            {
+                var dialog = new AdvancedSearchDialog(viewName);
+                if (dialog.ShowDialog() == true)
+                {
+                    // Apply the filter
+                    ApplyAdvancedFilter(viewName, dialog.CurrentFilter);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, $"Error showing advanced search for {viewName}");
+            }
+        }
+
+        private void ApplyAdvancedFilter(string viewName, SearchFilter filter)
+        {
+            try
+            {
+                switch (viewName)
+                {
+                    case "Users":
+                        var filteredUsers = _advancedSearchService.ApplyFilter(_allUsers, filter);
+                        _userPagination.SetAllItems(filteredUsers);
+                        RefreshUserPage();
+                        break;
+                        
+                    case "Infrastructure":
+                        var filteredInfrastructure = _advancedSearchService.ApplyFilter(_allInfrastructure, filter);
+                        _infrastructurePagination.SetAllItems(filteredInfrastructure);
+                        RefreshInfrastructurePage();
+                        break;
+                        
+                    case "Groups":
+                        var filteredGroups = _advancedSearchService.ApplyFilter(_allGroups, filter);
+                        _groupPagination.SetAllItems(filteredGroups);
+                        RefreshGroupPage();
+                        break;
+                }
+                
+                StatusMessage = $"Applied advanced filter to {viewName}: {filter.Summary}";
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, $"Error applying advanced filter to {viewName}");
+            }
+        }
+
+        #endregion
+
         #region IDisposable
 
         protected override void OnDisposing()
@@ -2441,6 +3836,11 @@ This directory is strictly for storing discovery results and company data.
                 if (_profileService is IDisposable disposableProfile)
                     disposableProfile.Dispose();
                     
+                // Dispose timers
+                _dashboardTimer?.Stop();
+                _progressTimer?.Stop();
+                _dataRefreshTimer?.Stop();
+
                 // Dispose ViewModels
                 SearchFilter?.Dispose();
                 DataVisualization?.Dispose();

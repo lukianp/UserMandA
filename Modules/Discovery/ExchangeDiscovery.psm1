@@ -109,12 +109,17 @@ function Invoke-ExchangeDiscovery {
         try {
             Write-ModuleLog -ModuleName "Exchange" -Message "Discovering mailboxes with enhanced metadata..." -Level "INFO"
             
+            # Enhanced mailbox discovery with better filtering
             $mailboxUri = "https://graph.microsoft.com/v1.0/users?`$select=$($userSelectFields -join ',')&`$top=$batchSize"
             if (-not $Configuration.discovery.excludeDisabledUsers) {
-                $mailboxUri += "&`$filter=mail ne null"
+                # Include all users with mailboxes (including disabled ones for shared mailboxes)
+                $mailboxUri += "&`$filter=mail ne null and userType eq 'Member'"
             } else {
-                $mailboxUri += "&`$filter=mail ne null and accountEnabled eq true"
+                # Only active user mailboxes
+                $mailboxUri += "&`$filter=mail ne null and accountEnabled eq true and userType eq 'Member'"
             }
+            
+            Write-ModuleLog -ModuleName "Exchange" -Message "Using mailbox discovery query: $mailboxUri" -Level "DEBUG"
             
             $pageCount = 0
             $totalMailboxes = 0
@@ -129,13 +134,23 @@ function Invoke-ExchangeDiscovery {
                 foreach ($user in $response.value) {
                     if (-not $user.mail) { continue } # Skip users without mailboxes
                     
-                    # Get additional mailbox settings with error handling
+                    # Get additional mailbox settings with enhanced error handling
                     $mailboxSettings = $null
                     try {
-                        $settingsUri = "https://graph.microsoft.com/v1.0/users/$($user.id)/mailboxSettings"
-                        $mailboxSettings = Invoke-GraphWithRetry -Uri $settingsUri
+                        # Check if user has a proper Exchange mailbox first
+                        if ($user.mail -and $user.accountEnabled) {
+                            $settingsUri = "https://graph.microsoft.com/v1.0/users/$($user.id)/mailboxSettings"
+                            $mailboxSettings = Invoke-GraphWithRetry -Uri $settingsUri
+                        }
                     } catch {
-                        Write-ModuleLog -ModuleName "Exchange" -Message "Could not get mailbox settings for $($user.userPrincipalName): $_" -Level "DEBUG"
+                        $errorMessage = $_.Exception.Message
+                        if ($errorMessage -match "BadRequest" -or $errorMessage -match "400") {
+                            Write-ModuleLog -ModuleName "Exchange" -Message "User $($user.userPrincipalName) may not have Exchange mailbox enabled: $errorMessage" -Level "DEBUG"
+                        } elseif ($errorMessage -match "Forbidden" -or $errorMessage -match "403") {
+                            Write-ModuleLog -ModuleName "Exchange" -Message "Insufficient permissions for mailbox settings on $($user.userPrincipalName): $errorMessage" -Level "WARN"
+                        } else {
+                            Write-ModuleLog -ModuleName "Exchange" -Message "Could not get mailbox settings for $($user.userPrincipalName): $errorMessage" -Level "DEBUG"
+                        }
                     }
                     
                     # Get mail folders statistics
@@ -148,32 +163,55 @@ function Invoke-ExchangeDiscovery {
                     }
                     
                     try {
-                        $foldersUri = "https://graph.microsoft.com/v1.0/users/$($user.id)/mailFolders?`$top=100"
-                        $folders = Invoke-GraphWithRetry -Uri $foldersUri
-                        
-                        foreach ($folder in $folders.value) {
-                            $folderStats.TotalFolders++
-                            switch ($folder.displayName) {
-                                "Inbox" { $folderStats.InboxCount = $folder.totalItemCount }
-                                "Sent Items" { $folderStats.SentCount = $folder.totalItemCount }
-                                "Drafts" { $folderStats.DraftsCount = $folder.totalItemCount }
-                                "Deleted Items" { $folderStats.DeletedCount = $folder.totalItemCount }
+                        # Only try to get folders if user has active mailbox
+                        if ($user.mail -and $user.accountEnabled) {
+                            $foldersUri = "https://graph.microsoft.com/v1.0/users/$($user.id)/mailFolders?`$top=100"
+                            $folders = Invoke-GraphWithRetry -Uri $foldersUri
+                            
+                            if ($folders -and $folders.value) {
+                                foreach ($folder in $folders.value) {
+                                    $folderStats.TotalFolders++
+                                    switch ($folder.displayName) {
+                                        "Inbox" { $folderStats.InboxCount = $folder.totalItemCount }
+                                        "Sent Items" { $folderStats.SentCount = $folder.totalItemCount }
+                                        "Drafts" { $folderStats.DraftsCount = $folder.totalItemCount }
+                                        "Deleted Items" { $folderStats.DeletedCount = $folder.totalItemCount }
+                                    }
+                                }
                             }
                         }
                     } catch {
-                        Write-ModuleLog -ModuleName "Exchange" -Message "Could not get folder stats for $($user.userPrincipalName): $_" -Level "DEBUG"
+                        $errorMessage = $_.Exception.Message
+                        if ($errorMessage -match "BadRequest" -or $errorMessage -match "400") {
+                            Write-ModuleLog -ModuleName "Exchange" -Message "User $($user.userPrincipalName) may not have Exchange mailbox or folders accessible: $errorMessage" -Level "DEBUG"
+                        } elseif ($errorMessage -match "Forbidden" -or $errorMessage -match "403") {
+                            Write-ModuleLog -ModuleName "Exchange" -Message "Insufficient permissions for mail folders on $($user.userPrincipalName): $errorMessage" -Level "WARN"
+                        } else {
+                            Write-ModuleLog -ModuleName "Exchange" -Message "Could not get folder stats for $($user.userPrincipalName): $errorMessage" -Level "DEBUG"
+                        }
                     }
                     
-                    # Get calendar permissions
+                    # Get calendar permissions with enhanced error handling
                     $calendarPermissions = @()
                     try {
-                        $calendarUri = "https://graph.microsoft.com/v1.0/users/$($user.id)/calendar/calendarPermissions"
-                        $calPerms = Invoke-GraphWithRetry -Uri $calendarUri
-                        $calendarPermissions = $calPerms.value | ForEach-Object {
-                            "$($_.emailAddress.name):$($_.role)"
+                        if ($user.mail -and $user.accountEnabled) {
+                            $calendarUri = "https://graph.microsoft.com/v1.0/users/$($user.id)/calendar/calendarPermissions"
+                            $calPerms = Invoke-GraphWithRetry -Uri $calendarUri
+                            if ($calPerms -and $calPerms.value) {
+                                $calendarPermissions = $calPerms.value | ForEach-Object {
+                                    "$($_.emailAddress.name):$($_.role)"
+                                }
+                            }
                         }
                     } catch {
-                        Write-ModuleLog -ModuleName "Exchange" -Message "Could not get calendar permissions for $($user.userPrincipalName): $_" -Level "DEBUG"
+                        $errorMessage = $_.Exception.Message
+                        if ($errorMessage -match "BadRequest" -or $errorMessage -match "400") {
+                            Write-ModuleLog -ModuleName "Exchange" -Message "User $($user.userPrincipalName) may not have Exchange calendar enabled: $errorMessage" -Level "DEBUG"
+                        } elseif ($errorMessage -match "Forbidden" -or $errorMessage -match "403") {
+                            Write-ModuleLog -ModuleName "Exchange" -Message "Insufficient permissions for calendar on $($user.userPrincipalName): $errorMessage" -Level "WARN"
+                        } else {
+                            Write-ModuleLog -ModuleName "Exchange" -Message "Could not get calendar permissions for $($user.userPrincipalName): $errorMessage" -Level "DEBUG"
+                        }
                     }
                     
                     # Build comprehensive mailbox object

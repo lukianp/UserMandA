@@ -105,16 +105,91 @@ function Invoke-SharePointDiscovery {
             -not $Configuration.discovery.sharepoint -or
             -not $Configuration.discovery.sharepoint.tenantName) {
             
-            # Try to extract from organization
+            # Enhanced tenant auto-detection using multiple methods (inspired by AzureHound approach)
             try {
-                Write-SharePointLog -Level "INFO" -Message "Tenant name not configured, attempting auto-detection..." -Context $Context
-                $org = Get-MgOrganization -ErrorAction Stop
-                $defaultDomain = ($org.VerifiedDomains | Where-Object { $_.IsDefault }).Name
-                $tenantName = $defaultDomain -replace '\.onmicrosoft\.com$', ''
+                Write-SharePointLog -Level "INFO" -Message "Tenant name not configured, attempting enhanced auto-detection..." -Context $Context
                 
-                Write-SharePointLog -Level "INFO" -Message "Auto-detected tenant name: $tenantName" -Context $Context
+                $tenantDetected = $false
+                $detectionMethods = @()
+                
+                # Method 1: Get organization information
+                try {
+                    Write-SharePointLog -Level "DEBUG" -Message "Attempting detection via organization data..." -Context $Context
+                    $org = Get-MgOrganization -ErrorAction Stop
+                    if ($org -and $org.VerifiedDomains) {
+                        $defaultDomain = ($org.VerifiedDomains | Where-Object { $_.IsDefault }).Name
+                        $tenantName = $defaultDomain -replace '\.onmicrosoft\.com$', ''
+                        $detectionMethods += "Organization Default Domain"
+                        $tenantDetected = $true
+                        Write-SharePointLog -Level "SUCCESS" -Message "Detected tenant via organization: $tenantName" -Context $Context
+                    }
+                } catch {
+                    Write-SharePointLog -Level "DEBUG" -Message "Organization method failed: $($_.Exception.Message)" -Context $Context
+                }
+                
+                # Method 2: Try to get domains list (fallback)
+                if (-not $tenantDetected) {
+                    try {
+                        Write-SharePointLog -Level "DEBUG" -Message "Attempting detection via domains list..." -Context $Context
+                        $domains = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/domains" -Method GET -ErrorAction Stop
+                        if ($domains -and $domains.value) {
+                            $onMicrosoftDomain = $domains.value | Where-Object { $_.id -like "*.onmicrosoft.com" -and $_.isDefault } | Select-Object -First 1
+                            if ($onMicrosoftDomain) {
+                                $tenantName = $onMicrosoftDomain.id -replace '\.onmicrosoft\.com$', ''
+                                $detectionMethods += "Domains API"
+                                $tenantDetected = $true
+                                Write-SharePointLog -Level "SUCCESS" -Message "Detected tenant via domains API: $tenantName" -Context $Context
+                            }
+                        }
+                    } catch {
+                        Write-SharePointLog -Level "DEBUG" -Message "Domains API method failed: $($_.Exception.Message)" -Context $Context
+                    }
+                }
+                
+                # Method 3: Try SharePoint root site discovery (advanced method)
+                if (-not $tenantDetected) {
+                    try {
+                        Write-SharePointLog -Level "DEBUG" -Message "Attempting detection via SharePoint sites..." -Context $Context
+                        $sites = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/sites?`$top=1" -Method GET -ErrorAction Stop
+                        if ($sites -and $sites.value -and $sites.value.Count -gt 0) {
+                            $siteUrl = $sites.value[0].webUrl
+                            if ($siteUrl -match "https://([^\.]+)\.sharepoint\.com") {
+                                $tenantName = $matches[1]
+                                $detectionMethods += "SharePoint Sites Discovery"
+                                $tenantDetected = $true
+                                Write-SharePointLog -Level "SUCCESS" -Message "Detected tenant via SharePoint sites: $tenantName" -Context $Context
+                            }
+                        }
+                    } catch {
+                        Write-SharePointLog -Level "DEBUG" -Message "SharePoint sites method failed: $($_.Exception.Message)" -Context $Context
+                    }
+                }
+                
+                # Method 4: Try via user profile (last resort)
+                if (-not $tenantDetected) {
+                    try {
+                        Write-SharePointLog -Level "DEBUG" -Message "Attempting detection via user profile..." -Context $Context
+                        $me = Get-MgUser -UserId (Get-MgContext).Account -ErrorAction Stop
+                        if ($me.UserPrincipalName -match "@([^\.]+)\.onmicrosoft\.com") {
+                            $tenantName = $matches[1]
+                            $detectionMethods += "User Profile"
+                            $tenantDetected = $true
+                            Write-SharePointLog -Level "SUCCESS" -Message "Detected tenant via user profile: $tenantName" -Context $Context
+                        }
+                    } catch {
+                        Write-SharePointLog -Level "DEBUG" -Message "User profile method failed: $($_.Exception.Message)" -Context $Context
+                    }
+                }
+                
+                if (-not $tenantDetected) {
+                    $result.AddError("SharePoint tenant name not configured and enhanced auto-detection failed using all methods", $null, $null)
+                    return $result
+                } else {
+                    Write-SharePointLog -Level "SUCCESS" -Message "Successfully auto-detected tenant '$tenantName' using methods: $($detectionMethods -join ', ')" -Context $Context
+                }
+                
             } catch {
-                $result.AddError("SharePoint tenant name not configured and auto-detection failed", $null, $null)
+                $result.AddError("SharePoint tenant auto-detection failed with error: $($_.Exception.Message)", $null, $null)
                 return $result
             }
         } else {

@@ -2,24 +2,62 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
-    /// Base view model class that implements INotifyPropertyChanged and IDisposable
+    /// Base view model class that implements INotifyPropertyChanged and IDisposable with performance optimizations
     /// </summary>
     public abstract class BaseViewModel : INotifyPropertyChanged, IDisposable
     {
         public event PropertyChangedEventHandler PropertyChanged;
+        
+        private readonly HashSet<string> _pendingNotifications = new HashSet<string>();
+        private readonly object _notificationLock = new object();
+        private bool _isNotificationScheduled;
+        private readonly DispatcherTimer _notificationTimer;
 
         /// <summary>
-        /// Raises the PropertyChanged event
+        /// Initializes the BaseViewModel with performance optimizations
+        /// </summary>
+        protected BaseViewModel()
+        {
+            _notificationTimer = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromMilliseconds(10) // Batch notifications every 10ms
+            };
+            _notificationTimer.Tick += ProcessPendingNotifications;
+        }
+
+        /// <summary>
+        /// Raises the PropertyChanged event immediately
         /// </summary>
         /// <param name="propertyName">Name of the property that changed</param>
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        /// <summary>
+        /// Queues a property change notification for batched processing (better performance for multiple changes)
+        /// </summary>
+        /// <param name="propertyName">Name of the property that changed</param>
+        protected virtual void OnPropertyChangedBatched([CallerMemberName] string propertyName = null)
+        {
+            if (string.IsNullOrEmpty(propertyName)) return;
+
+            lock (_notificationLock)
+            {
+                _pendingNotifications.Add(propertyName);
+                if (!_isNotificationScheduled)
+                {
+                    _isNotificationScheduled = true;
+                    _notificationTimer.Start();
+                }
+            }
         }
 
         /// <summary>
@@ -61,12 +99,54 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         /// <summary>
-        /// Raises PropertyChanged for multiple properties
+        /// Raises PropertyChanged for multiple properties immediately
         /// </summary>
         /// <param name="propertyNames">Names of properties that changed</param>
         protected void OnPropertiesChanged(params string[] propertyNames)
         {
             foreach (var propertyName in propertyNames)
+            {
+                OnPropertyChanged(propertyName);
+            }
+        }
+
+        /// <summary>
+        /// Queues multiple property change notifications for batched processing
+        /// </summary>
+        /// <param name="propertyNames">Names of properties that changed</param>
+        protected void OnPropertiesChangedBatched(params string[] propertyNames)
+        {
+            foreach (var propertyName in propertyNames)
+            {
+                OnPropertyChangedBatched(propertyName);
+            }
+        }
+
+        /// <summary>
+        /// Forces immediate processing of all pending notifications
+        /// </summary>
+        protected void FlushPendingNotifications()
+        {
+            if (_isNotificationScheduled)
+            {
+                _notificationTimer.Stop();
+                ProcessPendingNotifications(null, null);
+            }
+        }
+
+        private void ProcessPendingNotifications(object sender, EventArgs e)
+        {
+            _notificationTimer.Stop();
+            string[] notifications;
+
+            lock (_notificationLock)
+            {
+                notifications = _pendingNotifications.ToArray();
+                _pendingNotifications.Clear();
+                _isNotificationScheduled = false;
+            }
+
+            foreach (var propertyName in notifications)
             {
                 OnPropertyChanged(propertyName);
             }
@@ -96,6 +176,9 @@ namespace MandADiscoverySuite.ViewModels
                 if (disposing)
                 {
                     // Dispose managed resources here
+                    _notificationTimer?.Stop();
+                    _notificationTimer?.Tick -= ProcessPendingNotifications;
+                    
                     // Derived classes should override this method to dispose their resources
                     OnDisposing();
                 }

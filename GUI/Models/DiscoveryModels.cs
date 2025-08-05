@@ -687,4 +687,233 @@ namespace MandADiscoverySuite.Models
         public string SkuPartNumber { get; set; }
         public string Status { get; set; }
     }
+
+    /// <summary>
+    /// User data model for main views
+    /// </summary>
+    public class UserData : INotifyPropertyChanged
+    {
+        private string _displayName;
+        private string _userPrincipalName;
+        private string _mail;
+        private string _department;
+        private string _jobTitle;
+        private bool _accountEnabled;
+        private string _samAccountName;
+        private bool _isSelected;
+
+        public string Id { get; set; }
+        public string ObjectType { get; set; }
+        
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set { _isSelected = value; OnPropertyChanged(); }
+        }
+
+        public string DisplayName
+        {
+            get => _displayName;
+            set { _displayName = value; OnPropertyChanged(); }
+        }
+
+        public string UserPrincipalName
+        {
+            get => _userPrincipalName;
+            set { _userPrincipalName = value; OnPropertyChanged(); }
+        }
+
+        public string Mail
+        {
+            get => _mail;
+            set { _mail = value; OnPropertyChanged(); }
+        }
+
+        public string Department
+        {
+            get => _department;
+            set { _department = value; OnPropertyChanged(); }
+        }
+
+        public string JobTitle
+        {
+            get => _jobTitle;
+            set { _jobTitle = value; OnPropertyChanged(); }
+        }
+
+        public bool AccountEnabled
+        {
+            get => _accountEnabled;
+            set { _accountEnabled = value; OnPropertyChanged(); OnPropertyChanged(nameof(Status)); }
+        }
+
+        public string SamAccountName
+        {
+            get => _samAccountName;
+            set { _samAccountName = value; OnPropertyChanged(); }
+        }
+
+        // Additional properties from CSV
+        public string GivenName { get; set; }
+        public string Surname { get; set; }
+        public string CompanyName { get; set; }
+        public string City { get; set; }
+        public string Country { get; set; }
+        public string MobilePhone { get; set; }
+        public string ManagerDisplayName { get; set; }
+        public string CreatedDateTime { get; set; }
+        public string LastSignInDateTime { get; set; }
+        public string GroupMembershipCount { get; set; }
+        public string AssignedLicenses { get; set; }
+
+        // Display properties
+        public string Status => AccountEnabled ? "Active" : "Disabled";
+        public string Name => DisplayName ?? UserPrincipalName ?? SamAccountName;
+        public string Email => Mail ?? UserPrincipalName;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Infrastructure device data model
+    /// </summary>
+    public class InfrastructureData : INotifyPropertyChanged
+    {
+        private string _name;
+        private string _type;
+        private string _status;
+        private string _location;
+        private bool _isSelected;
+
+        public string Id { get; set; }
+        public string ObjectType { get; set; }
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set { _isSelected = value; OnPropertyChanged(); }
+        }
+
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
+
+        public string Type
+        {
+            get => _type;
+            set { _type = value; OnPropertyChanged(); }
+        }
+
+        public string Status
+        {
+            get => _status;
+            set { _status = value; OnPropertyChanged(); }
+        }
+
+        public string Location
+        {
+            get => _location;
+            set { _location = value; OnPropertyChanged(); }
+        }
+
+        // Additional properties
+        public string IPAddress { get; set; }
+        public string OperatingSystem { get; set; }
+        public string Version { get; set; }
+        public string LastSeen { get; set; }
+        public string Description { get; set; }
+        public string Manufacturer { get; set; }
+        public string Model { get; set; }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Group data model
+    /// </summary>
+    public class GroupData : INotifyPropertyChanged
+    {
+        private string _displayName;
+        private string _description;
+        private string _groupType;
+        private bool _mailEnabled;
+        private bool _securityEnabled;
+        private bool _isSelected;
+
+        public string Id { get; set; }
+        public string ObjectType { get; set; }
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set { _isSelected = value; OnPropertyChanged(); }
+        }
+
+        public string DisplayName
+        {
+            get => _displayName;
+            set { _displayName = value; OnPropertyChanged(); }
+        }
+
+        public string Description
+        {
+            get => _description;
+            set { _description = value; OnPropertyChanged(); }
+        }
+
+        public string GroupType
+        {
+            get => _groupType;
+            set { _groupType = value; OnPropertyChanged(); }
+        }
+
+        public bool MailEnabled
+        {
+            get => _mailEnabled;
+            set { _mailEnabled = value; OnPropertyChanged(); OnPropertyChanged(nameof(Type)); }
+        }
+
+        public bool SecurityEnabled
+        {
+            get => _securityEnabled;
+            set { _securityEnabled = value; OnPropertyChanged(); OnPropertyChanged(nameof(Type)); }
+        }
+
+        // Additional properties
+        public string Mail { get; set; }
+        public string CreatedDateTime { get; set; }
+        public string MemberCount { get; set; }
+        public string OwnerCount { get; set; }
+        public string Visibility { get; set; }
+
+        // Display properties
+        public string Type
+        {
+            get
+            {
+                if (MailEnabled && SecurityEnabled) return "Mail-Enabled Security";
+                if (MailEnabled) return "Distribution";
+                if (SecurityEnabled) return "Security";
+                return "Unknown";
+            }
+        }
+
+        public string Name => DisplayName;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
 }

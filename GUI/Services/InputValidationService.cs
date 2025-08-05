@@ -532,4 +532,232 @@ namespace MandADiscoverySuite.Services
             return string.Join("\n", messages);
         }
     }
+
+    #region User Information Validation Extensions
+
+    /// <summary>
+    /// Extension methods for user information validation
+    /// </summary>
+    public static class UserValidationExtensions
+    {
+        /// <summary>
+        /// Validates an email address format
+        /// </summary>
+        public static ValidationResult ValidateEmail(this InputValidationService service, string email, bool required = true)
+        {
+            var result = new ValidationResult();
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                if (required)
+                {
+                    result.AddError("Email address is required");
+                }
+                else
+                {
+                    result.AddInfo("Email is optional");
+                }
+                return result;
+            }
+
+            // Basic email regex pattern
+            var emailPattern = @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
+            if (!Regex.IsMatch(email, emailPattern))
+            {
+                result.AddError("Please enter a valid email address (e.g., user@domain.com)");
+                return result;
+            }
+
+            // Additional checks
+            if (email.Length > 254)
+            {
+                result.AddError("Email address is too long (maximum 254 characters)");
+                return result;
+            }
+
+            if (email.Contains(".."))
+            {
+                result.AddError("Email address cannot contain consecutive dots");
+                return result;
+            }
+
+            result.AddInfo("Email format is valid");
+            return result;
+        }
+
+        /// <summary>
+        /// Validates a phone number
+        /// </summary>
+        public static ValidationResult ValidatePhoneNumber(this InputValidationService service, string phoneNumber, bool required = false)
+        {
+            var result = new ValidationResult();
+
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                if (required)
+                {
+                    result.AddError("Phone number is required");
+                }
+                else
+                {
+                    result.AddInfo("Phone number is optional");
+                }
+                return result;
+            }
+
+            // Remove all non-digit characters for validation
+            var digitsOnly = Regex.Replace(phoneNumber, @"[^\d]", "");
+
+            if (digitsOnly.Length < 7)
+            {
+                result.AddError("Phone number must contain at least 7 digits");
+                return result;
+            }
+
+            if (digitsOnly.Length > 15)
+            {
+                result.AddError("Phone number cannot exceed 15 digits");
+                return result;
+            }
+
+            // Check for valid international format patterns
+            var phonePatterns = new[]
+            {
+                @"^\+?[1-9]\d{6,14}$",                    // International format
+                @"^\([0-9]{3}\)\s?[0-9]{3}-?[0-9]{4}$",  // US format (xxx) xxx-xxxx
+                @"^[0-9]{3}-?[0-9]{3}-?[0-9]{4}$",       // US format xxx-xxx-xxxx
+                @"^[0-9]{10,11}$",                        // Simple 10-11 digit
+                @"^0[0-9]{9,10}$"                         // UK format starting with 0
+            };
+
+            bool isValidFormat = phonePatterns.Any(pattern => Regex.IsMatch(phoneNumber, pattern));
+            
+            if (!isValidFormat)
+            {
+                result.AddWarning("Phone number format may be invalid. Please use formats like: +1234567890, (123) 456-7890, or 123-456-7890");
+            }
+            else
+            {
+                result.AddInfo("Phone number format is valid");
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Validates a person's name (first name, last name, etc.)
+        /// </summary>
+        public static ValidationResult ValidateName(this InputValidationService service, string name, string fieldName = "Name", bool required = true)
+        {
+            var result = new ValidationResult();
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                if (required)
+                {
+                    result.AddError($"{fieldName} is required");
+                }
+                else
+                {
+                    result.AddInfo($"{fieldName} is optional");
+                }
+                return result;
+            }
+
+            name = name.Trim();
+
+            if (name.Length < 1)
+            {
+                result.AddError($"{fieldName} cannot be empty");
+                return result;
+            }
+
+            if (name.Length > 50)
+            {
+                result.AddError($"{fieldName} cannot exceed 50 characters");
+                return result;
+            }
+
+            // Check for invalid characters (allow letters, spaces, hyphens, apostrophes)
+            if (!Regex.IsMatch(name, @"^[a-zA-Z\s\-'\.]+$"))
+            {
+                result.AddError($"{fieldName} can only contain letters, spaces, hyphens, and apostrophes");
+                return result;
+            }
+
+            // Check for reasonable patterns
+            if (Regex.IsMatch(name, @"^\s|\s$"))
+            {
+                result.AddWarning($"{fieldName} has leading or trailing spaces");
+            }
+
+            if (Regex.IsMatch(name, @"\s{2,}"))
+            {
+                result.AddWarning($"{fieldName} contains multiple consecutive spaces");
+            }
+
+            result.AddInfo($"{fieldName} is valid");
+            return result;
+        }
+
+        /// <summary>
+        /// Validates a username or user principal name
+        /// </summary>
+        public static ValidationResult ValidateUsername(this InputValidationService service, string username, bool required = true)
+        {
+            var result = new ValidationResult();
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                if (required)
+                {
+                    result.AddError("Username is required");
+                }
+                else
+                {
+                    result.AddInfo("Username is optional");
+                }
+                return result;
+            }
+
+            username = username.Trim();
+
+            if (username.Length < 3)
+            {
+                result.AddError("Username must be at least 3 characters long");
+                return result;
+            }
+
+            if (username.Length > 64)
+            {
+                result.AddError("Username cannot exceed 64 characters");
+                return result;
+            }
+
+            // Check if it's an email format (UPN)
+            if (username.Contains("@"))
+            {
+                return service.ValidateEmail(username, required);
+            }
+
+            // Check for valid username characters
+            if (!Regex.IsMatch(username, @"^[a-zA-Z0-9._-]+$"))
+            {
+                result.AddError("Username can only contain letters, numbers, dots, underscores, and hyphens");
+                return result;
+            }
+
+            // Username shouldn't start or end with special characters
+            if (Regex.IsMatch(username, @"^[._-]|[._-]$"))
+            {
+                result.AddError("Username cannot start or end with dots, underscores, or hyphens");
+                return result;
+            }
+
+            result.AddInfo("Username is valid");
+            return result;
+        }
+    }
+
+    #endregion
 }

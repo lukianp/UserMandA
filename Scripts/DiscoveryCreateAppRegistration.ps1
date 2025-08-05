@@ -258,6 +258,7 @@ $script:AppConfig = @{
         "Channel.ReadBasic.All" = "Read basic channel information"
         "ChannelMember.Read.All" = "Read channel members"
         "AppCatalog.Read.All" = "Read Teams app catalog for application inventory"
+        "AppCatalog.ReadWrite.All" = "Read and write Teams app catalog for application management"
         
         # Advanced features
         "Directory.ReadWrite.All" = "Read and write directory data (for migration scenarios)"
@@ -701,29 +702,79 @@ function Ensure-RequiredModules {
                     Sort-Object Version -Descending | Select-Object -First 1
                 
                 if ($latestInstalled) {
-                    # Remove any loaded versions first to prevent conflicts
-                    $loadedModule = Get-Module -Name $moduleName -ErrorAction SilentlyContinue
-                    if ($loadedModule) {
-                        Remove-Module -Name $moduleName -Force -ErrorAction SilentlyContinue
-                        Write-EnhancedLog "Unloaded existing $moduleName module" -Level INFO
+                    # Remove any loaded versions first to prevent conflicts - enhanced with retry
+                    $maxUnloadRetries = 3
+                    $unloadRetryCount = 0
+                    $moduleUnloaded = $false
+                    
+                    while ($unloadRetryCount -lt $maxUnloadRetries -and -not $moduleUnloaded) {
+                        $loadedModule = Get-Module -Name $moduleName -ErrorAction SilentlyContinue
+                        if ($loadedModule) {
+                            try {
+                                Remove-Module -Name $moduleName -Force -ErrorAction Stop
+                                Write-EnhancedLog "Unloaded existing $moduleName module (attempt $($unloadRetryCount + 1))" -Level INFO
+                                $moduleUnloaded = $true
+                            } catch {
+                                $unloadRetryCount++
+                                if ($unloadRetryCount -lt $maxUnloadRetries) {
+                                    Write-EnhancedLog "Failed to unload $moduleName (attempt $unloadRetryCount), retrying in 2 seconds..." -Level WARN
+                                    Start-Sleep -Seconds 2
+                                } else {
+                                    Write-EnhancedLog "Failed to unload $moduleName after $maxUnloadRetries attempts: $($_.Exception.Message)" -Level WARN
+                                    # Continue anyway - import might still work
+                                    $moduleUnloaded = $true
+                                }
+                            }
+                        } else {
+                            $moduleUnloaded = $true
+                        }
                     }
                     
-                    # Special handling for Az.Resources module which has known loading issues
-                    if ($moduleName -eq "Az.Resources") {
-                        try {
-                            # Force import without version requirement first
-                            Import-Module -Name $moduleName -Force -ErrorAction Stop
-                            Write-EnhancedLog "Imported $moduleName (latest available version)" -Level SUCCESS
-                        } catch {
-                            Write-EnhancedLog "Standard import failed for $moduleName, trying alternative method..." -Level WARN
-                            # Try importing with explicit path
-                            $modulePath = $latestInstalled.ModuleBase
-                            Import-Module -Name $modulePath -Force -ErrorAction Stop
-                            Write-EnhancedLog "Imported $moduleName v$($latestInstalled.Version) using explicit path" -Level SUCCESS
+                    # Enhanced import with multiple fallback methods
+                    $importMethods = @()
+                    
+                    if ($moduleName -eq "Az.Resources" -or $moduleName -like "Az.*") {
+                        # Az modules have known loading issues, try multiple methods
+                        $importMethods += @{
+                            Method = "Force Import"
+                            Action = { Import-Module -Name $moduleName -Force -ErrorAction Stop }
+                        }
+                        $importMethods += @{
+                            Method = "Explicit Path"
+                            Action = { Import-Module -Name $latestInstalled.ModuleBase -Force -ErrorAction Stop }
+                        }
+                        $importMethods += @{
+                            Method = "Global Scope"
+                            Action = { Import-Module -Name $moduleName -Force -Global -ErrorAction Stop }
                         }
                     } else {
-                        Import-Module -Name $moduleName -RequiredVersion $latestInstalled.Version -Force -ErrorAction Stop
-                        Write-EnhancedLog "Imported $moduleName v$($latestInstalled.Version)" -Level SUCCESS
+                        # Standard modules
+                        $importMethods += @{
+                            Method = "Version Specific"
+                            Action = { Import-Module -Name $moduleName -RequiredVersion $latestInstalled.Version -Force -ErrorAction Stop }
+                        }
+                        $importMethods += @{
+                            Method = "Force Import"
+                            Action = { Import-Module -Name $moduleName -Force -ErrorAction Stop }
+                        }
+                    }
+                    
+                    $importSuccessful = $false
+                    foreach ($method in $importMethods) {
+                        if ($importSuccessful) { break }
+                        
+                        try {
+                            Write-EnhancedLog "Attempting import using: $($method.Method)" -Level DEBUG
+                            & $method.Action
+                            Write-EnhancedLog "Successfully imported $moduleName using: $($method.Method)" -Level SUCCESS
+                            $importSuccessful = $true
+                        } catch {
+                            Write-EnhancedLog "Import method '$($method.Method)' failed: $($_.Exception.Message)" -Level WARN
+                        }
+                    }
+                    
+                    if (-not $importSuccessful) {
+                        throw "All import methods failed for $moduleName"
                     }
                 } else {
                     throw "Module $moduleName not found after installation"
