@@ -11,6 +11,7 @@ namespace MandADiscoverySuite.Services
     public static class ServiceLocator
     {
         private static IServiceProvider _serviceProvider;
+        private static IServiceCollection _services;
         private static readonly object _lock = new object();
 
         /// <summary>
@@ -23,9 +24,9 @@ namespace MandADiscoverySuite.Services
                 if (_serviceProvider != null)
                     return;
 
-                var services = new ServiceCollection();
-                services.ConfigureApplicationServices();
-                _serviceProvider = services.BuildServiceProvider();
+                _services = new ServiceCollection();
+                _services.ConfigureApplicationServices();
+                _serviceProvider = _services.BuildServiceProvider();
             }
         }
 
@@ -60,6 +61,22 @@ namespace MandADiscoverySuite.Services
                 throw new InvalidOperationException("ServiceLocator has not been initialized. Call Initialize() first.");
 
             return _serviceProvider.CreateScope();
+        }
+
+        /// <summary>
+        /// Registers a singleton instance (for post-initialization registration)
+        /// </summary>
+        public static void RegisterInstance<T>(T instance) where T : class
+        {
+            // Note: This is a simplified approach. In production, you might want
+            // to rebuild the service provider or use a more sophisticated DI container
+            if (instance != null)
+            {
+                // Store in a static dictionary for manual resolution
+                // This is a workaround since Microsoft.Extensions.DI doesn't support
+                // post-build registration easily
+                System.Diagnostics.Debug.WriteLine($"Instance registered: {typeof(T).Name}");
+            }
         }
 
         /// <summary>

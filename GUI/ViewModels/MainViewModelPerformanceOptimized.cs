@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using MandADiscoverySuite.Models;
@@ -86,15 +87,10 @@ namespace MandADiscoverySuite.ViewModels
         /// <param name="searchTerm">Search term</param>
         private void PerformOptimizedUserSearch(string searchTerm)
         {
-            _debouncedSearchService.DebouncedSearchAsync(
-                "UserSearch",
-                searchTerm,
-                async (term, cancellationToken) =>
-                {
-                    await SearchUsersAsync(term, cancellationToken);
-                },
-                TimeSpan.FromMilliseconds(300)
-            );
+            _debouncedSearchService.DebounceSearch(async () =>
+            {
+                await SearchUsersAsync(searchTerm, CancellationToken.None);
+            });
         }
 
         /// <summary>
@@ -103,15 +99,10 @@ namespace MandADiscoverySuite.ViewModels
         /// <param name="searchTerm">Search term</param>
         private void PerformOptimizedInfrastructureSearch(string searchTerm)
         {
-            _debouncedSearchService.DebouncedSearchAsync(
-                "InfrastructureSearch",
-                searchTerm,
-                async (term, cancellationToken) =>
-                {
-                    await SearchInfrastructureAsync(term, cancellationToken);
-                },
-                TimeSpan.FromMilliseconds(300)
-            );
+            _debouncedSearchService.DebounceSearch(async () =>
+            {
+                await SearchInfrastructureAsync(searchTerm, CancellationToken.None);
+            });
         }
 
         /// <summary>
@@ -120,15 +111,10 @@ namespace MandADiscoverySuite.ViewModels
         /// <param name="searchTerm">Search term</param>
         private void PerformOptimizedGroupsSearch(string searchTerm)
         {
-            _debouncedSearchService.DebouncedSearchAsync(
-                "GroupsSearch",
-                searchTerm,
-                async (term, cancellationToken) =>
-                {
-                    await SearchGroupsAsync(term, cancellationToken);
-                },
-                TimeSpan.FromMilliseconds(300)
-            );
+            _debouncedSearchService.DebounceSearch(async () =>
+            {
+                await SearchGroupsAsync(searchTerm, CancellationToken.None);
+            });
         }
 
         #endregion

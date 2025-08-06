@@ -1,0 +1,123 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:helpers="clr-namespace:MandADiscoverySuite.Helpers">
+    
+    <!-- Examples of optimized binding patterns for better performance -->
+    
+    <!-- BEFORE: Verbose binding with unnecessary Path= -->
+    <!-- <TextBlock Text="{Binding Path=UserName, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"/> -->
+    
+    <!-- AFTER: Simplified binding -->
+    <!-- <TextBlock Text="{helpers:OptimizedBinding UserName}"/> -->
+    
+    <!-- Example DataGrid with optimized bindings -->
+    <Style x:Key="OptimizedDataGridStyle" TargetType="DataGrid">
+        <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="CanUserResizeColumns" Value="True"/>
+        <Setter Property="CanUserSortColumns" Value="True"/>
+        <Setter Property="AutoGenerateColumns" Value="False"/>
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+        <Setter Property="EnableRowVirtualization" Value="True"/>
+        <Setter Property="EnableColumnVirtualization" Value="True"/>
+        <Setter Property="ScrollViewer.IsDeferredScrollingEnabled" Value="True"/>
+    </Style>
+    
+    <!-- Optimized column templates -->
+    <DataTemplate x:Key="OptimizedTextColumnTemplate">
+        <!-- OneWay binding for read-only data -->
+        <TextBlock Text="{helpers:OptimizedBinding Mode=OneWay}" 
+                   VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis"/>
+    </DataTemplate>
+    
+    <DataTemplate x:Key="OptimizedEditableColumnTemplate">
+        <!-- TwoWay binding only when editing -->
+        <TextBox Text="{helpers:OptimizedBinding Mode=TwoWay}" 
+                 BorderThickness="0"
+                 Background="Transparent"/>
+    </DataTemplate>
+    
+    <!-- Performance-optimized styles for common controls -->
+    <Style x:Key="OptimizedTextBoxStyle" TargetType="TextBox">
+        <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="FontSize" Value="13"/>
+        <!-- Disable spell checking for better performance -->
+        <Setter Property="SpellCheck.IsEnabled" Value="False"/>
+        <!-- Use LostFocus trigger for less frequent updates -->
+        <Setter Property="Text" Value="{helpers:OptimizedBinding Mode=TwoWay}"/>
+    </Style>
+    
+    <Style x:Key="OptimizedComboBoxStyle" TargetType="ComboBox">
+        <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <!-- Async loading for large collections -->
+        <Setter Property="ItemsSource" Value="{helpers:OptimizedBinding Async=True}"/>
+        <Setter Property="SelectedItem" Value="{helpers:OptimizedBinding Mode=TwoWay}"/>
+    </Style>
+    
+    <!-- Optimized progress indicators -->
+    <Style x:Key="OptimizedProgressBarStyle" TargetType="ProgressBar">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Height" Value="4"/>
+        <!-- OneWay binding for progress values -->
+        <Setter Property="Value" Value="{helpers:OptimizedBinding Mode=OneWay}"/>
+        <Setter Property="Maximum" Value="{helpers:OptimizedBinding Mode=OneTime, Fallback=100}"/>
+    </Style>
+    
+    <!-- Memory-efficient list styles -->
+    <Style x:Key="VirtualizedListBoxStyle" TargetType="ListBox">
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+        <Setter Property="VirtualizingPanel.ScrollUnit" Value="Item"/>
+        <Setter Property="ScrollViewer.IsDeferredScrollingEnabled" Value="True"/>
+        <Setter Property="ItemsSource" Value="{helpers:OptimizedBinding Async=True}"/>
+        <Setter Property="SelectedItem" Value="{helpers:OptimizedBinding Mode=TwoWay}"/>
+    </Style>
+    
+    <!-- Optimized button command bindings -->
+    <Style x:Key="OptimizedButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <!-- OneTime binding for commands (they rarely change) -->
+        <Setter Property="Command" Value="{helpers:OptimizedBinding Mode=OneTime}"/>
+        <!-- OneWay binding for enabled state -->
+        <Setter Property="IsEnabled" Value="{helpers:OptimizedBinding Mode=OneWay, Fallback=True}"/>
+    </Style>
+    
+    <!-- Conditional visibility with optimized bindings -->
+    <Style x:Key="ConditionalVisibilityStyle" TargetType="FrameworkElement">
+        <!-- OneWay binding for visibility checks -->
+        <Setter Property="Visibility" Value="{helpers:OptimizedBinding Mode=OneWay, 
+                                             Fallback=Collapsed}"/>
+    </Style>
+    
+    <!-- Optimized menu item bindings -->
+    <Style x:Key="OptimizedMenuItemStyle" TargetType="MenuItem">
+        <Setter Property="Header" Value="{helpers:OptimizedBinding Mode=OneWay}"/>
+        <Setter Property="Command" Value="{helpers:OptimizedBinding Mode=OneTime}"/>
+        <Setter Property="IsEnabled" Value="{helpers:OptimizedBinding Mode=OneWay, Fallback=True}"/>
+        <Setter Property="IsChecked" Value="{helpers:OptimizedBinding Mode=OneWay}"/>
+    </Style>
+    
+    <!-- High-performance chart bindings -->
+    <Style x:Key="OptimizedChartStyle" TargetType="UserControl">
+        <!-- Async binding for large datasets -->
+        <Setter Property="Tag" Value="{helpers:OptimizedBinding DataSource, Async=True}"/>
+    </Style>
+    
+</ResourceDictionary>

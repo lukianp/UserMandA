@@ -245,3 +245,8 @@ D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\refint\MandADiscoverySuite.dll
 D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\MandADiscoverySuite.pdb
 D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\MandADiscoverySuite.genruntimeconfig.cache
 D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\ref\MandADiscoverySuite.dll
+D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\Themes\SpacingSystem.baml
+D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\Controls\EmptyStateControl.baml
+D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\Themes\CustomTooltips.baml
+D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\Controls\EmptyStateControl.g.cs
+D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\Examples\OptimizedBindingExamples.baml

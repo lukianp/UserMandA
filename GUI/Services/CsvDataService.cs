@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,102 @@ namespace MandADiscoverySuite.Services
     /// </summary>
     public class CsvDataService : IDataService
     {
+        /// <summary>
+        /// Loads user data from CSV files as an asynchronous stream for incremental loading
+        /// </summary>
+        public async IAsyncEnumerable<UserData> LoadUsersAsyncEnumerable(string rawDataPath, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            var userFiles = new[]
+            {
+                Path.Combine(rawDataPath, "Users.csv"),
+                Path.Combine(rawDataPath, "AzureUsers.csv"),
+                Path.Combine(rawDataPath, "ActiveDirectoryUsers.csv"),
+                Path.Combine(rawDataPath, "EntraIDUsers.csv"),
+                Path.Combine(rawDataPath, "DirectoryUsers.csv")
+            };
+
+            var allCsvFiles = Directory.GetFiles(rawDataPath, "*.csv", SearchOption.TopDirectoryOnly);
+            var additionalUserFiles = allCsvFiles.Where(f => 
+            {
+                var fileName = Path.GetFileNameWithoutExtension(f).ToLower();
+                return fileName.Contains("user") || fileName.Equals("tenant");
+            }).ToArray();
+            
+            userFiles = userFiles.Concat(additionalUserFiles).Distinct().ToArray();
+
+            foreach (var filePath in userFiles)
+            {
+                if (File.Exists(filePath))
+                {
+                    await foreach (var user in LoadUsersFromCsvAsyncEnumerable(filePath, cancellationToken))
+                    {
+                        yield return user;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Loads users from a single CSV file as an asynchronous stream
+        /// </summary>
+        private async IAsyncEnumerable<UserData> LoadUsersFromCsvAsyncEnumerable(string filePath, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            using var reader = new StreamReader(filePath);
+            var headerLine = await reader.ReadLineAsync();
+            if (string.IsNullOrEmpty(headerLine)) yield break;
+
+            var headers = ParseCsvLine(headerLine);
+
+            while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
+            {
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrEmpty(line)) continue;
+
+                var values = ParseCsvLine(line);
+                if (values.Length < headers.Length) continue;
+
+                var user = new UserData();
+
+                for (int j = 0; j < headers.Length && j < values.Length; j++)
+                {
+                    var header = headers[j].ToLowerInvariant();
+                    var value = values[j];
+
+                    switch (header)
+                    {
+                        case "id": user.Id = value; break;
+                        case "objecttype": user.ObjectType = value; break;
+                        case "displayname": user.DisplayName = value; break;
+                        case "userprincipalname": user.UserPrincipalName = value; break;
+                        case "mail":
+                        case "email": user.Mail = value; break;
+                        case "department": user.Department = value; break;
+                        case "jobtitle": user.JobTitle = value; break;
+                        case "accountenabled": user.AccountEnabled = ParseBool(value); break;
+                        case "onpremisessamaccountname":
+                        case "samaccountname": user.SamAccountName = value; break;
+                        case "givenname": user.GivenName = value; break;
+                        case "surname": user.Surname = value; break;
+                        case "companyname": user.CompanyName = value; break;
+                        case "city": user.City = value; break;
+                        case "country": user.Country = value; break;
+                        case "mobilephone": user.MobilePhone = value; break;
+                        case "managerdisplayname": user.ManagerDisplayName = value; break;
+                        case "createddatetime": user.CreatedDateTime = value; break;
+                        case "lastsignindatetime": user.LastSignInDateTime = value; break;
+                        case "groupmembershipcount": user.GroupMembershipCount = value; break;
+                        case "assignedlicenses": user.AssignedLicenses = value; break;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(user.DisplayName) || 
+                    !string.IsNullOrWhiteSpace(user.UserPrincipalName) ||
+                    !string.IsNullOrWhiteSpace(user.SamAccountName))
+                {
+                    yield return user;
+                }
+            }
+        }
         /// <summary>
         /// Loads user data from CSV files
         /// </summary>
@@ -309,6 +406,96 @@ namespace MandADiscoverySuite.Services
             });
         }
 
+        /// <summary>
+        /// Streams users from a CSV file asynchronously for immediate UI feedback
+        /// </summary>
+        private async IAsyncEnumerable<UserData> LoadUsersFromCsvStreamAsync(string filePath, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            if (!File.Exists(filePath)) yield break;
+
+            using var reader = new StreamReader(filePath);
+            
+            // Read header line
+            var headerLine = await reader.ReadLineAsync();
+            if (headerLine == null) yield break;
+            
+            var headers = ParseCsvLine(headerLine);
+            string line;
+            int lineNumber = 1;
+            
+            // Stream each line as we read it
+            while ((line = await reader.ReadLineAsync()) != null)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                lineNumber++;
+                
+                UserData user = null;
+                
+                try
+                {
+                    var values = ParseCsvLine(line);
+                    if (values.Length < headers.Length) continue;
+
+                    user = new UserData();
+                    
+                    // Map CSV columns to user properties
+                    for (int j = 0; j < headers.Length && j < values.Length; j++)
+                    {
+                        var header = headers[j].ToLowerInvariant();
+                        var value = values[j];
+
+                        switch (header)
+                        {
+                            case "id":
+                                user.Id = value;
+                                break;
+                            case "displayname":
+                            case "name":
+                                user.DisplayName = value;
+                                // Name is a readonly property that returns DisplayName
+                                break;
+                            case "userprincipalname":
+                                user.UserPrincipalName = value;
+                                break;
+                            case "samaccountname":
+                                user.SamAccountName = value;
+                                break;
+                            case "mail":
+                            case "email":
+                                user.Mail = value;
+                                // Email is a readonly property that returns Mail
+                                break;
+                            case "department":
+                                user.Department = value;
+                                break;
+                            case "jobtitle":
+                                user.JobTitle = value;
+                                break;
+                            case "status":
+                            case "accountenabled":
+                                user.AccountEnabled = ParseBool(value);
+                                // Status is a readonly property based on AccountEnabled
+                                break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error parsing user row {lineNumber}: {ex.Message}");
+                    user = null;
+                }
+                
+                // Only yield users with meaningful data (outside of try-catch)
+                if (user != null && 
+                    (!string.IsNullOrWhiteSpace(user.DisplayName) || 
+                     !string.IsNullOrWhiteSpace(user.UserPrincipalName) ||
+                     !string.IsNullOrWhiteSpace(user.SamAccountName)))
+                {
+                    yield return user;
+                }
+            }
+        }
+
         private async Task<List<InfrastructureData>> LoadInfrastructureFromCsvAsync(string filePath)
         {
             // Use Task.Run to offload CPU-bound CSV parsing from the UI thread
@@ -407,16 +594,20 @@ namespace MandADiscoverySuite.Services
             catch (Exception ex)
             {
                 ErrorHandlingService.Instance.HandleException(ex, $"Loading infrastructure from {filePath}");
-            }
+                }
 
-            return infrastructure;
+                return infrastructure;
+            });
         }
 
         private async Task<List<ApplicationData>> LoadApplicationsFromCsvAsync(string filePath)
         {
-            var applications = new List<ApplicationData>();
+            // Use Task.Run to offload CPU-bound CSV parsing from the UI thread
+            return await Task.Run(async () =>
+            {
+                var applications = new List<ApplicationData>();
 
-            try
+                try
             {
                 var lines = await File.ReadAllLinesAsync(filePath);
                 if (lines.Length < 2) return applications;
@@ -506,20 +697,24 @@ namespace MandADiscoverySuite.Services
                         System.Diagnostics.Debug.WriteLine($"Error parsing application row {i}: {ex.Message}");
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                ErrorHandlingService.Instance.HandleException(ex, $"Loading applications from {filePath}");
-            }
+                }
+                catch (Exception ex)
+                {
+                    ErrorHandlingService.Instance.HandleException(ex, $"Loading applications from {filePath}");
+                }
 
-            return applications;
+                return applications;
+            });
         }
 
         private async Task<List<GroupData>> LoadGroupsFromCsvAsync(string filePath)
         {
-            var groups = new List<GroupData>();
+            // Use Task.Run to offload CPU-bound CSV parsing from the UI thread
+            return await Task.Run(async () =>
+            {
+                var groups = new List<GroupData>();
 
-            try
+                try
             {
                 var lines = await File.ReadAllLinesAsync(filePath);
                 if (lines.Length < 2) return groups;
@@ -592,13 +787,14 @@ namespace MandADiscoverySuite.Services
                         System.Diagnostics.Debug.WriteLine($"Error parsing group row {i}: {ex.Message}");
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                ErrorHandlingService.Instance.HandleException(ex, $"Loading groups from {filePath}");
-            }
+                }
+                catch (Exception ex)
+                {
+                    ErrorHandlingService.Instance.HandleException(ex, $"Loading groups from {filePath}");
+                }
 
-            return groups;
+                return groups;
+            });
         }
 
         private bool IsInfrastructureFile(string fileName)
@@ -728,6 +924,23 @@ namespace MandADiscoverySuite.Services
 
             _logger?.LogInformation($"Loaded {allUsers.Count} users for profile {profileName}");
             return allUsers;
+        }
+
+        /// <summary>
+        /// Streams users asynchronously for large datasets with immediate UI feedback
+        /// </summary>
+        public async IAsyncEnumerable<UserData> LoadUsersStreamAsync(string profileName, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            var allDataPaths = GetAllDataPaths(profileName);
+            
+            foreach (var dataPath in allDataPaths)
+            {
+                await foreach (var user in LoadUsersFromCsvStreamAsync(dataPath, cancellationToken))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    yield return user;
+                }
+            }
         }
 
         public async Task<IEnumerable<InfrastructureData>> LoadInfrastructureAsync(string profileName, bool forceRefresh = false, CancellationToken cancellationToken = default)

@@ -37,6 +37,8 @@ namespace MandADiscoverySuite.ViewModels
         private readonly RefreshService _refreshService;
         private readonly AdvancedSearchService _advancedSearchService;
         private readonly AsyncDataService _asyncDataService;
+        private readonly LazyViewLoadingService _lazyViewLoadingService;
+        private readonly DispatcherOptimizationService _dispatcherService;
         private readonly GlobalSearchViewModel _globalSearchViewModel;
         private CancellationTokenSource _cancellationTokenSource;
         
@@ -617,7 +619,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Constructor
 
-        public MainViewModel() : this(null, null, null, null, null, null, null)
+        public MainViewModel() : this(null, null, null, null, null, null, null, null)
         {
         }
 
@@ -629,6 +631,7 @@ namespace MandADiscoverySuite.ViewModels
             IDataService dataService,
             CsvDataService csvDataService,
             DataVisualizationViewModel dataVisualization,
+            LazyViewLoadingService lazyViewLoadingService = null,
             ThemeService themeService = null) : base(logger, messenger)
         {
             // Initialize collections (using optimized collections for data-heavy lists)
@@ -654,7 +657,16 @@ namespace MandADiscoverySuite.ViewModels
             _dataService = dataService ?? ServiceLocator.GetService<IDataService>();
             _csvDataService = csvDataService ?? ServiceLocator.GetService<CsvDataService>();
             _themeService = themeService ?? ServiceLocator.GetService<ThemeService>();
+            _lazyViewLoadingService = lazyViewLoadingService ?? ServiceLocator.GetService<LazyViewLoadingService>();
+            _dispatcherService = ServiceLocator.GetService<DispatcherOptimizationService>() ?? new DispatcherOptimizationService();
             _asyncDataService = new AsyncDataService(_dataService as CsvDataService ?? new CsvDataService());
+            
+            // Initialize binding optimization
+            var bindingService = ServiceLocator.GetService<BindingOptimizationService>();
+            if (bindingService != null)
+            {
+                MandADiscoverySuite.Helpers.BindingHelper.Initialize(bindingService);
+            }
 
             // Initialize search filter and global search
             SearchFilter = new SearchFilterViewModel();
@@ -848,6 +860,45 @@ namespace MandADiscoverySuite.ViewModels
 
         #endregion
 
+        #region Lazy Loading Methods
+        
+        /// <summary>
+        /// Sets up lazy loading for a view element
+        /// </summary>
+        /// <param name="viewName">Name of the view (Dashboard, Users, etc.)</param>
+        /// <param name="viewElement">The view element to manage</param>
+        /// <param name="initializer">Optional initializer function</param>
+        public void SetupLazyView(string viewName, FrameworkElement viewElement, Func<Task> initializer = null)
+        {
+            _lazyViewLoadingService?.SetupDeferredView(viewName, viewElement);
+            
+            if (initializer != null)
+            {
+                _lazyViewLoadingService?.RegisterView(viewName, viewElement, initializer);
+            }
+        }
+
+        /// <summary>
+        /// Gets lazy loading statistics for monitoring
+        /// </summary>
+        public ViewLoadingStats GetLazyLoadingStats()
+        {
+            return _lazyViewLoadingService?.GetStats() ?? new ViewLoadingStats();
+        }
+
+        /// <summary>
+        /// Pre-initializes critical views during idle time
+        /// </summary>
+        public async Task PreInitializeCriticalViewsAsync()
+        {
+            if (_lazyViewLoadingService != null)
+            {
+                await _lazyViewLoadingService.PreInitializeCriticalViewsAsync("Dashboard", "Users", "Discovery");
+            }
+        }
+
+        #endregion
+
         #region Async Helper Methods
 
         /// <summary>
@@ -865,10 +916,10 @@ namespace MandADiscoverySuite.ViewModels
             errorHandler.ExecuteWithErrorHandling(
                 taskFactory,
                 operationName,
-                onSuccess: () => Application.Current.Dispatcher.Invoke(() => 
-                    StatusMessage = $"{operationName} completed successfully"),
-                onError: (message) => Application.Current.Dispatcher.Invoke(() => 
-                    StatusMessage = message)
+                onSuccess: () => _dispatcherService.ScheduleUIUpdate(() => 
+                    StatusMessage = $"{operationName} completed successfully", UIUpdatePriority.Low),
+                onError: (message) => _dispatcherService.ScheduleUIUpdate(() => 
+                    StatusMessage = message, UIUpdatePriority.Normal)
             );
         }
 
@@ -1205,8 +1256,8 @@ namespace MandADiscoverySuite.ViewModels
 
                 System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Loaded {users.Count} users, {infrastructure.Count} infrastructure items, {groups.Count} groups, {applications.Count} applications");
 
-                // Update collections on the UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                // Update collections on the UI thread with optimized dispatcher
+                await _dispatcherService.ScheduleDataOperation(() =>
                 {
                     // Store all data for filtering
                     _allUsers = users;
@@ -1338,9 +1389,15 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private void OnCurrentViewChanged()
+        private async void OnCurrentViewChanged()
         {
             ShowNotification($"Switched to {CurrentView} view");
+            
+            // Initialize view if it hasn't been loaded yet
+            if (_lazyViewLoadingService != null && !_lazyViewLoadingService.IsViewInitialized(CurrentView))
+            {
+                await _lazyViewLoadingService.InitializeViewAsync(CurrentView);
+            }
             
             // Notify all visibility properties
             OnPropertiesChanged(
@@ -3053,7 +3110,7 @@ This directory is strictly for storing discovery results and company data.
 
         private void RefreshUserPage()
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            _ = _dispatcherService.ScheduleUIUpdate(() =>
             {
                 // Use optimized bulk operation instead of Clear() + individual Add() calls
                 Users.ReplaceAll(_userPagination.GetCurrentPageItems());
@@ -3061,19 +3118,19 @@ This directory is strictly for storing discovery results and company data.
                 // Use batched notifications for better performance
                 OnPropertiesChangedBatched(nameof(UserPageInfo), nameof(CurrentUserPage), nameof(TotalUserPages), 
                                          nameof(CanGoToPreviousPage), nameof(CanGoToNextPage));
-            });
+            }, UIUpdatePriority.High); // High priority for pagination to maintain responsiveness
         }
 
         private void RefreshInfrastructurePage()
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            _ = _dispatcherService.ScheduleUIUpdate(() =>
             {
                 // Use optimized bulk operation instead of Clear() + individual Add() calls
                 Infrastructure.ReplaceAll(_infrastructurePagination.GetCurrentPageItems());
                 
                 // Use batched notifications for better performance
                 OnPropertiesChangedBatched(nameof(InfrastructurePageInfo), nameof(CurrentInfrastructurePage), nameof(TotalInfrastructurePages));
-            });
+            }, UIUpdatePriority.High);
         }
 
         private void FilterInfrastructure()
@@ -3106,7 +3163,7 @@ This directory is strictly for storing discovery results and company data.
 
         private void RefreshGroupPage()
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            _ = _dispatcherService.ScheduleUIUpdate(() =>
             {
                 // Use optimized bulk operation instead of Clear() + individual Add() calls
                 Groups.ReplaceAll(_groupPagination.GetCurrentPageItems());
@@ -3114,7 +3171,7 @@ This directory is strictly for storing discovery results and company data.
                 // Use batched notifications for better performance
                 OnPropertiesChangedBatched(nameof(GroupPageInfo), nameof(CurrentGroupPage), nameof(TotalGroupPages), 
                                          nameof(HasPreviousGroupPage), nameof(HasNextGroupPage));
-            });
+            }, UIUpdatePriority.High);
         }
 
         private void FilterGroups()
@@ -3763,7 +3820,7 @@ This directory is strictly for storing discovery results and company data.
             var users = await LoadUsersDataAsync();
             _refreshService.UpdateRefreshProgress("Users", 75);
             
-            Application.Current.Dispatcher.Invoke(() =>
+            await _dispatcherService.ScheduleDataOperation(() =>
             {
                 _allUsers = users.ToList();
                 FilterUsers();
@@ -3776,7 +3833,7 @@ This directory is strictly for storing discovery results and company data.
             var infrastructure = await LoadInfrastructureDataAsync();
             _refreshService.UpdateRefreshProgress("Infrastructure", 75);
             
-            Application.Current.Dispatcher.Invoke(() =>
+            await _dispatcherService.ScheduleDataOperation(() =>
             {
                 _allInfrastructure = infrastructure.ToList();
                 FilterInfrastructure();
@@ -3789,7 +3846,7 @@ This directory is strictly for storing discovery results and company data.
             var groups = await LoadGroupsDataAsync();
             _refreshService.UpdateRefreshProgress("Groups", 75);
             
-            Application.Current.Dispatcher.Invoke(() =>
+            await _dispatcherService.ScheduleDataOperation(() =>
             {
                 _allGroups = groups.ToList();
                 FilterGroups();

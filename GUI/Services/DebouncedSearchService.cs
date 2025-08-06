@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -7,229 +6,189 @@ using System.Windows.Threading;
 namespace MandADiscoverySuite.Services
 {
     /// <summary>
-    /// Service for providing debounced search functionality to improve UI responsiveness
+    /// Service that provides debounced search functionality to prevent excessive searches while typing
     /// </summary>
-    public class DebouncedSearchService : IDisposable
+    public class DebouncedSearchService
     {
-        private readonly Dictionary<string, SearchContext> _searchContexts;
-        private readonly object _lockObject = new object();
-        private bool _disposed;
-
-        public DebouncedSearchService()
-        {
-            _searchContexts = new Dictionary<string, SearchContext>();
-        }
-
+        private Timer _debounceTimer;
+        private readonly object _lock = new();
+        private readonly int _debounceMilliseconds;
+        
         /// <summary>
-        /// Performs a debounced search operation
+        /// Initializes a new instance of the DebouncedSearchService
         /// </summary>
-        /// <param name="searchId">Unique identifier for this search context</param>
-        /// <param name="searchTerm">Search term to process</param>
-        /// <param name="searchAction">Action to execute after debounce delay</param>
-        /// <param name="debounceDelay">Delay before executing search (default 300ms)</param>
-        public void DebouncedSearch(string searchId, string searchTerm, Action<string> searchAction, TimeSpan? debounceDelay = null)
+        /// <param name="debounceMilliseconds">Delay in milliseconds before executing search (default 300ms)</param>
+        public DebouncedSearchService(int debounceMilliseconds = 300)
         {
-            if (_disposed) return;
-
-            var delay = debounceDelay ?? TimeSpan.FromMilliseconds(300);
-
-            lock (_lockObject)
+            _debounceMilliseconds = debounceMilliseconds;
+        }
+        
+        /// <summary>
+        /// Debounces a search action to only execute after the specified delay with no further input
+        /// </summary>
+        /// <param name="searchAction">The search action to execute</param>
+        public void DebounceSearch(Action searchAction)
+        {
+            lock (_lock)
             {
-                // Cancel existing search for this ID
-                if (_searchContexts.TryGetValue(searchId, out var existingContext))
+                _debounceTimer?.Dispose();
+                
+                _debounceTimer = new Timer(_ =>
                 {
-                    existingContext.CancellationTokenSource.Cancel();
-                    existingContext.CancellationTokenSource.Dispose();
-                }
-
-                // Create new search context
-                var cancellationTokenSource = new CancellationTokenSource();
-                var context = new SearchContext
+                    App.Current?.Dispatcher.InvokeAsync(searchAction, DispatcherPriority.Normal);
+                }, null, _debounceMilliseconds, Timeout.Infinite);
+            }
+        }
+        
+        /// <summary>
+        /// Debounces an async search function
+        /// </summary>
+        /// <param name="searchFunc">The async search function to execute</param>
+        /// <returns>Task representing the debounced operation</returns>
+        public Task DebounceSearchAsync(Func<Task> searchFunc)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+            
+            lock (_lock)
+            {
+                _debounceTimer?.Dispose();
+                
+                _debounceTimer = new Timer(async _ =>
                 {
-                    SearchTerm = searchTerm,
-                    SearchAction = searchAction,
-                    CancellationTokenSource = cancellationTokenSource,
-                    Timer = new DispatcherTimer(DispatcherPriority.Background)
+                    try
                     {
-                        Interval = delay
+                        await App.Current?.Dispatcher.InvokeAsync(async () =>
+                        {
+                            await searchFunc();
+                            tcs.SetResult(true);
+                        });
                     }
-                };
-
-                context.Timer.Tick += (sender, e) =>
-                {
-                    context.Timer.Stop();
-                    if (!cancellationTokenSource.Token.IsCancellationRequested)
+                    catch (Exception ex)
                     {
-                        try
-                        {
-                            searchAction(searchTerm);
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Debounced search error: {ex.Message}");
-                        }
-                        finally
-                        {
-                            lock (_lockObject)
-                            {
-                                if (_searchContexts.ContainsKey(searchId))
-                                {
-                                    _searchContexts[searchId].Dispose();
-                                    _searchContexts.Remove(searchId);
-                                }
-                            }
-                        }
+                        tcs.SetException(ex);
                     }
-                };
-
-                _searchContexts[searchId] = context;
-                context.Timer.Start();
+                }, null, _debounceMilliseconds, Timeout.Infinite);
             }
+            
+            return tcs.Task;
         }
-
+        
         /// <summary>
-        /// Performs an async debounced search operation
+        /// Cancels any pending search operation
         /// </summary>
-        /// <param name="searchId">Unique identifier for this search context</param>
-        /// <param name="searchTerm">Search term to process</param>
-        /// <param name="searchActionAsync">Async action to execute after debounce delay</param>
-        /// <param name="debounceDelay">Delay before executing search (default 300ms)</param>
-        public void DebouncedSearchAsync(string searchId, string searchTerm, Func<string, CancellationToken, Task> searchActionAsync, TimeSpan? debounceDelay = null)
+        public void CancelPendingSearch()
         {
-            if (_disposed) return;
-
-            var delay = debounceDelay ?? TimeSpan.FromMilliseconds(300);
-
-            lock (_lockObject)
+            lock (_lock)
             {
-                // Cancel existing search for this ID
-                if (_searchContexts.TryGetValue(searchId, out var existingContext))
-                {
-                    existingContext.CancellationTokenSource.Cancel();
-                    existingContext.CancellationTokenSource.Dispose();
-                }
-
-                // Create new search context
-                var cancellationTokenSource = new CancellationTokenSource();
-                var context = new SearchContext
-                {
-                    SearchTerm = searchTerm,
-                    SearchActionAsync = searchActionAsync,
-                    CancellationTokenSource = cancellationTokenSource,
-                    Timer = new DispatcherTimer(DispatcherPriority.Background)
-                    {
-                        Interval = delay
-                    }
-                };
-
-                context.Timer.Tick += async (sender, e) =>
-                {
-                    context.Timer.Stop();
-                    if (!cancellationTokenSource.Token.IsCancellationRequested)
-                    {
-                        try
-                        {
-                            await searchActionAsync(searchTerm, cancellationTokenSource.Token);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            // Expected when cancelled
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Debounced async search error: {ex.Message}");
-                        }
-                        finally
-                        {
-                            lock (_lockObject)
-                            {
-                                if (_searchContexts.ContainsKey(searchId))
-                                {
-                                    _searchContexts[searchId].Dispose();
-                                    _searchContexts.Remove(searchId);
-                                }
-                            }
-                        }
-                    }
-                };
-
-                _searchContexts[searchId] = context;
-                context.Timer.Start();
+                _debounceTimer?.Dispose();
+                _debounceTimer = null;
             }
         }
-
+        
         /// <summary>
-        /// Cancels any pending search for the specified ID
+        /// Disposes of resources used by the service
         /// </summary>
-        /// <param name="searchId">Search ID to cancel</param>
-        public void CancelSearch(string searchId)
-        {
-            lock (_lockObject)
-            {
-                if (_searchContexts.TryGetValue(searchId, out var context))
-                {
-                    context.CancellationTokenSource.Cancel();
-                    context.Dispose();
-                    _searchContexts.Remove(searchId);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets the current search term for a given search ID
-        /// </summary>
-        /// <param name="searchId">Search ID</param>
-        /// <returns>Current search term or null if not found</returns>
-        public string GetCurrentSearchTerm(string searchId)
-        {
-            lock (_lockObject)
-            {
-                return _searchContexts.TryGetValue(searchId, out var context) ? context.SearchTerm : null;
-            }
-        }
-
-        /// <summary>
-        /// Gets whether a search is currently pending for the given ID
-        /// </summary>
-        /// <param name="searchId">Search ID</param>
-        /// <returns>True if search is pending</returns>
-        public bool IsSearchPending(string searchId)
-        {
-            lock (_lockObject)
-            {
-                return _searchContexts.ContainsKey(searchId);
-            }
-        }
-
         public void Dispose()
         {
-            if (!_disposed)
+            lock (_lock)
             {
-                lock (_lockObject)
-                {
-                    foreach (var context in _searchContexts.Values)
-                    {
-                        context.Dispose();
-                    }
-                    _searchContexts.Clear();
-                    _disposed = true;
-                }
+                _debounceTimer?.Dispose();
+                _debounceTimer = null;
             }
         }
-
-        private class SearchContext : IDisposable
+    }
+    
+    /// <summary>
+    /// Generic version of DebouncedSearchService that returns search results
+    /// </summary>
+    /// <typeparam name="T">Type of search results</typeparam>
+    public class DebouncedSearchService<T>
+    {
+        private Timer _debounceTimer;
+        private readonly object _lock = new();
+        private readonly int _debounceMilliseconds;
+        private CancellationTokenSource _cts;
+        
+        /// <summary>
+        /// Initializes a new instance of the generic DebouncedSearchService
+        /// </summary>
+        /// <param name="debounceMilliseconds">Delay in milliseconds before executing search (default 300ms)</param>
+        public DebouncedSearchService(int debounceMilliseconds = 300)
         {
-            public string SearchTerm { get; set; }
-            public Action<string> SearchAction { get; set; }
-            public Func<string, CancellationToken, Task> SearchActionAsync { get; set; }
-            public CancellationTokenSource CancellationTokenSource { get; set; }
-            public DispatcherTimer Timer { get; set; }
-
-            public void Dispose()
+            _debounceMilliseconds = debounceMilliseconds;
+        }
+        
+        /// <summary>
+        /// Debounces a search function that returns results
+        /// </summary>
+        /// <param name="searchFunc">The search function to execute</param>
+        /// <param name="resultHandler">Handler for the search results</param>
+        /// <param name="errorHandler">Optional error handler</param>
+        public void DebounceSearch(
+            Func<CancellationToken, Task<T>> searchFunc, 
+            Action<T> resultHandler,
+            Action<Exception> errorHandler = null)
+        {
+            lock (_lock)
             {
-                Timer?.Stop();
-                CancellationTokenSource?.Cancel();
-                CancellationTokenSource?.Dispose();
+                _cts?.Cancel();
+                _cts = new CancellationTokenSource();
+                var token = _cts.Token;
+                
+                _debounceTimer?.Dispose();
+                
+                _debounceTimer = new Timer(async _ =>
+                {
+                    if (token.IsCancellationRequested) return;
+                    
+                    try
+                    {
+                        var result = await searchFunc(token);
+                        
+                        if (!token.IsCancellationRequested)
+                        {
+                            App.Current?.Dispatcher.InvokeAsync(() => resultHandler(result), DispatcherPriority.Normal);
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Search was cancelled, ignore
+                    }
+                    catch (Exception ex)
+                    {
+                        if (!token.IsCancellationRequested && errorHandler != null)
+                        {
+                            App.Current?.Dispatcher.InvokeAsync(() => errorHandler(ex), DispatcherPriority.Normal);
+                        }
+                    }
+                }, null, _debounceMilliseconds, Timeout.Infinite);
+            }
+        }
+        
+        /// <summary>
+        /// Cancels any pending search operation
+        /// </summary>
+        public void CancelPendingSearch()
+        {
+            lock (_lock)
+            {
+                _cts?.Cancel();
+                _debounceTimer?.Dispose();
+                _debounceTimer = null;
+            }
+        }
+        
+        /// <summary>
+        /// Disposes of resources used by the service
+        /// </summary>
+        public void Dispose()
+        {
+            lock (_lock)
+            {
+                _cts?.Cancel();
+                _cts?.Dispose();
+                _debounceTimer?.Dispose();
+                _debounceTimer = null;
             }
         }
     }

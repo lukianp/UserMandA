@@ -41,14 +41,20 @@ namespace MandADiscoverySuite.Extensions
             // Register utility services
             services.AddSingleton<IntelligentCacheService>();
             services.AddSingleton<MemoryOptimizationService>();
+            services.AddSingleton<UIUpdateThrottleService>();
             services.AddSingleton<DebouncedSearchService>();
             services.AddSingleton<AdvancedSearchService>();
+            services.AddSingleton<PerformanceMonitoringService>();
             services.AddSingleton<PaginationService<dynamic>>();
             services.AddSingleton<SmartPaginationService<dynamic>>();
             services.AddSingleton<DataExportService>();
             services.AddSingleton<ThemeService>();
             services.AddSingleton<ContextMenuService>();
             services.AddSingleton<LazyLoadingService>();
+            services.AddSingleton<LazyViewLoadingService>();
+            services.AddSingleton<StartupOptimizationService>();
+            services.AddSingleton<DispatcherOptimizationService>();
+            services.AddSingleton<BindingOptimizationService>();
             services.AddSingleton<RefreshService>();
             services.AddSingleton<BackgroundTaskQueueService>();
             services.AddSingleton<ConnectionPoolingService>();
@@ -64,6 +70,7 @@ namespace MandADiscoverySuite.Extensions
                 provider.GetService<IDataService>(),
                 provider.GetService<CsvDataService>(),
                 provider.GetService<DataVisualizationViewModel>(),
+                provider.GetService<LazyViewLoadingService>(),
                 provider.GetService<ThemeService>()
             ));
             services.AddTransient<DataVisualizationViewModel>();

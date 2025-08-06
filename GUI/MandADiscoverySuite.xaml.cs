@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using MandADiscoverySuite.ViewModels;
@@ -16,8 +17,13 @@ namespace MandADiscoverySuite
 
         public MainWindow()
         {
+            // Track MainWindow construction time
+            var startupService = ServiceLocator.GetService<StartupOptimizationService>();
+            startupService?.StartPhase("MainWindowInitialization");
+            
             InitializeComponent();
             
+            startupService?.StartPhase("ViewModelCreation");
             // Initialize ViewModel using dependency injection and set as DataContext
             try
             {
@@ -28,11 +34,21 @@ namespace MandADiscoverySuite
                 // Fallback to direct instantiation if DI fails
                 ViewModel = new MainViewModel();
             }
+            startupService?.EndPhase("ViewModelCreation");
             
+            startupService?.StartPhase("DataContextBinding");
             DataContext = ViewModel;
+            startupService?.EndPhase("DataContextBinding");
             
+            startupService?.StartPhase("ThemeApplication");
             // Apply initial theme
             ApplyTheme();
+            startupService?.EndPhase("ThemeApplication");
+            
+            // Set up lazy loading for views after components are initialized
+            this.Loaded += MainWindow_Loaded;
+            
+            startupService?.EndPhase("MainWindowInitialization");
         }
 
         private void ApplyTheme()
@@ -46,6 +62,157 @@ namespace MandADiscoverySuite
             {
                 // Log theme application error but don't fail startup
                 System.Diagnostics.Debug.WriteLine($"Theme application failed: {ex.Message}");
+            }
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            var startupService = ServiceLocator.GetService<StartupOptimizationService>();
+            startupService?.StartPhase("LazyViewSetup");
+            
+            try
+            {
+                // Set up lazy loading for each view
+                var dashboardView = FindName("DashboardView") as FrameworkElement;
+                var usersView = FindName("UsersView") as FrameworkElement;
+                var discoveryView = FindName("DiscoveryView") as FrameworkElement;
+                var computersView = FindName("ComputersView") as FrameworkElement;
+                var infrastructureView = FindName("InfrastructureView") as FrameworkElement;
+                var groupsView = FindName("GroupsView") as FrameworkElement;
+                var wavesView = FindName("WavesView") as FrameworkElement;
+                var migrateView = FindName("MigrateView") as FrameworkElement;
+                var reportsView = FindName("ReportsView") as FrameworkElement;
+                var analyticsView = FindName("AnalyticsView") as FrameworkElement;
+                var settingsView = FindName("SettingsView") as FrameworkElement;
+                var applicationsView = FindName("ApplicationsView") as FrameworkElement;
+                var domainDiscoveryView = FindName("DomainDiscoveryView") as FrameworkElement;
+                var fileServersView = FindName("FileServersView") as FrameworkElement;
+                var databasesView = FindName("DatabasesView") as FrameworkElement;
+                var securityView = FindName("SecurityView") as FrameworkElement;
+
+                // Register views with lazy loading service
+                if (dashboardView != null)
+                {
+                    ViewModel.SetupLazyView("Dashboard", dashboardView, async () =>
+                    {
+                        // Initialize dashboard data when first viewed
+                        if (ViewModel.RefreshDashboardCommand != null && ViewModel.RefreshDashboardCommand.CanExecute(null))
+                        {
+                            ViewModel.RefreshDashboardCommand.Execute(null);
+                        }
+                    });
+                }
+
+                if (usersView != null)
+                {
+                    ViewModel.SetupLazyView("Users", usersView, async () =>
+                    {
+                        // Initialize users data when first viewed
+                        if (ViewModel.RefreshUsersCommand != null && ViewModel.RefreshUsersCommand.CanExecute(null))
+                        {
+                            ViewModel.RefreshUsersCommand.Execute(null);
+                        }
+                    });
+                }
+
+                if (discoveryView != null)
+                {
+                    ViewModel.SetupLazyView("Discovery", discoveryView);
+                }
+
+                if (computersView != null)
+                {
+                    ViewModel.SetupLazyView("Computers", computersView);
+                }
+
+                if (infrastructureView != null)
+                {
+                    ViewModel.SetupLazyView("Infrastructure", infrastructureView, async () =>
+                    {
+                        // Initialize infrastructure data when first viewed
+                        if (ViewModel.RefreshInfrastructureCommand != null && ViewModel.RefreshInfrastructureCommand.CanExecute(null))
+                        {
+                            ViewModel.RefreshInfrastructureCommand.Execute(null);
+                        }
+                    });
+                }
+
+                if (groupsView != null)
+                {
+                    ViewModel.SetupLazyView("Groups", groupsView, async () =>
+                    {
+                        // Initialize groups data when first viewed
+                        if (ViewModel.RefreshGroupsCommand != null && ViewModel.RefreshGroupsCommand.CanExecute(null))
+                        {
+                            ViewModel.RefreshGroupsCommand.Execute(null);
+                        }
+                    });
+                }
+
+                if (wavesView != null)
+                {
+                    ViewModel.SetupLazyView("Waves", wavesView);
+                }
+
+                if (migrateView != null)
+                {
+                    ViewModel.SetupLazyView("Migrate", migrateView);
+                }
+
+                if (reportsView != null)
+                {
+                    ViewModel.SetupLazyView("Reports", reportsView);
+                }
+
+                if (analyticsView != null)
+                {
+                    ViewModel.SetupLazyView("Analytics", analyticsView);
+                }
+
+                if (settingsView != null)
+                {
+                    ViewModel.SetupLazyView("Settings", settingsView);
+                }
+
+                if (applicationsView != null)
+                {
+                    ViewModel.SetupLazyView("Applications", applicationsView);
+                }
+
+                if (domainDiscoveryView != null)
+                {
+                    ViewModel.SetupLazyView("DomainDiscovery", domainDiscoveryView);
+                }
+
+                if (fileServersView != null)
+                {
+                    ViewModel.SetupLazyView("FileServers", fileServersView);
+                }
+
+                if (databasesView != null)
+                {
+                    ViewModel.SetupLazyView("Databases", databasesView);
+                }
+
+                if (securityView != null)
+                {
+                    ViewModel.SetupLazyView("Security", securityView);
+                }
+
+                // Pre-initialize critical views during idle time
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(2000); // Wait 2 seconds after startup
+                    await ViewModel.PreInitializeCriticalViewsAsync();
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error setting up lazy loading: {ex.Message}");
+            }
+            finally
+            {
+                startupService?.EndPhase("LazyViewSetup");
             }
         }
 
