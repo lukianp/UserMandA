@@ -99,6 +99,11 @@ namespace MandADiscoverySuite.ViewModels
         public SearchFilterViewModel SearchFilter { get; }
 
         /// <summary>
+        /// Global search view model for comprehensive search functionality
+        /// </summary>
+        public GlobalSearchViewModel GlobalSearch => _globalSearchViewModel;
+
+        /// <summary>
         /// Data visualization view model for charts and analytics
         /// </summary>
         public DataVisualizationViewModel DataVisualization { get; }
@@ -651,9 +656,15 @@ namespace MandADiscoverySuite.ViewModels
             _themeService = themeService ?? ServiceLocator.GetService<ThemeService>();
             _asyncDataService = new AsyncDataService(_dataService as CsvDataService ?? new CsvDataService());
 
-            // Initialize search filter
+            // Initialize search filter and global search
             SearchFilter = new SearchFilterViewModel();
             SearchFilter.FiltersChanged += (s, e) => FilteredDiscoveryResults.Refresh();
+            
+            _globalSearchViewModel = new GlobalSearchViewModel(
+                null, 
+                messenger, 
+                _dataService, 
+                _profileService);
 
             // Initialize data visualization with dependency injection support
             DataVisualization = dataVisualization ?? new DataVisualizationViewModel();
@@ -1175,38 +1186,22 @@ namespace MandADiscoverySuite.ViewModels
                     return;
                 }
 
-                var rawDataPath = ConfigurationService.Instance.GetCompanyRawDataPath(SelectedProfile.CompanyName);
-                System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Looking for data in path: {rawDataPath}");
+                System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Loading data for profile: {SelectedProfile.CompanyName}");
                 
-                if (!Directory.Exists(rawDataPath)) 
-                {
-                    System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Raw data path does not exist: {rawDataPath}");
-                    StatusMessage = $"No discovery data found for {SelectedProfile.CompanyName}. Run discovery first.";
-                    return;
-                }
-
-                // Log available CSV files
-                var csvFiles = Directory.GetFiles(rawDataPath, "*.csv");
-                System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Found {csvFiles.Length} CSV files in {rawDataPath}");
-                foreach (var file in csvFiles)
-                {
-                    System.Diagnostics.Debug.WriteLine($"  - {Path.GetFileName(file)}");
-                }
-
                 StatusMessage = "Loading discovery data...";
 
-                // Load users, infrastructure, groups, and applications data in parallel
-                var usersTask = _csvDataService.LoadUsersAsync(rawDataPath);
-                var infrastructureTask = _csvDataService.LoadInfrastructureAsync(rawDataPath);
-                var groupsTask = _csvDataService.LoadGroupsAsync(rawDataPath);
-                var applicationsTask = _csvDataService.LoadApplicationsAsync(rawDataPath);
+                // Use enhanced CSV data service methods that scan multiple paths
+                var usersTask = _csvDataService.LoadUsersAsync(SelectedProfile.CompanyName);
+                var infrastructureTask = _csvDataService.LoadInfrastructureAsync(SelectedProfile.CompanyName);
+                var groupsTask = _csvDataService.LoadGroupsAsync(SelectedProfile.CompanyName);
+                var applicationsTask = _csvDataService.LoadApplicationsAsync(SelectedProfile.CompanyName);
 
                 await Task.WhenAll(usersTask, infrastructureTask, groupsTask, applicationsTask);
 
-                var users = await usersTask;
-                var infrastructure = await infrastructureTask;
-                var groups = await groupsTask;
-                var applications = await applicationsTask;
+                var users = (await usersTask).ToList();
+                var infrastructure = (await infrastructureTask).ToList();
+                var groups = (await groupsTask).ToList();
+                var applications = (await applicationsTask).ToList();
 
                 System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Loaded {users.Count} users, {infrastructure.Count} infrastructure items, {groups.Count} groups, {applications.Count} applications");
 
@@ -1319,6 +1314,23 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _dataRefreshTimer.Start();
                 StatusMessage = $"Auto-refresh enabled for {SelectedProfile.CompanyName}";
+                
+                // Automatically load discovery results and detailed CSV data when profile is selected
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await LoadDiscoveryResultsAsync();
+                        await LoadDetailedDataAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            StatusMessage = $"Error loading data for {SelectedProfile.CompanyName}: {ex.Message}";
+                        });
+                    }
+                });
             }
             else
             {

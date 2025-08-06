@@ -26,13 +26,25 @@ namespace MandADiscoverySuite.Services
             {
                 System.Diagnostics.Debug.WriteLine($"CsvDataService.LoadUsersAsync: Looking for user files in {rawDataPath}");
                 
-                // Look for user CSV files
+                // Look for user CSV files with various naming patterns
                 var userFiles = new[]
                 {
                     Path.Combine(rawDataPath, "Users.csv"),
                     Path.Combine(rawDataPath, "AzureUsers.csv"),
-                    Path.Combine(rawDataPath, "ActiveDirectoryUsers.csv")
+                    Path.Combine(rawDataPath, "ActiveDirectoryUsers.csv"),
+                    Path.Combine(rawDataPath, "EntraIDUsers.csv"),
+                    Path.Combine(rawDataPath, "DirectoryUsers.csv")
                 };
+
+                // Also scan for any CSV file that might contain user data
+                var allCsvFiles = Directory.GetFiles(rawDataPath, "*.csv", SearchOption.TopDirectoryOnly);
+                var additionalUserFiles = allCsvFiles.Where(f => 
+                {
+                    var fileName = Path.GetFileNameWithoutExtension(f).ToLower();
+                    return fileName.Contains("user") || fileName.Equals("tenant");
+                }).ToArray();
+                
+                userFiles = userFiles.Concat(additionalUserFiles).Distinct().ToArray();
 
                 foreach (var filePath in userFiles)
                 {
@@ -114,7 +126,9 @@ namespace MandADiscoverySuite.Services
                     Path.Combine(rawDataPath, "Applications.csv"),
                     Path.Combine(rawDataPath, "InstalledApplications.csv"),
                     Path.Combine(rawDataPath, "EntraIDAppRegistrations.csv"),
-                    Path.Combine(rawDataPath, "EntraIDEnterpriseApps.csv")
+                    Path.Combine(rawDataPath, "EntraIDEnterpriseApps.csv"),
+                    Path.Combine(rawDataPath, "AzureApplications.csv"),
+                    Path.Combine(rawDataPath, "EntraIDApplicationSecrets.csv")
                 };
 
                 foreach (var filePath in applicationFiles.Where(File.Exists))
@@ -177,23 +191,26 @@ namespace MandADiscoverySuite.Services
 
         private async Task<List<UserData>> LoadUsersFromCsvAsync(string filePath)
         {
-            var users = new List<UserData>();
-
-            try
+            // Use Task.Run to offload CPU-bound CSV parsing from the UI thread
+            return await Task.Run(async () =>
             {
-                var lines = await File.ReadAllLinesAsync(filePath);
-                if (lines.Length < 2) return users; // No data
+                var users = new List<UserData>();
 
-                var headers = ParseCsvLine(lines[0]);
-                
-                for (int i = 1; i < lines.Length; i++)
+                try
                 {
-                    try
-                    {
-                        var values = ParseCsvLine(lines[i]);
-                        if (values.Length < headers.Length) continue;
+                    var lines = await File.ReadAllLinesAsync(filePath);
+                    if (lines.Length < 2) return users; // No data
 
-                        var user = new UserData();
+                    var headers = ParseCsvLine(lines[0]);
+                    
+                    for (int i = 1; i < lines.Length; i++)
+                    {
+                        try
+                        {
+                            var values = ParseCsvLine(lines[i]);
+                            if (values.Length < headers.Length) continue;
+
+                            var user = new UserData();
                         
                         // Map CSV columns to user properties
                         for (int j = 0; j < headers.Length && j < values.Length; j++)
@@ -282,21 +299,25 @@ namespace MandADiscoverySuite.Services
                         System.Diagnostics.Debug.WriteLine($"Error parsing user row {i}: {ex.Message}");
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                ErrorHandlingService.Instance.HandleException(ex, $"Loading users from {filePath}");
-            }
+                }
+                catch (Exception ex)
+                {
+                    ErrorHandlingService.Instance.HandleException(ex, $"Loading users from {filePath}");
+                }
 
-            return users;
+                return users;
+            });
         }
 
         private async Task<List<InfrastructureData>> LoadInfrastructureFromCsvAsync(string filePath)
         {
-            var infrastructure = new List<InfrastructureData>();
-
-            try
+            // Use Task.Run to offload CPU-bound CSV parsing from the UI thread
+            return await Task.Run(async () =>
             {
+                var infrastructure = new List<InfrastructureData>();
+
+                try
+                {
                 var lines = await File.ReadAllLinesAsync(filePath);
                 if (lines.Length < 2) return infrastructure;
 
@@ -585,7 +606,9 @@ namespace MandADiscoverySuite.Services
             var infrastructureFiles = new[]
             {
                 "PhysicalServer_", "Security_", "NetworkInfrastructure", "VMware", "Intune",
-                "SQLServer_", "Certificate_", "Applications.csv", "ServicePrincipals.csv"
+                "SQLServer_", "Certificate_", "Applications.csv", "ServicePrincipals.csv",
+                "EntraIDServicePrincipals", "AzureApplications", "EntraIDAppRegistrations",
+                "EntraIDEnterpriseApps", "AzureResourceGroups", "PowerPlatform_"
             };
 
             return infrastructureFiles.Any(pattern => fileName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase));
@@ -605,6 +628,10 @@ namespace MandADiscoverySuite.Services
                 return "Database Server";
             if (fileName.StartsWith("Certificate", StringComparison.OrdinalIgnoreCase))
                 return "Certificate";
+            if (fileName.StartsWith("AzureResourceGroups", StringComparison.OrdinalIgnoreCase))
+                return "Azure Resource";
+            if (fileName.StartsWith("PowerPlatform", StringComparison.OrdinalIgnoreCase))
+                return "Power Platform";
             if (fileName.Contains("Application", StringComparison.OrdinalIgnoreCase))
                 return "Application";
             if (fileName.Contains("ServicePrincipal", StringComparison.OrdinalIgnoreCase))
@@ -679,16 +706,28 @@ namespace MandADiscoverySuite.Services
                 }
             }
 
-            var dataPath = ConfigurationService.Instance.GetCompanyDataPath(profileName);
-            var users = await LoadUsersAsync(dataPath);
+            var allDataPaths = GetAllDataPaths(profileName);
+            var allUsers = new List<UserData>();
+            
+            foreach (var dataPath in allDataPaths)
+            {
+                var users = await LoadUsersAsync(dataPath);
+                allUsers.AddRange(users);
+            }
+            
+            // Remove duplicates based on UserPrincipalName or SamAccountName
+            allUsers = allUsers
+                .GroupBy(u => u.UserPrincipalName ?? u.SamAccountName ?? u.Id)
+                .Select(g => g.First())
+                .ToList();
             
             if (_cacheService != null)
             {
-                await _cacheService.SetAsync(cacheKey, users, TimeSpan.FromMinutes(15));
+                await _cacheService.SetAsync(cacheKey, allUsers, TimeSpan.FromMinutes(15));
             }
 
-            _logger?.LogInformation($"Loaded {users.Count} users for profile {profileName}");
-            return users;
+            _logger?.LogInformation($"Loaded {allUsers.Count} users for profile {profileName}");
+            return allUsers;
         }
 
         public async Task<IEnumerable<InfrastructureData>> LoadInfrastructureAsync(string profileName, bool forceRefresh = false, CancellationToken cancellationToken = default)
@@ -705,16 +744,28 @@ namespace MandADiscoverySuite.Services
                 }
             }
 
-            var dataPath = ConfigurationService.Instance.GetCompanyDataPath(profileName);
-            var infrastructure = await LoadInfrastructureAsync(dataPath);
+            var allDataPaths = GetAllDataPaths(profileName);
+            var allInfrastructure = new List<InfrastructureData>();
+            
+            foreach (var dataPath in allDataPaths)
+            {
+                var infrastructure = await LoadInfrastructureAsync(dataPath);
+                allInfrastructure.AddRange(infrastructure);
+            }
+            
+            // Remove duplicates based on Name and Type
+            allInfrastructure = allInfrastructure
+                .GroupBy(i => new { i.Name, i.Type })
+                .Select(g => g.First())
+                .ToList();
             
             if (_cacheService != null)
             {
-                await _cacheService.SetAsync(cacheKey, infrastructure, TimeSpan.FromMinutes(15));
+                await _cacheService.SetAsync(cacheKey, allInfrastructure, TimeSpan.FromMinutes(15));
             }
 
-            _logger?.LogInformation($"Loaded {infrastructure.Count} infrastructure items for profile {profileName}");
-            return infrastructure;
+            _logger?.LogInformation($"Loaded {allInfrastructure.Count} infrastructure items for profile {profileName}");
+            return allInfrastructure;
         }
 
         public async Task<IEnumerable<GroupData>> LoadGroupsAsync(string profileName, bool forceRefresh = false, CancellationToken cancellationToken = default)
@@ -731,16 +782,28 @@ namespace MandADiscoverySuite.Services
                 }
             }
 
-            var dataPath = ConfigurationService.Instance.GetCompanyDataPath(profileName);
-            var groups = await LoadGroupsAsync(dataPath);
+            var allDataPaths = GetAllDataPaths(profileName);
+            var allGroups = new List<GroupData>();
+            
+            foreach (var dataPath in allDataPaths)
+            {
+                var groups = await LoadGroupsAsync(dataPath);
+                allGroups.AddRange(groups);
+            }
+            
+            // Remove duplicates based on Name and Type
+            allGroups = allGroups
+                .GroupBy(g => new { g.Name, g.Type })
+                .Select(g => g.First())
+                .ToList();
             
             if (_cacheService != null)
             {
-                await _cacheService.SetAsync(cacheKey, groups, TimeSpan.FromMinutes(15));
+                await _cacheService.SetAsync(cacheKey, allGroups, TimeSpan.FromMinutes(15));
             }
 
-            _logger?.LogInformation($"Loaded {groups.Count} groups for profile {profileName}");
-            return groups;
+            _logger?.LogInformation($"Loaded {allGroups.Count} groups for profile {profileName}");
+            return allGroups;
         }
 
         public async Task<IEnumerable<ApplicationData>> LoadApplicationsAsync(string profileName, bool forceRefresh = false, CancellationToken cancellationToken = default)
@@ -757,16 +820,28 @@ namespace MandADiscoverySuite.Services
                 }
             }
 
-            var dataPath = ConfigurationService.Instance.GetCompanyDataPath(profileName);
-            var applications = await LoadApplicationsAsync(dataPath);
+            var allDataPaths = GetAllDataPaths(profileName);
+            var allApplications = new List<ApplicationData>();
+            
+            foreach (var dataPath in allDataPaths)
+            {
+                var applications = await LoadApplicationsAsync(dataPath);
+                allApplications.AddRange(applications);
+            }
+            
+            // Remove duplicates based on Name and Version
+            allApplications = allApplications
+                .GroupBy(a => new { a.Name, a.Version })
+                .Select(g => g.First())
+                .ToList();
             
             if (_cacheService != null)
             {
-                await _cacheService.SetAsync(cacheKey, applications, TimeSpan.FromMinutes(15));
+                await _cacheService.SetAsync(cacheKey, allApplications, TimeSpan.FromMinutes(15));
             }
 
-            _logger?.LogInformation("Loaded " + applications.Count().ToString() + " applications for profile " + profileName);
-            return applications;
+            _logger?.LogInformation($"Loaded {allApplications.Count} applications for profile {profileName}");
+            return allApplications;
         }
 
         public async Task<DataSummary> GetDataSummaryAsync(string profileName, CancellationToken cancellationToken = default)
@@ -939,6 +1014,77 @@ namespace MandADiscoverySuite.Services
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Gets all potential data paths for a company profile
+        /// </summary>
+        private List<string> GetAllDataPaths(string profileName)
+        {
+            var dataPaths = new List<string>();
+            var rootPath = ConfigurationService.Instance.DiscoveryDataRootPath;
+            
+            // Primary location: C:\DiscoveryData\[CompanyName]\Raw
+            var primaryPath = Path.Combine(rootPath, profileName, "Raw");
+            if (Directory.Exists(primaryPath))
+            {
+                dataPaths.Add(primaryPath);
+                System.Diagnostics.Debug.WriteLine($"CsvDataService: Found primary data path: {primaryPath}");
+            }
+            
+            // Secondary location: C:\DiscoveryData\Profiles\[CompanyName]\Raw
+            var profilesPath = Path.Combine(rootPath, "Profiles", profileName, "Raw");
+            if (Directory.Exists(profilesPath))
+            {
+                dataPaths.Add(profilesPath);
+                System.Diagnostics.Debug.WriteLine($"CsvDataService: Found profiles data path: {profilesPath}");
+            }
+            
+            // Case-insensitive fallback search
+            if (!dataPaths.Any() && Directory.Exists(rootPath))
+            {
+                var directories = Directory.GetDirectories(rootPath);
+                var matchingDir = directories.FirstOrDefault(dir => 
+                    Path.GetFileName(dir).Equals(profileName, StringComparison.OrdinalIgnoreCase));
+                
+                if (matchingDir != null)
+                {
+                    var rawPath = Path.Combine(matchingDir, "Raw");
+                    if (Directory.Exists(rawPath))
+                    {
+                        dataPaths.Add(rawPath);
+                        System.Diagnostics.Debug.WriteLine($"CsvDataService: Found case-insensitive data path: {rawPath}");
+                    }
+                }
+                
+                // Also check Profiles subdirectory with case-insensitive search
+                var profilesDir = Path.Combine(rootPath, "Profiles");
+                if (Directory.Exists(profilesDir))
+                {
+                    var profileDirectories = Directory.GetDirectories(profilesDir);
+                    var matchingProfileDir = profileDirectories.FirstOrDefault(dir => 
+                        Path.GetFileName(dir).Equals(profileName, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (matchingProfileDir != null)
+                    {
+                        var rawPath = Path.Combine(matchingProfileDir, "Raw");
+                        if (Directory.Exists(rawPath))
+                        {
+                            dataPaths.Add(rawPath);
+                            System.Diagnostics.Debug.WriteLine($"CsvDataService: Found case-insensitive profiles data path: {rawPath}");
+                        }
+                    }
+                }
+            }
+            
+            if (!dataPaths.Any())
+            {
+                System.Diagnostics.Debug.WriteLine($"CsvDataService: No data paths found for profile: {profileName}");
+                // Return primary path as fallback even if it doesn't exist
+                dataPaths.Add(Path.Combine(rootPath, profileName, "Raw"));
+            }
+            
+            return dataPaths;
         }
 
         #endregion

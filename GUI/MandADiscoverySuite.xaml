@@ -1800,7 +1800,10 @@
                     </UniformGrid>
                     
                     <Border Grid.Row="2" Style="{StaticResource ModernCardStyle}">
-                        <DataGrid x:Name="ComputersDataGrid" Style="{StaticResource ModernDataGridStyle}">
+                        <DataGrid x:Name="ComputersDataGrid" Style="{StaticResource ModernDataGridStyle}"
+                                  behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                  behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                  behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Computer Name" Binding="{Binding Name}" Width="180">
                                     <DataGridTextColumn.HeaderStyle>
@@ -2548,7 +2551,10 @@
                                 <TextBlock Text="Wave Assignment Details" Style="{StaticResource SectionHeaderStyle}"/>
                                 <DataGrid x:Name="WavesDataGrid" Style="{StaticResource ModernDataGridStyle}" Height="400" 
                                           AllowDrop="True" Drop="WavesDataGrid_Drop" DragOver="WavesDataGrid_DragOver"
-                                          MouseMove="WavesDataGrid_MouseMove" PreviewMouseLeftButtonDown="WavesDataGrid_PreviewMouseLeftButtonDown">
+                                          MouseMove="WavesDataGrid_MouseMove" PreviewMouseLeftButtonDown="WavesDataGrid_PreviewMouseLeftButtonDown"
+                                          behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                          behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                          behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="User Name" Binding="{Binding UserName}" Width="150">
                                             <DataGridTextColumn.HeaderStyle>
@@ -2719,7 +2725,10 @@
                             
                             <DataGrid Grid.Row="2" x:Name="UserMigrationGrid"
                                       Background="#FF2D2D30" Foreground="White"
-                                      BorderBrush="#FF3E3E42"/>
+                                      BorderBrush="#FF3E3E42"
+                                      behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                      behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                      behaviors:VirtualizationBehavior.EnableRowVirtualization="True"/>
                         </Grid>
                     </TabItem>
                     
@@ -3472,7 +3481,10 @@
                                       HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                                       RowBackground="#FF2D2D30" AlternatingRowBackground="#FF1A202C"
                                       SelectionMode="Single" IsReadOnly="True"
-                                      AutoGenerateColumns="False">
+                                      AutoGenerateColumns="False"
+                                      behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                      behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                      behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="200"/>
                                     <DataGridTextColumn Header="App ID" Binding="{Binding AppId}" Width="160"/>
@@ -3731,7 +3743,10 @@
                             <StackPanel>
                                 <TextBlock Text="Discovered Domains" Style="{StaticResource SectionHeaderStyle}"/>
                                 <DataGrid x:Name="DomainsDataGrid" Style="{StaticResource ModernDataGridStyle}"
-                                          Margin="0,16,0,0" Height="300">
+                                          Margin="0,16,0,0" Height="300"
+                                          behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                          behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                          behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Domain Name" Binding="{Binding DomainName}" Width="200"/>
                                         <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="100"/>
@@ -3820,7 +3835,10 @@
                             <StackPanel>
                                 <TextBlock Text="Discovered File Servers" Style="{StaticResource SectionHeaderStyle}"/>
                                 <DataGrid x:Name="FileServersDataGrid" Style="{StaticResource ModernDataGridStyle}"
-                                          Margin="0,16,0,0" Height="350">
+                                          Margin="0,16,0,0" Height="350"
+                                          behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                          behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                          behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Server Name" Binding="{Binding ServerName}" Width="150"/>
                                         <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="120"/>
@@ -3922,7 +3940,10 @@
                             <StackPanel>
                                 <TextBlock Text="Discovered Database Servers" Style="{StaticResource SectionHeaderStyle}"/>
                                 <DataGrid x:Name="DatabasesDataGrid" Style="{StaticResource ModernDataGridStyle}"
-                                          Margin="0,16,0,0" Height="350">
+                                          Margin="0,16,0,0" Height="350"
+                                          behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                          behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                          behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Server Name" Binding="{Binding ServerName}" Width="150"/>
                                         <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="120"/>
@@ -4074,7 +4095,10 @@
                                 <!-- GPO Results -->
                                 <Grid x:Name="GPOResultsPanel" Visibility="Visible">
                                     <DataGrid x:Name="GPODataGrid" Style="{StaticResource ModernDataGridStyle}"
-                                              Height="300">
+                                              Height="300"
+                                              behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                              behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                              behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="GPO Name" Binding="{Binding Name}" Width="200"/>
                                             <DataGridTextColumn Header="Domain" Binding="{Binding Domain}" Width="150"/>
@@ -4090,7 +4114,10 @@
                                 <!-- Security Issues Results -->
                                 <Grid x:Name="SecurityResultsPanel" Visibility="Collapsed">
                                     <DataGrid x:Name="SecurityIssuesDataGrid" Style="{StaticResource ModernDataGridStyle}"
-                                              Height="300">
+                                              Height="300"
+                                              behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                              behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                              behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="Issue Type" Binding="{Binding IssueType}" Width="150"/>
                                             <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="100"/>
@@ -4105,7 +4132,10 @@
                                 <!-- Compliance Results -->
                                 <Grid x:Name="ComplianceResultsPanel" Visibility="Collapsed">
                                     <DataGrid x:Name="ComplianceDataGrid" Style="{StaticResource ModernDataGridStyle}"
-                                              Height="300">
+                                              Height="300"
+                                              behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                              behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                              behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="Control ID" Binding="{Binding ControlId}" Width="100"/>
                                             <DataGridTextColumn Header="Control Name" Binding="{Binding ControlName}" Width="200"/>
@@ -4121,7 +4151,10 @@
                                 <!-- Vulnerabilities Results -->
                                 <Grid x:Name="VulnerabilitiesResultsPanel" Visibility="Collapsed">
                                     <DataGrid x:Name="VulnerabilitiesDataGrid" Style="{StaticResource ModernDataGridStyle}"
-                                              Height="300">
+                                              Height="300"
+                                              behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                              behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                              behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="CVE ID" Binding="{Binding CveId}" Width="120"/>
                                             <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="250"/>

@@ -42,8 +42,18 @@ namespace MandADiscoverySuite.Extensions
             services.AddSingleton<IntelligentCacheService>();
             services.AddSingleton<MemoryOptimizationService>();
             services.AddSingleton<DebouncedSearchService>();
+            services.AddSingleton<AdvancedSearchService>();
+            services.AddSingleton<PaginationService<dynamic>>();
+            services.AddSingleton<SmartPaginationService<dynamic>>();
             services.AddSingleton<DataExportService>();
             services.AddSingleton<ThemeService>();
+            services.AddSingleton<ContextMenuService>();
+            services.AddSingleton<LazyLoadingService>();
+            services.AddSingleton<RefreshService>();
+            services.AddSingleton<BackgroundTaskQueueService>();
+            services.AddSingleton<ConnectionPoolingService>();
+            services.AddSingleton<OfflineModeService>();
+            services.AddSingleton<AsyncDataService>();
             
             // Register ViewModels as transient (new instance each time)
             services.AddTransient<MainViewModel>(provider => new MainViewModel(
@@ -58,6 +68,30 @@ namespace MandADiscoverySuite.Extensions
             ));
             services.AddTransient<DataVisualizationViewModel>();
             services.AddTransient<ProjectManagementViewModel>();
+            services.AddTransient<CustomizableDashboardViewModel>();
+            services.AddTransient<DrillDownDashboardViewModel>();
+            services.AddTransient<GanttChartViewModel>();
+            services.AddTransient<HealthScoreVisualizationViewModel>();
+            services.AddTransient<GlobalSearchViewModel>();
+            services.AddTransient<VirtualizedListViewModel>();
+            services.AddTransient<NetworkGraphViewModel>();
+            services.AddTransient<SystemStatusPanelViewModel>();
+            services.AddTransient<SearchFilterViewModel>();
+            services.AddTransient<CommandPaletteViewModel>();
+            services.AddTransient<BreadcrumbNavigationViewModel>();
+            services.AddTransient<DockingPanelViewModel>();
+            services.AddTransient<DataExportWizardViewModel>();
+            services.AddTransient<PrintPreviewViewModel>();
+            services.AddTransient<ZoomPanViewModel>();
+            services.AddTransient<KeyboardShortcutsDialogViewModel>();
+            services.AddTransient<NotificationCenterViewModel>();
+            services.AddTransient<CustomizableDataGridViewModel>();
+            services.AddTransient<SplitViewViewModel>();
+            services.AddTransient<TabViewModel>();
+            services.AddTransient<ProgressOverlayViewModel>();
+            services.AddTransient<StatusIndicatorViewModel>();
+            services.AddTransient<QuickActionsBarViewModel>();
+            services.AddTransient<ThemeToggleButtonViewModel>();
             
             // Register factories for ViewModels that need parameters
             services.AddTransient<Func<dynamic, string, UserDetailViewModel>>(provider =>

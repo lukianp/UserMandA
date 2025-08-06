@@ -175,7 +175,10 @@ namespace MandADiscoverySuite.Services
                 }
 
                 // Fallback to direct execution
-                return await ExecuteLoadWithContext(key, factory, strategy, cancellationToken);
+                OnLoadingProgress?.Invoke(new LazyLoadProgressEventArgs { Key = key, PercentageComplete = 0, StatusMessage = "Starting load..." });
+                var result = await ExecuteLoadWithContext(key, factory, strategy, cancellationToken);
+                OnLoadingProgress?.Invoke(new LazyLoadProgressEventArgs { Key = key, PercentageComplete = 100, StatusMessage = "Load completed" });
+                return result;
             }
             catch (Exception ex)
             {

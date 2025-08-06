@@ -65,7 +65,7 @@ namespace MandADiscoverySuite.Services
             if (Directory.Exists(exactPath))
                 return exactPath;
 
-            // Try to find case-insensitive match
+            // Try to find case-insensitive match in root
             if (Directory.Exists(DiscoveryDataRootPath))
             {
                 var directories = Directory.GetDirectories(DiscoveryDataRootPath);
@@ -76,6 +76,21 @@ namespace MandADiscoverySuite.Services
                 {
                     System.Diagnostics.Debug.WriteLine($"Found case-insensitive match: {companyName} -> {Path.GetFileName(matchingDir)}");
                     return matchingDir;
+                }
+                
+                // Also check Profiles subdirectory
+                var profilesPath = Path.Combine(DiscoveryDataRootPath, "Profiles");
+                if (Directory.Exists(profilesPath))
+                {
+                    var profileDirectories = Directory.GetDirectories(profilesPath);
+                    var matchingProfileDir = profileDirectories.FirstOrDefault(dir => 
+                        Path.GetFileName(dir).Equals(companyName, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (matchingProfileDir != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Found profile match: {companyName} -> {Path.GetFileName(matchingProfileDir)}");
+                        return matchingProfileDir;
+                    }
                 }
             }
 

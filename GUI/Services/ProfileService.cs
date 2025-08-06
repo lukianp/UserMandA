@@ -327,17 +327,82 @@ namespace MandADiscoverySuite.Services
 
         private List<CompanyProfile> CreateDefaultProfiles()
         {
-            return new List<CompanyProfile>
+            var profiles = new List<CompanyProfile>();
+            
+            // Check for existing data directories and create profiles for them
+            var discoveryDataPath = @"C:\DiscoveryData";
+            if (Directory.Exists(discoveryDataPath))
             {
-                new CompanyProfile
+                var directories = Directory.GetDirectories(discoveryDataPath);
+                bool foundProfiles = false;
+                
+                foreach (var dir in directories)
+                {
+                    var dirName = Path.GetFileName(dir);
+                    
+                    // Skip certain directories
+                    if (dirName.Equals("Profiles", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                        
+                    // Check if directory has Raw subfolder with data
+                    var rawPath = Path.Combine(dir, "Raw");
+                    if (Directory.Exists(rawPath) && Directory.GetFiles(rawPath, "*.csv").Length > 0)
+                    {
+                        profiles.Add(new CompanyProfile
+                        {
+                            CompanyName = dirName,
+                            Description = $"Auto-discovered profile for {dirName}",
+                            DomainController = $"dc.{dirName.ToLower()}.com",
+                            TenantId = Guid.NewGuid().ToString(),
+                            IsActive = !foundProfiles // First profile found is active
+                        });
+                        foundProfiles = true;
+                    }
+                }
+                
+                // Also check Profiles subdirectory structure
+                var profilesPath = Path.Combine(discoveryDataPath, "Profiles");
+                if (Directory.Exists(profilesPath))
+                {
+                    var profileDirs = Directory.GetDirectories(profilesPath);
+                    foreach (var dir in profileDirs)
+                    {
+                        var dirName = Path.GetFileName(dir);
+                        var rawPath = Path.Combine(dir, "Raw");
+                        if (Directory.Exists(rawPath) && Directory.GetFiles(rawPath, "*.csv").Length > 0)
+                        {
+                            // Don't duplicate if we already have this profile
+                            if (!profiles.Any(p => p.CompanyName.Equals(dirName, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                profiles.Add(new CompanyProfile
+                                {
+                                    CompanyName = dirName,
+                                    Description = $"Auto-discovered profile for {dirName}",
+                                    DomainController = $"dc.{dirName.ToLower()}.com",
+                                    TenantId = Guid.NewGuid().ToString(),
+                                    IsActive = !foundProfiles // First profile found is active
+                                });
+                                foundProfiles = true;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // If no profiles found, create default sample
+            if (!profiles.Any())
+            {
+                profiles.Add(new CompanyProfile
                 {
                     CompanyName = "Sample Corporation",
                     Description = "Sample company profile for demonstration",
                     DomainController = "dc.sample.com",
                     TenantId = Guid.NewGuid().ToString(),
                     IsActive = true
-                }
-            };
+                });
+            }
+            
+            return profiles;
         }
 
         private bool IsValidDomainController(string domainController)

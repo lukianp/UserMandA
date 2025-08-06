@@ -115,6 +115,11 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public event Action<BackgroundTaskQueueStats> OnQueueStatsUpdated;
 
+        /// <summary>
+        /// Gets the number of currently active tasks
+        /// </summary>
+        public int ActiveTaskCount => _activeTaskCount;
+
         #endregion
 
         #region Public Methods
