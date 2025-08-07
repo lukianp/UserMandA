@@ -1,0 +1,80 @@
+<UserControl x:Class="MandADiscoverySuite.Controls.OptimizedImage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="200" d:DesignWidth="200">
+
+    <Grid>
+        <!-- Main image display -->
+        <Image x:Name="MainImage"
+               Stretch="{Binding Stretch, RelativeSource={RelativeSource AncestorType=UserControl}}"
+               StretchDirection="{Binding StretchDirection, RelativeSource={RelativeSource AncestorType=UserControl}}"
+               HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType=UserControl}}"
+               VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource AncestorType=UserControl}}"
+               RenderOptions.BitmapScalingMode="HighQuality"
+               RenderOptions.EdgeMode="Aliased"/>
+
+        <!-- Loading indicator -->
+        <Grid x:Name="LoadingPanel" 
+              Background="{DynamicResource SurfaceBrush}"
+              Visibility="Collapsed">
+            <StackPanel HorizontalAlignment="Center" 
+                       VerticalAlignment="Center"
+                       Orientation="Horizontal">
+                <ProgressBar Width="20" Height="20" 
+                           IsIndeterminate="True"
+                           Style="{DynamicResource ModernProgressBarStyle}"
+                           Margin="0,0,8,0"/>
+                <TextBlock Text="Loading..." 
+                         Foreground="{DynamicResource ForegroundBrush}"
+                         VerticalAlignment="Center"
+                         FontSize="12"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Error display -->
+        <Grid x:Name="ErrorPanel"
+              Background="{DynamicResource SurfaceBrush}"
+              Visibility="Collapsed">
+            <StackPanel HorizontalAlignment="Center" 
+                       VerticalAlignment="Center"
+                       Orientation="Vertical">
+                <TextBlock Text="⚠" 
+                         FontSize="24"
+                         HorizontalAlignment="Center"
+                         Foreground="{DynamicResource DangerBrush}"
+                         Margin="0,0,0,4"/>
+                <TextBlock Text="Image failed to load" 
+                         Foreground="{DynamicResource ForegroundBrush}"
+                         HorizontalAlignment="Center"
+                         FontSize="11"
+                         TextWrapping="Wrap"
+                         TextAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Placeholder display -->
+        <Grid x:Name="PlaceholderPanel"
+              Background="{DynamicResource SurfaceBrush}"
+              Visibility="Collapsed">
+            <StackPanel HorizontalAlignment="Center" 
+                       VerticalAlignment="Center"
+                       Orientation="Vertical">
+                <TextBlock Text="📷" 
+                         FontSize="32"
+                         HorizontalAlignment="Center"
+                         Foreground="{DynamicResource AccentBrush}"
+                         Margin="0,0,0,8"/>
+                <TextBlock x:Name="PlaceholderTextBlock"
+                         Text="No image" 
+                         Foreground="{DynamicResource ForegroundBrush}"
+                         HorizontalAlignment="Center"
+                         FontSize="12"
+                         TextWrapping="Wrap"
+                         TextAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

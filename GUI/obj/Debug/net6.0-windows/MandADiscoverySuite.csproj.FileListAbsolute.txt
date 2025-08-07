@@ -250,3 +250,6 @@ D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\Controls\EmptyStateControl.bam
 D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\Themes\CustomTooltips.baml
 D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\Controls\EmptyStateControl.g.cs
 D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\Examples\OptimizedBindingExamples.baml
+D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\Controls\OptimizedImage.baml
+D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\Controls\OptimizedImage.g.cs
+D:\Scripts\UserMandA\GUI\obj\Debug\net6.0-windows\Themes\OptimizedImages.baml

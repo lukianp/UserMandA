@@ -40,6 +40,11 @@ namespace MandADiscoverySuite
                 _startupService.StartPhase("ResourceOptimization");
                 // Freeze all brushes for improved performance
                 BrushOptimizer.FreezeApplicationBrushes(this);
+                
+                // Start image preloading asynchronously
+                _ = ImagePreloader.PreloadApplicationImagesAsync();
+                _ = ImagePreloader.PreloadUIIconsAsync();
+                
                 _startupService.EndPhase("ResourceOptimization");
                 
                 base.OnStartup(e);

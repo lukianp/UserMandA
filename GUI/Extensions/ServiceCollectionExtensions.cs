@@ -55,6 +55,7 @@ namespace MandADiscoverySuite.Extensions
             services.AddSingleton<StartupOptimizationService>();
             services.AddSingleton<DispatcherOptimizationService>();
             services.AddSingleton<BindingOptimizationService>();
+            services.AddSingleton<ImageOptimizationService>();
             services.AddSingleton<RefreshService>();
             services.AddSingleton<BackgroundTaskQueueService>();
             services.AddSingleton<ConnectionPoolingService>();
