@@ -24,11 +24,11 @@
                     
                     <!-- Separator -->
                     <TextBlock Text="&#xE76C;" 
-                               FontFamily="Segoe MDL2 Assets"
-                               FontSize="12"
+                               FontFamily="{StaticResource IconFontFamily}"
+                               FontSize="{StaticResource FontSizeSmall}"
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                VerticalAlignment="Center"
-                               Margin="8,0"
+                               Margin="8,0,8,0"
                                Visibility="{Binding ShowSeparator, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 </StackPanel>
             </DataTemplate>

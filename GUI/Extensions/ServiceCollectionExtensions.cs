@@ -38,64 +38,36 @@ namespace MandADiscoverySuite.Extensions
             services.AddSingleton<IDiscoveryService, DiscoveryService>();
             services.AddSingleton<IDataService, CsvDataService>();
             
-            // Register utility services
-            services.AddSingleton<IntelligentCacheService>();
-            services.AddSingleton<MemoryOptimizationService>();
-            services.AddSingleton<UIUpdateThrottleService>();
-            services.AddSingleton<DebouncedSearchService>();
-            services.AddSingleton<AdvancedSearchService>();
-            services.AddSingleton<PerformanceMonitoringService>();
-            services.AddSingleton<PaginationService<dynamic>>();
-            services.AddSingleton<SmartPaginationService<dynamic>>();
-            services.AddSingleton<DataExportService>();
+            // Register utility services - most disabled for stack overflow debugging
+            // services.AddSingleton<IntelligentCacheService>();
+            // services.AddSingleton<MemoryOptimizationService>();
+            // services.AddSingleton<UIUpdateThrottleService>();
+            // services.AddSingleton<DebouncedSearchService>();
+            // services.AddSingleton<AdvancedSearchService>();
+            // services.AddSingleton<PerformanceMonitoringService>();
+            // services.AddSingleton<PaginationService<dynamic>>();
+            // services.AddSingleton<SmartPaginationService<dynamic>>();
+            // services.AddSingleton<DataExportService>();
             services.AddSingleton<ThemeService>();
-            services.AddSingleton<ContextMenuService>();
-            services.AddSingleton<LazyLoadingService>();
-            services.AddSingleton<LazyViewLoadingService>();
-            services.AddSingleton<StartupOptimizationService>();
-            services.AddSingleton<DispatcherOptimizationService>();
-            services.AddSingleton<BindingOptimizationService>();
-            services.AddSingleton<ImageOptimizationService>();
-            services.AddSingleton<RefreshService>();
-            services.AddSingleton<BackgroundTaskQueueService>();
-            services.AddSingleton<ConnectionPoolingService>();
-            services.AddSingleton<OfflineModeService>();
-            services.AddSingleton<AsyncDataService>();
+            // services.AddSingleton<ContextMenuService>();
+            // services.AddSingleton<LazyLoadingService>();
+            // services.AddSingleton<LazyViewLoadingService>();
+            // services.AddSingleton<StartupOptimizationService>();
+            // services.AddSingleton<DispatcherOptimizationService>();
+            // services.AddSingleton<BindingOptimizationService>();
+            // services.AddSingleton<ImageOptimizationService>();
+            // services.AddSingleton<GridLayoutOptimizationService>();
+            // services.AddSingleton<AnimationOptimizationService>();
+            // services.AddSingleton<RefreshService>();
+            // services.AddSingleton<BackgroundTaskQueueService>();
+            // services.AddSingleton<ConnectionPoolingService>();
+            // services.AddSingleton<OfflineModeService>();
+            // services.AddSingleton<AsyncDataService>();
             
-            // Register ViewModels as transient (new instance each time)
-            services.AddTransient<MainViewModel>(provider => new MainViewModel(
-                provider.GetService<ILogger<MainViewModel>>(),
-                provider.GetService<IMessenger>(),
-                provider.GetService<IDiscoveryService>(),
-                provider.GetService<IProfileService>(),
-                provider.GetService<IDataService>(),
-                provider.GetService<CsvDataService>(),
-                provider.GetService<DataVisualizationViewModel>(),
-                provider.GetService<LazyViewLoadingService>(),
-                provider.GetService<ThemeService>()
-            ));
-            services.AddTransient<DataVisualizationViewModel>();
-            services.AddTransient<ProjectManagementViewModel>();
-            services.AddTransient<CustomizableDashboardViewModel>();
-            services.AddTransient<DrillDownDashboardViewModel>();
-            services.AddTransient<GanttChartViewModel>();
-            services.AddTransient<HealthScoreVisualizationViewModel>();
-            services.AddTransient<GlobalSearchViewModel>();
-            services.AddTransient<VirtualizedListViewModel>();
-            services.AddTransient<NetworkGraphViewModel>();
-            services.AddTransient<SystemStatusPanelViewModel>();
-            services.AddTransient<SearchFilterViewModel>();
-            services.AddTransient<CommandPaletteViewModel>();
-            services.AddTransient<BreadcrumbNavigationViewModel>();
-            services.AddTransient<DockingPanelViewModel>();
-            services.AddTransient<DataExportWizardViewModel>();
-            services.AddTransient<PrintPreviewViewModel>();
-            services.AddTransient<ZoomPanViewModel>();
-            services.AddTransient<KeyboardShortcutsDialogViewModel>();
-            services.AddTransient<NotificationCenterViewModel>();
-            services.AddTransient<CustomizableDataGridViewModel>();
-            services.AddTransient<SplitViewViewModel>();
-            services.AddTransient<TabViewModel>();
+            // Register ViewModels as transient - temporarily simplified to avoid circular dependencies
+            // services.AddTransient<MainViewModel>();
+            // services.AddTransient<DataVisualizationViewModel>();
+            // Other ViewModels temporarily disabled for debugging
             services.AddTransient<ProgressOverlayViewModel>();
             services.AddTransient<StatusIndicatorViewModel>();
             services.AddTransient<QuickActionsBarViewModel>();

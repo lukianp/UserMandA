@@ -91,9 +91,9 @@
                 
                 <!-- Header -->
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
-                    <TextBlock Text="🔍 Search Builder" Style="{StaticResource HeaderTextStyle}"/>
+                    <TextBlock Text="🔍 Search Builder" Style="{StaticResource HeaderTextStyle}" IsHitTestVisible="False"/>
                     <TextBlock Text="{Binding ViewName}" Style="{StaticResource ModernTextStyle}" FontSize="16" 
-                               Foreground="#FF4299E1" Margin="16,2,0,0"/>
+                               Foreground="#FF4299E1" Margin="16,2,0,0" IsHitTestVisible="False"/>
                 </StackPanel>
                 
                 <!-- Filter Name and Logic -->

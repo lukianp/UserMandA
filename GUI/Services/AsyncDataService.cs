@@ -21,7 +21,7 @@ namespace MandADiscoverySuite.Services
 
         public AsyncDataService(CsvDataService csvDataService)
         {
-            _csvDataService = csvDataService ?? throw new ArgumentNullException(nameof(csvDataService));
+            _csvDataService = csvDataService ?? new CsvDataService(); // Create fallback if null
         }
 
         /// <summary>

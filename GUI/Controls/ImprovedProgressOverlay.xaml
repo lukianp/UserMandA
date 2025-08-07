@@ -1,0 +1,300 @@
+<UserControl x:Class="MandADiscoverySuite.Controls.ImprovedProgressOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    
+    <UserControl.Resources>
+        <!-- Progress Ring Animation -->
+        <Storyboard x:Key="ProgressRingAnimation" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="ProgressRingRotate"
+                           Storyboard.TargetProperty="Angle"
+                           From="0" To="360" Duration="0:0:1.5"
+                           AccelerationRatio="0.2" DecelerationRatio="0.2"/>
+        </Storyboard>
+        
+        <!-- Pulse Animation -->
+        <Storyboard x:Key="PulseAnimation" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="PulseEllipse"
+                           Storyboard.TargetProperty="Opacity"
+                           From="0.8" To="0.2" Duration="0:0:1"
+                           AutoReverse="True"/>
+            <DoubleAnimation Storyboard.TargetName="PulseScale"
+                           Storyboard.TargetProperty="ScaleX"
+                           From="1" To="1.2" Duration="0:0:1"
+                           AutoReverse="True"/>
+            <DoubleAnimation Storyboard.TargetName="PulseScale"
+                           Storyboard.TargetProperty="ScaleY"
+                           From="1" To="1.2" Duration="0:0:1"
+                           AutoReverse="True"/>
+        </Storyboard>
+        
+        <!-- Dots Animation -->
+        <Storyboard x:Key="DotsAnimation" RepeatBehavior="Forever">
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Dot1"
+                                          Storyboard.TargetProperty="Opacity">
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="1"/>
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.2" Value="0.3"/>
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.4" Value="0.3"/>
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.6" Value="0.3"/>
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.8" Value="1"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Dot2"
+                                          Storyboard.TargetProperty="Opacity">
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="0.3"/>
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.2" Value="1"/>
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.4" Value="0.3"/>
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.6" Value="0.3"/>
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.8" Value="0.3"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Dot3"
+                                          Storyboard.TargetProperty="Opacity">
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="0.3"/>
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.2" Value="0.3"/>
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.4" Value="1"/>
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.6" Value="0.3"/>
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.8" Value="0.3"/>
+            </DoubleAnimationUsingKeyFrames>
+        </Storyboard>
+    </UserControl.Resources>
+    
+    <Grid x:Name="OverlayRoot" Visibility="Collapsed">
+        <!-- Semi-transparent backdrop with blur effect -->
+        <Border x:Name="Backdrop"
+                Background="{DynamicResource BackgroundBrush}"
+                Opacity="0.9">
+            <Border.Effect>
+                <BlurEffect Radius="5"/>
+            </Border.Effect>
+        </Border>
+        
+        <!-- Dark overlay for better contrast -->
+        <Rectangle Fill="Black" Opacity="0.3"/>
+        
+        <!-- Progress Content Container -->
+        <Border x:Name="ProgressContainer"
+                Background="{DynamicResource CardBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                MaxWidth="400"
+                MaxHeight="280"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Padding="32"
+                RenderTransformOrigin="0.5,0.5">
+            
+            <Border.Effect>
+                <DropShadowEffect Color="Black" 
+                                Opacity="0.3" 
+                                ShadowDepth="8" 
+                                BlurRadius="20"/>
+            </Border.Effect>
+            
+            <Border.RenderTransform>
+                <ScaleTransform x:Name="ContainerScale" ScaleX="0.8" ScaleY="0.8"/>
+            </Border.RenderTransform>
+            
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Progress Indicator -->
+                <Grid Grid.Row="0" Height="80" Width="80" 
+                      HorizontalAlignment="Center" Margin="0,0,0,20">
+                    
+                    <!-- Circular Progress Ring -->
+                    <Canvas x:Name="CircularProgress" Visibility="Visible">
+                        <!-- Background Circle -->
+                        <Ellipse Width="80" Height="80"
+                                Stroke="{DynamicResource BorderBrush}"
+                                StrokeThickness="4"
+                                Fill="Transparent"/>
+                        
+                        <!-- Progress Arc -->
+                        <Path x:Name="ProgressArc"
+                              Stroke="{DynamicResource AccentBrush}"
+                              StrokeThickness="4"
+                              Fill="Transparent"
+                              RenderTransformOrigin="0.5,0.5">
+                            <Path.Data>
+                                <PathGeometry>
+                                    <PathFigure StartPoint="40,4">
+                                        <ArcSegment Size="36,36" 
+                                                  Point="76,40"
+                                                  SweepDirection="Clockwise"
+                                                  IsLargeArc="False"/>
+                                    </PathFigure>
+                                </PathGeometry>
+                            </Path.Data>
+                            <Path.RenderTransform>
+                                <RotateTransform x:Name="ProgressRingRotate" Angle="0" CenterX="40" CenterY="40"/>
+                            </Path.RenderTransform>
+                        </Path>
+                        
+                        <!-- Percentage Text -->
+                        <TextBlock x:Name="PercentageText"
+                                   Text="0%"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource ForegroundBrush}"
+                                   Canvas.Left="40"
+                                   Canvas.Top="40"
+                                   TextAlignment="Center"
+                                   Width="80"
+                                   Height="80"
+                                   VerticalAlignment="Center"
+                                   Margin="-40,-40,0,0"
+                                   LineHeight="80"/>
+                    </Canvas>
+                    
+                    <!-- Indeterminate Spinner -->
+                    <Canvas x:Name="IndeterminateSpinner" Visibility="Collapsed">
+                        <Ellipse Width="80" Height="80"
+                                Stroke="{DynamicResource BorderBrush}"
+                                StrokeThickness="4"
+                                Fill="Transparent"
+                                StrokeDashArray="20,10"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <RotateTransform x:Name="SpinnerRotate" Angle="0"/>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                    </Canvas>
+                    
+                    <!-- Pulse Effect -->
+                    <Ellipse x:Name="PulseEllipse"
+                            Width="80" Height="80"
+                            Fill="{DynamicResource AccentBrush}"
+                            Opacity="0"
+                            RenderTransformOrigin="0.5,0.5"
+                            Visibility="Collapsed">
+                        <Ellipse.RenderTransform>
+                            <ScaleTransform x:Name="PulseScale" ScaleX="1" ScaleY="1"/>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                </Grid>
+                
+                <!-- Title -->
+                <TextBlock x:Name="TitleText"
+                          Grid.Row="1"
+                          Text="Processing..."
+                          FontSize="18"
+                          FontWeight="SemiBold"
+                          Foreground="{DynamicResource ForegroundBrush}"
+                          HorizontalAlignment="Center"
+                          Margin="0,0,0,8"/>
+                
+                <!-- Message -->
+                <TextBlock x:Name="MessageText"
+                          Grid.Row="2"
+                          Text="Please wait while we complete your request"
+                          FontSize="14"
+                          Foreground="{DynamicResource ForegroundSecondaryBrush}"
+                          HorizontalAlignment="Center"
+                          TextWrapping="Wrap"
+                          TextAlignment="Center"
+                          Margin="0,0,0,16"/>
+                
+                <!-- Progress Bar -->
+                <ProgressBar x:Name="LinearProgressBar"
+                            Grid.Row="3"
+                            Height="6"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="0"
+                            Background="{DynamicResource BorderBrush}"
+                            Foreground="{DynamicResource AccentBrush}"
+                            BorderThickness="0"
+                            Margin="0,0,0,12"
+                            Visibility="Collapsed">
+                    <ProgressBar.Template>
+                        <ControlTemplate TargetType="ProgressBar">
+                            <Grid>
+                                <Border Background="{TemplateBinding Background}"
+                                        CornerRadius="3"/>
+                                <Border x:Name="PART_Track"
+                                        Background="{TemplateBinding Background}"
+                                        CornerRadius="3"/>
+                                <Decorator x:Name="PART_Indicator"
+                                          HorizontalAlignment="Left">
+                                    <Border Background="{TemplateBinding Foreground}"
+                                            CornerRadius="3"/>
+                                </Decorator>
+                            </Grid>
+                        </ControlTemplate>
+                    </ProgressBar.Template>
+                </ProgressBar>
+                
+                <!-- Sub-message with animated dots -->
+                <StackPanel Grid.Row="4" 
+                           Orientation="Horizontal"
+                           HorizontalAlignment="Center"
+                           Visibility="{Binding ElementName=SubMessageText, Path=Text.Length, 
+                                       Converter={StaticResource IntToVisibilityConverter}}">
+                    <TextBlock x:Name="SubMessageText"
+                              Text=""
+                              FontSize="12"
+                              Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text=" " FontSize="12"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse x:Name="Dot1" Width="4" Height="4" 
+                                Fill="{DynamicResource MutedForegroundBrush}" 
+                                Margin="1"/>
+                        <Ellipse x:Name="Dot2" Width="4" Height="4" 
+                                Fill="{DynamicResource MutedForegroundBrush}" 
+                                Margin="1"/>
+                        <Ellipse x:Name="Dot3" Width="4" Height="4" 
+                                Fill="{DynamicResource MutedForegroundBrush}" 
+                                Margin="1"/>
+                    </StackPanel>
+                </StackPanel>
+                
+                <!-- Cancel Button -->
+                <Button x:Name="CancelButton"
+                       Grid.Row="4"
+                       Content="Cancel"
+                       Style="{StaticResource FluentButtonStyle}"
+                       HorizontalAlignment="Center"
+                       Padding="24,8"
+                       Margin="0,12,0,0"
+                       Visibility="Collapsed"
+                       Click="CancelButton_Click"/>
+            </Grid>
+        </Border>
+    </Grid>
+    
+    <UserControl.Triggers>
+        <!-- Show Animation -->
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard x:Name="ShowStoryboard">
+                <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName="OverlayRoot"
+                                   Storyboard.TargetProperty="Opacity"
+                                   From="0" To="1" Duration="0:0:0.3"/>
+                    <DoubleAnimation Storyboard.TargetName="ContainerScale"
+                                   Storyboard.TargetProperty="ScaleX"
+                                   From="0.8" To="1" Duration="0:0:0.4">
+                        <DoubleAnimation.EasingFunction>
+                            <BackEase EasingMode="EaseOut" Amplitude="0.3"/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation Storyboard.TargetName="ContainerScale"
+                                   Storyboard.TargetProperty="ScaleY"
+                                   From="0.8" To="1" Duration="0:0:0.4">
+                        <DoubleAnimation.EasingFunction>
+                            <BackEase EasingMode="EaseOut" Amplitude="0.3"/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </UserControl.Triggers>
+</UserControl>

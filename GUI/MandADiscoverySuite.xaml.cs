@@ -17,38 +17,49 @@ namespace MandADiscoverySuite
 
         public MainWindow()
         {
-            // Track MainWindow construction time
-            var startupService = ServiceLocator.GetService<StartupOptimizationService>();
-            startupService?.StartPhase("MainWindowInitialization");
-            
-            InitializeComponent();
-            
-            startupService?.StartPhase("ViewModelCreation");
-            // Initialize ViewModel using dependency injection and set as DataContext
+            var logAction = Application.Current?.Properties["LogAction"] as Action<string>;
             try
             {
-                ViewModel = ServiceLocator.GetService<MainViewModel>();
-            }
-            catch (Exception)
-            {
-                // Fallback to direct instantiation if DI fails
+                logAction?.Invoke("=== MainWindow Constructor BEGIN ===");
+                
+                logAction?.Invoke("Calling InitializeComponent...");
+                InitializeComponent();
+                logAction?.Invoke("InitializeComponent completed successfully");
+                
+                logAction?.Invoke("Creating MainViewModel...");
+                // Create a minimal ViewModel to avoid binding errors
+                // We'll set the proper ViewModel later after services are initialized
                 ViewModel = new MainViewModel();
+                logAction?.Invoke("MainViewModel created successfully");
+                
+                logAction?.Invoke("Setting DataContext...");
+                DataContext = ViewModel;
+                logAction?.Invoke("DataContext set successfully");
+                
+                logAction?.Invoke("Adding Loaded event handler...");
+                // Set up lazy loading for views after components are initialized
+                this.Loaded += MainWindow_Loaded;
+                logAction?.Invoke("Loaded event handler added successfully");
+                
+                logAction?.Invoke("=== MainWindow Constructor COMPLETED SUCCESSFULLY ===");
             }
-            startupService?.EndPhase("ViewModelCreation");
-            
-            startupService?.StartPhase("DataContextBinding");
-            DataContext = ViewModel;
-            startupService?.EndPhase("DataContextBinding");
-            
-            startupService?.StartPhase("ThemeApplication");
-            // Apply initial theme
-            ApplyTheme();
-            startupService?.EndPhase("ThemeApplication");
-            
-            // Set up lazy loading for views after components are initialized
-            this.Loaded += MainWindow_Loaded;
-            
-            startupService?.EndPhase("MainWindowInitialization");
+            catch (Exception ex)
+            {
+                var errorMsg = $"CRITICAL MAINWINDOW CONSTRUCTOR FAILURE: {ex.GetType().Name}: {ex.Message}";
+                var stackTrace = $"Stack Trace:\n{ex.StackTrace}";
+                var innerEx = ex.InnerException != null ? $"Inner Exception: {ex.InnerException.Message}\nInner Stack: {ex.InnerException.StackTrace}" : "No inner exception";
+                var fullError = $"{errorMsg}\n{stackTrace}\n{innerEx}";
+                
+                logAction?.Invoke("=== CRITICAL MAINWINDOW CONSTRUCTOR FAILURE ===");
+                logAction?.Invoke(fullError);
+                logAction?.Invoke("=== END CRITICAL MAINWINDOW CONSTRUCTOR FAILURE ===");
+                
+                System.Diagnostics.Debug.WriteLine(fullError);
+                
+                MessageBox.Show($"CRITICAL MAINWINDOW FAILURE:\n{ex.Message}\n\nType: {ex.GetType().Name}\n\nStack trace:\n{ex.StackTrace}", 
+                              "Critical MainWindow Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                throw; // Re-throw to ensure the error is handled by the global handler
+            }
         }
 
         private void ApplyTheme()

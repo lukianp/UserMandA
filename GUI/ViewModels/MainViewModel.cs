@@ -39,6 +39,7 @@ namespace MandADiscoverySuite.ViewModels
         private readonly AsyncDataService _asyncDataService;
         private readonly LazyViewLoadingService _lazyViewLoadingService;
         private readonly DispatcherOptimizationService _dispatcherService;
+        private readonly UIUpdateThrottleService _uiThrottleService;
         private readonly GlobalSearchViewModel _globalSearchViewModel;
         private CancellationTokenSource _cancellationTokenSource;
         
@@ -652,20 +653,45 @@ namespace MandADiscoverySuite.ViewModels
             _infrastructurePagination.PageChanged += (s, e) => RefreshInfrastructurePage();
 
             // Initialize services with dependency injection
-            _discoveryService = discoveryService ?? ServiceLocator.GetService<IDiscoveryService>();
-            _profileService = profileService ?? ServiceLocator.GetService<IProfileService>();
-            _dataService = dataService ?? ServiceLocator.GetService<IDataService>();
-            _csvDataService = csvDataService ?? ServiceLocator.GetService<CsvDataService>();
-            _themeService = themeService ?? ServiceLocator.GetService<ThemeService>();
-            _lazyViewLoadingService = lazyViewLoadingService ?? ServiceLocator.GetService<LazyViewLoadingService>();
-            _dispatcherService = ServiceLocator.GetService<DispatcherOptimizationService>() ?? new DispatcherOptimizationService();
-            _asyncDataService = new AsyncDataService(_dataService as CsvDataService ?? new CsvDataService());
+            // Handle case when ServiceLocator is not initialized for debugging/testing
+            try
+            {
+                _discoveryService = discoveryService ?? ServiceLocator.GetService<IDiscoveryService>();
+                _profileService = profileService ?? ServiceLocator.GetService<IProfileService>();
+                _dataService = dataService ?? ServiceLocator.GetService<IDataService>();
+                _csvDataService = csvDataService ?? ServiceLocator.GetService<CsvDataService>();
+                _themeService = themeService ?? ServiceLocator.GetService<ThemeService>();
+                _lazyViewLoadingService = lazyViewLoadingService ?? ServiceLocator.GetService<LazyViewLoadingService>();
+                _dispatcherService = ServiceLocator.GetService<DispatcherOptimizationService>() ?? new DispatcherOptimizationService();
+                _uiThrottleService = ServiceLocator.GetService<UIUpdateThrottleService>() ?? new UIUpdateThrottleService();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ServiceLocator not initialized, using fallback services: {ex.Message}");
+                // Fallback to null services for minimal operation
+                _discoveryService = discoveryService;
+                _profileService = profileService;
+                _dataService = dataService;
+                _csvDataService = csvDataService;
+                _themeService = themeService;
+                _lazyViewLoadingService = lazyViewLoadingService;
+                _dispatcherService = new DispatcherOptimizationService();
+                _uiThrottleService = new UIUpdateThrottleService();
+            }
+            _asyncDataService = new AsyncDataService(_csvDataService ?? new CsvDataService());
             
             // Initialize binding optimization
-            var bindingService = ServiceLocator.GetService<BindingOptimizationService>();
-            if (bindingService != null)
+            try
             {
-                MandADiscoverySuite.Helpers.BindingHelper.Initialize(bindingService);
+                var bindingService = ServiceLocator.GetService<BindingOptimizationService>();
+                if (bindingService != null)
+                {
+                    MandADiscoverySuite.Helpers.BindingHelper.Initialize(bindingService);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Could not initialize binding optimization: {ex.Message}");
             }
 
             // Initialize search filter and global search
@@ -1239,6 +1265,21 @@ namespace MandADiscoverySuite.ViewModels
 
                 System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Loading data for profile: {SelectedProfile.CompanyName}");
                 
+                // Add null checks for services
+                if (_csvDataService == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("LoadDetailedDataAsync: _csvDataService is null");
+                    StatusMessage = "Data service not initialized";
+                    return;
+                }
+                
+                if (_dispatcherService == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("LoadDetailedDataAsync: _dispatcherService is null");
+                    StatusMessage = "Dispatcher service not initialized";
+                    return;
+                }
+                
                 StatusMessage = "Loading discovery data...";
 
                 // Use enhanced CSV data service methods that scan multiple paths
@@ -1282,8 +1323,13 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Exception occurred: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Exception type: {ex.GetType().Name}");
                 System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Stack trace: {ex.StackTrace}");
-                StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Detailed data loading");
+                if (ex.InnerException != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Inner exception: {ex.InnerException.Message}");
+                }
+                StatusMessage = ErrorHandlingService.Instance?.HandleException(ex, "Detailed data loading") ?? $"Error: {ex.Message}";
             }
         }
 
@@ -1306,7 +1352,9 @@ namespace MandADiscoverySuite.ViewModels
                 // Only refresh if we have a selected profile and we're not currently running discovery
                 if (SelectedProfile != null && !IsDiscoveryRunning)
                 {
-                    await LoadDetailedDataAsync();
+                    // Throttle data refresh to prevent excessive loading operations
+                    _uiThrottleService.Throttle("data-refresh", TimeSpan.FromSeconds(1), 
+                        () => Task.Run(async () => await LoadDetailedDataAsync()), DispatcherPriority.Background);
                 }
             }
             catch (Exception ex)
@@ -1469,13 +1517,17 @@ namespace MandADiscoverySuite.ViewModels
         {
             if (!IsDiscoveryRunning)
             {
-                UpdateDashboardMetrics();
+                // Throttle dashboard updates to prevent excessive UI redraws
+                _uiThrottleService.Throttle("dashboard-metrics", TimeSpan.FromMilliseconds(250), 
+                    () => UpdateDashboardMetrics(), DispatcherPriority.Background);
             }
         }
 
         private void ProgressTimer_Tick(object sender, EventArgs e)
         {
-            OnPropertyChanged(nameof(ElapsedTime));
+            // Throttle elapsed time updates to reduce binding updates
+            _uiThrottleService.Throttle("elapsed-time", TimeSpan.FromMilliseconds(500), 
+                () => OnPropertyChanged(nameof(ElapsedTime)), DispatcherPriority.Background);
         }
 
         #endregion

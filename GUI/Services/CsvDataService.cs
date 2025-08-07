@@ -881,8 +881,8 @@ namespace MandADiscoverySuite.Services
 
         public CsvDataService(ILogger<CsvDataService> logger, IntelligentCacheService cacheService)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
+            _logger = logger; // Allow null for backward compatibility
+            _cacheService = cacheService; // Allow null for backward compatibility
         }
 
         // Parameterless constructor for backward compatibility

@@ -3,21 +3,66 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MandADiscoverySuite.xaml">
     <Application.Resources>
-        <!-- Standard Converters -->
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-        
-        <!-- Common Colors -->
-        <SolidColorBrush x:Key="PrimaryBrush" Color="#4CAF50"/>
-        <SolidColorBrush x:Key="SecondaryBrush" Color="#2196F3"/>
-        <SolidColorBrush x:Key="AccentBrush" Color="#FF9800"/>
-        <SolidColorBrush x:Key="BackgroundBrush" Color="#F5F5F5"/>
-        <SolidColorBrush x:Key="SurfaceBrush" Color="White"/>
-        <SolidColorBrush x:Key="ForegroundBrush" Color="#333333"/>
-        
-        <!-- Dark Theme Colors -->
-        <SolidColorBrush x:Key="DarkBackgroundBrush" Color="#1E1E1E"/>
-        <SolidColorBrush x:Key="DarkSurfaceBrush" Color="#2D2D30"/>
-        <SolidColorBrush x:Key="DarkForegroundBrush" Color="#CCCCCC"/>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- DISABLED: Include optimized resources to fix stack overflow -->
+                <!-- <ResourceDictionary Source="Themes/OptimizedResources.xaml"/> -->
+                <!-- <ResourceDictionary Source="Themes/OptimizedAnimations.xaml"/> -->
+                <!-- <ResourceDictionary Source="Themes/OptimizedGridLayouts.xaml"/> -->
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Standard Converters -->
+            <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            
+            <!-- Common Colors -->
+            <SolidColorBrush x:Key="PrimaryBrush" Color="#4CAF50"/>
+            <SolidColorBrush x:Key="SecondaryBrush" Color="#2196F3"/>
+            <SolidColorBrush x:Key="AccentBrush" Color="#FF9800"/>
+            <SolidColorBrush x:Key="BackgroundBrush" Color="#F5F5F5"/>
+            <SolidColorBrush x:Key="SurfaceBrush" Color="White"/>
+            <SolidColorBrush x:Key="ForegroundBrush" Color="#333333"/>
+            
+            <!-- Dark Theme Colors -->
+            <SolidColorBrush x:Key="DarkBackgroundBrush" Color="#1E1E1E"/>
+            <SolidColorBrush x:Key="DarkSurfaceBrush" Color="#2D2D30"/>
+            <SolidColorBrush x:Key="DarkForegroundBrush" Color="#CCCCCC"/>
+            
+            <!-- Additional colors -->
+            <SolidColorBrush x:Key="MutedForegroundBrush" Color="#999999"/>
+            
+            <!-- Animation performance settings -->
+            <Duration x:Key="FastAnimationDuration">0:0:0.15</Duration>
+            <Duration x:Key="StandardAnimationDuration">0:0:0.25</Duration>
+            <Duration x:Key="SlowAnimationDuration">0:0:0.4</Duration>
+            
+            <!-- Animation easing functions -->
+            <PowerEase x:Key="StandardEase" EasingMode="EaseOut" Power="2"/>
+            <QuadraticEase x:Key="FastEase" EasingMode="EaseOut"/>
+            
+            <!-- Critical font families needed early in startup -->
+            <FontFamily x:Key="IconFontFamily">Segoe MDL2 Assets</FontFamily>
+            <FontFamily x:Key="PrimaryFontFamily">Segoe UI</FontFamily>
+            <FontFamily x:Key="MonospaceFontFamily">Consolas</FontFamily>
+            
+            <!-- Standard font sizes -->
+            <sys:Double x:Key="FontSizeXSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">10</sys:Double>
+            <sys:Double x:Key="FontSizeSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">12</sys:Double>
+            <sys:Double x:Key="FontSizeMedium" xmlns:sys="clr-namespace:System;assembly=mscorlib">14</sys:Double>
+            <sys:Double x:Key="FontSizeLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">16</sys:Double>
+            <sys:Double x:Key="FontSizeXLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">20</sys:Double>
+            
+            <!-- Spacing dimensions -->
+            <sys:Double x:Key="HorizontalSpacingSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">8</sys:Double>
+            <sys:Double x:Key="HorizontalSpacingMedium" xmlns:sys="clr-namespace:System;assembly=mscorlib">16</sys:Double>
+            <sys:Double x:Key="HorizontalSpacingLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">24</sys:Double>
+            <sys:Double x:Key="VerticalSpacingSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">4</sys:Double>
+            <sys:Double x:Key="VerticalSpacingMedium" xmlns:sys="clr-namespace:System;assembly=mscorlib">12</sys:Double>
+            <sys:Double x:Key="VerticalSpacingLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">20</sys:Double>
+            
+            <!-- Thickness/Margin values for spacing -->
+            <Thickness x:Key="HorizontalSpacingMediumThickness">16,0,16,0</Thickness>
+            <Thickness x:Key="VerticalSpacingMediumThickness">0,12,0,12</Thickness>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,0 +1,587 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Company Logo Vector -->
+    <DrawingImage x:Key="CompanyLogoVector">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Background circle -->
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="32,32" RadiusX="28" RadiusY="28"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- M&A letters -->
+                <GeometryDrawing Brush="White">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry>
+                            <!-- M letter -->
+                            <PathFigure StartPoint="15,20">
+                                <LineSegment Point="15,44"/>
+                                <LineSegment Point="18,44"/>
+                                <LineSegment Point="18,26"/>
+                                <LineSegment Point="22,32"/>
+                                <LineSegment Point="26,26"/>
+                                <LineSegment Point="26,44"/>
+                                <LineSegment Point="29,44"/>
+                                <LineSegment Point="29,20"/>
+                                <LineSegment Point="26,20"/>
+                                <LineSegment Point="22,28"/>
+                                <LineSegment Point="18,20"/>
+                            </PathFigure>
+                            
+                            <!-- & symbol -->
+                            <PathFigure StartPoint="32,28">
+                                <ArcSegment Point="36,32" Size="2,2" SweepDirection="Clockwise"/>
+                                <ArcSegment Point="32,36" Size="2,2" SweepDirection="Clockwise"/>
+                                <ArcSegment Point="28,32" Size="2,2" SweepDirection="Clockwise"/>
+                                <ArcSegment Point="32,28" Size="2,2" SweepDirection="Clockwise"/>
+                            </PathFigure>
+                            
+                            <!-- A letter -->
+                            <PathFigure StartPoint="40,44">
+                                <LineSegment Point="37,44"/>
+                                <LineSegment Point="42,20"/>
+                                <LineSegment Point="45,20"/>
+                                <LineSegment Point="50,44"/>
+                                <LineSegment Point="47,44"/>
+                                <LineSegment Point="46,38"/>
+                                <LineSegment Point="41,38"/>
+                                <LineSegment Point="40,44"/>
+                                <LineSegment Point="42,32"/>
+                                <LineSegment Point="45,32"/>
+                            </PathFigure>
+                        </PathGeometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- Discovery Suite Icon Vector -->
+    <DrawingImage x:Key="DiscoverySuiteIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Background -->
+                <GeometryDrawing Brush="{DynamicResource SurfaceBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,64,64" RadiusX="8" RadiusY="8"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Magnifying glass -->
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}" Pen="{x:Null}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="28,28" RadiusX="12" RadiusY="12"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource BackgroundBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="28,28" RadiusX="8" RadiusY="8"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Handle -->
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="36,36,12,4" RadiusX="2" RadiusY="2">
+                            <RectangleGeometry.Transform>
+                                <RotateTransform Angle="45" CenterX="42" CenterY="38"/>
+                            </RectangleGeometry.Transform>
+                        </RectangleGeometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Data points inside -->
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="25,25" RadiusX="1.5" RadiusY="1.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="31,25" RadiusX="1.5" RadiusY="1.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="28,31" RadiusX="1.5" RadiusY="1.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- Process Flow Diagram -->
+    <DrawingImage x:Key="ProcessFlowDiagram">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Start node -->
+                <GeometryDrawing Brush="{DynamicResource SuccessBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="50,30" RadiusX="20" RadiusY="15"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Process node 1 -->
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="130,15,80,30" RadiusX="5" RadiusY="5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Decision diamond -->
+                <GeometryDrawing Brush="{DynamicResource WarningBrush}">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry>
+                            <PathFigure StartPoint="270,30">
+                                <LineSegment Point="290,15"/>
+                                <LineSegment Point="310,30"/>
+                                <LineSegment Point="290,45"/>
+                                <LineSegment Point="270,30"/>
+                            </PathFigure>
+                        </PathGeometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Process node 2 -->
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="360,15,80,30" RadiusX="5" RadiusY="5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- End node -->
+                <GeometryDrawing Brush="{DynamicResource ErrorBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="500,30" RadiusX="20" RadiusY="15"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Arrows -->
+                <GeometryDrawing Brush="{DynamicResource ForegroundBrush}">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry>
+                            <!-- Arrow 1 -->
+                            <PathFigure StartPoint="75,30">
+                                <LineSegment Point="125,30"/>
+                                <LineSegment Point="120,25"/>
+                                <LineSegment Point="125,30"/>
+                                <LineSegment Point="120,35"/>
+                            </PathFigure>
+                            
+                            <!-- Arrow 2 -->
+                            <PathFigure StartPoint="215,30">
+                                <LineSegment Point="265,30"/>
+                                <LineSegment Point="260,25"/>
+                                <LineSegment Point="265,30"/>
+                                <LineSegment Point="260,35"/>
+                            </PathFigure>
+                            
+                            <!-- Arrow 3 -->
+                            <PathFigure StartPoint="315,30">
+                                <LineSegment Point="355,30"/>
+                                <LineSegment Point="350,25"/>
+                                <LineSegment Point="355,30"/>
+                                <LineSegment Point="350,35"/>
+                            </PathFigure>
+                            
+                            <!-- Arrow 4 -->
+                            <PathFigure StartPoint="445,30">
+                                <LineSegment Point="475,30"/>
+                                <LineSegment Point="470,25"/>
+                                <LineSegment Point="475,30"/>
+                                <LineSegment Point="470,35"/>
+                            </PathFigure>
+                        </PathGeometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Labels would be added as separate TextBlocks in actual implementation -->
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- Organization Chart Diagram -->
+    <DrawingImage x:Key="OrganizationChart">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- CEO Level -->
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="150,20,100,40" RadiusX="8" RadiusY="8"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- VP Level -->
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="50,100,80,35" RadiusX="6" RadiusY="6"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="160,100,80,35" RadiusX="6" RadiusY="6"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="270,100,80,35" RadiusX="6" RadiusY="6"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Manager Level -->
+                <GeometryDrawing Brush="{DynamicResource TertiaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="20,180,60,30" RadiusX="4" RadiusY="4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource TertiaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="100,180,60,30" RadiusX="4" RadiusY="4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource TertiaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="180,180,60,30" RadiusX="4" RadiusY="4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource TertiaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="260,180,60,30" RadiusX="4" RadiusY="4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Connection lines -->
+                <GeometryDrawing Brush="{DynamicResource BorderBrush}">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry>
+                            <!-- Vertical from CEO -->
+                            <PathFigure StartPoint="200,60">
+                                <LineSegment Point="200,80"/>
+                            </PathFigure>
+                            
+                            <!-- Horizontal connector -->
+                            <PathFigure StartPoint="90,80">
+                                <LineSegment Point="310,80"/>
+                            </PathFigure>
+                            
+                            <!-- Verticals to VPs -->
+                            <PathFigure StartPoint="90,80">
+                                <LineSegment Point="90,100"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="200,80">
+                                <LineSegment Point="200,100"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="310,80">
+                                <LineSegment Point="310,100"/>
+                            </PathFigure>
+                            
+                            <!-- VP to Manager connections -->
+                            <PathFigure StartPoint="90,135">
+                                <LineSegment Point="90,160"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="50,160">
+                                <LineSegment Point="130,160"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="50,160">
+                                <LineSegment Point="50,180"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="130,160">
+                                <LineSegment Point="130,180"/>
+                            </PathFigure>
+                            
+                            <!-- Similar for other VPs -->
+                            <PathFigure StartPoint="200,135">
+                                <LineSegment Point="200,160"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="180,160">
+                                <LineSegment Point="220,160"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="210,160">
+                                <LineSegment Point="210,180"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="310,135">
+                                <LineSegment Point="310,160"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="290,160">
+                                <LineSegment Point="290,180"/>
+                            </PathFigure>
+                        </PathGeometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- Data Flow Diagram -->
+    <DrawingImage x:Key="DataFlowDiagram">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- External entities (squares) -->
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="50,50,80,50"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="350,50,80,50"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Processes (circles) -->
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="240,75" RadiusX="40" RadiusY="30"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="240,175" RadiusX="40" RadiusY="30"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Data stores (open rectangles) -->
+                <GeometryDrawing Brush="{x:Null}" Pen="{DynamicResource BorderPen}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="150,250,180,40"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Data flows (arrows) -->
+                <GeometryDrawing Brush="{DynamicResource ForegroundBrush}">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry>
+                            <!-- From entity 1 to process 1 -->
+                            <PathFigure StartPoint="130,75">
+                                <LineSegment Point="200,75"/>
+                                <LineSegment Point="195,70"/>
+                                <LineSegment Point="200,75"/>
+                                <LineSegment Point="195,80"/>
+                            </PathFigure>
+                            
+                            <!-- From process 1 to entity 2 -->
+                            <PathFigure StartPoint="280,75">
+                                <LineSegment Point="350,75"/>
+                                <LineSegment Point="345,70"/>
+                                <LineSegment Point="350,75"/>
+                                <LineSegment Point="345,80"/>
+                            </PathFigure>
+                            
+                            <!-- From process 1 to process 2 -->
+                            <PathFigure StartPoint="240,105">
+                                <LineSegment Point="240,145"/>
+                                <LineSegment Point="235,140"/>
+                                <LineSegment Point="240,145"/>
+                                <LineSegment Point="245,140"/>
+                            </PathFigure>
+                            
+                            <!-- From process 2 to data store -->
+                            <PathFigure StartPoint="240,205">
+                                <LineSegment Point="240,250"/>
+                                <LineSegment Point="235,245"/>
+                                <LineSegment Point="240,250"/>
+                                <LineSegment Point="245,245"/>
+                            </PathFigure>
+                        </PathGeometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- Network Topology Diagram -->
+    <DrawingImage x:Key="NetworkTopology">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Central switch/router -->
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="175,125,50,50" RadiusX="8" RadiusY="8"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Client computers (squares) -->
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="75,75,40,30" RadiusX="4" RadiusY="4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="75,195,40,30" RadiusX="4" RadiusY="4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="285,75,40,30" RadiusX="4" RadiusY="4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="285,195,40,30" RadiusX="4" RadiusY="4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Server -->
+                <GeometryDrawing Brush="{DynamicResource TertiaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="175,25,50,40" RadiusX="6" RadiusY="6"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Network connections -->
+                <GeometryDrawing Brush="{DynamicResource BorderBrush}">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry>
+                            <!-- To clients -->
+                            <PathFigure StartPoint="175,150">
+                                <LineSegment Point="115,90"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="175,150">
+                                <LineSegment Point="115,210"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="225,150">
+                                <LineSegment Point="285,90"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="225,150">
+                                <LineSegment Point="285,210"/>
+                            </PathFigure>
+                            
+                            <!-- To server -->
+                            <PathFigure StartPoint="200,125">
+                                <LineSegment Point="200,65"/>
+                            </PathFigure>
+                        </PathGeometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- Timeline Diagram -->
+    <DrawingImage x:Key="TimelineDiagram">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Main timeline -->
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="50,100,300,4" RadiusX="2" RadiusY="2"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Timeline milestones -->
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="80,102" RadiusX="8" RadiusY="8"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="150,102" RadiusX="8" RadiusY="8"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="220,102" RadiusX="8" RadiusY="8"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource AccentBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="290,102" RadiusX="8" RadiusY="8"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Milestone descriptions (simplified as rectangles) -->
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="60,60,40,25" RadiusX="4" RadiusY="4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="130,130,40,25" RadiusX="4" RadiusY="4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="200,60,40,25" RadiusX="4" RadiusY="4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <GeometryDrawing Brush="{DynamicResource SecondaryBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="270,130,40,25" RadiusX="4" RadiusY="4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                
+                <!-- Connection lines -->
+                <GeometryDrawing Brush="{DynamicResource BorderBrush}">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry>
+                            <PathFigure StartPoint="80,94">
+                                <LineSegment Point="80,85"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="150,110">
+                                <LineSegment Point="150,130"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="220,94">
+                                <LineSegment Point="220,85"/>
+                            </PathFigure>
+                            
+                            <PathFigure StartPoint="290,110">
+                                <LineSegment Point="290,130"/>
+                            </PathFigure>
+                        </PathGeometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- Pens for outlines -->
+    <Pen x:Key="BorderPen" Brush="{DynamicResource BorderBrush}" Thickness="2"/>
+    <Pen x:Key="AccentPen" Brush="{DynamicResource AccentBrush}" Thickness="2"/>
+
+    <!-- Additional color resources for diagrams -->
+    <SolidColorBrush x:Key="SecondaryBrush" Color="#4A90E2"/>
+    <SolidColorBrush x:Key="TertiaryBrush" Color="#7ED321"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#F5A623"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="#D0021B"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="#50E3C2"/>
+
+</ResourceDictionary>

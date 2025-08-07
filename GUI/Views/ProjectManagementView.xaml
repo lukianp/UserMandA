@@ -3,25 +3,167 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:controls="clr-namespace:MandADiscoverySuite.Controls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Themes/OptimizedGridLayouts.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <Grid Style="{StaticResource OptimizedGridStyle}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         
         <!-- Header -->
-        <Border Grid.Row="0" Background="{DynamicResource HeaderBackground}" Padding="10">
-            <TextBlock Text="Project Management" 
-                      Style="{DynamicResource HeaderTextStyle}"/>
+        <Border Grid.Row="0" Background="{DynamicResource HeaderBackground}" Padding="16">
+            <Grid Style="{StaticResource TwoColumnFormGridStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" SharedSizeGroup="PageTitle"/>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="PageActions"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0"
+                          Text="Project Management" 
+                          Style="{DynamicResource HeaderTextStyle}"
+                          VerticalAlignment="Center"/>
+                          
+                <Button Grid.Column="1"
+                       Content="New Project"
+                       Style="{DynamicResource ModernButtonStyle}"
+                       Padding="12,6"/>
+            </Grid>
         </Border>
         
-        <!-- Content -->
+        <!-- Content with SharedSizeGroup optimization -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="10">
-                <TextBlock Text="Project management content goes here..." 
-                          Style="{DynamicResource BodyTextStyle}"/>
+            <StackPanel Margin="16">
+                
+                <!-- Project Overview Section -->
+                <TextBlock Text="Project Overview" 
+                          Style="{DynamicResource SectionHeaderTextStyle}"
+                          Margin="0,0,0,12"/>
+                
+                <!-- Using OptimizedFormPanel with SharedSizeGroup -->
+                <controls:OptimizedFormPanel x:Name="ProjectOverviewForm"
+                                           FormLayoutType="TwoColumn"
+                                           SizeGroupName="ProjectForm"
+                                           IsOptimized="True"
+                                           Margin="0,0,0,24"/>
+                
+                <!-- Project Details Grid with SharedSizeGroup -->
+                <Grid Style="{StaticResource DetailViewGridStyle}" Margin="0,0,0,24">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="DetailLabel" MinWidth="140"/>
+                        <ColumnDefinition Width="*" SharedSizeGroup="DetailValue" MinWidth="200"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Grid.Column="0" 
+                              Text="Project Name:" 
+                              Style="{DynamicResource ModernTextStyle}"
+                              FontWeight="Medium"
+                              Margin="0,0,16,8"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" 
+                            Text="M&amp;A Discovery Suite Enhancement"
+                            Style="{DynamicResource ModernTextBoxStyle}"
+                            Margin="0,0,0,8"/>
+                    
+                    <TextBlock Grid.Row="1" Grid.Column="0" 
+                              Text="Status:" 
+                              Style="{DynamicResource ModernTextStyle}"
+                              FontWeight="Medium"
+                              Margin="0,0,16,8"/>
+                    <ComboBox Grid.Row="1" Grid.Column="1"
+                             Style="{DynamicResource ModernComboBoxStyle}"
+                             SelectedIndex="1"
+                             Margin="0,0,0,8">
+                        <ComboBoxItem>Planning</ComboBoxItem>
+                        <ComboBoxItem>In Progress</ComboBoxItem>
+                        <ComboBoxItem>Review</ComboBoxItem>
+                        <ComboBoxItem>Completed</ComboBoxItem>
+                    </ComboBox>
+                    
+                    <TextBlock Grid.Row="2" Grid.Column="0" 
+                              Text="Due Date:" 
+                              Style="{DynamicResource ModernTextStyle}"
+                              FontWeight="Medium"
+                              Margin="0,0,16,8"/>
+                    <DatePicker Grid.Row="2" Grid.Column="1"
+                               Style="{DynamicResource ModernDatePickerStyle}"
+                               Margin="0,0,0,8"/>
+                    
+                    <TextBlock Grid.Row="3" Grid.Column="0" 
+                              Text="Priority:" 
+                              Style="{DynamicResource ModernTextStyle}"
+                              FontWeight="Medium"
+                              Margin="0,0,16,8"/>
+                    <Slider Grid.Row="3" Grid.Column="1"
+                           Minimum="1" Maximum="5" Value="3"
+                           Style="{DynamicResource ModernSliderStyle}"
+                           Margin="0,0,0,8"/>
+                </Grid>
+                
+                <!-- Team Members List with consistent sizing -->
+                <TextBlock Text="Team Members" 
+                          Style="{DynamicResource SectionHeaderTextStyle}"
+                          Margin="0,12,0,8"/>
+                
+                <ItemsControl ItemsSource="{Binding TeamMembers}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Style="{StaticResource ListItemGridStyle}" Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="MemberIcon" MinWidth="40"/>
+                                    <ColumnDefinition Width="*" SharedSizeGroup="MemberInfo" MinWidth="200"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="MemberRole" MinWidth="120"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="MemberActions" MinWidth="80"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <Ellipse Grid.Column="0" 
+                                        Width="32" Height="32"
+                                        Fill="{DynamicResource AccentBrush}"
+                                        Margin="8"/>
+                                
+                                <StackPanel Grid.Column="1" 
+                                           VerticalAlignment="Center"
+                                           Margin="8,4">
+                                    <TextBlock Text="John Doe" 
+                                              FontWeight="Medium"
+                                              Style="{DynamicResource ModernTextStyle}"/>
+                                    <TextBlock Text="john.doe@company.com" 
+                                              FontSize="11"
+                                              Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                              Style="{DynamicResource ModernTextStyle}"/>
+                                </StackPanel>
+                                
+                                <TextBlock Grid.Column="2" 
+                                          Text="Developer"
+                                          VerticalAlignment="Center"
+                                          Margin="8"
+                                          Style="{DynamicResource ModernTextStyle}"/>
+                                
+                                <Button Grid.Column="3" 
+                                       Content="Edit"
+                                       Style="{DynamicResource ModernButtonStyle}"
+                                       Padding="8,4"
+                                       Margin="8"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                
             </StackPanel>
         </ScrollViewer>
     </Grid>
