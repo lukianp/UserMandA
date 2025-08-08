@@ -37,8 +37,8 @@ namespace MandADiscoverySuite.ViewModels
             IGlobalSearchService globalSearchService = null,
             IProfileService profileService = null) : base(logger, messenger)
         {
-            _globalSearchService = globalSearchService ?? SimpleServiceLocator.GetService<IGlobalSearchService>();
-            _profileService = profileService ?? SimpleServiceLocator.GetService<IProfileService>();
+            _globalSearchService = globalSearchService ?? ServiceLocator.GetService<IGlobalSearchService>();
+            _profileService = profileService ?? ServiceLocator.GetService<IProfileService>();
 
             SearchResults = new ObservableCollection<SearchResultItem>();
             FilteredResults = CollectionViewSource.GetDefaultView(SearchResults);
