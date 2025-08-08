@@ -273,20 +273,32 @@ namespace MandADiscoverySuite.ViewModels
             {
                 ApplicationAssignments.Clear();
                 string applicationsFile = Path.Combine(_rawDataPath, "Applications.csv");
-                
-                if (File.Exists(applicationsFile))
+
+                if (File.Exists(applicationsFile) && !string.IsNullOrEmpty(_userData?.Id))
                 {
-                    var appLines = File.ReadAllLines(applicationsFile).Skip(1);
-                    foreach (var line in appLines)
+                    var lines = File.ReadAllLines(applicationsFile);
+                    if (lines.Length > 1)
                     {
-                        var parts = ParseCsvLine(line);
-                        if (parts.Length > 10)
+                        var headers = ParseCsvLine(lines[0]);
+                        int nameIndex = Array.FindIndex(headers, h => h.Equals("displayname", StringComparison.OrdinalIgnoreCase) || h.Equals("name", StringComparison.OrdinalIgnoreCase));
+                        int userIdsIndex = Array.FindIndex(headers, h => h.Equals("userids", StringComparison.OrdinalIgnoreCase) || h.Equals("assigneduserids", StringComparison.OrdinalIgnoreCase) || h.Equals("users", StringComparison.OrdinalIgnoreCase));
+
+                        for (int i = 1; i < lines.Length; i++)
                         {
-                            ApplicationAssignments.Add(new ApplicationAssignment
+                            var parts = ParseCsvLine(lines[i]);
+                            if (parts.Length <= Math.Max(nameIndex, userIdsIndex))
+                                continue;
+
+                            var userIds = userIdsIndex >= 0 ? parts[userIdsIndex] : string.Empty;
+                            if (!string.IsNullOrEmpty(userIds) && userIds.Split(new[] { ';', ',', '|' }, StringSplitOptions.RemoveEmptyEntries).Any(id => id.Trim().Equals(_userData.Id, StringComparison.OrdinalIgnoreCase)))
                             {
-                                DisplayName = parts[3],
-                                Role = "User"
-                            });
+                                var displayName = nameIndex >= 0 ? parts[nameIndex] : "Unknown";
+                                ApplicationAssignments.Add(new ApplicationAssignment
+                                {
+                                    DisplayName = displayName,
+                                    Role = "User"
+                                });
+                            }
                         }
                     }
                 }

@@ -672,7 +672,10 @@ namespace MandADiscoverySuite.Models
 
         public string Id { get; set; }
         public string ObjectType { get; set; }
-        
+        public List<string> UserIds { get; set; } = new List<string>();
+        public List<string> UserIds { get; set; } = new List<string>();
+        public List<string> UserIds { get; set; } = new List<string>();
+
         public bool IsSelected
         {
             get => _isSelected;
@@ -722,6 +725,7 @@ namespace MandADiscoverySuite.Models
         }
 
         // Additional properties from CSV
+        public List<string> ApplicationIds { get; set; } = new List<string>();
         public string GivenName { get; set; }
         public string Surname { get; set; }
         public string CompanyName { get; set; }
@@ -771,6 +775,7 @@ namespace MandADiscoverySuite.Models
 
         public string Id { get; set; }
         public string ObjectType { get; set; }
+        public List<string> UserIds { get; set; } = new List<string>();
 
         public bool IsSelected
         {
@@ -844,6 +849,7 @@ namespace MandADiscoverySuite.Models
 
         public string Id { get; set; }
         public string ObjectType { get; set; }
+        public List<string> UserIds { get; set; } = new List<string>();
 
         public bool IsSelected
         {
@@ -928,6 +934,7 @@ namespace MandADiscoverySuite.Models
 
         public string Id { get; set; }
         public string ObjectType { get; set; }
+        public List<string> UserIds { get; set; } = new List<string>();
 
         public bool IsSelected
         {

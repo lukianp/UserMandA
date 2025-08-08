@@ -104,8 +104,10 @@
             </Border>
 
             <!-- Main Content -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20">
-                <Grid>
+            <TabControl Grid.Row="1" Background="Transparent">
+                <TabItem Header="Overview">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                        <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
@@ -170,20 +172,6 @@
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Group Name" Binding="{Binding DisplayName}" Width="*"/>
                                         <DataGridTextColumn Header="Type" Binding="{Binding GroupType}" Width="80"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Application Assignments Card -->
-                        <Border Style="{StaticResource ModernCardStyle}">
-                            <StackPanel>
-                                <TextBlock Text="📱 Application Access" Style="{StaticResource SectionHeaderStyle}"/>
-                                <DataGrid x:Name="ApplicationsGrid" ItemsSource="{Binding ApplicationAssignments}" Style="{StaticResource CompactDataGridStyle}" MaxHeight="200"
-                                          VirtualizingStackPanel.IsVirtualizing="True" EnableRowVirtualization="True" EnableColumnVirtualization="True">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Application" Binding="{Binding DisplayName}" Width="*"/>
-                                        <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="100"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </StackPanel>
@@ -270,7 +258,18 @@
 
                     </StackPanel>
                 </Grid>
-            </ScrollViewer>
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="Applications">
+                    <DataGrid ItemsSource="{Binding ApplicationAssignments}" Style="{StaticResource CompactDataGridStyle}" Margin="20"
+                              VirtualizingStackPanel.IsVirtualizing="True" EnableRowVirtualization="True" EnableColumnVirtualization="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Application" Binding="{Binding DisplayName}" Width="*"/>
+                            <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="100"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+            </TabControl>
 
             <!-- Action Buttons -->
             <Border Grid.Row="2" Background="#FF2D3748" CornerRadius="0,0,12,12" Padding="20,16">
