@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using MandADiscoverySuite.Repository;
 
@@ -170,7 +171,7 @@ namespace MandADiscoverySuite.Models
     /// <summary>
     /// Migration wave entity for planning
     /// </summary>
-    public class MigrationWave : BaseEntity<string>
+    public partial class MigrationWave : BaseEntity<string>, INotifyPropertyChanged
     {
         [Required]
         [StringLength(100)]

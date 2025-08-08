@@ -132,6 +132,7 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Email:" Style="{StaticResource LabelStyle}"/>
@@ -157,6 +158,9 @@
 
                                     <TextBlock Grid.Row="7" Grid.Column="0" Text="Last Sign-In:" Style="{StaticResource LabelStyle}"/>
                                     <TextBox Grid.Row="7" Grid.Column="1" x:Name="LastSignInText" Text="{Binding LastSignIn}" Style="{StaticResource ValueStyle}" Background="Transparent" BorderThickness="0" IsReadOnly="True"/>
+
+                                    <TextBlock Grid.Row="8" Grid.Column="0" Text="Migration Wave:" Style="{StaticResource LabelStyle}"/>
+                                    <ComboBox Grid.Row="8" Grid.Column="1" ItemsSource="{Binding MigrationWaves}" SelectedItem="{Binding SelectedMigrationWave, Mode=TwoWay}" DisplayMemberPath="Name" Margin="0,0,0,8" Background="Transparent" Foreground="#FFE2E8F0"/>
                                 </Grid>
                             </StackPanel>
                         </Border>

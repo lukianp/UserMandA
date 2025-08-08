@@ -285,9 +285,25 @@ namespace MandADiscoverySuite.Repository
             where TEntity : class, IEntity<TKey>
             where TKey : IEquatable<TKey>
         {
-            // Generic repository creation is complex due to constraints
-            // Use specific factory methods for concrete entity types instead
-            throw new NotImplementedException("Use specific repository factory methods for concrete entity types");
+            if (typeof(TKey) == typeof(string))
+            {
+                return (IRepository<TEntity, TKey>)new GenericStringRepository<TEntity>(
+                    _logger as ILogger<BaseRepository<TEntity, string>>, _cacheService);
+            }
+
+            if (typeof(TKey) == typeof(int))
+            {
+                return (IRepository<TEntity, TKey>)new GenericIntRepository<TEntity>(
+                    _logger as ILogger<BaseRepository<TEntity, int>>, _cacheService);
+            }
+
+            if (typeof(TKey) == typeof(Guid))
+            {
+                return (IRepository<TEntity, TKey>)new GenericGuidRepository<TEntity>(
+                    _logger as ILogger<BaseRepository<TEntity, Guid>>, _cacheService);
+            }
+
+            throw new NotSupportedException($"No repository implementation for key type {typeof(TKey).Name}");
         }
 
         public IUnitOfWork CreateUnitOfWork()

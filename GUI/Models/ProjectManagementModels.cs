@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -547,6 +548,77 @@ namespace MandADiscoverySuite.Models
         public long FileSize { get; set; }
         public DateTime UploadedDate { get; set; } = DateTime.Now;
         public string UploadedBy { get; set; }
+    }
+
+    /// <summary>
+    /// Assignment of a user to a migration wave
+    /// </summary>
+    public class WaveAssignment : BaseEntity<string>, INotifyPropertyChanged
+    {
+        private string _userId;
+        private string _waveId;
+        private string _displayName;
+
+        public string UserId
+        {
+            get => _userId;
+            set { _userId = value; OnPropertyChanged(); }
+        }
+
+        public string WaveId
+        {
+            get => _waveId;
+            set { _waveId = value; OnPropertyChanged(); }
+        }
+
+        public string DisplayName
+        {
+            get => _displayName;
+            set { _displayName = value; OnPropertyChanged(); }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Represents a migration wave and its assignments
+    /// </summary>
+    public partial class MigrationWave
+    {
+        private ObservableCollection<WaveAssignment> _assignments = new ObservableCollection<WaveAssignment>();
+
+        public ObservableCollection<WaveAssignment> Assignments
+        {
+            get => _assignments;
+            set
+            {
+                if (_assignments != null)
+                    _assignments.CollectionChanged -= Assignments_CollectionChanged;
+                _assignments = value;
+                if (_assignments != null)
+                    _assignments.CollectionChanged += Assignments_CollectionChanged;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(AssignedUserCount));
+            }
+        }
+
+        public int AssignedUserCount => Assignments?.Count ?? 0;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        private void Assignments_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            OnPropertyChanged(nameof(AssignedUserCount));
+        }
     }
 
     // Enumerations

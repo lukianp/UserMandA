@@ -9,15 +9,17 @@ using System.Threading.Tasks;
 using System.Windows;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
+using MandADiscoverySuite.Repository;
 
 namespace MandADiscoverySuite.ViewModels
 {
     public class UserDetailViewModel : BaseViewModel
     {
         private readonly string _rawDataPath;
+        private readonly IUnitOfWork _unitOfWork;
         private UserDetailData _userData;
-        
-        public UserDetailViewModel(dynamic selectedUser, string rawDataPath)
+
+        public UserDetailViewModel(dynamic selectedUser, string rawDataPath, IUnitOfWork unitOfWork = null)
         {
             if (selectedUser == null)
                 throw new ArgumentNullException(nameof(selectedUser));
@@ -25,16 +27,19 @@ namespace MandADiscoverySuite.ViewModels
                 throw new ArgumentException("Raw data path cannot be null or empty", nameof(rawDataPath));
 
             _rawDataPath = rawDataPath;
+            _unitOfWork = unitOfWork ?? new UnitOfWork();
             GroupMemberships = new ObservableCollection<GroupMembership>();
             ApplicationAssignments = new ObservableCollection<ApplicationAssignment>();
             DeviceRelationships = new ObservableCollection<DeviceRelationship>();
             DirectoryRoles = new ObservableCollection<DirectoryRole>();
             LicenseAssignments = new ObservableCollection<LicenseAssignment>();
+            MigrationWaves = new ObservableCollection<MigrationWave>();
             
             CloseCommand = new RelayCommand(() => CloseRequested?.Invoke());
             ExportProfileCommand = new RelayCommand(ExportProfile);
-            
+
             LoadUserData(selectedUser);
+            LoadMigrationWaves();
         }
         
         public event Action CloseRequested;
@@ -44,6 +49,7 @@ namespace MandADiscoverySuite.ViewModels
         public ObservableCollection<DeviceRelationship> DeviceRelationships { get; }
         public ObservableCollection<DirectoryRole> DirectoryRoles { get; }
         public ObservableCollection<LicenseAssignment> LicenseAssignments { get; }
+        public ObservableCollection<MigrationWave> MigrationWaves { get; }
         
         public ICommand CloseCommand { get; }
         public ICommand ExportProfileCommand { get; }
@@ -147,6 +153,19 @@ namespace MandADiscoverySuite.ViewModels
         }
         
         public string WindowTitle => $"User Details - {DisplayName}";
+
+        private MigrationWave _selectedMigrationWave;
+        public MigrationWave SelectedMigrationWave
+        {
+            get => _selectedMigrationWave;
+            set
+            {
+                if (SetProperty(ref _selectedMigrationWave, value))
+                {
+                    _ = UpdateWaveAssignmentAsync(value);
+                }
+            }
+        }
         
         private void LoadUserData(dynamic selectedUser)
         {
@@ -364,6 +383,73 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading licenses: {ex.Message}");
+            }
+        }
+
+        private async void LoadMigrationWaves()
+        {
+            try
+            {
+                MigrationWaves.Clear();
+                var waveRepo = _unitOfWork.GetRepository<MigrationWave, string>();
+                var assignmentRepo = _unitOfWork.GetRepository<WaveAssignment, string>();
+                var waves = await waveRepo.GetAllAsync();
+                var assignments = await assignmentRepo.GetAllAsync();
+
+                foreach (var wave in waves)
+                {
+                    wave.Assignments = new ObservableCollection<WaveAssignment>(assignments.Where(a => a.WaveId == wave.Id));
+                    MigrationWaves.Add(wave);
+                }
+
+                var existing = assignments.FirstOrDefault(a => a.UserId == _userData.Id);
+                if (existing != null)
+                {
+                    SelectedMigrationWave = MigrationWaves.FirstOrDefault(w => w.Id == existing.WaveId);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading migration waves: {ex.Message}");
+            }
+        }
+
+        private async Task UpdateWaveAssignmentAsync(MigrationWave wave)
+        {
+            try
+            {
+                var assignmentRepo = _unitOfWork.GetRepository<WaveAssignment, string>();
+                var existing = await assignmentRepo.FirstOrDefaultAsync(a => a.UserId == _userData.Id);
+
+                if (wave != null)
+                {
+                    if (existing == null)
+                    {
+                        existing = new WaveAssignment { UserId = _userData.Id, DisplayName = DisplayName, WaveId = wave.Id };
+                        await assignmentRepo.AddAsync(existing);
+                        wave.Assignments.Add(existing);
+                    }
+                    else
+                    {
+                        var oldWave = MigrationWaves.FirstOrDefault(w => w.Id == existing.WaveId);
+                        oldWave?.Assignments.Remove(existing);
+                        existing.WaveId = wave.Id;
+                        await assignmentRepo.UpdateAsync(existing);
+                        wave.Assignments.Add(existing);
+                    }
+                }
+                else if (existing != null)
+                {
+                    await assignmentRepo.RemoveAsync(existing.Id);
+                    var oldWave = MigrationWaves.FirstOrDefault(w => w.Id == existing.WaveId);
+                    oldWave?.Assignments.Remove(existing);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating wave assignment: {ex.Message}");
             }
         }
         
