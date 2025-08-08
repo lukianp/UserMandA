@@ -154,6 +154,7 @@ class DatabaseStorageEngine {
                     Description TEXT,
                     ManagedBy TEXT,
                     MemberCount INTEGER DEFAULT 0,
+                    IsNested INTEGER DEFAULT 0,
                     CreatedDate DATETIME,
                     ModifiedDate DATETIME,
                     DistinguishedName TEXT,

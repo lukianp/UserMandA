@@ -380,8 +380,23 @@ namespace MandADiscoverySuite.Models
     {
         public string DisplayName { get; set; }
         public string GroupType { get; set; }
+        public string Scope { get; set; }
         public string Description { get; set; }
+        public bool IsNested { get; set; }
         public DateTime? MemberSince { get; set; }
+    }
+
+    /// <summary>
+    /// Basic security group information used in inventory views
+    /// </summary>
+    public class SecurityGroupInfo
+    {
+        public string Name { get; set; }
+        public string GroupType { get; set; }
+        public string Scope { get; set; }
+        public string Description { get; set; }
+        public bool IsNested { get; set; }
+        public string SamAccountName { get; set; }
     }
 
     /// <summary>

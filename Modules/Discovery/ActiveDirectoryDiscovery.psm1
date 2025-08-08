@@ -443,7 +443,7 @@ function Get-ADGroupsData {
         $groupProperties = @(
             'SamAccountName', 'Name', 'GroupCategory', 'GroupScope',
             'Description', 'DistinguishedName', 'whenCreated', 'whenChanged',
-            'mail', 'ManagedBy', 'member'
+            'mail', 'ManagedBy', 'member', 'memberOf'
         )
         
         $adGroups = Get-ADGroup -Filter * -Properties $groupProperties @ServerParams -ErrorAction Stop
@@ -462,6 +462,7 @@ function Get-ADGroupsData {
                 EmailAddress = $group.mail
                 ManagedBy = $group.ManagedBy
                 MemberCount = if ($group.member) { $group.member.Count } else { 0 }
+                IsNested = if ($group.memberOf) { $true } else { $false }
             }
             $null = $groups.Add($groupObj)
             

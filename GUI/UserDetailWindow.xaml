@@ -170,6 +170,9 @@
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Group Name" Binding="{Binding DisplayName}" Width="*"/>
                                         <DataGridTextColumn Header="Type" Binding="{Binding GroupType}" Width="80"/>
+                                        <DataGridTextColumn Header="Scope" Binding="{Binding Scope}" Width="80"/>
+                                        <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="200"/>
+                                        <DataGridCheckBoxColumn Header="Nested" Binding="{Binding IsNested}" Width="60"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </StackPanel>
