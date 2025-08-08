@@ -30,6 +30,7 @@ namespace MandADiscoverySuite.ViewModels
             DeviceRelationships = new ObservableCollection<DeviceRelationship>();
             DirectoryRoles = new ObservableCollection<DirectoryRole>();
             LicenseAssignments = new ObservableCollection<LicenseAssignment>();
+            Assets = new ObservableCollection<AssetData>();
             
             CloseCommand = new RelayCommand(() => CloseRequested?.Invoke());
             ExportProfileCommand = new RelayCommand(ExportProfile);
@@ -44,6 +45,7 @@ namespace MandADiscoverySuite.ViewModels
         public ObservableCollection<DeviceRelationship> DeviceRelationships { get; }
         public ObservableCollection<DirectoryRole> DirectoryRoles { get; }
         public ObservableCollection<LicenseAssignment> LicenseAssignments { get; }
+        public ObservableCollection<AssetData> Assets { get; }
         
         public ICommand CloseCommand { get; }
         public ICommand ExportProfileCommand { get; }
@@ -184,6 +186,7 @@ namespace MandADiscoverySuite.ViewModels
                 LoadGroupMemberships();
                 LoadApplicationAssignments();
                 LoadDeviceRelationships();
+                LoadAssets();
                 LoadDirectoryRoles();
                 LoadLicenses();
                 
@@ -312,6 +315,38 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading device relationships: {ex.Message}");
+            }
+        }
+
+        private void LoadAssets()
+        {
+            try
+            {
+                Assets.Clear();
+                foreach (var device in DeviceRelationships)
+                {
+                    Assets.Add(new AssetData
+                    {
+                        Name = device.DisplayName,
+                        Type = device.DeviceType,
+                        Owner = DisplayName,
+                        Status = device.Status
+                    });
+                }
+                if (Assets.Count == 0)
+                {
+                    Assets.Add(new AssetData
+                    {
+                        Name = "No assets found",
+                        Type = string.Empty,
+                        Owner = string.Empty,
+                        Status = string.Empty
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading assets: {ex.Message}");
             }
         }
         
