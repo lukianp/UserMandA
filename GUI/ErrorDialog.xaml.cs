@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Windows;
+using MandADiscoverySuite.ViewModels;
 
 namespace MandADiscoverySuite
 {
@@ -15,14 +16,22 @@ namespace MandADiscoverySuite
 
         public ErrorDialogResult Result { get; private set; } = ErrorDialogResult.Close;
         
-        private Exception exception;
-        private string operation;
-        private bool detailsVisible = false;
+        private readonly ErrorDialogViewModel _viewModel;
 
         public ErrorDialog()
         {
             InitializeComponent();
-            TimestampText.Text = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            
+            _viewModel = new ErrorDialogViewModel();
+            _viewModel.DialogClosed += OnDialogClosed;
+            DataContext = _viewModel;
+        }
+
+        private void OnDialogClosed(object sender, ErrorDialogViewModel.ErrorDialogResult result)
+        {
+            Result = (ErrorDialogResult)result;
+            DialogResult = result != ErrorDialogViewModel.ErrorDialogResult.Close;
+            Close();
         }
 
         public static ErrorDialogResult ShowError(Window owner, string message, Exception ex = null, string operation = null)
@@ -36,69 +45,10 @@ namespace MandADiscoverySuite
 
         public void SetError(string message, Exception ex, string operation = null)
         {
-            this.exception = ex;
-            this.operation = operation;
-
-            ErrorMessageText.Text = message;
-
-            if (!string.IsNullOrEmpty(operation))
-            {
-                TitleText.Text = $"Error in {operation}";
-            }
-
-            if (ex != null)
-            {
-                DetailsText.Text = $"Exception Type: {ex.GetType().Name}\n" +
-                                  $"Message: {ex.Message}\n" +
-                                  $"Source: {ex.Source ?? "Unknown"}\n" +
-                                  $"Target Site: {ex.TargetSite?.Name ?? "Unknown"}";
-
-                StackTraceText.Text = ex.StackTrace ?? "No stack trace available";
-                
-                // Show toggle button if we have details
-                ToggleDetailsButton.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                ToggleDetailsButton.Visibility = Visibility.Collapsed;
-            }
-
-            // Hide retry button if no operation specified
-            if (string.IsNullOrEmpty(operation))
-            {
-                RetryButton.Visibility = Visibility.Collapsed;
-            }
+            _viewModel.SetError(message, ex, operation);
         }
 
-        private void ToggleDetails_Click(object sender, RoutedEventArgs e)
-        {
-            detailsVisible = !detailsVisible;
-            
-            if (detailsVisible)
-            {
-                DetailsScrollViewer.Visibility = Visibility.Visible;
-                ToggleDetailsButton.Content = "▲ Hide Details";
-                Height = Math.Max(Height, 600);
-            }
-            else
-            {
-                DetailsScrollViewer.Visibility = Visibility.Collapsed;
-                ToggleDetailsButton.Content = "▼ Show Details";
-                Height = 400;
-            }
-        }
 
-        private void Retry_Click(object sender, RoutedEventArgs e)
-        {
-            Result = ErrorDialogResult.Retry;
-            Close();
-        }
-
-        private void Ignore_Click(object sender, RoutedEventArgs e)
-        {
-            Result = ErrorDialogResult.Ignore;
-            Close();
-        }
 
         private void Copy_Click(object sender, RoutedEventArgs e)
         {
@@ -106,18 +56,10 @@ namespace MandADiscoverySuite
             {
                 var errorInfo = $"M&A Discovery Suite Error Report\n" +
                                $"================================\n" +
-                               $"Timestamp: {TimestampText.Text}\n" +
-                               $"Operation: {operation ?? "Unknown"}\n" +
-                               $"Message: {ErrorMessageText.Text}\n\n";
-
-                if (exception != null)
-                {
-                    errorInfo += $"Exception Details:\n" +
-                                $"Type: {exception.GetType().Name}\n" +
-                                $"Message: {exception.Message}\n" +
-                                $"Source: {exception.Source ?? "Unknown"}\n" +
-                                $"Stack Trace:\n{exception.StackTrace ?? "No stack trace available"}\n";
-                }
+                               $"Timestamp: {_viewModel.Timestamp}\n" +
+                               $"Title: {_viewModel.Title}\n" +
+                               $"Message: {_viewModel.ErrorMessage}\n" +
+                               $"Details: {_viewModel.ExceptionDetails}\n";
 
                 Clipboard.SetText(errorInfo);
                 
@@ -143,15 +85,14 @@ namespace MandADiscoverySuite
         {
             try
             {
-                var subject = Uri.EscapeDataString($"M&A Discovery Suite Error Report - {operation ?? "General Error"}");
+                var subject = Uri.EscapeDataString($"M&A Discovery Suite Error Report - {_viewModel.Title}");
                 var body = Uri.EscapeDataString(
                     $"Please describe what you were doing when this error occurred:\n\n" +
                     $"[Your description here]\n\n" +
                     $"Error Details:\n" +
-                    $"Timestamp: {TimestampText.Text}\n" +
-                    $"Message: {ErrorMessageText.Text}\n" +
-                    $"Exception: {exception?.GetType().Name ?? "None"}\n" +
-                    $"Stack Trace: {exception?.StackTrace ?? "None"}");
+                    $"Timestamp: {_viewModel.Timestamp}\n" +
+                    $"Message: {_viewModel.ErrorMessage}\n" +
+                    $"Details: {_viewModel.ExceptionDetails}");
 
                 var mailtoUri = $"mailto:support@example.com?subject={subject}&body={body}";
                 Process.Start(new ProcessStartInfo(mailtoUri) { UseShellExecute = true });
@@ -163,10 +104,10 @@ namespace MandADiscoverySuite
             }
         }
 
-        private void Close_Click(object sender, RoutedEventArgs e)
+        protected override void OnClosed(EventArgs e)
         {
-            Result = ErrorDialogResult.Close;
-            Close();
+            _viewModel.DialogClosed -= OnDialogClosed;
+            base.OnClosed(e);
         }
     }
 }

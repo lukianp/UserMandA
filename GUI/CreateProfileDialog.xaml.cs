@@ -1,22 +1,30 @@
-using System.Linq;
+using System;
 using System.Windows;
 using System.Windows.Input;
 using MandADiscoverySuite.Themes;
-using MandADiscoverySuite.Services;
+using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Models;
 
 namespace MandADiscoverySuite
 {
     public partial class CreateProfileDialog : Window
     {
-        public string ProfileName { get; private set; } = "";
-        public Models.CompanyProfile Profile { get; private set; }
-
-        private bool _isEditMode = false;
+        private readonly CreateProfileDialogViewModel _viewModel;
+        
+        public CreateProfileDialogViewModel ViewModel => _viewModel;
+        public CompanyProfile CreatedProfile { get; private set; }
+        public string ProfileName => _viewModel.ProfileName;
+        public CompanyProfile Profile => CreatedProfile;
 
         public CreateProfileDialog()
         {
             InitializeComponent();
+            
+            _viewModel = new CreateProfileDialogViewModel();
+            _viewModel.ProfileCreated += OnProfileCreated;
+            _viewModel.DialogClosed += OnDialogClosed;
+            
+            DataContext = _viewModel;
             
             // Apply current theme
             ThemeManager.Instance.ApplyThemeToWindow(this);
@@ -24,58 +32,30 @@ namespace MandADiscoverySuite
             ProfileNameTextBox.Focus();
         }
 
-        public CreateProfileDialog(CompanyProfile existingProfile) : this()
+        public CreateProfileDialog(CompanyProfile existingProfile)
         {
-            if (existingProfile != null)
-            {
-                _isEditMode = true;
-                Profile = existingProfile;
-                ProfileName = existingProfile.CompanyName;
-                ProfileNameTextBox.Text = existingProfile.CompanyName;
-                Title = "Edit Company Profile";
-                CreateButton.Content = "Update";
-            }
+            InitializeComponent();
+            
+            _viewModel = new CreateProfileDialogViewModel(existingProfile);
+            _viewModel.ProfileCreated += OnProfileCreated;
+            _viewModel.DialogClosed += OnDialogClosed;
+            
+            DataContext = _viewModel;
+            
+            // Apply current theme
+            ThemeManager.Instance.ApplyThemeToWindow(this);
+            
+            ProfileNameTextBox.Focus();
         }
 
-        private void Create_Click(object sender, RoutedEventArgs e)
+        private void OnProfileCreated(object sender, CompanyProfile profile)
         {
-            CreateButton.IsEnabled = false;
-            
-            var validationResult = InputValidationService.Instance.ValidateCompanyName(ProfileNameTextBox.Text);
-            if (!validationResult.IsValid)
-            {
-                ShowValidationError(validationResult.GetSummaryMessage());
-                CreateButton.IsEnabled = true;
-                return;
-            }
-
-            ProfileName = ProfileNameTextBox.Text.Trim();
-            
-            if (_isEditMode)
-            {
-                // Update existing profile
-                Profile.CompanyName = ProfileName;
-                Profile.LastModified = System.DateTime.Now;
-            }
-            else
-            {
-                // Create new profile
-                Profile = new CompanyProfile
-                {
-                    Id = System.Guid.NewGuid().ToString(),
-                    CompanyName = ProfileName,
-                    Created = System.DateTime.Now,
-                    LastModified = System.DateTime.Now,
-                    IsActive = true
-                };
-            }
-            
+            CreatedProfile = profile;
             DialogResult = true;
-            CreateButton.IsEnabled = true;
             Close();
         }
 
-        private void Cancel_Click(object sender, RoutedEventArgs e)
+        private void OnDialogClosed(object sender, EventArgs e)
         {
             DialogResult = false;
             Close();
@@ -85,83 +65,30 @@ namespace MandADiscoverySuite
         {
             if (e.Key == Key.Enter)
             {
-                Create_Click(sender, new RoutedEventArgs());
+                if (_viewModel.CreateCommand.CanExecute(null))
+                    _viewModel.CreateCommand.Execute(null);
             }
             else if (e.Key == Key.Escape)
             {
-                Cancel_Click(sender, new RoutedEventArgs());
+                _viewModel.CancelCommand.Execute(null);
             }
         }
 
         private void ProfileNameTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
         {
-            ValidateProfileName();
+            _viewModel.ProfileName = ProfileNameTextBox.Text;
+            _viewModel.ValidateProfileName();
         }
 
-        private void ValidateProfileName()
-        {
-            try
-            {
-                var input = ProfileNameTextBox.Text;
-                var validationResult = InputValidationService.Instance.ValidateCompanyName(input);
-                
-                if (!validationResult.IsValid)
-                {
-                    ShowValidationError(validationResult.GetSummaryMessage());
-                }
-                else if (validationResult.HasWarnings)
-                {
-                    ShowValidationWarning(validationResult.GetSummaryMessage());
-                }
-                else
-                {
-                    ShowValidationSuccess(validationResult.GetSummaryMessage());
-                }
-            }
-            catch (System.Exception ex)
-            {
-                var errorMessage = ErrorHandlingService.Instance.HandleException(ex, "Profile name validation");
-                ShowValidationError(errorMessage);
-            }
-        }
 
-        private void ShowValidationError(string message)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                ProfileNameTextBox.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(229, 62, 62));
-                ProfileNameTextBox.BorderThickness = new Thickness(2);
-                ProfileNameTextBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(60, 31, 31));
-                ProfileNameValidationText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(229, 62, 62));
-                ProfileNameValidationText.Text = $"❌ {message}";
-                ProfileNameValidationText.Visibility = Visibility.Visible;
-            });
-        }
 
-        private void ShowValidationWarning(string message)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                ProfileNameTextBox.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(237, 137, 54));
-                ProfileNameTextBox.BorderThickness = new Thickness(2);
-                ProfileNameTextBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(45, 55, 72));
-                ProfileNameValidationText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(237, 137, 54));
-                ProfileNameValidationText.Text = $"⚠️ {message}";
-                ProfileNameValidationText.Visibility = Visibility.Visible;
-            });
-        }
 
-        private void ShowValidationSuccess(string message)
+
+        protected override void OnClosed(EventArgs e)
         {
-            Dispatcher.Invoke(() =>
-            {
-                ProfileNameTextBox.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(72, 187, 120));
-                ProfileNameTextBox.BorderThickness = new Thickness(2);
-                ProfileNameTextBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(45, 55, 72));
-                ProfileNameValidationText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(72, 187, 120));
-                ProfileNameValidationText.Text = $"✅ {message}";
-                ProfileNameValidationText.Visibility = Visibility.Visible;
-            });
+            _viewModel.ProfileCreated -= OnProfileCreated;
+            _viewModel.DialogClosed -= OnDialogClosed;
+            base.OnClosed(e);
         }
     }
 }

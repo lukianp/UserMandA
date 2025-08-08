@@ -75,16 +75,16 @@
                 <TextBlock Text="Log Filtering" Foreground="#FFE2E8F0" FontSize="14" FontWeight="Medium" Margin="0,0,0,8"/>
                 <StackPanel Orientation="Horizontal">
                     <CheckBox x:Name="ShowVerbose" Content="Verbose" Foreground="#FFE2E8F0" 
-                              IsChecked="True" Checked="LogFilter_Changed" Unchecked="LogFilter_Changed" Margin="0,0,16,0"/>
+                              IsChecked="{Binding ShowVerbose}" Margin="0,0,16,0"/>
                     <CheckBox x:Name="ShowDebug" Content="Debug" Foreground="#FFE2E8F0" 
-                              IsChecked="True" Checked="LogFilter_Changed" Unchecked="LogFilter_Changed" Margin="0,0,16,0"/>
+                              IsChecked="{Binding ShowDebug}" Margin="0,0,16,0"/>
                     <CheckBox x:Name="ShowInfo" Content="Info" Foreground="#FFE2E8F0" 
-                              IsChecked="True" Checked="LogFilter_Changed" Unchecked="LogFilter_Changed" Margin="0,0,16,0"/>
+                              IsChecked="{Binding ShowInfo}" Margin="0,0,16,0"/>
                     <CheckBox x:Name="ShowWarning" Content="Warning" Foreground="#FFED8936" 
-                              IsChecked="True" Checked="LogFilter_Changed" Unchecked="LogFilter_Changed" Margin="0,0,16,0"/>
+                              IsChecked="{Binding ShowWarning}" Margin="0,0,16,0"/>
                     <CheckBox x:Name="ShowError" Content="Error" Foreground="#FFF56565" 
-                              IsChecked="True" Checked="LogFilter_Changed" Unchecked="LogFilter_Changed" Margin="0,0,16,0"/>
-                    <Button Content="Clear" Click="ClearLog_Click" Style="{StaticResource ModernButtonStyle}" 
+                              IsChecked="{Binding ShowError}" Margin="0,0,16,0"/>
+                    <Button Content="Clear" Command="{Binding ClearLogCommand}" Style="{StaticResource ModernButtonStyle}" 
                             Background="#FF718096" Margin="16,0,0,0"/>
                 </StackPanel>
             </StackPanel>
@@ -105,16 +105,16 @@
         
         <!-- Status and Action Buttons -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <TextBlock x:Name="LogCount" Text="0 entries" Foreground="#FFA0AEC0" 
+            <TextBlock x:Name="LogCount" Text="{Binding LogCount}" Foreground="#FFA0AEC0" 
                        FontSize="12" VerticalAlignment="Center" Margin="0,0,16,0"/>
             <Button x:Name="ExportButton" Content="Export Log" Style="{StaticResource ModernButtonStyle}" 
-                    Click="ExportLog_Click" Margin="0,0,12,0"
+                    Command="{Binding ExportLogCommand}" Margin="0,0,12,0"
                     Background="#FF48BB78"/>
             <Button x:Name="RefreshButton" Content="Refresh" Style="{StaticResource ModernButtonStyle}" 
-                    Click="RefreshLog_Click" Margin="0,0,12,0"
+                    Command="{Binding RefreshLogCommand}" Margin="0,0,12,0"
                     Background="#FF4299E1"/>
             <Button x:Name="CloseButton" Content="Close" Style="{StaticResource ModernButtonStyle}" 
-                    Click="CloseButton_Click"
+                    Command="{Binding CloseCommand}"
                     Background="#FF4A5568"/>
         </StackPanel>
     </Grid>

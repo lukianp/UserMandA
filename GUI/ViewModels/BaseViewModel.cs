@@ -30,6 +30,7 @@ namespace MandADiscoverySuite.ViewModels
 
         // Common state properties
         private bool _isLoading;
+        private string _loadingMessage = "Loading...";
         private string _statusMessage = string.Empty;
         private bool _hasErrors;
         private string _errorMessage = string.Empty;
@@ -40,6 +41,12 @@ namespace MandADiscoverySuite.ViewModels
         {
             get => _isLoading;
             set => SetProperty(ref _isLoading, value);
+        }
+
+        public string LoadingMessage
+        {
+            get => _loadingMessage;
+            set => SetProperty(ref _loadingMessage, value);
         }
 
         public string StatusMessage

@@ -23,7 +23,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
-        <TextBlock Grid.Row="0" Text="Create New Company Profile" 
+        <TextBlock Grid.Row="0" Text="{Binding DialogTitle}" 
                    Style="{StaticResource ThemedHeaderTextStyle}"
                    FontSize="18" Margin="0,0,0,20"/>
         
@@ -41,16 +41,17 @@
                      Tag="Required field: Enter a company name"/>
             <TextBlock x:Name="ProfileNameValidationText" 
                        Style="{StaticResource ThemedValidationErrorTextStyle}"
+                       Text="{Binding ValidationMessage}"
                        Margin="0,4,0,16"
-                       Visibility="Collapsed"/>
+                       Visibility="{Binding IsValidationVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
         </StackPanel>
         
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"
+            <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True"
                     Style="{StaticResource ThemedSecondaryButtonStyle}"
                     Padding="20,8" Margin="0,0,10,0"/>
             
-            <Button x:Name="CreateButton" Content="Create" Click="Create_Click" IsDefault="True"
+            <Button x:Name="CreateButton" Content="{Binding ActionButtonText}" Command="{Binding CreateCommand}" IsDefault="True"
                     Style="{StaticResource ThemedButtonStyle}"
                     Padding="20,8"/>
         </StackPanel>
