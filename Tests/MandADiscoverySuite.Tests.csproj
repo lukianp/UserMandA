@@ -1,28 +1,27 @@
-&lt;Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
-  &lt;PropertyGroup>
-    &lt;TargetFramework>net6.0&lt;/TargetFramework>
-    &lt;IsPackable>false&lt;/IsPackable>
-    &lt;Nullable>disable&lt;/Nullable>
-  &lt;/PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
 
-  &lt;ItemGroup>
-    &lt;PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-    &lt;PackageReference Include="xunit" Version="2.6.1" />
-    &lt;PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
-      &lt;IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive&lt;/IncludeAssets>
-      &lt;PrivateAssets>all&lt;/PrivateAssets>
-    &lt;/PackageReference>
-    &lt;PackageReference Include="Moq" Version="4.20.69" />
-    &lt;PackageReference Include="Microsoft.Extensions.Logging.Testing" Version="8.0.0" />
-    &lt;PackageReference Include="coverlet.collector" Version="6.0.0">
-      &lt;IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive&lt;/IncludeAssets>
-      &lt;PrivateAssets>all&lt;/PrivateAssets>
-    &lt;/PackageReference>
-  &lt;/ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Moq" Version="4.20.69" />
+    <PackageReference Include="coverlet.collector" Version="6.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
 
-  &lt;ItemGroup>
-    &lt;ProjectReference Include="..\GUI\MandADiscoverySuite.csproj" />
-  &lt;/ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GUI\MandADiscoverySuite.csproj" />
+  </ItemGroup>
 
-&lt;/Project>
+</Project>

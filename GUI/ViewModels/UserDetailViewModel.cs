@@ -231,33 +231,42 @@ namespace MandADiscoverySuite.ViewModels
         {
             var tempMemberships = new List<GroupMembership>();
             string groupsFile = Path.Combine(_rawDataPath, "Groups.csv");
-            
+
             if (File.Exists(groupsFile))
             {
                 var allLines = await File.ReadAllLinesAsync(groupsFile);
-                var groupLines = allLines.Skip(1);
-                foreach (var line in groupLines)
+                if (allLines.Length > 1)
                 {
-                    var parts = ParseCsvLine(line);
-                    if (parts.Length > 10)
+                    var headers = ParseCsvLine(allLines[0]);
+                    var headerMap = headers
+                        .Select((h, i) => new { h, i })
+                        .ToDictionary(k => k.h, v => v.i, StringComparer.OrdinalIgnoreCase);
+
+                    foreach (var line in allLines.Skip(1))
                     {
-                        string sampleMembers = parts.Length > 15 ? parts[15] : "";
-                        if (!string.IsNullOrEmpty(sampleMembers) && 
+                        var parts = ParseCsvLine(line);
+
+                        string members = GetField(parts, headerMap, "Members") ?? GetField(parts, headerMap, "SampleMembers");
+                        if (!string.IsNullOrEmpty(members) &&
                             !string.IsNullOrEmpty(_userData?.Id) &&
-                            sampleMembers.Contains(_userData.Id, StringComparison.OrdinalIgnoreCase))
+                            members.Contains(_userData.Id, StringComparison.OrdinalIgnoreCase))
                         {
                             tempMemberships.Add(new GroupMembership
                             {
-                                DisplayName = parts[2],
-                                GroupType = parts[4].Contains("Unified") ? "Microsoft 365" : "Security"
+                                DisplayName = GetField(parts, headerMap, "Name") ?? GetField(parts, headerMap, "DisplayName"),
+                                GroupType = GetField(parts, headerMap, "GroupCategory") ?? GetField(parts, headerMap, "GroupType"),
+                                Scope = GetField(parts, headerMap, "GroupScope"),
+                                Description = GetField(parts, headerMap, "Description"),
+                                IsNested = bool.TryParse(GetField(parts, headerMap, "IsNested"), out bool nested) && nested
                             });
                         }
                     }
                 }
             }
-            
+
             // Update UI on main thread
-            Application.Current.Dispatcher.Invoke(() =>
+            var dispatcher = Application.Current?.Dispatcher ?? System.Windows.Threading.Dispatcher.CurrentDispatcher;
+            dispatcher.Invoke(() =>
             {
                 GroupMemberships.Clear();
                 foreach (var membership in tempMemberships)
@@ -265,6 +274,13 @@ namespace MandADiscoverySuite.ViewModels
                     GroupMemberships.Add(membership);
                 }
             });
+        }
+
+        private string GetField(string[] parts, Dictionary<string, int> map, string field)
+        {
+            return map != null && map.TryGetValue(field, out int idx) && idx < parts.Length
+                ? parts[idx]
+                : null;
         }
         
         private void LoadApplicationAssignments()
