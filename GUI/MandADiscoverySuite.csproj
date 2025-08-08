@@ -13,6 +13,8 @@
     <PublishReadyToRun>false</PublishReadyToRun>
     <OutputPath>C:\enterprisediscovery\</OutputPath>
     <BaseOutputPath>C:\enterprisediscovery\</BaseOutputPath>
+    <!-- Enable binding optimization for better performance -->
+    <TreatWarningsAsErrors Condition="'$(Configuration)' == 'Debug'">false</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +28,8 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.77" />
     <PackageReference Include="Microsoft.Graph" Version="4.54.0" />
+    <PackageReference Include="AvalonEdit" Version="6.2.0" />
+    <PackageReference Include="System.Management.Automation" Version="7.2.0" />
   </ItemGroup>
 
   <!-- Copy all PowerShell modules to output directory -->

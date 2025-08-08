@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.IO;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Messaging;
 using MandADiscoverySuite.Services;
@@ -19,6 +20,7 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class GanttChartViewModel : BaseViewModel
     {
+        private readonly IGanttService _ganttService;
         private readonly IDataService _dataService;
         private readonly IProfileService _profileService;
         
@@ -37,13 +39,16 @@ namespace MandADiscoverySuite.ViewModels
         private GanttMilestone _selectedMilestone;
 
         public GanttChartViewModel(
-            ILogger<GanttChartViewModel> logger,
-            IMessenger messenger,
-            IDataService dataService,
-            IProfileService profileService) : base(logger, messenger)
+            ILogger<GanttChartViewModel> logger = null,
+            IMessenger messenger = null,
+            IGanttService ganttService = null,
+            IDataService dataService = null,
+            IProfileService profileService = null) : base(logger, messenger)
         {
-            _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
-            _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            TabTitle = "Gantt Chart";
+            _ganttService = ganttService ?? SimpleServiceLocator.GetService<IGanttService>() ?? new GanttService();
+            _dataService = dataService;
+            _profileService = profileService;
 
             Tasks = new ObservableCollection<GanttTask>();
             TaskBars = new ObservableCollection<GanttTaskBar>();

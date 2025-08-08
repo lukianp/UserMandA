@@ -8,6 +8,7 @@
         xmlns:controls="clr-namespace:MandADiscoverySuite.Controls"
         xmlns:collections="clr-namespace:MandADiscoverySuite.Collections"
         xmlns:helpers="clr-namespace:MandADiscoverySuite.Helpers"
+        xmlns:views="clr-namespace:MandADiscoverySuite.Views"
         mc:Ignorable="d"
         Title="M&amp;A Discovery Suite - Enterprise Edition" Height="1000" Width="1600"
         WindowStartupLocation="CenterScreen" WindowState="Maximized"
@@ -18,6 +19,9 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <!-- Widget Templates -->
+                <ResourceDictionary Source="Themes/DashboardWidgets.xaml"/>
+                
                 <!-- Temporarily disabled for debugging stack overflow -->
                 <!-- <ResourceDictionary Source="Themes/ThemeStyles.xaml"/> -->
                 <!-- <ResourceDictionary Source="Themes/SpacingSystem.xaml"/> -->
@@ -25,6 +29,44 @@
                 <!-- <ResourceDictionary Source="Controls/ChartControls.xaml"/> -->
             </ResourceDictionary.MergedDictionaries>
             
+        <!-- Lightweight Control Templates for Large Lists -->
+        <DataTemplate x:Key="LightweightDiscoveryModuleTemplate">
+            <Border Background="#FF2D3748" CornerRadius="4" Padding="12,8" Margin="2">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="16" Margin="0,0,12,0"/>
+                    <TextBlock Grid.Column="1" Text="{Binding DisplayName}" 
+                               Foreground="#FFE2E8F0" FontSize="13" FontWeight="Medium" 
+                               VerticalAlignment="Center"/>
+                    <Ellipse Grid.Column="2" Width="6" Height="6" Fill="{Binding StatusColor}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+        
+        <DataTemplate x:Key="LightweightUserListTemplate">
+            <Border Background="Transparent" Padding="8,4" Margin="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="60"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="{Binding DisplayName}" 
+                               Foreground="#FFE2E8F0" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Department}" 
+                               Foreground="#FFA0AEC0" FontSize="11" VerticalAlignment="Center"/>
+                    <Ellipse Grid.Column="2" Width="4" Height="4" Fill="Green" 
+                             Visibility="{Binding AccountEnabled, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+        
         <!-- Column Header Gripper Style (moved to top to fix forward reference) -->
         <Style x:Key="ColumnHeaderGripperStyle" TargetType="Thumb">
             <Setter Property="Width" Value="8"/>
@@ -41,6 +83,8 @@
         
         <!-- Converters -->
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:RiskLevelToBrushConverter x:Key="RiskLevelToBrushConverter"/>
+        <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
         
         <!-- Modern Gradient Brushes -->
         <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,1">
@@ -589,6 +633,216 @@
             <Setter Property="Height" Value="4"/>
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
+
+        <!-- Tab View Templates for TDI -->
+        <DataTemplate x:Key="TabViewTemplate">
+            <ContentControl>
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Style.Triggers>
+                            <!-- Dashboard Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Dashboard">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <Grid Margin="16">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="*"/>
+                                                </Grid.RowDefinitions>
+
+                                                <!-- Dashboard Header with Controls -->
+                                                <Grid Grid.Row="0" Margin="0,0,0,16">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock Text="📊" FontSize="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="Dashboard" Foreground="#FFE2E8F0" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                        <Border Background="#FF374151" CornerRadius="4" Padding="4,2" Margin="12,0,0,0" 
+                                                                Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                            <TextBlock Text="EDIT MODE" Foreground="#FFFBBF24" FontSize="10" FontWeight="Bold"/>
+                                                        </Border>
+                                                    </StackPanel>
+
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                        <Button Content="🔄" Padding="8,4" Margin="0,0,8,0" 
+                                                                Command="{Binding RefreshAllWidgetsCommand}" 
+                                                                Style="{StaticResource ModernButtonStyle}"/>
+                                                        <Button Content="✏️" Padding="8,4" Margin="0,0,8,0" 
+                                                                Command="{Binding ToggleEditModeCommand}" 
+                                                                Style="{StaticResource ModernButtonStyle}"/>
+                                                        <Button Content="💾" Padding="8,4" Margin="0,0,8,0" 
+                                                                Command="{Binding SaveLayoutCommand}" 
+                                                                Style="{StaticResource ModernButtonStyle}"
+                                                                Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                        <Button Content="🔄" Padding="8,4" 
+                                                                Command="{Binding ResetLayoutCommand}" 
+                                                                Style="{StaticResource ModernButtonStyle}"
+                                                                Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <!-- Widget Grid Container -->
+                                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="300"/>
+                                                            <ColumnDefinition Width="300"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <!-- Widget ItemsControl with Grid positioning -->
+                                                        <ItemsControl ItemsSource="{Binding Widgets}" Grid.RowSpan="4" Grid.ColumnSpan="4">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <Grid/>
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemContainerStyle>
+                                                                <Style TargetType="ContentPresenter">
+                                                                    <Setter Property="Grid.Row" Value="{Binding Row}"/>
+                                                                    <Setter Property="Grid.Column" Value="{Binding Column}"/>
+                                                                    <Setter Property="Grid.RowSpan" Value="{Binding RowSpan}"/>
+                                                                    <Setter Property="Grid.ColumnSpan" Value="{Binding ColumnSpan}"/>
+                                                                    <Setter Property="Margin" Value="8"/>
+                                                                    <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                                </Style>
+                                                            </ItemsControl.ItemContainerStyle>
+                                                        </ItemsControl>
+                                                    </Grid>
+                                                </ScrollViewer>
+
+                                                <!-- Loading Overlay -->
+                                                <Border Grid.RowSpan="2" Background="#80000000" CornerRadius="8"
+                                                        Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <ProgressBar IsIndeterminate="True" Width="200" Height="4" 
+                                                                     Background="Transparent" Foreground="#FF667eea"/>
+                                                        <TextBlock Text="Loading Dashboard..." Foreground="#FFE2E8F0" FontSize="14" 
+                                                                   HorizontalAlignment="Center" Margin="0,16,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <!-- Error Message -->
+                                                <Border Grid.RowSpan="2" Background="#80000000" CornerRadius="8" Padding="32"
+                                                        Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock Text="❌" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                                                        <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFF56565" FontSize="14" 
+                                                                   HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="400"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <!-- Users Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Users">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <Grid Margin="32">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    <TextBlock Grid.Row="0" Text="Users" Style="{StaticResource HeaderTextStyle}"/>
+                                                    <TextBlock Grid.Row="1" Text="Users content will be loaded here..." 
+                                                              Foreground="#FFA0AEC0" FontSize="16" Margin="0,16"/>
+                                                </Grid>
+                                            </ScrollViewer>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <!-- Infrastructure Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Infrastructure">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <Grid Margin="32">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    <TextBlock Grid.Row="0" Text="Infrastructure" Style="{StaticResource HeaderTextStyle}"/>
+                                                    <TextBlock Grid.Row="1" Text="Infrastructure content will be loaded here..." 
+                                                              Foreground="#FFA0AEC0" FontSize="16" Margin="0,16"/>
+                                                </Grid>
+                                            </ScrollViewer>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <!-- Groups Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Groups">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <Grid Margin="32">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    <TextBlock Grid.Row="0" Text="Groups" Style="{StaticResource HeaderTextStyle}"/>
+                                                    <TextBlock Grid.Row="1" Text="Groups content will be loaded here..." 
+                                                              Foreground="#FFA0AEC0" FontSize="16" Margin="0,16"/>
+                                                </Grid>
+                                            </ScrollViewer>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <!-- Discovery Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Discovery">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <Grid Margin="32">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    <TextBlock Grid.Row="0" Text="Discovery" Style="{StaticResource HeaderTextStyle}"/>
+                                                    <TextBlock Grid.Row="1" Text="Discovery content will be loaded here..." 
+                                                              Foreground="#FFA0AEC0" FontSize="16" Margin="0,16"/>
+                                                </Grid>
+                                            </ScrollViewer>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <!-- Snapshot Comparison Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Snapshot Comparison">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <views:SnapshotComparisonView/>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
+        </DataTemplate>
+        
         </ResourceDictionary>
     </Window.Resources>
     
@@ -610,6 +864,7 @@
         <KeyBinding Key="F" Modifiers="Ctrl" Command="{Binding SearchCommand}"/>
         <KeyBinding Key="R" Modifiers="Ctrl" Command="{Binding RefreshCommand}"/>
         <KeyBinding Key="N" Modifiers="Ctrl" Command="{Binding NewProfileCommand}"/>
+        <KeyBinding Key="P" Modifiers="Ctrl+Shift" Command="{Binding ShowCommandPaletteCommand}"/>
         
         <!-- Theme Toggle -->
         <KeyBinding Key="T" Modifiers="Ctrl+Alt" Command="{Binding ToggleThemeCommand}"/>
@@ -815,7 +1070,7 @@
                         </Button>
                         
                         <Button x:Name="QuickReportsButton" 
-                                Command="{Binding NavigateCommand}"
+                                Command="{Binding OpenTabCommand}"
                                 CommandParameter="Reports"
                                 Background="#FF6B46C1"
                                 BorderThickness="0"
@@ -849,7 +1104,7 @@
                               HorizontalScrollBarVisibility="Disabled"
                               PanningMode="VerticalOnly">
                     <StackPanel>
-                        <Button x:Name="DashboardButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Dashboard"
+                        <Button x:Name="DashboardButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Dashboard"
                                 ToolTip="View company overview, statistics, and key metrics">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📊" FontSize="18" Margin="0,0,16,0"/>
@@ -860,7 +1115,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="DiscoveryButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Discovery"
+                    <Button x:Name="DiscoveryButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Discovery"
                             ToolTip="Run automated discovery modules to scan and analyze IT infrastructure">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🔍" FontSize="18" Margin="0,0,16,0"/>
@@ -871,7 +1126,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="UsersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Users"
+                    <Button x:Name="UsersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Users"
                             ToolTip="Manage user accounts, view profiles, and analyze user permissions">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="👥" FontSize="18" Margin="0,0,16,0"/>
@@ -882,7 +1137,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="ComputersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Computers"
+                    <Button x:Name="ComputersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Computers"
                             ToolTip="View computer inventory, hardware specifications, and device status">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="💻" FontSize="18" Margin="0,0,16,0"/>
@@ -893,7 +1148,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="InfrastructureButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Infrastructure"
+                    <Button x:Name="InfrastructureButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Infrastructure"
                             ToolTip="Explore network topology, infrastructure components, and connectivity">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🌐" FontSize="18" Margin="0,0,16,0"/>
@@ -904,7 +1159,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="GroupsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Groups"
+                    <Button x:Name="GroupsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Groups"
                             ToolTip="Manage security groups, distribution lists, and group memberships">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="👥" FontSize="18" Margin="0,0,16,0"/>
@@ -915,7 +1170,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="DomainDiscoveryButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="DomainDiscovery">
+                    <Button x:Name="DomainDiscoveryButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="DomainDiscovery">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🔍" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -925,7 +1180,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="FileServersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="FileServers">
+                    <Button x:Name="FileServersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="FileServers">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📁" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -935,7 +1190,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="DatabasesButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Databases">
+                    <Button x:Name="DatabasesButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Databases">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🗄️" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -945,7 +1200,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="SecurityButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Security">
+                    <Button x:Name="SecurityButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Security">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🔒" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -955,7 +1210,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="ApplicationsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Applications">
+                    <Button x:Name="ApplicationsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Applications">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📱" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -965,7 +1220,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="WavesButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Waves">
+                    <Button x:Name="WavesButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Waves">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🚀" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -975,7 +1230,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="MigrateButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Migrate">
+                    <Button x:Name="MigrateButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Migrate">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="⚡" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -987,7 +1242,7 @@
                     
                     <Separator Margin="24,16" Background="#FF2D3748"/>
                     
-                    <Button x:Name="ReportsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Reports"
+                    <Button x:Name="ReportsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Reports"
                             ToolTip="Generate comprehensive reports and analytics for discovered data">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📄" FontSize="18" Margin="0,0,16,0"/>
@@ -998,7 +1253,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="AnalyticsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Analytics"
+                    <Button x:Name="AnalyticsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Analytics"
                             ToolTip="Interactive data visualization and analytics dashboard">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📊" FontSize="18" Margin="0,0,16,0"/>
@@ -1009,7 +1264,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="SettingsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateCommand}" CommandParameter="Settings"
+                    <Button x:Name="SettingsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Settings"
                             ToolTip="Configure application settings, authentication, and discovery parameters">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="⚙️" FontSize="18" Margin="0,0,16,0"/>
@@ -1073,7 +1328,119 @@
             
             <!-- Breadcrumb Navigation -->
             <controls:BreadcrumbNavigation Grid.Row="0"/>
-            <!-- Dashboard View -->
+            
+            <!-- Tabbed Document Interface -->
+            <TabControl Grid.Row="1" x:Name="MainTabControl" 
+                        ItemsSource="{Binding OpenTabs}" 
+                        SelectedItem="{Binding SelectedTab}"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Margin="0,8,0,0">
+                
+                <!-- Tab Header Template -->
+                <TabControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Margin="12,8">
+                            <TextBlock Text="{Binding TabTitle}" 
+                                       Foreground="#FFE2E8F0" 
+                                       FontSize="14" 
+                                       FontWeight="Medium"
+                                       VerticalAlignment="Center"/>
+                            <Button Content="✕" 
+                                    Margin="8,0,0,0"
+                                    Width="16" Height="16"
+                                    FontSize="10"
+                                    Background="Transparent"
+                                    Foreground="#FFA0AEC0"
+                                    BorderThickness="0"
+                                    Padding="0"
+                                    Visibility="{Binding CanClose, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"
+                                    CommandParameter="{Binding}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </TabControl.ItemTemplate>
+                
+                <!-- Tab Content Template -->
+                <TabControl.ContentTemplate>
+                    <DataTemplate>
+                        <ContentPresenter Content="{Binding}" ContentTemplate="{DynamicResource TabViewTemplate}"/>
+                    </DataTemplate>
+                </TabControl.ContentTemplate>
+                
+                <!-- Tab Control Style -->
+                <TabControl.Style>
+                    <Style TargetType="TabControl">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="TabControl">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        
+                                        <!-- Tab Headers -->
+                                        <Border Grid.Row="0" Background="#FF1A202C" BorderBrush="#FF2D3748" BorderThickness="0,0,0,1">
+                                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Hidden">
+                                                <TabPanel x:Name="HeaderPanel" 
+                                                         Panel.ZIndex="1" 
+                                                         Margin="16,0"
+                                                         IsItemsHost="True" 
+                                                         Background="Transparent"/>
+                                            </ScrollViewer>
+                                        </Border>
+                                        
+                                        <!-- Tab Content -->
+                                        <ContentPresenter Grid.Row="1" 
+                                                         x:Name="PART_SelectedContentHost" 
+                                                         ContentSource="SelectedContent"/>
+                                    </Grid>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </TabControl.Style>
+                
+                <!-- Tab Item Style -->
+                <TabControl.ItemContainerStyle>
+                    <Style TargetType="TabItem">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Foreground" Value="#FFA0AEC0"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Margin" Value="0,0,4,0"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="TabItem">
+                                    <Border x:Name="Border" 
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="4,4,0,0"
+                                            Margin="0,4,0,0">
+                                        <ContentPresenter x:Name="ContentSite"
+                                                         VerticalAlignment="Center"
+                                                         HorizontalAlignment="Center"
+                                                         ContentSource="Header"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Border" Property="Background" Value="#FF2D3748"/>
+                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Border" Property="Background" Value="#FF374151"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </TabControl.ItemContainerStyle>
+            </TabControl>
+            
+            <!-- Legacy Dashboard View (will be replaced by TDI) -->
             <ScrollViewer Grid.Row="1" x:Name="DashboardView" Visibility="{Binding IsDashboardVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
@@ -1415,7 +1782,7 @@
                                 <TextBlock x:Name="AppsStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="DomainDiscoveryBtn" Command="{Binding NavigateCommand}" CommandParameter="DomainDiscovery" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                        <Button x:Name="DomainDiscoveryBtn" Command="{Binding OpenTabCommand}" CommandParameter="DomainDiscovery" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Domain Discovery" Foreground="White"/>
@@ -1424,7 +1791,7 @@
                                 <TextBlock x:Name="DomainStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="FileServersDiscoveryBtn" Command="{Binding NavigateCommand}" CommandParameter="FileServers" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                        <Button x:Name="FileServersDiscoveryBtn" Command="{Binding OpenTabCommand}" CommandParameter="FileServers" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="File Servers" Foreground="White"/>
@@ -1433,7 +1800,7 @@
                                 <TextBlock x:Name="FileServersStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="DatabasesDiscoveryBtn" Command="{Binding NavigateCommand}" CommandParameter="Databases" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                        <Button x:Name="DatabasesDiscoveryBtn" Command="{Binding OpenTabCommand}" CommandParameter="Databases" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Databases" Foreground="White"/>
@@ -1442,7 +1809,7 @@
                                 <TextBlock x:Name="DatabasesStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="SecurityDiscoveryBtn" Command="{Binding NavigateCommand}" CommandParameter="Security" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                        <Button x:Name="SecurityDiscoveryBtn" Command="{Binding OpenTabCommand}" CommandParameter="Security" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Security" Foreground="White"/>
@@ -4318,5 +4685,19 @@
                               FontSize="11" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
+            
+            <!-- Command Palette Overlay -->
+            <Grid x:Name="CommandPaletteOverlay" 
+                  Background="#80000000" 
+                  Visibility="{Binding IsCommandPaletteVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+                  MouseDown="CommandPaletteOverlay_MouseDown">
+                <controls:CommandPalette x:Name="CommandPaletteControl"
+                                       DataContext="{Binding CommandPaletteViewModel}"
+                                       MaxWidth="600"
+                                       MaxHeight="400"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Top"
+                                       Margin="0,100,0,0"/>
+            </Grid>
     </Grid>
 </Window>

@@ -16,7 +16,6 @@ namespace MandADiscoverySuite.ViewModels
         #region Performance Services
 
         private DebouncedSearchService _debouncedSearchService;
-        private IntelligentCacheService _cacheService;
         private MemoryOptimizationService _memoryOptimizationService;
         private SmartPaginationService<UserData> _smartUserPagination;
         private SmartPaginationService<InfrastructureData> _smartInfraPagination;
@@ -39,7 +38,6 @@ namespace MandADiscoverySuite.ViewModels
             _memoryOptimizationService.ConfigureForOptimalMemoryUsage();
 
             _debouncedSearchService = new DebouncedSearchService();
-            _cacheService = new IntelligentCacheService();
 
             // Initialize smart pagination services
             _smartUserPagination = new SmartPaginationService<UserData>();

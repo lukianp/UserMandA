@@ -40,6 +40,7 @@ namespace MandADiscoverySuite.ViewModels
         private readonly LazyViewLoadingService _lazyViewLoadingService;
         private readonly DispatcherOptimizationService _dispatcherService;
         private readonly UIUpdateThrottleService _uiThrottleService;
+        private readonly IntelligentCacheService _cacheService;
         private readonly GlobalSearchViewModel _globalSearchViewModel;
         private CancellationTokenSource _cancellationTokenSource;
         
@@ -140,6 +141,36 @@ namespace MandADiscoverySuite.ViewModels
         /// Collection of application data (optimized for performance)
         /// </summary>
         public OptimizedObservableCollection<ApplicationData> Applications { get; }
+
+        /// <summary>
+        /// Collection of open tabs in the document interface
+        /// </summary>
+        public ObservableCollection<BaseViewModel> OpenTabs { get; }
+
+        /// <summary>
+        /// Currently selected tab
+        /// </summary>
+        public BaseViewModel SelectedTab
+        {
+            get => _selectedTab;
+            set => SetProperty(ref _selectedTab, value);
+        }
+        private BaseViewModel _selectedTab;
+
+        /// <summary>
+        /// Command Palette visibility
+        /// </summary>
+        public bool IsCommandPaletteVisible
+        {
+            get => _isCommandPaletteVisible;
+            set => SetProperty(ref _isCommandPaletteVisible, value);
+        }
+        private bool _isCommandPaletteVisible;
+
+        /// <summary>
+        /// Command Palette ViewModel
+        /// </summary>
+        public CommandPaletteViewModel CommandPaletteViewModel { get; }
 
         /// <summary>
         /// Currently selected company profile
@@ -616,6 +647,16 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ShowInfrastructureAdvancedSearchCommand { get; }
         public ICommand ShowGroupsAdvancedSearchCommand { get; }
 
+        // Tab Document Interface Commands
+        public ICommand OpenTabCommand { get; }
+        public ICommand CloseTabCommand { get; }
+        public ICommand ShowCommandPaletteCommand { get; }
+        public ICommand CloseAllTabsCommand { get; }
+        public ICommand CloseOtherTabsCommand { get; }
+
+        // Snapshot & Comparison Commands
+        public ICommand ShowSnapshotComparisonCommand { get; }
+
         #endregion
 
         #region Constructor
@@ -644,6 +685,7 @@ namespace MandADiscoverySuite.ViewModels
             Infrastructure = new OptimizedObservableCollection<InfrastructureData>();
             Groups = new OptimizedObservableCollection<GroupData>();
             Applications = new OptimizedObservableCollection<ApplicationData>();
+            OpenTabs = new ObservableCollection<BaseViewModel>();
             
             // Initialize pagination services
             _userPagination = new PaginationService<UserData>();
@@ -664,6 +706,7 @@ namespace MandADiscoverySuite.ViewModels
                 _lazyViewLoadingService = lazyViewLoadingService ?? ServiceLocator.GetService<LazyViewLoadingService>();
                 _dispatcherService = ServiceLocator.GetService<DispatcherOptimizationService>() ?? new DispatcherOptimizationService();
                 _uiThrottleService = ServiceLocator.GetService<UIUpdateThrottleService>() ?? new UIUpdateThrottleService();
+                _cacheService = ServiceLocator.GetService<IntelligentCacheService>() ?? new IntelligentCacheService();
             }
             catch (Exception ex)
             {
@@ -677,8 +720,12 @@ namespace MandADiscoverySuite.ViewModels
                 _lazyViewLoadingService = lazyViewLoadingService;
                 _dispatcherService = new DispatcherOptimizationService();
                 _uiThrottleService = new UIUpdateThrottleService();
+                _cacheService = new IntelligentCacheService();
             }
             _asyncDataService = new AsyncDataService(_csvDataService ?? new CsvDataService());
+            
+            // Initialize Command Palette
+            CommandPaletteViewModel = new CommandPaletteViewModel(null, messenger, _profileService, _discoveryService, _dataService);
             
             // Initialize binding optimization
             try
@@ -701,7 +748,7 @@ namespace MandADiscoverySuite.ViewModels
             _globalSearchViewModel = new GlobalSearchViewModel(
                 null, 
                 messenger, 
-                _dataService, 
+                null, // IGlobalSearchService - not IDataService
                 _profileService);
 
             // Initialize data visualization with dependency injection support
@@ -848,6 +895,16 @@ namespace MandADiscoverySuite.ViewModels
             ShowInfrastructureAdvancedSearchCommand = new RelayCommand(() => ShowAdvancedSearch("Infrastructure"));
             ShowGroupsAdvancedSearchCommand = new RelayCommand(() => ShowAdvancedSearch("Groups"));
 
+            // Initialize TDI commands
+            OpenTabCommand = new RelayCommand<string>(OpenTab);
+            CloseTabCommand = new RelayCommand<BaseViewModel>(CloseTab);
+            ShowCommandPaletteCommand = new RelayCommand(ShowCommandPalette);
+            CloseAllTabsCommand = new RelayCommand(CloseAllTabs);
+            CloseOtherTabsCommand = new RelayCommand<BaseViewModel>(CloseOtherTabs);
+
+            // Initialize Snapshot & Comparison commands
+            ShowSnapshotComparisonCommand = new RelayCommand(() => OpenTab("snapshotcomparison"));
+
             // Initialize refresh service
             _refreshService = RefreshService.Instance;
             _refreshService.RefreshRequested += OnRefreshRequested;
@@ -865,6 +922,9 @@ namespace MandADiscoverySuite.ViewModels
             // Initialize auto-refresh timer for detailed data (every 5 seconds)
             _dataRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
             _dataRefreshTimer.Tick += DataRefreshTimer_Tick;
+
+            // Initialize TDI with default Dashboard tab
+            OpenTab("dashboard");
 
             // Load initial data
             _ = Task.Run(async () =>
@@ -1282,18 +1342,42 @@ namespace MandADiscoverySuite.ViewModels
                 
                 StatusMessage = "Loading discovery data...";
 
-                // Use enhanced CSV data service methods that scan multiple paths
-                var usersTask = _csvDataService.LoadUsersAsync(SelectedProfile.CompanyName);
+                // Load data with incremental updates for users using IAsyncEnumerable
+                var users = new List<UserData>();
                 var infrastructureTask = _csvDataService.LoadInfrastructureAsync(SelectedProfile.CompanyName);
                 var groupsTask = _csvDataService.LoadGroupsAsync(SelectedProfile.CompanyName);
                 var applicationsTask = _csvDataService.LoadApplicationsAsync(SelectedProfile.CompanyName);
 
-                await Task.WhenAll(usersTask, infrastructureTask, groupsTask, applicationsTask);
+                // Load users incrementally with real-time UI updates
+                var dataPath = $"C:\\discoverydata\\{SelectedProfile.CompanyName}";
+                await foreach (var user in _csvDataService.LoadUsersAsyncEnumerable(dataPath))
+                {
+                    users.Add(user);
+                    
+                    // Update UI every 50 users for responsive feedback
+                    if (users.Count % 50 == 0)
+                    {
+                        var currentCount = users.Count;
+                        await _dispatcherService.ScheduleDataOperation(() =>
+                        {
+                            StatusMessage = $"Loaded {currentCount} users...";
+                        });
+                    }
+                }
 
-                var users = (await usersTask).ToList();
-                var infrastructure = (await infrastructureTask).ToList();
-                var groups = (await groupsTask).ToList();
-                var applications = (await applicationsTask).ToList();
+                // Complete loading other data types with caching
+                var cacheKeyInfra = $"infrastructure_{SelectedProfile.CompanyName}";
+                var cacheKeyGroups = $"groups_{SelectedProfile.CompanyName}";  
+                var cacheKeyApps = $"applications_{SelectedProfile.CompanyName}";
+                
+                var infrastructure = (await _cacheService.GetOrCreateAsync(cacheKeyInfra, 
+                    async () => (await infrastructureTask).ToList(), TimeSpan.FromMinutes(5))).ToList();
+                    
+                var groups = (await _cacheService.GetOrCreateAsync(cacheKeyGroups,
+                    async () => (await groupsTask).ToList(), TimeSpan.FromMinutes(5))).ToList();
+                    
+                var applications = (await _cacheService.GetOrCreateAsync(cacheKeyApps,
+                    async () => (await applicationsTask).ToList(), TimeSpan.FromMinutes(5))).ToList();
 
                 System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Loaded {users.Count} users, {infrastructure.Count} infrastructure items, {groups.Count} groups, {applications.Count} applications");
 
@@ -4012,6 +4096,193 @@ This directory is strictly for storing discovery results and company data.
 
         #endregion
 
+        #region Tabbed Document Interface Methods
+
+        /// <summary>
+        /// Opens a new tab with the specified view type
+        /// </summary>
+        private void OpenTab(string viewType)
+        {
+            try
+            {
+                BaseViewModel tabViewModel = null;
+                
+                switch (viewType?.ToLowerInvariant())
+                {
+                    case "dashboard":
+                        tabViewModel = new DashboardViewModel() { TabTitle = "Dashboard", CanClose = false };
+                        break;
+                    case "users":
+                        tabViewModel = new UsersViewModel { TabTitle = "Users" };
+                        break;
+                    case "infrastructure":
+                        tabViewModel = new InfrastructureViewModel { TabTitle = "Infrastructure" };
+                        break;
+                    case "groups":
+                        tabViewModel = new GroupsViewModel { TabTitle = "Groups" };
+                        break;
+                    case "discovery":
+                        tabViewModel = new DiscoveryViewModel { TabTitle = "Discovery" };
+                        break;
+                    case "snapshotcomparison":
+                        tabViewModel = new SnapshotComparisonViewModel { TabTitle = "Snapshot Comparison" };
+                        break;
+                    case "ganttchart":
+                        tabViewModel = new GanttChartViewModel { TabTitle = "Gantt Chart" };
+                        break;
+                    case "reportbuilder":
+                        tabViewModel = new ReportBuilderViewModel { TabTitle = "Report Builder" };
+                        break;
+                    default:
+                        Logger?.LogWarning("Unknown view type for tab: {ViewType}", viewType);
+                        return;
+                }
+
+                if (tabViewModel != null)
+                {
+                    // Check if tab is already open
+                    var existingTab = OpenTabs.FirstOrDefault(t => t.TabTitle == tabViewModel.TabTitle);
+                    if (existingTab != null)
+                    {
+                        SelectedTab = existingTab;
+                        return;
+                    }
+
+                    OpenTabs.Add(tabViewModel);
+                    SelectedTab = tabViewModel;
+                    Logger?.LogInformation("Opened new tab: {TabTitle}", tabViewModel.TabTitle);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error opening tab for view type: {ViewType}", viewType);
+                StatusMessage = $"Error opening tab: {ex.Message}";
+            }
+        }
+
+        /// <summary>
+        /// Shows the Command Palette
+        /// </summary>
+        private void ShowCommandPalette()
+        {
+            IsCommandPaletteVisible = true;
+            Logger?.LogInformation("Command Palette opened");
+        }
+
+        /// <summary>
+        /// Hides the Command Palette
+        /// </summary>
+        private void HideCommandPalette()
+        {
+            IsCommandPaletteVisible = false;
+            Logger?.LogInformation("Command Palette closed");
+        }
+
+        /// <summary>
+        /// Closes the specified tab
+        /// </summary>
+        private void CloseTab(BaseViewModel tab)
+        {
+            if (tab == null || !tab.CanClose) return;
+
+            try
+            {
+                var index = OpenTabs.IndexOf(tab);
+                OpenTabs.Remove(tab);
+                
+                // Select adjacent tab if available
+                if (OpenTabs.Count > 0)
+                {
+                    if (index >= OpenTabs.Count)
+                        index = OpenTabs.Count - 1;
+                    SelectedTab = OpenTabs[index];
+                }
+                else
+                {
+                    SelectedTab = null;
+                }
+
+                // Dispose the closed tab if it implements IDisposable
+                if (tab is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+
+                Logger?.LogInformation("Closed tab: {TabTitle}", tab.TabTitle);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error closing tab: {TabTitle}", tab?.TabTitle);
+            }
+        }
+
+        /// <summary>
+        /// Closes all closeable tabs
+        /// </summary>
+        private void CloseAllTabs()
+        {
+            try
+            {
+                var tabsToClose = OpenTabs.Where(t => t.CanClose).ToList();
+                foreach (var tab in tabsToClose)
+                {
+                    CloseTab(tab);
+                }
+                Logger?.LogInformation("Closed all closeable tabs");
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error closing all tabs");
+            }
+        }
+
+        /// <summary>
+        /// Closes all tabs except the specified one
+        /// </summary>
+        private void CloseOtherTabs(BaseViewModel keepTab)
+        {
+            if (keepTab == null) return;
+
+            try
+            {
+                var tabsToClose = OpenTabs.Where(t => t != keepTab && t.CanClose).ToList();
+                foreach (var tab in tabsToClose)
+                {
+                    CloseTab(tab);
+                }
+                SelectedTab = keepTab;
+                Logger?.LogInformation("Closed other tabs, keeping: {TabTitle}", keepTab.TabTitle);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error closing other tabs");
+            }
+        }
+
+        // Placeholder ViewModels for TDI - These would be actual ViewModels in the real implementation
+
+        private class UsersViewModel : BaseViewModel
+        {
+            public UsersViewModel() : base() { }
+        }
+
+        private class InfrastructureViewModel : BaseViewModel
+        {
+            public InfrastructureViewModel() : base() { }
+        }
+
+        private class GroupsViewModel : BaseViewModel
+        {
+            public GroupsViewModel() : base() { }
+        }
+
+        private class DiscoveryViewModel : BaseViewModel
+        {
+            public DiscoveryViewModel() : base() { }
+        }
+
+        #endregion
+
         #region IDisposable
 
         protected override void OnDisposing()
@@ -4020,6 +4291,16 @@ This directory is strictly for storing discovery results and company data.
             {
                 // Dispose performance services first
                 DisposePerformanceServices();
+
+                // Dispose all open tabs
+                if (OpenTabs != null)
+                {
+                    foreach (var tab in OpenTabs.OfType<IDisposable>())
+                    {
+                        tab.Dispose();
+                    }
+                    OpenTabs.Clear();
+                }
 
                 // Stop timers and unsubscribe from events
                 if (_dashboardTimer != null)
@@ -4062,6 +4343,9 @@ This directory is strictly for storing discovery results and company data.
                     
                 if (_profileService is IDisposable disposableProfile)
                     disposableProfile.Dispose();
+                    
+                // Dispose cache service
+                _cacheService?.Dispose();
                     
                 // Dispose timers
                 _dashboardTimer?.Stop();

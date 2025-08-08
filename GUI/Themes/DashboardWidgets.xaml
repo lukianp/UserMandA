@@ -1,0 +1,365 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:widgets="clr-namespace:MandADiscoverySuite.ViewModels.Widgets">
+
+    <!-- System Overview Widget Template -->
+    <DataTemplate DataType="{x:Type widgets:SystemOverviewWidget}">
+        <Border Background="#FF1C2433" BorderBrush="#FF374151" BorderThickness="1" CornerRadius="8" Padding="16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <TextBlock Text="{Binding Icon}" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Title}" Foreground="#FFE2E8F0" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <TextBlock Grid.Column="1" Text="{Binding LastUpdated, StringFormat='{}{0:HH:mm}'}" 
+                               Foreground="#FFA0AEC0" FontSize="11" VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Content -->
+                <UniformGrid Grid.Row="1" Columns="2" Rows="2" Margin="0,16,0,0">
+                    <!-- Users -->
+                    <Border Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="4">
+                        <StackPanel>
+                            <TextBlock Text="👥" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding TotalUsers, StringFormat='{}{0:N0}'}" 
+                                       Foreground="#FFE2E8F0" FontSize="18" FontWeight="Bold" 
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Users" Foreground="#FFA0AEC0" FontSize="11" 
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Computers -->
+                    <Border Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="4">
+                        <StackPanel>
+                            <TextBlock Text="💻" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding TotalComputers, StringFormat='{}{0:N0}'}" 
+                                       Foreground="#FFE2E8F0" FontSize="18" FontWeight="Bold" 
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Computers" Foreground="#FFA0AEC0" FontSize="11" 
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Groups -->
+                    <Border Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="4">
+                        <StackPanel>
+                            <TextBlock Text="👤" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding TotalGroups, StringFormat='{}{0:N0}'}" 
+                                       Foreground="#FFE2E8F0" FontSize="18" FontWeight="Bold" 
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Groups" Foreground="#FFA0AEC0" FontSize="11" 
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Health Status -->
+                    <Border Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="4">
+                        <StackPanel>
+                            <TextBlock Text="❤️" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding HealthStatus}" 
+                                       Foreground="#FFE2E8F0" FontSize="14" FontWeight="Bold" 
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Health" Foreground="#FFA0AEC0" FontSize="11" 
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <!-- Loading Overlay -->
+                <Border Grid.RowSpan="2" Background="#80000000" CornerRadius="8"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ProgressBar IsIndeterminate="True" Width="100" Height="4" 
+                                     Background="Transparent" Foreground="#FF667eea"/>
+                        <TextBlock Text="Loading..." Foreground="#FFE2E8F0" FontSize="12" 
+                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <!-- Discovery Status Widget Template -->
+    <DataTemplate DataType="{x:Type widgets:DiscoveryStatusWidget}">
+        <Border Background="#FF1C2433" BorderBrush="#FF374151" BorderThickness="1" CornerRadius="8" Padding="16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <TextBlock Text="{Binding Icon}" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Title}" Foreground="#FFE2E8F0" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <TextBlock Grid.Column="1" Text="{Binding LastUpdated, StringFormat='{}{0:HH:mm}'}" 
+                               Foreground="#FFA0AEC0" FontSize="11" VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Summary -->
+                <UniformGrid Grid.Row="1" Columns="3" Margin="0,12,0,0">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding CompletedModules}" Foreground="#FF48BB78" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Completed" Foreground="#FFA0AEC0" FontSize="10" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding RunningModules}" Foreground="#FF667eea" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Running" Foreground="#FFA0AEC0" FontSize="10" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding FailedModules}" Foreground="#FFF56565" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Failed" Foreground="#FFA0AEC0" FontSize="10" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </UniformGrid>
+
+                <!-- Module List -->
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+                    <ItemsControl ItemsSource="{Binding DiscoveryModules}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#FF2D3748" CornerRadius="4" Padding="8" Margin="0,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <TextBlock Grid.Column="0" Text="{Binding StatusIcon}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding ModuleName}" Foreground="#FFE2E8F0" FontSize="12" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding LastRun, StringFormat='{}{0:HH:mm}'}" 
+                                                   Foreground="#FFA0AEC0" FontSize="10" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Loading Overlay -->
+                <Border Grid.RowSpan="3" Background="#80000000" CornerRadius="8"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ProgressBar IsIndeterminate="True" Width="100" Height="4" 
+                                     Background="Transparent" Foreground="#FF667eea"/>
+                        <TextBlock Text="Loading..." Foreground="#FFE2E8F0" FontSize="12" 
+                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <!-- Risk Assessment Widget Template -->
+    <DataTemplate DataType="{x:Type widgets:RiskAssessmentWidget}">
+        <Border Background="#FF1C2433" BorderBrush="#FF374151" BorderThickness="1" CornerRadius="8" Padding="16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <TextBlock Text="{Binding Icon}" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Title}" Foreground="#FFE2E8F0" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <TextBlock Grid.Column="1" Text="{Binding LastUpdated, StringFormat='{}{0:HH:mm}'}" 
+                               Foreground="#FFA0AEC0" FontSize="11" VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Risk Score -->
+                <Border Grid.Row="1" Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="0,12,0,0">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="Overall Risk Score" Foreground="#FFA0AEC0" FontSize="11" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding OverallRiskScore, StringFormat='{}{0:F1}'}" 
+                                   Foreground="#FFF56565" FontSize="24" FontWeight="Bold" 
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Risk Items -->
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+                    <ItemsControl ItemsSource="{Binding RiskItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#FF2D3748" CornerRadius="4" Padding="8" Margin="0,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Category}" Foreground="#FFE2E8F0" FontSize="12" FontWeight="Medium"/>
+                                            <TextBlock Text="{Binding Description}" Foreground="#FFA0AEC0" FontSize="10" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+                                            <TextBlock Text="{Binding Count}" 
+                                                       Foreground="{Binding Level, Converter={StaticResource RiskLevelToBrushConverter}}" 
+                                                       FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Level}" 
+                                                       Foreground="{Binding Level, Converter={StaticResource RiskLevelToBrushConverter}}" 
+                                                       FontSize="9" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Loading Overlay -->
+                <Border Grid.RowSpan="3" Background="#80000000" CornerRadius="8"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ProgressBar IsIndeterminate="True" Width="100" Height="4" 
+                                     Background="Transparent" Foreground="#FF667eea"/>
+                        <TextBlock Text="Loading..." Foreground="#FFE2E8F0" FontSize="12" 
+                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <!-- Migration Progress Widget Template -->
+    <DataTemplate DataType="{x:Type widgets:MigrationProgressWidget}">
+        <Border Background="#FF1C2433" BorderBrush="#FF374151" BorderThickness="1" CornerRadius="8" Padding="16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <TextBlock Text="{Binding Icon}" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Title}" Foreground="#FFE2E8F0" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <TextBlock Grid.Column="1" Text="{Binding LastUpdated, StringFormat='{}{0:HH:mm}'}" 
+                               Foreground="#FFA0AEC0" FontSize="11" VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Overall Progress -->
+                <Border Grid.Row="1" Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="0,12,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Overall Progress" Foreground="#FFA0AEC0" FontSize="11"/>
+                            <ProgressBar Value="{Binding OverallProgress}" Maximum="100" Height="8" 
+                                         Background="#FF4A5568" Foreground="#FF48BB78" Margin="0,4"/>
+                        </StackPanel>
+                        
+                        <TextBlock Grid.Column="1" Text="{Binding OverallProgress, StringFormat='{}{0:F1}%'}" 
+                                   Foreground="#FFE2E8F0" FontSize="16" FontWeight="Bold" 
+                                   VerticalAlignment="Center" Margin="16,0,0,0"/>
+                    </Grid>
+                </Border>
+
+                <!-- Migration Waves -->
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+                    <ItemsControl ItemsSource="{Binding MigrationWaves}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#FF2D3748" CornerRadius="4" Padding="8" Margin="0,2">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        
+                                        <Grid Grid.Row="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <TextBlock Grid.Column="0" Text="{Binding Name}" 
+                                                       Foreground="#FFE2E8F0" FontSize="12" FontWeight="Medium" 
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Status}" 
+                                                       Foreground="#FFA0AEC0" FontSize="10" 
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                        
+                                        <Grid Grid.Row="1" Margin="0,4,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <ProgressBar Grid.Column="0" Value="{Binding ProgressPercentage}" 
+                                                         Maximum="100" Height="6" 
+                                                         Background="#FF4A5568" Foreground="#FF667eea"/>
+                                            <TextBlock Grid.Column="1" 
+                                                       Text="{Binding ProgressText}"
+                                                       Foreground="#FFA0AEC0" FontSize="10" 
+                                                       VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Loading Overlay -->
+                <Border Grid.RowSpan="3" Background="#80000000" CornerRadius="8"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ProgressBar IsIndeterminate="True" Width="100" Height="4" 
+                                     Background="Transparent" Foreground="#FF667eea"/>
+                        <TextBlock Text="Loading..." Foreground="#FFE2E8F0" FontSize="12" 
+                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+</ResourceDictionary>

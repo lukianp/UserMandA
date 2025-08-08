@@ -26,15 +26,15 @@ namespace MandADiscoverySuite.ViewModels
         private int _selectedIndex = 0;
 
         public CommandPaletteViewModel(
-            ILogger<CommandPaletteViewModel> logger,
-            IMessenger messenger,
-            IProfileService profileService,
-            IDiscoveryService discoveryService,
-            IDataService dataService) : base(logger, messenger)
+            ILogger<CommandPaletteViewModel> logger = null,
+            IMessenger messenger = null,
+            IProfileService profileService = null,
+            IDiscoveryService discoveryService = null,
+            IDataService dataService = null) : base(logger, messenger)
         {
-            _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
-            _discoveryService = discoveryService ?? throw new ArgumentNullException(nameof(discoveryService));
-            _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
+            _profileService = profileService ?? SimpleServiceLocator.GetService<IProfileService>();
+            _discoveryService = discoveryService ?? SimpleServiceLocator.GetService<IDiscoveryService>();
+            _dataService = dataService ?? SimpleServiceLocator.GetService<IDataService>();
 
             Commands = new ObservableCollection<CommandItem>();
             FilteredCommands = CollectionViewSource.GetDefaultView(Commands);

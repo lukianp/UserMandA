@@ -654,53 +654,7 @@ namespace MandADiscoverySuite.Models
         }
     }
 
-    // User Detail Models
-    public class UserDetailData
-    {
-        public string Id { get; set; }
-        public string DisplayName { get; set; }
-        public string UserPrincipalName { get; set; }
-        public string Mail { get; set; }
-        public string JobTitle { get; set; }
-        public string Department { get; set; }
-        public string Manager { get; set; }
-        public string City { get; set; }
-        public string AccountEnabled { get; set; }
-        public string CreatedDateTime { get; set; }
-        public string LastSignInDateTime { get; set; }
-        public string AssignedLicenses { get; set; }
-    }
 
-    public class GroupMembership
-    {
-        public string DisplayName { get; set; }
-        public string GroupType { get; set; }
-    }
-
-    public class ApplicationAssignment
-    {
-        public string DisplayName { get; set; }
-        public string Role { get; set; }
-    }
-
-    public class DeviceRelationship
-    {
-        public string DisplayName { get; set; }
-        public string OperatingSystem { get; set; }
-        public string TrustType { get; set; }
-    }
-
-    public class DirectoryRole
-    {
-        public string DisplayName { get; set; }
-        public string Description { get; set; }
-    }
-
-    public class LicenseAssignment
-    {
-        public string SkuPartNumber { get; set; }
-        public string Status { get; set; }
-    }
 
     /// <summary>
     /// User data model for main views

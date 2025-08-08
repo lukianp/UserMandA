@@ -84,16 +84,16 @@ namespace MandADiscoverySuite.ViewModels
                         Shortcuts = new ObservableCollection<ShortcutViewModel>()
                     };
 
-                    foreach (var shortcut in category.Value.OrderBy(s => s.Name))
+                    foreach (var shortcut in category.Value.OrderBy(s => s.DisplayName))
                     {
                         var shortcutViewModel = new ShortcutViewModel
                         {
-                            Name = shortcut.Name,
+                            Name = shortcut.DisplayName,
                             Description = shortcut.Description,
-                            KeyGesture = shortcut.KeyGesture.ToString(),
-                            KeyParts = ParseKeyGesture(shortcut.KeyGesture.ToString()),
-                            Category = shortcut.Category,
-                            IsCustom = shortcut.IsCustom
+                            KeyGesture = shortcut.KeyCombination,
+                            KeyParts = ParseKeyGesture(shortcut.KeyCombination),
+                            Category = shortcut.Category.ToString(),
+                            IsCustom = !shortcut.IsDefault
                         };
 
                         categoryViewModel.Shortcuts.Add(shortcutViewModel);

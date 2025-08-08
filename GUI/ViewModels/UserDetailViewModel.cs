@@ -162,27 +162,24 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     Id = GetPropertyValue(selectedUser, "Id"),
                     DisplayName = GetPropertyValue(selectedUser, "DisplayName") ?? GetPropertyValue(selectedUser, "Name"),
-                    UserPrincipalName = GetPropertyValue(selectedUser, "UserPrincipalName") ?? GetPropertyValue(selectedUser, "Email"),
-                    Mail = GetPropertyValue(selectedUser, "Mail") ?? GetPropertyValue(selectedUser, "Email"),
-                    JobTitle = GetPropertyValue(selectedUser, "JobTitle") ?? GetPropertyValue(selectedUser, "Title"),
+                    Email = GetPropertyValue(selectedUser, "Mail") ?? GetPropertyValue(selectedUser, "Email"),
+                    Title = GetPropertyValue(selectedUser, "JobTitle") ?? GetPropertyValue(selectedUser, "Title"),
                     Department = GetPropertyValue(selectedUser, "Department"),
                     Manager = GetPropertyValue(selectedUser, "ManagerDisplayName") ?? GetPropertyValue(selectedUser, "Manager"),
-                    City = GetPropertyValue(selectedUser, "City") ?? GetPropertyValue(selectedUser, "Location"),
-                    AccountEnabled = GetPropertyValue(selectedUser, "AccountEnabled"),
-                    CreatedDateTime = GetPropertyValue(selectedUser, "CreatedDateTime"),
-                    LastSignInDateTime = GetPropertyValue(selectedUser, "LastSignInDateTime")
+                    IsEnabled = GetPropertyValue(selectedUser, "AccountEnabled") == "True" || GetPropertyValue(selectedUser, "AccountEnabled") == "true",
+                    LastLogon = DateTime.TryParse(GetPropertyValue(selectedUser, "LastSignInDateTime"), out DateTime lastLogon) ? lastLogon : DateTime.MinValue
                 };
                 
                 DisplayName = _userData.DisplayName ?? "Unknown User";
-                UserPrincipalName = _userData.UserPrincipalName ?? "";
-                Email = _userData.Mail ?? "";
-                JobTitle = _userData.JobTitle ?? "";
+                UserPrincipalName = "N/A"; // UserPrincipalName not available in UserDetailData
+                Email = _userData.Email ?? "";
+                JobTitle = _userData.Title ?? "";
                 Department = _userData.Department ?? "";
                 Manager = _userData.Manager ?? "";
-                Location = _userData.City ?? "";
-                AccountEnabled = _userData.AccountEnabled ?? "";
-                CreatedDate = _userData.CreatedDateTime ?? "";
-                LastSignIn = _userData.LastSignInDateTime ?? "";
+                Location = "N/A"; // City not available in UserDetailData
+                AccountEnabled = _userData.IsEnabled ? "Enabled" : "Disabled";
+                CreatedDate = "N/A"; // CreatedDateTime not available in UserDetailData
+                LastSignIn = _userData.LastLogon.ToString("yyyy-MM-dd HH:mm:ss");
                 
                 LoadGroupMemberships();
                 LoadApplicationAssignments();
@@ -309,7 +306,7 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     DisplayName = "No devices found",
                     OperatingSystem = "N/A",
-                    TrustType = "N/A"
+                    DeviceType = "N/A"
                 });
             }
             catch (Exception ex)
@@ -357,24 +354,12 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 LicenseAssignments.Clear();
-                string assignedLicenses = _userData.AssignedLicenses ?? "";
-                
-                if (!string.IsNullOrEmpty(assignedLicenses))
+                // License assignment data not available in UserDetailData model
+                LicenseAssignments.Add(new LicenseAssignment
                 {
-                    LicenseAssignments.Add(new LicenseAssignment
-                    {
-                        SkuPartNumber = "Microsoft 365 Business Premium",
-                        Status = "Active"
-                    });
-                }
-                else
-                {
-                    LicenseAssignments.Add(new LicenseAssignment
-                    {
-                        SkuPartNumber = "No licenses assigned",
-                        Status = "N/A"
-                    });
-                }
+                    SkuId = "N/A",
+                    Status = "Not Available"
+                });
             }
             catch (Exception ex)
             {

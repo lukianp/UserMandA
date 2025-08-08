@@ -1,8 +1,12 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
+using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
+using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Helpers;
 
 namespace MandADiscoverySuite
@@ -10,6 +14,7 @@ namespace MandADiscoverySuite
     public partial class App : Application
     {
         private StartupOptimizationService _startupService;
+        private KeyboardShortcutManager _shortcutManager;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -38,6 +43,16 @@ namespace MandADiscoverySuite
                     themeService.Initialize();
                     logAction?.Invoke("ThemeService initialized successfully");
                 }
+                
+                // Freeze static gradient brushes for performance
+                logAction?.Invoke("Freezing static gradient brushes...");
+                FreezeStaticBrushes();
+                logAction?.Invoke("Static brushes frozen successfully");
+                
+                // Initialize keyboard shortcuts
+                logAction?.Invoke("Initializing keyboard shortcuts...");
+                InitializeKeyboardShortcuts();
+                logAction?.Invoke("Keyboard shortcuts initialized successfully");
                 
                 logAction?.Invoke("Calling base.OnStartup...");
                 base.OnStartup(e);
@@ -106,6 +121,115 @@ namespace MandADiscoverySuite
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to initialize animation optimization: {ex.Message}");
+            }
+        }
+
+        private void InitializeKeyboardShortcuts()
+        {
+            try
+            {
+                var shortcutService = SimpleServiceLocator.GetService<IKeyboardShortcutService>();
+                if (shortcutService != null)
+                {
+                    _shortcutManager = new KeyboardShortcutManager(shortcutService);
+                    
+                    // Register application-wide shortcuts
+                    _shortcutManager.RegisterApplicationShortcuts();
+                    
+                    // Register common application shortcuts
+                    RegisterApplicationShortcuts(shortcutService);
+                    
+                    System.Diagnostics.Debug.WriteLine("Keyboard shortcuts initialized successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to initialize keyboard shortcuts: {ex.Message}");
+            }
+        }
+
+        private void RegisterApplicationShortcuts(IKeyboardShortcutService shortcutService)
+        {
+            try
+            {
+                // Register common application shortcuts
+                var shortcuts = new[]
+                {
+                    new { Id = "app.exit", Name = "Exit Application", Modifiers = ModifierKeys.Alt, Key = Key.F4, Action = new Action(() => Shutdown()) },
+                    new { Id = "app.settings", Name = "Open Settings", Modifiers = ModifierKeys.Control, Key = Key.OemComma, Action = new Action(() => ShowSettings()) },
+                    new { Id = "help.shortcuts", Name = "Show Keyboard Shortcuts", Modifiers = ModifierKeys.Control, Key = Key.OemQuestion, Action = new Action(() => ShowKeyboardShortcuts()) },
+                    new { Id = "app.minimize", Name = "Minimize Window", Modifiers = ModifierKeys.Windows, Key = Key.Down, Action = new Action(() => MinimizeCurrentWindow()) },
+                    new { Id = "app.maximize", Name = "Maximize Window", Modifiers = ModifierKeys.Windows, Key = Key.Up, Action = new Action(() => MaximizeCurrentWindow()) }
+                };
+
+                foreach (var shortcut in shortcuts)
+                {
+                    var keyboardShortcut = new KeyboardShortcut(shortcut.Id, shortcut.Name, shortcut.Modifiers, shortcut.Key)
+                    {
+                        Category = KeyboardShortcutCategory.General,
+                        Context = "Application",
+                        IsGlobal = false
+                    };
+
+                    var command = new RelayCommand(shortcut.Action);
+                    shortcutService.RegisterShortcut(keyboardShortcut, command);
+                }
+
+                // Register common shortcuts for different contexts
+                KeyboardShortcutIntegration.RegisterDataGridShortcuts(shortcutService);
+                KeyboardShortcutIntegration.RegisterDialogShortcuts(shortcutService);
+                KeyboardShortcutIntegration.RegisterNavigationShortcuts(shortcutService);
+                KeyboardShortcutIntegration.RegisterSearchShortcuts(shortcutService);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error registering application shortcuts: {ex.Message}");
+            }
+        }
+
+        private void ShowSettings()
+        {
+            // Implementation would show settings dialog
+            System.Diagnostics.Debug.WriteLine("Settings shortcut executed");
+        }
+
+        private void ShowKeyboardShortcuts()
+        {
+            try
+            {
+                var shortcutsWindow = new Window
+                {
+                    Title = "Keyboard Shortcuts",
+                    Content = new MandADiscoverySuite.Views.KeyboardShortcutsView(),
+                    Width = 900,
+                    Height = 700,
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen
+                };
+                shortcutsWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error showing keyboard shortcuts: {ex.Message}");
+            }
+        }
+
+        private void MinimizeCurrentWindow()
+        {
+            var activeWindow = Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+            if (activeWindow != null)
+            {
+                activeWindow.WindowState = WindowState.Minimized;
+            }
+        }
+
+        private void MaximizeCurrentWindow()
+        {
+            var activeWindow = Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+            if (activeWindow != null)
+            {
+                activeWindow.WindowState = activeWindow.WindowState == WindowState.Maximized 
+                    ? WindowState.Normal 
+                    : WindowState.Maximized;
             }
         }
         
@@ -230,10 +354,40 @@ namespace MandADiscoverySuite
             Current.Properties["LogAction"] = logAction;
         }
 
+        private void FreezeStaticBrushes()
+        {
+            try
+            {
+                // Get static gradient brushes from resources and freeze them for performance
+                var staticBrushKeys = new[]
+                {
+                    "PrimaryGradient", "AccentGradient", "SuccessGradient", "DangerGradient",
+                    "GlassmorphismBrush", "NeonCyanGradient", "NeonPinkGradient", "HolographicGradient"
+                };
+
+                foreach (var key in staticBrushKeys)
+                {
+                    if (Resources[key] is Freezable freezable && !freezable.IsFrozen)
+                    {
+                        freezable.Freeze();
+                        System.Diagnostics.Debug.WriteLine($"Frozen brush: {key}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error freezing brushes: {ex.Message}");
+            }
+        }
+
         protected override void OnExit(ExitEventArgs e)
         {
             try
             {
+                // Clean up keyboard shortcuts
+                KeyboardShortcutIntegration.CleanupAll();
+                _shortcutManager?.Dispose();
+                
                 // Clean up startup optimization service
                 _startupService?.Dispose();
                 

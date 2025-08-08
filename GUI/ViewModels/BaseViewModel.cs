@@ -33,6 +33,8 @@ namespace MandADiscoverySuite.ViewModels
         private string _statusMessage = string.Empty;
         private bool _hasErrors;
         private string _errorMessage = string.Empty;
+        private string _tabTitle = "Untitled";
+        private bool _canClose = true;
 
         public bool IsLoading
         {
@@ -56,6 +58,24 @@ namespace MandADiscoverySuite.ViewModels
         {
             get => _errorMessage;
             set => SetProperty(ref _errorMessage, value);
+        }
+
+        /// <summary>
+        /// Tab title for the document interface
+        /// </summary>
+        public virtual string TabTitle
+        {
+            get => _tabTitle;
+            set => SetProperty(ref _tabTitle, value);
+        }
+
+        /// <summary>
+        /// Whether this tab can be closed
+        /// </summary>
+        public virtual bool CanClose
+        {
+            get => _canClose;
+            set => SetProperty(ref _canClose, value);
         }
 
         /// <summary>

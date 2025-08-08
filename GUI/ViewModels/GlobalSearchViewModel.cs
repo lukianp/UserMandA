@@ -21,9 +21,8 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class GlobalSearchViewModel : BaseViewModel
     {
-        private readonly IDataService _dataService;
+        private readonly IGlobalSearchService _globalSearchService;
         private readonly IProfileService _profileService;
-        private readonly SearchFilterParser _filterParser;
         
         private string _searchText = string.Empty;
         private bool _showResults = false;
@@ -35,19 +34,18 @@ namespace MandADiscoverySuite.ViewModels
         public GlobalSearchViewModel(
             ILogger<GlobalSearchViewModel> logger,
             IMessenger messenger,
-            IDataService dataService,
-            IProfileService profileService) : base(logger, messenger)
+            IGlobalSearchService globalSearchService = null,
+            IProfileService profileService = null) : base(logger, messenger)
         {
-            _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
-            _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
-            _filterParser = new SearchFilterParser();
+            _globalSearchService = globalSearchService ?? SimpleServiceLocator.GetService<IGlobalSearchService>();
+            _profileService = profileService ?? SimpleServiceLocator.GetService<IProfileService>();
 
             SearchResults = new ObservableCollection<SearchResultItem>();
             FilteredResults = CollectionViewSource.GetDefaultView(SearchResults);
             FilterSuggestions = new ObservableCollection<FilterSuggestion>();
 
             InitializeCommands();
-            LoadFilterSuggestions();
+            _ = LoadFilterSuggestionsAsync();
         }
 
         #region Properties
@@ -102,8 +100,8 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
-        public bool HasActiveFilters => _filterParser.GetActiveFilters(SearchText).Any();
-        public int ActiveFilterCount => _filterParser.GetActiveFilters(SearchText).Count();
+        public bool HasActiveFilters => ExtractFilters(SearchText).Any();
+        public int ActiveFilterCount => ExtractFilters(SearchText).Count;
         public bool ShowFilterSuggestions => !HasSearchText && FilterSuggestions.Any();
         public bool ShowNoResults => !IsSearching && SearchResults.Count == 0 && HasSearchText;
         public bool ShowBothSuggestionsAndResults => ShowFilterSuggestions && SearchResults.Any();
@@ -153,46 +151,12 @@ namespace MandADiscoverySuite.ViewModels
 
                 try
                 {
-                    var filters = _filterParser.ParseFilters(SearchText);
-                    var freeText = _filterParser.GetFreeText(SearchText);
-
-                    var profile = await _profileService.GetCurrentProfileAsync();
-                    if (profile == null) return;
-
-                    var results = new List<SearchResultItem>();
-
-                    // Search Users
-                    if (!filters.ContainsKey("type") || filters["type"].Contains("user"))
-                    {
-                        var users = await _dataService.LoadUsersAsync(profile.Name);
-                        results.AddRange(SearchUsers(users, filters, freeText));
-                    }
-
-                    // Search Infrastructure
-                    if (!filters.ContainsKey("type") || filters["type"].Contains("computer") || filters["type"].Contains("infrastructure"))
-                    {
-                        var infrastructure = await _dataService.LoadInfrastructureAsync(profile.Name);
-                        results.AddRange(SearchInfrastructure(infrastructure, filters, freeText));
-                    }
-
-                    // Search Groups
-                    if (!filters.ContainsKey("type") || filters["type"].Contains("group"))
-                    {
-                        var groups = await _dataService.LoadGroupsAsync(profile.Name);
-                        results.AddRange(SearchGroups(groups, filters, freeText));
-                    }
-
-                    // Search Applications (if available)
-                    if (!filters.ContainsKey("type") || filters["type"].Contains("application"))
-                    {
-                        var applications = await _dataService.LoadApplicationsAsync(profile.Name);
-                        results.AddRange(SearchApplications(applications, filters, freeText));
-                    }
+                    var results = await _globalSearchService.SearchAsync(SearchText, SearchScope.All, _searchCancellation.Token);
 
                     if (!_searchCancellation.Token.IsCancellationRequested)
                     {
                         SearchResults.Clear();
-                        foreach (var result in results.OrderBy(r => r.RelevanceScore).Take(50))
+                        foreach (var result in results.OrderByDescending(r => r.RelevanceScore).Take(50))
                         {
                             SearchResults.Add(result);
                         }
@@ -216,6 +180,9 @@ namespace MandADiscoverySuite.ViewModels
             if (result == null) return;
 
             Logger?.LogInformation("Selected search result: {Title} ({Type})", result.Title, result.ResultType);
+
+            // Save to search history
+            _ = SaveSearchHistoryAsync(result);
 
             // Navigate to the appropriate view based on result type
             switch (result.ResultType.ToLower())
@@ -255,7 +222,7 @@ namespace MandADiscoverySuite.ViewModels
             var firstSuggestion = FilterSuggestions.FirstOrDefault();
             if (firstSuggestion != null)
             {
-                SearchText = firstSuggestion.Example.Split('\'')[1]; // Extract the example filter
+                SearchText = $"{firstSuggestion.FilterKey}:{firstSuggestion.FilterValue}";
             }
         }
 
@@ -319,63 +286,21 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private void LoadFilterSuggestions()
+        private async Task LoadFilterSuggestionsAsync()
         {
-            FilterSuggestions.Add(new FilterSuggestion
+            try
             {
-                FilterType = "user:",
-                Description = "Search users by name or email",
-                Example = "user: 'john doe'"
-            });
-
-            FilterSuggestions.Add(new FilterSuggestion
+                var suggestions = await _globalSearchService.GetFilterSuggestionsAsync();
+                FilterSuggestions.Clear();
+                foreach (var suggestion in suggestions)
+                {
+                    FilterSuggestions.Add(suggestion);
+                }
+            }
+            catch (Exception ex)
             {
-                FilterType = "computer:",
-                Description = "Search computers by name",
-                Example = "computer: 'server'"
-            });
-
-            FilterSuggestions.Add(new FilterSuggestion
-            {
-                FilterType = "os:",
-                Description = "Filter by operating system",
-                Example = "os: 'windows server 2019'"
-            });
-
-            FilterSuggestions.Add(new FilterSuggestion
-            {
-                FilterType = "domain:",
-                Description = "Filter by domain",
-                Example = "domain: 'contoso.com'"
-            });
-
-            FilterSuggestions.Add(new FilterSuggestion
-            {
-                FilterType = "type:",
-                Description = "Filter by data type",
-                Example = "type: 'user' or 'computer'"
-            });
-
-            FilterSuggestions.Add(new FilterSuggestion
-            {
-                FilterType = "department:",
-                Description = "Filter users by department",
-                Example = "department: 'IT'"
-            });
-
-            FilterSuggestions.Add(new FilterSuggestion
-            {
-                FilterType = "enabled:",
-                Description = "Filter by enabled status",
-                Example = "enabled: true"
-            });
-
-            FilterSuggestions.Add(new FilterSuggestion
-            {
-                FilterType = "lastlogon:",
-                Description = "Filter by last logon date",
-                Example = "lastlogon: '>30 days'"
-            });
+                Logger?.LogError(ex, "Error loading filter suggestions");
+            }
         }
 
         private IEnumerable<SearchResultItem> SearchUsers(IEnumerable<UserData> users, Dictionary<string, List<string>> filters, string freeText)
@@ -396,7 +321,7 @@ namespace MandADiscoverySuite.ViewModels
                         Icon = "\uE716",
                         MatchType = GetMatchType(score),
                         RelevanceScore = score,
-                        Tags = new[] { user.Domain, user.Department, user.Enabled ? "Enabled" : "Disabled" }.Where(t => !string.IsNullOrEmpty(t)).ToArray(),
+                        Tags = new[] { user.Domain, user.Department, user.Enabled ? "Enabled" : "Disabled" }.Where(t => !string.IsNullOrEmpty(t)).ToList(),
                         Data = user
                     });
                 }
@@ -423,7 +348,7 @@ namespace MandADiscoverySuite.ViewModels
                         Icon = "\uE977",
                         MatchType = GetMatchType(score),
                         RelevanceScore = score,
-                        Tags = new[] { computer.Domain, computer.OperatingSystem, computer.IsServer ? "Server" : "Workstation" }.Where(t => !string.IsNullOrEmpty(t)).ToArray(),
+                        Tags = new[] { computer.Domain, computer.OperatingSystem, computer.IsServer ? "Server" : "Workstation" }.Where(t => !string.IsNullOrEmpty(t)).ToList(),
                         Data = computer
                     });
                 }
@@ -450,7 +375,7 @@ namespace MandADiscoverySuite.ViewModels
                         Icon = "\uE902",
                         MatchType = GetMatchType(score),
                         RelevanceScore = score,
-                        Tags = new[] { group.Domain, group.Type, $"{group.MemberCount} members" }.Where(t => !string.IsNullOrEmpty(t)).ToArray(),
+                        Tags = new[] { group.Domain, group.Type, $"{group.MemberCount} members" }.Where(t => !string.IsNullOrEmpty(t)).ToList(),
                         Data = group
                     });
                 }
@@ -477,7 +402,7 @@ namespace MandADiscoverySuite.ViewModels
                         Icon = "\uE8B7",
                         MatchType = GetMatchType(score),
                         RelevanceScore = score,
-                        Tags = new[] { app.Publisher, app.Version, app.InstallLocation }.Where(t => !string.IsNullOrEmpty(t)).ToArray(),
+                        Tags = new[] { app.Publisher, app.Version, app.InstallLocation }.Where(t => !string.IsNullOrEmpty(t)).ToList(),
                         Data = app
                     });
                 }
@@ -633,6 +558,44 @@ namespace MandADiscoverySuite.ViewModels
 
         #endregion
 
+        #region Missing Methods
+
+        private Dictionary<string, List<string>> ExtractFilters(string searchText)
+        {
+            var filters = new Dictionary<string, List<string>>();
+            if (string.IsNullOrWhiteSpace(searchText)) return filters;
+
+            // Simple filter extraction - look for key:value patterns
+            var matches = System.Text.RegularExpressions.Regex.Matches(searchText, @"(\w+):([^\s]+)");
+            foreach (System.Text.RegularExpressions.Match match in matches)
+            {
+                var key = match.Groups[1].Value.ToLower();
+                var value = match.Groups[2].Value;
+                
+                if (!filters.ContainsKey(key))
+                    filters[key] = new List<string>();
+                filters[key].Add(value);
+            }
+
+            return filters;
+        }
+
+        private async Task<bool> SaveSearchHistoryAsync(SearchResultItem result)
+        {
+            try
+            {
+                // Save search history - implementation would persist to database/file
+                await Task.Delay(1); // Placeholder for actual save operation
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        #endregion
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -644,74 +607,4 @@ namespace MandADiscoverySuite.ViewModels
         }
     }
 
-    /// <summary>
-    /// Parses search filters from search text
-    /// </summary>
-    public class SearchFilterParser
-    {
-        private static readonly Regex FilterRegex = new(@"(\w+):\s*['""]?([^'""]+)['""]?", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        public Dictionary<string, List<string>> ParseFilters(string searchText)
-        {
-            var filters = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-
-            if (string.IsNullOrWhiteSpace(searchText))
-                return filters;
-
-            var matches = FilterRegex.Matches(searchText);
-            foreach (Match match in matches)
-            {
-                var key = match.Groups[1].Value.ToLowerInvariant();
-                var value = match.Groups[2].Value.Trim();
-
-                if (!filters.ContainsKey(key))
-                    filters[key] = new List<string>();
-
-                filters[key].Add(value);
-            }
-
-            return filters;
-        }
-
-        public string GetFreeText(string searchText)
-        {
-            if (string.IsNullOrWhiteSpace(searchText))
-                return string.Empty;
-
-            // Remove all filter patterns and return remaining text
-            var result = FilterRegex.Replace(searchText, string.Empty).Trim();
-            return result;
-        }
-
-        public IEnumerable<string> GetActiveFilters(string searchText)
-        {
-            return ParseFilters(searchText).Keys;
-        }
-    }
-
-    /// <summary>
-    /// Represents a search result item
-    /// </summary>
-    public class SearchResultItem
-    {
-        public string Title { get; set; }
-        public string Description { get; set; }
-        public string ResultType { get; set; }
-        public string TypeColor { get; set; }
-        public string Icon { get; set; }
-        public string MatchType { get; set; }
-        public int RelevanceScore { get; set; }
-        public string[] Tags { get; set; } = Array.Empty<string>();
-        public object Data { get; set; }
-    }
-
-    /// <summary>
-    /// Represents a filter suggestion
-    /// </summary>
-    public class FilterSuggestion
-    {
-        public string FilterType { get; set; }
-        public string Description { get; set; }
-        public string Example { get; set; }
-    }
 }

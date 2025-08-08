@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using MandADiscoverySuite.ViewModels;
+using MandADiscoverySuite.Models;
 
 namespace MandADiscoverySuite.Controls
 {

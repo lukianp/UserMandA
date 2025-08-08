@@ -37,6 +37,8 @@ namespace MandADiscoverySuite.Extensions
             services.AddSingleton<IProfileService, ProfileService>();
             services.AddSingleton<IDiscoveryService, DiscoveryService>();
             services.AddSingleton<IDataService, CsvDataService>();
+            services.AddSingleton<IScriptEditorService, ScriptEditorService>();
+            services.AddSingleton<IDataGridColumnService, DataGridColumnService>();
             
             // Register utility services - most disabled for stack overflow debugging
             // services.AddSingleton<IntelligentCacheService>();

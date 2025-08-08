@@ -14,6 +14,7 @@ namespace MandADiscoverySuite
     public partial class MainWindow : Window
     {
         public MainViewModel ViewModel { get; private set; }
+        private KeyboardShortcutManager _shortcutManager;
 
         public MainWindow()
         {
@@ -216,6 +217,9 @@ namespace MandADiscoverySuite
                     await Task.Delay(2000); // Wait 2 seconds after startup
                     await ViewModel.PreInitializeCriticalViewsAsync();
                 });
+
+                // Initialize keyboard shortcuts for this window
+                InitializeWindowShortcuts();
             }
             catch (Exception ex)
             {
@@ -224,6 +228,27 @@ namespace MandADiscoverySuite
             finally
             {
                 startupService?.EndPhase("LazyViewSetup");
+            }
+        }
+
+        private void InitializeWindowShortcuts()
+        {
+            try
+            {
+                var shortcutService = SimpleServiceLocator.GetService<IKeyboardShortcutService>();
+                if (shortcutService != null)
+                {
+                    _shortcutManager = new KeyboardShortcutManager(shortcutService);
+                    
+                    // Register window-specific shortcuts for main window context
+                    _shortcutManager.RegisterWindowShortcuts(this, "MainWindow");
+                    
+                    System.Diagnostics.Debug.WriteLine("MainWindow keyboard shortcuts initialized");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error initializing window shortcuts: {ex.Message}");
             }
         }
 
@@ -615,6 +640,10 @@ Tips:
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            // Cleanup keyboard shortcuts
+            _shortcutManager?.UnregisterWindowShortcuts(this);
+            _shortcutManager?.Dispose();
+            
             // Cleanup ViewModel resources
             ViewModel?.Dispose();
         }
@@ -711,5 +740,16 @@ Tips:
         private void AppSearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) { }
         private void AppFilterCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) { }
         private void AnalyzeDependencies_Click(object sender, RoutedEventArgs e) { }
+
+        /// <summary>
+        /// Handles clicking outside the Command Palette to close it
+        /// </summary>
+        private void CommandPaletteOverlay_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (ViewModel != null)
+            {
+                ViewModel.IsCommandPaletteVisible = false;
+            }
+        }
     }
 }

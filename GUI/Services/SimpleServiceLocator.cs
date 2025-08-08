@@ -74,6 +74,15 @@ namespace MandADiscoverySuite.Services
             // Register factories for other services
             RegisterFactory<DiscoveryService>(() => new DiscoveryService());
             RegisterFactory<ProfileService>(() => new ProfileService());
+            RegisterFactory<IWidgetLayoutService>(() => new WidgetLayoutService());
+            RegisterFactory<ISnapshotService>(() => new SnapshotService());
+            RegisterFactory<IAdvancedFilterService>(() => new AdvancedFilterService());
+            RegisterFactory<IGanttService>(() => new GanttService());
+            RegisterFactory<IGlobalSearchService>(() => new GlobalSearchService());
+            RegisterFactory<IReportBuilderService>(() => new ReportBuilderService());
+            RegisterFactory<IKeyboardShortcutService>(() => new KeyboardShortcutService());
+            RegisterFactory<IDetailWindowService>(() => new DetailWindowService());
+            RegisterFactory<IDataGridColumnService>(() => new DataGridColumnService());
             
             // Register ViewModels
             RegisterFactory<MandADiscoverySuite.ViewModels.MainViewModel>(() => 
