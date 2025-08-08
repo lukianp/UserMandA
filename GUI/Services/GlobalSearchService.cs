@@ -32,7 +32,7 @@ namespace MandADiscoverySuite.Services
         public GlobalSearchService(ILogger<GlobalSearchService> logger = null, IDataService dataService = null)
         {
             _logger = logger;
-            _dataService = dataService ?? SimpleServiceLocator.GetService<IDataService>();
+            _dataService = dataService ?? ServiceLocator.GetService<IDataService>();
             
             _searchDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
                 "MandADiscoverySuite", "Search");
@@ -839,7 +839,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                var ganttService = SimpleServiceLocator.GetService<IGanttService>();
+                var ganttService = ServiceLocator.GetService<IGanttService>();
                 if (ganttService == null) return;
                 
                 var waves = await ganttService.GetMigrationWavesAsync();
@@ -880,7 +880,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                var ganttService = SimpleServiceLocator.GetService<IGanttService>();
+                var ganttService = ServiceLocator.GetService<IGanttService>();
                 if (ganttService == null) return;
                 
                 var waves = await ganttService.GetMigrationWavesAsync();

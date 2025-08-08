@@ -3,6 +3,21 @@
 ## Project Overview
 The M&A Discovery Suite is a WPF application designed for comprehensive enterprise discovery during mergers and acquisitions. The primary objective was to refactor the application from code-behind architecture to MVVM (Model-View-ViewModel) pattern for better maintainability and testability.
 
+## Development Sessions Overview
+
+### **Session 1: MVVM Foundation & Navigation** ✅
+- Complete migration from code-behind to MVVM architecture
+- Implementation of BaseViewModel with INotifyPropertyChanged
+- Navigation system using Command pattern
+- PowerShell module integration
+- Company profile management
+
+### **Session 2: Advanced UI Components** ✅
+- Item 15: What-If Simulation UI with comprehensive modeling system
+- Item 16: Task Scheduler UI with Windows Task Scheduler integration
+- Modern WPF interfaces with MVVM compliance
+- Service layer architectures with full error handling
+
 ## Major Accomplishments
 
 ### 1. MVVM Architecture Migration
@@ -933,6 +948,158 @@ A comprehensive Task Scheduler system has been fully implemented with Windows Ta
 - ✅ **Discovery Integration**: M&A-specific task creation workflows
 - ✅ **Build System**: Clean builds with 0 compilation errors
 - ✅ **Systematic Implementation**: TodoWrite-tracked task completion
+
+---
+
+## 🎯 **Next Phase: Complete MVVM Refactoring & Production Readiness**
+
+The following prioritized task list represents the comprehensive MVVM refactoring and production readiness requirements for the M&A Discovery Suite:
+
+### **📋 MVVM Architecture & Foundation (Tasks 1-10)**
+1. ✅ **Refactor WPF app from code-behind to MVVM** - Views contain no logic beyond InitializeComponent
+2. ✅ **Create BaseViewModel implementing INotifyPropertyChanged** with SetProperty helper
+3. ✅ **Introduce MainViewModel as application root DataContext** for MainWindow
+4. ✅ **Create DiscoveryModuleViewModel** to represent each discovery module tile (Name, IsSelected, Status, LastRun, Progress)
+5. ✅ **Create specialized ViewModels** - UsersViewModel, ComputersViewModel, InfrastructureViewModel, GroupsViewModel for tab-specific data
+6. ⏳ **Move all button click handlers to ICommand implementations** using CommunityToolkit.Mvvm (RelayCommand, AsyncRelayCommand)
+7. ⏳ **Replace UI element visibility toggles** with bound boolean properties and BooleanToVisibilityConverter
+8. ⏳ **Bind all tab content to ObservableCollection<T>** properties for instant UI updates
+9. ⏳ **Implement DiscoveryService** that runs PowerShell modules and raises completion events
+10. ⏳ **Ensure DiscoveryService executes from C:\\enterprisediscovery\\** as working directory
+
+### **📊 Data Management & File System (Tasks 11-20)**
+11. ⏳ **Read and write all company data** in C:\\discoverydata\\<company>\\ with current test profile 'ljpops'
+12. ⏳ **Do not prompt for paths** - hardcode root paths according to constraints
+13. ⏳ **Wire StartDiscoveryCommand to DiscoveryService** to launch selected modules asynchronously
+14. ⏳ **Subscribe to process Exited events** from PowerShell to trigger immediate data reload on completion
+15. ⏳ **Add FileSystemWatcher** on C:\\discoverydata\\ljpops\\ (and relevant subfolders like Raw) to trigger re-parsing on file changes
+16. ⏳ **Remove or relegate the 30-second timer refresh** to a fallback mechanism; prefer event-driven refresh
+17. ⏳ **Create CsvReader utility** with robust parsing (quoted fields, commas) and schema checks per dataset
+18. ⏳ **Define data models (POCOs)** for Users, Computers, Groups, AzureObjects, etc. matching column names in CSVs
+19. ⏳ **Encapsulate dataset loading in repository classes** (e.g., UsersRepository) returning strongly typed lists
+20. ⏳ **In ViewModels, expose ReadOnlyObservableCollection<T>** to the View and keep a private ObservableCollection<T> for mutation
+
+### **⚡ Performance & Threading (Tasks 21-30)**
+21. ⏳ **Perform CSV parsing on background threads** (Task.Run) and marshal results to UI thread for collection updates
+22. ⏳ **Compute summary stats** (e.g., DisabledUserCount, PrivilegedUserCount) once per refresh; raise PropertyChanged
+23. ⏳ **Add a manual RefreshDataCommand** per tab to force reload
+24. ⏳ **Disable StartDiscoveryCommand while discovery is running** - re-enable on completion or failure
+25. ⏳ **Show module status transitions** - Ready → Running → Completed/Failed in the tile UI via binding
+26. ⏳ **Persist module run metadata** (LastRunUtc, Duration, ExitCode) in memory and optionally to a small JSON file in profile folder
+27. ⏳ **Implement lazy loading of tab data** on first activation to reduce startup time
+28. ⏳ **Use virtualization** (VirtualizingStackPanel.IsVirtualizing=true) for long lists and DataGrids
+29. ⏳ **Implement search and filter in each tab** (filter text bound to ViewModel, apply CollectionViewSource filtering)
+30. ⏳ **Add paging for very large datasets** (e.g., 5,000+ rows) via PagedCollectionView-like pattern
+
+### **🎛️ User Interface & Experience (Tasks 31-40)**
+31. ⏳ **Provide a StatusBar** bound to MainViewModel for global messages and long-running operation hints
+32. ⏳ **Add a global CancellationTokenSource** in MainViewModel to cancel discovery runs and long loads
+33. ⏳ **Surface errors via an Errors collection** and a Toast/Inline alert bound to ViewModel
+34. ⏳ **Centralize exception handling** in DiscoveryService and repositories with meaningful messages
+35. ⏳ **Log all operations** to C:\\discoverydata\\ljpops\\Logs\\gui.log; roll daily and cap size
+36. ⏳ **Add telemetry toggles** (off by default) to capture performance timings in log only (no external calls)
+37. ⏳ **Implement EnvironmentType detection** (AzureOnly, OnPremOnly, Hybrid) based on loaded datasets
+38. ⏳ **Expose EnvironmentType in MainViewModel** - adapt visible tabs/messages accordingly
+39. ⏳ **Show a dashboard card** indicating detected environment and next recommended actions
+40. ⏳ **Guard against partial discoveries** - annotate tabs with 'No data found – run discovery' when empty
+
+### **🔧 Build & Deployment (Tasks 41-50)**
+41. ⏳ **Ensure Build-GUI.ps1 remains the single build entry** - remove any alternate publish scripts
+42. ⏳ **Verify Build-GUI.ps1 publishes** to C:\\enterprisediscovery\\ and copies Modules and Scripts subfolders
+43. ⏳ **Ensure DiscoveryService launches PowerShell** using full paths under C:\\enterprisediscovery\\Scripts\\ and Modules\\Discovery\\
+44. ⏳ **Implement module selection persistence** per company (store selection JSON in C:\\discoverydata\\ljpops\\profile.json)
+45. ⏳ **Add a ProfileService** that lists available profiles from C:\\discoverydata\\ and manages creation of new ones (folders only)
+46. ⏳ **On profile create, scaffold subfolders** - Raw, Processed, Reports, Logs, Credentials if missing
+47. ⏳ **Open credentials editor** via Process.Start for C:\\discoverydata\\ljpops\\Credentials\\discoverycredentials.config
+48. ⏳ **Replace any legacy path literals** with constants (ENTERPRISE_ROOT, DISCOVERY_ROOT) in a Paths class
+49. ⏳ **Create a Paths.Validate() routine** that asserts required folders exist; create missing ones at startup
+50. ⏳ **Move theme toggling (IsDarkTheme)** into MainViewModel and apply via merged dictionaries
+
+### **🧪 Testing & Quality (Tasks 51-60)**
+51. ⏳ **Abstract MessageBox into an IDialogService** interface for unit testing
+52. ⏳ **Add a simple DI container** (e.g., Microsoft.Extensions.DependencyInjection) to compose ViewModels and services
+53. ⏳ **Write unit tests for ViewModel** property changes, command CanExecute logic, and calculation correctness
+54. ⏳ **Write integration tests for CSV parsing** using small sample files in a test temp directory
+55. ⏳ **Add a PerformanceStopwatch helper** to log durations for discovery and parsing steps
+56. ⏳ **Use AsyncRelayCommand for StartDiscoveryCommand** to avoid blocking UI and to handle exceptions cleanly
+57. ⏳ **Represent progress from DiscoveryService** via IProgress<double> and bind to a progress bar in each module tile
+58. ⏳ **Show per-module log tail** (last N lines) in a collapsible panel for quick diagnostics
+59. ⏳ **Implement a global hotkey** (e.g., F5) bound to RefreshCurrentTabCommand
+60. ⏳ **Consolidate duplicated code-behind navigation logic** into a single SelectedSection enum in MainViewModel
+
+### **🏗️ Advanced Architecture (Tasks 61-70)**
+61. ⏳ **Use DataTemplates keyed on ViewModel types** to auto-resolve Views (ViewLocator pattern)
+62. ⏳ **Split MainWindow XAML into UserControls** per section and host them via ContentControl bound to CurrentSectionVM
+63. ⏳ **Add a lightweight message bus** (e.g., WeakReferenceMessenger from Toolkit) for cross-VM notifications (e.g., DataRefreshed)
+64. ⏳ **Normalize CSV headers** (case-insensitive) and map to model properties with attributes to withstand minor header changes
+65. ⏳ **Validate schema** - fail fast with a user-visible error if mandatory columns are missing
+66. ⏳ **Detect file locks and retry reading** with exponential backoff to avoid race conditions with PowerShell writes
+67. ⏳ **When replacing large collections** - prefer .Clear() + AddRange with a batched notification or replace the ItemsSource atomically
+68. ⏳ **Use ConfigureAwait(false) in library/service code** to avoid deadlocks; marshal to UI thread only at ViewModel boundary
+69. ⏳ **Throttle FileSystemWatcher events** (debounce 500ms) to avoid multiple reloads from a single write
+70. ⏳ **Guard StartDiscoveryCommand** against concurrent invocations with an interlocked flag
+
+### **🔧 Maintenance & Reliability (Tasks 71-80)**
+71. ⏳ **Provide a 'Rebuild Index' maintenance command** that re-parses all CSVs for the current profile
+72. ⏳ **Introduce a simple version file** in C:\\enterprisediscovery\\VERSION.json and show it in the About dialog
+73. ⏳ **Ensure all relative module/script paths** in code assume C:\\enterprisediscovery\\ as AppContext.BaseDirectory
+74. ⏳ **Add a SettingsViewModel** for UI preferences (theme, auto-refresh on/off) persisted per profile
+75. ⏳ **Render big-number tiles on the dashboard** (Users, Computers, Groups, Apps) bound to live counts
+76. ⏳ **Provide export commands (to CSV)** for filtered views into C:\\discoverydata\\ljpops\\Reports\\
+77. ⏳ **Enable column sorting and multi-column filtering** via CollectionView in DataGrids
+78. ⏳ **Implement keyboard navigation** and basic accessibility labels on interactive elements
+79. ⏳ **Localize user-visible strings** via resx; keep English default, structure ready for future locales
+80. ⏳ **Add a 'Safe Mode' startup arg** that disables FileSystemWatcher and timers for troubleshooting
+
+### **🚀 Production Readiness (Tasks 81-90)**
+81. ⏳ **Ensure unhandled exception handler** logs and shows a friendly crash message with log path
+82. ⏳ **Refactor any synchronous disk I/O** in UI thread to async streams with using statements
+83. ⏳ **Cache small lookup tables** (e.g., group-to-privilege map) in memory to speed up metrics
+84. ⏳ **Introduce a ComputedMetrics class** to centralize all cross-dataset derivations (accuracy, single source)
+85. ⏳ **Unit-test ComputedMetrics** against known-good sample CSVs for 100% accuracy
+86. ⏳ **Gate environment classification** on data confidence; show 'Unknown' when only one side (Azure/AD) is present
+87. ⏳ **Add 'Run Recommended Modules' button** that selects modules based on missing datasets for better intelligence
+88. ⏳ **Provide visual cues (badges)** on tabs when new data has arrived since last view
+89. ⏳ **Add debounce on search text input** (300ms) to avoid re-filtering per keystroke
+90. ⏳ **Use ObservableValidator from Toolkit** for any user inputs (profile name, etc.)
+
+### **✨ Final Polish (Tasks 91-100)**
+91. ⏳ **Include a compact mode layout toggle** for dense data displays
+92. ⏳ **Implement command-line args** --profile=ljpops to auto-select profile on startup
+93. ⏳ **On app start, verify PowerShell availability** and script execution policy; show guidance if blocked
+94. ⏳ **Ensure Build-GUI.ps1 copies any new resources** (converters, templates, icons) to C:\\enterprisediscovery\\
+95. ⏳ **Document the MVVM structure** in a README-MVVM.md in the repo root for future contributors
+96. ⏳ **Remove all dead code** and obsolete handlers from code-behind after migration to MVVM
+97. ⏳ **Run a post-refactor smoke test** - delete build artifacts, run Build-GUI.ps1, launch from C:\\enterprisediscovery\\ and validate paths
+98. ⏳ **Profile initial load and first discovery run** - target <2s UI ready and instant post-completion refresh
+99. ⏳ **Add CI step** (if applicable) to run unit tests and lint XAML bindings (no missing properties)
+100. ⏳ **Final audit** - ensure zero interactive path prompts; all data assumed at C:\\discoverydata\\ and build/run at C:\\enterprisediscovery\\
+
+---
+
+**Total Tasks**: 100 items focused on complete MVVM refactoring and production readiness
+**Current Status**: 5 of 100 completed (Tasks 1, 2, 3, 4, 5 from MVVM foundation)
+**Next Priority**: Task 6 - Move all button click handlers to ICommand implementations using CommunityToolkit.Mvvm (RelayCommand, AsyncRelayCommand)
+
+### **✅ Task 5 Completed: Specialized ViewModels Created (Latest Session - 2025-08-08)**
+
+**Specialized ViewModels Implementation:**
+- **UsersViewModel.cs**: Complete MVVM implementation for Users tab with filtering, searching, export functionality, and CSV data service integration
+- **ComputersViewModel.cs**: MVVM implementation for Computers tab (using InfrastructureData model) with full CRUD operations  
+- **InfrastructureViewModel.cs**: Advanced ViewModel with pagination support, filtering, and comprehensive infrastructure management
+- **GroupsViewModel.cs**: Security groups ViewModel with type filtering, membership analysis, and group hierarchy support
+
+**Key Features Implemented:**
+- Full MVVM compliance with BaseViewModel inheritance
+- OptimizedObservableCollection for performance
+- ICollectionView for filtering and sorting
+- Comprehensive command implementations (RelayCommand, AsyncRelayCommand)
+- Export functionality using existing CsvDataService
+- Search and filter capabilities
+- Loading states and progress tracking
+- Error handling and status messaging
+
+**Build Status**: ✅ 0 errors, warnings only
 
 ## 🔧 Critical Application Launch Issues Resolution (Latest Session - 2025-08-07)
 
