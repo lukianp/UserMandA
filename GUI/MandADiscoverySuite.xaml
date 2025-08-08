@@ -819,10 +819,20 @@
                                                         <RowDefinition Height="Auto"/>
                                                     </Grid.RowDefinitions>
                                                     <TextBlock Grid.Row="0" Text="Discovery" Style="{StaticResource HeaderTextStyle}"/>
-                                                    <TextBlock Grid.Row="1" Text="Discovery content will be loaded here..." 
+                                                    <TextBlock Grid.Row="1" Text="Discovery content will be loaded here..."
                                                               Foreground="#FFA0AEC0" FontSize="16" Margin="0,16"/>
                                                 </Grid>
                                             </ScrollViewer>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <!-- Group Policies Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Group Policies">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <views:GPOInventoryView/>
                                         </DataTemplate>
                                     </Setter.Value>
                                 </Setter>

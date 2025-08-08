@@ -161,17 +161,30 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Group Memberships Card -->
+                        <!-- Group Memberships / Policies Card -->
                         <Border Style="{StaticResource ModernCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="👥 Group Memberships" Style="{StaticResource SectionHeaderStyle}"/>
-                                <DataGrid x:Name="GroupMembershipsGrid" ItemsSource="{Binding GroupMemberships}" Style="{StaticResource CompactDataGridStyle}" MaxHeight="200"
-                                          VirtualizingStackPanel.IsVirtualizing="True" EnableRowVirtualization="True" EnableColumnVirtualization="True">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Group Name" Binding="{Binding DisplayName}" Width="*"/>
-                                        <DataGridTextColumn Header="Type" Binding="{Binding GroupType}" Width="80"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                <TextBlock Text="👥 Groups &amp; Policies" Style="{StaticResource SectionHeaderStyle}"/>
+                                <TabControl>
+                                    <TabItem Header="Group Memberships">
+                                        <DataGrid x:Name="GroupMembershipsGrid" ItemsSource="{Binding GroupMemberships}" Style="{StaticResource CompactDataGridStyle}" MaxHeight="200"
+                                                  VirtualizingStackPanel.IsVirtualizing="True" EnableRowVirtualization="True" EnableColumnVirtualization="True">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Group Name" Binding="{Binding DisplayName}" Width="*"/>
+                                                <DataGridTextColumn Header="Type" Binding="{Binding GroupType}" Width="80"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </TabItem>
+                                    <TabItem Header="Group Policies">
+                                        <DataGrid x:Name="GroupPoliciesGrid" ItemsSource="{Binding GroupPolicies}" Style="{StaticResource CompactDataGridStyle}" MaxHeight="200"
+                                                  VirtualizingStackPanel.IsVirtualizing="True" EnableRowVirtualization="True" EnableColumnVirtualization="True">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Policy Name" Binding="{Binding PolicyName}" Width="*"/>
+                                                <DataGridTextColumn Header="Linked OU" Binding="{Binding LinkedOu}" Width="*"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </TabItem>
+                                </TabControl>
                             </StackPanel>
                         </Border>
 

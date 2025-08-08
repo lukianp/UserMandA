@@ -77,11 +77,13 @@ namespace MandADiscoverySuite.Models
         private bool _isEnabled;
         private DateTime _lastLogon;
         private List<string> _groups;
+        private List<string> _groupPolicies;
         private Dictionary<string, string> _attributes;
 
         public UserDetailData()
         {
             Groups = new List<string>();
+            GroupPolicies = new List<string>();
             Attributes = new Dictionary<string, string>();
         }
 
@@ -135,6 +137,12 @@ namespace MandADiscoverySuite.Models
             set => SetProperty(ref _groups, value);
         }
 
+        public List<string> GroupPolicies
+        {
+            get => _groupPolicies;
+            set => SetProperty(ref _groupPolicies, value);
+        }
+
         public Dictionary<string, string> Attributes
         {
             get => _attributes;
@@ -153,6 +161,7 @@ namespace MandADiscoverySuite.Models
                 { "Enabled", IsEnabled },
                 { "Last Logon", LastLogon },
                 { "Groups", string.Join(", ", Groups ?? new List<string>()) },
+                { "Group Policies", string.Join(", ", GroupPolicies ?? new List<string>()) },
                 { "Attributes Count", Attributes?.Count ?? 0 }
             };
         }

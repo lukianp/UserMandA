@@ -4127,6 +4127,11 @@ This directory is strictly for storing discovery results and company data.
                     case "snapshotcomparison":
                         tabViewModel = new SnapshotComparisonViewModel { TabTitle = "Snapshot Comparison" };
                         break;
+                    case "gpo":
+                    case "gpos":
+                    case "grouppolicies":
+                        tabViewModel = new GPOInventoryViewModel { TabTitle = "Group Policies" };
+                        break;
                     case "ganttchart":
                         tabViewModel = new GanttChartViewModel { TabTitle = "Gantt Chart" };
                         break;

@@ -108,40 +108,20 @@ function Invoke-GPODiscovery {
         }
 
         # Perform discovery (placeholder - implement specific discovery logic)
-        $allDiscoveredData = [System.Collections.ArrayList]::new()
-        
         Write-GPOLog -Level "INFO" -Message "Discovery logic not yet implemented for this module" -Context $Context
-        
-        # Example discovery result
-        $exampleData = [PSCustomObject]@{
-            ModuleName = 'GPO'
-            Status = 'NotImplemented'
-            SessionId = $SessionId
-            _DataType = 'PlaceholderData'
-        }
-        $null = $allDiscoveredData.Add($exampleData)
 
-        # Export data
-        if ($allDiscoveredData.Count -gt 0) {
-            $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-            $dataGroups = $allDiscoveredData | Group-Object -Property _DataType
-            
-            foreach ($group in $dataGroups) {
-                $data = $group.Group
-                $data | ForEach-Object {
-                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
-                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "GPO" -Force
-                    $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
-                }
-                
-                $fileName = "GPO_$($group.Name).csv"
-                $filePath = Join-Path $outputPath $fileName
-                $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
-                Write-GPOLog -Level "SUCCESS" -Message "Exported $($data.Count) $($group.Name) records to $fileName" -Context $Context
-            }
-        }
+        # Sample data for UI development
+        $gpoList = @(
+            [PSCustomObject]@{ Name = 'Sample GPO'; LinkedOUs = 'OU=Demo,DC=example,DC=com' }
+        )
+        $gpoList | Export-Csv -Path (Join-Path $outputPath 'GPOs.csv') -NoTypeInformation -Encoding UTF8
 
-        $result.RecordCount = $allDiscoveredData.Count
+        $userGpoMappings = @(
+            [PSCustomObject]@{ UserId = 'demo'; PolicyName = 'Sample GPO'; LinkedOu = 'OU=Demo,DC=example,DC=com' }
+        )
+        $userGpoMappings | Export-Csv -Path (Join-Path $outputPath 'UserGPOs.csv') -NoTypeInformation -Encoding UTF8
+
+        $result.RecordCount = $gpoList.Count
         $result.Metadata["TotalRecords"] = $result.RecordCount
         $result.Metadata["SessionId"] = $SessionId
 

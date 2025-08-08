@@ -30,6 +30,7 @@ namespace MandADiscoverySuite.ViewModels
             DeviceRelationships = new ObservableCollection<DeviceRelationship>();
             DirectoryRoles = new ObservableCollection<DirectoryRole>();
             LicenseAssignments = new ObservableCollection<LicenseAssignment>();
+            GroupPolicies = new ObservableCollection<GroupPolicyAssignment>();
             
             CloseCommand = new RelayCommand(() => CloseRequested?.Invoke());
             ExportProfileCommand = new RelayCommand(ExportProfile);
@@ -44,6 +45,7 @@ namespace MandADiscoverySuite.ViewModels
         public ObservableCollection<DeviceRelationship> DeviceRelationships { get; }
         public ObservableCollection<DirectoryRole> DirectoryRoles { get; }
         public ObservableCollection<LicenseAssignment> LicenseAssignments { get; }
+        public ObservableCollection<GroupPolicyAssignment> GroupPolicies { get; }
         
         public ICommand CloseCommand { get; }
         public ICommand ExportProfileCommand { get; }
@@ -186,6 +188,7 @@ namespace MandADiscoverySuite.ViewModels
                 LoadDeviceRelationships();
                 LoadDirectoryRoles();
                 LoadLicenses();
+                LoadGroupPolicies();
                 
                 OnPropertyChanged(nameof(WindowTitle));
             }
@@ -424,7 +427,59 @@ Last Sign-In: {LastSignIn}
 
             return report;
         }
-        
+
+        private void LoadGroupPolicies()
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await LoadGroupPoliciesAsync();
+                }
+                catch (Exception ex)
+                {
+                    ErrorHandlingService.Instance.HandleException(ex, "Loading group policies");
+                }
+            });
+        }
+
+        private async Task LoadGroupPoliciesAsync()
+        {
+            var tempPolicies = new List<GroupPolicyAssignment>();
+            string policiesFile = Path.Combine(_rawDataPath, "UserGPOs.csv");
+
+            if (File.Exists(policiesFile))
+            {
+                var lines = await File.ReadAllLinesAsync(policiesFile);
+                foreach (var line in lines.Skip(1))
+                {
+                    var parts = ParseCsvLine(line);
+                    if (parts.Length >= 3)
+                    {
+                        var userId = parts[0];
+                        if (!string.IsNullOrEmpty(_userData?.Id) &&
+                            userId.Equals(_userData.Id, StringComparison.OrdinalIgnoreCase))
+                        {
+                            tempPolicies.Add(new GroupPolicyAssignment
+                            {
+                                PolicyName = parts[1],
+                                LinkedOu = parts[2]
+                            });
+                        }
+                    }
+                }
+            }
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                GroupPolicies.Clear();
+                foreach (var policy in tempPolicies)
+                {
+                    GroupPolicies.Add(policy);
+                }
+            });
+        }
+
         private string[] ParseCsvLine(string line)
         {
             if (string.IsNullOrEmpty(line))
