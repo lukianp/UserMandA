@@ -1,4 +1,6 @@
+using System.Windows;
 using System.Windows.Controls;
+using MandADiscoverySuite.ViewModels;
 
 namespace MandADiscoverySuite.Views
 {
@@ -7,9 +9,19 @@ namespace MandADiscoverySuite.Views
     /// </summary>
     public partial class ProjectManagementDashboard : UserControl
     {
+        private readonly ProjectManagementDashboardViewModel _viewModel;
+
         public ProjectManagementDashboard()
         {
             InitializeComponent();
+            _viewModel = new ProjectManagementDashboardViewModel();
+            DataContext = _viewModel;
+            Loaded += OnLoaded;
+        }
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            _viewModel.RefreshMetricsCommand.Execute(null);
         }
     }
 }
