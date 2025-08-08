@@ -47,7 +47,7 @@ class MachineLearningClassifier {
     [void] InitializeClassificationModels() {
         $this.LogMessage("Initializing classification models", "INFO")
         
-        $models = @{
+        $this.Models = @{
             "SensitiveDataClassifier" = @{
                 Type = "BinaryClassification"
                 Algorithm = "RandomForest"
@@ -60,7 +60,7 @@ class MachineLearningClassifier {
                 TrainingDataSize = 100000
                 LastTrained = (Get-Date).AddDays(-7)
                 ModelVersion = "2.1.0"
-            },
+            };
             
             "DocumentTypeClassifier" = @{
                 Type = "MultiClassification"
@@ -74,7 +74,7 @@ class MachineLearningClassifier {
                 TrainingDataSize = 75000
                 LastTrained = (Get-Date).AddDays(-5)
                 ModelVersion = "1.8.3"
-            },
+            };
             
             "PersonalDataDetector" = @{
                 Type = "NamedEntityRecognition"
@@ -87,7 +87,7 @@ class MachineLearningClassifier {
                 TrainingDataSize = 200000
                 LastTrained = (Get-Date).AddDays(-3)
                 ModelVersion = "3.2.1"
-            },
+            };
             
             "BusinessCriticalityClassifier" = @{
                 Type = "RegressionClassification"
@@ -100,7 +100,7 @@ class MachineLearningClassifier {
                 TrainingDataSize = 50000
                 LastTrained = (Get-Date).AddDays(-10)
                 ModelVersion = "1.5.2"
-            },
+            };
             
             "ContentSimilarityAnalyzer" = @{
                 Type = "SimilarityLearning"
@@ -113,7 +113,7 @@ class MachineLearningClassifier {
                 TrainingDataSize = 150000
                 LastTrained = (Get-Date).AddDays(-6)
                 ModelVersion = "2.3.0"
-            },
+            };
             
             "RiskScorePredictor" = @{
                 Type = "RiskAssessment"
@@ -133,8 +133,7 @@ class MachineLearningClassifier {
             }
         }
         
-        $this.Models = $models
-        $this.LogMessage("Loaded $($models.Count) classification models", "INFO")
+        $this.LogMessage("Loaded $($this.Models.Count) classification models", "INFO")
     }
 
     [void] LoadPreTrainedModels() {
