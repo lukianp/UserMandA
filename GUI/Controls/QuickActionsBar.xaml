@@ -277,6 +277,8 @@
                     <MenuItem Header="📊 New Dashboard" Command="{Binding NewDashboardCommand}"/>
                     <MenuItem Header="🔍 New Discovery" Command="{Binding NewDiscoveryCommand}"/>
                     <MenuItem Header="📈 New Report" Command="{Binding NewReportCommand}"/>
+                    <MenuItem Header="📦 Application Inventory" Command="{Binding ShowApplicationInventoryCommand}"/>
+                    <MenuItem Header="🖥️ Asset Inventory" Command="{Binding ShowAssetInventoryCommand}"/>
                     <Separator/>
                     <MenuItem Header="📂 Open File" Command="{Binding OpenFileCommand}"/>
                     <MenuItem Header="💾 Save All" Command="{Binding SaveAllCommand}"/>

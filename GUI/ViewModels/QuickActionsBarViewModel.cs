@@ -122,6 +122,8 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand NewDashboardCommand { get; private set; }
         public ICommand NewDiscoveryCommand { get; private set; }
         public ICommand NewReportCommand { get; private set; }
+        public ICommand ShowApplicationInventoryCommand { get; private set; }
+        public ICommand ShowAssetInventoryCommand { get; private set; }
         public ICommand OpenFileCommand { get; private set; }
         public ICommand SaveAllCommand { get; private set; }
         public ICommand ShowSettingsCommand { get; private set; }
@@ -137,6 +139,8 @@ namespace MandADiscoverySuite.ViewModels
             NewDashboardCommand = new RelayCommand(NewDashboard);
             NewDiscoveryCommand = new RelayCommand(NewDiscovery);
             NewReportCommand = new RelayCommand(NewReport);
+            ShowApplicationInventoryCommand = new RelayCommand(ShowApplicationInventory);
+            ShowAssetInventoryCommand = new RelayCommand(ShowAssetInventory);
             OpenFileCommand = new RelayCommand(OpenFile);
             SaveAllCommand = new RelayCommand(SaveAll);
             ShowSettingsCommand = new RelayCommand(ShowSettings);
@@ -412,6 +416,38 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex)
             {
                 Logger?.LogError(ex, "Error opening help");
+            }
+        }
+
+        private void ShowApplicationInventory()
+        {
+            try
+            {
+                _notificationService?.AddInfo(
+                    "Application Inventory",
+                    "Opening application inventory view...");
+
+                Logger?.LogDebug("Opening application inventory from quick actions");
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error opening application inventory");
+            }
+        }
+
+        private void ShowAssetInventory()
+        {
+            try
+            {
+                _notificationService?.AddInfo(
+                    "Asset Inventory",
+                    "Opening asset inventory view...");
+
+                Logger?.LogDebug("Opening asset inventory from quick actions");
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error opening asset inventory");
             }
         }
 
