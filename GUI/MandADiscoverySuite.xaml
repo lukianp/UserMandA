@@ -762,17 +762,27 @@
                                 <Setter Property="ContentTemplate">
                                     <Setter.Value>
                                         <DataTemplate>
-                                            <ContentControl Content="{Binding}"/>
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <Grid Margin="32">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    <TextBlock Grid.Row="0" Text="Infrastructure" Style="{StaticResource HeaderTextStyle}"/>
+                                                    <TextBlock Grid.Row="1" Text="Infrastructure content will be loaded here..." 
+                                                              Foreground="#FFA0AEC0" FontSize="16" Margin="0,16"/>
+                                                </Grid>
+                                            </ScrollViewer>
                                         </DataTemplate>
                                     </Setter.Value>
                                 </Setter>
                             </DataTrigger>
-                            <!-- Computers Template -->
-                            <DataTrigger Binding="{Binding TabTitle}" Value="Computers">
+                            <!-- Assets Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Assets">
                                 <Setter Property="ContentTemplate">
                                     <Setter.Value>
                                         <DataTemplate>
-                                            <views:ComputersView DataContext="{Binding}"/>
+                                            <views:AssetInventoryView/>
                                         </DataTemplate>
                                     </Setter.Value>
                                 </Setter>
@@ -1237,7 +1247,18 @@
                             </StackPanel>
                         </StackPanel>
                     </Button>
-                    
+
+                    <Button x:Name="AssetsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Assets"
+                            ToolTip="View asset inventory">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📦" FontSize="18" Margin="0,0,16,0"/>
+                            <StackPanel>
+                                <TextBlock Text="Assets"/>
+                                <TextBlock Text="Inventory" FontSize="10" Foreground="#FFA0AEC0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+
                     <Button x:Name="GroupsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Groups"
                             ToolTip="Manage security groups, distribution lists, and group memberships">
                         <StackPanel Orientation="Horizontal">

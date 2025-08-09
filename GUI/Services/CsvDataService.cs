@@ -804,6 +804,14 @@ namespace MandADiscoverySuite.Services
                                 case "urlinfoabout":
                                     application.URLInfoAbout = value;
                                     break;
+                                case "userids":
+                                case "assigneduserids":
+                                case "users":
+                                    application.UserIds = value
+                                        .Split(new[] { ';', ',', '|' }, StringSplitOptions.RemoveEmptyEntries)
+                                        .Select(u => u.Trim())
+                                        .ToList();
+                                    break;
                             }
                         }
 
@@ -1163,12 +1171,28 @@ namespace MandADiscoverySuite.Services
                 var applications = await LoadApplicationsAsync(dataPath);
                 allApplications.AddRange(applications);
             }
-            
+
             // Remove duplicates based on Name and Version
             allApplications = allApplications
                 .GroupBy(a => new { a.Name, a.Version })
                 .Select(g => g.First())
                 .ToList();
+
+            // Map applications to users
+            var users = (await LoadUsersAsync(profileName, forceRefresh, cancellationToken)).ToList();
+            var userLookup = users.ToDictionary(u => u.Id, u => u);
+            foreach (var app in allApplications)
+            {
+                if (app.UserIds == null) continue;
+                foreach (var userId in app.UserIds)
+                {
+                    if (userLookup.TryGetValue(userId, out var user))
+                    {
+                        if (!user.ApplicationIds.Contains(app.Id))
+                            user.ApplicationIds.Add(app.Id);
+                    }
+                }
+            }
             
             if (_cacheService != null)
             {

@@ -4318,6 +4318,9 @@ This directory is strictly for storing discovery results and company data.
                     case "infrastructure":
                         tabViewModel = new InfrastructureViewModel { TabTitle = "Infrastructure" };
                         break;
+                    case "assets":
+                        tabViewModel = new AssetInventoryViewModel { TabTitle = "Assets" };
+                        break;
                     case "groups":
                         tabViewModel = new GroupsViewModel { TabTitle = "Groups" };
                         break;

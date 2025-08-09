@@ -873,3 +873,153 @@ function Get-ADDomainControllersData {
 
 # --- Module Export ---
 Export-ModuleMember -Function Invoke-ActiveDirectoryDiscovery
+
+#region M&A Enhancements (Non-breaking): Export-DiscoveryResultsEnhanced
+# This wrapper enriches discovery objects with additional, optional metadata
+# before delegating to the standard Export-DiscoveryResults. Authentication flows
+# and discovery logic remain untouched.
+function Export-DiscoveryResultsEnhanced {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.Collections.IEnumerable] $Data,
+        [Parameter(Mandatory=$true)]
+        [string] $OutputDirectory,
+        [Parameter(Mandatory=$true)]
+        [string] $ModuleName,
+        [Parameter(Mandatory=$false)]
+        [string] $SessionId,
+        [Parameter(Mandatory=$false)]
+        [string] $FilePrefix = $null
+    )
+
+    # Local helper: attempts to enrich an object in a conservative, additive way.
+    function Add-EnhancedMetadata {
+        param([object]$obj)
+
+        # Title / Description
+        $titleCandidates = @(
+            $obj.Title,
+            $obj.DisplayName,
+            $obj.Name,
+            $obj.ComputerName,
+            $obj.ServerName,
+            $obj.ResourceGroupName,
+            $obj.Id
+        ) | Where-Object { $_ -and ($_.ToString().Trim() -ne '') }
+        $descCandidates = @(
+            $obj.Description,
+            $obj.Notes,
+            $obj.Comment,
+            $obj.Summary
+        ) | Where-Object { $_ -and ($_.ToString().Trim() -ne '') }
+
+        if (-not ($obj.PSObject.Properties.Name -contains 'Title')) {
+            $t = $null
+            foreach ($c in $titleCandidates) { if ($c) { $t = $c; break } }
+            if ($t) { Add-Member -InputObject $obj -NotePropertyName 'Title' -NotePropertyValue $t -Force }
+            else     { Add-Member -InputObject $obj -NotePropertyName 'Title' -NotePropertyValue '' -Force }
+        }
+        if (-not ($obj.PSObject.Properties.Name -contains 'Description')) {
+            $d = $null
+            foreach ($c in $descCandidates) { if ($c) { $d = $c; break } }
+            if ($d) { Add-Member -InputObject $obj -NotePropertyName 'Description' -NotePropertyValue $d -Force }
+            else     { Add-Member -InputObject $obj -NotePropertyName 'Description' -NotePropertyValue '' -Force }
+        }
+
+        # Protocols / Ports (heuristics: Protocol property, URL scheme, known fields)
+        if (-not ($obj.PSObject.Properties.Name -contains 'Protocols')) {
+            $protocols = New-Object System.Collections.Generic.HashSet[string]
+            foreach ($propName in @('Protocol','Protocols','Scheme','Transport','DiscoveryProtocol')) {
+                if ($obj.PSObject.Properties.Name -contains $propName) {
+                    $val = $obj.$propName
+                    if ($val) {
+                        foreach ($p in ($val -split '[,;/\s]+' | Where-Object { $_ })) { [void]$protocols.Add(($p.ToString()).ToUpper()) }
+                    }
+                }
+            }
+            foreach ($propName in @('Url','URL','Uri','URI','Endpoint','Address')) {
+                if ($obj.PSObject.Properties.Name -contains $propName) {
+                    $v = $obj.$propName
+                    if ($v) {
+                        try {
+                            $u = [Uri]$v
+                            if ($u.Scheme) { [void]$protocols.Add($u.Scheme.ToUpper()) }
+                        } catch {}
+                    }
+                }
+            }
+            $protoOut = if ($protocols.Count -gt 0) { ($protocols.ToArray() -join ', ') } else { '' }
+            Add-Member -InputObject $obj -NotePropertyName 'Protocols' -NotePropertyValue $protoOut -Force
+        }
+
+        if (-not ($obj.PSObject.Properties.Name -contains 'Ports')) {
+            $ports = New-Object System.Collections.Generic.HashSet[string]
+            foreach ($propName in @('Port','Ports','TcpPort','UdpPort','ServicePort','ListenPort')) {
+                if ($obj.PSObject.Properties.Name -contains $propName) {
+                    $val = $obj.$propName
+                    if ($val) {
+                        foreach ($p in ($val -split '[,;/\s]+' | Where-Object { $_ })) {
+                            if ($p -match '^\d{1,5}$') { [void]$ports.Add($p) }
+                        }
+                    }
+                }
+            }
+            foreach ($propName in @('Url','URL','Uri','URI','Endpoint','Address')) {
+                if ($obj.PSObject.Properties.Name -contains $propName) {
+                    $v = $obj.$propName
+                    if ($v) {
+                        try {
+                            $u = [Uri]$v
+                            if ($u.Port -and $u.Port -gt 0) { [void]$ports.Add(($u.Port).ToString()) }
+                        } catch {}
+                    }
+                }
+            }
+            $portOut = if ($ports.Count -gt 0) { ($ports.ToArray() | Sort-Object {[int]$_}) -join ', ' } else { '' }
+            Add-Member -InputObject $obj -NotePropertyName 'Ports' -NotePropertyValue $portOut -Force
+        }
+
+        # AuthRequired (heuristic based on presence of "Everyone"/"Anonymous" in permissions-like fields)
+        if (-not ($obj.PSObject.Properties.Name -contains 'AuthRequired')) {
+            $auth = $null
+            foreach ($propName in @('RequiresAuthentication','AuthRequired','Authentication','Access','Permissions','SharePermissions','Acl','Security')) {
+                if ($obj.PSObject.Properties.Name -contains $propName) {
+                    $val = $obj.$propName
+                    if ($val) {
+                        $s = $val.ToString()
+                        if ($s -match '(Everyone|Anonymous|Guest)') { $auth = $false }
+                        elseif ($s -ne '') { $auth = $true }
+                    }
+                }
+            }
+            if ($null -eq $auth) { $auth = '' } # unknown
+            Add-Member -InputObject $obj -NotePropertyName 'AuthRequired' -NotePropertyValue $auth -Force
+        }
+
+        return $obj
+    }
+
+    # Materialize and enrich all items conservatively
+    $dataArray = @()
+    foreach ($item in $Data) {
+        if ($null -ne $item) {
+            $dataArray += (Add-EnhancedMetadata -obj $item)
+        }
+    }
+
+    # Delegate to standard exporter if available; otherwise fallback to Export-Csv for each _DataType group
+    if (Get-Command -Name Export-DiscoveryResults -ErrorAction SilentlyContinue) {
+Export-DiscoveryResultsEnhanced -Data $dataArray -OutputDirectory $OutputDirectory -ModuleName $ModuleName -SessionId $SessionId -FilePrefix $FilePrefix
+    } else {
+        # Fallback: mimic grouping behavior without changing existing file names too much
+        $groups = $dataArray | Group-Object -Property _DataType
+        foreach ($g in $groups) {
+            $type = if ($g.Name) { $g.Name } else { 'Data' }
+            $prefix = if ($FilePrefix) { $FilePrefix } else { $ModuleName }
+            $file = Join-Path $OutputDirectory ("{0}_{1}.csv" -f $prefix,$type)
+            $g.Group | Export-Csv -NoTypeInformation -Encoding UTF8 -Path $file
+        }
+    }
+}
+#endregion M&A Enhancements (Non-breaking): Export-DiscoveryResultsEnhanced
