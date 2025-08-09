@@ -123,6 +123,10 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Content="Manage Presets" 
+                                Command="{Binding ManagePresetsCommand}"
+                                Style="{StaticResource ThemedSecondaryButtonStyle}"
+                                Margin="0,0,8,0"/>
                         <Button Content="Load Filter" 
                                 Command="{Binding LoadFilterCommand}"
                                 Style="{StaticResource ThemedSecondaryButtonStyle}"

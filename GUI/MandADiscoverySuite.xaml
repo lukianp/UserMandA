@@ -752,17 +752,7 @@
                                 <Setter Property="ContentTemplate">
                                     <Setter.Value>
                                         <DataTemplate>
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                <Grid Margin="32">
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Row="0" Text="Users" Style="{StaticResource HeaderTextStyle}"/>
-                                                    <TextBlock Grid.Row="1" Text="Users content will be loaded here..." 
-                                                              Foreground="#FFA0AEC0" FontSize="16" Margin="0,16"/>
-                                                </Grid>
-                                            </ScrollViewer>
+                                            <views:UsersView DataContext="{Binding}"/>
                                         </DataTemplate>
                                     </Setter.Value>
                                 </Setter>
@@ -772,17 +762,17 @@
                                 <Setter Property="ContentTemplate">
                                     <Setter.Value>
                                         <DataTemplate>
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                <Grid Margin="32">
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Row="0" Text="Infrastructure" Style="{StaticResource HeaderTextStyle}"/>
-                                                    <TextBlock Grid.Row="1" Text="Infrastructure content will be loaded here..." 
-                                                              Foreground="#FFA0AEC0" FontSize="16" Margin="0,16"/>
-                                                </Grid>
-                                            </ScrollViewer>
+                                            <ContentControl Content="{Binding}"/>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <!-- Computers Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Computers">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <views:ComputersView DataContext="{Binding}"/>
                                         </DataTemplate>
                                     </Setter.Value>
                                 </Setter>
@@ -792,17 +782,7 @@
                                 <Setter Property="ContentTemplate">
                                     <Setter.Value>
                                         <DataTemplate>
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                <Grid Margin="32">
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Row="0" Text="Groups" Style="{StaticResource HeaderTextStyle}"/>
-                                                    <TextBlock Grid.Row="1" Text="Groups content will be loaded here..." 
-                                                              Foreground="#FFA0AEC0" FontSize="16" Margin="0,16"/>
-                                                </Grid>
-                                            </ScrollViewer>
+                                            <views:GroupsView DataContext="{Binding}"/>
                                         </DataTemplate>
                                     </Setter.Value>
                                 </Setter>
@@ -817,12 +797,111 @@
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto"/>
                                                         <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="*"/>
                                                     </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Row="0" Text="Discovery" Style="{StaticResource HeaderTextStyle}"/>
-                                                    <TextBlock Grid.Row="1" Text="Discovery content will be loaded here..." 
-                                                              Foreground="#FFA0AEC0" FontSize="16" Margin="0,16"/>
+                                                    
+                                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,32">
+                                                        <StackPanel>
+                                                            <TextBlock Text="Discovery Modules" Style="{StaticResource HeaderTextStyle}"/>
+                                                            <TextBlock Text="Run discovery modules to gather comprehensive organizational data" Foreground="#FFA0AEC0" FontSize="16"/>
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
+                                                            <Button Content="🔄 Refresh Data" Style="{StaticResource ModernButtonStyle}" 
+                                                                    Background="{StaticResource AccentGradient}" Command="{Binding DataContext.RefreshDataCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" 
+                                                                    Margin="0,0,12,0"/>
+                                                            <Button Content="▶️ Run All Modules" Style="{StaticResource ModernButtonStyle}"
+                                                                    Command="{Binding DataContext.StartDiscoveryCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    
+                                                    <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,32">
+                                                        <Button Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,12,8" Command="{Binding DataContext.ToggleModuleCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="ActiveDirectory">
+                                                            <StackPanel>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="Active Directory" Foreground="White"/>
+                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                                                </StackPanel>
+                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding DataContext.ToggleModuleCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="AzureAD">
+                                                            <StackPanel>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="Azure AD / Entra" Foreground="White"/>
+                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                                                </StackPanel>
+                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding DataContext.ToggleModuleCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="NetworkInfrastructure">
+                                                            <StackPanel>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="Infrastructure" Foreground="White"/>
+                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                                                </StackPanel>
+                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding DataContext.ToggleModuleCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="Applications">
+                                                            <StackPanel>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="Applications" Foreground="White"/>
+                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                                                </StackPanel>
+                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="DomainDiscovery" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                                                            <StackPanel>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="Domain Discovery" Foreground="White"/>
+                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                                                </StackPanel>
+                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="FileServers" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                                                            <StackPanel>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="File Servers" Foreground="White"/>
+                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                                                </StackPanel>
+                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="Databases" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                                                            <StackPanel>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="Databases" Foreground="White"/>
+                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                                                </StackPanel>
+                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </WrapPanel>
+                                                    
+                                                    <Border Grid.Row="2" Style="{StaticResource ModernCardStyle}">
+                                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                            <TextBlock Text="Discovery modules will appear here. Click the module buttons above to run specific discovery operations." 
+                                                                       Foreground="#FFA0AEC0" 
+                                                                       FontSize="14" 
+                                                                       HorizontalAlignment="Center" 
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="50"/>
+                                                        </ScrollViewer>
+                                                    </Border>
                                                 </Grid>
                                             </ScrollViewer>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <!-- Applications Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Applications">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <ContentControl Content="{Binding}"/>
                                         </DataTemplate>
                                     </Setter.Value>
                                 </Setter>

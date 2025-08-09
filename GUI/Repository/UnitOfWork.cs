@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Services;
@@ -285,14 +286,111 @@ namespace MandADiscoverySuite.Repository
             where TEntity : class, IEntity<TKey>
             where TKey : IEquatable<TKey>
         {
-            // Generic repository creation is complex due to constraints
-            // Use specific factory methods for concrete entity types instead
-            throw new NotImplementedException("Use specific repository factory methods for concrete entity types");
+            // Create a generic in-memory repository implementation
+            // This uses a simple dictionary-based storage for any entity type
+            return new GenericInMemoryRepository<TEntity, TKey>(_logger as ILogger<GenericInMemoryRepository<TEntity, TKey>>, _cacheService);
         }
 
         public IUnitOfWork CreateUnitOfWork()
         {
             return new UnitOfWork(_logger as ILogger<UnitOfWork>, this);
+        }
+    }
+
+    /// <summary>
+    /// Generic in-memory repository implementation for any entity type
+    /// </summary>
+    internal class GenericInMemoryRepository<TEntity, TKey> : BaseRepository<TEntity, TKey>
+        where TEntity : class, IEntity<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        private readonly Dictionary<TKey, TEntity> _storage = new Dictionary<TKey, TEntity>();
+
+        public GenericInMemoryRepository(ILogger<GenericInMemoryRepository<TEntity, TKey>> logger, IntelligentCacheService cacheService)
+            : base(logger, cacheService)
+        {
+        }
+
+        public override async Task<TEntity> GetByIdAsync(TKey id)
+        {
+            await Task.CompletedTask;
+            return _storage.TryGetValue(id, out var entity) ? entity : null;
+        }
+
+        public override async Task<IEnumerable<TEntity>> GetAllAsync()
+        {
+            await Task.CompletedTask;
+            return _storage.Values.ToList();
+        }
+
+        public override async Task<TEntity> AddAsync(TEntity entity)
+        {
+            await Task.CompletedTask;
+            if (entity != null && entity.Id != null)
+            {
+                _storage[entity.Id] = entity;
+            }
+            return entity;
+        }
+
+        public override async Task<TEntity> UpdateAsync(TEntity entity)
+        {
+            await Task.CompletedTask;
+            if (entity != null && entity.Id != null)
+            {
+                _storage[entity.Id] = entity;
+            }
+            return entity;
+        }
+
+        public async Task<bool> DeleteAsync(TKey id)
+        {
+            await Task.CompletedTask;
+            return _storage.Remove(id);
+        }
+
+        public override async Task<IEnumerable<TEntity>> FindAsync(System.Linq.Expressions.Expression<Func<TEntity, bool>> predicate)
+        {
+            await Task.CompletedTask;
+            var compiled = predicate.Compile();
+            return _storage.Values.Where(compiled).ToList();
+        }
+
+        public override async Task<int> CountAsync(System.Linq.Expressions.Expression<Func<TEntity, bool>> predicate = null)
+        {
+            await Task.CompletedTask;
+            if (predicate == null)
+                return _storage.Count;
+            
+            var compiled = predicate.Compile();
+            return _storage.Values.Where(compiled).Count();
+        }
+
+        public async Task<bool> ExistsAsync(TKey id)
+        {
+            await Task.CompletedTask;
+            return _storage.ContainsKey(id);
+        }
+
+        protected override TKey GenerateNewId()
+        {
+            // Generate a new ID based on the type
+            if (typeof(TKey) == typeof(Guid))
+            {
+                return (TKey)(object)Guid.NewGuid();
+            }
+            else if (typeof(TKey) == typeof(string))
+            {
+                return (TKey)(object)Guid.NewGuid().ToString();
+            }
+            else if (typeof(TKey) == typeof(int))
+            {
+                return (TKey)(object)new Random().Next(1, int.MaxValue);
+            }
+            else
+            {
+                throw new NotSupportedException($"ID generation for type {typeof(TKey).Name} is not supported");
+            }
         }
     }
 

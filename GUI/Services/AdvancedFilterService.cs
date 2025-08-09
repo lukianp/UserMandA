@@ -216,8 +216,17 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
+                var isNew = string.IsNullOrEmpty(config.Id) || !await FilterExistsAsync(config.Id);
+                
+                if (isNew)
+                {
+                    config.Id = Guid.NewGuid().ToString();
+                    config.CreatedDate = DateTime.Now;
+                    config.CreatedBy = Environment.UserName;
+                }
+                
                 config.Name = name;
-                config.CreatedDate = DateTime.Now;
+                config.LastModified = DateTime.Now;
                 
                 var filePath = Path.Combine(_filtersDirectory, $"{config.Id}.json");
                 var json = JsonSerializer.Serialize(config, _jsonOptions);
@@ -230,6 +239,127 @@ namespace MandADiscoverySuite.Services
             {
                 _logger?.LogError(ex, "Error saving filter: {FilterName}", name);
                 throw;
+            }
+        }
+
+        private async Task<bool> FilterExistsAsync(string filterId)
+        {
+            var filePath = Path.Combine(_filtersDirectory, $"{filterId}.json");
+            return File.Exists(filePath);
+        }
+
+        public async Task<FilterConfiguration> SaveFilterPresetAsync(FilterConfiguration config, string category = "Custom", List<string> tags = null, string description = null)
+        {
+            try
+            {
+                config.Category = category ?? "Custom";
+                config.Tags = tags ?? new List<string>();
+                config.Description = description ?? string.Empty;
+                config.LastModified = DateTime.Now;
+                
+                var filePath = Path.Combine(_filtersDirectory, $"{config.Id}.json");
+                var json = JsonSerializer.Serialize(config, _jsonOptions);
+                await File.WriteAllTextAsync(filePath, json);
+
+                _logger?.LogInformation("Filter preset saved: {Name} in category {Category}", config.Name, config.Category);
+                return config;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error saving filter preset: {Name}", config.Name);
+                throw;
+            }
+        }
+
+        public async Task<List<FilterConfiguration>> GetFilterPresetsByCategoryAsync(string category = null)
+        {
+            try
+            {
+                var allFilters = await GetSavedFiltersAsync();
+                
+                if (!string.IsNullOrEmpty(category))
+                {
+                    return allFilters.Where(f => f.Category?.Equals(category, StringComparison.OrdinalIgnoreCase) == true)
+                                   .OrderBy(f => f.Name)
+                                   .ToList();
+                }
+                
+                return allFilters.OrderBy(f => f.Category)
+                                .ThenBy(f => f.Name)
+                                .ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error getting filter presets by category: {Category}", category);
+                return new List<FilterConfiguration>();
+            }
+        }
+
+        public async Task<List<string>> GetFilterCategoriesAsync()
+        {
+            try
+            {
+                var filters = await GetSavedFiltersAsync();
+                return filters.Select(f => f.Category)
+                             .Where(c => !string.IsNullOrEmpty(c))
+                             .Distinct()
+                             .OrderBy(c => c)
+                             .ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error getting filter categories");
+                return new List<string> { "Custom" };
+            }
+        }
+
+        public async Task MarkFilterAsUsedAsync(string filterId)
+        {
+            try
+            {
+                var filePath = Path.Combine(_filtersDirectory, $"{filterId}.json");
+                if (!File.Exists(filePath)) return;
+
+                var json = await File.ReadAllTextAsync(filePath);
+                var filter = JsonSerializer.Deserialize<FilterConfiguration>(json, _jsonOptions);
+                
+                if (filter != null)
+                {
+                    filter.UsageCount++;
+                    filter.LastUsed = DateTime.Now;
+                    
+                    var updatedJson = JsonSerializer.Serialize(filter, _jsonOptions);
+                    await File.WriteAllTextAsync(filePath, updatedJson);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error marking filter as used: {FilterId}", filterId);
+            }
+        }
+
+        public async Task ToggleFavoriteAsync(string filterId)
+        {
+            try
+            {
+                var filePath = Path.Combine(_filtersDirectory, $"{filterId}.json");
+                if (!File.Exists(filePath)) return;
+
+                var json = await File.ReadAllTextAsync(filePath);
+                var filter = JsonSerializer.Deserialize<FilterConfiguration>(json, _jsonOptions);
+                
+                if (filter != null)
+                {
+                    filter.IsFavorite = !filter.IsFavorite;
+                    filter.LastModified = DateTime.Now;
+                    
+                    var updatedJson = JsonSerializer.Serialize(filter, _jsonOptions);
+                    await File.WriteAllTextAsync(filePath, updatedJson);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error toggling favorite for filter: {FilterId}", filterId);
             }
         }
 

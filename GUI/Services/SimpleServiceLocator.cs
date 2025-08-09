@@ -73,7 +73,11 @@ namespace MandADiscoverySuite.Services
             
             // Register factories for other services
             RegisterFactory<DiscoveryService>(() => new DiscoveryService());
+            RegisterFactory<IDiscoveryService>(() => new DiscoveryService());
             RegisterFactory<ProfileService>(() => new ProfileService());
+            RegisterFactory<IProfileService>(() => new ProfileService());
+            RegisterFactory<CsvDataService>(() => new CsvDataService());
+            RegisterFactory<IDataService>(() => new CsvDataService()); // Use CsvDataService as IDataService implementation
             RegisterFactory<IWidgetLayoutService>(() => new WidgetLayoutService());
             RegisterFactory<ISnapshotService>(() => new SnapshotService());
             RegisterFactory<IAdvancedFilterService>(() => new AdvancedFilterService());
@@ -83,6 +87,17 @@ namespace MandADiscoverySuite.Services
             RegisterFactory<IKeyboardShortcutService>(() => new KeyboardShortcutService());
             RegisterFactory<IDetailWindowService>(() => new DetailWindowService());
             RegisterFactory<IDataGridColumnService>(() => new DataGridColumnService());
+            RegisterFactory<IWhatIfSimulationService>(() => new WhatIfSimulationService());
+            RegisterFactory<ITaskSchedulerService>(() => new TaskSchedulerService());
+            RegisterFactory<INotesTaggingService>(() => new NotesTaggingService());
+            RegisterFactory<IRiskAnalysisService>(() => new RiskAnalysisService());
+            RegisterFactory<ThemeService>(() => 
+            {
+                // Create a null logger since we don't have the full DI container
+                var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<ThemeService>.Instance;
+                var messenger = CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger.Default;
+                return new ThemeService(logger, messenger);
+            });
             
             // Register ViewModels
             RegisterFactory<MandADiscoverySuite.ViewModels.MainViewModel>(() => 

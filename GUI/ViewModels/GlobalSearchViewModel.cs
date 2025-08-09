@@ -30,6 +30,8 @@ namespace MandADiscoverySuite.ViewModels
         private SearchResultItem _selectedResult;
         private int _selectedIndex = -1;
         private CancellationTokenSource _searchCancellation;
+        private const int MaxSearchHistoryItems = 10;
+        private bool _showSearchHistory = false;
 
         public GlobalSearchViewModel(
             ILogger<GlobalSearchViewModel> logger,
@@ -37,15 +39,17 @@ namespace MandADiscoverySuite.ViewModels
             IGlobalSearchService globalSearchService = null,
             IProfileService profileService = null) : base(logger, messenger)
         {
-            _globalSearchService = globalSearchService ?? ServiceLocator.GetService<IGlobalSearchService>();
-            _profileService = profileService ?? ServiceLocator.GetService<IProfileService>();
+            _globalSearchService = globalSearchService ?? SimpleServiceLocator.GetService<IGlobalSearchService>();
+            _profileService = profileService ?? SimpleServiceLocator.GetService<IProfileService>();
 
             SearchResults = new ObservableCollection<SearchResultItem>();
             FilteredResults = CollectionViewSource.GetDefaultView(SearchResults);
             FilterSuggestions = new ObservableCollection<FilterSuggestion>();
+            SearchHistory = new ObservableCollection<string>();
 
             InitializeCommands();
             _ = LoadFilterSuggestionsAsync();
+            _ = LoadSearchHistoryAsync();
         }
 
         #region Properties
@@ -53,6 +57,7 @@ namespace MandADiscoverySuite.ViewModels
         public ObservableCollection<SearchResultItem> SearchResults { get; }
         public ICollectionView FilteredResults { get; }
         public ObservableCollection<FilterSuggestion> FilterSuggestions { get; }
+        public ObservableCollection<string> SearchHistory { get; }
 
         public string SearchText
         {
@@ -73,6 +78,12 @@ namespace MandADiscoverySuite.ViewModels
         {
             get => _showResults;
             set => SetProperty(ref _showResults, value);
+        }
+
+        public bool ShowSearchHistory
+        {
+            get => _showSearchHistory;
+            set => SetProperty(ref _showSearchHistory, value);
         }
 
         public bool IsSearching
@@ -114,6 +125,8 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ClearSearchCommand { get; private set; }
         public ICommand MoveSelectionDownCommand { get; private set; }
         public ICommand MoveSelectionUpCommand { get; private set; }
+        public ICommand SelectFromHistoryCommand { get; private set; }
+        public ICommand ClearHistoryCommand { get; private set; }
 
         protected override void InitializeCommands()
         {
@@ -123,6 +136,8 @@ namespace MandADiscoverySuite.ViewModels
             ClearSearchCommand = new RelayCommand(ClearSearch);
             MoveSelectionDownCommand = new RelayCommand(MoveSelectionDown);
             MoveSelectionUpCommand = new RelayCommand(MoveSelectionUp);
+            SelectFromHistoryCommand = new RelayCommand<string>(SelectFromHistory);
+            ClearHistoryCommand = new AsyncRelayCommand(ClearHistoryAsync);
         }
 
         #endregion
@@ -162,6 +177,12 @@ namespace MandADiscoverySuite.ViewModels
                         }
 
                         SelectedIndex = SearchResults.Any() ? 0 : -1;
+                        
+                        // Add to search history if we have results
+                        if (SearchResults.Any() && !string.IsNullOrWhiteSpace(SearchText))
+                        {
+                            await AddToSearchHistoryAsync(SearchText);
+                        }
                     }
                 }
                 finally
@@ -232,11 +253,16 @@ namespace MandADiscoverySuite.ViewModels
             {
                 ShowResults = true;
             }
+            else if (SearchHistory.Any() && string.IsNullOrWhiteSpace(SearchText))
+            {
+                ShowSearchHistory = true;
+            }
         }
 
         public void OnSearchBoxLostFocus()
         {
             ShowResults = false;
+            ShowSearchHistory = false;
         }
 
         public void ClearSearch()
@@ -578,6 +604,103 @@ namespace MandADiscoverySuite.ViewModels
             }
 
             return filters;
+        }
+
+        private async Task LoadSearchHistoryAsync()
+        {
+            try
+            {
+                var appDataPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "MandADiscoverySuite", "SearchHistory.json");
+
+                if (System.IO.File.Exists(appDataPath))
+                {
+                    var json = await System.IO.File.ReadAllTextAsync(appDataPath);
+                    var history = System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+                    
+                    SearchHistory.Clear();
+                    foreach (var item in history.Take(MaxSearchHistoryItems))
+                    {
+                        SearchHistory.Add(item);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error loading search history");
+            }
+        }
+
+        private async Task AddToSearchHistoryAsync(string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm)) return;
+
+            try
+            {
+                // Remove if already exists to avoid duplicates
+                if (SearchHistory.Contains(searchTerm))
+                {
+                    SearchHistory.Remove(searchTerm);
+                }
+
+                // Add to beginning
+                SearchHistory.Insert(0, searchTerm);
+
+                // Limit history size
+                while (SearchHistory.Count > MaxSearchHistoryItems)
+                {
+                    SearchHistory.RemoveAt(SearchHistory.Count - 1);
+                }
+
+                await SaveSearchHistoryAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error adding to search history");
+            }
+        }
+
+        private async Task SaveSearchHistoryAsync()
+        {
+            try
+            {
+                var appDataPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "MandADiscoverySuite");
+
+                System.IO.Directory.CreateDirectory(appDataPath);
+                
+                var filePath = System.IO.Path.Combine(appDataPath, "SearchHistory.json");
+                var json = System.Text.Json.JsonSerializer.Serialize(SearchHistory.ToList());
+                await System.IO.File.WriteAllTextAsync(filePath, json);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error saving search history");
+            }
+        }
+
+        private void SelectFromHistory(string searchTerm)
+        {
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                SearchText = searchTerm;
+                ShowSearchHistory = false;
+            }
+        }
+
+        private async Task ClearHistoryAsync()
+        {
+            try
+            {
+                SearchHistory.Clear();
+                await SaveSearchHistoryAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error clearing search history");
+            }
         }
 
         private async Task<bool> SaveSearchHistoryAsync(SearchResultItem result)

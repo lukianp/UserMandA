@@ -21,7 +21,8 @@ namespace MandADiscoverySuite.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException();
+            // ConvertBack is typically not needed for error brush converters
+            return Binding.DoNothing;
         }
     }
 }

@@ -98,7 +98,8 @@ namespace MandADiscoverySuite.ViewModels
 
         public ThemeToggleButtonViewModel()
         {
-            _themeService = null; // Will be injected or resolved later
+            // Try to get ThemeService from ServiceLocator
+            _themeService = SimpleServiceLocator.GetService<ThemeService>();
             
             // Register for theme change messages
             Messenger.Register<ThemeChangedMessage>(this);
@@ -137,10 +138,22 @@ namespace MandADiscoverySuite.ViewModels
                 }
                 else
                 {
-                    // Manual toggle if service not available
-                    IsLightTheme = !IsLightTheme;
+                    // Fallback: Use the existing theme system through ThemeManager
+                    var themeManager = MandADiscoverySuite.Themes.ThemeManager.Instance;
+                    var currentTheme = themeManager.CurrentTheme;
+                    var newTheme = currentTheme == MandADiscoverySuite.Themes.ThemeType.Dark 
+                        ? MandADiscoverySuite.Themes.ThemeType.Light 
+                        : MandADiscoverySuite.Themes.ThemeType.Dark;
+                    
+                    themeManager.ApplyTheme(newTheme);
+                    
+                    // Update local state
+                    IsLightTheme = newTheme == MandADiscoverySuite.Themes.ThemeType.Light;
                     UpdateVisualState();
                     UpdateTooltip();
+                    
+                    // Send message to notify other components
+                    Messenger.Send(new ThemeChangedMessage(newTheme == MandADiscoverySuite.Themes.ThemeType.Dark, "Blue"));
                 }
             }
             catch (Exception ex)
@@ -154,8 +167,17 @@ namespace MandADiscoverySuite.ViewModels
         {
             if (_themeService == null)
             {
-                // Default to dark theme if service not available
-                IsLightTheme = false;
+                // Fallback: Get current theme from ThemeManager
+                try
+                {
+                    var themeManager = MandADiscoverySuite.Themes.ThemeManager.Instance;
+                    IsLightTheme = themeManager.CurrentTheme == MandADiscoverySuite.Themes.ThemeType.Light;
+                }
+                catch
+                {
+                    // Default to dark theme if unable to determine
+                    IsLightTheme = false;
+                }
             }
             else
             {

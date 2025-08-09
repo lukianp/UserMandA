@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,6 +18,7 @@ namespace MandADiscoverySuite.ViewModels
     public partial class DockingPanelViewModel : BaseViewModel
     {
         private readonly NotificationService _notificationService;
+        private readonly IDockingLayoutService _layoutService;
         private readonly Dictionary<string, DockablePanel> _panels;
         private readonly Dictionary<string, Window> _floatingWindows;
         
@@ -28,11 +30,12 @@ namespace MandADiscoverySuite.ViewModels
         public DockingPanelViewModel() : base()
         {
             _notificationService = ServiceLocator.GetService<NotificationService>();
+            _layoutService = SimpleServiceLocator.GetService<IDockingLayoutService>() ?? new DockingLayoutService();
             _panels = new Dictionary<string, DockablePanel>();
             _floatingWindows = new Dictionary<string, Window>();
             
             InitializeCommands();
-            InitializePanels();
+            _ = InitializePanelsAsync();
         }
 
         #region Properties
@@ -73,6 +76,10 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ClosePanelCommand { get; private set; }
         public ICommand ShowPanelOptionsCommand { get; private set; }
         public ICommand ResetLayoutCommand { get; private set; }
+        public ICommand SaveLayoutCommand { get; private set; }
+        public ICommand LoadLayoutCommand { get; private set; }
+        public ICommand SaveLayoutAsCommand { get; private set; }
+        public ICommand ManageLayoutsCommand { get; private set; }
 
         #endregion
 
@@ -86,9 +93,32 @@ namespace MandADiscoverySuite.ViewModels
             ClosePanelCommand = new RelayCommand<string>(ClosePanel);
             ShowPanelOptionsCommand = new RelayCommand(ShowPanelOptions);
             ResetLayoutCommand = new RelayCommand(ResetLayout);
+            SaveLayoutCommand = new RelayCommand(() => Task.Run(SaveCurrentLayoutAsync));
+            LoadLayoutCommand = new RelayCommand(() => Task.Run(LoadDefaultLayoutAsync));
+            SaveLayoutAsCommand = new RelayCommand(SaveLayoutAs);
+            ManageLayoutsCommand = new RelayCommand(ManageLayouts);
         }
 
-        private void InitializePanels()
+        private async Task InitializePanelsAsync()
+        {
+            try
+            {
+                AvailablePanels = new ObservableCollection<DockablePanel>();
+
+                // Load saved layout or use default
+                var layout = await _layoutService.LoadLayoutAsync();
+                await ApplyLayoutAsync(layout);
+
+                Logger?.LogInformation("Initialized panels with saved layout");
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error initializing panels, using defaults");
+                InitializeDefaultPanels();
+            }
+        }
+
+        private void InitializeDefaultPanels()
         {
             AvailablePanels = new ObservableCollection<DockablePanel>();
 
@@ -101,7 +131,9 @@ namespace MandADiscoverySuite.ViewModels
                 Position = DockPosition.Left,
                 IsPinned = true,
                 IsVisible = true,
-                Content = CreateExplorerContent()
+                Content = CreateExplorerContent(),
+                Width = 250,
+                Height = 400
             };
 
             var propertiesPanel = new DockablePanel
@@ -112,7 +144,9 @@ namespace MandADiscoverySuite.ViewModels
                 Position = DockPosition.Right,
                 IsPinned = true,
                 IsVisible = true,
-                Content = CreatePropertiesContent()
+                Content = CreatePropertiesContent(),
+                Width = 300,
+                Height = 400
             };
 
             var outputPanel = new DockablePanel
@@ -123,7 +157,9 @@ namespace MandADiscoverySuite.ViewModels
                 Position = DockPosition.Bottom,
                 IsPinned = true,
                 IsVisible = true,
-                Content = CreateOutputContent()
+                Content = CreateOutputContent(),
+                Width = 800,
+                Height = 200
             };
 
             _panels["Left"] = explorerPanel;
@@ -262,6 +298,9 @@ namespace MandADiscoverySuite.ViewModels
 
                     panel.IsFloating = true;
                     
+                    // Auto-save layout after floating
+                    _ = Task.Run(SaveCurrentLayoutAsync);
+                    
                     _notificationService?.AddInfo(
                         "Panel Floated", 
                         $"{panel.Title} panel is now floating");
@@ -304,6 +343,9 @@ namespace MandADiscoverySuite.ViewModels
                     }
 
                     panel.IsFloating = false;
+                    
+                    // Auto-save layout after docking
+                    _ = Task.Run(SaveCurrentLayoutAsync);
                     
                     Logger?.LogDebug("Docked floating panel: {PanelTitle}", panel.Title);
                 }
@@ -387,6 +429,9 @@ namespace MandADiscoverySuite.ViewModels
 
                     panel.IsVisible = false;
                     
+                    // Auto-save layout after closing
+                    _ = Task.Run(SaveCurrentLayoutAsync);
+                    
                     _notificationService?.AddInfo(
                         "Panel Closed", 
                         $"{panel.Title} panel closed");
@@ -443,7 +488,10 @@ namespace MandADiscoverySuite.ViewModels
                 }
 
                 // Restore default content
-                InitializePanels();
+                InitializeDefaultPanels();
+
+                // Save the reset layout
+                _ = Task.Run(SaveCurrentLayoutAsync);
 
                 _notificationService?.AddSuccess(
                     "Layout Reset", 
@@ -458,6 +506,266 @@ namespace MandADiscoverySuite.ViewModels
                     "Layout Reset Failed", 
                     "Unable to reset panel layout.");
             }
+        }
+
+        private async Task SaveCurrentLayoutAsync()
+        {
+            try
+            {
+                var layout = CreateLayoutFromCurrentState();
+                await _layoutService.SaveLayoutAsync(layout);
+
+                _notificationService?.AddSuccess(
+                    "Layout Saved", 
+                    "Current panel layout has been saved");
+
+                Logger?.LogInformation("Saved current layout");
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error saving current layout");
+                _notificationService?.AddError(
+                    "Save Failed", 
+                    "Unable to save current layout.");
+            }
+        }
+
+        private async Task LoadDefaultLayoutAsync()
+        {
+            try
+            {
+                var layout = await _layoutService.LoadLayoutAsync();
+                await ApplyLayoutAsync(layout);
+
+                _notificationService?.AddSuccess(
+                    "Layout Loaded", 
+                    "Panel layout has been restored");
+
+                Logger?.LogInformation("Loaded default layout");
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error loading layout");
+                _notificationService?.AddError(
+                    "Load Failed", 
+                    "Unable to load saved layout.");
+            }
+        }
+
+        private void SaveLayoutAs()
+        {
+            try
+            {
+                // For now, use a timestamp-based name since InputBox is not available
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var name = $"Layout_{timestamp}";
+
+                var layout = CreateLayoutFromCurrentState();
+                layout.Name = name;
+                
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _layoutService.SaveLayoutAsync(name, layout);
+                        
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            _notificationService?.AddSuccess(
+                                "Layout Saved", 
+                                $"Layout '{name}' has been saved");
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "Error saving layout: {LayoutName}", name);
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            _notificationService?.AddError(
+                                "Save Failed", 
+                                $"Unable to save layout '{name}'");
+                        });
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error in SaveLayoutAs");
+                _notificationService?.AddError(
+                    "Error", 
+                    "Unable to save layout");
+            }
+        }
+
+        private void ManageLayouts()
+        {
+            try
+            {
+                // This would show a dialog to manage saved layouts
+                Task.Run(async () =>
+                {
+                    var layouts = await _layoutService.GetSavedLayoutsAsync();
+                    var layoutList = string.Join("\n", layouts.Select((name, index) => $"{index + 1}. {name}"));
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        _notificationService?.AddInfo(
+                            "Saved Layouts", 
+                            $"Available layouts:\n{layoutList}");
+                    });
+                });
+
+                Logger?.LogDebug("Showed layout management");
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error showing layout management");
+                _notificationService?.AddError(
+                    "Error", 
+                    "Unable to show layout management");
+            }
+        }
+
+        private DockingLayout CreateLayoutFromCurrentState()
+        {
+            var layout = new DockingLayout
+            {
+                Name = "Current Layout",
+                LastModified = DateTime.Now,
+                Panels = new List<PanelLayout>()
+            };
+
+            foreach (var kvp in _panels)
+            {
+                var panel = kvp.Value;
+                var panelLayout = new PanelLayout
+                {
+                    Id = panel.Id,
+                    Title = panel.Title,
+                    Icon = panel.Icon,
+                    Position = panel.Position,
+                    IsVisible = panel.IsVisible,
+                    IsPinned = panel.IsPinned,
+                    IsFloating = panel.IsFloating,
+                    Width = panel.Width,
+                    Height = panel.Height
+                };
+
+                // Get floating window position if exists
+                if (_floatingWindows.TryGetValue(kvp.Key, out var floatingWindow))
+                {
+                    panelLayout.FloatingX = floatingWindow.Left;
+                    panelLayout.FloatingY = floatingWindow.Top;
+                }
+
+                layout.Panels.Add(panelLayout);
+            }
+
+            return layout;
+        }
+
+        private async Task ApplyLayoutAsync(DockingLayout layout)
+        {
+            try
+            {
+                // Clear current panels
+                _panels.Clear();
+                _floatingWindows.Clear();
+                AvailablePanels?.Clear();
+
+                if (AvailablePanels == null)
+                    AvailablePanels = new ObservableCollection<DockablePanel>();
+
+                // Apply each panel from the layout
+                foreach (var panelLayout in layout.Panels)
+                {
+                    var panel = new DockablePanel
+                    {
+                        Id = panelLayout.Id,
+                        Title = panelLayout.Title,
+                        Icon = panelLayout.Icon,
+                        Position = panelLayout.Position,
+                        IsVisible = panelLayout.IsVisible,
+                        IsPinned = panelLayout.IsPinned,
+                        IsFloating = panelLayout.IsFloating,
+                        Width = panelLayout.Width,
+                        Height = panelLayout.Height,
+                        Content = CreatePanelContent(panelLayout.Id)
+                    };
+
+                    // Map panel to position
+                    var positionKey = GetPositionKey(panelLayout.Position);
+                    if (!string.IsNullOrEmpty(positionKey))
+                    {
+                        _panels[positionKey] = panel;
+                    }
+
+                    AvailablePanels.Add(panel);
+
+                    // Handle floating panels
+                    if (panelLayout.IsFloating)
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            var floatingWindow = new Window
+                            {
+                                Title = panel.Title,
+                                Width = panelLayout.Width,
+                                Height = panelLayout.Height,
+                                Left = panelLayout.FloatingX,
+                                Top = panelLayout.FloatingY,
+                                WindowStyle = WindowStyle.ToolWindow,
+                                ShowInTaskbar = false,
+                                Content = panel.Content,
+                                Owner = Application.Current.MainWindow
+                            };
+
+                            _floatingWindows[positionKey] = floatingWindow;
+                            floatingWindow.Show();
+                            floatingWindow.Closed += (s, e) => DockFloatingPanel(positionKey);
+                        });
+                    }
+                }
+
+                // Set panel content for docked panels
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    LeftPanelContent = _panels.TryGetValue("Left", out var leftPanel) && leftPanel.IsVisible && !leftPanel.IsFloating ? leftPanel.Content : null;
+                    RightPanelContent = _panels.TryGetValue("Right", out var rightPanel) && rightPanel.IsVisible && !rightPanel.IsFloating ? rightPanel.Content : null;
+                    BottomPanelContent = _panels.TryGetValue("Bottom", out var bottomPanel) && bottomPanel.IsVisible && !bottomPanel.IsFloating ? bottomPanel.Content : null;
+                    MainContent = "Main content area - your primary workspace";
+                });
+
+                Logger?.LogInformation("Applied layout: {LayoutName}", layout.Name);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error applying layout");
+                throw;
+            }
+        }
+
+        private string GetPositionKey(DockPosition position)
+        {
+            return position switch
+            {
+                DockPosition.Left => "Left",
+                DockPosition.Right => "Right",
+                DockPosition.Bottom => "Bottom",
+                DockPosition.Top => "Top",
+                _ => null
+            };
+        }
+
+        private object CreatePanelContent(string panelId)
+        {
+            return panelId switch
+            {
+                "Explorer" => CreateExplorerContent(),
+                "Properties" => CreatePropertiesContent(),
+                "Output" => CreateOutputContent(),
+                _ => new System.Windows.Controls.TextBlock { Text = $"Content for {panelId}" }
+            };
         }
 
         #endregion

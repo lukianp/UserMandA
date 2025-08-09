@@ -101,5 +101,20 @@ namespace MandADiscoverySuite.Controls
                 _viewModel.SearchText = text;
             }
         }
+
+        private void History_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement element && 
+                element.DataContext is string searchTerm)
+            {
+                _viewModel?.SelectFromHistoryCommand?.Execute(searchTerm);
+                e.Handled = true;
+            }
+        }
+
+        private void History_MouseEnter(object sender, MouseEventArgs e)
+        {
+            // Optional: Add hover effects or preview functionality
+        }
     }
 }

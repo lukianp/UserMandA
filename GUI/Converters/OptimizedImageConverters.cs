@@ -59,7 +59,8 @@ namespace MandADiscoverySuite.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException("ConvertBack is not supported for OptimizedImageConverter");
+            // ConvertBack is not supported for OptimizedImageConverter
+            return Binding.DoNothing;
         }
     }
 
@@ -104,7 +105,8 @@ namespace MandADiscoverySuite.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException("ConvertBack is not supported for ResourceImageConverter");
+            // ConvertBack is not supported for ResourceImageConverter
+            return Binding.DoNothing;
         }
     }
 
@@ -155,7 +157,8 @@ namespace MandADiscoverySuite.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException("ConvertBack is not supported for ThumbnailImageConverter");
+            // ConvertBack is not supported for ThumbnailImageConverter
+            return Binding.DoNothing;
         }
     }
 
@@ -230,7 +233,8 @@ namespace MandADiscoverySuite.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException("ConvertBack is not supported for FileIconConverter");
+            // ConvertBack is not supported for FileIconConverter
+            return Binding.DoNothing;
         }
     }
 
@@ -297,7 +301,8 @@ namespace MandADiscoverySuite.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException("ConvertBack is not supported for StatusIconConverter");
+            // ConvertBack is not supported for StatusIconConverter
+            return Binding.DoNothing;
         }
     }
 
@@ -360,7 +365,8 @@ namespace MandADiscoverySuite.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException("ConvertBack is not supported for BooleanIconConverter");
+            // ConvertBack is not supported for BooleanIconConverter
+            return Binding.DoNothing;
         }
     }
 }

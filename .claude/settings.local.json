@@ -92,7 +92,10 @@
       "Bash(\"./bin/Release/net6.0-windows/MandADiscoverySuite.exe\")",
       "Bash(./apphost.exe)",
       "Bash(Start-Process \"dotnet\" -ArgumentList \"run --configuration Release\" -PassThru)",
-      "Bash(dotnet publish:*)"
+      "Bash(dotnet publish:*)",
+      "Bash(\"./apphost.exe\")",
+      "Bash(Start-Process \"GUI/bin/Release/net6.0-windows/MandADiscoverySuite.exe\" -PassThru)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

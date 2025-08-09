@@ -62,6 +62,8 @@ namespace MandADiscoverySuite.Models
             set { _overallProgress = value; OnPropertyChanged(); }
         }
 
+        public DateTime? LastModified { get; set; }
+
         public string HealthScoreColor => HealthScore >= 80 ? "#FF10B981" : HealthScore >= 60 ? "#FFF59E0B" : "#FFEF4444";
 
         public ObservableCollection<ProjectPhase> Phases { get; set; } = new ObservableCollection<ProjectPhase>();

@@ -933,8 +933,8 @@ namespace MandADiscoverySuite.Services
             return format.ToLower() switch
             {
                 "json" => JsonConvert.SerializeObject(graph, Formatting.Indented),
-                "xml" => throw new NotImplementedException("XML export not implemented"),
-                "csv" => throw new NotImplementedException("CSV export not implemented"),
+                "xml" => await ExportToXmlAsync(graph),
+                "csv" => await ExportToCsvAsync(graph),
                 _ => JsonConvert.SerializeObject(graph, Formatting.Indented)
             };
         }
@@ -949,10 +949,143 @@ namespace MandADiscoverySuite.Services
             return format.ToLower() switch
             {
                 "json" => JsonConvert.DeserializeObject<DependencyGraph>(content),
-                "xml" => throw new NotImplementedException("XML import not implemented"),
+                "xml" => await ImportFromXmlAsync(content),
                 _ => JsonConvert.DeserializeObject<DependencyGraph>(content)
             };
         }
+
+        #region Export/Import Helpers
+
+        private async Task<string> ExportToXmlAsync(DependencyGraph graph)
+        {
+            var xml = new System.Xml.XmlDocument();
+            var root = xml.CreateElement("DependencyGraph");
+            
+            // Add graph properties
+            root.SetAttribute("Id", graph.Id);
+            root.SetAttribute("Name", graph.Name);
+            root.SetAttribute("CreatedDate", graph.Created.ToString("o"));
+            
+            // Add nodes
+            var nodesElement = xml.CreateElement("Nodes");
+            foreach (var node in graph.Nodes)
+            {
+                var nodeElement = xml.CreateElement("Node");
+                nodeElement.SetAttribute("Id", node.Id);
+                nodeElement.SetAttribute("Label", node.Name);
+                nodeElement.SetAttribute("Type", node.Type);
+                nodeElement.SetAttribute("X", node.Position.X.ToString());
+                nodeElement.SetAttribute("Y", node.Position.Y.ToString());
+                nodeElement.SetAttribute("IsSelected", node.IsSelected.ToString());
+                nodesElement.AppendChild(nodeElement);
+            }
+            root.AppendChild(nodesElement);
+            
+            // Add edges  
+            var edgesElement = xml.CreateElement("Edges");
+            foreach (var edge in graph.Edges)
+            {
+                var edgeElement = xml.CreateElement("Edge");
+                edgeElement.SetAttribute("Id", edge.Id);
+                edgeElement.SetAttribute("Source", edge.SourceNodeId);
+                edgeElement.SetAttribute("Target", edge.TargetNodeId);
+                edgeElement.SetAttribute("Type", edge.EdgeType.ToString());
+                edgeElement.SetAttribute("Weight", edge.Weight.ToString());
+                edgesElement.AppendChild(edgeElement);
+            }
+            root.AppendChild(edgesElement);
+            
+            xml.AppendChild(root);
+            return xml.OuterXml;
+        }
+
+        private async Task<string> ExportToCsvAsync(DependencyGraph graph)
+        {
+            var csv = new System.Text.StringBuilder();
+            
+            // Export nodes
+            csv.AppendLine("# Nodes");
+            csv.AppendLine("Id,Label,Type,X,Y,IsSelected");
+            foreach (var node in graph.Nodes)
+            {
+                csv.AppendLine($"\"{node.Id}\",\"{node.Name}\",\"{node.Type}\",{node.Position.X},{node.Position.Y},{node.IsSelected}");
+            }
+            
+            csv.AppendLine();
+            
+            // Export edges
+            csv.AppendLine("# Edges");
+            csv.AppendLine("Id,Source,Target,Type,Weight");
+            foreach (var edge in graph.Edges)
+            {
+                csv.AppendLine($"\"{edge.Id}\",\"{edge.SourceNodeId}\",\"{edge.TargetNodeId}\",\"{edge.EdgeType}\",{edge.Weight}");
+            }
+            
+            return csv.ToString();
+        }
+
+        private async Task<DependencyGraph> ImportFromXmlAsync(string xmlContent)
+        {
+            var xml = new System.Xml.XmlDocument();
+            xml.LoadXml(xmlContent);
+            
+            var root = xml.DocumentElement;
+            var graph = new DependencyGraph
+            {
+                Id = root.GetAttribute("Id"),
+                Name = root.GetAttribute("Name"),
+                Created = DateTime.Parse(root.GetAttribute("CreatedDate"))
+            };
+            
+            // Import nodes
+            var nodesElement = root.SelectSingleNode("Nodes");
+            if (nodesElement != null)
+            {
+                foreach (System.Xml.XmlNode nodeElement in nodesElement.ChildNodes)
+                {
+                    if (nodeElement.Name == "Node")
+                    {
+                        var node = new DependencyNode
+                        {
+                            Id = nodeElement.Attributes["Id"]?.Value,
+                            Name = nodeElement.Attributes["Label"]?.Value,
+                            Type = nodeElement.Attributes["Type"]?.Value,
+                            Position = new System.Windows.Point(
+                                double.Parse(nodeElement.Attributes["X"]?.Value ?? "0"),
+                                double.Parse(nodeElement.Attributes["Y"]?.Value ?? "0")
+                            ),
+                            IsSelected = bool.Parse(nodeElement.Attributes["IsSelected"]?.Value ?? "false")
+                        };
+                        graph.Nodes.Add(node);
+                    }
+                }
+            }
+            
+            // Import edges
+            var edgesElement = root.SelectSingleNode("Edges");
+            if (edgesElement != null)
+            {
+                foreach (System.Xml.XmlNode edgeElement in edgesElement.ChildNodes)
+                {
+                    if (edgeElement.Name == "Edge")
+                    {
+                        var edge = new DependencyEdge
+                        {
+                            Id = edgeElement.Attributes["Id"]?.Value,
+                            SourceNodeId = edgeElement.Attributes["Source"]?.Value,
+                            TargetNodeId = edgeElement.Attributes["Target"]?.Value,
+                            EdgeType = Enum.Parse<DependencyEdgeType>(edgeElement.Attributes["Type"]?.Value ?? "Dependency"),
+                            Weight = double.Parse(edgeElement.Attributes["Weight"]?.Value ?? "1")
+                        };
+                        graph.Edges.Add(edge);
+                    }
+                }
+            }
+            
+            return graph;
+        }
+
+        #endregion
 
         #endregion
     }

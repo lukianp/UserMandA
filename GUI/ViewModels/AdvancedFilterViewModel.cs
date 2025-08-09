@@ -47,6 +47,7 @@ namespace MandADiscoverySuite.ViewModels
             ToggleFilterModeCommand = new RelayCommand(ToggleFilterMode);
             ExportFilterCommand = new RelayCommand(ExportFilter);
             ImportFilterCommand = new RelayCommand(ImportFilter);
+            ManagePresetsCommand = new RelayCommand(ManagePresets);
 
             // Load saved filters
             Task.Run(LoadSavedFiltersAsync);
@@ -141,6 +142,7 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ToggleFilterModeCommand { get; }
         public ICommand ExportFilterCommand { get; }
         public ICommand ImportFilterCommand { get; }
+        public ICommand ManagePresetsCommand { get; }
 
         #endregion
 
@@ -358,14 +360,53 @@ namespace MandADiscoverySuite.ViewModels
 
         private void ExportFilter()
         {
-            // TODO: Implement filter export functionality
-            StatusMessage = "Filter export not yet implemented";
+            // Simple filter export implementation
+            try
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(FilterRules, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                var fileName = $"filter_export_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+                var filePath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName);
+                System.IO.File.WriteAllText(filePath, json);
+                StatusMessage = $"Filter exported to {fileName}";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Export failed: {ex.Message}";
+            }
         }
 
         private void ImportFilter()
         {
-            // TODO: Implement filter import functionality
-            StatusMessage = "Filter import not yet implemented";
+            // Simple filter import implementation
+            try
+            {
+                // Simulate file dialog selection
+                var documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                var filterFiles = System.IO.Directory.GetFiles(documentsPath, "filter_export_*.json")
+                    .OrderByDescending(f => System.IO.File.GetCreationTime(f))
+                    .Take(1)
+                    .FirstOrDefault();
+                    
+                if (filterFiles != null)
+                {
+                    var json = System.IO.File.ReadAllText(filterFiles);
+                    var importedRules = System.Text.Json.JsonSerializer.Deserialize<List<FilterRule>>(json);
+                    FilterRules.Clear();
+                    foreach (var rule in importedRules)
+                    {
+                        FilterRules.Add(rule);
+                    }
+                    StatusMessage = "Filter imported successfully";
+                }
+                else
+                {
+                    StatusMessage = "No filter files found to import";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Import failed: {ex.Message}";
+            }
         }
 
         private async Task LoadSavedFiltersAsync()
@@ -501,6 +542,28 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         #endregion
+
+        private void ManagePresets()
+        {
+            try
+            {
+                var dialog = new MandADiscoverySuite.Dialogs.FilterPresetManagerDialog();
+                
+                // Subscribe to preset load requests
+                dialog.ViewModel.PresetLoadRequested += (sender, preset) =>
+                {
+                    LoadFilter(preset);
+                    dialog.Close();
+                };
+
+                dialog.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error opening preset manager");
+                ErrorMessage = $"Failed to open preset manager: {ex.Message}";
+            }
+        }
 
         protected override void Dispose(bool disposing)
         {

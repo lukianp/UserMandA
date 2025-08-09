@@ -230,7 +230,7 @@ namespace MandADiscoverySuite.ViewModels
                 // Simulate loading more data
                 await Task.Delay(500, e.CancellationToken);
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var allUsers = await LoadUsersCachedAsync(companyName);
                 
                 var skipCount = e.CurrentItemCount;
@@ -258,7 +258,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 await Task.Delay(500, e.CancellationToken);
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var allInfrastructure = await LoadInfrastructureCachedAsync(companyName);
                 
                 var skipCount = e.CurrentItemCount;
@@ -286,7 +286,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 await Task.Delay(500, e.CancellationToken);
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var allGroups = await LoadGroupsCachedAsync(companyName);
                 
                 var skipCount = e.CurrentItemCount;
@@ -357,7 +357,7 @@ namespace MandADiscoverySuite.ViewModels
 
         private async Task SearchUsersAsync(string searchTerm, System.Threading.CancellationToken cancellationToken)
         {
-            var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+            var companyName = SelectedProfile?.CompanyName ?? "ljpops";
             var cacheKey = $"UserSearch_{companyName}_{searchTerm}";
             
             var filteredUsers = await _cacheService.GetOrCreateAsync(cacheKey, async () =>
@@ -386,7 +386,7 @@ namespace MandADiscoverySuite.ViewModels
 
         private async Task SearchInfrastructureAsync(string searchTerm, System.Threading.CancellationToken cancellationToken)
         {
-            var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+            var companyName = SelectedProfile?.CompanyName ?? "ljpops";
             var cacheKey = $"InfrastructureSearch_{companyName}_{searchTerm}";
             
             var filteredItems = await _cacheService.GetOrCreateAsync(cacheKey, async () =>
@@ -415,7 +415,7 @@ namespace MandADiscoverySuite.ViewModels
 
         private async Task SearchGroupsAsync(string searchTerm, System.Threading.CancellationToken cancellationToken)
         {
-            var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+            var companyName = SelectedProfile?.CompanyName ?? "ljpops";
             var cacheKey = $"GroupsSearch_{companyName}_{searchTerm}";
             
             var filteredItems = await _cacheService.GetOrCreateAsync(cacheKey, async () =>

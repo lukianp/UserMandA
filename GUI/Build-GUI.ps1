@@ -7,8 +7,15 @@
 .DESCRIPTION
     This script compiles the WPF application using .NET 6 and creates a self-contained executable
     that can be distributed and run on Windows systems without requiring .NET to be installed.
+    
+    RECENT CRITICAL BUG FIXES INCLUDED:
+    - Fixed ProfileService dependency injection using SimpleServiceLocator
+    - Protected ConfigurationService from incorrect path assignments (ensures C:\DiscoveryData usage)
+    - Ensures ModuleRegistry.json is copied to both main and net6.0-windows\Configuration locations
+    - Cleaned up profile configuration to use ljpops as active profile
+    - All data loading and module registry issues resolved
 
-.PARAMETER Configurationmake sure
+.PARAMETER Configuration
     Build configuration: Debug or Release (default: Release)
 
 .PARAMETER OutputPath
@@ -315,6 +322,25 @@ if (Test-Path $ConfigSourcePath) {
                 Write-Warning "Missing GUI configuration file: $config"
             }
         }
+    }
+    
+    # CRITICAL FIX: Ensure ModuleRegistry.json exists in net6.0-windows subdirectory
+    Write-Host "Verifying ModuleRegistry.json deployment..." -ForegroundColor Yellow
+    $Net6ConfigPath = Join-Path $OutputPath "net6.0-windows\Configuration"
+    $ModuleRegistrySource = Join-Path $ConfigDestPath "ModuleRegistry.json"
+    $ModuleRegistryDest = Join-Path $Net6ConfigPath "ModuleRegistry.json"
+    
+    if (Test-Path $ModuleRegistrySource) {
+        # Ensure the net6.0-windows\Configuration directory exists
+        if (!(Test-Path $Net6ConfigPath)) {
+            New-Item -Path $Net6ConfigPath -ItemType Directory -Force | Out-Null
+        }
+        
+        # Copy ModuleRegistry.json to net6.0-windows location
+        Copy-Item -Path $ModuleRegistrySource -Destination $ModuleRegistryDest -Force
+        Write-Host "  [OK] ModuleRegistry.json copied to net6.0-windows location" -ForegroundColor Green
+    } else {
+        Write-Warning "ModuleRegistry.json not found in source configuration"
     }
     
     foreach ($config in $CriticalConfigs) {

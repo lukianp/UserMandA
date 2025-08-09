@@ -46,6 +46,9 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public bool IsViewInitialized(string viewName)
         {
+            if (string.IsNullOrEmpty(viewName))
+                return false;
+                
             return _viewInitialized.TryGetValue(viewName, out var initialized) && initialized;
         }
 
@@ -54,6 +57,9 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task InitializeViewAsync(string viewName)
         {
+            if (string.IsNullOrEmpty(viewName))
+                return;
+                
             if (_viewInitialized.TryGetValue(viewName, out var initialized) && initialized)
                 return;
 

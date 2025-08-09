@@ -140,7 +140,8 @@
             </Grid.ColumnDefinitions>
             
             <!-- Data Grid -->
-            <DataGrid Grid.Column="0" 
+            <DataGrid x:Name="MainDataGrid"
+                      Grid.Column="0" 
                       ItemsSource="{Binding FilteredItems}" 
                       SelectedItem="{Binding SelectedItem}"
                       AutoGenerateColumns="False" 

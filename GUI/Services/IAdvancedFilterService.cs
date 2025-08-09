@@ -15,16 +15,30 @@ namespace MandADiscoverySuite.Services
         FilterConfiguration CreateEmptyFilter();
         List<FilterOperator> GetAvailableOperators();
         List<string> GetFilterableProperties<T>();
+        Task<List<string>> GetFilterCategoriesAsync();
+        Task MarkFilterAsUsedAsync(string filterId);
+        Task ToggleFavoriteAsync(string filterId);
+        Task<FilterConfiguration> SaveFilterPresetAsync(FilterConfiguration config, string category = "Custom", List<string> tags = null, string description = null);
+        Task<List<FilterConfiguration>> GetFilterPresetsByCategoryAsync(string category = null);
     }
 
     public class FilterConfiguration
     {
         public string Id { get; set; }
         public string Name { get; set; }
+        public string Description { get; set; }
         public DateTime CreatedDate { get; set; }
+        public DateTime LastModified { get; set; }
         public List<FilterRule> Rules { get; set; }
         public FilterLogic Logic { get; set; } // AND or OR
         public bool IsQuickFilter { get; set; }
+        public string Category { get; set; }
+        public List<string> Tags { get; set; }
+        public bool IsShared { get; set; }
+        public string CreatedBy { get; set; }
+        public int UsageCount { get; set; }
+        public DateTime LastUsed { get; set; }
+        public bool IsFavorite { get; set; }
         public Dictionary<string, object> Metadata { get; set; }
 
         public FilterConfiguration()
@@ -33,7 +47,11 @@ namespace MandADiscoverySuite.Services
             Rules = new List<FilterRule>();
             Logic = FilterLogic.And;
             Metadata = new Dictionary<string, object>();
+            Tags = new List<string>();
             CreatedDate = DateTime.Now;
+            LastModified = DateTime.Now;
+            CreatedBy = Environment.UserName;
+            Category = "Custom";
         }
     }
 

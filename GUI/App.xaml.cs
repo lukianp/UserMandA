@@ -28,13 +28,13 @@ namespace MandADiscoverySuite
                 logAction?.Invoke("=== OnStartup BEGIN ===");
                 logAction?.Invoke("Global exception handling setup completed");
                 
-                // Initialize ServiceLocator and core services
-                logAction?.Invoke("Initializing ServiceLocator...");
-                ServiceLocator.Initialize();
-                logAction?.Invoke("ServiceLocator initialized successfully");
+                // Initialize only SimpleServiceLocator (removing ServiceLocator to avoid conflicts)
+                logAction?.Invoke("Initializing SimpleServiceLocator...");
+                SimpleServiceLocator.Initialize();
+                logAction?.Invoke("SimpleServiceLocator initialized successfully");
                 
                 logAction?.Invoke("Getting ThemeService...");
-                var themeService = ServiceLocator.GetService<ThemeService>();
+                var themeService = SimpleServiceLocator.GetService<ThemeService>();
                 logAction?.Invoke($"ThemeService retrieved: {(themeService != null ? "Success" : "NULL")}");
                 
                 if (themeService != null)
@@ -88,8 +88,7 @@ namespace MandADiscoverySuite
                 // Complete startup optimization
                 await _startupService?.CompleteStartupAsync();
                 
-                // Register the service with the service locator for later use
-                ServiceLocator.RegisterInstance(_startupService);
+                // Startup service completed successfully
             }
             catch (Exception ex)
             {
@@ -101,7 +100,7 @@ namespace MandADiscoverySuite
         {
             try
             {
-                var animationService = ServiceLocator.GetService<AnimationOptimizationService>();
+                var animationService = SimpleServiceLocator.GetService<AnimationOptimizationService>();
                 if (animationService != null)
                 {
                     // Set performance level based on system capabilities
@@ -270,7 +269,7 @@ namespace MandADiscoverySuite
         private void SetupGlobalExceptionHandling()
         {
             // Create detailed log file
-            var logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MandADiscoverySuite", "Logs");
+            var logPath = @"C:\DiscoveryData\ljpops\Logs";
             Directory.CreateDirectory(logPath);
             var logFile = Path.Combine(logPath, $"MandADiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.log");
             
@@ -392,7 +391,7 @@ namespace MandADiscoverySuite
                 _startupService?.Dispose();
                 
                 // Clean up service container
-                ServiceLocator.Dispose();
+                SimpleServiceLocator.Clear();
             }
             catch
             {

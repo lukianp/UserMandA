@@ -436,7 +436,7 @@ namespace MandADiscoverySuite.ViewModels
 
                 // Perform path validation asynchronously, but create window on UI thread
                 string launcherScriptPath = null;
-                string companyName = "DefaultCompany";
+                string companyName = "ljpops";
 
                 await Task.Run(() =>
                 {

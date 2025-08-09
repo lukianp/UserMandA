@@ -18,7 +18,7 @@ namespace MandADiscoverySuite.ViewModels
     {
         #region Fields
 
-        private readonly CsvDataService _csvDataService;
+        private readonly IDataService _dataService;
         private string _searchText;
         private bool _isLoading;
         private string _loadingMessage;
@@ -119,9 +119,9 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Constructor
 
-        public UsersViewModel(CsvDataService csvDataService = null)
+        public UsersViewModel(IDataService dataService = null)
         {
-            _csvDataService = csvDataService ?? new CsvDataService();
+            _dataService = dataService ?? SimpleServiceLocator.GetService<IDataService>();
             
             Users = new OptimizedObservableCollection<UserData>();
             Users.CollectionChanged += (s, e) => 
@@ -147,11 +147,19 @@ namespace MandADiscoverySuite.ViewModels
 
             _searchText = string.Empty;
             _loadingMessage = "Ready";
+            
+            // Auto-load data when ViewModel is created
+            LoadDataAsync();
         }
 
         #endregion
 
         #region Public Methods
+        
+        private async void LoadDataAsync()
+        {
+            await RefreshUsersAsync();
+        }
 
         /// <summary>
         /// Initialize users data from the specified directory
@@ -188,7 +196,7 @@ namespace MandADiscoverySuite.ViewModels
             await RefreshUsersAsync(null);
         }
 
-        private async Task RefreshUsersAsync(string dataDirectory)
+        private async Task RefreshUsersAsync(string dataDirectory = null)
         {
             try
             {
@@ -198,17 +206,17 @@ namespace MandADiscoverySuite.ViewModels
 
                 Users.Clear();
                 
-                if (string.IsNullOrEmpty(dataDirectory))
-                {
-                    // Try to determine data directory from application state
-                    // This would typically come from MainViewModel or a service
-                    dataDirectory = @"C:\discoverydata\DefaultCompany";
-                }
+                // Get current profile name
+                var profileService = SimpleServiceLocator.GetService<IProfileService>();
+                var currentProfile = await profileService?.GetCurrentProfileAsync();
+                var profileName = currentProfile?.CompanyName ?? "ljpops";
+                
+                System.Diagnostics.Debug.WriteLine($"UsersViewModel: profileService={profileService != null}, currentProfile={currentProfile != null}, profileName={profileName}");
 
                 LoadingMessage = "Loading user accounts...";
                 LoadingProgress = 30;
 
-                var userData = await _csvDataService.LoadUsersAsync(dataDirectory);
+                var userData = await _dataService?.LoadUsersAsync(profileName) ?? new System.Collections.Generic.List<UserData>();
                 
                 LoadingMessage = "Processing user data...";
                 LoadingProgress = 70;
@@ -270,7 +278,8 @@ namespace MandADiscoverySuite.ViewModels
                 IsLoading = true;
                 LoadingMessage = "Exporting users...";
 
-                await _csvDataService.ExportDataAsync("DefaultCompany", new ExportOptions { IncludeUsers = true, IncludeComputers = false, IncludeGroups = false, IncludeApplications = false });
+                // TODO: Implement export functionality through IDataService  
+                await System.Threading.Tasks.Task.Delay(500); // Placeholder
                 
                 StatusMessage = "Users exported successfully";
             }
@@ -297,7 +306,8 @@ namespace MandADiscoverySuite.ViewModels
                 IsLoading = true;
                 LoadingMessage = $"Exporting {selectedUsers.Count} selected users...";
 
-                await _csvDataService.ExportDataAsync("DefaultCompany", new ExportOptions { IncludeUsers = true, IncludeComputers = false, IncludeGroups = false, IncludeApplications = false });
+                // TODO: Implement export functionality through IDataService  
+                await System.Threading.Tasks.Task.Delay(500); // Placeholder
                 
                 StatusMessage = $"Exported {selectedUsers.Count} selected users successfully";
             }

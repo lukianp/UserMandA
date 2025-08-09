@@ -164,13 +164,11 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(ProfileName))
+                var validationResult = InputValidationService.Instance.ValidateCompanyName(ProfileName);
+                
+                if (!validationResult.IsValid)
                 {
-                    ShowValidationError("Company name is required");
-                }
-                else if (ProfileName.Length < 2)
-                {
-                    ShowValidationError("Company name must be at least 2 characters");
+                    ShowValidationError(validationResult.GetSummaryMessage());
                 }
                 else
                 {

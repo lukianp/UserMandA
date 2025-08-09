@@ -40,8 +40,7 @@ namespace MandADiscoverySuite.Services
 
         private ErrorHandlingService()
         {
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var logDirectory = Path.Combine(appDataPath, "MandADiscoverySuite", "Logs");
+            var logDirectory = @"C:\DiscoveryData\ljpops\Logs";
             Directory.CreateDirectory(logDirectory);
             
             _logFilePath = Path.Combine(logDirectory, $"error_log_{DateTime.Now:yyyyMMdd}.txt");

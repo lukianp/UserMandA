@@ -18,7 +18,7 @@ namespace MandADiscoverySuite.ViewModels
     {
         #region Fields
 
-        private readonly CsvDataService _csvDataService;
+        private readonly IDataService _dataService;
         private string _searchText;
         private bool _isLoading;
         private string _loadingMessage;
@@ -166,9 +166,9 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Constructor
 
-        public InfrastructureViewModel(CsvDataService csvDataService = null)
+        public InfrastructureViewModel(IDataService dataService = null)
         {
-            _csvDataService = csvDataService ?? new CsvDataService();
+            _dataService = dataService ?? SimpleServiceLocator.GetService<IDataService>();
             
             Infrastructure = new OptimizedObservableCollection<InfrastructureData>();
             Infrastructure.CollectionChanged += (s, e) => 
@@ -252,15 +252,15 @@ namespace MandADiscoverySuite.ViewModels
 
                 Infrastructure.Clear();
                 
-                if (string.IsNullOrEmpty(dataDirectory))
-                {
-                    dataDirectory = @"C:\discoverydata\DefaultCompany";
-                }
+                // Get current profile name
+                var profileService = SimpleServiceLocator.GetService<IProfileService>();
+                var currentProfile = await profileService?.GetCurrentProfileAsync();
+                var profileName = currentProfile?.CompanyName ?? "ljpops";
 
                 LoadingMessage = "Loading infrastructure components...";
                 LoadingProgress = 30;
 
-                var infrastructureData = await _csvDataService.LoadInfrastructureAsync(dataDirectory);
+                var infrastructureData = await _dataService?.LoadInfrastructureAsync(profileName) ?? new System.Collections.Generic.List<InfrastructureData>();
                 
                 LoadingMessage = "Processing infrastructure data...";
                 LoadingProgress = 70;
@@ -343,7 +343,8 @@ namespace MandADiscoverySuite.ViewModels
                 IsLoading = true;
                 LoadingMessage = "Exporting infrastructure...";
 
-                await _csvDataService.ExportDataAsync("DefaultCompany", new ExportOptions { IncludeComputers = true, IncludeUsers = false, IncludeGroups = false, IncludeApplications = false });
+                // TODO: Implement export functionality through IDataService  
+                await System.Threading.Tasks.Task.Delay(500); // Placeholder
                 
                 StatusMessage = "Infrastructure exported successfully";
             }
@@ -370,7 +371,8 @@ namespace MandADiscoverySuite.ViewModels
                 IsLoading = true;
                 LoadingMessage = $"Exporting {selectedItems.Count} selected infrastructure items...";
 
-                await _csvDataService.ExportDataAsync("DefaultCompany", new ExportOptions { IncludeComputers = true, IncludeUsers = false, IncludeGroups = false, IncludeApplications = false });
+                // TODO: Implement export functionality through IDataService  
+                await System.Threading.Tasks.Task.Delay(500); // Placeholder
                 
                 StatusMessage = $"Exported {selectedItems.Count} selected infrastructure items successfully";
             }

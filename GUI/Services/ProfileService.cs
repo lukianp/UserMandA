@@ -241,8 +241,8 @@ namespace MandADiscoverySuite.Services
             if (string.IsNullOrWhiteSpace(companyName))
                 throw new ArgumentException("Company name cannot be null or empty", nameof(companyName));
 
-            // Profile data is stored in C:\discoverydata\{companyName}
-            return Path.Combine(@"C:\discoverydata", companyName);
+            // Profile data is stored in DiscoveryData directory
+            return ConfigurationService.Instance.GetCompanyDataPath(companyName);
         }
 
         /// <summary>

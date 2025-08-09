@@ -49,7 +49,25 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// The root directory where discovery data is stored
         /// </summary>
-        public string DiscoveryDataRootPath { get; set; } = @"C:\DiscoveryData";
+        public string DiscoveryDataRootPath 
+        { 
+            get => _discoveryDataRootPath; 
+            set 
+            {
+                // Prevent setting to current working directory which causes path issues
+                if (!string.IsNullOrWhiteSpace(value) && value != Environment.CurrentDirectory)
+                {
+                    _discoveryDataRootPath = value;
+                    System.Diagnostics.Debug.WriteLine($"ConfigurationService: DiscoveryDataRootPath set to: {value}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"ConfigurationService: Rejected setting DiscoveryDataRootPath to current directory: {value}");
+                }
+            }
+        }
+        
+        private string _discoveryDataRootPath = @"C:\DiscoveryData";
 
         /// <summary>
         /// Gets the discovery data path for a specific company (handles case insensitivity)

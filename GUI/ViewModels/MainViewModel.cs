@@ -532,6 +532,13 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand EditProfileCommand { get; }
         public ICommand DeleteProfileCommand { get; }
         public ICommand NavigateCommand { get; }
+        public ICommand ShowUsersViewCommand { get; }
+        public ICommand ShowGroupsViewCommand { get; }
+        public ICommand ShowComputersViewCommand { get; }
+        public ICommand ShowInfrastructureViewCommand { get; }
+        public ICommand ShowDiscoveryViewCommand { get; }
+        public ICommand ShowDashboardViewCommand { get; }
+        public ICommand ShowApplicationsViewCommand { get; }
         public ICommand ToggleModuleCommand { get; }
         public ICommand ConfigureModuleCommand { get; }
         public ICommand ExportResultsCommand { get; }
@@ -657,6 +664,14 @@ namespace MandADiscoverySuite.ViewModels
         // Snapshot & Comparison Commands
         public ICommand ShowSnapshotComparisonCommand { get; }
 
+        // Advanced UI Features Commands
+        public ICommand ShowWhatIfSimulationCommand { get; }
+        public ICommand ShowTaskSchedulerCommand { get; }
+        public ICommand ShowNotesTaggingCommand { get; }
+        public ICommand ShowRiskAnalysisCommand { get; }
+        public ICommand ShowDataExportManagerCommand { get; }
+        public ICommand ShowBulkEditCommand { get; }
+
         #endregion
 
         #region Constructor
@@ -698,15 +713,15 @@ namespace MandADiscoverySuite.ViewModels
             // Handle case when ServiceLocator is not initialized for debugging/testing
             try
             {
-                _discoveryService = discoveryService ?? ServiceLocator.GetService<IDiscoveryService>();
-                _profileService = profileService ?? ServiceLocator.GetService<IProfileService>();
-                _dataService = dataService ?? ServiceLocator.GetService<IDataService>();
-                _csvDataService = csvDataService ?? ServiceLocator.GetService<CsvDataService>();
-                _themeService = themeService ?? ServiceLocator.GetService<ThemeService>();
-                _lazyViewLoadingService = lazyViewLoadingService ?? ServiceLocator.GetService<LazyViewLoadingService>();
-                _dispatcherService = ServiceLocator.GetService<DispatcherOptimizationService>() ?? new DispatcherOptimizationService();
-                _uiThrottleService = ServiceLocator.GetService<UIUpdateThrottleService>() ?? new UIUpdateThrottleService();
-                _cacheService = ServiceLocator.GetService<IntelligentCacheService>() ?? new IntelligentCacheService();
+                _discoveryService = discoveryService ?? SimpleServiceLocator.GetService<IDiscoveryService>();
+                _profileService = profileService ?? SimpleServiceLocator.GetService<IProfileService>();
+                _dataService = dataService ?? SimpleServiceLocator.GetService<IDataService>();
+                _csvDataService = csvDataService ?? SimpleServiceLocator.GetService<CsvDataService>();
+                _themeService = themeService ?? SimpleServiceLocator.GetService<ThemeService>();
+                _lazyViewLoadingService = lazyViewLoadingService ?? SimpleServiceLocator.GetService<LazyViewLoadingService>();
+                _dispatcherService = SimpleServiceLocator.GetService<DispatcherOptimizationService>() ?? new DispatcherOptimizationService();
+                _uiThrottleService = SimpleServiceLocator.GetService<UIUpdateThrottleService>() ?? new UIUpdateThrottleService();
+                _cacheService = SimpleServiceLocator.GetService<IntelligentCacheService>() ?? new IntelligentCacheService();
             }
             catch (Exception ex)
             {
@@ -773,6 +788,13 @@ namespace MandADiscoverySuite.ViewModels
             EditProfileCommand = new RelayCommand<CompanyProfile>(EditProfile);
             DeleteProfileCommand = new RelayCommand<CompanyProfile>(DeleteProfile);
             NavigateCommand = new RelayCommand<string>(Navigate);
+            ShowUsersViewCommand = new RelayCommand(() => OpenTab("users"));
+            ShowGroupsViewCommand = new RelayCommand(() => OpenTab("groups"));
+            ShowComputersViewCommand = new RelayCommand(() => OpenTab("infrastructure"));
+            ShowInfrastructureViewCommand = new RelayCommand(() => OpenTab("infrastructure"));
+            ShowDiscoveryViewCommand = new RelayCommand(() => OpenTab("discovery"));
+            ShowDashboardViewCommand = new RelayCommand(() => OpenTab("dashboard"));
+            ShowApplicationsViewCommand = new RelayCommand(() => OpenTab("applications"));
             ToggleModuleCommand = new RelayCommand<string>(ToggleModule);
             ConfigureModuleCommand = new RelayCommand<DiscoveryModuleViewModel>(ConfigureModule);
             ExportResultsCommand = new AsyncRelayCommand(ExportResultsAsync);
@@ -905,6 +927,14 @@ namespace MandADiscoverySuite.ViewModels
             // Initialize Snapshot & Comparison commands
             ShowSnapshotComparisonCommand = new RelayCommand(() => OpenTab("snapshotcomparison"));
 
+            // Initialize Advanced UI Features commands
+            ShowWhatIfSimulationCommand = new RelayCommand(() => OpenTab("whatif"));
+            ShowTaskSchedulerCommand = new RelayCommand(() => OpenTab("taskscheduler"));
+            ShowNotesTaggingCommand = new RelayCommand(() => OpenTab("notestagging"));
+            ShowRiskAnalysisCommand = new RelayCommand(() => OpenTab("riskanalysis"));
+            ShowDataExportManagerCommand = new RelayCommand(() => OpenTab("dataexportmanager"));
+            ShowBulkEditCommand = new RelayCommand(() => OpenTab("bulkedit"));
+
             // Initialize refresh service
             _refreshService = RefreshService.Instance;
             _refreshService.RefreshRequested += OnRefreshRequested;
@@ -919,9 +949,11 @@ namespace MandADiscoverySuite.ViewModels
             _progressTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _progressTimer.Tick += ProgressTimer_Tick;
 
-            // Initialize auto-refresh timer for detailed data (every 5 seconds)
-            _dataRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            // Initialize auto-refresh timer for detailed data (disabled to prevent log spam)
+            // DISABLED: Causing excessive errors and log spam
+            _dataRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) }; // Increased from 5 to 30 seconds
             _dataRefreshTimer.Tick += DataRefreshTimer_Tick;
+            // Don't start the timer automatically - only start when user requests data refresh
 
             // Initialize TDI with default Dashboard tab
             OpenTab("dashboard");
@@ -1020,21 +1052,38 @@ namespace MandADiscoverySuite.ViewModels
                 StatusMessage = "Initializing application...";
                 
                 // Load company profiles
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Loading company profiles...");
                 await LoadCompanyProfilesAsync();
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Company profiles loaded successfully");
                 
                 // Initialize discovery modules
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Initializing discovery modules...");
                 InitializeDiscoveryModules();
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Discovery modules initialized successfully");
                 
                 // Initialize dashboard metrics
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Initializing dashboard metrics...");
                 InitializeDashboardMetrics();
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Dashboard metrics initialized successfully");
                 
                 // Start dashboard timer
-                _dashboardTimer.Start();
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Starting dashboard timer...");
+                _dashboardTimer?.Start();
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Dashboard timer started successfully");
+                
+                // Load initial data if a profile is selected
+                if (SelectedProfile != null)
+                {
+                    System.Diagnostics.Debug.WriteLine("InitializeAsync: Loading initial discovery data...");
+                    await LoadDiscoveryResultsAsync();
+                    System.Diagnostics.Debug.WriteLine("InitializeAsync: Initial discovery data loaded successfully");
+                }
                 
                 StatusMessage = "Application ready";
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"InitializeAsync: Exception occurred: {ex}");
                 StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Application initialization");
             }
         }
@@ -1057,21 +1106,69 @@ namespace MandADiscoverySuite.ViewModels
 
         private async Task LoadCompanyProfilesAsync()
         {
-            var profiles = await _profileService.GetProfilesAsync();
-            
-            Application.Current.Dispatcher.Invoke(() =>
+            try
             {
-                CompanyProfiles.Clear();
+                System.Diagnostics.Debug.WriteLine("=== LoadCompanyProfilesAsync START ===");
+                StatusMessage = "Loading company profiles...";
+                
+                if (_profileService == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("ERROR: ProfileService is NULL!");
+                    ErrorHandlingService.Instance.HandleException(new InvalidOperationException("ProfileService is null"), "LoadCompanyProfiles");
+                    return;
+                }
+                
+                System.Diagnostics.Debug.WriteLine("Getting profiles from ProfileService...");
+                var profiles = await _profileService.GetProfilesAsync();
+                System.Diagnostics.Debug.WriteLine($"ProfileService returned {profiles?.Count() ?? 0} profiles");
+                
+                if (profiles == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("WARNING: ProfileService.GetProfilesAsync() returned null");
+                    profiles = new List<CompanyProfile>();
+                }
+                
+                // Log each profile for debugging
                 foreach (var profile in profiles)
                 {
-                    CompanyProfiles.Add(profile);
+                    System.Diagnostics.Debug.WriteLine($"Profile loaded: {profile?.CompanyName ?? "NULL"}, Active: {profile?.IsActive ?? false}");
                 }
-
-                if (CompanyProfiles.Count > 0 && SelectedProfile == null)
+                
+                Application.Current.Dispatcher.Invoke(() =>
                 {
-                    SelectedProfile = CompanyProfiles.First();
-                }
-            });
+                    System.Diagnostics.Debug.WriteLine($"Updating CompanyProfiles collection (current count: {CompanyProfiles.Count})");
+                    CompanyProfiles.Clear();
+                    foreach (var profile in profiles.ToList())  // ToList to avoid collection modification issues
+                    {
+                        if (profile != null)
+                        {
+                            CompanyProfiles.Add(profile);
+                            System.Diagnostics.Debug.WriteLine($"  - Added to UI: {profile.CompanyName}");
+                        }
+                    }
+
+                    System.Diagnostics.Debug.WriteLine($"CompanyProfiles now has {CompanyProfiles.Count} items");
+                    
+                    if (CompanyProfiles.Count > 0 && SelectedProfile == null)
+                    {
+                        SelectedProfile = CompanyProfiles.First();
+                        System.Diagnostics.Debug.WriteLine($"Selected default profile: {SelectedProfile.CompanyName}");
+                    }
+                    else if (CompanyProfiles.Count == 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine("WARNING: No company profiles loaded!");
+                        StatusMessage = "No company profiles found. Please create one.";
+                    }
+                });
+                
+                System.Diagnostics.Debug.WriteLine("=== LoadCompanyProfilesAsync COMPLETE ===");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ERROR in LoadCompanyProfilesAsync: {ex}");
+                ErrorHandlingService.Instance.HandleException(ex, "LoadCompanyProfiles");
+                StatusMessage = "Error loading company profiles";
+            }
         }
 
         private async void InitializeDiscoveryModules()
@@ -1228,6 +1325,19 @@ namespace MandADiscoverySuite.ViewModels
                 _progressTimer.Stop();
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
+                
+                // Reset all module statuses to Ready when discovery ends
+                foreach (var module in DiscoveryModules)
+                {
+                    if (module.Status == DiscoveryModuleStatus.Running)
+                    {
+                        module.Status = DiscoveryModuleStatus.Ready;
+                        module.Progress = 0;
+                        module.LastMessage = "Ready";
+                    }
+                }
+                
+                CurrentOperation = "Ready";
             }
         }
 
@@ -1236,6 +1346,27 @@ namespace MandADiscoverySuite.ViewModels
             _cancellationTokenSource?.Cancel();
             CurrentOperation = "Stopping discovery...";
             StatusMessage = "Discovery stop requested";
+            
+            // Reset discovery state immediately to unblock UI
+            IsDiscoveryRunning = false;
+            OverallProgress = 0;
+            _progressTimer?.Stop();
+            
+            // Reset all module statuses to Ready to reflect reality
+            foreach (var module in DiscoveryModules)
+            {
+                module.Status = DiscoveryModuleStatus.Ready;
+                module.Progress = 0;
+                module.LastMessage = "Ready";
+            }
+            
+            // Update status after resetting modules
+            CurrentOperation = "Ready";
+            StatusMessage = "Discovery stopped - all modules ready";
+            
+            // Cleanup
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
         }
 
         private void UpdateDiscoveryProgress(DiscoveryProgress progress)
@@ -1433,12 +1564,21 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                // Only refresh if we have a selected profile and we're not currently running discovery
+                // Only refresh if we have a selected profile, we're not currently running discovery, and data actually exists
                 if (SelectedProfile != null && !IsDiscoveryRunning)
                 {
-                    // Throttle data refresh to prevent excessive loading operations
-                    _uiThrottleService.Throttle("data-refresh", TimeSpan.FromSeconds(1), 
-                        () => Task.Run(async () => await LoadDetailedDataAsync()), DispatcherPriority.Background);
+                    // Check if the profile has a valid data directory before attempting refresh
+                    var dataPath = Path.Combine(ConfigurationService.Instance.DiscoveryDataRootPath, SelectedProfile.CompanyName, "Raw");
+                    if (Directory.Exists(dataPath) && Directory.GetFiles(dataPath, "*.csv").Length > 0)
+                    {
+                        // Throttle data refresh to prevent excessive loading operations
+                        _uiThrottleService.Throttle("data-refresh", TimeSpan.FromSeconds(5), 
+                            () => Task.Run(async () => await LoadDetailedDataAsync()), DispatcherPriority.Background);
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"DataRefreshTimer: No data found for profile '{SelectedProfile.CompanyName}' at '{dataPath}'");
+                    }
                 }
             }
             catch (Exception ex)
@@ -1489,8 +1629,32 @@ namespace MandADiscoverySuite.ViewModels
 
         private void OnSelectedProfileChanged()
         {
+            // Reset discovery state when switching profiles to prevent lockouts
+            if (IsDiscoveryRunning)
+            {
+                _cancellationTokenSource?.Cancel();
+                IsDiscoveryRunning = false;
+                CurrentOperation = "Ready";
+                OverallProgress = 0;
+                _progressTimer?.Stop();
+                
+                // Reset all module statuses to Ready to reflect reality
+                foreach (var module in DiscoveryModules)
+                {
+                    module.Status = DiscoveryModuleStatus.Ready;
+                    module.Progress = 0;
+                    module.LastMessage = "Ready";
+                }
+            }
+            
             StatusMessage = SelectedProfile != null ? $"Selected profile: {SelectedProfile.CompanyName}" : "No profile selected";
             OnPropertyChanged(nameof(CanStartDiscovery));
+            
+            // Sync with ProfileService to ensure GetCurrentProfileAsync returns the selected profile
+            if (SelectedProfile != null)
+            {
+                _ = Task.Run(async () => await _profileService.SetCurrentProfileAsync(SelectedProfile.CompanyName));
+            }
 
             // Start or stop data refresh timer based on profile selection
             if (SelectedProfile != null)
@@ -1503,6 +1667,10 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     try
                     {
+                        // Create sample data if profile directory exists but has no CSV files
+                        var sampleDataService = new SampleDataService();
+                        await sampleDataService.CreateSampleDataIfMissingAsync(SelectedProfile.CompanyName);
+                        
                         await LoadDiscoveryResultsAsync();
                         await LoadDetailedDataAsync();
                     }
@@ -1599,11 +1767,19 @@ namespace MandADiscoverySuite.ViewModels
 
         private void DashboardTimer_Tick(object sender, EventArgs e)
         {
-            if (!IsDiscoveryRunning)
+            try
             {
-                // Throttle dashboard updates to prevent excessive UI redraws
-                _uiThrottleService.Throttle("dashboard-metrics", TimeSpan.FromMilliseconds(250), 
-                    () => UpdateDashboardMetrics(), DispatcherPriority.Background);
+                if (!IsDiscoveryRunning && _uiThrottleService != null)
+                {
+                    // Throttle dashboard updates to prevent excessive UI redraws
+                    _uiThrottleService.Throttle("dashboard-metrics", TimeSpan.FromMilliseconds(250), 
+                        () => UpdateDashboardMetrics(), DispatcherPriority.Background);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DashboardTimer_Tick error: {ex}");
+                // Don't let dashboard timer errors crash the application
             }
         }
 
@@ -1694,11 +1870,17 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine("=== CreateProfileAsync START ===");
+                StatusMessage = "Opening create profile dialog...";
+                
                 // Show the proper create profile dialog
                 var createDialog = new CreateProfileDialog();
+                System.Diagnostics.Debug.WriteLine("Create profile dialog created");
+                
                 if (createDialog.ShowDialog() == true)
                 {
                     var companyName = createDialog.ProfileName;
+                    System.Diagnostics.Debug.WriteLine($"Creating profile: {companyName}");
                     
                     var newProfile = new Models.CompanyProfile
                     {
@@ -1709,26 +1891,43 @@ namespace MandADiscoverySuite.ViewModels
                         IsActive = true,
                         Description = $"Profile for {companyName}"
                     };
+                    System.Diagnostics.Debug.WriteLine($"Profile object created: {newProfile.CompanyName}");
 
                     // Save profile directly
+                    System.Diagnostics.Debug.WriteLine("Saving profile to ProfileService...");
                     await _profileService.CreateProfileAsync(newProfile);
+                    System.Diagnostics.Debug.WriteLine("Profile saved successfully");
                     
                     // Add to collection and select
                     Application.Current.Dispatcher.Invoke(() =>
                     {
+                        System.Diagnostics.Debug.WriteLine($"Adding profile to UI collection...");
                         CompanyProfiles.Add(newProfile);
                         SelectedProfile = newProfile;
+                        
+                        // Force property notifications to ensure UI updates
+                        OnPropertyChanged(nameof(CompanyProfiles));
+                        OnPropertyChanged(nameof(SelectedProfile));
+                        System.Diagnostics.Debug.WriteLine($"Profile added to UI. Collection count: {CompanyProfiles.Count}");
                     });
 
                     // Create the directory structure in C:\discoverydata
+                    System.Diagnostics.Debug.WriteLine($"Creating directory structure for {companyName}");
                     CreateDiscoveryDataStructure(companyName);
 
                     StatusMessage = $"Created new profile: {newProfile.CompanyName}";
                     ShowNotification($"Profile '{companyName}' created successfully");
+                    System.Diagnostics.Debug.WriteLine("=== CreateProfileAsync COMPLETE ===");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("Profile creation cancelled by user");
                 }
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"ERROR in CreateProfileAsync: {ex}");
+                ErrorHandlingService.Instance.HandleException(ex, "CreateProfile");
                 StatusMessage = $"Failed to create profile: {ex.Message}";
             }
         }
@@ -1834,7 +2033,10 @@ This directory is strictly for storing discovery results and company data.
         private async void DeleteProfile(CompanyProfile profile)
         {
             if (profile == null)
-                throw new ArgumentNullException(nameof(profile));
+            {
+                StatusMessage = "No profile selected to delete";
+                return;
+            }
 
             try
             {
@@ -1893,9 +2095,19 @@ This directory is strictly for storing discovery results and company data.
         private void ToggleModule(string moduleName)
         {
             if (string.IsNullOrWhiteSpace(moduleName))
-                throw new ArgumentException("Module name cannot be null or empty", nameof(moduleName));
+            {
+                StatusMessage = "Module name cannot be null or empty";
+                return;
+            }
 
             var module = DiscoveryModules.FirstOrDefault(m => m.ModuleName == moduleName);
+            if (module == null)
+            {
+                StatusMessage = $"Module '{moduleName}' not found";
+                System.Diagnostics.Debug.WriteLine($"ToggleModule: Module '{moduleName}' not found. Available modules: {string.Join(", ", DiscoveryModules.Select(m => m.ModuleName))}");
+                return;
+            }
+            
             ToggleModule(module);
         }
 
@@ -2065,8 +2277,14 @@ This directory is strictly for storing discovery results and company data.
         {
             try
             {
-                _themeService?.ToggleTheme();
-                IsDarkTheme = _themeService?.CurrentTheme == ThemeMode.Dark;
+                var themeManager = Themes.ThemeManager.Instance;
+                var currentTheme = themeManager.CurrentTheme;
+                var newTheme = currentTheme == Themes.ThemeType.Dark 
+                    ? Themes.ThemeType.Light 
+                    : Themes.ThemeType.Dark;
+                
+                themeManager.ApplyTheme(newTheme);
+                IsDarkTheme = newTheme == Themes.ThemeType.Dark;
             }
             catch (Exception ex)
             {
@@ -2090,7 +2308,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Starting Azure App Registration setup...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetAppRegistrationScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2151,7 +2369,7 @@ This directory is strictly for storing discovery results and company data.
         {
             try
             {
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var dataPath = ConfigurationService.Instance.GetCompanyDataPath(companyName);
                 
                 if (Directory.Exists(dataPath))
@@ -2212,7 +2430,7 @@ This directory is strictly for storing discovery results and company data.
                 StatusMessage = "Opening user details...";
                 
                 // Get raw data path for current company
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var rawDataPath = ConfigurationService.Instance.GetCompanyRawDataPath(companyName);
                 
                 var dialog = new UserDetailWindow(parameter, rawDataPath);
@@ -2314,34 +2532,21 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Starting domain scan...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
-                if (System.IO.File.Exists(scriptPath))
-                {
-                    var powerShellWindow = new PowerShellWindow(
-                        scriptPath,
-                        "Multi-Domain Forest Discovery",
-                        $"Comprehensive domain and forest discovery for {companyName}",
-                        "-ModuleName", "MultiDomainForestDiscovery",
-                        "-CompanyName", companyName
-                    );
-                    powerShellWindow.Show();
-                    StatusMessage = "Domain discovery launched";
-                }
-                else
-                {
-                    var errorMessage = $"Discovery launcher script not found at: {scriptPath}";
-                    ErrorHandlingService.Instance.HandleException(
-                        new System.IO.FileNotFoundException(errorMessage, scriptPath), 
-                        "Launching domain discovery", 
-                        true);
-                    StatusMessage = "Discovery script not found - check installation";
-                }
+                LaunchDiscoveryModuleWithLogging(
+                    scriptPath,
+                    "MultiDomainForestDiscovery",
+                    "Multi-Domain Forest Discovery",
+                    $"Comprehensive domain and forest discovery for {companyName}",
+                    companyName
+                );
             }
             catch (Exception ex)
             {
                 StatusMessage = $"Domain scan failed: {ex.Message}";
+                ErrorHandlingService.Instance.HandleException(ex, "Domain scan");
             }
         }
 
@@ -2351,34 +2556,21 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Performing DNS lookup...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
-                if (System.IO.File.Exists(scriptPath))
-                {
-                    var powerShellWindow = new PowerShellWindow(
-                        scriptPath,
-                        "DNS Infrastructure Discovery",
-                        $"DNS server and zone discovery for {companyName}",
-                        "-ModuleName", "DNSDiscovery",
-                        "-CompanyName", companyName
-                    );
-                    powerShellWindow.Show();
-                    StatusMessage = "DNS discovery launched";
-                }
-                else
-                {
-                    var errorMessage = $"Discovery launcher script not found at: {scriptPath}";
-                    ErrorHandlingService.Instance.HandleException(
-                        new System.IO.FileNotFoundException(errorMessage, scriptPath), 
-                        "Launching DNS discovery", 
-                        true);
-                    StatusMessage = "Discovery script not found - check installation";
-                }
+                LaunchDiscoveryModuleWithLogging(
+                    scriptPath,
+                    "DNSDiscovery",
+                    "DNS Infrastructure Discovery",
+                    $"DNS server and zone discovery for {companyName}",
+                    companyName
+                );
             }
             catch (Exception ex)
             {
                 StatusMessage = $"DNS lookup failed: {ex.Message}";
+                ErrorHandlingService.Instance.HandleException(ex, "DNS lookup");
             }
         }
 
@@ -2388,7 +2580,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Enumerating subdomains...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2426,7 +2618,7 @@ This directory is strictly for storing discovery results and company data.
                 StatusMessage = "Starting file server scan...";
                 
                 // Launch PowerShell script for file server discovery
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2463,7 +2655,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Analyzing network shares...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2500,7 +2692,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Generating storage report...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2537,7 +2729,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Starting database scan...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2577,7 +2769,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Analyzing SQL Server configurations...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2617,7 +2809,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Generating database report...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2657,7 +2849,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Checking database versions...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2697,7 +2889,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Starting Group Policy scan...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2737,7 +2929,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Starting security audit...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2777,7 +2969,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Running compliance check...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2817,7 +3009,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Starting vulnerability assessment...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -2894,7 +3086,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Analyzing firewall configuration...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -3009,7 +3201,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Starting application discovery...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -3099,7 +3291,7 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = "Analyzing application dependencies...";
                 
-                var companyName = SelectedProfile?.CompanyName ?? "DefaultCompany";
+                var companyName = SelectedProfile?.CompanyName ?? "ljpops";
                 var scriptPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                 
                 if (System.IO.File.Exists(scriptPath))
@@ -3334,8 +3526,8 @@ This directory is strictly for storing discovery results and company data.
         {
             var filtered = _allApplications.AsEnumerable();
             
-            // Applications don't have search text property yet, so just update the collection
-            // TODO: Add ApplicationSearchText property if needed
+            // Applications filtering - could be extended with search text filtering if needed
+            // For now, just refresh the collection
             
             Applications.Clear();
             foreach (var app in filtered)
@@ -4026,11 +4218,16 @@ This directory is strictly for storing discovery results and company data.
         private async Task<IEnumerable<GroupData>> LoadGroupsDataAsync()
         {
             // Use the existing CSV loading functionality
-            return await Task.Run(() =>
+            return await Task.Run(async () =>
             {
                 try
                 {
-                    return _allGroups.AsEnumerable();
+                    if (SelectedProfile == null)
+                        return Enumerable.Empty<GroupData>();
+                    
+                    var dataPath = Path.Combine(@"C:\DiscoveryData", SelectedProfile.CompanyName, "Raw");
+                    var groupsData = await _csvDataService.LoadGroupsAsync(dataPath);
+                    return groupsData;
                 }
                 catch (Exception ex)
                 {
@@ -4115,11 +4312,17 @@ This directory is strictly for storing discovery results and company data.
                     case "users":
                         tabViewModel = new UsersViewModel { TabTitle = "Users" };
                         break;
+                    case "computers":
+                        tabViewModel = new ComputersViewModel { TabTitle = "Computers" };
+                        break;
                     case "infrastructure":
                         tabViewModel = new InfrastructureViewModel { TabTitle = "Infrastructure" };
                         break;
                     case "groups":
                         tabViewModel = new GroupsViewModel { TabTitle = "Groups" };
+                        break;
+                    case "applications":
+                        tabViewModel = new ApplicationsViewModel { TabTitle = "Applications" };
                         break;
                     case "discovery":
                         tabViewModel = new DiscoveryViewModel { TabTitle = "Discovery" };
@@ -4127,11 +4330,60 @@ This directory is strictly for storing discovery results and company data.
                     case "snapshotcomparison":
                         tabViewModel = new SnapshotComparisonViewModel { TabTitle = "Snapshot Comparison" };
                         break;
+                    case "whatif":
+                        var whatIfService = SimpleServiceLocator.GetService<IWhatIfSimulationService>();
+                        tabViewModel = new WhatIfSimulationViewModel(whatIfService) { TabTitle = "What-If Simulation" };
+                        break;
+                    case "taskscheduler":
+                        var taskSchedulerService = SimpleServiceLocator.GetService<ITaskSchedulerService>();
+                        tabViewModel = new TaskSchedulerViewModel(taskSchedulerService) { TabTitle = "Task Scheduler" };
+                        break;
+                    case "notestagging":
+                        var notesTaggingService = SimpleServiceLocator.GetService<INotesTaggingService>();
+                        tabViewModel = new NotesTaggingViewModel(notesTaggingService) { TabTitle = "Notes & Tags" };
+                        break;
+                    case "riskanalysis":
+                        var riskAnalysisService = SimpleServiceLocator.GetService<IRiskAnalysisService>();
+                        tabViewModel = new RiskAnalysisViewModel(riskAnalysisService) { TabTitle = "Risk Analysis" };
+                        break;
+                    case "dataexportmanager":
+                        tabViewModel = new DataExportManagerViewModel() { TabTitle = "Data Export Manager" };
+                        break;
+                    case "bulkedit":
+                        tabViewModel = new BulkEditViewModel() { TabTitle = "Bulk Edit" };
+                        break;
                     case "ganttchart":
                         tabViewModel = new GanttChartViewModel { TabTitle = "Gantt Chart" };
                         break;
                     case "reportbuilder":
                         tabViewModel = new ReportBuilderViewModel { TabTitle = "Report Builder" };
+                        break;
+                    case "reports":
+                        tabViewModel = new ReportBuilderViewModel { TabTitle = "Reports" };
+                        break;
+                    case "domaindiscovery":
+                        tabViewModel = new DiscoveryViewModel { TabTitle = "Domain Discovery" };
+                        break;
+                    case "fileservers":
+                        tabViewModel = new InfrastructureViewModel { TabTitle = "File Servers" };
+                        break;
+                    case "databases":
+                        tabViewModel = new InfrastructureViewModel { TabTitle = "Databases" };
+                        break;
+                    case "security":
+                        tabViewModel = new GroupsViewModel { TabTitle = "Security" };
+                        break;
+                    case "waves":
+                        tabViewModel = new DashboardViewModel { TabTitle = "Waves" };
+                        break;
+                    case "migrate":
+                        tabViewModel = new DashboardViewModel { TabTitle = "Migrate" };
+                        break;
+                    case "analytics":
+                        tabViewModel = new DashboardViewModel { TabTitle = "Analytics" };
+                        break;
+                    case "settings":
+                        tabViewModel = new DashboardViewModel { TabTitle = "Settings" };
                         break;
                     default:
                         Logger?.LogWarning("Unknown view type for tab: {ViewType}", viewType);
@@ -4140,6 +4392,9 @@ This directory is strictly for storing discovery results and company data.
 
                 if (tabViewModel != null)
                 {
+                    // Hide legacy views when using TDI system
+                    CurrentView = null;
+                    
                     // Check if tab is already open
                     var existingTab = OpenTabs.FirstOrDefault(t => t.TabTitle == tabViewModel.TabTitle);
                     if (existingTab != null)
@@ -4369,6 +4624,104 @@ This directory is strictly for storing discovery results and company data.
             }
             
             base.OnDisposing();
+        }
+
+        #endregion
+
+        #region Discovery Module Logging Helper
+
+        /// <summary>
+        /// Creates and shows a PowerShell window with comprehensive logging
+        /// </summary>
+        /// <param name="scriptPath">Path to the PowerShell script</param>
+        /// <param name="moduleName">Name of the module being launched</param>
+        /// <param name="displayName">Display name for the window</param>
+        /// <param name="description">Description of what the module does</param>
+        /// <param name="companyName">Company name parameter</param>
+        /// <param name="additionalArgs">Additional arguments to pass to the script</param>
+        /// <returns>True if launched successfully, false otherwise</returns>
+        private bool LaunchDiscoveryModuleWithLogging(string scriptPath, string moduleName, string displayName, string description, string companyName, params string[] additionalArgs)
+        {
+            try
+            {
+                // Log the launch attempt
+                var logMessage = $"Attempting to launch discovery module: {moduleName} for company: {companyName}";
+                var logArgs = $"Script: {scriptPath}, Args: {string.Join(", ", new[] { "-ModuleName", moduleName, "-CompanyName", companyName }.Concat(additionalArgs))}";
+                
+                // Log to application logs
+                System.Diagnostics.Debug.WriteLine($"[DISCOVERY] {logMessage}");
+                System.Diagnostics.Debug.WriteLine($"[DISCOVERY] {logArgs}");
+                
+                // Log to error handling service for persistence
+                try 
+                {
+                    // Create a fake info exception just to get it into the logs
+                    var infoEx = new InvalidOperationException($"Discovery module launch: {moduleName}");
+                    ErrorHandlingService.Instance.HandleException(infoEx, $"Discovery Module Launch - {moduleName}", false);
+                }
+                catch { /* Ignore logging errors */ }
+
+                // Check if script exists
+                if (!System.IO.File.Exists(scriptPath))
+                {
+                    var errorMessage = $"Discovery launcher script not found at: {scriptPath}";
+                    System.Diagnostics.Debug.WriteLine($"[DISCOVERY ERROR] {errorMessage}");
+                    
+                    ErrorHandlingService.Instance.HandleException(
+                        new System.IO.FileNotFoundException(errorMessage, scriptPath),
+                        $"Launching {moduleName}",
+                        true);
+                    
+                    StatusMessage = $"{moduleName} script not found - check installation";
+                    return false;
+                }
+
+                // Build arguments array
+                var args = new List<string> { "-ModuleName", moduleName, "-CompanyName", companyName };
+                if (additionalArgs != null && additionalArgs.Length > 0)
+                {
+                    args.AddRange(additionalArgs);
+                }
+
+                // Create and show the PowerShell window
+                var powerShellWindow = new PowerShellWindow(
+                    scriptPath,
+                    displayName,
+                    description,
+                    args.ToArray()
+                );
+
+                // Log successful creation
+                System.Diagnostics.Debug.WriteLine($"[DISCOVERY SUCCESS] PowerShell window created for {moduleName}");
+                
+                // Show the window
+                powerShellWindow.Show();
+                
+                // Log successful launch
+                System.Diagnostics.Debug.WriteLine($"[DISCOVERY SUCCESS] PowerShell window shown for {moduleName}");
+                StatusMessage = $"{displayName} launched successfully";
+                
+                // Log success to error handling service
+                try 
+                {
+                    var successEx = new InvalidOperationException($"Discovery module launched successfully: {moduleName}");
+                    ErrorHandlingService.Instance.HandleException(successEx, $"Discovery Module Success - {moduleName}", false);
+                }
+                catch { /* Ignore logging errors */ }
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Log the error
+                var errorMessage = $"Failed to launch discovery module {moduleName}: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"[DISCOVERY ERROR] {errorMessage}");
+                System.Diagnostics.Debug.WriteLine($"[DISCOVERY ERROR] Exception: {ex}");
+                
+                ErrorHandlingService.Instance.HandleException(ex, $"Launching {moduleName}");
+                StatusMessage = $"Failed to launch {displayName}: {ex.Message}";
+                return false;
+            }
         }
 
         #endregion
