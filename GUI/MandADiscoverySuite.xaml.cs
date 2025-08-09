@@ -1052,6 +1052,26 @@ Tips:
             MessageBox.Show("Dependency analysis initiated.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
+        private void VulnerabilitiesColumnChooser_Click(object sender, RoutedEventArgs e)
+        {
+            var columnChooserWindow = new Window
+            {
+                Title = "Choose Columns - Vulnerabilities",
+                Width = 350,
+                Height = 450,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this
+            };
+
+            var columnChooser = new Controls.ColumnChooser
+            {
+                TargetDataGrid = VulnerabilitiesDataGrid
+            };
+
+            columnChooserWindow.Content = columnChooser;
+            columnChooserWindow.ShowDialog();
+        }
+
         /// <summary>
         /// Handles clicking outside the Command Palette to close it
         /// </summary>

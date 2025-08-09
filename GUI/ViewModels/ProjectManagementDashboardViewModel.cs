@@ -124,7 +124,7 @@ namespace MandADiscoverySuite.ViewModels
                 .SelectMany(p => p.Components)
                 .SelectMany(c => c.Tasks)
                 .Count(t => t.Name?.IndexOf("migration", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                            t.Status != TaskStatus.Completed);
+                            t.Status != Models.TaskStatus.Completed);
             PendingMigrations = count;
         }
 

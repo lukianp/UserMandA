@@ -4717,7 +4717,23 @@
                                 
                                 <!-- Vulnerabilities Results -->
                                 <Grid x:Name="VulnerabilitiesResultsPanel" Visibility="Collapsed">
-                                    <DataGrid x:Name="VulnerabilitiesDataGrid" Style="{StaticResource ModernDataGridStyle}"
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Toolbar with Column Chooser -->
+                                    <Border Grid.Row="0" Background="#FF2D3748" Padding="8,4">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button x:Name="VulnerabilitiesColumnChooserButton" Content="⚙ Columns" 
+                                                    Click="VulnerabilitiesColumnChooser_Click"
+                                                    Background="#FF4A5568" Foreground="#FFE2E8F0" 
+                                                    BorderBrush="#FF63B3ED" Padding="8,4" Margin="4,0"
+                                                    ToolTip="Choose which columns to display"/>
+                                        </StackPanel>
+                                    </Border>
+                                    
+                                    <DataGrid Grid.Row="1" x:Name="VulnerabilitiesDataGrid" Style="{StaticResource ModernDataGridStyle}"
                                               Height="300"
                                               behaviors:VirtualizationBehavior.EnableVirtualization="True"
                                               behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"

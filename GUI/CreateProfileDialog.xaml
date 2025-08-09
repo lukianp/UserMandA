@@ -12,8 +12,10 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="Styles/ValidationStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             <converters:ValidationLevelToColorConverter x:Key="ValidationLevelToColorConverter"/>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         </ResourceDictionary>
     </Window.Resources>
     <Grid Margin="20">
@@ -35,14 +37,54 @@
         </StackPanel>
         
         <StackPanel Grid.Row="2">
-            <TextBox x:Name="ProfileNameTextBox" 
-                     Style="{StaticResource ThemedTextBoxStyle}"
-                     Padding="10,8"
-                     KeyDown="ProfileNameTextBox_KeyDown"
-                     TextChanged="ProfileNameTextBox_TextChanged"
-                     Tag="Required field: Enter a company name"/>
+            <Border x:Name="TextBoxBorder" BorderThickness="2" CornerRadius="4">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ValidationLevel}" Value="Error">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                                            To="#FFDC2626" Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ValidationLevel}" Value="Warning">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                                            To="#FFED8936" Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ValidationLevel}" Value="Success">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                                            To="#FF48BB78" Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBox x:Name="ProfileNameTextBox" 
+                         Style="{StaticResource ThemedTextBoxStyle}"
+                         Padding="10,8"
+                         BorderThickness="0"
+                         KeyDown="ProfileNameTextBox_KeyDown"
+                         TextChanged="ProfileNameTextBox_TextChanged"
+                         Tag="Required field: Enter a company name"/>
+            </Border>
             <TextBlock x:Name="ProfileNameValidationText" 
-                       Style="{StaticResource ThemedValidationTextStyle}"
+                       Style="{StaticResource ValidationMessageStyle}"
                        Text="{Binding ValidationMessage}"
                        Foreground="{Binding ValidationLevel, Converter={StaticResource ValidationLevelToColorConverter}}"
                        Margin="0,4,0,16"

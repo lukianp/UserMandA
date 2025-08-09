@@ -418,7 +418,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Current refresh status for the active view
         /// </summary>
-        public RefreshStatus CurrentRefreshStatus => _refreshService?.ViewStatuses.TryGetValue(CurrentView, out var status) == true ? status : null;
+        public RefreshStatus CurrentRefreshStatus => !string.IsNullOrEmpty(CurrentView) && _refreshService?.ViewStatuses.TryGetValue(CurrentView, out var status) == true ? status : null;
 
         /// <summary>
         /// Can start discovery operation
@@ -1691,12 +1691,15 @@ namespace MandADiscoverySuite.ViewModels
 
         private async void OnCurrentViewChanged()
         {
-            ShowNotification($"Switched to {CurrentView} view");
-            
-            // Initialize view if it hasn't been loaded yet
-            if (_lazyViewLoadingService != null && !_lazyViewLoadingService.IsViewInitialized(CurrentView))
+            if (!string.IsNullOrEmpty(CurrentView))
             {
-                await _lazyViewLoadingService.InitializeViewAsync(CurrentView);
+                ShowNotification($"Switched to {CurrentView} view");
+                
+                // Initialize view if it hasn't been loaded yet
+                if (_lazyViewLoadingService != null && !_lazyViewLoadingService.IsViewInitialized(CurrentView))
+                {
+                    await _lazyViewLoadingService.InitializeViewAsync(CurrentView);
+                }
             }
             
             // Notify all visibility properties
@@ -2035,6 +2038,7 @@ This directory is strictly for storing discovery results and company data.
             if (profile == null)
             {
                 StatusMessage = "No profile selected to delete";
+                System.Diagnostics.Debug.WriteLine("DeleteProfile: Attempted to delete null profile");
                 return;
             }
 
@@ -2085,7 +2089,11 @@ This directory is strictly for storing discovery results and company data.
         private void ToggleModule(DiscoveryModuleViewModel module)
         {
             if (module == null)
-                throw new ArgumentNullException(nameof(module));
+            {
+                StatusMessage = "Cannot toggle null module";
+                System.Diagnostics.Debug.WriteLine("ToggleModule: Attempted to toggle null module");
+                return;
+            }
 
             module.IsEnabled = !module.IsEnabled;
             OnPropertyChanged(nameof(EnabledModulesCount));

@@ -673,8 +673,6 @@ namespace MandADiscoverySuite.Models
         public string Id { get; set; }
         public string ObjectType { get; set; }
         public List<string> UserIds { get; set; } = new List<string>();
-        public List<string> UserIds { get; set; } = new List<string>();
-        public List<string> UserIds { get; set; } = new List<string>();
 
         public bool IsSelected
         {

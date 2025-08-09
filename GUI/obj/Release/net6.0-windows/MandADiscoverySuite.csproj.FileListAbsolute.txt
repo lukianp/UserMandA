@@ -147,6 +147,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\AdvancedFilteringUI
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\AnimatedMetricCard.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\BreadcrumbNavigation.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\BusyIndicator.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\ColumnChooser.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\CommandPalette.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\CompactModeToggle.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\CustomizableDashboard.baml
@@ -164,6 +165,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\HealthScoreVisualiz
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\ImprovedProgressOverlay.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\InteractiveNetworkGraph.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\KeyboardShortcutsDialog.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\LoadingOverlay.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\NotificationCenter.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\OptimizedFormPanel.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\OptimizedImage.baml
@@ -200,6 +202,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Styles\FocusVisualStyles.bam
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Styles\OptimizedDataGridStyles.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Styles\RefinedDataGridStyles.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Styles\ScrollBarStyles.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Styles\ValidationStyles.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Templates\LightweightControlTemplates.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\TestWindow.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Themes\CustomTooltips.baml
@@ -212,6 +215,8 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Themes\RefinedColorPalette.b
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Themes\SpacingSystem.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Themes\ThemeStyles.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\UserDetailWindow.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ApplicationInventoryView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AssetInventoryView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\BulkEditView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ColumnChooserDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ComputersView.baml
@@ -222,7 +227,6 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GroupsView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\KeyboardShortcutsView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\NotesTaggingView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\PhaseTrackerView.baml
-D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ProjectManagementDashboard.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\RiskAnalysisView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ShortcutEditDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SnapshotComparisonView.baml
@@ -235,6 +239,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\AdvancedFilteringUI
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\AnimatedMetricCard.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\BreadcrumbNavigation.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\BusyIndicator.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\ColumnChooser.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\CommandPalette.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\CompactModeToggle.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\CustomizableDashboard.g.cs
@@ -254,6 +259,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\HealthScoreVisualiz
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\ImprovedProgressOverlay.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\InteractiveNetworkGraph.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\KeyboardShortcutsDialog.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\LoadingOverlay.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\NotificationCenter.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\OptimizedFormPanel.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Controls\OptimizedImage.g.cs
@@ -287,6 +293,8 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\RefreshSettingsDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\TestWindow.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\UserDetailWindow.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AdvancedFilterView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ApplicationInventoryView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AssetInventoryView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\BulkEditView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ColumnChooserDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ComputersView.g.cs
@@ -328,6 +336,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Themes\OptimizedGridLayouts.
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Themes\OptimizedImages.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AdvancedFilterView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DependencyGraphView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ProjectManagementDashboard.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ProjectManagementView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ReportBuilderView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ScriptEditorView.baml
