@@ -9,6 +9,32 @@ using MandADiscoverySuite.Models;
 
 namespace MandADiscoverySuite.Services
 {
+    internal static class PowerShellHelper
+    {
+        public static string GetPowerShellPath()
+        {
+            // Try PowerShell Core first (pwsh.exe)
+            var pwshPath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\PowerShell\7\pwsh.exe");
+            if (System.IO.File.Exists(pwshPath))
+                return pwshPath;
+
+            // Try PowerShell Core in PATH
+            var pathEnv = Environment.GetEnvironmentVariable("PATH");
+            if (!string.IsNullOrEmpty(pathEnv))
+            {
+                foreach (var path in pathEnv.Split(';'))
+                {
+                    var pwshInPath = System.IO.Path.Combine(path, "pwsh.exe");
+                    if (System.IO.File.Exists(pwshInPath))
+                        return pwshInPath;
+                }
+            }
+
+            // Fall back to Windows PowerShell
+            return "powershell.exe";
+        }
+    }
+
     /// <summary>
     /// Service for managing discovery operations
     /// </summary>
@@ -815,7 +841,7 @@ namespace MandADiscoverySuite.Services
 
             var startInfo = new ProcessStartInfo
             {
-                FileName = "powershell.exe",
+                FileName = PowerShellHelper.GetPowerShellPath(),
                 Arguments = args,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,

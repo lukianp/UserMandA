@@ -11,6 +11,29 @@ namespace MandADiscoverySuite
 {
     public partial class PowerShellWindow : Window
     {
+        private static string GetPowerShellPath()
+        {
+            // Try PowerShell Core first (pwsh.exe)
+            var pwshPath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\PowerShell\7\pwsh.exe");
+            if (File.Exists(pwshPath))
+                return pwshPath;
+
+            // Try PowerShell Core in PATH
+            var pathEnv = Environment.GetEnvironmentVariable("PATH");
+            if (!string.IsNullOrEmpty(pathEnv))
+            {
+                foreach (var path in pathEnv.Split(';'))
+                {
+                    var pwshInPath = Path.Combine(path, "pwsh.exe");
+                    if (File.Exists(pwshInPath))
+                        return pwshInPath;
+                }
+            }
+
+            // Fall back to Windows PowerShell
+            return "powershell.exe";
+        }
+
         private Process? powerShellProcess;
         private CancellationTokenSource? cancellationTokenSource;
         private string scriptPath;
@@ -118,7 +141,7 @@ namespace MandADiscoverySuite
 
             var startInfo = new ProcessStartInfo
             {
-                FileName = "powershell.exe",
+                FileName = GetPowerShellPath(),
                 Arguments = arguments,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
