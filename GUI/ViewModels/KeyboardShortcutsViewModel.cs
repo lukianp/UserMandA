@@ -113,7 +113,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        public bool IsLoading
+        public new bool IsLoading
         {
             get => _isLoading;
             set => SetProperty(ref _isLoading, value);
@@ -139,7 +139,7 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand LoadPresetCommand { get; private set; }
         public ICommand SavePresetCommand { get; private set; }
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             RefreshCommand = new RelayCommand(async () => await LoadDataAsync());
             SaveSettingsCommand = new RelayCommand(async () => await SaveSettingsAsync(), () => Settings != null);

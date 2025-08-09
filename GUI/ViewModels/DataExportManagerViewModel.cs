@@ -182,7 +182,7 @@ namespace MandADiscoverySuite.ViewModels
             ExportDescription = "Data export";
         }
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             SelectAllExportsCommand = new RelayCommand(SelectAllExports);
             ClearExportSelectionCommand = new RelayCommand(ClearExportSelection);

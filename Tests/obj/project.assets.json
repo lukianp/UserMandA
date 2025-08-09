@@ -3510,7 +3510,7 @@
         "type": "project",
         "framework": ".NETCoreApp,Version=v6.0",
         "dependencies": {
-          "AvalonEdit": "6.2.0",
+          "AvalonEdit": "6.2.0.78",
           "CommunityToolkit.Mvvm": "8.2.2",
           "Microsoft.Extensions.Configuration": "6.0.1",
           "Microsoft.Extensions.Configuration.Json": "6.0.0",
@@ -9879,17 +9879,5 @@
         "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.428\\RuntimeIdentifierGraph.json"
       }
     }
-  },
-  "logs": [
-    {
-      "code": "NU1603",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "MandADiscoverySuite depends on AvalonEdit (>= 6.2.0) but AvalonEdit 6.2.0 was not found. An approximate best match of AvalonEdit 6.2.0.78 was resolved.",
-      "libraryId": "AvalonEdit",
-      "targetGraphs": [
-        "net6.0-windows7.0"
-      ]
-    }
-  ]
+  }
 }

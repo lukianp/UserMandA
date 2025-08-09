@@ -200,6 +200,14 @@ namespace MandADiscoverySuite.Services
                     if (!result.Contains("ERROR"))
                     {
                         TaskStarted?.Invoke(this, new TaskEventArgs(taskName, "Task started"));
+                        
+                        // Monitor task completion - in a real implementation, you might poll or use event logs
+                        // For now, we'll simulate completion after a brief delay
+                        Task.Delay(100).ContinueWith(_ =>
+                        {
+                            TaskCompleted?.Invoke(this, new TaskEventArgs(taskName, "Task completed"));
+                        });
+                        
                         return true;
                     }
                 }
@@ -219,13 +227,18 @@ namespace MandADiscoverySuite.Services
                 try
                 {
                     var result = ExecuteSchTasksCommand($"schtasks /end /tn \"{taskName}\"");
-                    return !result.Contains("ERROR");
+                    if (!result.Contains("ERROR"))
+                    {
+                        TaskCompleted?.Invoke(this, new TaskEventArgs(taskName, "Task stopped"));
+                        return true;
+                    }
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Error stopping task '{taskName}': {ex.Message}");
-                    return false;
+                    TaskFailed?.Invoke(this, new TaskEventArgs(taskName, $"Failed to stop task: {ex.Message}"));
                 }
+                return false;
             });
         }
 

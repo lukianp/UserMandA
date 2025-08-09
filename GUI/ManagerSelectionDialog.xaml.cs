@@ -95,7 +95,7 @@ namespace MandADiscoverySuite
             }
         }
 
-        private async Task<List<UserInfo>> GetManagersFromDirectoryAsync()
+        private Task<List<UserInfo>> GetManagersFromDirectoryAsync()
         {
             // In a real implementation, this would query Active Directory or Azure AD
             // For now, return sample data
@@ -175,7 +175,7 @@ namespace MandADiscoverySuite
                 }
             };
 
-            return managers;
+            return Task.FromResult(managers);
         }
 
         private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)

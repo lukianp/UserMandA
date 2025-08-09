@@ -34,7 +34,7 @@ namespace MandADiscoverySuite.Services
             _dataPath = Path.Combine(appData, "MandADiscoverySuite", "WhatIfSimulations");
             Directory.CreateDirectory(_dataPath);
             
-            LoadSimulationsAsync();
+            _ = LoadSimulationsAsync();
         }
 
         #region Simulation Management

@@ -34,8 +34,8 @@ namespace MandADiscoverySuite
             return "powershell.exe";
         }
 
-        private Process? powerShellProcess;
-        private CancellationTokenSource? cancellationTokenSource;
+        private Process powerShellProcess;
+        private CancellationTokenSource cancellationTokenSource;
         private string scriptPath;
         private string[] scriptArguments;
 

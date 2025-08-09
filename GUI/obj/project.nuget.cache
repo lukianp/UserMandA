@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "Vvkuec/PMR9TvILooihp4dDW1B0dGuJYTTB2mwZImlmtxJkuLl2lPXasNSvB60six6zgh43gpttcBfxsJwlSNQ==",
+  "dgSpecHash": "xLjYW/4ZXlZ8jgFDrFxfzAfi4DK3as/7hj+UH/bV9viFk8SMr6zlKU1hOmPKcg2CKG015FlL2ENiMNJN/tcUgA==",
   "success": true,
   "projectFilePath": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
   "expectedPackageFiles": [
@@ -139,16 +139,5 @@
     "C:\\Users\\lukia\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.4\\system.threading.tasks.extensions.4.5.4.nupkg.sha512",
     "C:\\Users\\lukia\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1603",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "MandADiscoverySuite depends on AvalonEdit (>= 6.2.0) but AvalonEdit 6.2.0 was not found. An approximate best match of AvalonEdit 6.2.0.78 was resolved.",
-      "libraryId": "AvalonEdit",
-      "targetGraphs": [
-        "net6.0-windows7.0"
-      ]
-    }
-  ]
+  "logs": []
 }

@@ -481,6 +481,9 @@ namespace MandADiscoverySuite.Services
                 
                 _runningTasks.TryAdd(taskItem.Id, taskItem);
                 
+                // Increment active task count
+                Interlocked.Increment(ref _activeTaskCount);
+                
                 OnTaskStarted?.Invoke(taskItem);
                 
                 // Create progress reporter
@@ -528,6 +531,9 @@ namespace MandADiscoverySuite.Services
                         _runningTasks.TryRemove(taskItem.Id, out _);
                         _completedTasks.TryAdd(taskItem.Id, taskItem);
                         
+                        // Decrement active task count
+                        Interlocked.Decrement(ref _activeTaskCount);
+                        
                         // Clean up
                         taskItem.CancellationTokenSource?.Dispose();
                     }
@@ -543,6 +549,9 @@ namespace MandADiscoverySuite.Services
                 taskItem.CompletedAt = DateTime.UtcNow;
                 taskItem.ErrorMessage = ex.Message;
                 taskItem.Exception = ex;
+                
+                // Decrement active task count since we incremented it but the task failed to start
+                Interlocked.Decrement(ref _activeTaskCount);
                 
                 _completedTasks.TryAdd(taskItem.Id, taskItem);
             }

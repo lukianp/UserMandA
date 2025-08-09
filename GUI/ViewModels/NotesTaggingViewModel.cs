@@ -68,7 +68,7 @@ namespace MandADiscoverySuite.ViewModels
             InitializeFilter();
             
             // Load data
-            LoadDataAsync();
+            _ = LoadDataAsync();
         }
 
         #region Properties
@@ -134,7 +134,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _noteSearchText, value))
                 {
-                    SearchNotesAsync(value);
+                    _ = SearchNotesAsync(value);
                 }
             }
         }
@@ -146,7 +146,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _tagSearchText, value))
                 {
-                    SearchTagsAsync(value);
+                    _ = SearchTagsAsync(value);
                 }
             }
         }
@@ -329,7 +329,7 @@ namespace MandADiscoverySuite.ViewModels
             NoteTypeStats = new Dictionary<NoteType, int>();
         }
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             // View commands
             ShowNotesViewCommand = new RelayCommand(() => IsNotesView = true);

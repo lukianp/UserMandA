@@ -25,7 +25,7 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _timestamp, value);
         }
 
-        public string ErrorMessage
+        public new string ErrorMessage
         {
             get => _errorMessage;
             set => SetProperty(ref _errorMessage, value);
@@ -81,7 +81,7 @@ namespace MandADiscoverySuite.ViewModels
             InitializeCommands();
         }
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             ToggleDetailsCommand = new RelayCommand(ToggleDetails);
             CloseCommand = new RelayCommand(() => DialogClosed?.Invoke(this, ErrorDialogResult.Close));

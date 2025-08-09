@@ -39,7 +39,7 @@ namespace MandADiscoverySuite.ViewModels
             Recommendations = new ObservableCollection<RecommendationItem>();
 
             InitializeCommands();
-            LoadHealthScoresAsync();
+            _ = LoadHealthScoresAsync();
         }
 
         #region Properties

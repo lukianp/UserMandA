@@ -71,7 +71,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _searchText, value))
                 {
-                    FilterItemsAsync();
+                    _ = FilterItemsAsync();
                 }
             }
         }
@@ -83,7 +83,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _selectedFilter, value))
                 {
-                    FilterItemsAsync();
+                    _ = FilterItemsAsync();
                 }
             }
         }
@@ -118,7 +118,7 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _isLoading, value);
         }
 
-        public string LoadingMessage
+        public new string LoadingMessage
         {
             get => _loadingMessage;
             set => SetProperty(ref _loadingMessage, value);

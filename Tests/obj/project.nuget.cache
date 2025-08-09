@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "c4fDEIAcZCoFKefWaobKENjU1YbfXhmtkqBaN2UXVhXNv/DXPzHDxvlnpEzRPpA2DjflU2qBvO/s91xsOjrS2g==",
+  "dgSpecHash": "Igujhs/YYvY38wMBp3L59qsagNJMx0E4ClAAek9f93laTb/EF93+AY+xAEra1kahqx7gqleG5aFcYKx6N4w/8g==",
   "success": true,
   "projectFilePath": "D:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj",
   "expectedPackageFiles": [
@@ -179,16 +179,5 @@
     "C:\\Users\\lukia\\.nuget\\packages\\xunit.extensibility.execution\\2.6.1\\xunit.extensibility.execution.2.6.1.nupkg.sha512",
     "C:\\Users\\lukia\\.nuget\\packages\\xunit.runner.visualstudio\\2.4.5\\xunit.runner.visualstudio.2.4.5.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1603",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "MandADiscoverySuite depends on AvalonEdit (>= 6.2.0) but AvalonEdit 6.2.0 was not found. An approximate best match of AvalonEdit 6.2.0.78 was resolved.",
-      "libraryId": "AvalonEdit",
-      "targetGraphs": [
-        "net6.0-windows7.0"
-      ]
-    }
-  ]
+  "logs": []
 }

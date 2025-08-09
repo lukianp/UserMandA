@@ -142,6 +142,7 @@ namespace MandADiscoverySuite.Controls
             if (filter != null)
             {
                 ActiveFilters.Remove(filter);
+                FilterRemovalRequested?.Invoke(this, new FilterRemovedEventArgs(filter));
                 UpdateFilterState();
             }
         }
@@ -155,6 +156,7 @@ namespace MandADiscoverySuite.Controls
             foreach (var filter in filtersToRemove)
             {
                 ActiveFilters.Remove(filter);
+                FilterRemovalRequested?.Invoke(this, new FilterRemovedEventArgs(filter));
             }
             UpdateFilterState();
         }

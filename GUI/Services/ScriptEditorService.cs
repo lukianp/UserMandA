@@ -60,6 +60,10 @@ namespace MandADiscoverySuite.Services
 
             options = options ?? new PowerShellExecutionOptions();
             
+            // Create a new cancellation token source for this execution
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            
             var result = new ScriptExecutionResult
             {
                 Timestamp = DateTime.Now,
@@ -150,9 +154,9 @@ namespace MandADiscoverySuite.Services
                         var executeTask = Task.Run(() =>
                         {
                             return _currentExecution.BeginInvoke<PSObject, PSObject>(null, outputCollection);
-                        }, cancellationToken);
+                        }, _cancellationTokenSource.Token);
 
-                        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(options.TimeoutSeconds), cancellationToken);
+                        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(options.TimeoutSeconds), _cancellationTokenSource.Token);
                         var completedTask = await Task.WhenAny(executeTask, timeoutTask);
 
                         if (completedTask == timeoutTask)
@@ -199,6 +203,13 @@ namespace MandADiscoverySuite.Services
                 stopwatch.Stop();
                 result.ExecutionTime = stopwatch.Elapsed;
                 _currentExecution = null;
+                
+                // Clean up the cancellation token source
+                if (_cancellationTokenSource != null)
+                {
+                    _cancellationTokenSource.Dispose();
+                    _cancellationTokenSource = null;
+                }
             }
 
             _executionHistory.Insert(0, result);

@@ -70,7 +70,7 @@ namespace MandADiscoverySuite.ViewModels
             }
             
             // Load initial data
-            LoadAvailableGraphsAsync();
+            _ = LoadAvailableGraphsAsync();
         }
 
         #region Properties
@@ -311,7 +311,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Command Methods
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             NewGraphCommand = new RelayCommand(async () => await NewGraphAsync());
             LoadGraphCommand = new RelayCommand<DependencyGraph>(async graph => await LoadGraphAsync(graph));

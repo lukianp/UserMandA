@@ -81,7 +81,7 @@ namespace MandADiscoverySuite.ViewModels
             InitializeCommands();
             
             // Load initial data
-            LoadDataAsync();
+            _ = LoadDataAsync();
         }
 
         #region Properties
@@ -117,7 +117,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _selectedRisk, value))
                 {
-                    LoadRiskDetailsAsync();
+                    _ = LoadRiskDetailsAsync();
                 }
             }
         }
@@ -171,7 +171,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _searchText, value))
                 {
-                    SearchRisksAsync();
+                    _ = SearchRisksAsync();
                 }
             }
         }
@@ -202,7 +202,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _selectedCategory, value))
                 {
-                    ApplyFiltersAsync();
+                    _ = ApplyFiltersAsync();
                 }
             }
         }
@@ -214,7 +214,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _selectedLevel, value))
                 {
-                    ApplyFiltersAsync();
+                    _ = ApplyFiltersAsync();
                 }
             }
         }
@@ -226,7 +226,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _selectedStatus, value))
                 {
-                    ApplyFiltersAsync();
+                    _ = ApplyFiltersAsync();
                 }
             }
         }
@@ -238,7 +238,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _selectedOwner, value))
                 {
-                    ApplyFiltersAsync();
+                    _ = ApplyFiltersAsync();
                 }
             }
         }
@@ -426,7 +426,7 @@ namespace MandADiscoverySuite.ViewModels
             ComplianceScores = new Dictionary<string, double>();
         }
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             // View commands
             RefreshDataCommand = new AsyncRelayCommand(LoadDataAsync);

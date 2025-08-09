@@ -49,6 +49,11 @@ namespace MandADiscoverySuite
                 FreezeStaticBrushes();
                 logAction?.Invoke("Static brushes frozen successfully");
                 
+                // Initialize startup optimization service
+                logAction?.Invoke("Initializing startup optimization service...");
+                _startupService = SimpleServiceLocator.GetService<StartupOptimizationService>();
+                logAction?.Invoke("Startup optimization service initialized");
+                
                 // Initialize keyboard shortcuts
                 logAction?.Invoke("Initializing keyboard shortcuts...");
                 InitializeKeyboardShortcuts();

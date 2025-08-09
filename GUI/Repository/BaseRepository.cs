@@ -455,13 +455,13 @@ namespace MandADiscoverySuite.Repository
 
         #region Advanced Operations
 
-        public virtual async Task<IEnumerable<TResult>> ExecuteQueryAsync<TResult>(string sql, params object[] parameters)
+        public virtual Task<IEnumerable<TResult>> ExecuteQueryAsync<TResult>(string sql, params object[] parameters)
         {
             // For in-memory implementation, throw not supported
             throw new NotSupportedException("Raw SQL queries are not supported in in-memory repository");
         }
 
-        public virtual async Task<int> ExecuteCommandAsync(string sql, params object[] parameters)
+        public virtual Task<int> ExecuteCommandAsync(string sql, params object[] parameters)
         {
             // For in-memory implementation, throw not supported
             throw new NotSupportedException("Raw SQL commands are not supported in in-memory repository");

@@ -41,7 +41,7 @@ namespace MandADiscoverySuite.ViewModels
             CanClose = true;
             
             // Load data
-            LoadApplicationsAsync();
+            _ = LoadApplicationsAsync();
         }
 
         #region Properties
@@ -78,7 +78,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Whether applications are currently loading
         /// </summary>
-        public bool IsLoading
+        public new bool IsLoading
         {
             get => _isLoading;
             set => SetProperty(ref _isLoading, value);
@@ -87,7 +87,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Loading message
         /// </summary>
-        public string LoadingMessage
+        public new string LoadingMessage
         {
             get => _loadingMessage;
             set => SetProperty(ref _loadingMessage, value);

@@ -38,7 +38,7 @@ namespace MandADiscoverySuite.ViewModels
             // Initialize commands
             AddRuleCommand = new RelayCommand(AddRule);
             RemoveRuleCommand = new RelayCommand<FilterRule>(RemoveRule);
-            ApplyFilterCommand = new AsyncRelayCommand(ApplyFilterAsync);
+            ApplyFilterCommand = new RelayCommand(ApplyFilter);
             ClearFilterCommand = new RelayCommand(ClearFilter);
             SaveFilterCommand = new AsyncRelayCommand(SaveFilterAsync);
             LoadFilterCommand = new RelayCommand<FilterConfiguration>(LoadFilter);
@@ -133,7 +133,7 @@ namespace MandADiscoverySuite.ViewModels
 
         public ICommand AddRuleCommand { get; }
         public ICommand RemoveRuleCommand { get; }
-        public AsyncRelayCommand ApplyFilterCommand { get; }
+        public ICommand ApplyFilterCommand { get; }
         public ICommand ClearFilterCommand { get; }
         public AsyncRelayCommand SaveFilterCommand { get; }
         public ICommand LoadFilterCommand { get; }
@@ -198,7 +198,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task ApplyFilterAsync()
+        private void ApplyFilter()
         {
             try
             {

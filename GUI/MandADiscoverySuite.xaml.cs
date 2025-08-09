@@ -114,25 +114,27 @@ namespace MandADiscoverySuite
                 // Register views with lazy loading service
                 if (dashboardView != null)
                 {
-                    ViewModel.SetupLazyView("Dashboard", dashboardView, async () =>
+                    ViewModel.SetupLazyView("Dashboard", dashboardView, () =>
                     {
                         // Initialize dashboard data when first viewed
                         if (ViewModel.RefreshDashboardCommand != null && ViewModel.RefreshDashboardCommand.CanExecute(null))
                         {
                             ViewModel.RefreshDashboardCommand.Execute(null);
                         }
+                        return Task.CompletedTask;
                     });
                 }
 
                 if (usersView != null)
                 {
-                    ViewModel.SetupLazyView("Users", usersView, async () =>
+                    ViewModel.SetupLazyView("Users", usersView, () =>
                     {
                         // Initialize users data when first viewed
                         if (ViewModel.RefreshUsersCommand != null && ViewModel.RefreshUsersCommand.CanExecute(null))
                         {
                             ViewModel.RefreshUsersCommand.Execute(null);
                         }
+                        return Task.CompletedTask;
                     });
                 }
 
@@ -148,25 +150,27 @@ namespace MandADiscoverySuite
 
                 if (infrastructureView != null)
                 {
-                    ViewModel.SetupLazyView("Infrastructure", infrastructureView, async () =>
+                    ViewModel.SetupLazyView("Infrastructure", infrastructureView, () =>
                     {
                         // Initialize infrastructure data when first viewed
                         if (ViewModel.RefreshInfrastructureCommand != null && ViewModel.RefreshInfrastructureCommand.CanExecute(null))
                         {
                             ViewModel.RefreshInfrastructureCommand.Execute(null);
                         }
+                        return Task.CompletedTask;
                     });
                 }
 
                 if (groupsView != null)
                 {
-                    ViewModel.SetupLazyView("Groups", groupsView, async () =>
+                    ViewModel.SetupLazyView("Groups", groupsView, () =>
                     {
                         // Initialize groups data when first viewed
                         if (ViewModel.RefreshGroupsCommand != null && ViewModel.RefreshGroupsCommand.CanExecute(null))
                         {
                             ViewModel.RefreshGroupsCommand.Execute(null);
                         }
+                        return Task.CompletedTask;
                     });
                 }
 

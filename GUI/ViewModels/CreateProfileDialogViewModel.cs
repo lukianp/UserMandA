@@ -71,7 +71,7 @@ namespace MandADiscoverySuite.ViewModels
             InitializeCommands();
         }
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             CreateCommand = new AsyncRelayCommand(CreateProfileAsync, CanCreateProfile);
             CancelCommand = new RelayCommand(Cancel);

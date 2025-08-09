@@ -155,7 +155,7 @@ namespace MandADiscoverySuite.ViewModels
             SelectedCategory = BulkEditCategory.Notes;
         }
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             LoadCategoryCommand = new AsyncRelayCommand<BulkEditCategory?>(LoadCategoryAsync);
             SelectAllItemsCommand = new RelayCommand(SelectAllItems);

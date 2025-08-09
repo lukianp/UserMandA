@@ -99,7 +99,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Loading progress message
         /// </summary>
-        public string LoadingMessage
+        public new string LoadingMessage
         {
             get => _loadingMessage;
             set => SetProperty(ref _loadingMessage, value);
@@ -197,7 +197,7 @@ namespace MandADiscoverySuite.ViewModels
             _loadingMessage = "Ready";
             
             // Auto-load data when ViewModel is created
-            LoadDataAsync();
+            _ = LoadDataAsync();
         }
 
         #endregion

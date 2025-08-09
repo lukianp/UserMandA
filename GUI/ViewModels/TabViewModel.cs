@@ -416,7 +416,7 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         public TabType TabType { get; set; }
-        public bool CanClose { get; set; } = true;
+        public new bool CanClose { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime LastAccessed { get; set; } = DateTime.Now;
     }

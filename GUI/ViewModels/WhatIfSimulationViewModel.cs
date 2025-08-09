@@ -64,7 +64,7 @@ namespace MandADiscoverySuite.ViewModels
 
             TabTitle = "What-If Simulation";
             InitializeCommands();
-            LoadSimulationsAsync();
+            _ = LoadSimulationsAsync();
         }
 
         #region Properties
@@ -88,7 +88,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _selectedSimulation, value) && value != null)
                 {
-                    LoadSimulationAsync(value);
+                    _ = LoadSimulationAsync(value);
                 }
             }
         }
@@ -779,7 +779,7 @@ namespace MandADiscoverySuite.ViewModels
                     CurrentOperation = "Completed";
                     StatusMessage = e.Message;
                     ShowResults = true;
-                    LoadAnalysisDataAsync();
+                    _ = LoadAnalysisDataAsync();
                 });
             }
         }

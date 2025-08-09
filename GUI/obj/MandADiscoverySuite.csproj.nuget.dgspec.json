@@ -40,7 +40,7 @@
           "dependencies": {
             "AvalonEdit": {
               "target": "Package",
-              "version": "[6.2.0, )"
+              "version": "[6.2.0.78, )"
             },
             "CommunityToolkit.Mvvm": {
               "target": "Package",

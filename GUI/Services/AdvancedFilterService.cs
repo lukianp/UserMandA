@@ -216,7 +216,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                var isNew = string.IsNullOrEmpty(config.Id) || !await FilterExistsAsync(config.Id);
+                var isNew = string.IsNullOrEmpty(config.Id) || !FilterExists(config.Id);
                 
                 if (isNew)
                 {
@@ -242,7 +242,7 @@ namespace MandADiscoverySuite.Services
             }
         }
 
-        private async Task<bool> FilterExistsAsync(string filterId)
+        private bool FilterExists(string filterId)
         {
             var filePath = Path.Combine(_filtersDirectory, $"{filterId}.json");
             return File.Exists(filePath);
@@ -396,7 +396,7 @@ namespace MandADiscoverySuite.Services
             }
         }
 
-        public async Task DeleteFilterAsync(string filterId)
+        public Task DeleteFilterAsync(string filterId)
         {
             try
             {
@@ -406,6 +406,7 @@ namespace MandADiscoverySuite.Services
                     File.Delete(filePath);
                     _logger?.LogInformation("Deleted filter: {FilterId}", filterId);
                 }
+                return Task.CompletedTask;
             }
             catch (Exception ex)
             {

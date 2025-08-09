@@ -152,7 +152,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Initialization
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             SelectCategoryCommand = new RelayCommand<CategoryItem>(SelectCategory);
             LoadPresetCommand = new RelayCommand<FilterConfiguration>(preset => Task.Run(() => LoadPresetAsync(preset)));

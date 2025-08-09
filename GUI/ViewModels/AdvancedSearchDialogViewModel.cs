@@ -116,7 +116,7 @@ namespace MandADiscoverySuite.ViewModels
             };
         }
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
             AddCriteriaCommand = new RelayCommand(AddCriteria);
             RemoveCriteriaCommand = new RelayCommand<SearchCriteria>(RemoveCriteria);
