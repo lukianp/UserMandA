@@ -72,90 +72,87 @@ namespace MandADiscoverySuite.ViewModels.Widgets
             set => SetProperty(ref _overallProgress, value);
         }
 
-        public override void RefreshAsync()
+        public override async Task RefreshAsync()
         {
-            Task.Run(async () =>
+            try
             {
-                try
+                IsLoading = true;
+
+                await Task.Delay(900);
+
+                var waves = new[]
                 {
-                    IsLoading = true;
+                    new MigrationWave 
+                    { 
+                        Name = "Wave 1 - Pilot", 
+                        TotalItems = 50, 
+                        CompletedItems = 45, 
+                        StartDate = DateTime.Now.AddDays(-30),
+                        EndDate = DateTime.Now.AddDays(-15),
+                        Status = "Completed"
+                    },
+                    new MigrationWave 
+                    { 
+                        Name = "Wave 2 - Finance", 
+                        TotalItems = 150, 
+                        CompletedItems = 75, 
+                        StartDate = DateTime.Now.AddDays(-15),
+                        EndDate = null,
+                        Status = "In Progress"
+                    },
+                    new MigrationWave 
+                    { 
+                        Name = "Wave 3 - Operations", 
+                        TotalItems = 200, 
+                        CompletedItems = 0, 
+                        StartDate = DateTime.Now.AddDays(15),
+                        EndDate = null,
+                        Status = "Planned"
+                    },
+                    new MigrationWave 
+                    { 
+                        Name = "Wave 4 - All Remaining", 
+                        TotalItems = 800, 
+                        CompletedItems = 0, 
+                        StartDate = DateTime.Now.AddDays(45),
+                        EndDate = null,
+                        Status = "Planned"
+                    },
+                };
 
-                    await Task.Delay(900);
-
-                    var waves = new[]
-                    {
-                        new MigrationWave 
-                        { 
-                            Name = "Wave 1 - Pilot", 
-                            TotalItems = 50, 
-                            CompletedItems = 45, 
-                            StartDate = DateTime.Now.AddDays(-30),
-                            EndDate = DateTime.Now.AddDays(-15),
-                            Status = "Completed"
-                        },
-                        new MigrationWave 
-                        { 
-                            Name = "Wave 2 - Finance", 
-                            TotalItems = 150, 
-                            CompletedItems = 75, 
-                            StartDate = DateTime.Now.AddDays(-15),
-                            EndDate = null,
-                            Status = "In Progress"
-                        },
-                        new MigrationWave 
-                        { 
-                            Name = "Wave 3 - Operations", 
-                            TotalItems = 200, 
-                            CompletedItems = 0, 
-                            StartDate = DateTime.Now.AddDays(15),
-                            EndDate = null,
-                            Status = "Planned"
-                        },
-                        new MigrationWave 
-                        { 
-                            Name = "Wave 4 - All Remaining", 
-                            TotalItems = 800, 
-                            CompletedItems = 0, 
-                            StartDate = DateTime.Now.AddDays(45),
-                            EndDate = null,
-                            Status = "Planned"
-                        },
-                    };
-
-                    MigrationWaves.Clear();
-                    foreach (var wave in waves)
-                    {
-                        MigrationWaves.Add(wave);
-                    }
-
-                    // Calculate totals
-                    TotalUsers = 0;
-                    MigratedUsers = 0;
-                    TotalSystems = 0;
-                    MigratedSystems = 0;
-
-                    foreach (var wave in waves)
-                    {
-                        TotalUsers += wave.TotalItems;
-                        MigratedUsers += wave.CompletedItems;
-                    }
-
-                    // Mock system migration data
-                    TotalSystems = 450;
-                    MigratedSystems = 120;
-
-                    // Calculate overall progress
-                    var totalItems = TotalUsers + TotalSystems;
-                    var completedItems = MigratedUsers + MigratedSystems;
-                    OverallProgress = totalItems > 0 ? (double)completedItems / totalItems * 100 : 0;
-
-                    OnRefreshCompleted();
-                }
-                catch (Exception ex)
+                MigrationWaves.Clear();
+                foreach (var wave in waves)
                 {
-                    OnRefreshError($"Failed to refresh migration progress: {ex.Message}");
+                    MigrationWaves.Add(wave);
                 }
-            });
+
+                // Calculate totals
+                TotalUsers = 0;
+                MigratedUsers = 0;
+                TotalSystems = 0;
+                MigratedSystems = 0;
+
+                foreach (var wave in waves)
+                {
+                    TotalUsers += wave.TotalItems;
+                    MigratedUsers += wave.CompletedItems;
+                }
+
+                // Mock system migration data
+                TotalSystems = 450;
+                MigratedSystems = 120;
+
+                // Calculate overall progress
+                var totalItems = TotalUsers + TotalSystems;
+                var completedItems = MigratedUsers + MigratedSystems;
+                OverallProgress = totalItems > 0 ? (double)completedItems / totalItems * 100 : 0;
+
+                OnRefreshCompleted();
+            }
+            catch (Exception ex)
+            {
+                OnRefreshError($"Failed to refresh migration progress: {ex.Message}");
+            }
         }
     }
 }

@@ -197,7 +197,7 @@ namespace MandADiscoverySuite.ViewModels
             _loadingMessage = "Ready";
             
             // Auto-load data when ViewModel is created
-            _ = LoadDataAsync();
+            LoadDataAsync();
         }
 
         #endregion

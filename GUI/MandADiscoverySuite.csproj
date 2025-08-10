@@ -14,7 +14,10 @@
     <OutputPath>C:\enterprisediscovery\</OutputPath>
     <BaseOutputPath>C:\enterprisediscovery\</BaseOutputPath>
     <!-- Enable binding optimization for better performance -->
-    <TreatWarningsAsErrors Condition="'$(Configuration)' == 'Debug'">false</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <WarningsNotAsErrors />
+    <NoWarn>CS8209;CS1998;CS4014;CS0169;CS0414;CS8892</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

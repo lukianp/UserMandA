@@ -1049,6 +1049,7 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine($"MainViewModel.InitializeAsync: Starting initialization at {DateTime.Now:HH:mm:ss.fff}");
                 StatusMessage = "Initializing application...";
                 
                 // Load company profiles
@@ -4318,10 +4319,14 @@ This directory is strictly for storing discovery results and company data.
                         tabViewModel = new DashboardViewModel() { TabTitle = "Dashboard", CanClose = false };
                         break;
                     case "users":
-                        tabViewModel = new UsersViewModel { TabTitle = "Users" };
+                        var dataService = SimpleServiceLocator.GetService<IDataService>();
+                        tabViewModel = new UsersViewModel(dataService);
+                        tabViewModel.TabTitle = "Users";
                         break;
                     case "computers":
-                        tabViewModel = new ComputersViewModel { TabTitle = "Computers" };
+                        var computersDataService = SimpleServiceLocator.GetService<IDataService>();
+                        tabViewModel = new ComputersViewModel(computersDataService);
+                        tabViewModel.TabTitle = "Computers";
                         break;
                     case "infrastructure":
                         tabViewModel = new InfrastructureViewModel { TabTitle = "Infrastructure" };
@@ -4330,7 +4335,9 @@ This directory is strictly for storing discovery results and company data.
                         tabViewModel = new AssetInventoryViewModel { TabTitle = "Assets" };
                         break;
                     case "groups":
-                        tabViewModel = new GroupsViewModel { TabTitle = "Groups" };
+                        var groupsDataService = SimpleServiceLocator.GetService<IDataService>();
+                        tabViewModel = new GroupsViewModel(groupsDataService);
+                        tabViewModel.TabTitle = "Groups";
                         break;
                     case "applications":
                         tabViewModel = new ApplicationsViewModel { TabTitle = "Applications" };
@@ -4525,26 +4532,17 @@ This directory is strictly for storing discovery results and company data.
             }
         }
 
-        // Placeholder ViewModels for TDI - These would be actual ViewModels in the real implementation
-
-        private class UsersViewModel : BaseViewModel
-        {
-            public UsersViewModel() : base() { }
-        }
-
-        private class InfrastructureViewModel : BaseViewModel
-        {
-            public InfrastructureViewModel() : base() { }
-        }
-
-        private class GroupsViewModel : BaseViewModel
-        {
-            public GroupsViewModel() : base() { }
-        }
-
+        // Note: Removed most placeholder ViewModels - now using real ViewModels from dependency injection
+        // Some ViewModels still need to be created (DiscoveryViewModel, InfrastructureViewModel)
+        
         private class DiscoveryViewModel : BaseViewModel
         {
             public DiscoveryViewModel() : base() { }
+        }
+        
+        private class InfrastructureViewModel : BaseViewModel
+        {
+            public InfrastructureViewModel() : base() { }
         }
 
         #endregion

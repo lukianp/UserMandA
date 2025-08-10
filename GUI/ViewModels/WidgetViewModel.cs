@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -86,7 +87,7 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _errorMessage, value);
         }
 
-        public abstract void RefreshAsync();
+        public abstract Task RefreshAsync();
 
         protected virtual void OnRefreshCompleted()
         {

@@ -83,7 +83,7 @@ namespace MandADiscoverySuite.ViewModels
                 // Refresh all widgets
                 foreach (var widget in widgets.Where(w => w.IsVisible))
                 {
-                    _ = widget.RefreshAsync();
+                    widget.RefreshAsync();
                 }
 
                 _logger?.LogInformation("Loaded {Count} dashboard widgets", widgets.Count);

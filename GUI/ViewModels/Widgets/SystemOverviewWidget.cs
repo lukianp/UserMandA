@@ -52,33 +52,30 @@ namespace MandADiscoverySuite.ViewModels.Widgets
             set => SetProperty(ref _healthStatus, value);
         }
 
-        public override void RefreshAsync()
+        public override async Task RefreshAsync()
         {
-            Task.Run(async () =>
+            try
             {
-                try
-                {
-                    IsLoading = true;
+                IsLoading = true;
 
-                    // Simulate data loading - in real implementation, this would load from CSV data service
-                    await Task.Delay(1000);
+                // Simulate data loading - in real implementation, this would load from CSV data service
+                await Task.Delay(1000);
 
-                    // Mock data - replace with actual data service calls
-                    TotalUsers = new Random().Next(1000, 5000);
-                    TotalComputers = new Random().Next(500, 2000);
-                    TotalGroups = new Random().Next(50, 200);
-                    TotalApplications = new Random().Next(100, 500);
-                    
-                    var healthValues = new[] { "Excellent", "Good", "Warning", "Critical" };
-                    HealthStatus = healthValues[new Random().Next(healthValues.Length)];
+                // Mock data - replace with actual data service calls
+                TotalUsers = new Random().Next(1000, 5000);
+                TotalComputers = new Random().Next(500, 2000);
+                TotalGroups = new Random().Next(50, 200);
+                TotalApplications = new Random().Next(100, 500);
+                
+                var healthValues = new[] { "Excellent", "Good", "Warning", "Critical" };
+                HealthStatus = healthValues[new Random().Next(healthValues.Length)];
 
-                    OnRefreshCompleted();
-                }
-                catch (Exception ex)
-                {
-                    OnRefreshError($"Failed to refresh system overview: {ex.Message}");
-                }
-            });
+                OnRefreshCompleted();
+            }
+            catch (Exception ex)
+            {
+                OnRefreshError($"Failed to refresh system overview: {ex.Message}");
+            }
         }
     }
 }

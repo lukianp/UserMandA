@@ -54,59 +54,56 @@ namespace MandADiscoverySuite.ViewModels.Widgets
             set => SetProperty(ref _failedModules, value);
         }
 
-        public override void RefreshAsync()
+        public override async Task RefreshAsync()
         {
-            Task.Run(async () =>
+            try
             {
-                try
+                IsLoading = true;
+
+                await Task.Delay(800);
+
+                var modules = new[]
                 {
-                    IsLoading = true;
+                    new DiscoveryStatusItem { ModuleName = "Active Directory", Status = "Completed", StatusIcon = "✅", LastRun = DateTime.Now.AddMinutes(-15) },
+                    new DiscoveryStatusItem { ModuleName = "Azure AD", Status = "Running", StatusIcon = "⏳", LastRun = null },
+                    new DiscoveryStatusItem { ModuleName = "Exchange", Status = "Completed", StatusIcon = "✅", LastRun = DateTime.Now.AddMinutes(-30) },
+                    new DiscoveryStatusItem { ModuleName = "SharePoint", Status = "Failed", StatusIcon = "❌", LastRun = DateTime.Now.AddHours(-2) },
+                    new DiscoveryStatusItem { ModuleName = "SQL Server", Status = "Pending", StatusIcon = "⏸️", LastRun = null },
+                };
 
-                    await Task.Delay(800);
-
-                    var modules = new[]
-                    {
-                        new DiscoveryStatusItem { ModuleName = "Active Directory", Status = "Completed", StatusIcon = "✅", LastRun = DateTime.Now.AddMinutes(-15) },
-                        new DiscoveryStatusItem { ModuleName = "Azure AD", Status = "Running", StatusIcon = "⏳", LastRun = null },
-                        new DiscoveryStatusItem { ModuleName = "Exchange", Status = "Completed", StatusIcon = "✅", LastRun = DateTime.Now.AddMinutes(-30) },
-                        new DiscoveryStatusItem { ModuleName = "SharePoint", Status = "Failed", StatusIcon = "❌", LastRun = DateTime.Now.AddHours(-2) },
-                        new DiscoveryStatusItem { ModuleName = "SQL Server", Status = "Pending", StatusIcon = "⏸️", LastRun = null },
-                    };
-
-                    DiscoveryModules.Clear();
-                    foreach (var module in modules)
-                    {
-                        DiscoveryModules.Add(module);
-                    }
-
-                    // Calculate summaries
-                    RunningModules = 0;
-                    CompletedModules = 0;
-                    FailedModules = 0;
-
-                    foreach (var module in modules)
-                    {
-                        switch (module.Status)
-                        {
-                            case "Running":
-                                RunningModules++;
-                                break;
-                            case "Completed":
-                                CompletedModules++;
-                                break;
-                            case "Failed":
-                                FailedModules++;
-                                break;
-                        }
-                    }
-
-                    OnRefreshCompleted();
-                }
-                catch (Exception ex)
+                DiscoveryModules.Clear();
+                foreach (var module in modules)
                 {
-                    OnRefreshError($"Failed to refresh discovery status: {ex.Message}");
+                    DiscoveryModules.Add(module);
                 }
-            });
+
+                // Calculate summaries
+                RunningModules = 0;
+                CompletedModules = 0;
+                FailedModules = 0;
+
+                foreach (var module in modules)
+                {
+                    switch (module.Status)
+                    {
+                        case "Running":
+                            RunningModules++;
+                            break;
+                        case "Completed":
+                            CompletedModules++;
+                            break;
+                        case "Failed":
+                            FailedModules++;
+                            break;
+                    }
+                }
+
+                OnRefreshCompleted();
+            }
+            catch (Exception ex)
+            {
+                OnRefreshError($"Failed to refresh discovery status: {ex.Message}");
+            }
         }
     }
 }

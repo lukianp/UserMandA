@@ -69,66 +69,63 @@ namespace MandADiscoverySuite.ViewModels.Widgets
             set => SetProperty(ref _overallRiskScore, value);
         }
 
-        public override void RefreshAsync()
+        public override async Task RefreshAsync()
         {
-            Task.Run(async () =>
+            try
             {
-                try
+                IsLoading = true;
+
+                await Task.Delay(1200);
+
+                var risks = new[]
                 {
-                    IsLoading = true;
+                    new RiskItem { Category = "Security", Level = "Critical", Icon = "🔒", Count = 3, Description = "Unpatched vulnerabilities detected" },
+                    new RiskItem { Category = "Compliance", Level = "High", Icon = "📋", Count = 7, Description = "Policy violations found" },
+                    new RiskItem { Category = "Data", Level = "Medium", Icon = "💾", Count = 12, Description = "Sensitive data exposure risks" },
+                    new RiskItem { Category = "Infrastructure", Level = "High", Icon = "🖥️", Count = 5, Description = "Legacy system dependencies" },
+                    new RiskItem { Category = "Access", Level = "Critical", Icon = "🔑", Count = 2, Description = "Privileged access anomalies" },
+                };
 
-                    await Task.Delay(1200);
-
-                    var risks = new[]
-                    {
-                        new RiskItem { Category = "Security", Level = "Critical", Icon = "🔒", Count = 3, Description = "Unpatched vulnerabilities detected" },
-                        new RiskItem { Category = "Compliance", Level = "High", Icon = "📋", Count = 7, Description = "Policy violations found" },
-                        new RiskItem { Category = "Data", Level = "Medium", Icon = "💾", Count = 12, Description = "Sensitive data exposure risks" },
-                        new RiskItem { Category = "Infrastructure", Level = "High", Icon = "🖥️", Count = 5, Description = "Legacy system dependencies" },
-                        new RiskItem { Category = "Access", Level = "Critical", Icon = "🔑", Count = 2, Description = "Privileged access anomalies" },
-                    };
-
-                    RiskItems.Clear();
-                    foreach (var risk in risks)
-                    {
-                        RiskItems.Add(risk);
-                    }
-
-                    // Calculate risk counts
-                    CriticalRisks = 0;
-                    HighRisks = 0;
-                    MediumRisks = 0;
-                    LowRisks = 0;
-
-                    foreach (var risk in risks)
-                    {
-                        switch (risk.Level)
-                        {
-                            case "Critical":
-                                CriticalRisks += risk.Count;
-                                break;
-                            case "High":
-                                HighRisks += risk.Count;
-                                break;
-                            case "Medium":
-                                MediumRisks += risk.Count;
-                                break;
-                            case "Low":
-                                LowRisks += risk.Count;
-                                break;
-                        }
-                    }
-
-                    // Calculate overall risk score (weighted)
-                    OverallRiskScore = ((CriticalRisks * 10) + (HighRisks * 5) + (MediumRisks * 2) + (LowRisks * 1)) / 10.0;
-
-                    OnRefreshCompleted();
-                }
-                catch (Exception ex)
+                RiskItems.Clear();
+                foreach (var risk in risks)
                 {
-                    OnRefreshError($"Failed to refresh risk assessment: {ex.Message}");
+                    RiskItems.Add(risk);
                 }
-            });
+
+                // Calculate risk counts
+                CriticalRisks = 0;
+                HighRisks = 0;
+                MediumRisks = 0;
+                LowRisks = 0;
+
+                foreach (var risk in risks)
+                {
+                    switch (risk.Level)
+                    {
+                        case "Critical":
+                            CriticalRisks += risk.Count;
+                            break;
+                        case "High":
+                            HighRisks += risk.Count;
+                            break;
+                        case "Medium":
+                            MediumRisks += risk.Count;
+                            break;
+                        case "Low":
+                            LowRisks += risk.Count;
+                            break;
+                    }
+                }
+
+                // Calculate overall risk score (weighted)
+                OverallRiskScore = ((CriticalRisks * 10) + (HighRisks * 5) + (MediumRisks * 2) + (LowRisks * 1)) / 10.0;
+
+                OnRefreshCompleted();
+            }
+            catch (Exception ex)
+            {
+                OnRefreshError($"Failed to refresh risk assessment: {ex.Message}");
+            }
         }
     }
 }

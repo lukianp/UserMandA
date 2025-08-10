@@ -149,7 +149,7 @@ namespace MandADiscoverySuite.ViewModels
             _loadingMessage = "Ready";
             
             // Auto-load data when ViewModel is created
-            _ = LoadDataAsync();
+            LoadDataAsync();
         }
 
         #endregion
@@ -158,7 +158,9 @@ namespace MandADiscoverySuite.ViewModels
         
         private async void LoadDataAsync()
         {
+            System.Diagnostics.Debug.WriteLine("UsersViewModel.LoadDataAsync: Starting data load...");
             await RefreshUsersAsync();
+            System.Diagnostics.Debug.WriteLine("UsersViewModel.LoadDataAsync: Data load completed.");
         }
 
         /// <summary>
@@ -216,7 +218,9 @@ namespace MandADiscoverySuite.ViewModels
                 LoadingMessage = "Loading user accounts...";
                 LoadingProgress = 30;
 
+                System.Diagnostics.Debug.WriteLine($"UsersViewModel: About to call _dataService.LoadUsersAsync('{profileName}')");
                 var userData = await _dataService?.LoadUsersAsync(profileName) ?? new System.Collections.Generic.List<UserData>();
+                System.Diagnostics.Debug.WriteLine($"UsersViewModel: LoadUsersAsync returned {userData.Count()} users");
                 
                 LoadingMessage = "Processing user data...";
                 LoadingProgress = 70;

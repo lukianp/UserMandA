@@ -66,7 +66,7 @@ namespace MandADiscoverySuite.ViewModels
             _scriptEditorService.OutputReceived += OnOutputReceived;
             
             // Load initial data
-            _ = LoadTemplatesAsync();
+            LoadTemplatesAsync();
             LoadRecentResults();
         }
 
