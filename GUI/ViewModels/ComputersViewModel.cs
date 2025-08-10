@@ -203,6 +203,8 @@ namespace MandADiscoverySuite.ViewModels
                 IsLoading = true;
                 LoadingMessage = "Refreshing computers data...";
                 LoadingProgress = 10;
+                
+                System.Diagnostics.Debug.WriteLine($"ComputersViewModel.RefreshComputersAsync: Starting refresh at {DateTime.Now:HH:mm:ss.fff}");
 
                 Computers.Clear();
                 
@@ -210,19 +212,61 @@ namespace MandADiscoverySuite.ViewModels
                 var profileService = SimpleServiceLocator.GetService<IProfileService>();
                 var currentProfile = await profileService?.GetCurrentProfileAsync();
                 var profileName = currentProfile?.CompanyName ?? "ljpops";
+                
+                System.Diagnostics.Debug.WriteLine($"ComputersViewModel: Loading data for profile: {profileName}");
 
                 LoadingMessage = "Loading computer accounts...";
                 LoadingProgress = 30;
 
                 // Load computers from CSV files (using infrastructure data)
-                var computerData = await _dataService?.LoadInfrastructureAsync(profileName) ?? new System.Collections.Generic.List<InfrastructureData>();
-                
-                LoadingMessage = "Processing computer data...";
-                LoadingProgress = 70;
-
-                foreach (var computer in computerData)
+                if (_dataService == null)
                 {
-                    Computers.Add(computer);
+                    System.Diagnostics.Debug.WriteLine("ComputersViewModel: DataService is null, using CsvDataService directly");
+                    var csvService = SimpleServiceLocator.GetService<CsvDataService>() ?? new CsvDataService();
+                    var computerData = await csvService.LoadInfrastructureAsync(profileName);
+                    
+                    System.Diagnostics.Debug.WriteLine($"ComputersViewModel: Loaded {computerData?.Count() ?? 0} computers from CSV");
+                    
+                    LoadingMessage = "Processing computer data...";
+                    LoadingProgress = 70;
+
+                    if (computerData != null && computerData.Any())
+                    {
+                        foreach (var computer in computerData)
+                        {
+                            Computers.Add(computer);
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("ComputersViewModel: No computer data loaded, creating sample data");
+                        // Create sample data if none exists
+                        var sampleService = new SampleDataService();
+                        await sampleService.CreateSampleDataIfMissingAsync(profileName);
+                        
+                        // Try loading again
+                        computerData = await csvService.LoadInfrastructureAsync(profileName);
+                        if (computerData != null)
+                        {
+                            foreach (var computer in computerData)
+                            {
+                                Computers.Add(computer);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    var computerData = await _dataService.LoadInfrastructureAsync(profileName) ?? new System.Collections.Generic.List<InfrastructureData>();
+                    System.Diagnostics.Debug.WriteLine($"ComputersViewModel: Loaded {computerData.Count()} computers from DataService");
+                    
+                    LoadingMessage = "Processing computer data...";
+                    LoadingProgress = 70;
+
+                    foreach (var computer in computerData)
+                    {
+                        Computers.Add(computer);
+                    }
                 }
 
                 LoadingMessage = "Applying filters...";
@@ -233,6 +277,8 @@ namespace MandADiscoverySuite.ViewModels
 
                 LoadingMessage = $"Loaded {Computers.Count} computers successfully";
                 LoadingProgress = 100;
+                
+                System.Diagnostics.Debug.WriteLine($"ComputersViewModel: Refresh completed with {Computers.Count} computers");
             }
             catch (Exception ex)
             {

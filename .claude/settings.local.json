@@ -97,7 +97,8 @@
       "Bash(Start-Process \"GUI/bin/Release/net6.0-windows/MandADiscoverySuite.exe\" -PassThru)",
       "Bash(pkill:*)",
       "Bash(msbuild:*)",
-      "Bash(Start-Sleep 120)"
+      "Bash(Start-Sleep 120)",
+      "Bash(del:*)"
     ],
     "deny": []
   }

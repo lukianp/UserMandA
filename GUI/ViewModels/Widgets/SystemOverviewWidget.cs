@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite.ViewModels.Widgets
 {
@@ -10,6 +11,7 @@ namespace MandADiscoverySuite.ViewModels.Widgets
         private int _totalGroups;
         private int _totalApplications;
         private string _healthStatus;
+        private readonly IDataService _dataService;
 
         public SystemOverviewWidget()
         {
@@ -18,6 +20,16 @@ namespace MandADiscoverySuite.ViewModels.Widgets
             RowSpan = 1;
             ColumnSpan = 2;
             HealthStatus = "Unknown";
+            
+            try
+            {
+                _dataService = SimpleServiceLocator.GetService<IDataService>();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SystemOverviewWidget: Failed to get DataService: {ex.Message}");
+                ErrorHandlingService.Instance.HandleException(ex, "SystemOverviewWidget initialization");
+            }
         }
 
         public override string WidgetType => "SystemOverview";
@@ -57,25 +69,56 @@ namespace MandADiscoverySuite.ViewModels.Widgets
             try
             {
                 IsLoading = true;
+                System.Diagnostics.Debug.WriteLine($"SystemOverviewWidget.RefreshAsync: Starting refresh at {DateTime.Now:HH:mm:ss.fff}");
+                System.Diagnostics.Debug.WriteLine("SystemOverviewWidget: Starting widget refresh");
 
-                // Simulate data loading - in real implementation, this would load from CSV data service
-                await Task.Delay(1000);
-
-                // Mock data - replace with actual data service calls
-                TotalUsers = new Random().Next(1000, 5000);
-                TotalComputers = new Random().Next(500, 2000);
-                TotalGroups = new Random().Next(50, 200);
-                TotalApplications = new Random().Next(100, 500);
-                
-                var healthValues = new[] { "Excellent", "Good", "Warning", "Critical" };
-                HealthStatus = healthValues[new Random().Next(healthValues.Length)];
+                if (_dataService != null)
+                {
+                    try
+                    {
+                        // Load actual data from data service - using mock data for now
+                        // TODO: Implement actual data loading when IDataService methods are available
+                        await LoadMockData();
+                        
+                        System.Diagnostics.Debug.WriteLine($"SystemOverviewWidget: Mock data loaded");
+                    }
+                    catch (Exception dataEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"SystemOverviewWidget: Error loading data: {dataEx.Message}");
+                        ErrorHandlingService.Instance.HandleException(dataEx, "SystemOverviewWidget data loading");
+                        
+                        // Fall back to mock data
+                        await LoadMockData();
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("SystemOverviewWidget: DataService is null, using mock data");
+                    
+                    // Use mock data if service is not available
+                    await LoadMockData();
+                }
 
                 OnRefreshCompleted();
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"SystemOverviewWidget.RefreshAsync: Exception: {ex}");
+                ErrorHandlingService.Instance.HandleException(ex, "SystemOverviewWidget refresh");
                 OnRefreshError($"Failed to refresh system overview: {ex.Message}");
             }
+        }
+        
+        private async Task LoadMockData()
+        {
+            await Task.Delay(500);
+            TotalUsers = new Random().Next(1000, 5000);
+            TotalComputers = new Random().Next(500, 2000);
+            TotalGroups = new Random().Next(50, 200);
+            TotalApplications = new Random().Next(100, 500);
+            
+            var healthValues = new[] { "Excellent", "Good", "Warning", "Critical" };
+            HealthStatus = healthValues[new Random().Next(healthValues.Length)];
         }
     }
 }

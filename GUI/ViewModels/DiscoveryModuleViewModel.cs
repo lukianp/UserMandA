@@ -49,7 +49,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Category of the module (Identity, Infrastructure, Applications, etc.)
         /// </summary>
-        public string Category { get; }
+        public string Category { get; set; }
 
         /// <summary>
         /// Whether the module is enabled for discovery

@@ -81,10 +81,11 @@ namespace MandADiscoverySuite.ViewModels
                 });
 
                 // Refresh all widgets
-                foreach (var widget in widgets.Where(w => w.IsVisible))
-                {
-                    widget.RefreshAsync();
-                }
+                var refreshTasks = widgets.Where(w => w.IsVisible)
+                    .Select(w => w.RefreshAsync())
+                    .ToArray();
+                    
+                await Task.WhenAll(refreshTasks);
 
                 _logger?.LogInformation("Loaded {Count} dashboard widgets", widgets.Count);
             }

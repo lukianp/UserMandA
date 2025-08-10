@@ -73,12 +73,15 @@ namespace MandADiscoverySuite.ViewModels
         private double _newIndicatorThreshold;
         private string _newIndicatorUnit;
 
-        public RiskAnalysisViewModel(IRiskAnalysisService riskAnalysisService) : base()
+        public RiskAnalysisViewModel(IRiskAnalysisService riskAnalysisService = null) : base()
         {
-            _riskAnalysisService = riskAnalysisService ?? throw new ArgumentNullException(nameof(riskAnalysisService));
+            _riskAnalysisService = riskAnalysisService ?? SimpleServiceLocator.GetService<IRiskAnalysisService>() ?? new RiskAnalysisService();
             
             InitializeCollections();
             InitializeCommands();
+            
+            TabTitle = "Risk Analysis";
+            CanClose = true;
             
             // Load initial data
             _ = LoadDataAsync();

@@ -726,11 +726,11 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"ServiceLocator not initialized, using fallback services: {ex.Message}");
-                // Fallback to null services for minimal operation
-                _discoveryService = discoveryService;
-                _profileService = profileService;
+                // Fallback to default services for minimal operation
+                _discoveryService = discoveryService ?? new DiscoveryService();
+                _profileService = profileService ?? new ProfileService();
                 _dataService = dataService;
-                _csvDataService = csvDataService;
+                _csvDataService = csvDataService ?? new CsvDataService();
                 _themeService = themeService;
                 _lazyViewLoadingService = lazyViewLoadingService;
                 _dispatcherService = new DispatcherOptimizationService();
@@ -1176,20 +1176,32 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                // Load modules from registry
-                var registryModules = await ModuleRegistryService.Instance.GetAvailableModulesAsync();
+                System.Diagnostics.Debug.WriteLine("InitializeDiscoveryModules: Starting module initialization");
+                
+                // Load ALL modules from registry (not just validated ones)
+                var registry = await ModuleRegistryService.Instance.LoadRegistryAsync();
                 var modules = new List<DiscoveryModuleViewModel>();
                 
-                foreach (var moduleInfo in registryModules)
+                System.Diagnostics.Debug.WriteLine($"InitializeDiscoveryModules: Registry has {registry?.Modules?.Count ?? 0} modules defined");
+                
+                if (registry?.Modules != null)
                 {
-                    var moduleId = Path.GetFileNameWithoutExtension(moduleInfo.FilePath);
-                    var module = new DiscoveryModuleViewModel(
-                        moduleId,
-                        moduleInfo.DisplayName,
-                        moduleInfo.Description,
-                        moduleInfo.Enabled
-                    );
-                    modules.Add(module);
+                    foreach (var kvp in registry.Modules)
+                    {
+                        var moduleInfo = kvp.Value;
+                        var moduleId = kvp.Key;
+                        
+                        System.Diagnostics.Debug.WriteLine($"InitializeDiscoveryModules: Adding module {moduleId} - {moduleInfo.DisplayName}");
+                        
+                        var module = new DiscoveryModuleViewModel(
+                            moduleId,
+                            moduleInfo.DisplayName,
+                            moduleInfo.Description,
+                            moduleInfo.Enabled
+                        );
+                        module.Category = moduleInfo.Category;
+                        modules.Add(module);
+                    }
                 }
 
                 Application.Current.Dispatcher.Invoke(() =>
@@ -1201,30 +1213,81 @@ namespace MandADiscoverySuite.ViewModels
                     }
                 });
                 
+                System.Diagnostics.Debug.WriteLine($"InitializeDiscoveryModules: Loaded {modules.Count} discovery modules from registry");
                 StatusMessage = $"Loaded {modules.Count} discovery modules from registry";
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"InitializeDiscoveryModules: Exception loading from registry: {ex.Message}");
                 ErrorHandlingService.Instance.HandleException(ex, "Loading discovery modules from registry");
                 
-                // Fallback to essential modules if registry fails
+                // Fallback to ALL modules if registry fails
                 InitializeFallbackModules();
-                StatusMessage = "Loaded fallback discovery modules (registry unavailable)";
+                StatusMessage = "Loaded all discovery modules (fallback mode)";
             }
         }
         
         private void InitializeFallbackModules()
         {
+            System.Diagnostics.Debug.WriteLine("InitializeFallbackModules: Loading comprehensive fallback module list");
+            
             var modules = new[]
             {
-                new DiscoveryModuleViewModel("ActiveDirectoryDiscovery", "Active Directory Discovery", "Discover AD users, groups, computers, and organizational structure", true),
-                new DiscoveryModuleViewModel("AzureDiscovery", "Azure AD Discovery", "Discover Azure AD users, groups, and applications", true),
-                new DiscoveryModuleViewModel("ExchangeDiscovery", "Exchange Discovery", "Discover Exchange mailboxes, databases, and configuration", true),
-                new DiscoveryModuleViewModel("NetworkInfrastructureDiscovery", "Network Infrastructure", "Discover network devices, switches, and routers", true),
-                new DiscoveryModuleViewModel("SQLServerDiscovery", "SQL Server Discovery", "Discover SQL Server instances and databases", true),
-                new DiscoveryModuleViewModel("FileServerDiscovery", "File Server Discovery", "Discover file shares and permissions", true),
-                new DiscoveryModuleViewModel("ApplicationDiscovery", "Application Discovery", "Discover installed applications and services", true),
-                new DiscoveryModuleViewModel("SecurityInfrastructureDiscovery", "Security Infrastructure", "Discover security appliances, configurations, and policies", true)
+                // Identity & Access
+                new DiscoveryModuleViewModel("ActiveDirectoryDiscovery", "Active Directory Discovery", "Discover AD users, groups, computers, and organizational structure", true) { Category = "Identity" },
+                new DiscoveryModuleViewModel("AzureDiscovery", "Azure AD Discovery", "Discover Azure AD users, groups, and applications", true) { Category = "Identity" },
+                new DiscoveryModuleViewModel("EntraIDAppDiscovery", "Enhanced Entra ID Apps", "Advanced Entra ID application and service principal discovery", true) { Category = "Identity" },
+                new DiscoveryModuleViewModel("MultiDomainForestDiscovery", "Multi-Domain Forest Discovery", "Complex Active Directory forest and domain topology analysis", true) { Category = "Identity" },
+                new DiscoveryModuleViewModel("ExternalIdentityDiscovery", "External Identity Systems", "Discover external identity providers and integrations", false) { Category = "Identity" },
+                new DiscoveryModuleViewModel("GraphDiscovery", "Enhanced Graph Discovery", "Advanced Microsoft Graph API discovery and analysis", false) { Category = "Identity" },
+                
+                // Cloud & Infrastructure
+                new DiscoveryModuleViewModel("AzureResourceDiscovery", "Azure Resource Discovery", "Discover Azure infrastructure, resources, and configurations", true) { Category = "Cloud" },
+                new DiscoveryModuleViewModel("MultiCloudDiscoveryEngine", "Multi-Cloud Discovery", "Discover resources across multiple cloud platforms", true) { Category = "Cloud" },
+                new DiscoveryModuleViewModel("ContainerOrchestration", "Container Discovery", "Discover Kubernetes clusters and containerized applications", false) { Category = "Cloud" },
+                
+                // Collaboration
+                new DiscoveryModuleViewModel("ExchangeDiscovery", "Exchange Discovery", "Discover Exchange mailboxes, databases, and configuration", true) { Category = "Collaboration" },
+                new DiscoveryModuleViewModel("TeamsDiscovery", "Microsoft Teams Discovery", "Discover Teams, channels, and membership", true) { Category = "Collaboration" },
+                new DiscoveryModuleViewModel("SharePointDiscovery", "SharePoint Discovery", "Discover SharePoint sites, lists, and permissions", true) { Category = "Collaboration" },
+                new DiscoveryModuleViewModel("PowerPlatformDiscovery", "Power Platform Discovery", "Discover Power Apps, Power Automate flows, and Power BI reports", false) { Category = "Collaboration" },
+                
+                // Infrastructure
+                new DiscoveryModuleViewModel("NetworkInfrastructureDiscovery", "Network Infrastructure", "Discover network devices, switches, and routers", true) { Category = "Infrastructure" },
+                new DiscoveryModuleViewModel("PhysicalServerDiscovery", "Physical Server Discovery", "Discover physical hardware inventory, specifications, and configurations", true) { Category = "Infrastructure" },
+                new DiscoveryModuleViewModel("VMwareDiscovery", "VMware Discovery", "Discover VMware virtual infrastructure", true) { Category = "Virtualization" },
+                new DiscoveryModuleViewModel("PrinterDiscovery", "Printer Discovery", "Discover network and local printers", false) { Category = "Infrastructure" },
+                new DiscoveryModuleViewModel("BackupRecoveryDiscovery", "Backup & Recovery Systems", "Discover backup infrastructure and recovery solutions", false) { Category = "Infrastructure" },
+                
+                // Storage & Data
+                new DiscoveryModuleViewModel("FileServerDiscovery", "File Server Discovery", "Discover file shares and permissions", true) { Category = "Storage" },
+                new DiscoveryModuleViewModel("StorageArrayDiscovery", "Storage Array Discovery", "Discover SAN/NAS storage systems and configurations", true) { Category = "Storage" },
+                new DiscoveryModuleViewModel("SQLServerDiscovery", "SQL Server Discovery", "Discover SQL Server instances and databases", true) { Category = "Data" },
+                new DiscoveryModuleViewModel("DatabaseSchemaDiscovery", "Database Schema Discovery", "Discover database schemas and data structures", false) { Category = "Data" },
+                new DiscoveryModuleViewModel("DataClassification", "Data Classification", "Classify and assess data sensitivity", true) { Category = "Data" },
+                
+                // Security
+                new DiscoveryModuleViewModel("SecurityInfrastructureDiscovery", "Security Infrastructure", "Discover security appliances, configurations, and policies", true) { Category = "Security" },
+                new DiscoveryModuleViewModel("SecurityGroupAnalysis", "Security Group Analysis", "Analyze security group membership and permissions", true) { Category = "Security" },
+                new DiscoveryModuleViewModel("CertificateDiscovery", "Certificate Discovery", "Discover digital certificates and PKI infrastructure", true) { Category = "Security" },
+                new DiscoveryModuleViewModel("GPODiscovery", "Group Policy Analysis", "Group Policy discovery, analysis, and security policy assessment", true) { Category = "Security" },
+                new DiscoveryModuleViewModel("ThreatDetectionEngine", "Threat Detection Analysis", "Analyze security threats and vulnerabilities", false) { Category = "Security" },
+                new DiscoveryModuleViewModel("PaloAltoDiscovery", "Palo Alto Networks Discovery", "Discover Palo Alto security appliances and configurations", false) { Category = "Security" },
+                
+                // Applications & Services
+                new DiscoveryModuleViewModel("ApplicationDiscovery", "Application Discovery", "Discover installed applications and services", true) { Category = "Applications" },
+                new DiscoveryModuleViewModel("ApplicationDependencyMapping", "Application Dependencies", "Map application dependencies and integration points", true) { Category = "Applications" },
+                new DiscoveryModuleViewModel("IntuneDiscovery", "Intune Discovery", "Discover managed devices and policies", true) { Category = "Device Management" },
+                new DiscoveryModuleViewModel("LicensingDiscovery", "Software Licensing Analysis", "Comprehensive software licensing compliance and cost analysis", true) { Category = "Compliance" },
+                
+                // Compliance & Governance  
+                new DiscoveryModuleViewModel("ComplianceAssessmentFramework", "Compliance Assessment", "Assess regulatory compliance and governance", true) { Category = "Compliance" },
+                new DiscoveryModuleViewModel("DataGovernanceMetadataManagement", "Data Governance", "Manage data governance policies and metadata", false) { Category = "Data Governance" },
+                new DiscoveryModuleViewModel("DataLineageDependencyEngine", "Data Lineage Mapping", "Map data lineage and dependencies across systems", false) { Category = "Data Governance" },
+                
+                // Operations & Assessment
+                new DiscoveryModuleViewModel("ScheduledTaskDiscovery", "Scheduled Task Discovery", "Discover scheduled tasks and automation workflows", false) { Category = "Operations" },
+                new DiscoveryModuleViewModel("EnvironmentRiskScoring", "Environment Risk Assessment", "Comprehensive risk scoring and security assessment for M&A due diligence", true) { Category = "Risk Assessment" }
             };
 
             Application.Current.Dispatcher.Invoke(() =>
@@ -1481,7 +1544,7 @@ namespace MandADiscoverySuite.ViewModels
                 var applicationsTask = _csvDataService.LoadApplicationsAsync(SelectedProfile.CompanyName);
 
                 // Load users incrementally with real-time UI updates
-                var dataPath = $"C:\\discoverydata\\{SelectedProfile.CompanyName}";
+                var dataPath = ConfigurationService.Instance.GetCompanyRawDataPath(SelectedProfile.CompanyName);
                 await foreach (var user in _csvDataService.LoadUsersAsyncEnumerable(dataPath))
                 {
                     users.Add(user);
@@ -4380,22 +4443,28 @@ This directory is strictly for storing discovery results and company data.
                         tabViewModel = new ReportBuilderViewModel { TabTitle = "Reports" };
                         break;
                     case "domaindiscovery":
-                        tabViewModel = new DiscoveryViewModel { TabTitle = "Domain Discovery" };
+                        tabViewModel = new RiskAnalysisViewModel { TabTitle = "Domain Discovery" };
                         break;
                     case "fileservers":
-                        tabViewModel = new InfrastructureViewModel { TabTitle = "File Servers" };
+                        var fileServersViewModel = new InfrastructureViewModel { TabTitle = "File Servers" };
+                        System.Diagnostics.Debug.WriteLine("Creating File Servers tab with InfrastructureViewModel");
+                        tabViewModel = fileServersViewModel;
                         break;
                     case "databases":
-                        tabViewModel = new InfrastructureViewModel { TabTitle = "Databases" };
+                        var databasesViewModel = new InfrastructureViewModel { TabTitle = "Databases" };
+                        System.Diagnostics.Debug.WriteLine("Creating Databases tab with InfrastructureViewModel");
+                        tabViewModel = databasesViewModel;
                         break;
                     case "security":
-                        tabViewModel = new GroupsViewModel { TabTitle = "Security" };
+                        var securityViewModel = new GroupsViewModel { TabTitle = "Security" };
+                        System.Diagnostics.Debug.WriteLine("Creating Security tab with GroupsViewModel");
+                        tabViewModel = securityViewModel;
                         break;
                     case "waves":
-                        tabViewModel = new DashboardViewModel { TabTitle = "Waves" };
+                        tabViewModel = new ProjectManagementViewModel { TabTitle = "Waves" };
                         break;
                     case "migrate":
-                        tabViewModel = new DashboardViewModel { TabTitle = "Migrate" };
+                        tabViewModel = new ProjectManagementDashboardViewModel { TabTitle = "Migrate" };
                         break;
                     case "analytics":
                         tabViewModel = new DashboardViewModel { TabTitle = "Analytics" };

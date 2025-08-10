@@ -201,6 +201,14 @@ namespace MandADiscoverySuite.ViewModels
 
             _searchText = string.Empty;
             _loadingMessage = "Ready";
+            
+            // Auto-load data when ViewModel is created
+            LoadDataAsync();
+        }
+        
+        private async void LoadDataAsync()
+        {
+            await RefreshInfrastructureAsync();
         }
 
         #endregion
