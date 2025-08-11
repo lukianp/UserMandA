@@ -1,4 +1,4 @@
-﻿
+﻿D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\GeneratedInternalTypeHelper.g.cs
 FD:\Scripts\UserMandA\GUI\App.xaml;;
 FD:\Scripts\UserMandA\GUI\Controls\ChartControls.xaml;;
 FD:\Scripts\UserMandA\GUI\Controls\FilterableDataGrid.xaml;;
@@ -20,4 +20,5 @@ FD:\Scripts\UserMandA\GUI\Views\ReportBuilderView.xaml;;
 FD:\Scripts\UserMandA\GUI\Views\ScriptEditorView.xaml;;
 FD:\Scripts\UserMandA\GUI\Views\TaskSchedulerView.xaml;;
 FD:\Scripts\UserMandA\GUI\Views\WhatIfSimulationView.xaml;;
+FD:\Scripts\UserMandA\GUI\Windows\ComputerDetailWindow.xaml;;
 

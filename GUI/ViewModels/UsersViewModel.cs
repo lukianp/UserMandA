@@ -25,9 +25,6 @@ namespace MandADiscoverySuite.ViewModels
         private readonly CsvDataService _csvDataService;
         private readonly MainViewModel _mainViewModel;
         private string _searchText;
-        private bool _isLoading;
-        private string _loadingMessage;
-        private int _loadingProgress;
         private ICollectionView _usersView;
         private UserData _selectedUser;
 
@@ -64,32 +61,9 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        /// <summary>
-        /// Whether users are currently being loaded
-        /// </summary>
-        public new bool IsLoading
-        {
-            get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
-        }
+        // Use base class IsLoading property instead of hiding it
 
-        /// <summary>
-        /// Loading progress message
-        /// </summary>
-        public new string LoadingMessage
-        {
-            get => _loadingMessage;
-            set => SetProperty(ref _loadingMessage, value);
-        }
-
-        /// <summary>
-        /// Loading progress percentage (0-100)
-        /// </summary>
-        public new int LoadingProgress
-        {
-            get => _loadingProgress;
-            set => SetProperty(ref _loadingProgress, value);
-        }
+        // Use base class LoadingMessage and LoadingProgress properties
 
         /// <summary>
         /// Number of users currently displayed after filtering
@@ -142,9 +116,12 @@ namespace MandADiscoverySuite.ViewModels
 
         public UsersViewModel(IDataService dataService = null, CsvDataService csvDataService = null, MainViewModel mainViewModel = null)
         {
+            System.Diagnostics.Debug.WriteLine("UsersViewModel constructor started");
             _dataService = dataService ?? SimpleServiceLocator.GetService<IDataService>();
             _csvDataService = csvDataService ?? SimpleServiceLocator.GetService<CsvDataService>();
             _mainViewModel = mainViewModel;
+            
+            System.Diagnostics.Debug.WriteLine($"UsersViewModel services: _dataService={_dataService != null}, _csvDataService={_csvDataService != null}");
             
             Users = new OptimizedObservableCollection<UserData>();
             Users.CollectionChanged += (s, e) => 
@@ -170,19 +147,21 @@ namespace MandADiscoverySuite.ViewModels
             OpenUserDetailCommand = new RelayCommand<UserData>(OpenUserDetail, user => user != null);
 
             _searchText = string.Empty;
-            _loadingMessage = "Ready";
+            LoadingMessage = "Ready";
             
             // Auto-load data when ViewModel is created
-            LoadDataAsync();
+            _ = LoadDataAsync();
         }
 
         #endregion
 
         #region Public Methods
         
-        private async void LoadDataAsync()
+        private async Task LoadDataAsync()
         {
+            System.Diagnostics.Debug.WriteLine("UsersViewModel.LoadDataAsync started");
             await RefreshUsersAsync();
+            System.Diagnostics.Debug.WriteLine("UsersViewModel.LoadDataAsync completed");
         }
 
         /// <summary>
@@ -222,6 +201,7 @@ namespace MandADiscoverySuite.ViewModels
 
         private async Task RefreshUsersAsync(string dataDirectory = null)
         {
+            System.Diagnostics.Debug.WriteLine("RefreshUsersAsync started");
             try
             {
                 IsLoading = true;

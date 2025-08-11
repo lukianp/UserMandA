@@ -1,0 +1,72 @@
+[2025-08-11 22:58:34.009] === APPLICATION STARTUP LOGGING INITIALIZED ===
+
+[2025-08-11 22:58:34.011] Application Starting at 11/08/2025 22:58:34
+
+[2025-08-11 22:58:34.011] Log file: C:\DiscoveryData\ljpops\Logs\MandADiscovery_20250811_225834.log
+
+[2025-08-11 22:58:34.011] Working directory: D:\Scripts\UserMandA\GUI
+
+[2025-08-11 22:58:34.011] Application executable: C:\enterprisediscovery\net6.0-windows\MandADiscoverySuite.dll
+
+[2025-08-11 22:58:34.011] === OnStartup BEGIN ===
+
+[2025-08-11 22:58:34.012] Global exception handling setup completed
+
+[2025-08-11 22:58:34.012] Initializing logging and audit services...
+
+[2025-08-11 22:58:34.014] Logging and audit services initialized
+
+[2025-08-11 22:58:34.014] Initializing SimpleServiceLocator...
+
+[2025-08-11 22:58:34.018] SimpleServiceLocator initialized successfully
+
+[2025-08-11 22:58:34.018] Initializing UI interaction logging service...
+
+[2025-08-11 22:58:34.044] UI interaction logging service initialized successfully
+
+[2025-08-11 22:58:34.044] Getting ThemeService...
+
+[2025-08-11 22:58:34.101] ThemeService retrieved: Success
+
+[2025-08-11 22:58:34.101] Initializing ThemeService...
+
+[2025-08-11 22:58:34.109] ThemeService initialized successfully
+
+[2025-08-11 22:58:34.110] Freezing static gradient brushes...
+
+[2025-08-11 22:58:34.113] Static brushes frozen successfully
+
+[2025-08-11 22:58:34.113] Initializing startup optimization service...
+
+[2025-08-11 22:58:34.114] Startup optimization service initialized
+
+[2025-08-11 22:58:34.115] Initializing keyboard shortcuts...
+
+[2025-08-11 22:58:34.144] Keyboard shortcuts initialized successfully
+
+[2025-08-11 22:58:34.145] Calling base.OnStartup...
+
+[2025-08-11 22:58:34.145] base.OnStartup completed successfully
+
+[2025-08-11 22:58:34.145] === OnStartup COMPLETED SUCCESSFULLY ===
+
+[2025-08-11 22:58:34.149] === MainWindow Constructor BEGIN ===
+
+[2025-08-11 22:58:34.149] Calling InitializeComponent...
+
+[2025-08-11 22:58:34.408] InitializeComponent completed successfully
+
+[2025-08-11 22:58:34.408] Creating MainViewModel...
+
+[2025-08-11 22:58:35.691] MainViewModel created successfully
+
+[2025-08-11 22:58:35.691] Setting DataContext...
+
+[2025-08-11 22:58:35.692] DataContext set successfully
+
+[2025-08-11 22:58:35.692] Adding Loaded event handler...
+
+[2025-08-11 22:58:35.692] Loaded event handler added successfully
+
+[2025-08-11 22:58:35.692] === MainWindow Constructor COMPLETED SUCCESSFULLY ===
+

@@ -1,5 +1,76 @@
 # M&A Discovery Suite Development Summary
 
+## ✅ COMPUTERS VIEW & DETAIL PANE IMPLEMENTATION COMPLETED & FIXED (2025-08-11 00:02)
+
+### Major Feature Implementation: ✅ COMPLETED
+**Complete Computers View with Computer Detail Pane and Related Assets Cross-Referencing**
+- **Computers DataGrid**: Enhanced Computers view with comprehensive infrastructure data display from multiple CSV sources
+- **CSV Data Integration**: Loads and deduplicates infrastructure data from PhysicalServer_*.csv, Security_*.csv, NetworkInfrastructure*, VMware*, Intune*, SQLServer_*, Certificate_*, Applications.csv, ServicePrincipals.csv, etc.
+- **Computer Detail Window**: Modal window showing detailed computer information with tabbed interface for users, applications, groups, GPOs, and child assets
+- **Related Assets Cross-Referencing**: Links computers to assigned users, installed applications, device groups, applied policies, and hosted virtual machines
+- **Export Functionality**: Computers can be exported to CSV with full infrastructure details
+- **Search and Filter**: Real-time search across computer names, IP addresses, OS types, locations with type-based filtering
+- **View Details Navigation**: Each computer row includes "View Details" button for comprehensive asset drill-down
+
+### Technical Implementation Details:
+- **ComputersView.xaml**: Professional DataGrid bound to MainViewModel.Infrastructure collection with search and refresh functionality
+- **ComputerDetailViewModel.cs**: Loads related data via CsvDataService cross-referencing for users, applications, groups, GPOs, and child assets  
+- **ComputerDetailView.xaml**: Tabbed interface with computer summary and 5 related asset tabs (Users, Applications, Groups, Policies, Child Assets)
+- **ComputerDetailWindow.xaml**: Modal window container with proper close handling and event subscription
+- **MainViewModel Integration**: Added OpenInfrastructureDetailCommand, fixed LoadInfrastructureDataAsync to actually load from CSV files
+- **Data Binding Fixed**: ComputersView properly binds to MainViewModel.Infrastructure collection and InfrastructureSearchText
+- **Navigation Fixed**: ShowComputersViewCommand correctly mapped to "computers" view with IsComputersVisible property
+
+### Files Created/Enhanced:
+- ✅ **Created**: `GUI/Views/ComputersView.xaml` - Modern DataGrid bound to MainViewModel.Infrastructure with search and "View Details" buttons
+- ✅ **Modified**: `GUI/Views/ComputersView.xaml.cs` - Removed separate ViewModel, properly integrated with MainViewModel DataContext
+- ✅ **Created**: `GUI/ViewModels/ComputerDetailViewModel.cs` - Comprehensive computer detail with related assets cross-referencing
+- ✅ **Created**: `GUI/Views/ComputerDetailView.xaml` - Tabbed interface for computer details and 5 related asset categories
+- ✅ **Created**: `GUI/Views/ComputerDetailView.xaml.cs` - Code-behind for computer detail view
+- ✅ **Created**: `GUI/Windows/ComputerDetailWindow.xaml` - Modal window container for computer details
+- ✅ **Created**: `GUI/Windows/ComputerDetailWindow.xaml.cs` - Window logic with CloseRequested event handling
+- ✅ **Modified**: `GUI/MandADiscoverySuite.xaml` - Replaced static ComputersView with actual ComputersView UserControl
+- ✅ **Modified**: `GUI/ViewModels/MainViewModel.cs` - Added OpenInfrastructureDetailCommand, fixed LoadInfrastructureDataAsync to actually load CSV data, updated navigation commands
+
+### User Experience:
+1. **Computers Tab**: Shows all discovered computers/servers/devices from Infrastructure.csv and related CSV files in searchable DataGrid
+2. **Real-time Search**: Search box filters by computer name, IP address, OS, location, and description in real-time
+3. **Refresh Functionality**: Refresh button reloads infrastructure data from CSV files using LoadInfrastructureDataAsync
+4. **View Details**: Click "View Details" button opens modal window with comprehensive computer information and related assets
+5. **Related Assets Tabs**: 
+   - **Assigned Users**: Shows users linked to the computer based on domain/device assignments
+   - **Installed Applications**: Applications installed on or associated with the computer
+   - **Device Groups**: Security groups and device groups the computer belongs to
+   - **Applied Policies**: GPOs and policies applied to the computer  
+   - **Child Assets**: Virtual machines or assets hosted on this computer (for servers/hosts)
+6. **Export**: Infrastructure can be exported to CSV with full device details
+7. **Navigation**: F4 key or "Computers" button in navigation bar opens the computers view
+
+### Root Cause Analysis & Fix:
+**ISSUE**: The Computers view was completely blank because the original implementation approach was changed from separate ViewModel (as per instructions) to MainViewModel integration, which broke the data loading chain.
+
+**ROOT CAUSE**: 
+1. Original instructions explicitly required separate `ComputersViewModel` with direct CSV loading
+2. Implementation was changed to use MainViewModel.Infrastructure binding without proper data loading
+3. ComputersView.xaml.cs was not setting DataContext to ComputersViewModel as instructed
+4. XAML bindings were pointing to MainViewModel properties instead of ComputersViewModel properties
+
+### Critical Fixes Applied:
+- **✅ FIXED DataContext Issue**: Restored ComputersView.xaml.cs to create and set DataContext to `new ComputersViewModel()` as per original instructions
+- **✅ FIXED Binding Issue**: Updated all XAML bindings to point to ComputersViewModel properties (SearchText, ComputersView, IsLoading, etc.)
+- **✅ FIXED Data Loading**: ComputersViewModel properly calls `_csvDataService.LoadInfrastructureAsync(profileName)` with debug logging
+- **✅ FIXED Command Integration**: ComputersViewModel has complete command set including OpenComputerDetailCommand for detail functionality  
+- **✅ VERIFIED CSV Integration**: ComputersViewModel loads from actual CSV files (Infrastructure.csv, PhysicalServer_*.csv, Security_*.csv, etc.)
+
+### Implementation Now Follows Original Instructions Exactly:
+1. ✅ **Separate ComputersViewModel** inheriting from BaseViewModel with CsvDataService injection
+2. ✅ **ObservableCollection<InfrastructureData>** property populated by `LoadInfrastructureAsync(profileName)`  
+3. ✅ **ComputersView.xaml.cs** sets DataContext to new ComputersViewModel with MainViewModel parameter
+4. ✅ **DataGrid** bound to ComputersView collection with "View Details" buttons
+5. ✅ **OpenComputerDetailCommand** opens ComputerDetailWindow with ComputerDetailViewModel
+6. ✅ **Auto-loading** mechanism triggers data load when ViewModel is created
+7. ✅ **Debug logging** added to trace data loading process
+
 ## ✅ USERS VIEW & DETAIL PANE IMPLEMENTATION COMPLETED (2025-08-11 22:39)
 
 ### Major Feature Implementation: ✅ COMPLETED

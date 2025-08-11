@@ -220,6 +220,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ApplicationInventoryVi
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AssetInventoryView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\BulkEditView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ColumnChooserDialog.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ComputerDetailView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ComputersView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DataExportManagerView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DiscoveryDashboardView.baml
@@ -306,6 +307,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ApplicationInventoryVi
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AssetInventoryView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\BulkEditView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ColumnChooserDialog.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ComputerDetailView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ComputersView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DataExportManagerView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DependencyGraphView.g.cs
@@ -336,6 +338,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\UsersView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\WaveView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\WhatIfSimulationView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Windows\ChangelogWindow.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Windows\ComputerDetailWindow.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\App.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\GeneratedInternalTypeHelper.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite_MarkupCompile.cache
@@ -361,6 +364,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ReportBuilderView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ScriptEditorView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\TaskSchedulerView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\WhatIfSimulationView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Windows\ComputerDetailWindow.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.g.resources
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.GeneratedMSBuildEditorConfig.editorconfig
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\MandADiscoverySuite.AssemblyInfoInputs.cache

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -8,6 +9,7 @@ using System.Windows.Input;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Collections;
+using MandADiscoverySuite.Windows;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -19,11 +21,12 @@ namespace MandADiscoverySuite.ViewModels
         #region Fields
 
         private readonly IDataService _dataService;
+        private readonly CsvDataService _csvDataService;
+        private readonly MainViewModel _mainViewModel;
         private string _searchText;
-        private bool _isLoading;
-        private string _loadingMessage;
-        private int _loadingProgress;
+        private string _selectedTypeFilter;
         private ICollectionView _computersView;
+        private InfrastructureData _selectedComputer;
 
         #endregion
 
@@ -59,30 +62,37 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         /// <summary>
-        /// Whether computers are currently being loaded
+        /// Selected type filter for computers
         /// </summary>
-        public new bool IsLoading
+        public string SelectedTypeFilter
         {
-            get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
+            get => _selectedTypeFilter;
+            set
+            {
+                if (SetProperty(ref _selectedTypeFilter, value))
+                {
+                    ApplyFilter();
+                }
+            }
         }
 
         /// <summary>
-        /// Loading progress message
+        /// Available computer types for filtering
         /// </summary>
-        public new string LoadingMessage
-        {
-            get => _loadingMessage;
-            set => SetProperty(ref _loadingMessage, value);
-        }
+        public ObservableCollection<string> ComputerTypes { get; }
 
         /// <summary>
-        /// Loading progress percentage (0-100)
+        /// Whether there are computers to display
         /// </summary>
-        public new int LoadingProgress
+        public bool HasComputers => TotalComputerCount > 0;
+
+        /// <summary>
+        /// Currently selected computer for detail view
+        /// </summary>
+        public InfrastructureData SelectedComputer
         {
-            get => _loadingProgress;
-            set => SetProperty(ref _loadingProgress, value);
+            get => _selectedComputer;
+            set => SetProperty(ref _selectedComputer, value);
         }
 
         /// <summary>
@@ -106,28 +116,30 @@ namespace MandADiscoverySuite.ViewModels
 
         public ICommand RefreshComputersCommand { get; }
         public ICommand ExportComputersCommand { get; }
-        public ICommand ExportSelectedComputersCommand { get; }
-        public ICommand SelectAllComputersCommand { get; }
-        public ICommand DeselectAllComputersCommand { get; }
-        public ICommand DeleteSelectedComputersCommand { get; }
-        public ICommand CopySelectedComputersCommand { get; }
-        public ICommand CopyAllComputersCommand { get; }
-        public ICommand ShowAdvancedSearchCommand { get; }
         public ICommand ClearSearchCommand { get; }
+        public ICommand ClearFiltersCommand { get; }
+        public ICommand OpenComputerDetailCommand { get; }
 
         #endregion
 
         #region Constructor
 
-        public ComputersViewModel(IDataService dataService = null)
+        public ComputersViewModel(IDataService dataService = null, CsvDataService csvDataService = null, MainViewModel mainViewModel = null)
         {
+            System.Diagnostics.Debug.WriteLine("ComputersViewModel constructor: Starting initialization");
             _dataService = dataService ?? SimpleServiceLocator.GetService<IDataService>();
+            _csvDataService = csvDataService ?? SimpleServiceLocator.GetService<CsvDataService>();
+            _mainViewModel = mainViewModel;
+            System.Diagnostics.Debug.WriteLine($"ComputersViewModel constructor: Services initialized - _csvDataService is {(_csvDataService != null ? "not null" : "null")}");
             
             Computers = new OptimizedObservableCollection<InfrastructureData>();
             Computers.CollectionChanged += (s, e) => 
             {
-                OnPropertiesChanged(nameof(TotalComputerCount), nameof(StatusInfo));
+                OnPropertiesChanged(nameof(TotalComputerCount), nameof(StatusInfo), nameof(HasComputers));
+                UpdateComputerTypes();
             };
+
+            ComputerTypes = new ObservableCollection<string>();
 
             // Create collection view for filtering and sorting
             ComputersView = CollectionViewSource.GetDefaultView(Computers);
@@ -136,23 +148,19 @@ namespace MandADiscoverySuite.ViewModels
             // Initialize commands
             RefreshComputersCommand = new AsyncRelayCommand(RefreshComputersAsync, () => !IsLoading);
             ExportComputersCommand = new AsyncRelayCommand(ExportComputersAsync, () => Computers.Count > 0);
-            ExportSelectedComputersCommand = new AsyncRelayCommand(ExportSelectedComputersAsync, CanExecuteSelectedComputersOperation);
-            SelectAllComputersCommand = new RelayCommand(SelectAllComputers, () => Computers.Count > 0);
-            DeselectAllComputersCommand = new RelayCommand(DeselectAllComputers, CanExecuteSelectedComputersOperation);
-            DeleteSelectedComputersCommand = new AsyncRelayCommand(DeleteSelectedComputersAsync, CanExecuteSelectedComputersOperation);
-            CopySelectedComputersCommand = new RelayCommand(CopySelectedComputers, CanExecuteSelectedComputersOperation);
-            CopyAllComputersCommand = new RelayCommand(CopyAllComputers, () => Computers.Count > 0);
-            ShowAdvancedSearchCommand = new RelayCommand(ShowAdvancedSearch);
             ClearSearchCommand = new RelayCommand(ClearSearch, () => !string.IsNullOrEmpty(SearchText));
+            ClearFiltersCommand = new RelayCommand(ClearFilters, () => !string.IsNullOrEmpty(SelectedTypeFilter));
+            OpenComputerDetailCommand = new RelayCommand<InfrastructureData>(OpenComputerDetail, computer => computer != null);
 
             _searchText = string.Empty;
-            _loadingMessage = "Ready";
+            _selectedTypeFilter = string.Empty;
+            LoadingMessage = "Ready";
             
             // Auto-load data when ViewModel is created
-            LoadDataAsync();
+            _ = LoadDataAsync();
         }
         
-        private async void LoadDataAsync()
+        private async Task LoadDataAsync()
         {
             await RefreshComputersAsync();
         }
@@ -196,15 +204,14 @@ namespace MandADiscoverySuite.ViewModels
             await RefreshComputersAsync(null);
         }
 
-        private async Task RefreshComputersAsync(string dataDirectory)
+        private async Task RefreshComputersAsync(string dataDirectory = null)
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine("ComputersViewModel.RefreshComputersAsync: Starting data refresh");
                 IsLoading = true;
-                LoadingMessage = "Refreshing computers data...";
+                LoadingMessage = "Refreshing computer data...";
                 LoadingProgress = 10;
-                
-                System.Diagnostics.Debug.WriteLine($"ComputersViewModel.RefreshComputersAsync: Starting refresh at {DateTime.Now:HH:mm:ss.fff}");
 
                 Computers.Clear();
                 
@@ -212,73 +219,48 @@ namespace MandADiscoverySuite.ViewModels
                 var profileService = SimpleServiceLocator.GetService<IProfileService>();
                 var currentProfile = await profileService?.GetCurrentProfileAsync();
                 var profileName = currentProfile?.CompanyName ?? "ljpops";
-                
-                System.Diagnostics.Debug.WriteLine($"ComputersViewModel: Loading data for profile: {profileName}");
+                System.Diagnostics.Debug.WriteLine($"ComputersViewModel.RefreshComputersAsync: Using profile name: {profileName}");
 
-                LoadingMessage = "Loading computer accounts...";
+                LoadingMessage = "Loading infrastructure data...";
                 LoadingProgress = 30;
 
-                // Load computers from CSV files (using infrastructure data)
-                if (_dataService == null)
+                // Use CsvDataService to load infrastructure data
+                IEnumerable<InfrastructureData> infrastructureData;
+                if (_csvDataService != null)
                 {
-                    System.Diagnostics.Debug.WriteLine("ComputersViewModel: DataService is null, using CsvDataService directly");
-                    var csvService = SimpleServiceLocator.GetService<CsvDataService>() ?? new CsvDataService();
-                    var computerData = await csvService.LoadInfrastructureAsync(profileName);
-                    
-                    System.Diagnostics.Debug.WriteLine($"ComputersViewModel: Loaded {computerData?.Count() ?? 0} computers from CSV");
-                    
-                    LoadingMessage = "Processing computer data...";
-                    LoadingProgress = 70;
-
-                    if (computerData != null && computerData.Any())
-                    {
-                        foreach (var computer in computerData)
-                        {
-                            Computers.Add(computer);
-                        }
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine("ComputersViewModel: No computer data loaded, creating sample data");
-                        // Create sample data if none exists
-                        var sampleService = new SampleDataService();
-                        await sampleService.CreateSampleDataIfMissingAsync(profileName);
-                        
-                        // Try loading again
-                        computerData = await csvService.LoadInfrastructureAsync(profileName);
-                        if (computerData != null)
-                        {
-                            foreach (var computer in computerData)
-                            {
-                                Computers.Add(computer);
-                            }
-                        }
-                    }
+                    System.Diagnostics.Debug.WriteLine("ComputersViewModel.RefreshComputersAsync: Using CsvDataService to load infrastructure data");
+                    infrastructureData = await _csvDataService.LoadInfrastructureAsync(profileName) ?? new List<InfrastructureData>();
+                    System.Diagnostics.Debug.WriteLine($"ComputersViewModel.RefreshComputersAsync: Loaded {infrastructureData.Count()} infrastructure items from CsvDataService");
                 }
                 else
                 {
-                    var computerData = await _dataService.LoadInfrastructureAsync(profileName) ?? new System.Collections.Generic.List<InfrastructureData>();
-                    System.Diagnostics.Debug.WriteLine($"ComputersViewModel: Loaded {computerData.Count()} computers from DataService");
-                    
-                    LoadingMessage = "Processing computer data...";
-                    LoadingProgress = 70;
+                    System.Diagnostics.Debug.WriteLine("ComputersViewModel.RefreshComputersAsync: CsvDataService is null, using fallback IDataService");
+                    infrastructureData = await _dataService?.LoadInfrastructureAsync(profileName) ?? new List<InfrastructureData>();
+                    System.Diagnostics.Debug.WriteLine($"ComputersViewModel.RefreshComputersAsync: Loaded {infrastructureData.Count()} infrastructure items from IDataService");
+                }
 
-                    foreach (var computer in computerData)
+                LoadingMessage = "Processing computer data...";
+                LoadingProgress = 70;
+
+                var computerList = infrastructureData.ToList();
+
+                // Ensure UI updates happen on UI thread
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    foreach (var computer in computerList)
                     {
                         Computers.Add(computer);
                     }
-                }
 
-                LoadingMessage = "Applying filters...";
-                LoadingProgress = 90;
+                    LoadingMessage = "Applying filters...";
+                    LoadingProgress = 90;
 
-                ComputersView.Refresh();
-                OnPropertiesChanged(nameof(FilteredComputerCount), nameof(TotalComputerCount), nameof(StatusInfo));
+                    ComputersView.Refresh();
+                    OnPropertiesChanged(nameof(FilteredComputerCount), nameof(TotalComputerCount), nameof(StatusInfo), nameof(HasComputers));
 
-                LoadingMessage = $"Loaded {Computers.Count} computers successfully";
-                LoadingProgress = 100;
-                
-                System.Diagnostics.Debug.WriteLine($"ComputersViewModel: Refresh completed with {Computers.Count} computers");
+                    LoadingMessage = $"Loaded {Computers.Count} computers successfully";
+                    LoadingProgress = 100;
+                });
             }
             catch (Exception ex)
             {
@@ -288,7 +270,10 @@ namespace MandADiscoverySuite.ViewModels
             }
             finally
             {
-                IsLoading = false;
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsLoading = false;
+                });
             }
         }
 
@@ -297,23 +282,53 @@ namespace MandADiscoverySuite.ViewModels
             if (item is not InfrastructureData computer)
                 return false;
 
-            if (string.IsNullOrWhiteSpace(SearchText))
-                return true;
+            // Apply search filter
+            if (!string.IsNullOrWhiteSpace(SearchText))
+            {
+                var searchTerm = SearchText.ToLowerInvariant();
+                var nameMatch = computer.Name?.ToLowerInvariant().Contains(searchTerm) == true;
+                var ipMatch = computer.IPAddress?.ToLowerInvariant().Contains(searchTerm) == true;
+                var typeMatch = computer.Type?.ToLowerInvariant().Contains(searchTerm) == true;
+                var osMatch = computer.OperatingSystem?.ToLowerInvariant().Contains(searchTerm) == true;
+                var locationMatch = computer.Location?.ToLowerInvariant().Contains(searchTerm) == true;
 
-            var searchTerm = SearchText.ToLowerInvariant();
-            
-            return computer.Name?.ToLowerInvariant().Contains(searchTerm) == true ||
-                   computer.Type?.ToLowerInvariant().Contains(searchTerm) == true ||
-                   computer.Description?.ToLowerInvariant().Contains(searchTerm) == true ||
-                   computer.Location?.ToLowerInvariant().Contains(searchTerm) == true ||
-                   computer.IPAddress?.ToLowerInvariant().Contains(searchTerm) == true ||
-                   computer.OperatingSystem?.ToLowerInvariant().Contains(searchTerm) == true;
+                if (!nameMatch && !ipMatch && !typeMatch && !osMatch && !locationMatch)
+                    return false;
+            }
+
+            // Apply type filter
+            if (!string.IsNullOrWhiteSpace(SelectedTypeFilter) && SelectedTypeFilter != "All")
+            {
+                if (computer.Type != SelectedTypeFilter)
+                    return false;
+            }
+
+            return true;
         }
 
         private void ApplyFilter()
         {
             ComputersView?.Refresh();
-            OnPropertiesChanged(nameof(FilteredComputerCount), nameof(StatusInfo));
+            OnPropertiesChanged(nameof(FilteredComputerCount), nameof(StatusInfo), nameof(HasComputers));
+        }
+
+        private void UpdateComputerTypes()
+        {
+            var types = Computers.Select(c => c.Type)
+                                .Where(t => !string.IsNullOrEmpty(t))
+                                .Distinct()
+                                .OrderBy(t => t)
+                                .ToList();
+
+            System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                ComputerTypes.Clear();
+                ComputerTypes.Add("All");
+                foreach (var type in types)
+                {
+                    ComputerTypes.Add(type);
+                }
+            });
         }
 
         private async Task ExportComputersAsync()
@@ -323,21 +338,76 @@ namespace MandADiscoverySuite.ViewModels
                 IsLoading = true;
                 LoadingMessage = "Exporting computers...";
 
-                // TODO: Implement export functionality through IDataService  
-                await System.Threading.Tasks.Task.Delay(500); // Placeholder
+                // Get filtered computers
+                var computersToExport = ComputersView?.Cast<InfrastructureData>().ToList() ?? new List<InfrastructureData>();
                 
-                StatusMessage = "Computers exported successfully";
+                if (!computersToExport.Any())
+                {
+                    StatusMessage = "No computers to export";
+                    return;
+                }
+
+                var saveDialog = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "Export Computers",
+                    Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+                    DefaultExt = "csv",
+                    FileName = $"Computers_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+                };
+
+                if (saveDialog.ShowDialog() == true)
+                {
+                    // Use fallback export method since ExportInfrastructureAsync may not exist
+                    await ExportComputersFallbackAsync(computersToExport, saveDialog.FileName);
+                    
+                    StatusMessage = $"Exported {computersToExport.Count} computers to {System.IO.Path.GetFileName(saveDialog.FileName)}";
+                }
+                else
+                {
+                    StatusMessage = "Export cancelled";
+                }
             }
             catch (Exception ex)
             {
                 ErrorMessage = $"Failed to export computers: {ex.Message}";
                 HasErrors = true;
+                StatusMessage = "Export failed";
             }
             finally
             {
                 IsLoading = false;
                 LoadingMessage = "Ready";
             }
+        }
+
+        /// <summary>
+        /// Fallback export method when CsvDataService is not available
+        /// </summary>
+        private async Task ExportComputersFallbackAsync(List<InfrastructureData> computers, string filePath)
+        {
+            var csvLines = new List<string>();
+            
+            // Header
+            csvLines.Add("Name,Type,OperatingSystem,Version,IPAddress,Status,Location,Manufacturer,Model,LastSeen");
+            
+            // Data rows
+            foreach (var computer in computers)
+            {
+                var line = $"\"{computer.Name?.Replace("\"", "\"\"")}\"," +
+                          $"\"{computer.Type?.Replace("\"", "\"\"")}\"," +
+                          $"\"{computer.OperatingSystem?.Replace("\"", "\"\"")}\"," +
+                          $"\"{computer.Version?.Replace("\"", "\"\"")}\"," +
+                          $"\"{computer.IPAddress?.Replace("\"", "\"\"")}\"," +
+                          $"\"{computer.Status?.Replace("\"", "\"\"")}\"," +
+                          $"\"{computer.Location?.Replace("\"", "\"\"")}\"," +
+                          $"\"{computer.Manufacturer?.Replace("\"", "\"\"")}\"," +
+                          $"\"{computer.Model?.Replace("\"", "\"\"")}\"," +
+                          $"\"{computer.LastSeen?.Replace("\"", "\"\"")}\"";
+                
+                csvLines.Add(line);
+            }
+            
+            await System.IO.File.WriteAllLinesAsync(filePath, csvLines);
         }
 
         private async Task ExportSelectedComputersAsync()
@@ -460,6 +530,44 @@ namespace MandADiscoverySuite.ViewModels
         private void ClearSearch()
         {
             SearchText = string.Empty;
+        }
+
+        private void ClearFilters()
+        {
+            SelectedTypeFilter = string.Empty;
+        }
+
+        /// <summary>
+        /// Opens the computer detail pane for the specified computer
+        /// </summary>
+        /// <param name="computer">Computer to show details for</param>
+        private void OpenComputerDetail(InfrastructureData computer)
+        {
+            if (computer == null) return;
+
+            try
+            {
+                SelectedComputer = computer;
+                
+                // Create and show computer detail view
+                if (_csvDataService != null)
+                {
+                    var detailViewModel = new ComputerDetailViewModel(computer, _csvDataService);
+                    
+                    // For now, create a modal window (similar to UserDetailWindow)
+                    var detailWindow = new ComputerDetailWindow();
+                    detailWindow.DataContext = detailViewModel;
+                    detailWindow.Owner = System.Windows.Application.Current.MainWindow;
+                    detailWindow.ShowDialog();
+                }
+                
+                StatusMessage = $"Opened details for {computer.Name}";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Failed to open computer details: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"Error opening computer detail for {computer?.Name}: {ex}");
+            }
         }
 
         private bool CanExecuteSelectedComputersOperation()

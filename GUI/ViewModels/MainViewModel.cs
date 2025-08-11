@@ -17,6 +17,7 @@ using MandADiscoverySuite.Collections;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Themes;
+using MandADiscoverySuite.Windows;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -202,7 +203,7 @@ namespace MandADiscoverySuite.ViewModels
         public bool IsDashboardVisible => CurrentView == "Dashboard";
         public bool IsDiscoveryVisible => CurrentView == "Discovery";
         public bool IsUsersVisible => CurrentView == "Users";
-        public bool IsComputersVisible => CurrentView == "Computers";
+        public bool IsComputersVisible => CurrentView == "computers";
         public bool IsInfrastructureVisible => CurrentView == "Infrastructure";
         public bool IsGroupsVisible => CurrentView == "Groups";
         public bool IsDomainDiscoveryVisible => CurrentView == "DomainDiscovery";
@@ -641,6 +642,7 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand PreviousInfrastructurePageCommand { get; }
         public ICommand NextInfrastructurePageCommand { get; }
         public ICommand LastInfrastructurePageCommand { get; }
+        public ICommand OpenInfrastructureDetailCommand { get; }
         
         // Groups Commands
         public ICommand SelectAllGroupsCommand { get; }
@@ -806,7 +808,7 @@ namespace MandADiscoverySuite.ViewModels
             ShowUsersViewCommand = new RelayCommand(() => OpenTab("users"));
             ShowGroupsViewCommand = new RelayCommand(() => OpenTab("groups"));
             ShowManagementViewCommand = new RelayCommand(() => OpenTab("management"));
-            ShowComputersViewCommand = new RelayCommand(() => OpenTab("infrastructure"));
+            ShowComputersViewCommand = new RelayCommand(() => OpenTab("computers"));
             ShowInfrastructureViewCommand = new RelayCommand(() => OpenTab("infrastructure"));
             ShowDiscoveryViewCommand = new RelayCommand(() => OpenTab("discovery"));
             ShowDashboardViewCommand = new RelayCommand(() => OpenTab("dashboard"));
@@ -904,6 +906,7 @@ namespace MandADiscoverySuite.ViewModels
             PreviousInfrastructurePageCommand = new RelayCommand(() => _infrastructurePagination.PreviousPage());
             NextInfrastructurePageCommand = new RelayCommand(() => _infrastructurePagination.NextPage());
             LastInfrastructurePageCommand = new RelayCommand(() => _infrastructurePagination.LastPage());
+            OpenInfrastructureDetailCommand = new RelayCommand<InfrastructureData>(OpenInfrastructureDetail, computer => computer != null);
 
             // Initialize groups commands
             SelectAllGroupsCommand = new RelayCommand(SelectAllGroups);
@@ -4005,6 +4008,38 @@ This directory is strictly for storing discovery results and company data.
             RefreshInfrastructurePage();
         }
 
+        /// <summary>
+        /// Opens the computer detail pane for the specified infrastructure item
+        /// </summary>
+        /// <param name="computer">Infrastructure item to show details for</param>
+        private void OpenInfrastructureDetail(InfrastructureData computer)
+        {
+            if (computer == null) return;
+
+            try
+            {
+                // Create and show computer detail view using the existing ComputerDetailViewModel
+                var csvDataService = SimpleServiceLocator.GetService<CsvDataService>();
+                if (csvDataService != null)
+                {
+                    var detailViewModel = new ComputerDetailViewModel(computer, csvDataService);
+                    
+                    // Create a modal window (similar to UserDetailWindow)
+                    var detailWindow = new ComputerDetailWindow();
+                    detailWindow.DataContext = detailViewModel;
+                    detailWindow.Owner = System.Windows.Application.Current.MainWindow;
+                    detailWindow.ShowDialog();
+                }
+                
+                StatusMessage = $"Opened details for {computer.Name}";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Failed to open computer details: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"Error opening infrastructure detail for {computer?.Name}: {ex}");
+            }
+        }
+
         private void RefreshGroupPage()
         {
             _ = _dispatcherService.ScheduleUIUpdate(() =>
@@ -4815,19 +4850,25 @@ This directory is strictly for storing discovery results and company data.
 
         private async Task<IEnumerable<InfrastructureData>> LoadInfrastructureDataAsync()
         {
-            // Use the existing CSV loading functionality  
-            return await Task.Run(() =>
+            // Actually load from CSV files using CsvDataService
+            try
             {
-                try
+                if (SelectedProfile == null || _csvDataService == null)
                 {
+                    System.Diagnostics.Debug.WriteLine("LoadInfrastructureDataAsync: No profile selected or CSV service unavailable");
                     return _allInfrastructure.AsEnumerable();
                 }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error loading infrastructure: {ex.Message}");
-                    return Enumerable.Empty<InfrastructureData>();
-                }
-            });
+
+                System.Diagnostics.Debug.WriteLine($"LoadInfrastructureDataAsync: Loading infrastructure data for profile: {SelectedProfile.CompanyName}");
+                var infrastructure = await _csvDataService.LoadInfrastructureAsync(SelectedProfile.CompanyName);
+                System.Diagnostics.Debug.WriteLine($"LoadInfrastructureDataAsync: Loaded {infrastructure.Count()} infrastructure items");
+                return infrastructure;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading infrastructure from CSV: {ex.Message}");
+                return _allInfrastructure.AsEnumerable();
+            }
         }
 
         private async Task<IEnumerable<GroupData>> LoadGroupsDataAsync()
@@ -4948,8 +4989,25 @@ This directory is strictly for storing discovery results and company data.
                         break;
                     case "computers":
                         var computersDataService = SimpleServiceLocator.GetService<IDataService>();
-                        tabViewModel = new ComputersViewModel(computersDataService);
-                        tabViewModel.TabTitle = "Computers";
+                        var computersCsvDataService = SimpleServiceLocator.GetService<CsvDataService>();
+                        var computersViewModel = new ComputersViewModel(computersDataService, computersCsvDataService, this);
+                        computersViewModel.TabTitle = "Computers";
+                        // Trigger data loading by executing the refresh command
+                        _ = Task.Run(() =>
+                        {
+                            try
+                            {
+                                if (computersViewModel.RefreshComputersCommand.CanExecute(null))
+                                {
+                                    computersViewModel.RefreshComputersCommand.Execute(null);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error loading computers data: {ex.Message}");
+                            }
+                        });
+                        tabViewModel = computersViewModel;
                         break;
                     case "infrastructure":
                         var infrastructureDataService = SimpleServiceLocator.GetService<IDataService>();
