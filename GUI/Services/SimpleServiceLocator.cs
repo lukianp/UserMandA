@@ -99,6 +99,13 @@ namespace MandADiscoverySuite.Services
                 return new ThemeService(logger, messenger);
             });
             
+            RegisterFactory<UIInteractionLoggingService>(() =>
+            {
+                // Use a null logger since we don't have the full DI container
+                var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<UIInteractionLoggingService>.Instance;
+                return new UIInteractionLoggingService(logger);
+            });
+            
             // Register ViewModels
             RegisterFactory<MandADiscoverySuite.ViewModels.MainViewModel>(() => 
                 new MandADiscoverySuite.ViewModels.MainViewModel());

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace MandADiscoverySuite.Models
@@ -82,7 +83,7 @@ namespace MandADiscoverySuite.Models
     /// <summary>
     /// Represents a project phase (e.g., Discovery, Service Transition, Design)
     /// </summary>
-    public class ProjectPhase : INotifyPropertyChanged
+    public partial class ProjectPhase : INotifyPropertyChanged
     {
         private string _name;
         private string _description;
@@ -615,5 +616,444 @@ namespace MandADiscoverySuite.Models
         InProgress,
         Mitigated,
         Closed
+    }
+
+    // =====================================================
+    // NEW MIGRATION MANAGEMENT MODELS
+    // =====================================================
+
+    /// <summary>
+    /// Represents a complete migration project with project management phases
+    /// </summary>
+    public class MigrationProject : INotifyPropertyChanged
+    {
+        private string _projectName;
+        private double _overallProgress;
+        private DateTime _startDate;
+        private DateTime _endDate;
+
+        public string ProjectName
+        {
+            get => _projectName;
+            set { _projectName = value; OnPropertyChanged(); }
+        }
+
+        public ObservableCollection<ProjectPhase> Phases { get; set; } = new ObservableCollection<ProjectPhase>();
+
+        public double OverallProgress
+        {
+            get => _overallProgress;
+            set { _overallProgress = value; OnPropertyChanged(); }
+        }
+
+        public DateTime StartDate
+        {
+            get => _startDate;
+            set { _startDate = value; OnPropertyChanged(); }
+        }
+
+        public DateTime EndDate
+        {
+            get => _endDate;
+            set { _endDate = value; OnPropertyChanged(); }
+        }
+
+        public ObservableCollection<string> Stakeholders { get; set; } = new ObservableCollection<string>();
+        
+        public ObservableCollection<RiskItem> Risks { get; set; } = new ObservableCollection<RiskItem>();
+
+        public ObservableCollection<MigrationProjectWave> Waves { get; set; } = new ObservableCollection<MigrationProjectWave>();
+
+        /// <summary>
+        /// Calculates overall progress as average of phase progresses
+        /// </summary>
+        public void CalculateOverallProgress()
+        {
+            if (Phases == null || Phases.Count == 0)
+            {
+                OverallProgress = 0;
+                return;
+            }
+
+            double totalProgress = 0;
+            foreach (var phase in Phases)
+            {
+                phase.CalculatePhaseProgress();
+                totalProgress += phase.Progress;
+            }
+            
+            OverallProgress = totalProgress / Phases.Count;
+        }
+
+        /// <summary>
+        /// Initializes project with standard PM phases from flowchart
+        /// </summary>
+        public void InitializeWithStandardPhases()
+        {
+            Phases.Clear();
+            
+            // Initiation Phase
+            var initiation = new ProjectPhase
+            {
+                Name = "Initiation",
+                Description = "Project initiation and setup phase",
+                StartDate = StartDate,
+                EndDate = StartDate.AddDays(14)
+            };
+            initiation.Tasks.Add(new MigrationProjectTask { Name = "Concept Development", Description = "Develop project concept and vision" });
+            initiation.Tasks.Add(new MigrationProjectTask { Name = "Feasibility Study", Description = "Conduct feasibility analysis" });
+            initiation.Tasks.Add(new MigrationProjectTask { Name = "Stakeholder Identification", Description = "Identify and engage key stakeholders" });
+            initiation.Tasks.Add(new MigrationProjectTask { Name = "Project Charter Development", Description = "Create project charter document" });
+            initiation.Tasks.Add(new MigrationProjectTask { Name = "Approval & Authorization", Description = "Obtain project approval and authorization" });
+            Phases.Add(initiation);
+
+            // Planning Phase
+            var planning = new ProjectPhase
+            {
+                Name = "Planning",
+                Description = "Comprehensive project planning phase",
+                StartDate = StartDate.AddDays(14),
+                EndDate = StartDate.AddDays(30)
+            };
+            planning.Tasks.Add(new MigrationProjectTask { Name = "Scope Definition", Description = "Define project scope and boundaries" });
+            planning.Tasks.Add(new MigrationProjectTask { Name = "Work Breakdown Structure (WBS)", Description = "Create detailed WBS" });
+            planning.Tasks.Add(new MigrationProjectTask { Name = "Scheduling", Description = "Develop project schedule" });
+            planning.Tasks.Add(new MigrationProjectTask { Name = "Resource Allocation", Description = "Allocate resources to tasks" });
+            planning.Tasks.Add(new MigrationProjectTask { Name = "Risk Management Planning", Description = "Identify and plan for risks" });
+            planning.Tasks.Add(new MigrationProjectTask { Name = "Communication Planning", Description = "Develop communication strategy" });
+            planning.Tasks.Add(new MigrationProjectTask { Name = "Procurement Planning", Description = "Plan procurement activities" });
+            Phases.Add(planning);
+
+            // Execution Phase
+            var execution = new ProjectPhase
+            {
+                Name = "Execution",
+                Description = "Project execution and implementation phase",
+                StartDate = StartDate.AddDays(30),
+                EndDate = StartDate.AddDays(120)
+            };
+            execution.Tasks.Add(new MigrationProjectTask { Name = "Team Coordination", Description = "Coordinate team activities" });
+            execution.Tasks.Add(new MigrationProjectTask { Name = "Task Execution", Description = "Execute planned tasks" });
+            execution.Tasks.Add(new MigrationProjectTask { Name = "Quality Assurance & Control", Description = "Ensure quality standards" });
+            execution.Tasks.Add(new MigrationProjectTask { Name = "Stakeholder Engagement", Description = "Engage with stakeholders" });
+            execution.Tasks.Add(new MigrationProjectTask { Name = "Procurement Management", Description = "Manage procurement processes" });
+            Phases.Add(execution);
+
+            // Monitoring & Controlling Phase
+            var monitoring = new ProjectPhase
+            {
+                Name = "Monitoring & Controlling",
+                Description = "Continuous monitoring and control phase",
+                StartDate = StartDate.AddDays(30),
+                EndDate = StartDate.AddDays(120)
+            };
+            monitoring.Tasks.Add(new MigrationProjectTask { Name = "Performance Measurement", Description = "Measure project performance" });
+            monitoring.Tasks.Add(new MigrationProjectTask { Name = "Risk Monitoring", Description = "Monitor and manage risks" });
+            monitoring.Tasks.Add(new MigrationProjectTask { Name = "Scope Control", Description = "Control project scope" });
+            monitoring.Tasks.Add(new MigrationProjectTask { Name = "Cost Control", Description = "Monitor and control costs" });
+            monitoring.Tasks.Add(new MigrationProjectTask { Name = "Quality Control", Description = "Ensure quality compliance" });
+            Phases.Add(monitoring);
+
+            // Closure Phase
+            var closure = new ProjectPhase
+            {
+                Name = "Closure",
+                Description = "Project closure and handover phase",
+                StartDate = StartDate.AddDays(120),
+                EndDate = EndDate
+            };
+            closure.Tasks.Add(new MigrationProjectTask { Name = "Final Deliverable Handover", Description = "Hand over final deliverables" });
+            closure.Tasks.Add(new MigrationProjectTask { Name = "Client Approval & Sign-Off", Description = "Obtain client approval" });
+            closure.Tasks.Add(new MigrationProjectTask { Name = "Project Documentation", Description = "Complete project documentation" });
+            closure.Tasks.Add(new MigrationProjectTask { Name = "Team Evaluation & Recognition", Description = "Evaluate and recognize team" });
+            closure.Tasks.Add(new MigrationProjectTask { Name = "Post-Mortem Analysis", Description = "Conduct lessons learned session" });
+            Phases.Add(closure);
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Extended ProjectPhase with migration-specific features
+    /// </summary>
+    public partial class ProjectPhase
+    {
+        public ObservableCollection<MigrationProjectTask> Tasks { get; set; } = new ObservableCollection<MigrationProjectTask>();
+
+        /// <summary>
+        /// Calculates phase progress as percentage of completed tasks
+        /// </summary>
+        public void CalculatePhaseProgress()
+        {
+            if (Tasks == null || Tasks.Count == 0)
+            {
+                Progress = 0;
+                return;
+            }
+
+            int completedTasks = Tasks.Count(t => t.Status == MigrationProjectTaskStatus.Completed);
+            Progress = (double)completedTasks / Tasks.Count * 100;
+        }
+    }
+
+    /// <summary>
+    /// Represents a migration task with dependencies
+    /// </summary>
+    public class MigrationProjectTask : INotifyPropertyChanged
+    {
+        private static int _nextId = 1;
+        private int _id;
+        private string _name;
+        private string _description;
+        private string _owner;
+        private DateTime _startDate;
+        private DateTime _endDate;
+        private MigrationProjectTaskStatus _status;
+        private double _progress;
+        private string _notes;
+        private bool _isCriticalPath;
+
+        public int Id
+        {
+            get => _id;
+            set { _id = value; OnPropertyChanged(); }
+        }
+
+        public MigrationProjectTask()
+        {
+            Id = _nextId++;
+            Status = MigrationProjectTaskStatus.NotStarted;
+            Progress = 0;
+            Dependencies = new List<int>();
+        }
+
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
+
+        public string Description
+        {
+            get => _description;
+            set { _description = value; OnPropertyChanged(); }
+        }
+
+        public string Owner
+        {
+            get => _owner;
+            set { _owner = value; OnPropertyChanged(); }
+        }
+
+        public DateTime StartDate
+        {
+            get => _startDate;
+            set { _startDate = value; OnPropertyChanged(); }
+        }
+
+        public DateTime EndDate
+        {
+            get => _endDate;
+            set { _endDate = value; OnPropertyChanged(); }
+        }
+
+        public MigrationProjectTaskStatus Status
+        {
+            get => _status;
+            set { _status = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusColor)); }
+        }
+
+        public List<int> Dependencies { get; set; }
+
+        public double Progress
+        {
+            get => _progress;
+            set { _progress = Math.Max(0, Math.Min(100, value)); OnPropertyChanged(); }
+        }
+
+        public string Notes
+        {
+            get => _notes;
+            set { _notes = value; OnPropertyChanged(); }
+        }
+
+        public bool IsCriticalPath
+        {
+            get => _isCriticalPath;
+            set { _isCriticalPath = value; OnPropertyChanged(); }
+        }
+
+        public string StatusColor => Status switch
+        {
+            MigrationProjectTaskStatus.NotStarted => "#FF6B7280",
+            MigrationProjectTaskStatus.InProgress => "#FF3B82F6",
+            MigrationProjectTaskStatus.Completed => "#FF10B981",
+            MigrationProjectTaskStatus.AtRisk => "#FFF59E0B",
+            MigrationProjectTaskStatus.Blocked => "#FFEF4444",
+            _ => "#FF6B7280"
+        };
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Represents a migration wave
+    /// </summary>
+    public class MigrationProjectWave : INotifyPropertyChanged
+    {
+        private string _name;
+        private string _description;
+        private DateTime _startDate;
+        private DateTime _endDate;
+        private WaveStatus _status;
+        private double _progress;
+
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
+
+        public string Description
+        {
+            get => _description;
+            set { _description = value; OnPropertyChanged(); }
+        }
+
+        public DateTime StartDate
+        {
+            get => _startDate;
+            set { _startDate = value; OnPropertyChanged(); }
+        }
+
+        public DateTime EndDate
+        {
+            get => _endDate;
+            set { _endDate = value; OnPropertyChanged(); }
+        }
+
+        public WaveStatus Status
+        {
+            get => _status;
+            set { _status = value; OnPropertyChanged(); }
+        }
+
+        public ObservableCollection<User> AssignedUsers { get; set; } = new ObservableCollection<User>();
+
+        public double Progress
+        {
+            get => _progress;
+            set { _progress = value; OnPropertyChanged(); }
+        }
+
+        public List<string> AssociatedPhases { get; set; } = new List<string>();
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Represents a risk item
+    /// </summary>
+    public class RiskItem : INotifyPropertyChanged
+    {
+        private string _description;
+        private RiskSeverity _severity;
+        private string _mitigation;
+
+        public string Description
+        {
+            get => _description;
+            set { _description = value; OnPropertyChanged(); }
+        }
+
+        public RiskSeverity Severity
+        {
+            get => _severity;
+            set { _severity = value; OnPropertyChanged(); }
+        }
+
+        public string Mitigation
+        {
+            get => _mitigation;
+            set { _mitigation = value; OnPropertyChanged(); }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Represents a user
+    /// </summary>
+    public class User : INotifyPropertyChanged
+    {
+        private string _name;
+        private string _role;
+
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
+
+        public string Role
+        {
+            get => _role;
+            set { _role = value; OnPropertyChanged(); }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Wave status item for charts
+    /// </summary>
+    public class WaveStatusItem
+    {
+        public string WaveName { get; set; }
+        public double Completion { get; set; }
+    }
+
+    // New Enumerations
+    public enum MigrationProjectTaskStatus
+    {
+        NotStarted,
+        InProgress,
+        Completed,
+        AtRisk,
+        Blocked
+    }
+
+    public enum WaveStatus
+    {
+        Planned,
+        Active,
+        Completed
+    }
+
+    public enum RiskSeverity
+    {
+        Low,
+        Medium,
+        High
     }
 }

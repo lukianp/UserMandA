@@ -13,4 +13,8 @@ build_property.InvariantGlobalization =
 build_property.PlatformNeutralAssembly = 
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = MandADiscoverySuite
+<<<<<<< HEAD
 build_property.ProjectDir = D:\Scripts\UserMandA\GUI\
+=======
+build_property.ProjectDir = D:\Scripts\UserMandA-1\GUI\
+>>>>>>> b834b9783289396bba24fdc8e133724fd3526408

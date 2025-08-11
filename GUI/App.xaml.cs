@@ -36,6 +36,17 @@ namespace MandADiscoverySuite
                 var auditService = AuditService.Instance;
                 logAction?.Invoke("Logging and audit services initialized");
 
+                // Initialize SimpleServiceLocator early (moved before UI logging service)
+                logAction?.Invoke("Initializing SimpleServiceLocator...");
+                SimpleServiceLocator.Initialize();
+                logAction?.Invoke("SimpleServiceLocator initialized successfully");
+
+                // Initialize UI interaction logging service for comprehensive click tracking
+                logAction?.Invoke("Initializing UI interaction logging service...");
+                var uiLoggingService = SimpleServiceLocator.GetService<UIInteractionLoggingService>();
+                uiLoggingService?.Initialize();
+                logAction?.Invoke("UI interaction logging service initialized successfully");
+
                 // Store start time for uptime calculation
                 Current.Properties["StartTime"] = startTime;
                 
@@ -45,10 +56,7 @@ namespace MandADiscoverySuite
                     $"M&A Discovery Suite v{version} is starting up", 
                     new { Version = version, CommandLineArgs = e.Args, StartTime = startTime }));
                 
-                // Initialize only SimpleServiceLocator (removing ServiceLocator to avoid conflicts)
-                logAction?.Invoke("Initializing SimpleServiceLocator...");
-                SimpleServiceLocator.Initialize();
-                logAction?.Invoke("SimpleServiceLocator initialized successfully");
+                // SimpleServiceLocator already initialized above
                 
                 logAction?.Invoke("Getting ThemeService...");
                 var themeService = SimpleServiceLocator.GetService<ThemeService>();
