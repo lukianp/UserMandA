@@ -1,0 +1,314 @@
+<UserControl x:Class="MandADiscoverySuite.Views.InfrastructureAssetsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="800" d:DesignWidth="1200">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FF2D3748"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="FilterComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="MinWidth" Value="150"/>
+            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="SearchTextBoxStyle" TargetType="TextBox">
+            <Setter Property="MinWidth" Value="200"/>
+            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#FFE2E8F0"/>
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="Infrastructure &amp; Assets" Style="{StaticResource HeaderTextStyle}" FontSize="20"/>
+
+        <!-- Filter and Search Controls -->
+        <Border Grid.Row="1" Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="0,0,0,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Search -->
+                <TextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBox Grid.Column="1" 
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                         Style="{StaticResource SearchTextBoxStyle}"
+                         ToolTip="Search by name, IP address, description, or type"/>
+
+                <!-- Type Filter -->
+                <TextBlock Grid.Column="2" Text="Type:" VerticalAlignment="Center" Margin="16,0,8,0"/>
+                <ComboBox Grid.Column="3" 
+                          ItemsSource="{Binding AssetTypes}"
+                          SelectedItem="{Binding SelectedTypeFilter}"
+                          Style="{StaticResource FilterComboBoxStyle}"
+                          ToolTip="Filter by asset type"/>
+
+                <!-- Location Filter -->
+                <TextBlock Grid.Column="4" Text="Location:" VerticalAlignment="Center" Margin="16,0,8,0"/>
+                <ComboBox Grid.Column="5" 
+                          ItemsSource="{Binding AssetLocations}"
+                          SelectedItem="{Binding SelectedLocationFilter}"
+                          Style="{StaticResource FilterComboBoxStyle}"
+                          ToolTip="Filter by location"/>
+            </Grid>
+        </Border>
+
+        <!-- Action Buttons and Status -->
+        <Grid Grid.Row="2" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Status and Buttons -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="Refresh" Command="{Binding RefreshAssetsCommand}" 
+                        Padding="12,6" Margin="0,0,8,0"
+                        ToolTip="Reload assets from CSV files"/>
+                <Button Content="Clear Search" Command="{Binding ClearSearchCommand}" 
+                        Padding="12,6" Margin="0,0,8,0"
+                        ToolTip="Clear search text"/>
+                <Button Content="Clear Filters" Command="{Binding ClearFiltersCommand}" 
+                        Padding="12,6" Margin="0,0,8,0"
+                        ToolTip="Clear all filters"/>
+                <Button Content="Export" Command="{Binding ExportAssetsCommand}" 
+                        Padding="12,6" Margin="0,0,8,0"
+                        ToolTip="Export filtered assets to CSV"/>
+            </StackPanel>
+
+            <!-- Status Info -->
+            <TextBlock Grid.Column="1" Text="{Binding StatusInfo}" VerticalAlignment="Center" 
+                       Foreground="#FF718096" FontSize="12"/>
+        </Grid>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="3">
+            <!-- Loading Indicator -->
+            <Border Background="White" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
+                    Panel.ZIndex="10">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,0,0,16"/>
+                    <TextBlock Text="{Binding LoadingMessage}" HorizontalAlignment="Center" 
+                               Foreground="#FF4A5568" FontSize="14"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Error Message -->
+            <Border Background="#FFFEF2F2" BorderBrush="#FFED8077" BorderThickness="1" Padding="16" Margin="0,0,0,16"
+                    Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="Error" FontWeight="Bold" Foreground="#FFE53E3E" Margin="0,0,0,8"/>
+                    <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFE53E3E" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Assets DataGrid -->
+            <DataGrid x:Name="AssetsDataGrid"
+                      ItemsSource="{Binding AssetsView}"
+                      SelectedItem="{Binding SelectedAsset}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      IsReadOnly="True"
+                      SelectionMode="Single"
+                      GridLinesVisibility="Horizontal"
+                      HeadersVisibility="Column"
+                      RowHeaderWidth="0"
+                      AlternatingRowBackground="#FFF8FAFC"
+                      Background="White"
+                      BorderBrush="#FFE2E8F0"
+                      BorderThickness="1"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling">
+
+                <DataGrid.Columns>
+                    <!-- Name -->
+                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" MinWidth="150">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Padding" Value="8,4"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Type -->
+                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="140" MinWidth="100">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Padding" Value="8,4"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Description -->
+                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="200" MinWidth="150">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Padding" Value="8,4"/>
+                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                <Setter Property="ToolTip" Value="{Binding Description}"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Operating System -->
+                    <DataGridTextColumn Header="OS" Binding="{Binding OperatingSystem}" Width="120" MinWidth="80">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Padding" Value="8,4"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- IP Address -->
+                    <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="120" MinWidth="100">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontFamily" Value="Consolas"/>
+                                <Setter Property="Padding" Value="8,4"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Status -->
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80" MinWidth="60">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Padding" Value="8,4"/>
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Location -->
+                    <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="120" MinWidth="100">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Padding" Value="8,4"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Manufacturer -->
+                    <DataGridTextColumn Header="Manufacturer" Binding="{Binding Manufacturer}" Width="120" MinWidth="100">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Padding" Value="8,4"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Model -->
+                    <DataGridTextColumn Header="Model" Binding="{Binding Model}" Width="120" MinWidth="100">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Padding" Value="8,4"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Last Seen -->
+                    <DataGridTextColumn Header="Last Seen" Binding="{Binding LastSeen, StringFormat=yyyy-MM-dd HH:mm}" Width="130" MinWidth="120">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontFamily" Value="Consolas"/>
+                                <Setter Property="Padding" Value="8,4"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- View Details Button -->
+                    <DataGridTemplateColumn Header="Actions" Width="100" MinWidth="80">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="View Details" 
+                                        Command="{Binding DataContext.OpenAssetDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                        CommandParameter="{Binding}"
+                                        Padding="8,4" Margin="4"
+                                        FontSize="10"
+                                        Background="#FF3182CE"
+                                        Foreground="White"
+                                        BorderThickness="0"
+                                        ToolTip="View detailed information and relationships for this asset">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#FF2C5AA0"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FFF7FAFC"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+            </DataGrid>
+        </Grid>
+
+        <!-- Empty State -->
+        <Border Grid.Row="3" 
+                Visibility="{Binding HasAssets, Converter={StaticResource BoolToVisibilityConverter}}"
+                Background="White">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasAssets}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                <TextBlock Text="No Assets Found" FontSize="18" FontWeight="SemiBold" 
+                           HorizontalAlignment="Center" Foreground="#FF4A5568" Margin="0,0,0,8"/>
+                <TextBlock Text="No infrastructure assets were found in the CSV data files." 
+                           HorizontalAlignment="Center" Foreground="#FF718096" Margin="0,0,0,16"/>
+                <Button Content="Refresh Data" Command="{Binding RefreshAssetsCommand}" 
+                        Padding="16,8" Background="#FF3182CE" Foreground="White" BorderThickness="0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
