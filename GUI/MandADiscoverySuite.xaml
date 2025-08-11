@@ -808,106 +808,7 @@
                                 <Setter Property="ContentTemplate">
                                     <Setter.Value>
                                         <DataTemplate>
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                <Grid Margin="32">
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="*"/>
-                                                    </Grid.RowDefinitions>
-                                                    
-                                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,32">
-                                                        <StackPanel>
-                                                            <TextBlock Text="Discovery Modules" Style="{StaticResource HeaderTextStyle}"/>
-                                                            <TextBlock Text="Run discovery modules to gather comprehensive organizational data" Foreground="#FFA0AEC0" FontSize="16"/>
-                                                        </StackPanel>
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
-                                                            <Button Content="🔄 Refresh Data" Style="{StaticResource ModernButtonStyle}" 
-                                                                    Background="{StaticResource AccentGradient}" Command="{Binding DataContext.RefreshDataCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" 
-                                                                    Margin="0,0,12,0"/>
-                                                            <Button Content="▶️ Run All Modules" Style="{StaticResource ModernButtonStyle}"
-                                                                    Command="{Binding DataContext.StartDiscoveryCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"/>
-                                                        </StackPanel>
-                                                    </StackPanel>
-                                                    
-                                                    <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,32">
-                                                        <Button Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,12,8" Command="{Binding DataContext.ToggleModuleCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="ActiveDirectory">
-                                                            <StackPanel>
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="Active Directory" Foreground="White"/>
-                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
-                                                                </StackPanel>
-                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Button>
-                                                        <Button Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding DataContext.ToggleModuleCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="AzureAD">
-                                                            <StackPanel>
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="Azure AD / Entra" Foreground="White"/>
-                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
-                                                                </StackPanel>
-                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Button>
-                                                        <Button Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding DataContext.ToggleModuleCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="NetworkInfrastructure">
-                                                            <StackPanel>
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="Infrastructure" Foreground="White"/>
-                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
-                                                                </StackPanel>
-                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Button>
-                                                        <Button Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding DataContext.ToggleModuleCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="applications">
-                                                            <StackPanel>
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="Applications" Foreground="White"/>
-                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
-                                                                </StackPanel>
-                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Button>
-                                                        <Button Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="domaindiscovery" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
-                                                            <StackPanel>
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="Domain Discovery" Foreground="White"/>
-                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
-                                                                </StackPanel>
-                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Button>
-                                                        <Button Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="fileservers" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
-                                                            <StackPanel>
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="File Servers" Foreground="White"/>
-                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
-                                                                </StackPanel>
-                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Button>
-                                                        <Button Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="databases" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
-                                                            <StackPanel>
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="Databases" Foreground="White"/>
-                                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
-                                                                </StackPanel>
-                                                                <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Button>
-                                                    </WrapPanel>
-                                                    
-                                                    <Border Grid.Row="2" Style="{StaticResource ModernCardStyle}">
-                                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                            <TextBlock Text="Discovery modules will appear here. Click the module buttons above to run specific discovery operations." 
-                                                                       Foreground="#FFA0AEC0" 
-                                                                       FontSize="14" 
-                                                                       HorizontalAlignment="Center" 
-                                                                       VerticalAlignment="Center"
-                                                                       Margin="50"/>
-                                                        </ScrollViewer>
-                                                    </Border>
-                                                </Grid>
-                                            </ScrollViewer>
+                                            <views:DiscoveryDashboardView/>
                                         </DataTemplate>
                                     </Setter.Value>
                                 </Setter>
@@ -953,16 +854,16 @@
     
     <Window.InputBindings>
         <!-- Navigation Shortcuts -->
-        <KeyBinding Key="F1" Command="{Binding ShowDashboardCommand}"/>
-        <KeyBinding Key="F2" Command="{Binding ShowDiscoveryCommand}"/>
-        <KeyBinding Key="F3" Command="{Binding ShowUsersCommand}"/>
-        <KeyBinding Key="F4" Command="{Binding ShowComputersCommand}"/>
+        <KeyBinding Key="F1" Command="{Binding ShowDashboardViewCommand}"/>
+        <KeyBinding Key="F2" Command="{Binding ShowDiscoveryViewCommand}"/>
+        <KeyBinding Key="F3" Command="{Binding ShowUsersViewCommand}"/>
+        <KeyBinding Key="F4" Command="{Binding ShowComputersViewCommand}"/>
         <KeyBinding Key="F5" Command="{Binding RefreshCommand}"/>
         
         <!-- Action Shortcuts -->
-        <KeyBinding Key="F6" Command="{Binding RunDiscoveryCommand}"/>
-        <KeyBinding Key="F9" Command="{Binding ShowSettingsCommand}"/>
-        <KeyBinding Key="F10" Command="{Binding ShowReportsCommand}"/>
+        <KeyBinding Key="F6" Command="{Binding StartDiscoveryCommand}"/>
+        <KeyBinding Key="F9" Command="{Binding ShowSettingsViewCommand}"/>
+        <KeyBinding Key="F10" Command="{Binding ShowReportsViewCommand}"/>
         
         <!-- Standard Shortcuts -->
         <KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding SaveCommand}"/>
@@ -1885,8 +1786,8 @@
                 </Grid>
             </ScrollViewer>
             
-            <!-- Discovery View -->
-            <ScrollViewer Grid.Row="1" x:Name="DiscoveryView" Visibility="{Binding IsDiscoveryVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <!-- Legacy Discovery View - REMOVED to prevent conflicts -->
+            <ScrollViewer Grid.Row="1" x:Name="DiscoveryView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Opacity="0" IsEnabled="False">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>

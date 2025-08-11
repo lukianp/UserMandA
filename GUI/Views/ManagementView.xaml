@@ -172,28 +172,9 @@
         </Border>
 
         <!-- Content Area -->
-        <Grid Grid.Row="1">
-            <!-- Debug text to verify the view is loading -->
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Panel.ZIndex="100">
-                <TextBlock Text="ManagementView is loaded - DEBUG" 
-                           Foreground="Yellow" 
-                           FontSize="20" 
-                           HorizontalAlignment="Center"/>
-                <TextBlock Text="{Binding SelectedViewModel, StringFormat='Selected: {0}'}" 
-                           Foreground="Cyan" 
-                           FontSize="14" 
-                           HorizontalAlignment="Center" 
-                           Margin="0,5,0,0"/>
-                <TextBlock Text="{Binding DashboardViewModel, StringFormat='Dashboard VM: {0}'}" 
-                           Foreground="Lime" 
-                           FontSize="12" 
-                           HorizontalAlignment="Center" 
-                           Margin="0,2,0,0"/>
-            </StackPanel>
-            
-            <ContentControl Content="{Binding SelectedViewModel}" 
-                            HorizontalContentAlignment="Stretch" 
-                            VerticalContentAlignment="Stretch"/>
-        </Grid>
+        <ContentControl Grid.Row="1" 
+                        Content="{Binding SelectedViewModel}" 
+                        HorizontalContentAlignment="Stretch" 
+                        VerticalContentAlignment="Stretch"/>
     </Grid>
 </UserControl>

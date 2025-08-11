@@ -222,6 +222,7 @@ D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\BulkEditView.baml
 D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\ColumnChooserDialog.baml
 D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\ComputersView.baml
 D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\DataExportManagerView.baml
+D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\DiscoveryDashboardView.baml
 D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\ExportFormatSelectionDialog.baml
 D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\GanttChartView.baml
 D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\GanttView.baml
@@ -307,6 +308,7 @@ D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\ColumnChooserDialog.
 D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\ComputersView.g.cs
 D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\DataExportManagerView.g.cs
 D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\DependencyGraphView.g.cs
+D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\DiscoveryDashboardView.g.cs
 D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\ExportFormatSelectionDialog.g.cs
 D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\GanttChartView.g.cs
 D:\Scripts\UserMandA-1\GUI\obj\Release\net6.0-windows\Views\GanttView.g.cs

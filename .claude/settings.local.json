@@ -104,7 +104,8 @@
       "Bash(dotnet --version)",
       "Bash(dotnet publish:*)",
       "Bash(tasklist:*)",
-      "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\MandADiscovery_20250811_160653.log\" -Tail 20)"
+      "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\MandADiscovery_20250811_160653.log\" -Tail 20)",
+      "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\MandADiscovery_20250811_175821.log\" -Tail 20)"
     ],
     "deny": []
   }

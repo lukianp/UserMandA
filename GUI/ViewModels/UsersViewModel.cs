@@ -100,6 +100,11 @@ namespace MandADiscoverySuite.ViewModels
         /// </summary>
         public string StatusInfo => $"Showing {FilteredUserCount} of {TotalUserCount} users";
 
+        /// <summary>
+        /// Whether there are users to display
+        /// </summary>
+        public bool HasUsers => TotalUserCount > 0;
+
         #endregion
 
         #region Commands
@@ -126,7 +131,7 @@ namespace MandADiscoverySuite.ViewModels
             Users = new OptimizedObservableCollection<UserData>();
             Users.CollectionChanged += (s, e) => 
             {
-                OnPropertiesChanged(nameof(TotalUserCount), nameof(StatusInfo));
+                OnPropertiesChanged(nameof(TotalUserCount), nameof(StatusInfo), nameof(HasUsers));
             };
 
             // Create collection view for filtering and sorting
@@ -234,7 +239,7 @@ namespace MandADiscoverySuite.ViewModels
                 LoadingProgress = 90;
 
                 UsersView.Refresh();
-                OnPropertiesChanged(nameof(FilteredUserCount), nameof(TotalUserCount), nameof(StatusInfo));
+                OnPropertiesChanged(nameof(FilteredUserCount), nameof(TotalUserCount), nameof(StatusInfo), nameof(HasUsers));
 
                 LoadingMessage = $"Loaded {Users.Count} users successfully";
                 LoadingProgress = 100;
@@ -272,7 +277,7 @@ namespace MandADiscoverySuite.ViewModels
         private void ApplyFilter()
         {
             UsersView?.Refresh();
-            OnPropertiesChanged(nameof(FilteredUserCount), nameof(StatusInfo));
+            OnPropertiesChanged(nameof(FilteredUserCount), nameof(StatusInfo), nameof(HasUsers));
         }
 
         private async Task ExportUsersAsync()

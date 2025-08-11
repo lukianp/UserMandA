@@ -118,7 +118,6 @@
                 
                 <!-- Data Grid -->
                 <DataGrid ItemsSource="{Binding Users}" 
-                          Visibility="{Binding IsLoading, Converter={StaticResource InvertedBoolToVisibilityConverter}}"
                           AutoGenerateColumns="True"
                           Background="Transparent"
                           BorderThickness="0"
@@ -129,6 +128,19 @@
                           IsReadOnly="True"
                           SelectionMode="Single"
                           Margin="1">
+                    <DataGrid.Style>
+                        <Style TargetType="DataGrid">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding HasUsers}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.Style>
                     <DataGrid.Resources>
                         <!-- DataGrid Header Style -->
                         <Style TargetType="DataGridColumnHeader">
@@ -177,8 +189,21 @@
                 
                 <!-- Empty State -->
                 <StackPanel HorizontalAlignment="Center" 
-                           VerticalAlignment="Center"
-                           Visibility="Collapsed">
+                           VerticalAlignment="Center">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsLoading}" Value="False"/>
+                                        <Condition Binding="{Binding HasUsers}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
                     <TextBlock Text="👤" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="#FF6B7280"/>
                     <TextBlock Text="No users found" 
                                FontSize="18" 
