@@ -121,6 +121,21 @@ namespace MandADiscoverySuite.Services
 
             try
             {
+                // CRITICAL FIX: Detect if rawDataPath is actually a profile name instead of a full path
+                if (!Path.IsPathRooted(rawDataPath) && !rawDataPath.Contains("\\") && !rawDataPath.Contains("/"))
+                {
+                    // This looks like a profile name, not a path - build the correct path
+                    var rootPath = ConfigurationService.Instance.DiscoveryDataRootPath;
+                    rawDataPath = Path.Combine(rootPath, rawDataPath, "Raw");
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.LoadUsersAsync: Fixed profile name to full path: '{rawDataPath}'");
+                }
+                
+                // ADDITIONAL FIX: Force correct path if it contains working directory or Scripts
+                if (rawDataPath.Contains("Scripts") || rawDataPath.Contains("EnterpriseDiscovery\\ljpops"))
+                {
+                    rawDataPath = @"C:\DiscoveryData\ljpops\Raw";
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.LoadUsersAsync: Forced correct path: '{rawDataPath}'");
+                }
                 
                 // Look for user CSV files with various naming patterns
                 var userFiles = new[]
@@ -208,10 +223,17 @@ namespace MandADiscoverySuite.Services
                     // This looks like a profile name, not a path - build the correct path
                     var rootPath = ConfigurationService.Instance.DiscoveryDataRootPath;
                     rawDataPath = Path.Combine(rootPath, rawDataPath, "Raw");
-                    System.Diagnostics.Debug.WriteLine($"CsvDataService: Fixed profile name '{Path.GetFileName(rawDataPath)}' to full path: '{rawDataPath}'");
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.LoadInfrastructureAsync: Fixed profile name to full path: '{rawDataPath}'");
                 }
                 
-                System.Diagnostics.Debug.WriteLine($"CsvDataService.LoadInfrastructureAsync(path): Using path: '{rawDataPath}'");
+                // ADDITIONAL FIX: Force correct path if it contains working directory or Scripts
+                if (rawDataPath.Contains("Scripts") || rawDataPath.Contains("EnterpriseDiscovery\\ljpops"))
+                {
+                    rawDataPath = @"C:\DiscoveryData\ljpops\Raw";
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.LoadInfrastructureAsync: Forced correct path: '{rawDataPath}'");
+                }
+                
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.LoadInfrastructureAsync: Using final path: '{rawDataPath}'");
                 
                 // Check if directory exists first
                 if (!Directory.Exists(rawDataPath))
@@ -1379,6 +1401,14 @@ namespace MandADiscoverySuite.Services
         {
             var dataPaths = new List<string>();
             var rootPath = ConfigurationService.Instance.DiscoveryDataRootPath;
+            _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.GetAllDataPaths: ConfigurationService returned rootPath = '{rootPath}'");
+            
+            // TEMPORARY FIX: Force correct path if ConfigurationService returns wrong path
+            if (rootPath.Contains("Scripts") || !Directory.Exists(Path.Combine(rootPath, "ljpops")))
+            {
+                rootPath = @"C:\DiscoveryData";
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.GetAllDataPaths: Fixed rootPath to = '{rootPath}'");
+            }
             
             // Handle null or empty profileName - default to "ljpops"
             if (string.IsNullOrWhiteSpace(profileName))

@@ -13,12 +13,8 @@ namespace MandADiscoverySuite.Views
         {
             InitializeComponent();
             
-            // Set DataContext to ComputersViewModel as per original instructions
-            // Get the MainViewModel from the main window if available
-            var mainWindow = Application.Current.MainWindow;
-            var mainViewModel = mainWindow?.DataContext as MainViewModel;
-            
-            DataContext = new ComputersViewModel(mainViewModel: mainViewModel);
+            // DataContext will be set by the tab navigation system when ComputersViewModel is created
+            // Don't create ComputersViewModel here to avoid overriding the tab system's DataContext
         }
     }
 }

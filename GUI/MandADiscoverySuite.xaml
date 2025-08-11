@@ -763,6 +763,16 @@
                                     </Setter.Value>
                                 </Setter>
                             </DataTrigger>
+                            <!-- Computers Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Computers">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <views:ComputersView DataContext="{Binding}"/>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
                             <!-- Infrastructure Template -->
                             <DataTrigger Binding="{Binding TabTitle}" Value="Infrastructure">
                                 <Setter Property="ContentTemplate">

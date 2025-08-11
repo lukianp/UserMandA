@@ -126,11 +126,11 @@ namespace MandADiscoverySuite.ViewModels
 
         public ComputersViewModel(IDataService dataService = null, CsvDataService csvDataService = null, MainViewModel mainViewModel = null)
         {
-            System.Diagnostics.Debug.WriteLine("ComputersViewModel constructor: Starting initialization");
+            _ = EnhancedLoggingService.Instance.LogInformationAsync("ComputersViewModel constructor: Starting initialization");
             _dataService = dataService ?? SimpleServiceLocator.GetService<IDataService>();
             _csvDataService = csvDataService ?? SimpleServiceLocator.GetService<CsvDataService>();
             _mainViewModel = mainViewModel;
-            System.Diagnostics.Debug.WriteLine($"ComputersViewModel constructor: Services initialized - _csvDataService is {(_csvDataService != null ? "not null" : "null")}");
+            _ = EnhancedLoggingService.Instance.LogInformationAsync($"ComputersViewModel constructor: Services initialized - _csvDataService is {(_csvDataService != null ? "not null" : "null")}");
             
             Computers = new OptimizedObservableCollection<InfrastructureData>();
             Computers.CollectionChanged += (s, e) => 
@@ -208,7 +208,7 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("ComputersViewModel.RefreshComputersAsync: Starting data refresh");
+                _ = EnhancedLoggingService.Instance.LogInformationAsync("ComputersViewModel.RefreshComputersAsync: Starting data refresh");
                 IsLoading = true;
                 LoadingMessage = "Refreshing computer data...";
                 LoadingProgress = 10;
@@ -219,7 +219,7 @@ namespace MandADiscoverySuite.ViewModels
                 var profileService = SimpleServiceLocator.GetService<IProfileService>();
                 var currentProfile = await profileService?.GetCurrentProfileAsync();
                 var profileName = currentProfile?.CompanyName ?? "ljpops";
-                System.Diagnostics.Debug.WriteLine($"ComputersViewModel.RefreshComputersAsync: Using profile name: {profileName}");
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"ComputersViewModel.RefreshComputersAsync: Using profile name: {profileName}");
 
                 LoadingMessage = "Loading infrastructure data...";
                 LoadingProgress = 30;
@@ -228,15 +228,15 @@ namespace MandADiscoverySuite.ViewModels
                 IEnumerable<InfrastructureData> infrastructureData;
                 if (_csvDataService != null)
                 {
-                    System.Diagnostics.Debug.WriteLine("ComputersViewModel.RefreshComputersAsync: Using CsvDataService to load infrastructure data");
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync("ComputersViewModel.RefreshComputersAsync: Using CsvDataService to load infrastructure data");
                     infrastructureData = await _csvDataService.LoadInfrastructureAsync(profileName) ?? new List<InfrastructureData>();
-                    System.Diagnostics.Debug.WriteLine($"ComputersViewModel.RefreshComputersAsync: Loaded {infrastructureData.Count()} infrastructure items from CsvDataService");
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"ComputersViewModel.RefreshComputersAsync: Loaded {infrastructureData.Count()} infrastructure items from CsvDataService");
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine("ComputersViewModel.RefreshComputersAsync: CsvDataService is null, using fallback IDataService");
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync("ComputersViewModel.RefreshComputersAsync: CsvDataService is null, using fallback IDataService");
                     infrastructureData = await _dataService?.LoadInfrastructureAsync(profileName) ?? new List<InfrastructureData>();
-                    System.Diagnostics.Debug.WriteLine($"ComputersViewModel.RefreshComputersAsync: Loaded {infrastructureData.Count()} infrastructure items from IDataService");
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"ComputersViewModel.RefreshComputersAsync: Loaded {infrastructureData.Count()} infrastructure items from IDataService");
                 }
 
                 LoadingMessage = "Processing computer data...";
@@ -264,6 +264,7 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
+                _ = EnhancedLoggingService.Instance.LogErrorAsync("ComputersViewModel.RefreshComputersAsync: Error during data refresh", ex);
                 ErrorMessage = $"Failed to refresh computers: {ex.Message}";
                 HasErrors = true;
                 LoadingMessage = "Failed to load computers";
