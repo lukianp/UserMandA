@@ -16,6 +16,7 @@
             <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <converters:InvertedBoolToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter"/>
+            <converters:ViewModelTypeComparisonConverter x:Key="ViewModelTypeComparisonConverter"/>
             
             <!-- Common Colors -->
             <SolidColorBrush x:Key="PrimaryBrush" Color="#4CAF50"/>

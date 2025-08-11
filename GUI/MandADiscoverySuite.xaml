@@ -932,6 +932,16 @@
                                     </Setter.Value>
                                 </Setter>
                             </DataTrigger>
+                            <!-- Management Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Management">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <views:ManagementView/>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </ContentControl.Style>
@@ -1346,6 +1356,17 @@
                             <StackPanel>
                                 <TextBlock Text="Migrate"/>
                                 <TextBlock Text="Execute Migration" FontSize="10" Foreground="#FFA0AEC0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+                    
+                    <Button x:Name="ManagementButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Management"
+                            ToolTip="Project management dashboard with Gantt charts, waves, and migration planning">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📊" FontSize="18" Margin="0,0,16,0"/>
+                            <StackPanel>
+                                <TextBlock Text="Management"/>
+                                <TextBlock Text="Project Planning" FontSize="10" Foreground="#FFA0AEC0"/>
                             </StackPanel>
                         </StackPanel>
                     </Button>

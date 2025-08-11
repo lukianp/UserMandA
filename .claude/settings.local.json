@@ -99,7 +99,12 @@
       "Bash(msbuild:*)",
       "Bash(Start-Sleep 120)",
       "Bash(del:*)",
-      "Bash(Start-Process \"C:\\EnterpriseDiscovery\\MandADiscoverySuite.exe\" -PassThru)"
+      "Bash(Start-Process \"C:\\EnterpriseDiscovery\\MandADiscoverySuite.exe\" -PassThru)",
+      "Bash(dotnet nuget locals:*)",
+      "Bash(dotnet --version)",
+      "Bash(dotnet publish:*)",
+      "Bash(tasklist:*)",
+      "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\MandADiscovery_20250811_160653.log\" -Tail 20)"
     ],
     "deny": []
   }

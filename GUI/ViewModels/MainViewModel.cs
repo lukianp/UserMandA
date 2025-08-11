@@ -176,6 +176,11 @@ namespace MandADiscoverySuite.ViewModels
         public CommandPaletteViewModel CommandPaletteViewModel { get; }
 
         /// <summary>
+        /// Management ViewModel for Migration Management features
+        /// </summary>
+        public ManagementViewModel ManagementViewModel { get; }
+
+        /// <summary>
         /// Currently selected company profile
         /// </summary>
         public CompanyProfile SelectedProfile
@@ -537,6 +542,7 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand NavigateCommand { get; }
         public ICommand ShowUsersViewCommand { get; }
         public ICommand ShowGroupsViewCommand { get; }
+        public ICommand ShowManagementViewCommand { get; }
         public ICommand ShowComputersViewCommand { get; }
         public ICommand ShowInfrastructureViewCommand { get; }
         public ICommand ShowDiscoveryViewCommand { get; }
@@ -747,6 +753,9 @@ namespace MandADiscoverySuite.ViewModels
             // Initialize Command Palette
             CommandPaletteViewModel = new CommandPaletteViewModel(null, messenger, _profileService, _discoveryService, _dataService);
             
+            // Initialize Management ViewModel
+            ManagementViewModel = new ManagementViewModel();
+            
             // Initialize binding optimization
             try
             {
@@ -795,6 +804,7 @@ namespace MandADiscoverySuite.ViewModels
             NavigateCommand = new RelayCommand<string>(Navigate);
             ShowUsersViewCommand = new RelayCommand(() => OpenTab("users"));
             ShowGroupsViewCommand = new RelayCommand(() => OpenTab("groups"));
+            ShowManagementViewCommand = new RelayCommand(() => OpenTab("management"));
             ShowComputersViewCommand = new RelayCommand(() => OpenTab("infrastructure"));
             ShowInfrastructureViewCommand = new RelayCommand(() => OpenTab("infrastructure"));
             ShowDiscoveryViewCommand = new RelayCommand(() => OpenTab("discovery"));
@@ -4881,6 +4891,10 @@ This directory is strictly for storing discovery results and company data.
                         break;
                     case "settings":
                         tabViewModel = new DashboardViewModel { TabTitle = "Settings" };
+                        break;
+                    case "management":
+                        tabViewModel = ManagementViewModel;
+                        tabViewModel.TabTitle = "Management";
                         break;
                     default:
                         Logger?.LogWarning("Unknown view type for tab: {ViewType}", viewType);
