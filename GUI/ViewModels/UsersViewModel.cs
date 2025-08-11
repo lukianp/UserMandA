@@ -254,29 +254,43 @@ namespace MandADiscoverySuite.ViewModels
                 LoadingMessage = "Processing user data...";
                 LoadingProgress = 70;
 
-                foreach (var user in userData)
+                var userList = userData.ToList(); // Convert to list to get count
+                System.Diagnostics.Debug.WriteLine($"UsersViewModel: Processing {userList.Count} users");
+
+                // Ensure UI updates happen on UI thread
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    Users.Add(user);
-                }
+                    foreach (var user in userList)
+                    {
+                        Users.Add(user);
+                    }
 
-                LoadingMessage = "Applying filters...";
-                LoadingProgress = 90;
+                    LoadingMessage = "Applying filters...";
+                    LoadingProgress = 90;
 
-                UsersView.Refresh();
-                OnPropertiesChanged(nameof(FilteredUserCount), nameof(TotalUserCount), nameof(StatusInfo), nameof(HasUsers));
+                    UsersView.Refresh();
+                    OnPropertiesChanged(nameof(FilteredUserCount), nameof(TotalUserCount), nameof(StatusInfo), nameof(HasUsers));
 
-                LoadingMessage = $"Loaded {Users.Count} users successfully";
-                LoadingProgress = 100;
+                    LoadingMessage = $"Loaded {Users.Count} users successfully";
+                    LoadingProgress = 100;
+                    System.Diagnostics.Debug.WriteLine($"UsersViewModel: Completed loading {Users.Count} users");
+                });
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"UsersViewModel: Exception during refresh: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"UsersViewModel: Exception stack trace: {ex.StackTrace}");
                 ErrorMessage = $"Failed to refresh users: {ex.Message}";
                 HasErrors = true;
                 LoadingMessage = "Failed to load users";
             }
             finally
             {
-                IsLoading = false;
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsLoading = false;
+                    System.Diagnostics.Debug.WriteLine("UsersViewModel: Set IsLoading = false");
+                });
             }
         }
 
