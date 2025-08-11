@@ -70,7 +70,7 @@ namespace MandADiscoverySuite.Services
             }
         }
         
-        private string _discoveryDataRootPath = @"C:\DiscoveryData";
+        private string _discoveryDataRootPath = @"C:\discoverydata";
 
         /// <summary>
         /// Gets the discovery data path for a specific company (handles case insensitivity)
