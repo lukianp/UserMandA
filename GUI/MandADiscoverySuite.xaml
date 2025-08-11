@@ -858,7 +858,7 @@
                                                                 <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </Button>
-                                                        <Button Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding DataContext.ToggleModuleCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="Applications">
+                                                        <Button Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding DataContext.ToggleModuleCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="applications">
                                                             <StackPanel>
                                                                 <StackPanel Orientation="Horizontal">
                                                                     <TextBlock Text="Applications" Foreground="White"/>
@@ -867,7 +867,7 @@
                                                                 <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </Button>
-                                                        <Button Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="DomainDiscovery" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                                                        <Button Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="domaindiscovery" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                                                             <StackPanel>
                                                                 <StackPanel Orientation="Horizontal">
                                                                     <TextBlock Text="Domain Discovery" Foreground="White"/>
@@ -876,7 +876,7 @@
                                                                 <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </Button>
-                                                        <Button Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="FileServers" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                                                        <Button Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="fileservers" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                                                             <StackPanel>
                                                                 <StackPanel Orientation="Horizontal">
                                                                     <TextBlock Text="File Servers" Foreground="White"/>
@@ -885,7 +885,7 @@
                                                                 <TextBlock Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </Button>
-                                                        <Button Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="Databases" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                                                        <Button Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="databases" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                                                             <StackPanel>
                                                                 <StackPanel Orientation="Horizontal">
                                                                     <TextBlock Text="Databases" Foreground="White"/>
@@ -1180,7 +1180,7 @@
                         
                         <Button x:Name="QuickReportsButton" 
                                 Command="{Binding OpenTabCommand}"
-                                CommandParameter="Reports"
+                                CommandParameter="reports"
                                 Background="#FF6B46C1"
                                 BorderThickness="0"
                                 Height="36"
@@ -1213,7 +1213,7 @@
                               HorizontalScrollBarVisibility="Disabled"
                               PanningMode="VerticalOnly">
                     <StackPanel>
-                        <Button x:Name="DashboardButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Dashboard"
+                        <Button x:Name="DashboardButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="dashboard"
                                 ToolTip="View company overview, statistics, and key metrics">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📊" FontSize="18" Margin="0,0,16,0"/>
@@ -1224,7 +1224,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="DiscoveryButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Discovery"
+                    <Button x:Name="DiscoveryButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="discovery"
                             ToolTip="Run automated discovery modules to scan and analyze IT infrastructure">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🔍" FontSize="18" Margin="0,0,16,0"/>
@@ -1235,7 +1235,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="UsersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Users"
+                    <Button x:Name="UsersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="users"
                             ToolTip="Manage user accounts, view profiles, and analyze user permissions">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="👥" FontSize="18" Margin="0,0,16,0"/>
@@ -1246,7 +1246,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="ComputersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Computers"
+                    <Button x:Name="ComputersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="computers"
                             ToolTip="View computer inventory, hardware specifications, and device status">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="💻" FontSize="18" Margin="0,0,16,0"/>
@@ -1257,7 +1257,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="InfrastructureButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Infrastructure"
+                    <Button x:Name="InfrastructureButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="infrastructure"
                             ToolTip="Explore network topology, infrastructure components, and connectivity">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🌐" FontSize="18" Margin="0,0,16,0"/>
@@ -1268,7 +1268,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="AssetsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Assets"
+                    <Button x:Name="AssetsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="assets"
                             ToolTip="View asset inventory">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📦" FontSize="18" Margin="0,0,16,0"/>
@@ -1279,7 +1279,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="GroupsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Groups"
+                    <Button x:Name="GroupsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="groups"
                             ToolTip="Manage security groups, distribution lists, and group memberships">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="👥" FontSize="18" Margin="0,0,16,0"/>
@@ -1290,7 +1290,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="DomainDiscoveryButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="DomainDiscovery">
+                    <Button x:Name="DomainDiscoveryButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="domaindiscovery">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🔍" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -1300,7 +1300,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="FileServersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="FileServers">
+                    <Button x:Name="FileServersButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="fileservers">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📁" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -1310,7 +1310,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="DatabasesButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Databases">
+                    <Button x:Name="DatabasesButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="databases">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🗄️" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -1320,7 +1320,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="SecurityButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Security">
+                    <Button x:Name="SecurityButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="security">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🔒" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -1330,7 +1330,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="ApplicationsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Applications">
+                    <Button x:Name="ApplicationsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="applications">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📱" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -1340,7 +1340,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="WavesButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Waves">
+                    <Button x:Name="WavesButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="waves">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🚀" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -1350,7 +1350,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="MigrateButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Migrate">
+                    <Button x:Name="MigrateButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="migrate">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="⚡" FontSize="18" Margin="0,0,16,0"/>
                             <StackPanel>
@@ -1360,7 +1360,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="ManagementButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Management"
+                    <Button x:Name="ManagementButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="management"
                             ToolTip="Project management dashboard with Gantt charts, waves, and migration planning">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📊" FontSize="18" Margin="0,0,16,0"/>
@@ -1373,7 +1373,7 @@
                     
                     <Separator Margin="24,16" Background="#FF2D3748"/>
                     
-                    <Button x:Name="ReportsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Reports"
+                    <Button x:Name="ReportsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="reports"
                             ToolTip="Generate comprehensive reports and analytics for discovered data">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📄" FontSize="18" Margin="0,0,16,0"/>
@@ -1384,7 +1384,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="AnalyticsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Analytics"
+                    <Button x:Name="AnalyticsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="analytics"
                             ToolTip="Interactive data visualization and analytics dashboard">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📊" FontSize="18" Margin="0,0,16,0"/>
@@ -1395,7 +1395,7 @@
                         </StackPanel>
                     </Button>
                     
-                    <Button x:Name="SettingsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="Settings"
+                    <Button x:Name="SettingsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="settings"
                             ToolTip="Configure application settings, authentication, and discovery parameters">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="⚙️" FontSize="18" Margin="0,0,16,0"/>
@@ -1935,7 +1935,7 @@
                                 <TextBlock x:Name="InfraStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="AppsDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding ToggleModuleCommand}" CommandParameter="Applications">
+                        <Button x:Name="AppsDiscoveryBtn" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8" Command="{Binding ToggleModuleCommand}" CommandParameter="applications">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Applications" Foreground="White"/>
@@ -1944,7 +1944,7 @@
                                 <TextBlock x:Name="AppsStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="DomainDiscoveryBtn" Command="{Binding OpenTabCommand}" CommandParameter="DomainDiscovery" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                        <Button x:Name="DomainDiscoveryBtn" Command="{Binding OpenTabCommand}" CommandParameter="domaindiscovery" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Domain Discovery" Foreground="White"/>
@@ -1953,7 +1953,7 @@
                                 <TextBlock x:Name="DomainStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="FileServersDiscoveryBtn" Command="{Binding OpenTabCommand}" CommandParameter="FileServers" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                        <Button x:Name="FileServersDiscoveryBtn" Command="{Binding OpenTabCommand}" CommandParameter="fileservers" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="File Servers" Foreground="White"/>
@@ -1962,7 +1962,7 @@
                                 <TextBlock x:Name="FileServersStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="DatabasesDiscoveryBtn" Command="{Binding OpenTabCommand}" CommandParameter="Databases" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                        <Button x:Name="DatabasesDiscoveryBtn" Command="{Binding OpenTabCommand}" CommandParameter="databases" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Databases" Foreground="White"/>
@@ -1971,7 +1971,7 @@
                                 <TextBlock x:Name="DatabasesStatusText" Text="Ready" FontSize="10" Foreground="#FFA0AEC0" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="SecurityDiscoveryBtn" Command="{Binding OpenTabCommand}" CommandParameter="Security" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
+                        <Button x:Name="SecurityDiscoveryBtn" Command="{Binding OpenTabCommand}" CommandParameter="security" Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748" Margin="0,0,12,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Security" Foreground="White"/>
@@ -2100,7 +2100,7 @@
                             <Button Content="📤 Export Selected" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ExportSelectedUsersCommand}"/>
                             <Button Content="📋 Copy Selected" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding CopySelectedUsersCommand}"/>
                             <Button Content="📋 Copy All" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding CopyAllUsersCommand}"/>
-                            <Button Content="👁️ Columns" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="Users"/>
+                            <Button Content="👁️ Columns" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="users"/>
                             <Button Content="🔍 Advanced Search" Style="{StaticResource ModernButtonStyle}" Background="#FF4299E1" Margin="8,0,0,0" Command="{Binding ShowUsersAdvancedSearchCommand}"/>
                             <Button Content="🗑️ Delete Selected" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource DangerGradient}" Margin="8,0,0,0" Command="{Binding DeleteSelectedUsersCommand}"/>
                         </StackPanel>
@@ -2694,7 +2694,7 @@
                                     <Button Content="📤 Export Selected" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ExportSelectedInfrastructureCommand}"/>
                                     <Button Content="📋 Copy Selected" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding CopySelectedInfrastructureCommand}"/>
                                     <Button Content="📋 Copy All" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding CopyAllInfrastructureCommand}"/>
-                                    <Button Content="👁️ Columns" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="Infrastructure"/>
+                                    <Button Content="👁️ Columns" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="infrastructure"/>
                                     <Button Content="🔍 Advanced Search" Style="{StaticResource ModernButtonStyle}" Background="#FF4299E1" Margin="8,0,0,0" Command="{Binding ShowInfrastructureAdvancedSearchCommand}"/>
                                 </StackPanel>
                             </StackPanel>
@@ -2942,7 +2942,7 @@
                             <Button Content="📤 Export Selected" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ExportSelectedGroupsCommand}"/>
                             <Button Content="📋 Copy Selected" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding CopySelectedGroupsCommand}"/>
                             <Button Content="📋 Copy All" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding CopyAllGroupsCommand}"/>
-                            <Button Content="👁️ Columns" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="Groups"/>
+                            <Button Content="👁️ Columns" Style="{StaticResource ModernButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="groups"/>
                             <Button Content="🔍 Advanced Search" Style="{StaticResource ModernButtonStyle}" Background="#FF4299E1" Margin="8,0,0,0" Command="{Binding ShowGroupsAdvancedSearchCommand}"/>
                             <Button Content="🗑️ Delete Selected" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource DangerGradient}" Margin="8,0,0,0" Command="{Binding DeleteSelectedGroupsCommand}"/>
                         </StackPanel>
@@ -4712,7 +4712,7 @@
                                             Command="{Binding SecurityTabCommand}" CommandParameter="GPO"/>
                                     <Button x:Name="SecurityTabButton" Content="Security Issues" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF4A5568" Margin="0,0,8,0" Padding="16,8"
-                                            Command="{Binding SecurityTabCommand}" CommandParameter="Security"/>
+                                            Command="{Binding SecurityTabCommand}" CommandParameter="security"/>
                                     <Button x:Name="ComplianceTabButton" Content="Compliance" Style="{StaticResource ModernButtonStyle}"
                                             Background="#FF4A5568" Margin="0,0,8,0" Padding="16,8"
                                             Command="{Binding SecurityTabCommand}" CommandParameter="Compliance"/>

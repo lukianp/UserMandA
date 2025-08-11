@@ -4893,8 +4893,7 @@ This directory is strictly for storing discovery results and company data.
                         tabViewModel = new DashboardViewModel { TabTitle = "Settings" };
                         break;
                     case "management":
-                        tabViewModel = ManagementViewModel;
-                        tabViewModel.TabTitle = "Management";
+                        tabViewModel = new ManagementViewModel { TabTitle = "Management" };
                         break;
                     default:
                         Logger?.LogWarning("Unknown view type for tab: {ViewType}", viewType);
