@@ -129,7 +129,7 @@ namespace MandADiscoverySuite.ViewModels
             return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
             {
                 var dataPath = ConfigurationService.Instance.GetCompanyDataPath(companyName);
-                return await Task.Run(() =>
+                return await Task.Run(async () =>
                 {
                     // Load from CSV files
                     var allUsers = new System.Collections.Generic.List<UserData>();
@@ -139,7 +139,7 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         try
                         {
-                            var fileUsers = Task.Run(async () => await _csvDataService.LoadUsersAsync(file)).GetAwaiter().GetResult();
+                            var fileUsers = await _csvDataService.LoadUsersAsync(file);
                             allUsers.AddRange(fileUsers);
                         }
                         catch (Exception ex)
@@ -163,7 +163,7 @@ namespace MandADiscoverySuite.ViewModels
             return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
             {
                 var dataPath = ConfigurationService.Instance.GetCompanyDataPath(companyName);
-                return await Task.Run(() =>
+                return await Task.Run(async () =>
                 {
                     var allInfrastructure = new System.Collections.Generic.List<InfrastructureData>();
                     var files = System.IO.Directory.GetFiles(dataPath, "infrastructure*.csv", System.IO.SearchOption.AllDirectories);
@@ -172,7 +172,7 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         try
                         {
-                            var fileData = Task.Run(async () => await _csvDataService.LoadInfrastructureAsync(file)).GetAwaiter().GetResult();
+                            var fileData = await _csvDataService.LoadInfrastructureAsync(file);
                             allInfrastructure.AddRange(fileData);
                         }
                         catch (Exception ex)
@@ -196,7 +196,7 @@ namespace MandADiscoverySuite.ViewModels
             return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
             {
                 var dataPath = ConfigurationService.Instance.GetCompanyDataPath(companyName);
-                return await Task.Run(() =>
+                return await Task.Run(async () =>
                 {
                     var allGroups = new System.Collections.Generic.List<GroupData>();
                     var files = System.IO.Directory.GetFiles(dataPath, "groups*.csv", System.IO.SearchOption.AllDirectories);
@@ -205,7 +205,7 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         try
                         {
-                            var fileData = Task.Run(async () => await _csvDataService.LoadGroupsAsync(file)).GetAwaiter().GetResult();
+                            var fileData = await _csvDataService.LoadGroupsAsync(file);
                             allGroups.AddRange(fileData);
                         }
                         catch (Exception ex)

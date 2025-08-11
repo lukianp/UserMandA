@@ -195,6 +195,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\PowerShellWindow.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\RefreshSettingsDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Resources\AppIcons.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Resources\VectorGraphics.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Styles\AccessibilityStyles.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Styles\ChartStyles.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Styles\CustomTooltipStyles.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Styles\CustomWindowChrome.baml
@@ -221,15 +222,18 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\BulkEditView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ColumnChooserDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ComputersView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DataExportManagerView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ExportFormatSelectionDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GanttChartView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GenericDetailWindow.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GroupsView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\KeyboardShortcutsView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\LogViewerDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\NotesTaggingView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\PhaseTrackerView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\RiskAnalysisView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ShortcutEditDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SnapshotComparisonView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ThemeSelectionDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\UserDetailWindow.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\UsersView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Windows\ChangelogWindow.baml
@@ -300,10 +304,12 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ColumnChooserDialog.g.
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ComputersView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DataExportManagerView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DependencyGraphView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ExportFormatSelectionDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GanttChartView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GenericDetailWindow.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GroupsView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\KeyboardShortcutsView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\LogViewerDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\NotesTaggingView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\PhaseTrackerView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ProjectManagementDashboard.g.cs
@@ -314,6 +320,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ScriptEditorView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ShortcutEditDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SnapshotComparisonView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\TaskSchedulerView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ThemeSelectionDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\UserDetailWindow.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\UsersView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\WhatIfSimulationView.g.cs

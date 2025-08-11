@@ -182,6 +182,7 @@ namespace MandADiscoverySuite.Models
         Debug,
         Window,
         Help,
+        Accessibility,
         Custom
     }
 

@@ -1,0 +1,296 @@
+<Window x:Class="MandADiscoverySuite.Views.LogViewerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="System Logs &amp; Audit Viewer" 
+        Width="1200" 
+        Height="800"
+        WindowStartupLocation="CenterOwner"
+        WindowState="Maximized">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Filter Controls -->
+        <Border Grid.Row="0" Background="#F8F9FA" Padding="15" BorderBrush="LightGray" BorderThickness="0,0,0,1">
+            <StackPanel>
+                <TextBlock Text="Log Viewer &amp; Audit Trail" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                
+                <!-- Filter Row 1 -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="Date Range:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <DatePicker x:Name="StartDatePicker" Width="95" Margin="0,0,5,0"/>
+                        <TextBlock Text="to" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <DatePicker x:Name="EndDatePicker" Width="95"/>
+                    </StackPanel>
+                    
+                    <TextBlock Grid.Column="2" Text="Log Type:" VerticalAlignment="Center" Margin="20,0,10,0"/>
+                    <ComboBox x:Name="LogTypeComboBox" Grid.Column="3">
+                        <ComboBoxItem Content="All Logs" IsSelected="True"/>
+                        <ComboBoxItem Content="Application Logs"/>
+                        <ComboBoxItem Content="Audit Logs"/>
+                        <ComboBoxItem Content="Security Logs"/>
+                        <ComboBoxItem Content="Error Logs Only"/>
+                    </ComboBox>
+                    
+                    <TextBlock Grid.Column="4" Text="Level:" VerticalAlignment="Center" Margin="20,0,10,0"/>
+                    <ComboBox x:Name="LogLevelComboBox" Grid.Column="5">
+                        <ComboBoxItem Content="All Levels" IsSelected="True"/>
+                        <ComboBoxItem Content="Critical"/>
+                        <ComboBoxItem Content="Error"/>
+                        <ComboBoxItem Content="Warning"/>
+                        <ComboBoxItem Content="Information"/>
+                        <ComboBoxItem Content="Debug"/>
+                    </ComboBox>
+                </Grid>
+                
+                <!-- Filter Row 2 -->
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBox x:Name="SearchTextBox" Grid.Column="1" 
+                             VerticalAlignment="Center"
+                             ToolTip="Search logs for specific text..."/>
+                    
+                    <TextBlock Grid.Column="2" Text="Category:" VerticalAlignment="Center" Margin="20,0,10,0"/>
+                    <ComboBox x:Name="CategoryComboBox" Grid.Column="3">
+                        <ComboBoxItem Content="All Categories" IsSelected="True"/>
+                        <ComboBoxItem Content="User Actions"/>
+                        <ComboBoxItem Content="Data Operations"/>
+                        <ComboBoxItem Content="Configuration"/>
+                        <ComboBoxItem Content="Discovery"/>
+                        <ComboBoxItem Content="Security"/>
+                        <ComboBoxItem Content="Performance"/>
+                        <ComboBoxItem Content="Errors"/>
+                    </ComboBox>
+                    
+                    <StackPanel Grid.Column="5" Orientation="Horizontal">
+                        <Button x:Name="RefreshButton" Content="Refresh" Click="RefreshButton_Click" 
+                                Padding="15,5" Margin="0,0,10,0"/>
+                        <Button x:Name="ExportButton" Content="Export Logs" Click="ExportButton_Click" 
+                                Padding="15,5" Margin="0,0,10,0"/>
+                        <Button x:Name="ClearLogsButton" Content="Clear Old Logs" Click="ClearLogsButton_Click" 
+                                Padding="15,5"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+        
+        <!-- Main Content -->
+        <TabControl Grid.Row="1" Margin="10">
+            
+            <!-- Log Entries Tab -->
+            <TabItem Header="Log Entries">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="200"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Log List -->
+                    <DataGrid x:Name="LogsDataGrid" Grid.Row="0" AutoGenerateColumns="False" 
+                              IsReadOnly="True" AlternatingRowBackground="AliceBlue"
+                              SelectionChanged="LogsDataGrid_SelectionChanged">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp, StringFormat={}{0:yyyy-MM-dd HH:mm:ss.fff}}" Width="150"/>
+                            <DataGridTextColumn Header="Level" Binding="{Binding Level}" Width="80">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Level}" Value="Error">
+                                                <Setter Property="Foreground" Value="Red"/>
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Level}" Value="Critical">
+                                                <Setter Property="Foreground" Value="DarkRed"/>
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Level}" Value="Warning">
+                                                <Setter Property="Foreground" Value="DarkOrange"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120"/>
+                            <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*"/>
+                            <DataGridTextColumn Header="User" Binding="{Binding UserName}" Width="100"/>
+                            <DataGridTextColumn Header="Thread" Binding="{Binding ThreadId}" Width="60"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    
+                    <!-- Splitter -->
+                    <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" Background="LightGray"/>
+                    
+                    <!-- Details Panel -->
+                    <Grid Grid.Row="2" Background="#F8F9FA">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Left Panel - Message Details -->
+                        <GroupBox Grid.Column="0" Header="Message Details" Margin="5">
+                            <ScrollViewer>
+                                <StackPanel>
+                                    <TextBlock Text="Message:" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBlock x:Name="DetailMessageTextBlock" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    
+                                    <TextBlock Text="Location:" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBlock x:Name="LocationTextBlock" Margin="0,0,0,10"/>
+                                    
+                                    <TextBlock x:Name="ExceptionLabel" Text="Exception:" FontWeight="Bold" Margin="0,0,0,5" Visibility="Collapsed"/>
+                                    <TextBox x:Name="ExceptionTextBox" IsReadOnly="True" 
+                                             TextWrapping="Wrap" AcceptsReturn="True" 
+                                             MaxHeight="100" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                             Visibility="Collapsed"/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </GroupBox>
+                        
+                        <!-- Right Panel - Structured Data -->
+                        <GroupBox Grid.Column="1" Header="Structured Data" Margin="5">
+                            <ScrollViewer>
+                                <TextBox x:Name="StructuredDataTextBox" IsReadOnly="True" 
+                                         TextWrapping="Wrap" AcceptsReturn="True" 
+                                         FontFamily="Consolas"/>
+                            </ScrollViewer>
+                        </GroupBox>
+                    </Grid>
+                </Grid>
+            </TabItem>
+            
+            <!-- Statistics Tab -->
+            <TabItem Header="Statistics">
+                <ScrollViewer>
+                    <StackPanel Margin="20">
+                        <TextBlock Text="Logging Statistics" FontSize="16" FontWeight="Bold" Margin="0,0,0,20"/>
+                        
+                        <Grid x:Name="StatisticsGrid">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Summary Stats -->
+                            <GroupBox Grid.Row="0" Grid.Column="0" Header="Summary" Margin="0,0,10,10">
+                                <StackPanel>
+                                    <TextBlock x:Name="TotalEntriesText" Margin="0,5"/>
+                                    <TextBlock x:Name="ErrorCountText" Foreground="Red" Margin="0,5"/>
+                                    <TextBlock x:Name="WarningCountText" Foreground="DarkOrange" Margin="0,5"/>
+                                    <TextBlock x:Name="InfoCountText" Margin="0,5"/>
+                                    <TextBlock x:Name="DebugCountText" Margin="0,5"/>
+                                </StackPanel>
+                            </GroupBox>
+                            
+                            <!-- Categories with Most Errors -->
+                            <GroupBox Grid.Row="0" Grid.Column="1" Header="Top Error Categories" Margin="10,0,0,10">
+                                <ItemsControl x:Name="ErrorCategoriesItemsControl">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                                <TextBlock Text="{Binding Key}" FontWeight="SemiBold" Width="120"/>
+                                                <TextBlock Text="{Binding Value}" Foreground="Red"/>
+                                                <TextBlock Text=" errors"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </GroupBox>
+                            
+                            <!-- Top Exception Types -->
+                            <GroupBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Header="Top Exception Types" Margin="0,10,0,0">
+                                <ItemsControl x:Name="ExceptionTypesItemsControl">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                                <TextBlock Text="{Binding Key}" FontWeight="SemiBold" Width="200"/>
+                                                <TextBlock Text="{Binding Value}" Foreground="Red"/>
+                                                <TextBlock Text=" occurrences"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </GroupBox>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            
+            <!-- Audit Trail Tab -->
+            <TabItem Header="Audit Trail">
+                <Grid>
+                    <DataGrid x:Name="AuditDataGrid" AutoGenerateColumns="False" 
+                              IsReadOnly="True" AlternatingRowBackground="AliceBlue">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}" Width="150"/>
+                            <DataGridTextColumn Header="Event Type" Binding="{Binding EventType}" Width="120"/>
+                            <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="150"/>
+                            <DataGridTextColumn Header="Details" Binding="{Binding Details}" Width="*"/>
+                            <DataGridTextColumn Header="User" Binding="{Binding UserName}" Width="100"/>
+                            <DataGridTextColumn Header="Level" Binding="{Binding Level}" Width="80">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Level}" Value="Error">
+                                                <Setter Property="Foreground" Value="Red"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Level}" Value="Critical">
+                                                <Setter Property="Foreground" Value="DarkRed"/>
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Level}" Value="Warning">
+                                                <Setter Property="Foreground" Value="DarkOrange"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsSecurityEvent}" Value="True">
+                                                <Setter Property="Background" Value="LightYellow"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+        
+        <!-- Status Bar -->
+        <StatusBar Grid.Row="2">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusTextBlock" Text="Ready"/>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <TextBlock x:Name="RecordCountTextBlock" Text="0 records"/>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>

@@ -29,9 +29,10 @@ namespace MandADiscoverySuite.Extensions
             services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
 
             // Register core services as singletons
-            services.AddSingleton<ConfigurationService>();
+            services.AddSingleton<ConfigurationService>(provider => ConfigurationService.Instance);
             services.AddSingleton<ErrorHandlingService>(provider => ErrorHandlingService.Instance);
             services.AddSingleton<InputValidationService>();
+            services.AddSingleton<AutoSaveService>();
             
             // Register business services
             services.AddSingleton<IProfileService, ProfileService>();
@@ -48,6 +49,12 @@ namespace MandADiscoverySuite.Extensions
             services.AddSingleton<IDetailWindowService, DetailWindowService>();
             services.AddSingleton<ISnapshotService, SnapshotService>();
             services.AddSingleton<IReportBuilderService, ReportBuilderService>();
+            
+            // Register progress tracking service
+            services.AddSingleton<ProgressTrackingService>();
+            
+            // Register data sanitization service
+            services.AddSingleton<DataSanitizationService>(provider => DataSanitizationService.Instance);
             
             // Register utility services - most disabled for stack overflow debugging
             // services.AddSingleton<IntelligentCacheService>();

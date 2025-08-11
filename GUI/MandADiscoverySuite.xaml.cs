@@ -639,7 +639,9 @@ Ctrl+Home             First Page
 Ctrl+End              Last Page
 
 OTHER:
-Ctrl+T                 Toggle Theme
+Ctrl+Alt+T             Toggle Theme
+Ctrl+Shift+T           Theme Selection
+Ctrl+Shift+L           View Logs &amp; Audit
 Shift+Delete          Delete Selected
 F1                     Show This Help
 
@@ -651,14 +653,37 @@ Tips:
             MessageBox.Show(helpText, "Keyboard Shortcuts", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private async void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            // Cleanup keyboard shortcuts
-            _shortcutManager?.UnregisterWindowShortcuts(this);
-            _shortcutManager?.Dispose();
+            // Cancel the close event temporarily to save configuration
+            e.Cancel = true;
             
-            // Cleanup ViewModel resources
-            ViewModel?.Dispose();
+            try
+            {
+                // Save configuration before closing
+                if (ViewModel != null)
+                {
+                    await ViewModel.OnClosingAsync();
+                }
+                
+                // Cleanup keyboard shortcuts
+                _shortcutManager?.UnregisterWindowShortcuts(this);
+                _shortcutManager?.Dispose();
+                
+                // Cleanup ViewModel resources
+                ViewModel?.Dispose();
+                
+                // Now actually close the window
+                e.Cancel = false;
+                Application.Current.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Error during window closing");
+                // Still close the window even if saving fails
+                e.Cancel = false;
+                Application.Current.Shutdown();
+            }
         }
 
         protected override void OnSourceInitialized(EventArgs e)

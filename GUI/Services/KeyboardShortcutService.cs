@@ -399,18 +399,48 @@ namespace MandADiscoverySuite.Services
         {
             return await Task.FromResult(new List<KeyboardShortcut>
             {
+                // File operations
                 new KeyboardShortcut("file.new", "New File", ModifierKeys.Control, Key.N) { Category = KeyboardShortcutCategory.File },
                 new KeyboardShortcut("file.open", "Open File", ModifierKeys.Control, Key.O) { Category = KeyboardShortcutCategory.File },
                 new KeyboardShortcut("file.save", "Save File", ModifierKeys.Control, Key.S) { Category = KeyboardShortcutCategory.File },
+                
+                // Edit operations
                 new KeyboardShortcut("edit.copy", "Copy", ModifierKeys.Control, Key.C) { Category = KeyboardShortcutCategory.Edit },
                 new KeyboardShortcut("edit.paste", "Paste", ModifierKeys.Control, Key.V) { Category = KeyboardShortcutCategory.Edit },
                 new KeyboardShortcut("edit.cut", "Cut", ModifierKeys.Control, Key.X) { Category = KeyboardShortcutCategory.Edit },
                 new KeyboardShortcut("edit.undo", "Undo", ModifierKeys.Control, Key.Z) { Category = KeyboardShortcutCategory.Edit },
                 new KeyboardShortcut("edit.redo", "Redo", ModifierKeys.Control, Key.Y) { Category = KeyboardShortcutCategory.Edit },
+                new KeyboardShortcut("edit.select_all", "Select All", ModifierKeys.Control, Key.A) { Category = KeyboardShortcutCategory.Edit },
+                
+                // Search operations
                 new KeyboardShortcut("search.find", "Find", ModifierKeys.Control, Key.F) { Category = KeyboardShortcutCategory.Search },
                 new KeyboardShortcut("search.replace", "Replace", ModifierKeys.Control, Key.H) { Category = KeyboardShortcutCategory.Search },
+                new KeyboardShortcut("search.find_next", "Find Next", ModifierKeys.None, Key.F3) { Category = KeyboardShortcutCategory.Search },
+                new KeyboardShortcut("search.find_previous", "Find Previous", ModifierKeys.Shift, Key.F3) { Category = KeyboardShortcutCategory.Search },
+                
+                // View operations
                 new KeyboardShortcut("view.refresh", "Refresh", ModifierKeys.None, Key.F5) { Category = KeyboardShortcutCategory.View },
-                new KeyboardShortcut("help.about", "About", ModifierKeys.None, Key.F1) { Category = KeyboardShortcutCategory.Help }
+                new KeyboardShortcut("view.zoom_in", "Zoom In", ModifierKeys.Control, Key.OemPlus) { Category = KeyboardShortcutCategory.View },
+                new KeyboardShortcut("view.zoom_out", "Zoom Out", ModifierKeys.Control, Key.OemMinus) { Category = KeyboardShortcutCategory.View },
+                new KeyboardShortcut("view.zoom_reset", "Reset Zoom", ModifierKeys.Control, Key.D0) { Category = KeyboardShortcutCategory.View },
+                
+                // Navigation operations
+                new KeyboardShortcut("nav.next_tab", "Next Tab", ModifierKeys.Control, Key.Tab) { Category = KeyboardShortcutCategory.Navigation },
+                new KeyboardShortcut("nav.previous_tab", "Previous Tab", ModifierKeys.Control | ModifierKeys.Shift, Key.Tab) { Category = KeyboardShortcutCategory.Navigation },
+                new KeyboardShortcut("nav.close_tab", "Close Tab", ModifierKeys.Control, Key.W) { Category = KeyboardShortcutCategory.Navigation },
+                new KeyboardShortcut("nav.new_tab", "New Tab", ModifierKeys.Control, Key.T) { Category = KeyboardShortcutCategory.Navigation },
+                new KeyboardShortcut("nav.go_to_dashboard", "Go to Dashboard", ModifierKeys.Control, Key.Home) { Category = KeyboardShortcutCategory.Navigation },
+                
+                // Accessibility shortcuts
+                new KeyboardShortcut("accessibility.focus_search", "Focus Search Box", ModifierKeys.Control, Key.E) { Category = KeyboardShortcutCategory.Accessibility },
+                new KeyboardShortcut("accessibility.toggle_high_contrast", "Toggle High Contrast", ModifierKeys.Alt | ModifierKeys.Shift, Key.F8) { Category = KeyboardShortcutCategory.Accessibility },
+                new KeyboardShortcut("accessibility.increase_font_size", "Increase Font Size", ModifierKeys.Control | ModifierKeys.Shift, Key.OemPlus) { Category = KeyboardShortcutCategory.Accessibility },
+                new KeyboardShortcut("accessibility.decrease_font_size", "Decrease Font Size", ModifierKeys.Control | ModifierKeys.Shift, Key.OemMinus) { Category = KeyboardShortcutCategory.Accessibility },
+                new KeyboardShortcut("accessibility.skip_to_content", "Skip to Main Content", ModifierKeys.Alt, Key.M) { Category = KeyboardShortcutCategory.Accessibility },
+                
+                // Help operations
+                new KeyboardShortcut("help.about", "About", ModifierKeys.None, Key.F1) { Category = KeyboardShortcutCategory.Help },
+                new KeyboardShortcut("help.keyboard_shortcuts", "Keyboard Shortcuts Help", ModifierKeys.Control, Key.OemQuestion) { Category = KeyboardShortcutCategory.Help }
             });
         }
 

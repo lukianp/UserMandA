@@ -89,7 +89,10 @@ namespace MandADiscoverySuite.ViewModels
                 IsLoading = true;
                 LoadingMessage = IsEditMode ? "Updating profile..." : "Creating profile...";
 
-                var validationResult = InputValidationService.Instance.ValidateCompanyName(ProfileName);
+                // Sanitize input first
+                var sanitizedName = DataSanitizationService.Instance.SanitizeFileName(ProfileName);
+                
+                var validationResult = InputValidationService.Instance.ValidateCompanyName(sanitizedName);
                 if (!validationResult.IsValid)
                 {
                     ErrorMessage = validationResult.GetSummaryMessage();
@@ -104,7 +107,7 @@ namespace MandADiscoverySuite.ViewModels
                     // Update existing profile
                     profile = new CompanyProfile
                     {
-                        CompanyName = ProfileName.Trim(),
+                        CompanyName = sanitizedName,
                         Description = _originalProfile.Description,
                         DomainController = _originalProfile.DomainController,
                         TenantId = _originalProfile.TenantId,
@@ -122,12 +125,12 @@ namespace MandADiscoverySuite.ViewModels
                     // Create new profile
                     profile = new CompanyProfile
                     {
-                        CompanyName = ProfileName.Trim(),
+                        CompanyName = sanitizedName,
                         Description = "",
                         DomainController = "",
                         TenantId = "",
                         IsActive = true,
-                        Path = System.IO.Path.Combine(@"C:\discoverydata", ProfileName.Trim()),
+                        Path = System.IO.Path.Combine(GetDiscoveryDataRootPath(), ProfileName.Trim()),
                         Industry = "",
                         IsHybrid = false
                     };
@@ -145,7 +148,9 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Failed to {(IsEditMode ? "update" : "create")} profile: {ex.Message}";
+                var errorMessage = ErrorHandlingService.Instance.HandleException(ex, 
+                    $"{(IsEditMode ? "Updating" : "Creating")} profile '{ProfileName}'");
+                ErrorMessage = errorMessage;
                 HasErrors = true;
             }
             finally
@@ -153,6 +158,29 @@ namespace MandADiscoverySuite.ViewModels
                 IsLoading = false;
                 LoadingMessage = "Ready";
             }
+        }
+
+        /// <summary>
+        /// Gets the root path for discovery data, with fallback to default location
+        /// </summary>
+        private string GetDiscoveryDataRootPath()
+        {
+            try
+            {
+                // Try to get from configuration service
+                var configService = SimpleServiceLocator.GetService<ConfigurationService>();
+                if (configService != null)
+                {
+                    return configService.DiscoveryDataRootPath;
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.LogWarning($"Could not get discovery data path from configuration: {ex.Message}");
+            }
+
+            // Fallback to default location
+            return @"C:\DiscoveryData";
         }
 
         private void Cancel()

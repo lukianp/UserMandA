@@ -16,6 +16,7 @@ using MandADiscoverySuite.Behaviors;
 using MandADiscoverySuite.Collections;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
+using MandADiscoverySuite.Themes;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -31,6 +32,8 @@ namespace MandADiscoverySuite.ViewModels
         private readonly IDataService _dataService;
         private readonly CsvDataService _csvDataService;
         private readonly ThemeService _themeService;
+        private readonly ConfigurationService _configurationService;
+        private readonly AutoSaveService _autoSaveService;
         private readonly DispatcherTimer _dashboardTimer;
         private readonly DispatcherTimer _progressTimer;
         private readonly DispatcherTimer _dataRefreshTimer;
@@ -544,6 +547,8 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ExportResultsCommand { get; }
         public ICommand ImportProfileCommand { get; }
         public ICommand ToggleThemeCommand { get; }
+        public ICommand ShowThemeSelectionCommand { get; }
+        public ICommand ShowLogViewerCommand { get; }
         public ICommand ClearSearchCommand { get; }
         public ICommand SelectAllModulesCommand { get; }
         public ICommand SelectNoneModulesCommand { get; }
@@ -800,6 +805,8 @@ namespace MandADiscoverySuite.ViewModels
             ExportResultsCommand = new AsyncRelayCommand(ExportResultsAsync);
             ImportProfileCommand = new AsyncRelayCommand(ImportProfileAsync);
             ToggleThemeCommand = new RelayCommand(ToggleTheme);
+            ShowThemeSelectionCommand = new RelayCommand(ShowThemeSelection);
+            ShowLogViewerCommand = new RelayCommand(ShowLogViewer);
             ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
             SelectAllModulesCommand = new RelayCommand(() => SetAllModulesEnabled(true));
             SelectNoneModulesCommand = new RelayCommand(() => SetAllModulesEnabled(false));
@@ -955,6 +962,13 @@ namespace MandADiscoverySuite.ViewModels
             _dataRefreshTimer.Tick += DataRefreshTimer_Tick;
             // Don't start the timer automatically - only start when user requests data refresh
 
+            // Initialize configuration persistence
+            _configurationService = ConfigurationService.Instance;
+            _autoSaveService = new AutoSaveService();
+            
+            // Load saved settings and apply them
+            LoadSavedConfiguration();
+
             // Initialize TDI with default Dashboard tab
             OpenTab("dashboard");
 
@@ -974,6 +988,162 @@ namespace MandADiscoverySuite.ViewModels
                     });
                 }
             });
+        }
+
+        #endregion
+
+        #region Configuration Persistence
+
+        /// <summary>
+        /// Loads saved configuration and applies it to the application
+        /// </summary>
+        private void LoadSavedConfiguration()
+        {
+            try
+            {
+                var settings = _configurationService.Settings;
+                var preferences = _configurationService.Preferences;
+                var session = _configurationService.Session;
+
+                // Apply theme settings
+                if (!string.IsNullOrEmpty(settings.Theme) && _themeService != null)
+                {
+                    // Convert string to ThemeMode enum
+                    if (Enum.TryParse<ThemeMode>(settings.Theme, out var themeMode))
+                    {
+                        _themeService.SetTheme(themeMode);
+                    }
+                }
+
+                // Apply discovery settings
+                if (!string.IsNullOrEmpty(settings.DefaultCompany))
+                {
+                    // Set the default company when loading profiles
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(1000); // Wait for profiles to load
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            var defaultProfile = CompanyProfiles.FirstOrDefault(p => 
+                                string.Equals(p.Name, settings.DefaultCompany, StringComparison.OrdinalIgnoreCase));
+                            if (defaultProfile != null)
+                            {
+                                SelectedProfile = defaultProfile;
+                            }
+                        });
+                    });
+                }
+
+                // Apply data grid settings
+                ApplyDataGridSettings(settings.DataGridSettings);
+
+                System.Diagnostics.Debug.WriteLine("Configuration loaded successfully");
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to load saved configuration");
+            }
+        }
+
+        /// <summary>
+        /// Saves current configuration to disk
+        /// </summary>
+        public async Task SaveConfigurationAsync()
+        {
+            try
+            {
+                var settings = _configurationService.Settings;
+                var session = _configurationService.Session;
+
+                // Update session state
+                session.CurrentCompany = SelectedProfile?.Name ?? "";
+                session.OpenTabs = OpenTabs.Select(tab => 
+                    tab.GetType().Name.Replace("ViewModel", "").ToLower()).ToList();
+                session.ActiveTab = SelectedTab?.GetType().Name.Replace("ViewModel", "").ToLower() ?? "";
+
+                // Update data grid settings
+                UpdateDataGridSettings(settings.DataGridSettings);
+
+                // Update default company
+                if (SelectedProfile != null)
+                {
+                    settings.DefaultCompany = SelectedProfile.Name;
+                }
+
+                // Save all configuration
+                await _configurationService.SaveSettingsAsync();
+                await _configurationService.SaveSessionAsync();
+                await _configurationService.SavePreferencesAsync();
+
+                System.Diagnostics.Debug.WriteLine("Configuration saved successfully");
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to save configuration");
+            }
+        }
+
+        /// <summary>
+        /// Applies data grid settings to the UI
+        /// </summary>
+        private void ApplyDataGridSettings(DataGridSettings settings)
+        {
+            try
+            {
+                // TODO: Apply page size settings when pagination services support it
+                // Current pagination services don't expose PageSize property
+                
+                // Column visibility and settings will be applied by individual views
+                // when they load their specific configurations
+                
+                System.Diagnostics.Debug.WriteLine($"Applied data grid settings with page size: {settings.PageSize}");
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to apply data grid settings");
+            }
+        }
+
+        /// <summary>
+        /// Updates data grid settings from current UI state
+        /// </summary>
+        private void UpdateDataGridSettings(DataGridSettings settings)
+        {
+            try
+            {
+                // TODO: Update page size from pagination services when they support it
+                // Current pagination services don't expose PageSize property
+                
+                // Column settings will be updated by individual views
+                // when they save their specific configurations
+                
+                System.Diagnostics.Debug.WriteLine("Updated data grid settings from current UI state");
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to update data grid settings");
+            }
+        }
+
+        /// <summary>
+        /// Called when the application is closing to save configuration
+        /// </summary>
+        public async Task OnClosingAsync()
+        {
+            try
+            {
+                if (_autoSaveService != null)
+                {
+                    await _autoSaveService.SaveOnExitAsync();
+                    _autoSaveService.Dispose();
+                }
+                
+                await SaveConfigurationAsync();
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to save configuration on exit");
+            }
         }
 
         #endregion
@@ -1071,6 +1241,19 @@ namespace MandADiscoverySuite.ViewModels
                 System.Diagnostics.Debug.WriteLine("InitializeAsync: Starting dashboard timer...");
                 _dashboardTimer?.Start();
                 System.Diagnostics.Debug.WriteLine("InitializeAsync: Dashboard timer started successfully");
+                
+                // Initialize real-time log monitoring
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Initializing log monitoring...");
+                try
+                {
+                    await LogMonitoringIntegrationService.Instance.InitializeAsync();
+                    System.Diagnostics.Debug.WriteLine("InitializeAsync: Log monitoring initialized successfully");
+                }
+                catch (Exception logEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"InitializeAsync: Log monitoring initialization failed: {logEx.Message}");
+                    ErrorHandlingService.Instance.LogWarning($"Log monitoring initialization failed: {logEx.Message}");
+                }
                 
                 // Load initial data if a profile is selected
                 if (SelectedProfile != null)
@@ -1326,9 +1509,12 @@ namespace MandADiscoverySuite.ViewModels
 
         private async Task StartDiscoveryAsync()
         {
+            using var performanceTracker = EnhancedLoggingService.Instance.BeginPerformanceTracking("Discovery Operation");
+            
             if (SelectedProfile == null)
             {
                 StatusMessage = "Please select a company profile first";
+                await EnhancedLoggingService.Instance.LogWarningAsync("Discovery start attempted without profile selection");
                 return;
             }
 
@@ -1353,8 +1539,17 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     StatusMessage = "No modules enabled for discovery";
                     IsDiscoveryRunning = false;
+                    await EnhancedLoggingService.Instance.LogWarningAsync("Discovery start attempted with no enabled modules");
                     return;
                 }
+
+                // Log discovery start
+                await AuditService.Instance.LogDiscoveryOperationAsync("Start Discovery", 
+                    SelectedProfile.CompanyName, "Started", 
+                    $"Started discovery with {enabledModules.Count} modules: {string.Join(", ", enabledModules.Select(m => m.ModuleName))}");
+                await EnhancedLoggingService.Instance.LogUserActionAsync("Start Discovery", 
+                    $"Started discovery for {SelectedProfile.CompanyName}", 
+                    new { Company = SelectedProfile.CompanyName, ModuleCount = enabledModules.Count, Modules = enabledModules.Select(m => m.ModuleName).ToArray() });
 
                 var progress = new Progress<DiscoveryProgress>(UpdateDiscoveryProgress);
                 
@@ -1370,18 +1565,36 @@ namespace MandADiscoverySuite.ViewModels
                     
                     // Load results
                     await LoadDiscoveryResultsAsync();
+                    
+                    // Log successful completion
+                    var duration = DateTime.Now - OperationStartTime;
+                    await AuditService.Instance.LogDiscoveryOperationAsync("Complete Discovery", 
+                        SelectedProfile.CompanyName, "Completed Successfully", 
+                        $"Discovery completed in {duration.TotalMinutes:F1} minutes with {DiscoveryResults.Count} results");
+                    await EnhancedLoggingService.Instance.LogInformationAsync("Discovery completed successfully", 
+                        new { Company = SelectedProfile.CompanyName, Duration = duration, ResultCount = DiscoveryResults.Count });
                 }
             }
             catch (OperationCanceledException)
             {
                 CurrentOperation = "Discovery cancelled";
                 StatusMessage = "Discovery was cancelled";
+                
+                // Log cancellation
+                await AuditService.Instance.LogDiscoveryOperationAsync("Cancel Discovery", 
+                    SelectedProfile?.CompanyName ?? "Unknown", "Cancelled", "Discovery operation was cancelled by user");
+                await EnhancedLoggingService.Instance.LogWarningAsync("Discovery operation cancelled by user");
             }
             catch (Exception ex)
             {
                 CurrentOperation = $"Discovery failed: {ex.Message}";
                 StatusMessage = $"Discovery error: {ex.Message}";
                 ErrorHandlingService.Instance.HandleException(ex, "Running discovery");
+                
+                // Log error
+                await AuditService.Instance.LogDiscoveryOperationAsync("Discovery Error", 
+                    SelectedProfile?.CompanyName ?? "Unknown", "Failed", $"Discovery failed: {ex.Message}");
+                await EnhancedLoggingService.Instance.LogErrorAsync("Discovery operation failed", ex);
             }
             finally
             {
@@ -1510,21 +1723,26 @@ namespace MandADiscoverySuite.ViewModels
 
         private async Task LoadDetailedDataAsync()
         {
+            using var progressToken = StartProgress("load_detailed_data", "Loading detailed discovery data");
+            
             try
             {
                 if (SelectedProfile == null) 
                 {
                     System.Diagnostics.Debug.WriteLine("LoadDetailedDataAsync: No profile selected");
+                    progressToken?.Complete(false, "No profile selected");
                     return;
                 }
 
                 System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Loading data for profile: {SelectedProfile.CompanyName}");
+                progressToken?.Report(5, "Checking services...");
                 
                 // Add null checks for services
                 if (_csvDataService == null)
                 {
                     System.Diagnostics.Debug.WriteLine("LoadDetailedDataAsync: _csvDataService is null");
                     StatusMessage = "Data service not initialized";
+                    progressToken?.Complete(false, "Data service not initialized");
                     return;
                 }
                 
@@ -1532,18 +1750,21 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     System.Diagnostics.Debug.WriteLine("LoadDetailedDataAsync: _dispatcherService is null");
                     StatusMessage = "Dispatcher service not initialized";
+                    progressToken?.Complete(false, "Dispatcher service not initialized");
                     return;
                 }
                 
-                StatusMessage = "Loading discovery data...";
+                progressToken?.Report(10, "Starting data load...");
 
                 // Load data with incremental updates for users using IAsyncEnumerable
+                progressToken?.Report(15, "Starting parallel data loading...");
                 var users = new List<UserData>();
                 var infrastructureTask = _csvDataService.LoadInfrastructureAsync(SelectedProfile.CompanyName);
                 var groupsTask = _csvDataService.LoadGroupsAsync(SelectedProfile.CompanyName);
                 var applicationsTask = _csvDataService.LoadApplicationsAsync(SelectedProfile.CompanyName);
 
                 // Load users incrementally with real-time UI updates
+                progressToken?.Report(20, "Loading user data...");
                 var dataPath = ConfigurationService.Instance.GetCompanyRawDataPath(SelectedProfile.CompanyName);
                 await foreach (var user in _csvDataService.LoadUsersAsyncEnumerable(dataPath))
                 {
@@ -1553,6 +1774,9 @@ namespace MandADiscoverySuite.ViewModels
                     if (users.Count % 50 == 0)
                     {
                         var currentCount = users.Count;
+                        var progressPercent = Math.Min(40, 20 + (currentCount / 50)); // Progress from 20% to 40%
+                        progressToken?.Report(progressPercent, $"Loaded {currentCount} users...");
+                        
                         await _dispatcherService.ScheduleDataOperation(() =>
                         {
                             StatusMessage = $"Loaded {currentCount} users...";
@@ -1561,6 +1785,7 @@ namespace MandADiscoverySuite.ViewModels
                 }
 
                 // Complete loading other data types with caching
+                progressToken?.Report(45, "Loading infrastructure data...");
                 var cacheKeyInfra = $"infrastructure_{SelectedProfile.CompanyName}";
                 var cacheKeyGroups = $"groups_{SelectedProfile.CompanyName}";  
                 var cacheKeyApps = $"applications_{SelectedProfile.CompanyName}";
@@ -1568,14 +1793,17 @@ namespace MandADiscoverySuite.ViewModels
                 var infrastructure = (await _cacheService.GetOrCreateAsync(cacheKeyInfra, 
                     async () => (await infrastructureTask).ToList(), TimeSpan.FromMinutes(5))).ToList();
                     
+                progressToken?.Report(60, "Loading groups data...");
                 var groups = (await _cacheService.GetOrCreateAsync(cacheKeyGroups,
                     async () => (await groupsTask).ToList(), TimeSpan.FromMinutes(5))).ToList();
                     
+                progressToken?.Report(75, "Loading applications data...");
                 var applications = (await _cacheService.GetOrCreateAsync(cacheKeyApps,
                     async () => (await applicationsTask).ToList(), TimeSpan.FromMinutes(5))).ToList();
 
                 System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: Loaded {users.Count} users, {infrastructure.Count} infrastructure items, {groups.Count} groups, {applications.Count} applications");
 
+                progressToken?.Report(90, "Updating UI collections...");
                 // Update collections on the UI thread with optimized dispatcher
                 await _dispatcherService.ScheduleDataOperation(() =>
                 {
@@ -1597,7 +1825,9 @@ namespace MandADiscoverySuite.ViewModels
                     System.Diagnostics.Debug.WriteLine($"LoadDetailedDataAsync: UI collections updated successfully");
                 });
 
+                progressToken?.Report(100, "Data loading completed");
                 StatusMessage = $"Loaded data: {users.Count} users, {infrastructure.Count} infrastructure, {groups.Count} groups, {applications.Count} applications";
+                progressToken?.Complete(true, "Data loading completed successfully");
             }
             catch (Exception ex)
             {
@@ -2218,9 +2448,20 @@ This directory is strictly for storing discovery results and company data.
                     return;
                 }
 
-                var exportPath = $"C:\\DiscoveryData\\{SelectedProfile?.CompanyName}\\export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-                await _discoveryService.ExportResultsAsync(SelectedProfile?.CompanyName, exportPath);
-                StatusMessage = "Results exported successfully";
+                var exportRequest = await ShowExportFormatSelectionAsync("DiscoveryResults_Export", DiscoveryResults.Count);
+                if (exportRequest != null)
+                {
+                    exportRequest.Data = DiscoveryResults;
+                    var success = await DataExportService.Instance.ExportDataAsync(exportRequest);
+                    if (success)
+                    {
+                        StatusMessage = "Results exported successfully";
+                    }
+                    else
+                    {
+                        StatusMessage = "Export failed";
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -2361,6 +2602,54 @@ This directory is strictly for storing discovery results and company data.
             catch (Exception ex)
             {
                 Logger?.LogError(ex, "Error toggling theme");
+            }
+        }
+
+        private void ShowThemeSelection()
+        {
+            try
+            {
+                var dialog = new Views.ThemeSelectionDialog();
+                dialog.Owner = Application.Current.MainWindow;
+
+                if (dialog.ShowDialog() == true)
+                {
+                    // Theme has already been applied in the dialog
+                    // Update the IsDarkTheme property based on selected theme
+                    IsDarkTheme = dialog.SelectedTheme == Themes.ThemeType.Dark;
+                    
+                    StatusMessage = $"Theme changed to {dialog.SelectedTheme}";
+                    
+                    // Log user action
+                    _ = EnhancedLoggingService.Instance.LogUserActionAsync("Theme Selection", 
+                        $"User changed theme to {dialog.SelectedTheme}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error showing theme selection dialog");
+                _ = EnhancedLoggingService.Instance.LogErrorAsync("Error showing theme selection dialog", ex);
+                StatusMessage = "Error opening theme selection dialog";
+            }
+        }
+
+        private void ShowLogViewer()
+        {
+            try
+            {
+                var dialog = new Views.LogViewerDialog();
+                dialog.Owner = Application.Current.MainWindow;
+                dialog.ShowDialog();
+                
+                // Log user action
+                _ = EnhancedLoggingService.Instance.LogUserActionAsync("Log Viewer Access", 
+                    "User opened system logs and audit viewer");
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error showing log viewer dialog");
+                _ = EnhancedLoggingService.Instance.LogErrorAsync("Error showing log viewer dialog", ex);
+                StatusMessage = "Error opening log viewer";
             }
         }
 
@@ -3493,7 +3782,18 @@ This directory is strictly for storing discovery results and company data.
             
             if (!string.IsNullOrWhiteSpace(UserSearchText) && UserSearchText != "Search users...")
             {
-                var searchLower = UserSearchText.ToLowerInvariant();
+                // Sanitize search input to prevent injection attacks
+                var sanitizedSearch = DataSanitizationService.Instance.SanitizeText(UserSearchText, SanitizationLevel.Standard);
+                
+                // Validate search input
+                var validationResult = InputValidationService.Instance.ValidateSearchText(sanitizedSearch);
+                if (!validationResult.IsValid)
+                {
+                    StatusMessage = validationResult.GetSummaryMessage();
+                    return;
+                }
+                
+                var searchLower = sanitizedSearch.ToLowerInvariant();
                 filtered = filtered.Where(u =>
                     (u.Name?.ToLowerInvariant().Contains(searchLower) ?? false) ||
                     (u.Email?.ToLowerInvariant().Contains(searchLower) ?? false) ||
@@ -3546,7 +3846,18 @@ This directory is strictly for storing discovery results and company data.
             
             if (!string.IsNullOrWhiteSpace(InfrastructureSearchText) && InfrastructureSearchText != "Search computers...")
             {
-                var searchLower = InfrastructureSearchText.ToLowerInvariant();
+                // Sanitize search input to prevent injection attacks
+                var sanitizedSearch = DataSanitizationService.Instance.SanitizeText(InfrastructureSearchText, SanitizationLevel.Standard);
+                
+                // Validate search input
+                var validationResult = InputValidationService.Instance.ValidateSearchText(sanitizedSearch);
+                if (!validationResult.IsValid)
+                {
+                    StatusMessage = validationResult.GetSummaryMessage();
+                    return;
+                }
+                
+                var searchLower = sanitizedSearch.ToLowerInvariant();
                 filtered = filtered.Where(i =>
                     (i.Name?.ToLowerInvariant().Contains(searchLower) ?? false) ||
                     (i.Type?.ToLowerInvariant().Contains(searchLower) ?? false) ||
@@ -3635,8 +3946,13 @@ This directory is strictly for storing discovery results and company data.
                 var selectedUsers = Users.Where(u => u.IsSelected).ToList();
                 if (selectedUsers.Any())
                 {
-                    await DataExportService.Instance.ExportToCsvAsync(selectedUsers, "SelectedUsers_Export.csv");
-                    StatusMessage = $"{selectedUsers.Count} users exported successfully";
+                    var exportRequest = await ShowExportFormatSelectionAsync("SelectedUsers_Export", selectedUsers.Count);
+                    if (exportRequest != null)
+                    {
+                        exportRequest.Data = selectedUsers;
+                        await DataExportService.Instance.ExportDataAsync(exportRequest);
+                        StatusMessage = $"{selectedUsers.Count} users exported successfully";
+                    }
                 }
                 else
                 {
@@ -3691,21 +4007,35 @@ This directory is strictly for storing discovery results and company data.
 
         private async Task ExportUsersAsync()
         {
+            using var performanceTracker = EnhancedLoggingService.Instance.BeginPerformanceTracking("Export Users");
+            
             try
             {
                 if (Users?.Any() == true)
                 {
-                    await DataExportService.Instance.ExportToCsvAsync(Users, "Users_Export.csv");
-                    StatusMessage = "Users exported successfully";
+                    var exportRequest = await ShowExportFormatSelectionAsync("Users_Export", Users.Count);
+                    if (exportRequest != null)
+                    {
+                        await DataExportService.Instance.ExportDataAsync(exportRequest);
+                        StatusMessage = "Users exported successfully";
+                        
+                        // Log the export operation for audit
+                        await AuditService.Instance.LogDataExportAsync("Users", exportRequest.Format, Users.Count, exportRequest.FileName);
+                        await EnhancedLoggingService.Instance.LogUserActionAsync("Export Users", 
+                            $"Exported {Users.Count} users to {exportRequest.Format} format", 
+                            new { RecordCount = Users.Count, Format = exportRequest.Format, FileName = exportRequest.FileName });
+                    }
                 }
                 else
                 {
                     StatusMessage = "No user data to export";
+                    await EnhancedLoggingService.Instance.LogWarningAsync("Export Users attempted with no data");
                 }
             }
             catch (Exception ex)
             {
                 StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Export users");
+                await EnhancedLoggingService.Instance.LogErrorAsync("Error exporting users", ex);
             }
         }
 
@@ -3715,8 +4045,12 @@ This directory is strictly for storing discovery results and company data.
             {
                 if (Infrastructure?.Any() == true)
                 {
-                    await DataExportService.Instance.ExportToCsvAsync(Infrastructure, "Infrastructure_Export.csv");
-                    StatusMessage = "Infrastructure data exported successfully";
+                    var exportRequest = await ShowExportFormatSelectionAsync("Infrastructure_Export", Infrastructure.Count);
+                    if (exportRequest != null)
+                    {
+                        await DataExportService.Instance.ExportDataAsync(exportRequest);
+                        StatusMessage = "Infrastructure data exported successfully";
+                    }
                 }
                 else
                 {
@@ -3735,8 +4069,12 @@ This directory is strictly for storing discovery results and company data.
             {
                 if (Groups?.Any() == true)
                 {
-                    await DataExportService.Instance.ExportToCsvAsync(Groups, "Groups_Export.csv");
-                    StatusMessage = "Groups data exported successfully";
+                    var exportRequest = await ShowExportFormatSelectionAsync("Groups_Export", Groups.Count);
+                    if (exportRequest != null)
+                    {
+                        await DataExportService.Instance.ExportDataAsync(exportRequest);
+                        StatusMessage = "Groups data exported successfully";
+                    }
                 }
                 else
                 {
@@ -3747,6 +4085,68 @@ This directory is strictly for storing discovery results and company data.
             {
                 StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Export groups");
             }
+        }
+
+        /// <summary>
+        /// Shows the export format selection dialog and returns the export request
+        /// </summary>
+        private async Task<ExportRequest> ShowExportFormatSelectionAsync(string defaultFileName, int recordCount)
+        {
+            return await Task.Run(() =>
+            {
+                ExportRequest exportRequest = null;
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var dialog = new Views.ExportFormatSelectionDialog();
+                    dialog.Owner = Application.Current.MainWindow;
+
+                    if (dialog.ShowDialog() == true)
+                    {
+                        exportRequest = new ExportRequest
+                        {
+                            Format = dialog.SelectedFormat,
+                            FileName = GetExportFileName(defaultFileName, dialog.SelectedFormat),
+                            WorksheetName = dialog.WorksheetName,
+                            IncludeCharts = dialog.IncludeCharts
+                        };
+
+                        // Set the data based on current context
+                        switch (_currentView)
+                        {
+                            case "Users":
+                                exportRequest.Data = Users;
+                                break;
+                            case "Infrastructure":
+                                exportRequest.Data = Infrastructure;
+                                break;
+                            case "Groups":
+                                exportRequest.Data = Groups;
+                                break;
+                            default:
+                                exportRequest.Data = DiscoveryResults;
+                                break;
+                        }
+                    }
+                });
+
+                return exportRequest;
+            });
+        }
+
+        /// <summary>
+        /// Gets the appropriate file name with extension based on export format
+        /// </summary>
+        private string GetExportFileName(string baseName, string format)
+        {
+            var extension = format.ToLower() switch
+            {
+                "excel" => ".xlsx",
+                "json" => ".json",
+                _ => ".csv"
+            };
+
+            return baseName + extension;
         }
 
         #endregion
@@ -4043,10 +4443,15 @@ This directory is strictly for storing discovery results and company data.
                     return;
                 }
 
-                var success = await DataExportService.Instance.ExportToCsvAsync(selectedItems, "infrastructure_export");
-                if (success)
+                var exportRequest = await ShowExportFormatSelectionAsync("SelectedInfrastructure_Export", selectedItems.Count);
+                if (exportRequest != null)
                 {
-                    DialogService.Instance.ShowInformationDialog("Export Complete", $"Successfully exported {selectedItems.Count} infrastructure item(s).");
+                    exportRequest.Data = selectedItems;
+                    var success = await DataExportService.Instance.ExportDataAsync(exportRequest);
+                    if (success)
+                    {
+                        DialogService.Instance.ShowInformationDialog("Export Complete", $"Successfully exported {selectedItems.Count} infrastructure item(s).");
+                    }
                 }
                 else
                 {
@@ -4095,10 +4500,15 @@ This directory is strictly for storing discovery results and company data.
                     return;
                 }
 
-                var success = await DataExportService.Instance.ExportToCsvAsync(selectedItems, "groups_export");
-                if (success)
+                var exportRequest = await ShowExportFormatSelectionAsync("SelectedGroups_Export", selectedItems.Count);
+                if (exportRequest != null)
                 {
-                    DialogService.Instance.ShowInformationDialog("Export Complete", $"Successfully exported {selectedItems.Count} group(s).");
+                    exportRequest.Data = selectedItems;
+                    var success = await DataExportService.Instance.ExportDataAsync(exportRequest);
+                    if (success)
+                    {
+                        DialogService.Instance.ShowInformationDialog("Export Complete", $"Successfully exported {selectedItems.Count} group(s).");
+                    }
                 }
                 else
                 {
@@ -4679,6 +5089,16 @@ This directory is strictly for storing discovery results and company data.
                     
                 // Dispose cache service
                 _cacheService?.Dispose();
+                
+                // Dispose log monitoring service
+                try
+                {
+                    LogMonitoringIntegrationService.Instance.Dispose();
+                }
+                catch (Exception logEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error disposing log monitoring service: {logEx.Message}");
+                }
                     
                 // Dispose timers
                 _dashboardTimer?.Stop();

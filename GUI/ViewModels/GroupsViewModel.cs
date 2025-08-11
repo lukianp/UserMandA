@@ -108,7 +108,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Loading progress percentage (0-100)
         /// </summary>
-        public int LoadingProgress
+        public new int LoadingProgress
         {
             get => _loadingProgress;
             set => SetProperty(ref _loadingProgress, value);

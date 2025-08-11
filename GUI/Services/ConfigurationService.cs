@@ -1,6 +1,9 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+using MandADiscoverySuite.Models;
 
 namespace MandADiscoverySuite.Services
 {
@@ -186,9 +189,383 @@ namespace MandADiscoverySuite.Services
             return result;
         }
 
+        #region Configuration Persistence
+
+        private AppConfiguration _applicationSettings;
+        private UserPreferences _userPreferences;
+        private SessionState _sessionState;
+        
+        private readonly string _settingsPath;
+        private readonly string _preferencesPath;
+        private readonly string _sessionPath;
+        private readonly object _settingsLock = new object();
+
+        /// <summary>
+        /// Gets the current application settings
+        /// </summary>
+        public AppConfiguration Settings
+        {
+            get
+            {
+                if (_applicationSettings == null)
+                {
+                    LoadSettings();
+                }
+                return _applicationSettings;
+            }
+        }
+
+        /// <summary>
+        /// Gets the current user preferences
+        /// </summary>
+        public UserPreferences Preferences
+        {
+            get
+            {
+                if (_userPreferences == null)
+                {
+                    LoadPreferences();
+                }
+                return _userPreferences;
+            }
+        }
+
+        /// <summary>
+        /// Gets the current session state
+        /// </summary>
+        public SessionState Session
+        {
+            get
+            {
+                if (_sessionState == null)
+                {
+                    LoadSession();
+                }
+                return _sessionState;
+            }
+        }
+
+        /// <summary>
+        /// Saves application settings to disk
+        /// </summary>
+        public async Task SaveSettingsAsync()
+        {
+            if (_applicationSettings == null) return;
+
+            try
+            {
+                lock (_settingsLock)
+                {
+                    _applicationSettings.LastSaved = DateTime.Now;
+                    var json = JsonConvert.SerializeObject(_applicationSettings, Formatting.Indented);
+                    
+                    var directory = Path.GetDirectoryName(_settingsPath);
+                    if (!Directory.Exists(directory))
+                        Directory.CreateDirectory(directory);
+                        
+                    File.WriteAllText(_settingsPath, json);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to save settings");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Saves user preferences to disk
+        /// </summary>
+        public async Task SavePreferencesAsync()
+        {
+            if (_userPreferences == null) return;
+
+            try
+            {
+                lock (_settingsLock)
+                {
+                    var json = JsonConvert.SerializeObject(_userPreferences, Formatting.Indented);
+                    
+                    var directory = Path.GetDirectoryName(_preferencesPath);
+                    if (!Directory.Exists(directory))
+                        Directory.CreateDirectory(directory);
+                        
+                    File.WriteAllText(_preferencesPath, json);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to save preferences");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Saves session state to disk
+        /// </summary>
+        public async Task SaveSessionAsync()
+        {
+            if (_sessionState == null) return;
+
+            try
+            {
+                lock (_settingsLock)
+                {
+                    _sessionState.LastActivity = DateTime.Now;
+                    var json = JsonConvert.SerializeObject(_sessionState, Formatting.Indented);
+                    
+                    var directory = Path.GetDirectoryName(_sessionPath);
+                    if (!Directory.Exists(directory))
+                        Directory.CreateDirectory(directory);
+                        
+                    File.WriteAllText(_sessionPath, json);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to save session");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Loads application settings from disk
+        /// </summary>
+        public void LoadSettings()
+        {
+            try
+            {
+                if (File.Exists(_settingsPath))
+                {
+                    var json = File.ReadAllText(_settingsPath);
+                    _applicationSettings = JsonConvert.DeserializeObject<AppConfiguration>(json);
+                    
+                    // Validate loaded settings
+                    var validationResult = ValidateSettings(_applicationSettings);
+                    if (!validationResult.IsValid)
+                    {
+                        ErrorHandlingService.Instance.LogWarning($"Settings validation failed, using defaults: {string.Join(", ", validationResult.Errors)}");
+                        _applicationSettings = new AppConfiguration();
+                    }
+                }
+                else
+                {
+                    _applicationSettings = new AppConfiguration();
+                    _ = SaveSettingsAsync(); // Save default settings
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to load settings, using defaults");
+                _applicationSettings = new AppConfiguration();
+            }
+        }
+
+        /// <summary>
+        /// Loads user preferences from disk
+        /// </summary>
+        public void LoadPreferences()
+        {
+            try
+            {
+                if (File.Exists(_preferencesPath))
+                {
+                    var json = File.ReadAllText(_preferencesPath);
+                    _userPreferences = JsonConvert.DeserializeObject<UserPreferences>(json);
+                }
+                else
+                {
+                    _userPreferences = new UserPreferences();
+                    _ = SavePreferencesAsync(); // Save default preferences
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to load preferences, using defaults");
+                _userPreferences = new UserPreferences();
+            }
+        }
+
+        /// <summary>
+        /// Loads session state from disk
+        /// </summary>
+        public void LoadSession()
+        {
+            try
+            {
+                if (File.Exists(_sessionPath))
+                {
+                    var json = File.ReadAllText(_sessionPath);
+                    _sessionState = JsonConvert.DeserializeObject<SessionState>(json);
+                }
+                else
+                {
+                    _sessionState = new SessionState();
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to load session state, creating new");
+                _sessionState = new SessionState();
+            }
+        }
+
+        /// <summary>
+        /// Validates application settings
+        /// </summary>
+        public ConfigurationValidationResult ValidateSettings(AppConfiguration settings)
+        {
+            var result = new ConfigurationValidationResult();
+            
+            if (settings == null)
+            {
+                result.AddError("Settings cannot be null");
+                return result;
+            }
+
+            if (settings.FontSize < 10 || settings.FontSize > 24)
+            {
+                result.AddWarning($"Font size {settings.FontSize} is outside recommended range (10-24)");
+                settings.FontSize = Math.Max(10, Math.Min(24, settings.FontSize));
+            }
+
+            if (settings.AutoSaveIntervalMinutes < 1 || settings.AutoSaveIntervalMinutes > 60)
+            {
+                result.AddWarning($"Auto-save interval {settings.AutoSaveIntervalMinutes} is outside valid range (1-60 minutes)");
+                settings.AutoSaveIntervalMinutes = Math.Max(1, Math.Min(60, settings.AutoSaveIntervalMinutes));
+            }
+
+            var validThemes = new[] { "Dark", "Light", "Auto", "HighContrast" };
+            if (!validThemes.Contains(settings.Theme))
+            {
+                result.AddWarning($"Unknown theme '{settings.Theme}', defaulting to 'Dark'");
+                settings.Theme = "Dark";
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Resets all settings to defaults
+        /// </summary>
+        public async Task ResetToDefaultsAsync()
+        {
+            _applicationSettings = new AppConfiguration();
+            _userPreferences = new UserPreferences();
+            _sessionState = new SessionState();
+            
+            await SaveSettingsAsync();
+            await SavePreferencesAsync();
+            await SaveSessionAsync();
+        }
+
+        /// <summary>
+        /// Creates a backup of current configuration
+        /// </summary>
+        public async Task CreateBackupAsync()
+        {
+            try
+            {
+                var backupDirectory = Path.Combine(Path.GetDirectoryName(_settingsPath), "Backups");
+                Directory.CreateDirectory(backupDirectory);
+                
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                
+                // Backup settings
+                if (File.Exists(_settingsPath))
+                {
+                    var settingsBackup = Path.Combine(backupDirectory, $"settings_{timestamp}.json");
+                    File.Copy(_settingsPath, settingsBackup);
+                }
+                
+                // Backup preferences
+                if (File.Exists(_preferencesPath))
+                {
+                    var preferencesBackup = Path.Combine(backupDirectory, $"preferences_{timestamp}.json");
+                    File.Copy(_preferencesPath, preferencesBackup);
+                }
+                
+                // Cleanup old backups (keep last 10)
+                var backupFiles = Directory.GetFiles(backupDirectory, "*.json")
+                    .OrderByDescending(f => File.GetCreationTime(f))
+                    .Skip(10);
+                
+                foreach (var oldBackup in backupFiles)
+                {
+                    File.Delete(oldBackup);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to create configuration backup");
+            }
+        }
+
+        /// <summary>
+        /// Exports configuration to a file
+        /// </summary>
+        public async Task ExportConfigurationAsync(string filePath)
+        {
+            try
+            {
+                var exportData = new
+                {
+                    Settings = _applicationSettings,
+                    Preferences = _userPreferences,
+                    ExportedOn = DateTime.Now,
+                    Version = "1.0.0"
+                };
+                
+                var json = JsonConvert.SerializeObject(exportData, Formatting.Indented);
+                await File.WriteAllTextAsync(filePath, json);
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to export configuration");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Imports configuration from a file
+        /// </summary>
+        public async Task ImportConfigurationAsync(string filePath)
+        {
+            try
+            {
+                var json = await File.ReadAllTextAsync(filePath);
+                dynamic importData = JsonConvert.DeserializeObject(json);
+                
+                if (importData?.Settings != null)
+                {
+                    _applicationSettings = JsonConvert.DeserializeObject<AppConfiguration>(importData.Settings.ToString());
+                    await SaveSettingsAsync();
+                }
+                
+                if (importData?.Preferences != null)
+                {
+                    _userPreferences = JsonConvert.DeserializeObject<UserPreferences>(importData.Preferences.ToString());
+                    await SavePreferencesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Failed to import configuration");
+                throw;
+            }
+        }
+
+        #endregion
+
         private ConfigurationService()
         {
             // Private constructor for singleton
+            var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MandADiscoverySuite");
+            Directory.CreateDirectory(appDataPath);
+            
+            _settingsPath = Path.Combine(appDataPath, "settings.json");
+            _preferencesPath = Path.Combine(appDataPath, "preferences.json");
+            _sessionPath = Path.Combine(appDataPath, "session.json");
         }
     }
 

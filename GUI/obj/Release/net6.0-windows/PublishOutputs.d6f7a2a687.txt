@@ -145,6 +145,9 @@ C:\EnterpriseDiscovery\Azure.Core.dll
 C:\EnterpriseDiscovery\CommunityToolkit.Mvvm.dll
 C:\EnterpriseDiscovery\EntityFramework.SqlServer.dll
 C:\EnterpriseDiscovery\EntityFramework.dll
+C:\EnterpriseDiscovery\EPPlus.dll
+C:\EnterpriseDiscovery\EPPlus.Interfaces.dll
+C:\EnterpriseDiscovery\EPPlus.System.Drawing.dll
 C:\EnterpriseDiscovery\Microsoft.ApplicationInsights.dll
 C:\EnterpriseDiscovery\Microsoft.Bcl.AsyncInterfaces.dll
 C:\EnterpriseDiscovery\Microsoft.Extensions.Configuration.dll
@@ -181,6 +184,7 @@ C:\EnterpriseDiscovery\Microsoft.IdentityModel.Logging.dll
 C:\EnterpriseDiscovery\Microsoft.IdentityModel.Protocols.dll
 C:\EnterpriseDiscovery\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 C:\EnterpriseDiscovery\Microsoft.IdentityModel.Tokens.dll
+C:\EnterpriseDiscovery\Microsoft.IO.RecyclableMemoryStream.dll
 C:\EnterpriseDiscovery\Microsoft.Xaml.Behaviors.dll
 C:\EnterpriseDiscovery\Newtonsoft.Json.dll
 C:\EnterpriseDiscovery\System.Data.SQLite.dll
@@ -189,6 +193,7 @@ C:\EnterpriseDiscovery\System.Data.SQLite.EF6.dll
 C:\EnterpriseDiscovery\System.IdentityModel.Tokens.Jwt.dll
 C:\EnterpriseDiscovery\System.Management.dll
 C:\EnterpriseDiscovery\System.Memory.Data.dll
+C:\EnterpriseDiscovery\System.Security.Cryptography.Pkcs.dll
 C:\EnterpriseDiscovery\System.Text.Encodings.Web.dll
 C:\EnterpriseDiscovery\System.Text.Json.dll
 C:\EnterpriseDiscovery\runtimes\unix\lib\netstandard1.6\Microsoft.Management.Infrastructure.dll
@@ -271,4 +276,5 @@ C:\EnterpriseDiscovery\runtimes\win\lib\net6.0\System.Diagnostics.EventLog.Messa
 C:\EnterpriseDiscovery\runtimes\win\lib\net6.0\System.Management.dll
 C:\EnterpriseDiscovery\runtimes\unix\lib\net6.0\System.Management.Automation.dll
 C:\EnterpriseDiscovery\runtimes\win\lib\net6.0\System.Management.Automation.dll
+C:\EnterpriseDiscovery\runtimes\win\lib\net6.0\System.Security.Cryptography.Pkcs.dll
 C:\EnterpriseDiscovery\runtimes\browser\lib\net6.0\System.Text.Encodings.Web.dll

@@ -341,7 +341,7 @@ namespace MandADiscoverySuite.Utilities
                 }
 
                 var command = args[0].ToLowerInvariant();
-                var rootPath = args.Length > 1 ? args[1] : @"C:\EnterpriseDiscovery";
+                var rootPath = args.Length > 1 ? args[1] : GetDefaultRootPath();
 
                 switch (command)
                 {
@@ -384,7 +384,7 @@ namespace MandADiscoverySuite.Utilities
             Console.WriteLine("  health    - Generate health report");
             Console.WriteLine("  merge     - Merge discovered modules into existing registry");
             Console.WriteLine();
-            Console.WriteLine("Default rootPath: C:\\EnterpriseDiscovery");
+            Console.WriteLine($"Default rootPath: {GetDefaultRootPath()}");
         }
 
         private static async Task GenerateRegistryCommand(string rootPath)
@@ -480,6 +480,48 @@ namespace MandADiscoverySuite.Utilities
             await service.SaveRegistryAsync(updated);
             
             Console.WriteLine($"Merged {discovered.Count} new modules into registry");
+        }
+
+        /// <summary>
+        /// Gets the default root path by detecting the current executable location
+        /// </summary>
+        private static string GetDefaultRootPath()
+        {
+            try
+            {
+                // First try to find the application directory
+                var appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                
+                // Look for common indicators that this is the right directory
+                if (Directory.Exists(Path.Combine(appDirectory, "Modules")) || 
+                    File.Exists(Path.Combine(appDirectory, "MandADiscoverySuite.exe")))
+                {
+                    return appDirectory;
+                }
+                
+                // Check parent directory
+                var parentDir = Directory.GetParent(appDirectory)?.FullName;
+                if (!string.IsNullOrEmpty(parentDir) && 
+                    (Directory.Exists(Path.Combine(parentDir, "Modules")) || 
+                     File.Exists(Path.Combine(parentDir, "MandADiscoverySuite.exe"))))
+                {
+                    return parentDir;
+                }
+                
+                // Check for C:\EnterpriseDiscovery as fallback
+                if (Directory.Exists(@"C:\EnterpriseDiscovery"))
+                {
+                    return @"C:\EnterpriseDiscovery";
+                }
+                
+                // Ultimate fallback to current directory
+                return Environment.CurrentDirectory;
+            }
+            catch
+            {
+                // If all else fails, use the traditional default
+                return @"C:\EnterpriseDiscovery";
+            }
         }
     }
 }

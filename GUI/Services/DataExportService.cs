@@ -7,6 +7,10 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System.Drawing;
+using System.Reflection;
 using MandADiscoverySuite.Models;
 
 namespace MandADiscoverySuite.Services
@@ -15,6 +19,8 @@ namespace MandADiscoverySuite.Services
     {
         Task<bool> ExportToCsvAsync<T>(IEnumerable<T> data, string defaultFileName = null);
         Task<bool> ExportToJsonAsync<T>(IEnumerable<T> data, string defaultFileName = null);
+        Task<bool> ExportToExcelAsync<T>(IEnumerable<T> data, string defaultFileName = null);
+        Task<bool> ExportToExcelAsync<T>(IEnumerable<T> data, string defaultFileName, string worksheetName, bool includeCharts = false);
     }
 
     public class DataExportService : IDataExportService
@@ -119,6 +125,204 @@ namespace MandADiscoverySuite.Services
             return false;
         }
 
+        public async Task<bool> ExportToExcelAsync<T>(IEnumerable<T> data, string defaultFileName = null)
+        {
+            return await ExportToExcelAsync(data, defaultFileName, "Data", false);
+        }
+
+        public async Task<bool> ExportToExcelAsync<T>(IEnumerable<T> data, string defaultFileName, string worksheetName, bool includeCharts = false)
+        {
+            try
+            {
+                if (data == null || !data.Any())
+                {
+                    DialogService.Instance.ShowWarningDialog("Export Warning", "No data to export.");
+                    return false;
+                }
+
+                // Set EPPlus license context
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+                var saveFileDialog = new SaveFileDialog
+                {
+                    Title = "Export to Excel",
+                    Filter = "Excel files (*.xlsx)|*.xlsx|All files (*.*)|*.*",
+                    FilterIndex = 1,
+                    FileName = defaultFileName ?? $"Export_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.xlsx"
+                };
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    await CreateExcelFileAsync(data, saveFileDialog.FileName, worksheetName, includeCharts);
+                    
+                    DialogService.Instance.ShowInformationDialog("Export Complete", 
+                        $"Data exported successfully to:\n{saveFileDialog.FileName}");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = ErrorHandlingService.Instance.HandleException(ex, "Data export to Excel");
+                DialogService.Instance.ShowErrorDialog("Export Error", errorMessage);
+            }
+
+            return false;
+        }
+
+        private async Task CreateExcelFileAsync<T>(IEnumerable<T> data, string filePath, string worksheetName, bool includeCharts)
+        {
+            await Task.Run(() =>
+            {
+                using var package = new ExcelPackage();
+                var worksheet = package.Workbook.Worksheets.Add(worksheetName);
+                
+                var properties = typeof(T).GetProperties();
+                var dataList = data.ToList();
+                
+                // Add headers
+                for (int col = 1; col <= properties.Length; col++)
+                {
+                    worksheet.Cells[1, col].Value = GetDisplayName(properties[col - 1]);
+                    worksheet.Cells[1, col].Style.Font.Bold = true;
+                    worksheet.Cells[1, col].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    worksheet.Cells[1, col].Style.Fill.BackgroundColor.SetColor(Color.LightBlue);
+                    worksheet.Cells[1, col].Style.Border.BorderAround(ExcelBorderStyle.Thin);
+                }
+                
+                // Add data
+                for (int row = 0; row < dataList.Count; row++)
+                {
+                    var item = dataList[row];
+                    for (int col = 0; col < properties.Length; col++)
+                    {
+                        var cellValue = properties[col].GetValue(item);
+                        var cell = worksheet.Cells[row + 2, col + 1];
+                        
+                        // Format different data types appropriately
+                        if (cellValue is DateTime dateTime)
+                        {
+                            cell.Value = dateTime;
+                            cell.Style.Numberformat.Format = "yyyy-mm-dd hh:mm:ss";
+                        }
+                        else if (cellValue is decimal || cellValue is double || cellValue is float)
+                        {
+                            cell.Value = cellValue;
+                            cell.Style.Numberformat.Format = "#,##0.00";
+                        }
+                        else if (cellValue is int || cellValue is long)
+                        {
+                            cell.Value = cellValue;
+                            cell.Style.Numberformat.Format = "#,##0";
+                        }
+                        else if (cellValue is bool boolValue)
+                        {
+                            cell.Value = boolValue ? "Yes" : "No";
+                        }
+                        else
+                        {
+                            cell.Value = cellValue?.ToString() ?? "";
+                        }
+                        
+                        cell.Style.Border.BorderAround(ExcelBorderStyle.Thin);
+                    }
+                }
+                
+                // Auto-fit columns
+                worksheet.Cells.AutoFitColumns();
+                
+                // Add freeze panes for header
+                worksheet.View.FreezePanes(2, 1);
+                
+                // Add filters
+                var dataRange = worksheet.Cells[1, 1, dataList.Count + 1, properties.Length];
+                dataRange.AutoFilter = true;
+                
+                // Create charts if requested
+                if (includeCharts)
+                {
+                    CreateChartsForData(worksheet, dataList, properties);
+                }
+                
+                // Add summary information
+                AddSummaryWorksheet(package, dataList, worksheetName);
+                
+                package.SaveAs(new FileInfo(filePath));
+            });
+        }
+
+        private void CreateChartsForData<T>(ExcelWorksheet worksheet, List<T> dataList, PropertyInfo[] properties)
+        {
+            try
+            {
+                // Find numeric columns for charting
+                var numericProperties = properties.Where(p => 
+                    p.PropertyType == typeof(int) || p.PropertyType == typeof(long) ||
+                    p.PropertyType == typeof(decimal) || p.PropertyType == typeof(double) ||
+                    p.PropertyType == typeof(float) || p.PropertyType == typeof(int?) ||
+                    p.PropertyType == typeof(long?) || p.PropertyType == typeof(decimal?) ||
+                    p.PropertyType == typeof(double?) || p.PropertyType == typeof(float?))
+                    .Take(5) // Limit to 5 numeric columns for performance
+                    .ToArray();
+
+                if (numericProperties.Length > 0)
+                {
+                    // Create a summary chart
+                    var chart = worksheet.Drawings.AddChart("SummaryChart", OfficeOpenXml.Drawing.Chart.eChartType.ColumnClustered);
+                    chart.Title.Text = "Data Summary";
+                    chart.SetPosition(dataList.Count + 5, 0, 1, 0);
+                    chart.SetSize(600, 400);
+                    
+                    foreach (var prop in numericProperties)
+                    {
+                        var colIndex = Array.IndexOf(properties, prop) + 1;
+                        var series = chart.Series.Add(worksheet.Cells[2, colIndex, dataList.Count + 1, colIndex],
+                                                     worksheet.Cells[1, colIndex]);
+                        series.Header = GetDisplayName(prop);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Chart creation failed, but don't fail the entire export
+                System.Diagnostics.Debug.WriteLine($"Chart creation failed: {ex.Message}");
+            }
+        }
+
+        private void AddSummaryWorksheet<T>(ExcelPackage package, List<T> dataList, string originalWorksheetName)
+        {
+            var summarySheet = package.Workbook.Worksheets.Add("Summary");
+            
+            // Add export summary
+            summarySheet.Cells["A1"].Value = "Export Summary";
+            summarySheet.Cells["A1"].Style.Font.Bold = true;
+            summarySheet.Cells["A1"].Style.Font.Size = 16;
+            
+            summarySheet.Cells["A3"].Value = "Export Date:";
+            summarySheet.Cells["B3"].Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            
+            summarySheet.Cells["A4"].Value = "Data Sheet:";
+            summarySheet.Cells["B4"].Value = originalWorksheetName;
+            
+            summarySheet.Cells["A5"].Value = "Total Records:";
+            summarySheet.Cells["B5"].Value = dataList.Count;
+            
+            summarySheet.Cells["A6"].Value = "Data Type:";
+            summarySheet.Cells["B6"].Value = typeof(T).Name;
+            
+            // Style the summary
+            summarySheet.Cells["A1:B6"].Style.Border.BorderAround(ExcelBorderStyle.Thin);
+            summarySheet.Cells["A3:A6"].Style.Font.Bold = true;
+            
+            summarySheet.Cells.AutoFitColumns();
+        }
+
+        private string GetDisplayName(PropertyInfo property)
+        {
+            // Convert PascalCase to Display Name
+            var name = property.Name;
+            return System.Text.RegularExpressions.Regex.Replace(name, "([a-z])([A-Z])", "$1 $2");
+        }
+
         private string ConvertToCsv<T>(IEnumerable<T> data)
         {
             var csv = new StringBuilder();
@@ -157,6 +361,9 @@ namespace MandADiscoverySuite.Services
                         return await ExportToCsvAsync((IEnumerable<object>)request.Data, request.FileName);
                     case "json":
                         return await ExportToJsonAsync((IEnumerable<object>)request.Data, request.FileName);
+                    case "excel":
+                    case "xlsx":
+                        return await ExportToExcelAsync((IEnumerable<object>)request.Data, request.FileName, request.WorksheetName ?? "Data", request.IncludeCharts);
                     default:
                         throw new ArgumentException($"Unsupported export format: {request.Format}");
                 }
@@ -191,5 +398,7 @@ namespace MandADiscoverySuite.Services
         public object Data { get; set; }
         public string Format { get; set; }
         public string FileName { get; set; }
+        public string WorksheetName { get; set; } = "Data";
+        public bool IncludeCharts { get; set; } = false;
     }
 }

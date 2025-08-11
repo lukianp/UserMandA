@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Messaging;
+using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -27,10 +28,12 @@ namespace MandADiscoverySuite.ViewModels
         // Modern MVVM infrastructure
         protected readonly ILogger Logger;
         protected readonly IMessenger Messenger;
+        protected readonly ProgressTrackingService ProgressTracker;
 
         // Common state properties
         private bool _isLoading;
         private string _loadingMessage = "Loading...";
+        private int _loadingProgress;
         private string _statusMessage = string.Empty;
         private bool _hasErrors;
         private string _errorMessage = string.Empty;
@@ -47,6 +50,15 @@ namespace MandADiscoverySuite.ViewModels
         {
             get => _loadingMessage;
             set => SetProperty(ref _loadingMessage, value);
+        }
+
+        /// <summary>
+        /// Loading progress percentage (0-100)
+        /// </summary>
+        public int LoadingProgress
+        {
+            get => _loadingProgress;
+            set => SetProperty(ref _loadingProgress, value);
         }
 
         public string StatusMessage
@@ -92,6 +104,15 @@ namespace MandADiscoverySuite.ViewModels
         {
             Logger = logger;
             Messenger = messenger ?? WeakReferenceMessenger.Default;
+            
+            try
+            {
+                ProgressTracker = SimpleServiceLocator.GetService<ProgressTrackingService>();
+            }
+            catch
+            {
+                // ProgressTracker will be null if service locator is not available
+            }
             
             _notificationTimer = new DispatcherTimer(DispatcherPriority.Background)
             {
@@ -322,6 +343,71 @@ namespace MandADiscoverySuite.ViewModels
         protected void RegisterForMessage<T>(MessageHandler<object, T> handler) where T : class
         {
             Messenger?.Register<T>(this, handler);
+        }
+
+        #endregion
+
+        #region Progress Tracking Helpers
+
+        /// <summary>
+        /// Starts a progress operation
+        /// </summary>
+        protected ProgressToken StartProgress(string operationId, string description, bool isIndeterminate = false)
+        {
+            var token = ProgressTracker?.StartOperation(operationId, description, isIndeterminate);
+            if (token != null)
+            {
+                IsLoading = true;
+                LoadingMessage = description;
+                LoadingProgress = 0;
+            }
+            return token;
+        }
+
+        /// <summary>
+        /// Updates progress for the current loading operation
+        /// </summary>
+        protected void UpdateProgress(int progress, string status = null)
+        {
+            LoadingProgress = progress;
+            if (!string.IsNullOrEmpty(status))
+            {
+                LoadingMessage = status;
+            }
+        }
+
+        /// <summary>
+        /// Executes an operation with automatic progress tracking
+        /// </summary>
+        protected async Task<T> ExecuteWithProgressAsync<T>(
+            string operationId,
+            string description,
+            Func<ProgressToken, Task<T>> operation,
+            T defaultValue = default(T))
+        {
+            using var progressToken = StartProgress(operationId, description);
+            
+            try
+            {
+                var result = await operation(progressToken);
+                progressToken?.Complete(true, "Operation completed successfully");
+                StatusMessage = $"{description} completed successfully";
+                return result;
+            }
+            catch (Exception ex)
+            {
+                progressToken?.Complete(false, ex.Message);
+                HasErrors = true;
+                ErrorMessage = ex.Message;
+                StatusMessage = $"{description} failed: {ex.Message}";
+                Logger?.LogError(ex, "Error in {OperationDescription}", description);
+                return defaultValue;
+            }
+            finally
+            {
+                IsLoading = false;
+                LoadingProgress = 0;
+            }
         }
 
         #endregion

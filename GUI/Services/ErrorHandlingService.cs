@@ -221,7 +221,7 @@ namespace MandADiscoverySuite.Services
                 Timestamp = DateTime.Now,
                 Context = "Info",
                 Message = message,
-                LogLevel = LogLevel.Info
+                LogLevel = ErrorLogLevel.Info
             };
 
             LogError(entry);
@@ -240,7 +240,7 @@ namespace MandADiscoverySuite.Services
                 Timestamp = DateTime.Now,
                 Context = "Warning",
                 Message = message,
-                LogLevel = LogLevel.Warning
+                LogLevel = ErrorLogLevel.Warning
             };
 
             LogError(entry);
@@ -271,7 +271,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                var logLine = entry.LogLevel == LogLevel.Error
+                var logLine = entry.LogLevel == ErrorLogLevel.Error
                     ? $"[{entry.LogLevel}] {entry.Timestamp:yyyy-MM-dd HH:mm:ss} - {entry.Context}: {entry.Message}" +
                       (entry.ExceptionType != null ? $" ({entry.ExceptionType})" : "") +
                       (entry.InnerException != null ? $" Inner: {entry.InnerException}" : "") +
@@ -393,13 +393,13 @@ namespace MandADiscoverySuite.Services
         public string ExceptionType { get; set; }
         public string StackTrace { get; set; }
         public string InnerException { get; set; }
-        public LogLevel LogLevel { get; set; } = LogLevel.Error;
+        public ErrorLogLevel LogLevel { get; set; } = ErrorLogLevel.Error;
     }
 
     /// <summary>
     /// Log levels for error handling
     /// </summary>
-    public enum LogLevel
+    public enum ErrorLogLevel
     {
         Info,
         Warning,

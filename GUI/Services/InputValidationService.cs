@@ -493,6 +493,92 @@ namespace MandADiscoverySuite.Services
         }
 
         #endregion
+
+        #region Security Validation
+
+        /// <summary>
+        /// Validates input for potential security threats
+        /// </summary>
+        public ValidationResult ValidateForSecurityThreats(string input)
+        {
+            var result = new ValidationResult();
+
+            if (string.IsNullOrEmpty(input))
+            {
+                result.AddInfo("Input is empty");
+                return result;
+            }
+
+            // Check for SQL injection patterns
+            if (DataSanitizationService.Instance.ContainsSqlInjectionPattern(input))
+            {
+                result.AddError("Input contains potential SQL injection patterns");
+            }
+
+            // Check for XSS patterns
+            if (DataSanitizationService.Instance.ContainsXssPattern(input))
+            {
+                result.AddError("Input contains potential XSS patterns");
+            }
+
+            // Check for script tags
+            if (System.Text.RegularExpressions.Regex.IsMatch(input, @"<script[^>]*>", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                result.AddError("Input contains script tags");
+            }
+
+            // Check for executable content
+            if (System.Text.RegularExpressions.Regex.IsMatch(input, @"\.(exe|bat|cmd|ps1|vbs|js)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                result.AddWarning("Input appears to reference an executable file");
+            }
+
+            if (result.IsValid)
+            {
+                result.AddInfo("Input passed security validation");
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Validates that input doesn't contain malicious file paths
+        /// </summary>
+        public ValidationResult ValidatePathSecurity(string path)
+        {
+            var result = new ValidationResult();
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                result.AddInfo("Path is empty");
+                return result;
+            }
+
+            // Check for directory traversal attempts
+            if (path.Contains("..") || path.Contains("../") || path.Contains("..\\"))
+            {
+                result.AddError("Path contains directory traversal patterns");
+            }
+
+            // Check for absolute paths to sensitive locations
+            string[] sensitiveLocations = { "system32", "windows", "program files", "/etc", "/bin", "/usr", "/var" };
+            foreach (var location in sensitiveLocations)
+            {
+                if (path.ToLowerInvariant().Contains(location))
+                {
+                    result.AddWarning($"Path references sensitive location: {location}");
+                }
+            }
+
+            if (result.IsValid)
+            {
+                result.AddInfo("Path passed security validation");
+            }
+
+            return result;
+        }
+
+        #endregion
     }
 
 

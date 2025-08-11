@@ -18,7 +18,9 @@ namespace MandADiscoverySuite
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            var startTime = DateTime.Now;
             Action<string> logAction = null;
+            
             try
             {
                 // Set up global exception handling first
@@ -27,6 +29,21 @@ namespace MandADiscoverySuite
                 
                 logAction?.Invoke("=== OnStartup BEGIN ===");
                 logAction?.Invoke("Global exception handling setup completed");
+
+                // Initialize enhanced logging and audit services early
+                logAction?.Invoke("Initializing logging and audit services...");
+                var loggingService = EnhancedLoggingService.Instance;
+                var auditService = AuditService.Instance;
+                logAction?.Invoke("Logging and audit services initialized");
+
+                // Store start time for uptime calculation
+                Current.Properties["StartTime"] = startTime;
+                
+                // Log application startup
+                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
+                _ = Task.Run(async () => await loggingService.LogApplicationEventAsync("Application Starting", 
+                    $"M&A Discovery Suite v{version} is starting up", 
+                    new { Version = version, CommandLineArgs = e.Args, StartTime = startTime }));
                 
                 // Initialize only SimpleServiceLocator (removing ServiceLocator to avoid conflicts)
                 logAction?.Invoke("Initializing SimpleServiceLocator...");
@@ -62,6 +79,12 @@ namespace MandADiscoverySuite
                 logAction?.Invoke("Calling base.OnStartup...");
                 base.OnStartup(e);
                 logAction?.Invoke("base.OnStartup completed successfully");
+
+                // Log startup completion
+                var startupDuration = DateTime.Now - startTime;
+                _ = Task.Run(async () => await loggingService.LogStartupAsync(version, startupDuration));
+                _ = Task.Run(async () => await auditService.LogSystemStartupAsync(version, startupDuration));
+                
                 logAction?.Invoke("=== OnStartup COMPLETED SUCCESSFULLY ===");
             }
             catch (Exception ex)
@@ -82,6 +105,7 @@ namespace MandADiscoverySuite
                 Shutdown(1);
             }
         }
+
 
         private async Task CompleteStartupOptimizationAsync()
         {

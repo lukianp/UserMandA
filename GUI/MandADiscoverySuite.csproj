@@ -33,6 +33,7 @@
     <PackageReference Include="Microsoft.Graph" Version="4.54.0" />
     <PackageReference Include="AvalonEdit" Version="6.2.0.78" />
     <PackageReference Include="System.Management.Automation" Version="7.2.0" />
+    <PackageReference Include="EPPlus" Version="6.2.10" />
   </ItemGroup>
 
   <!-- Copy all PowerShell modules to output directory -->
