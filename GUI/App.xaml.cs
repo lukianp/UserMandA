@@ -41,6 +41,10 @@ namespace MandADiscoverySuite
                 SimpleServiceLocator.Initialize();
                 logAction?.Invoke("SimpleServiceLocator initialized successfully");
 
+                // Ensure discovery data root path uses correct casing
+                ConfigurationService.Instance.DiscoveryDataRootPath = @"C:\discoverydata";
+                logAction?.Invoke($"DiscoveryDataRootPath: {ConfigurationService.Instance.DiscoveryDataRootPath}");
+
                 // Initialize UI interaction logging service for comprehensive click tracking
                 logAction?.Invoke("Initializing UI interaction logging service...");
                 var uiLoggingService = SimpleServiceLocator.GetService<UIInteractionLoggingService>();

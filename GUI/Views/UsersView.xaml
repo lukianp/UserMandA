@@ -148,21 +148,21 @@
                         <!-- User Principal Name -->
                         <DataGridTextColumn Header="User Principal Name" Binding="{Binding UserPrincipalName}" Width="250" />
                         <!-- Email -->
-                        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="220" />
+                        <DataGridTextColumn Header="Email" Binding="{Binding Mail}" Width="220" />
                         <!-- Department -->
                         <DataGridTextColumn Header="Department" Binding="{Binding Department}" Width="150" />
                         <!-- Job Title -->
-                        <DataGridTextColumn Header="Job Title" Binding="{Binding Title}" Width="180" />
+                        <DataGridTextColumn Header="Job Title" Binding="{Binding JobTitle}" Width="180" />
                         <!-- Account Enabled -->
-                        <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="80" />
+                        <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding AccountEnabled}" Width="80" />
                         <!-- Sam Account Name -->
                         <DataGridTextColumn Header="Sam Account" Binding="{Binding SamAccountName}" Width="120" />
                         <!-- Company Name -->
                         <DataGridTextColumn Header="Company" Binding="{Binding CompanyName}" Width="120" />
                         <!-- Manager -->
-                        <DataGridTextColumn Header="Manager" Binding="{Binding Manager}" Width="150" />
+                        <DataGridTextColumn Header="Manager" Binding="{Binding ManagerDisplayName}" Width="150" />
                         <!-- Created Date -->
-                        <DataGridTextColumn Header="Created" Binding="{Binding CreatedDate, StringFormat=yyyy-MM-dd}" Width="100" />
+                        <DataGridTextColumn Header="Created" Binding="{Binding CreatedDateTime, StringFormat=yyyy-MM-dd}" Width="120" />
                         <!-- Last Sign In -->
                         <DataGridTextColumn Header="Last Sign In" Binding="{Binding LastSignInDate, StringFormat=yyyy-MM-dd}" Width="100" />
                         <!-- View Details Button -->
