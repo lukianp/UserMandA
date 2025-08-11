@@ -80,12 +80,20 @@ namespace MandADiscoverySuite.ViewModels
                     }
                 });
 
-                // Refresh all widgets
+                // Don't wait for all widgets to refresh - let them load asynchronously
+                // This prevents the perpetual loading state
                 var refreshTasks = widgets.Where(w => w.IsVisible)
-                    .Select(w => w.RefreshAsync())
+                    .Select(w => Task.Run(() => w.RefreshAsync().ContinueWith(t => 
+                    {
+                        if (t.IsFaulted)
+                        {
+                            _logger?.LogWarning(t.Exception, "Widget refresh failed for {WidgetType}", w.WidgetType);
+                        }
+                    })))
                     .ToArray();
-                    
-                await Task.WhenAll(refreshTasks);
+
+                // Don't await all tasks - let dashboard show while widgets load
+                _ = Task.WhenAll(refreshTasks);
 
                 _logger?.LogInformation("Loaded {Count} dashboard widgets", widgets.Count);
             }

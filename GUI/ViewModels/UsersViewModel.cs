@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Data;
@@ -8,6 +10,7 @@ using System.Windows.Input;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Collections;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -19,11 +22,14 @@ namespace MandADiscoverySuite.ViewModels
         #region Fields
 
         private readonly IDataService _dataService;
+        private readonly CsvDataService _csvDataService;
+        private readonly MainViewModel _mainViewModel;
         private string _searchText;
         private bool _isLoading;
         private string _loadingMessage;
         private int _loadingProgress;
         private ICollectionView _usersView;
+        private UserData _selectedUser;
 
         #endregion
 
@@ -105,6 +111,15 @@ namespace MandADiscoverySuite.ViewModels
         /// </summary>
         public bool HasUsers => TotalUserCount > 0;
 
+        /// <summary>
+        /// Currently selected user for detail view
+        /// </summary>
+        public UserData SelectedUser
+        {
+            get => _selectedUser;
+            set => SetProperty(ref _selectedUser, value);
+        }
+
         #endregion
 
         #region Commands
@@ -119,14 +134,17 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand CopyAllUsersCommand { get; }
         public ICommand ShowAdvancedSearchCommand { get; }
         public ICommand ClearSearchCommand { get; }
+        public ICommand OpenUserDetailCommand { get; }
 
         #endregion
 
         #region Constructor
 
-        public UsersViewModel(IDataService dataService = null)
+        public UsersViewModel(IDataService dataService = null, CsvDataService csvDataService = null, MainViewModel mainViewModel = null)
         {
             _dataService = dataService ?? SimpleServiceLocator.GetService<IDataService>();
+            _csvDataService = csvDataService ?? SimpleServiceLocator.GetService<CsvDataService>();
+            _mainViewModel = mainViewModel;
             
             Users = new OptimizedObservableCollection<UserData>();
             Users.CollectionChanged += (s, e) => 
@@ -149,6 +167,7 @@ namespace MandADiscoverySuite.ViewModels
             CopyAllUsersCommand = new RelayCommand(CopyAllUsers, () => Users.Count > 0);
             ShowAdvancedSearchCommand = new RelayCommand(ShowAdvancedSearch);
             ClearSearchCommand = new RelayCommand(ClearSearch, () => !string.IsNullOrEmpty(SearchText));
+            OpenUserDetailCommand = new RelayCommand<UserData>(OpenUserDetail, user => user != null);
 
             _searchText = string.Empty;
             _loadingMessage = "Ready";
@@ -163,9 +182,7 @@ namespace MandADiscoverySuite.ViewModels
         
         private async void LoadDataAsync()
         {
-            System.Diagnostics.Debug.WriteLine("UsersViewModel.LoadDataAsync: Starting data load...");
             await RefreshUsersAsync();
-            System.Diagnostics.Debug.WriteLine("UsersViewModel.LoadDataAsync: Data load completed.");
         }
 
         /// <summary>
@@ -223,9 +240,16 @@ namespace MandADiscoverySuite.ViewModels
                 LoadingMessage = "Loading user accounts...";
                 LoadingProgress = 30;
 
-                System.Diagnostics.Debug.WriteLine($"UsersViewModel: About to call _dataService.LoadUsersAsync('{profileName}')");
-                var userData = await _dataService?.LoadUsersAsync(profileName) ?? new System.Collections.Generic.List<UserData>();
-                System.Diagnostics.Debug.WriteLine($"UsersViewModel: LoadUsersAsync returned {userData.Count()} users");
+                // Use CsvDataService directly if available, otherwise fall back to IDataService
+                IEnumerable<UserData> userData;
+                if (_csvDataService != null)
+                {
+                    userData = await _csvDataService.LoadUsersAsync(profileName) ?? new System.Collections.Generic.List<UserData>();
+                }
+                else
+                {
+                    userData = await _dataService?.LoadUsersAsync(profileName) ?? new System.Collections.Generic.List<UserData>();
+                }
                 
                 LoadingMessage = "Processing user data...";
                 LoadingProgress = 70;
@@ -287,21 +311,80 @@ namespace MandADiscoverySuite.ViewModels
                 IsLoading = true;
                 LoadingMessage = "Exporting users...";
 
-                // TODO: Implement export functionality through IDataService  
-                await System.Threading.Tasks.Task.Delay(500); // Placeholder
+                // Get filtered users
+                var usersToExport = UsersView?.Cast<UserData>().ToList() ?? new List<UserData>();
                 
-                StatusMessage = "Users exported successfully";
+                if (!usersToExport.Any())
+                {
+                    StatusMessage = "No users to export";
+                    return;
+                }
+
+                var saveDialog = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "Export Users",
+                    Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+                    DefaultExt = "csv",
+                    FileName = $"Users_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+                };
+
+                if (saveDialog.ShowDialog() == true)
+                {
+                    if (_csvDataService != null)
+                    {
+                        await _csvDataService.ExportUsersAsync(usersToExport, saveDialog.FileName);
+                    }
+                    else
+                    {
+                        // Fallback export method
+                        await ExportUsersFallbackAsync(usersToExport, saveDialog.FileName);
+                    }
+                    
+                    StatusMessage = $"Exported {usersToExport.Count} users to {System.IO.Path.GetFileName(saveDialog.FileName)}";
+                }
+                else
+                {
+                    StatusMessage = "Export cancelled";
+                }
             }
             catch (Exception ex)
             {
                 ErrorMessage = $"Failed to export users: {ex.Message}";
                 HasErrors = true;
+                StatusMessage = "Export failed";
             }
             finally
             {
                 IsLoading = false;
                 LoadingMessage = "Ready";
             }
+        }
+        
+        /// <summary>
+        /// Fallback export method when CsvDataService is not available
+        /// </summary>
+        private async Task ExportUsersFallbackAsync(List<UserData> users, string filePath)
+        {
+            var csvLines = new List<string>();
+            
+            // Header
+            csvLines.Add("DisplayName,UserPrincipalName,Email,Department,JobTitle,AccountEnabled,SamAccountName");
+            
+            // Data rows
+            foreach (var user in users)
+            {
+                var line = $"\"{user.DisplayName?.Replace("\"", "\"\"")}\"," +
+                          $"\"{user.UserPrincipalName?.Replace("\"", "\"\"")}\"," +
+                          $"\"{(user.Email ?? user.Mail)?.Replace("\"", "\"\"")}\"," +
+                          $"\"{user.Department?.Replace("\"", "\"\"")}\"," +
+                          $"\"{user.Title?.Replace("\"", "\"\"")}\"," +
+                          $"\"{user.AccountEnabled}\"," +
+                          $"\"{user.SamAccountName?.Replace("\"", "\"\"")}\"";
+                
+                csvLines.Add(line);
+            }
+            
+            await System.IO.File.WriteAllLinesAsync(filePath, csvLines);
         }
 
         private async Task ExportSelectedUsersAsync()
@@ -433,6 +516,75 @@ namespace MandADiscoverySuite.ViewModels
             return Users?.Any(u => u.IsSelected) == true && !IsLoading;
         }
 
+        /// <summary>
+        /// Opens the user detail pane for the specified user
+        /// </summary>
+        /// <param name="user">User to show details for</param>
+        private void OpenUserDetail(UserData user)
+        {
+            if (user == null) return;
+
+            try
+            {
+                SelectedUser = user;
+                
+                // Try to get the root data path
+                var configService = SimpleServiceLocator.GetService<ConfigurationService>();
+                var profileService = SimpleServiceLocator.GetService<IProfileService>();
+                
+                string rawDataPath = null;
+                
+                // Try to get current profile path
+                var currentProfile = profileService?.GetCurrentProfileAsync()?.Result;
+                if (currentProfile != null && configService != null)
+                {
+                    rawDataPath = Path.Combine(configService.DiscoveryDataRootPath, currentProfile.CompanyName, "Raw");
+                }
+                
+                // Fallback to default path
+                if (rawDataPath == null || !Directory.Exists(rawDataPath))
+                {
+                    rawDataPath = @"C:\DiscoveryData\ljpops\Raw";
+                }
+
+                // Create and show user detail window with enhanced functionality
+                UserDetailWindow userDetailWindow;
+                
+                if (_csvDataService != null)
+                {
+                    // Use enhanced constructor with CsvDataService
+                    var enhancedViewModel = new UserDetailViewModel(user, _csvDataService);
+                    userDetailWindow = new UserDetailWindow();
+                    userDetailWindow.DataContext = enhancedViewModel;
+                    enhancedViewModel.CloseRequested += () => userDetailWindow?.Close();
+                }
+                else
+                {
+                    // Fall back to legacy constructor
+                    userDetailWindow = new UserDetailWindow(user, rawDataPath);
+                }
+                
+                userDetailWindow.Owner = System.Windows.Application.Current.MainWindow;
+                userDetailWindow.ShowDialog();
+                
+                StatusMessage = $"Opened details for {user.DisplayName}";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Failed to open user details: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"Error opening user detail for {user?.DisplayName}: {ex}");
+            }
+        }
+
         #endregion
+    }
+
+    /// <summary>
+    /// Message to request opening user detail view
+    /// </summary>
+    public class OpenUserDetailMessage
+    {
+        public UserData User { get; set; }
+        public UserDetailViewModel ViewModel { get; set; }
     }
 }

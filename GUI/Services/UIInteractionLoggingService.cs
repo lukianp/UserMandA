@@ -97,15 +97,32 @@ namespace MandADiscoverySuite.Services
             {
                 var button = sender as ButtonBase;
                 if (button == null) return;
-
+                
+                // Enhanced error tracking for tile/button failures
                 var buttonInfo = ExtractButtonInformation(button);
-                _ = Task.Run(async () => await _enhancedLogger.LogInformationAsync($"🔘 BUTTON_CLICK: {buttonInfo}"));
-
-                // Log command execution if present
+                _ = Task.Run(async () => await _enhancedLogger.LogInformationAsync($"🔲 BUTTON_CLICK: {buttonInfo}"));
+                
+                // Monitor command execution and capture failures
                 if (button.Command != null)
                 {
-                    var commandInfo = ExtractCommandInformation(button.Command, button.CommandParameter);
-                    _ = Task.Run(async () => await _enhancedLogger.LogInformationAsync($"⚡ COMMAND_EXECUTE: {commandInfo}"));
+                    var commandBefore = button.Command.CanExecute(button.CommandParameter);
+                    _ = Task.Run(async () => {
+                        await Task.Delay(100); // Give command time to execute
+                        try 
+                        {
+                            // Check if command completed successfully by looking for any error states
+                            var context = button.DataContext;
+                            var hasError = CheckForErrorsInContext(context);
+                            if (hasError)
+                            {
+                                await _enhancedLogger.LogWarningAsync($"🚨 TILE_ERROR: Button '{buttonInfo}' command may have failed - error detected in context");
+                            }
+                        }
+                        catch (Exception cmdEx)
+                        {
+                            await _enhancedLogger.LogErrorAsync($"🚨 TILE_COMMAND_ERROR: Button '{buttonInfo}' command execution failed", cmdEx);
+                        }
+                    });
                 }
             }
             catch (Exception ex)
@@ -278,6 +295,59 @@ namespace MandADiscoverySuite.Services
             }
             
             return "None";
+        }
+
+        /// <summary>
+        /// Check if the data context has any error properties indicating a failed operation
+        /// </summary>
+        private bool CheckForErrorsInContext(object context)
+        {
+            if (context == null) return false;
+
+            try
+            {
+                var contextType = context.GetType();
+                
+                // Check for common error properties
+                var errorProperties = new[] { "ErrorMessage", "HasError", "IsError", "Error", "LastError" };
+                
+                foreach (var propName in errorProperties)
+                {
+                    var property = contextType.GetProperty(propName);
+                    if (property != null)
+                    {
+                        var value = property.GetValue(context);
+                        if (value != null)
+                        {
+                            // Check boolean error flags
+                            if (value is bool boolValue && boolValue)
+                                return true;
+                                
+                            // Check string error messages
+                            if (value is string stringValue && !string.IsNullOrEmpty(stringValue))
+                                return true;
+                        }
+                    }
+                }
+
+                // Check for IsLoading state that might indicate a hung operation
+                var loadingProperty = contextType.GetProperty("IsLoading");
+                if (loadingProperty != null)
+                {
+                    var isLoading = loadingProperty.GetValue(context);
+                    if (isLoading is bool loading && loading)
+                    {
+                        // Log loading state for debugging
+                        _ = Task.Run(async () => await _enhancedLogger.LogInformationAsync($"🔄 CONTEXT_LOADING: {contextType.Name} is in loading state"));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _ = Task.Run(async () => await _enhancedLogger.LogWarningAsync("Error checking context for errors", ex));
+            }
+
+            return false;
         }
 
         private string ExtractContentString(object content)

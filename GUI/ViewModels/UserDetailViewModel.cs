@@ -1,12 +1,12 @@
 using System;
 using System.Collections.ObjectModel;
-using System.IO;
-using System.Windows.Input;
-using System.Linq;
-using Microsoft.Win32;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using System.Windows;
+using System.IO;
+using Microsoft.Win32;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 
@@ -16,6 +16,8 @@ namespace MandADiscoverySuite.ViewModels
     {
         private readonly string _rawDataPath;
         private UserDetailData _userData;
+        private readonly CsvDataService _csvDataService;
+        private readonly UserData _user;
         
         public UserDetailViewModel(dynamic selectedUser, string rawDataPath)
         {
@@ -38,6 +40,49 @@ namespace MandADiscoverySuite.ViewModels
             LoadUserData(selectedUser);
         }
         
+        // New constructor that accepts UserData and CsvDataService for enhanced functionality
+        public UserDetailViewModel(UserData user, CsvDataService csvDataService)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+            
+            _csvDataService = csvDataService ?? throw new ArgumentNullException(nameof(csvDataService));
+            _user = user;
+            
+            TabTitle = $"User Details - {user.DisplayName}";
+            
+            GroupMemberships = new ObservableCollection<GroupMembership>();
+            ApplicationAssignments = new ObservableCollection<ApplicationAssignment>();
+            DeviceRelationships = new ObservableCollection<DeviceRelationship>();
+            DirectoryRoles = new ObservableCollection<DirectoryRole>();
+            LicenseAssignments = new ObservableCollection<LicenseAssignment>();
+            Assets = new ObservableCollection<AssetData>();
+            
+            // Initialize additional collections for enhanced functionality
+            SecurityGroups = new ObservableCollection<GroupData>();
+            Applications = new ObservableCollection<ApplicationData>();
+            InfrastructureAssets = new ObservableCollection<InfrastructureData>();
+            
+            CloseCommand = new RelayCommand(() => CloseRequested?.Invoke());
+            ExportProfileCommand = new RelayCommand(ExportProfile);
+            RefreshDataCommand = new AsyncRelayCommand(LoadRelatedDataAsync);
+            
+            // Set user properties
+            DisplayName = user.DisplayName;
+            UserPrincipalName = user.UserPrincipalName;
+            Email = user.Email ?? user.Mail;
+            JobTitle = user.Title;
+            Department = user.Department;
+            Manager = user.ManagerDisplayName;
+            Location = user.City;
+            AccountEnabled = user.AccountEnabled ? "Enabled" : "Disabled";
+            CreatedDate = user.CreatedDate?.ToString("yyyy-MM-dd") ?? "N/A";
+            LastSignIn = user.LastSignInDateTime ?? "Never";
+            
+            // Load related data asynchronously
+            _ = LoadRelatedDataAsync();
+        }
+        
         public event Action CloseRequested;
         
         public ObservableCollection<GroupMembership> GroupMemberships { get; }
@@ -47,8 +92,14 @@ namespace MandADiscoverySuite.ViewModels
         public ObservableCollection<LicenseAssignment> LicenseAssignments { get; }
         public ObservableCollection<AssetData> Assets { get; }
         
+        // Enhanced collections for the new constructor
+        public ObservableCollection<GroupData> SecurityGroups { get; private set; }
+        public ObservableCollection<ApplicationData> Applications { get; private set; }
+        public ObservableCollection<InfrastructureData> InfrastructureAssets { get; private set; }
+        
         public ICommand CloseCommand { get; }
         public ICommand ExportProfileCommand { get; }
+        public ICommand RefreshDataCommand { get; private set; }
         
         private string _displayName;
         public string DisplayName
@@ -524,6 +575,189 @@ Last Sign-In: {LastSignIn}
             }
             
             base.OnDisposing();
+        }
+        
+        /// <summary>
+        /// Loads all related data for the user from CSV files (for enhanced constructor)
+        /// </summary>
+        private async Task LoadRelatedDataAsync()
+        {
+            if (_csvDataService == null || _user == null) return;
+            
+            await ExecuteAsync(async () =>
+            {
+                LoadingMessage = "Loading user related data...";
+                LoadingProgress = 0;
+
+                // Get current profile name for data path resolution
+                var profileService = SimpleServiceLocator.GetService<IProfileService>();
+                var currentProfile = await profileService?.GetCurrentProfileAsync();
+                var profileName = currentProfile?.CompanyName ?? "ljpops";
+
+                try
+                {
+                    // Load security groups
+                    LoadingMessage = "Loading security groups...";
+                    LoadingProgress = 20;
+                    await LoadSecurityGroupsAsync(profileName);
+
+                    // Load applications
+                    LoadingMessage = "Loading applications...";
+                    LoadingProgress = 50;
+                    await LoadApplicationsAsync(profileName);
+
+                    // Load infrastructure assets
+                    LoadingMessage = "Loading infrastructure assets...";
+                    LoadingProgress = 80;
+                    await LoadInfrastructureAssetsAsync(profileName);
+
+                    LoadingProgress = 100;
+                    LoadingMessage = "User data loaded successfully";
+                    StatusMessage = $"Loaded related data for {_user.DisplayName}";
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Error loading user data: {ex.Message}";
+                    throw;
+                }
+            }, "Load User Details");
+        }
+
+        /// <summary>
+        /// Loads security groups that the user belongs to
+        /// </summary>
+        private async Task LoadSecurityGroupsAsync(string profileName)
+        {
+            try
+            {
+                var allGroups = await _csvDataService.LoadGroupsAsync(profileName);
+                
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    SecurityGroups.Clear();
+                    
+                    // Filter groups where user is a member
+                    foreach (var group in allGroups)
+                    {
+                        // Check if user is in the group members list
+                        if (IsUserInGroup(group, _user))
+                        {
+                            SecurityGroups.Add(group);
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading security groups: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Loads applications owned or used by the user
+        /// </summary>
+        private async Task LoadApplicationsAsync(string profileName)
+        {
+            try
+            {
+                var allApplications = await _csvDataService.LoadApplicationsAsync(profileName);
+                
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Applications.Clear();
+                    
+                    // Filter applications where user is owner or assigned user
+                    foreach (var app in allApplications)
+                    {
+                        if (IsUserAssignedToApplication(app, _user))
+                        {
+                            Applications.Add(app);
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading applications: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Loads infrastructure assets owned or used by the user
+        /// </summary>
+        private async Task LoadInfrastructureAssetsAsync(string profileName)
+        {
+            try
+            {
+                var allInfrastructure = await _csvDataService.LoadInfrastructureAsync(profileName);
+                
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    InfrastructureAssets.Clear();
+                    
+                    // Filter assets where user is owner or primary user
+                    foreach (var asset in allInfrastructure)
+                    {
+                        if (IsUserAssignedToAsset(asset, _user))
+                        {
+                            InfrastructureAssets.Add(asset);
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading infrastructure assets: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks if a user is a member of a group
+        /// </summary>
+        private bool IsUserInGroup(GroupData group, UserData user)
+        {
+            // Simple check using UserIds collection which exists in GroupData
+            if (group.UserIds != null && !string.IsNullOrEmpty(user.Id))
+            {
+                return group.UserIds.Contains(user.Id, StringComparer.OrdinalIgnoreCase);
+            }
+            
+            // Fallback to simple name matching (less reliable but better than nothing)
+            if (!string.IsNullOrEmpty(group.DisplayName) && !string.IsNullOrEmpty(user.DisplayName))
+            {
+                // This is a very basic check - in real scenarios you'd want more sophisticated membership logic
+                return false; // Disable this for now as it's not reliable
+            }
+            
+            return false;
+        }
+
+        /// <summary>
+        /// Checks if a user is assigned to an application
+        /// </summary>
+        private bool IsUserAssignedToApplication(ApplicationData app, UserData user)
+        {
+            // Check using UserIds collection which exists in ApplicationData
+            if (app.UserIds != null && !string.IsNullOrEmpty(user.Id))
+            {
+                return app.UserIds.Contains(user.Id, StringComparer.OrdinalIgnoreCase);
+            }
+            
+            return false;
+        }
+
+        /// <summary>
+        /// Checks if a user is assigned to an infrastructure asset
+        /// </summary>
+        private bool IsUserAssignedToAsset(InfrastructureData asset, UserData user)
+        {
+            // Check using UserIds collection which exists in InfrastructureData
+            if (asset.UserIds != null && !string.IsNullOrEmpty(user.Id))
+            {
+                return asset.UserIds.Contains(user.Id, StringComparer.OrdinalIgnoreCase);
+            }
+            
+            return false;
         }
     }
 }

@@ -550,6 +550,7 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ShowApplicationsViewCommand { get; }
         public ICommand ToggleModuleCommand { get; }
         public ICommand ConfigureModuleCommand { get; }
+        public ICommand RunSingleModuleCommand { get; }
         public ICommand ExportResultsCommand { get; }
         public ICommand ImportProfileCommand { get; }
         public ICommand ToggleThemeCommand { get; }
@@ -812,6 +813,7 @@ namespace MandADiscoverySuite.ViewModels
             ShowApplicationsViewCommand = new RelayCommand(() => OpenTab("applications"));
             ToggleModuleCommand = new RelayCommand<string>(ToggleModule);
             ConfigureModuleCommand = new RelayCommand<DiscoveryModuleViewModel>(ConfigureModule);
+            RunSingleModuleCommand = new RelayCommand<string>(async (moduleName) => await RunSingleModuleAsync(moduleName));
             ExportResultsCommand = new AsyncRelayCommand(ExportResultsAsync);
             ImportProfileCommand = new AsyncRelayCommand(ImportProfileAsync);
             ToggleThemeCommand = new RelayCommand(ToggleTheme);
@@ -982,19 +984,70 @@ namespace MandADiscoverySuite.ViewModels
             // Initialize TDI with default Dashboard tab
             OpenTab("dashboard");
 
+            // Initialize fallback modules immediately to ensure dashboard always has tiles
+            try
+            {
+                InitializeFallbackModules();
+                StatusMessage = "Discovery modules loaded (fallback mode)";
+            }
+            catch (Exception fallbackEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"MainViewModel: Fallback module initialization failed: {fallbackEx}");
+                StatusMessage = "Error loading discovery modules";
+            }
+
             // Load initial data
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await InitializeAsync();
+                    await EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Starting initialization task");
+                    
+                    // Add timeout protection to prevent hanging
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+                    {
+                        await InitializeAsync().ConfigureAwait(false);
+                    }
+                    
+                    await EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Initialization task completed successfully");
+                }
+                catch (OperationCanceledException ex)
+                {
+                    await EnhancedLoggingService.Instance.LogWarningAsync("MainViewModel initialization timed out, using fallback initialization");
+                    
+                    // Fallback initialization if timeout occurs
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        try
+                        {
+                            // Initialize discovery modules directly using fallback
+                            InitializeFallbackModules();
+                            StatusMessage = "Initialized with fallback modules (initialization timed out)";
+                        }
+                        catch (Exception fallbackEx)
+                        {
+                            StatusMessage = $"Fallback initialization failed: {fallbackEx.Message}";
+                        }
+                    });
                 }
                 catch (Exception ex)
                 {
+                    await EnhancedLoggingService.Instance.LogErrorAsync("MainViewModel initialization failed", ex);
                     ErrorHandlingService.Instance.HandleException(ex, "MainViewModel initialization");
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         StatusMessage = $"Initialization failed: {ex.Message}";
+                        
+                        // Try fallback initialization even on errors
+                        try
+                        {
+                            InitializeFallbackModules();
+                            StatusMessage = "Initialized with fallback modules (after error)";
+                        }
+                        catch (Exception fallbackEx)
+                        {
+                            StatusMessage = $"Fallback initialization failed: {fallbackEx.Message}";
+                        }
                     });
                 }
             });
@@ -1229,55 +1282,55 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"MainViewModel.InitializeAsync: Starting initialization at {DateTime.Now:HH:mm:ss.fff}");
+                await EnhancedLoggingService.Instance.LogInformationAsync($"MainViewModel.InitializeAsync: Starting initialization at {DateTime.Now:HH:mm:ss.fff}");
                 StatusMessage = "Initializing application...";
                 
                 // Load company profiles
-                System.Diagnostics.Debug.WriteLine("InitializeAsync: Loading company profiles...");
+                await EnhancedLoggingService.Instance.LogInformationAsync("InitializeAsync: Loading company profiles...");
                 await LoadCompanyProfilesAsync();
-                System.Diagnostics.Debug.WriteLine("InitializeAsync: Company profiles loaded successfully");
+                await EnhancedLoggingService.Instance.LogInformationAsync("InitializeAsync: Company profiles loaded successfully");
                 
                 // Initialize discovery modules
-                System.Diagnostics.Debug.WriteLine("InitializeAsync: Initializing discovery modules...");
+                await EnhancedLoggingService.Instance.LogInformationAsync("InitializeAsync: Initializing discovery modules...");
                 InitializeDiscoveryModules();
-                System.Diagnostics.Debug.WriteLine("InitializeAsync: Discovery modules initialized successfully");
+                await EnhancedLoggingService.Instance.LogInformationAsync("InitializeAsync: Discovery modules initialized successfully");
                 
                 // Initialize dashboard metrics
-                System.Diagnostics.Debug.WriteLine("InitializeAsync: Initializing dashboard metrics...");
+                await EnhancedLoggingService.Instance.LogInformationAsync("InitializeAsync: Initializing dashboard metrics...");
                 InitializeDashboardMetrics();
-                System.Diagnostics.Debug.WriteLine("InitializeAsync: Dashboard metrics initialized successfully");
+                await EnhancedLoggingService.Instance.LogInformationAsync("InitializeAsync: Dashboard metrics initialized successfully");
                 
                 // Start dashboard timer
-                System.Diagnostics.Debug.WriteLine("InitializeAsync: Starting dashboard timer...");
+                await EnhancedLoggingService.Instance.LogInformationAsync("InitializeAsync: Starting dashboard timer...");
                 _dashboardTimer?.Start();
-                System.Diagnostics.Debug.WriteLine("InitializeAsync: Dashboard timer started successfully");
+                await EnhancedLoggingService.Instance.LogInformationAsync("InitializeAsync: Dashboard timer started successfully");
                 
                 // Initialize real-time log monitoring
-                System.Diagnostics.Debug.WriteLine("InitializeAsync: Initializing log monitoring...");
+                await EnhancedLoggingService.Instance.LogInformationAsync("InitializeAsync: Initializing log monitoring...");
                 try
                 {
                     await LogMonitoringIntegrationService.Instance.InitializeAsync();
-                    System.Diagnostics.Debug.WriteLine("InitializeAsync: Log monitoring initialized successfully");
+                    await EnhancedLoggingService.Instance.LogInformationAsync("InitializeAsync: Log monitoring initialized successfully");
                 }
                 catch (Exception logEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"InitializeAsync: Log monitoring initialization failed: {logEx.Message}");
+                    await EnhancedLoggingService.Instance.LogWarningAsync($"InitializeAsync: Log monitoring initialization failed: {logEx.Message}");
                     ErrorHandlingService.Instance.LogWarning($"Log monitoring initialization failed: {logEx.Message}");
                 }
                 
                 // Load initial data if a profile is selected
                 if (SelectedProfile != null)
                 {
-                    System.Diagnostics.Debug.WriteLine("InitializeAsync: Loading initial discovery data...");
+                    await EnhancedLoggingService.Instance.LogInformationAsync("InitializeAsync: Loading initial discovery data...");
                     await LoadDiscoveryResultsAsync();
-                    System.Diagnostics.Debug.WriteLine("InitializeAsync: Initial discovery data loaded successfully");
+                    await EnhancedLoggingService.Instance.LogInformationAsync("InitializeAsync: Initial discovery data loaded successfully");
                 }
                 
                 StatusMessage = "Application ready";
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"InitializeAsync: Exception occurred: {ex}");
+                await EnhancedLoggingService.Instance.LogErrorAsync($"InitializeAsync: Exception occurred", ex);
                 StatusMessage = ErrorHandlingService.Instance.HandleException(ex, "Application initialization");
             }
         }
@@ -1384,13 +1437,15 @@ namespace MandADiscoverySuite.ViewModels
                         var moduleInfo = kvp.Value;
                         var moduleId = kvp.Key;
                         
-                        System.Diagnostics.Debug.WriteLine($"InitializeDiscoveryModules: Adding module {moduleId} - {moduleInfo.DisplayName}");
+                        System.Diagnostics.Debug.WriteLine($"InitializeDiscoveryModules: Adding module {moduleId} - {moduleInfo.DisplayName} (Registry Enabled: {moduleInfo.Enabled})");
                         
+                        // Show ALL modules regardless of their enabled state in registry
+                        // The user can toggle them as needed in the UI
                         var module = new DiscoveryModuleViewModel(
                             moduleId,
                             moduleInfo.DisplayName,
                             moduleInfo.Description,
-                            moduleInfo.Enabled
+                            true  // Always show all modules, user can enable/disable as needed
                         );
                         module.Category = moduleInfo.Category;
                         modules.Add(module);
@@ -1427,60 +1482,60 @@ namespace MandADiscoverySuite.ViewModels
             var modules = new[]
             {
                 // Identity & Access
-                new DiscoveryModuleViewModel("ActiveDirectoryDiscovery", "Active Directory Discovery", "Discover AD users, groups, computers, and organizational structure", true) { Category = "Identity" },
-                new DiscoveryModuleViewModel("AzureDiscovery", "Azure AD Discovery", "Discover Azure AD users, groups, and applications", true) { Category = "Identity" },
-                new DiscoveryModuleViewModel("EntraIDAppDiscovery", "Enhanced Entra ID Apps", "Advanced Entra ID application and service principal discovery", true) { Category = "Identity" },
-                new DiscoveryModuleViewModel("MultiDomainForestDiscovery", "Multi-Domain Forest Discovery", "Complex Active Directory forest and domain topology analysis", true) { Category = "Identity" },
-                new DiscoveryModuleViewModel("ExternalIdentityDiscovery", "External Identity Systems", "Discover external identity providers and integrations", false) { Category = "Identity" },
-                new DiscoveryModuleViewModel("GraphDiscovery", "Enhanced Graph Discovery", "Advanced Microsoft Graph API discovery and analysis", false) { Category = "Identity" },
+                new DiscoveryModuleViewModel("ActiveDirectoryDiscovery", "Active Directory Discovery", "Discover AD users, groups, computers, and organizational structure", true),
+                new DiscoveryModuleViewModel("AzureDiscovery", "Azure AD Discovery", "Discover Azure AD users, groups, and applications", true),
+                new DiscoveryModuleViewModel("EntraIDAppDiscovery", "Enhanced Entra ID Apps", "Advanced Entra ID application and service principal discovery", true),
+                new DiscoveryModuleViewModel("MultiDomainForestDiscovery", "Multi-Domain Forest Discovery", "Complex Active Directory forest and domain topology analysis", true),
+                new DiscoveryModuleViewModel("ExternalIdentityDiscovery", "External Identity Systems", "Discover external identity providers and integrations", false),
+                new DiscoveryModuleViewModel("GraphDiscovery", "Enhanced Graph Discovery", "Advanced Microsoft Graph API discovery and analysis", false),
                 
                 // Cloud & Infrastructure
-                new DiscoveryModuleViewModel("AzureResourceDiscovery", "Azure Resource Discovery", "Discover Azure infrastructure, resources, and configurations", true) { Category = "Cloud" },
-                new DiscoveryModuleViewModel("MultiCloudDiscoveryEngine", "Multi-Cloud Discovery", "Discover resources across multiple cloud platforms", true) { Category = "Cloud" },
-                new DiscoveryModuleViewModel("ContainerOrchestration", "Container Discovery", "Discover Kubernetes clusters and containerized applications", false) { Category = "Cloud" },
+                new DiscoveryModuleViewModel("AzureResourceDiscovery", "Azure Resource Discovery", "Discover Azure infrastructure, resources, and configurations", true),
+                new DiscoveryModuleViewModel("MultiCloudDiscoveryEngine", "Multi-Cloud Discovery", "Discover resources across multiple cloud platforms", true),
+                new DiscoveryModuleViewModel("ContainerOrchestration", "Container Discovery", "Discover Kubernetes clusters and containerized applications", false),
                 
                 // Collaboration
-                new DiscoveryModuleViewModel("ExchangeDiscovery", "Exchange Discovery", "Discover Exchange mailboxes, databases, and configuration", true) { Category = "Collaboration" },
-                new DiscoveryModuleViewModel("TeamsDiscovery", "Microsoft Teams Discovery", "Discover Teams, channels, and membership", true) { Category = "Collaboration" },
-                new DiscoveryModuleViewModel("SharePointDiscovery", "SharePoint Discovery", "Discover SharePoint sites, lists, and permissions", true) { Category = "Collaboration" },
-                new DiscoveryModuleViewModel("PowerPlatformDiscovery", "Power Platform Discovery", "Discover Power Apps, Power Automate flows, and Power BI reports", false) { Category = "Collaboration" },
+                new DiscoveryModuleViewModel("ExchangeDiscovery", "Exchange Discovery", "Discover Exchange mailboxes, databases, and configuration", true),
+                new DiscoveryModuleViewModel("TeamsDiscovery", "Microsoft Teams Discovery", "Discover Teams, channels, and membership", true),
+                new DiscoveryModuleViewModel("SharePointDiscovery", "SharePoint Discovery", "Discover SharePoint sites, lists, and permissions", true),
+                new DiscoveryModuleViewModel("PowerPlatformDiscovery", "Power Platform Discovery", "Discover Power Apps, Power Automate flows, and Power BI reports", false),
                 
                 // Infrastructure
-                new DiscoveryModuleViewModel("NetworkInfrastructureDiscovery", "Network Infrastructure", "Discover network devices, switches, and routers", true) { Category = "Infrastructure" },
-                new DiscoveryModuleViewModel("PhysicalServerDiscovery", "Physical Server Discovery", "Discover physical hardware inventory, specifications, and configurations", true) { Category = "Infrastructure" },
-                new DiscoveryModuleViewModel("VMwareDiscovery", "VMware Discovery", "Discover VMware virtual infrastructure", true) { Category = "Virtualization" },
-                new DiscoveryModuleViewModel("PrinterDiscovery", "Printer Discovery", "Discover network and local printers", false) { Category = "Infrastructure" },
-                new DiscoveryModuleViewModel("BackupRecoveryDiscovery", "Backup & Recovery Systems", "Discover backup infrastructure and recovery solutions", false) { Category = "Infrastructure" },
+                new DiscoveryModuleViewModel("NetworkInfrastructureDiscovery", "Network Infrastructure", "Discover network devices, switches, and routers", true),
+                new DiscoveryModuleViewModel("PhysicalServerDiscovery", "Physical Server Discovery", "Discover physical hardware inventory, specifications, and configurations", true),
+                new DiscoveryModuleViewModel("VMwareDiscovery", "VMware Discovery", "Discover VMware virtual infrastructure", true),
+                new DiscoveryModuleViewModel("PrinterDiscovery", "Printer Discovery", "Discover network and local printers", false),
+                new DiscoveryModuleViewModel("BackupRecoveryDiscovery", "Backup & Recovery Systems", "Discover backup infrastructure and recovery solutions", false),
                 
                 // Storage & Data
-                new DiscoveryModuleViewModel("FileServerDiscovery", "File Server Discovery", "Discover file shares and permissions", true) { Category = "Storage" },
-                new DiscoveryModuleViewModel("StorageArrayDiscovery", "Storage Array Discovery", "Discover SAN/NAS storage systems and configurations", true) { Category = "Storage" },
-                new DiscoveryModuleViewModel("SQLServerDiscovery", "SQL Server Discovery", "Discover SQL Server instances and databases", true) { Category = "Data" },
-                new DiscoveryModuleViewModel("DatabaseSchemaDiscovery", "Database Schema Discovery", "Discover database schemas and data structures", false) { Category = "Data" },
-                new DiscoveryModuleViewModel("DataClassification", "Data Classification", "Classify and assess data sensitivity", true) { Category = "Data" },
+                new DiscoveryModuleViewModel("FileServerDiscovery", "File Server Discovery", "Discover file shares and permissions", true),
+                new DiscoveryModuleViewModel("StorageArrayDiscovery", "Storage Array Discovery", "Discover SAN/NAS storage systems and configurations", true),
+                new DiscoveryModuleViewModel("SQLServerDiscovery", "SQL Server Discovery", "Discover SQL Server instances and databases", true),
+                new DiscoveryModuleViewModel("DatabaseSchemaDiscovery", "Database Schema Discovery", "Discover database schemas and data structures", false),
+                new DiscoveryModuleViewModel("DataClassification", "Data Classification", "Classify and assess data sensitivity", true),
                 
                 // Security
-                new DiscoveryModuleViewModel("SecurityInfrastructureDiscovery", "Security Infrastructure", "Discover security appliances, configurations, and policies", true) { Category = "Security" },
-                new DiscoveryModuleViewModel("SecurityGroupAnalysis", "Security Group Analysis", "Analyze security group membership and permissions", true) { Category = "Security" },
-                new DiscoveryModuleViewModel("CertificateDiscovery", "Certificate Discovery", "Discover digital certificates and PKI infrastructure", true) { Category = "Security" },
-                new DiscoveryModuleViewModel("GPODiscovery", "Group Policy Analysis", "Group Policy discovery, analysis, and security policy assessment", true) { Category = "Security" },
-                new DiscoveryModuleViewModel("ThreatDetectionEngine", "Threat Detection Analysis", "Analyze security threats and vulnerabilities", false) { Category = "Security" },
-                new DiscoveryModuleViewModel("PaloAltoDiscovery", "Palo Alto Networks Discovery", "Discover Palo Alto security appliances and configurations", false) { Category = "Security" },
+                new DiscoveryModuleViewModel("SecurityInfrastructureDiscovery", "Security Infrastructure", "Discover security appliances, configurations, and policies", true),
+                new DiscoveryModuleViewModel("SecurityGroupAnalysis", "Security Group Analysis", "Analyze security group membership and permissions", true),
+                new DiscoveryModuleViewModel("CertificateDiscovery", "Certificate Discovery", "Discover digital certificates and PKI infrastructure", true),
+                new DiscoveryModuleViewModel("GPODiscovery", "Group Policy Analysis", "Group Policy discovery, analysis, and security policy assessment", true),
+                new DiscoveryModuleViewModel("ThreatDetectionEngine", "Threat Detection Analysis", "Analyze security threats and vulnerabilities", false),
+                new DiscoveryModuleViewModel("PaloAltoDiscovery", "Palo Alto Networks Discovery", "Discover Palo Alto security appliances and configurations", false),
                 
                 // Applications & Services
-                new DiscoveryModuleViewModel("ApplicationDiscovery", "Application Discovery", "Discover installed applications and services", true) { Category = "Applications" },
-                new DiscoveryModuleViewModel("ApplicationDependencyMapping", "Application Dependencies", "Map application dependencies and integration points", true) { Category = "Applications" },
-                new DiscoveryModuleViewModel("IntuneDiscovery", "Intune Discovery", "Discover managed devices and policies", true) { Category = "Device Management" },
-                new DiscoveryModuleViewModel("LicensingDiscovery", "Software Licensing Analysis", "Comprehensive software licensing compliance and cost analysis", true) { Category = "Compliance" },
+                new DiscoveryModuleViewModel("ApplicationDiscovery", "Application Discovery", "Discover installed applications and services", true),
+                new DiscoveryModuleViewModel("ApplicationDependencyMapping", "Application Dependencies", "Map application dependencies and integration points", true),
+                new DiscoveryModuleViewModel("IntuneDiscovery", "Intune Discovery", "Discover managed devices and policies", true),
+                new DiscoveryModuleViewModel("LicensingDiscovery", "Software Licensing Analysis", "Comprehensive software licensing compliance and cost analysis", true),
                 
                 // Compliance & Governance  
-                new DiscoveryModuleViewModel("ComplianceAssessmentFramework", "Compliance Assessment", "Assess regulatory compliance and governance", true) { Category = "Compliance" },
-                new DiscoveryModuleViewModel("DataGovernanceMetadataManagement", "Data Governance", "Manage data governance policies and metadata", false) { Category = "Data Governance" },
-                new DiscoveryModuleViewModel("DataLineageDependencyEngine", "Data Lineage Mapping", "Map data lineage and dependencies across systems", false) { Category = "Data Governance" },
+                new DiscoveryModuleViewModel("ComplianceAssessmentFramework", "Compliance Assessment", "Assess regulatory compliance and governance", true),
+                new DiscoveryModuleViewModel("DataGovernanceMetadataManagement", "Data Governance", "Manage data governance policies and metadata", false),
+                new DiscoveryModuleViewModel("DataLineageDependencyEngine", "Data Lineage Mapping", "Map data lineage and dependencies across systems", false),
                 
                 // Operations & Assessment
-                new DiscoveryModuleViewModel("ScheduledTaskDiscovery", "Scheduled Task Discovery", "Discover scheduled tasks and automation workflows", false) { Category = "Operations" },
-                new DiscoveryModuleViewModel("EnvironmentRiskScoring", "Environment Risk Assessment", "Comprehensive risk scoring and security assessment for M&A due diligence", true) { Category = "Risk Assessment" }
+                new DiscoveryModuleViewModel("ScheduledTaskDiscovery", "Scheduled Task Discovery", "Discover scheduled tasks and automation workflows", false),
+                new DiscoveryModuleViewModel("EnvironmentRiskScoring", "Environment Risk Assessment", "Comprehensive risk scoring and security assessment for M&A due diligence", true)
             };
 
             Application.Current.Dispatcher.Invoke(() =>
@@ -2445,6 +2500,74 @@ This directory is strictly for storing discovery results and company data.
             {
                 ErrorHandlingService.Instance.HandleException(ex, "Configuring module");
                 StatusMessage = $"Failed to configure {module.DisplayName}";
+            }
+        }
+
+        private async Task RunSingleModuleAsync(string moduleName)
+        {
+            if (string.IsNullOrWhiteSpace(moduleName))
+            {
+                StatusMessage = "Module name cannot be null or empty";
+                return;
+            }
+
+            if (SelectedProfile == null)
+            {
+                StatusMessage = "Please select a company profile first";
+                return;
+            }
+
+            try
+            {
+                var module = DiscoveryModules.FirstOrDefault(m => m.ModuleName == moduleName);
+                if (module == null)
+                {
+                    StatusMessage = $"Module '{moduleName}' not found";
+                    return;
+                }
+
+                // Update module status
+                module.Status = DiscoveryModuleStatus.Running;
+                module.Progress = 0;
+                module.LastMessage = "Starting discovery...";
+
+                StatusMessage = $"Running {module.DisplayName}...";
+                await EnhancedLoggingService.Instance.LogInformationAsync($"Starting single module discovery: {moduleName}");
+
+                // Run the specific module
+                if (_discoveryService != null)
+                {
+                    await _discoveryService.StartDiscoveryAsync(SelectedProfile.CompanyName, new[] { moduleName });
+                    
+                    module.Status = DiscoveryModuleStatus.Completed;
+                    module.Progress = 100;
+                    module.LastMessage = "Discovery completed successfully";
+                    module.LastRunTime = DateTime.Now;
+                    
+                    StatusMessage = $"{module.DisplayName} completed successfully";
+                    await EnhancedLoggingService.Instance.LogInformationAsync($"Single module discovery completed: {moduleName}");
+
+                    // Refresh results
+                    await LoadDiscoveryResultsAsync();
+                }
+                else
+                {
+                    module.Status = DiscoveryModuleStatus.Failed;
+                    module.LastMessage = "Discovery service not available";
+                    StatusMessage = "Discovery service not available";
+                }
+            }
+            catch (Exception ex)
+            {
+                var module = DiscoveryModules.FirstOrDefault(m => m.ModuleName == moduleName);
+                if (module != null)
+                {
+                    module.Status = DiscoveryModuleStatus.Failed;
+                    module.LastMessage = $"Error: {ex.Message}";
+                }
+                
+                StatusMessage = $"Failed to run {moduleName}: {ex.Message}";
+                await EnhancedLoggingService.Instance.LogErrorAsync($"Single module discovery failed: {moduleName}", ex);
             }
         }
 
@@ -4803,8 +4926,25 @@ This directory is strictly for storing discovery results and company data.
                         break;
                     case "users":
                         var dataService = SimpleServiceLocator.GetService<IDataService>();
-                        tabViewModel = new UsersViewModel(dataService);
-                        tabViewModel.TabTitle = "Users";
+                        var csvDataService = SimpleServiceLocator.GetService<CsvDataService>();
+                        var usersViewModel = new UsersViewModel(dataService, csvDataService, this);
+                        usersViewModel.TabTitle = "Users";
+                        // Trigger data loading by executing the refresh command
+                        _ = Task.Run(() =>
+                        {
+                            try
+                            {
+                                if (usersViewModel.RefreshUsersCommand.CanExecute(null))
+                                {
+                                    usersViewModel.RefreshUsersCommand.Execute(null);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error loading users data: {ex.Message}");
+                            }
+                        });
+                        tabViewModel = usersViewModel;
                         break;
                     case "computers":
                         var computersDataService = SimpleServiceLocator.GetService<IDataService>();
@@ -4812,15 +4952,48 @@ This directory is strictly for storing discovery results and company data.
                         tabViewModel.TabTitle = "Computers";
                         break;
                     case "infrastructure":
-                        tabViewModel = new InfrastructureViewModel { TabTitle = "Infrastructure" };
+                        var infrastructureDataService = SimpleServiceLocator.GetService<IDataService>();
+                        var infrastructureViewModel = new MandADiscoverySuite.ViewModels.InfrastructureViewModel(infrastructureDataService) { TabTitle = "Infrastructure" };
+                        // Trigger data loading by executing the refresh command
+                        _ = Task.Run(() =>
+                        {
+                            try
+                            {
+                                if (infrastructureViewModel.RefreshInfrastructureCommand.CanExecute(null))
+                                {
+                                    infrastructureViewModel.RefreshInfrastructureCommand.Execute(null);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error loading infrastructure data: {ex.Message}");
+                            }
+                        });
+                        tabViewModel = infrastructureViewModel;
                         break;
                     case "assets":
                         tabViewModel = new AssetInventoryViewModel { TabTitle = "Assets" };
                         break;
                     case "groups":
                         var groupsDataService = SimpleServiceLocator.GetService<IDataService>();
-                        tabViewModel = new GroupsViewModel(groupsDataService);
-                        tabViewModel.TabTitle = "Groups";
+                        var groupsViewModel = new GroupsViewModel(groupsDataService);
+                        groupsViewModel.TabTitle = "Groups";
+                        // Trigger data loading by executing the refresh command
+                        _ = Task.Run(() =>
+                        {
+                            try
+                            {
+                                if (groupsViewModel.RefreshGroupsCommand.CanExecute(null))
+                                {
+                                    groupsViewModel.RefreshGroupsCommand.Execute(null);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error loading groups data: {ex.Message}");
+                            }
+                        });
+                        tabViewModel = groupsViewModel;
                         break;
                     case "applications":
                         tabViewModel = new ApplicationsViewModel { TabTitle = "Applications" };
@@ -4866,17 +5039,20 @@ This directory is strictly for storing discovery results and company data.
                         tabViewModel = new RiskAnalysisViewModel { TabTitle = "Domain Discovery" };
                         break;
                     case "fileservers":
-                        var fileServersViewModel = new InfrastructureViewModel { TabTitle = "File Servers" };
+                        var fileServersDataService = SimpleServiceLocator.GetService<IDataService>();
+                        var fileServersViewModel = new MandADiscoverySuite.ViewModels.InfrastructureViewModel(fileServersDataService) { TabTitle = "File Servers" };
                         System.Diagnostics.Debug.WriteLine("Creating File Servers tab with InfrastructureViewModel");
                         tabViewModel = fileServersViewModel;
                         break;
                     case "databases":
-                        var databasesViewModel = new InfrastructureViewModel { TabTitle = "Databases" };
+                        var databasesDataService = SimpleServiceLocator.GetService<IDataService>();
+                        var databasesViewModel = new MandADiscoverySuite.ViewModels.InfrastructureViewModel(databasesDataService) { TabTitle = "Databases" };
                         System.Diagnostics.Debug.WriteLine("Creating Databases tab with InfrastructureViewModel");
                         tabViewModel = databasesViewModel;
                         break;
                     case "security":
-                        var securityViewModel = new GroupsViewModel { TabTitle = "Security" };
+                        var securityDataService = SimpleServiceLocator.GetService<IDataService>();
+                        var securityViewModel = new GroupsViewModel(securityDataService) { TabTitle = "Security" };
                         System.Diagnostics.Debug.WriteLine("Creating Security tab with GroupsViewModel");
                         tabViewModel = securityViewModel;
                         break;

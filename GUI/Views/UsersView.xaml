@@ -117,16 +117,17 @@
                 </StackPanel>
                 
                 <!-- Data Grid -->
-                <DataGrid ItemsSource="{Binding Users}" 
-                          AutoGenerateColumns="True"
+                <DataGrid ItemsSource="{Binding UsersView}" 
+                          AutoGenerateColumns="False"
                           Background="Transparent"
                           BorderThickness="0"
                           GridLinesVisibility="None"
                           HeadersVisibility="Column"
                           CanUserAddRows="False"
                           CanUserDeleteRows="False"
-                          IsReadOnly="True"
+                          IsReadOnly="False"
                           SelectionMode="Single"
+                          SelectedItem="{Binding SelectedUser}"
                           Margin="1">
                     <DataGrid.Style>
                         <Style TargetType="DataGrid">
@@ -141,6 +142,68 @@
                             </Style.Triggers>
                         </Style>
                     </DataGrid.Style>
+                    <DataGrid.Columns>
+                        <!-- Display Name -->
+                        <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="200" />
+                        <!-- User Principal Name -->
+                        <DataGridTextColumn Header="User Principal Name" Binding="{Binding UserPrincipalName}" Width="250" />
+                        <!-- Email -->
+                        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="220" />
+                        <!-- Department -->
+                        <DataGridTextColumn Header="Department" Binding="{Binding Department}" Width="150" />
+                        <!-- Job Title -->
+                        <DataGridTextColumn Header="Job Title" Binding="{Binding Title}" Width="180" />
+                        <!-- Account Enabled -->
+                        <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="80" />
+                        <!-- Sam Account Name -->
+                        <DataGridTextColumn Header="Sam Account" Binding="{Binding SamAccountName}" Width="120" />
+                        <!-- Company Name -->
+                        <DataGridTextColumn Header="Company" Binding="{Binding CompanyName}" Width="120" />
+                        <!-- Manager -->
+                        <DataGridTextColumn Header="Manager" Binding="{Binding Manager}" Width="150" />
+                        <!-- Created Date -->
+                        <DataGridTextColumn Header="Created" Binding="{Binding CreatedDate, StringFormat=yyyy-MM-dd}" Width="100" />
+                        <!-- Last Sign In -->
+                        <DataGridTextColumn Header="Last Sign In" Binding="{Binding LastSignInDate, StringFormat=yyyy-MM-dd}" Width="100" />
+                        <!-- View Details Button -->
+                        <DataGridTemplateColumn Header="Actions" Width="100">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="View Details" 
+                                            FontSize="11" 
+                                            Padding="8,4"
+                                            Background="#FF10B981" 
+                                            Foreground="White" 
+                                            BorderThickness="0"
+                                            Command="{Binding DataContext.OpenUserDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}"
+                                                                    CornerRadius="4"
+                                                                    BorderThickness="0">
+                                                                <ContentPresenter HorizontalAlignment="Center" 
+                                                                                  VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="#FF059669"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                    
                     <DataGrid.Resources>
                         <!-- DataGrid Header Style -->
                         <Style TargetType="DataGridColumnHeader">

@@ -121,7 +121,6 @@ namespace MandADiscoverySuite.Services
 
             try
             {
-                System.Diagnostics.Debug.WriteLine($"CsvDataService.LoadUsersAsync: Looking for user files in {rawDataPath}");
                 
                 // Look for user CSV files with various naming patterns
                 var userFiles = new[]
@@ -147,12 +146,10 @@ namespace MandADiscoverySuite.Services
                 {
                     if (File.Exists(filePath))
                     {
-                        System.Diagnostics.Debug.WriteLine($"CsvDataService.LoadUsersAsync: Loading from {filePath}");
                         try
                         {
                             var fileUsers = await LoadUsersFromCsvAsync(filePath);
                             users.AddRange(fileUsers);
-                            System.Diagnostics.Debug.WriteLine($"CsvDataService.LoadUsersAsync: Loaded {fileUsers.Count} users from {Path.GetFileName(filePath)}");
                         }
                         catch (Exception fileEx)
                         {
@@ -1386,7 +1383,6 @@ namespace MandADiscoverySuite.Services
             // Handle null or empty profileName - default to "ljpops"
             if (string.IsNullOrWhiteSpace(profileName))
             {
-                System.Diagnostics.Debug.WriteLine($"CsvDataService: ProfileName is null/empty, defaulting to 'ljpops'");
                 profileName = "ljpops";
             }
             
@@ -1395,7 +1391,6 @@ namespace MandADiscoverySuite.Services
             if (Directory.Exists(primaryPath))
             {
                 dataPaths.Add(primaryPath);
-                System.Diagnostics.Debug.WriteLine($"CsvDataService: Found primary data path: {primaryPath}");
             }
             
             // Secondary location: C:\DiscoveryData\Profiles\[CompanyName]\Raw
@@ -1403,7 +1398,6 @@ namespace MandADiscoverySuite.Services
             if (Directory.Exists(profilesPath))
             {
                 dataPaths.Add(profilesPath);
-                System.Diagnostics.Debug.WriteLine($"CsvDataService: Found profiles data path: {profilesPath}");
             }
             
             // Case-insensitive fallback search
@@ -1445,12 +1439,66 @@ namespace MandADiscoverySuite.Services
             
             if (!dataPaths.Any())
             {
-                System.Diagnostics.Debug.WriteLine($"CsvDataService: No data paths found for profile: {profileName}");
                 // Return primary path as fallback even if it doesn't exist
                 dataPaths.Add(Path.Combine(rootPath, profileName, "Raw"));
             }
             
             return dataPaths;
+        }
+
+        /// <summary>
+        /// Exports users to a CSV file
+        /// </summary>
+        public async Task ExportUsersAsync(List<UserData> users, string filePath)
+        {
+            if (users == null || !users.Any())
+            {
+                throw new ArgumentException("No users to export");
+            }
+
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                throw new ArgumentException("File path cannot be empty");
+            }
+
+            var csvLines = new List<string>();
+            
+            // Header
+            csvLines.Add("DisplayName,UserPrincipalName,Email,Department,JobTitle,AccountEnabled,SamAccountName,CompanyName,Manager,CreatedDate,LastSignInDate");
+            
+            // Data rows
+            foreach (var user in users)
+            {
+                var line = $"\"{EscapeCsvValue(user.DisplayName)}\"," +
+                          $"\"{EscapeCsvValue(user.UserPrincipalName)}\"," +
+                          $"\"{EscapeCsvValue(user.Email ?? user.Mail)}\"," +
+                          $"\"{EscapeCsvValue(user.Department)}\"," +
+                          $"\"{EscapeCsvValue(user.Title)}\"," +
+                          $"\"{user.AccountEnabled}\"," +
+                          $"\"{EscapeCsvValue(user.SamAccountName)}\"," +
+                          $"\"{EscapeCsvValue(user.CompanyName)}\"," +
+                          $"\"{EscapeCsvValue(user.ManagerDisplayName)}\"," +
+                          $"\"{user.CreatedDate?.ToString("yyyy-MM-dd") ?? ""}\"," +
+                          $"\"{user.LastLogonDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? user.LastSignInDateTime ?? ""}\"";
+                
+                csvLines.Add(line);
+            }
+            
+            await File.WriteAllLinesAsync(filePath, csvLines);
+        }
+
+        /// <summary>
+        /// Escapes CSV values to handle commas and quotes
+        /// </summary>
+        private string EscapeCsvValue(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+            
+            // Replace double quotes with two double quotes
+            return value.Replace("\"", "\"\"");
         }
 
         #endregion

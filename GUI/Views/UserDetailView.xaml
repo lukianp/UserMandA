@@ -1,0 +1,510 @@
+<UserControl x:Class="MandADiscoverySuite.Views.UserDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1200"
+             Background="#FF0F1419">
+    
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </UserControl.Resources>
+    
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="{Binding DisplayName, FallbackValue='User Details'}" 
+                           FontSize="28" 
+                           FontWeight="SemiBold"
+                           Foreground="#FFE2E8F0"/>
+                <TextBlock Text="Detailed information and related assets" 
+                           FontSize="14" 
+                           Foreground="#FFA0AEC0" 
+                           Margin="0,4,0,0"/>
+            </StackPanel>
+            
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="🔄 Refresh" 
+                        Padding="16,8"
+                        Margin="0,0,12,0"
+                        Background="#FF4299E1" 
+                        Foreground="White" 
+                        BorderThickness="0"
+                        Command="{Binding RefreshDataCommand}"
+                        ToolTip="Refresh user data">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                CornerRadius="6"
+                                                BorderThickness="0">
+                                            <ContentPresenter HorizontalAlignment="Center" 
+                                                              VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#FF3182CE"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                
+                <Button Content="❌ Close" 
+                        Padding="16,8"
+                        Background="#FFDC2626" 
+                        Foreground="White" 
+                        BorderThickness="0"
+                        Command="{Binding CloseCommand}"
+                        ToolTip="Close user details">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                CornerRadius="6"
+                                                BorderThickness="0">
+                                            <ContentPresenter HorizontalAlignment="Center" 
+                                                              VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#FFB91C1C"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+        </Grid>
+        
+        <!-- User Summary Card -->
+        <Border Grid.Row="1" 
+                Background="#FF1A202C" 
+                BorderBrush="#FF2D3748" 
+                BorderThickness="1" 
+                CornerRadius="12" 
+                Padding="24" 
+                Margin="0,0,0,24">
+            <Border.Effect>
+                <DropShadowEffect Color="#FF000000" Direction="315" ShadowDepth="4" Opacity="0.3" BlurRadius="8"/>
+            </Border.Effect>
+            
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- User Info Column 1 -->
+                <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                    <TextBlock Text="👤 User Information" FontSize="16" FontWeight="SemiBold" Foreground="#FFE2E8F0" Margin="0,0,0,12"/>
+                    
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Display Name:" FontWeight="Medium" Foreground="#FFA0AEC0" Width="120"/>
+                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}" Foreground="#FFE2E8F0"/>
+                    </Grid>
+                    
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="UPN:" FontWeight="Medium" Foreground="#FFA0AEC0" Width="120"/>
+                        <TextBlock Grid.Column="1" Text="{Binding UserPrincipalName}" Foreground="#FFE2E8F0"/>
+                    </Grid>
+                    
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Email:" FontWeight="Medium" Foreground="#FFA0AEC0" Width="120"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Email}" Foreground="#FFE2E8F0"/>
+                    </Grid>
+                </StackPanel>
+                
+                <!-- User Info Column 2 -->
+                <StackPanel Grid.Column="1" Margin="16,0">
+                    <TextBlock Text="🏢 Organization" FontSize="16" FontWeight="SemiBold" Foreground="#FFE2E8F0" Margin="0,0,0,12"/>
+                    
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Department:" FontWeight="Medium" Foreground="#FFA0AEC0" Width="120"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Department, FallbackValue='N/A'}" Foreground="#FFE2E8F0"/>
+                    </Grid>
+                    
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Job Title:" FontWeight="Medium" Foreground="#FFA0AEC0" Width="120"/>
+                        <TextBlock Grid.Column="1" Text="{Binding JobTitle, FallbackValue='N/A'}" Foreground="#FFE2E8F0"/>
+                    </Grid>
+                    
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Manager:" FontWeight="Medium" Foreground="#FFA0AEC0" Width="120"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Manager, FallbackValue='N/A'}" Foreground="#FFE2E8F0"/>
+                    </Grid>
+                </StackPanel>
+                
+                <!-- User Info Column 3 -->
+                <StackPanel Grid.Column="2" Margin="16,0,0,0">
+                    <TextBlock Text="📅 Account Status" FontSize="16" FontWeight="SemiBold" Foreground="#FFE2E8F0" Margin="0,0,0,12"/>
+                    
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Status:" FontWeight="Medium" Foreground="#FFA0AEC0" Width="120"/>
+                        <TextBlock Grid.Column="1" Text="{Binding AccountEnabled}" Foreground="#FFE2E8F0"/>
+                    </Grid>
+                    
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Created:" FontWeight="Medium" Foreground="#FFA0AEC0" Width="120"/>
+                        <TextBlock Grid.Column="1" Text="{Binding CreatedDate}" Foreground="#FFE2E8F0"/>
+                    </Grid>
+                    
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Last Sign-In:" FontWeight="Medium" Foreground="#FFA0AEC0" Width="120"/>
+                        <TextBlock Grid.Column="1" Text="{Binding LastSignIn}" Foreground="#FFE2E8F0"/>
+                    </Grid>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Loading Indicator -->
+        <StackPanel Grid.Row="2" 
+                   HorizontalAlignment="Center" 
+                   VerticalAlignment="Center"
+                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <TextBlock Text="⏳" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+            <TextBlock Text="{Binding LoadingMessage}" 
+                       FontSize="16" 
+                       Foreground="#FFA0AEC0" 
+                       HorizontalAlignment="Center"/>
+        </StackPanel>
+        
+        <!-- Related Data Tabs -->
+        <TabControl Grid.Row="2" 
+                   Background="Transparent"
+                   BorderThickness="0"
+                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}, 
+                               ConverterParameter=Inverted}">
+            
+            <TabControl.Style>
+                <Style TargetType="TabControl">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="TabControl">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Tab Headers -->
+                                    <TabPanel Grid.Row="0" 
+                                             IsItemsHost="True" 
+                                             Background="#FF1A202C"
+                                             Margin="0,0,0,1"/>
+                                    
+                                    <!-- Tab Content -->
+                                    <ContentPresenter Grid.Row="1" 
+                                                     ContentSource="SelectedContent"/>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </TabControl.Style>
+            
+            <!-- Tab Item Style -->
+            <TabControl.Resources>
+                <Style TargetType="TabItem">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="TabItem">
+                                <Border Name="Border" 
+                                       Background="#FF2D3748"
+                                       BorderBrush="#FF4A5568"
+                                       BorderThickness="1,1,1,0"
+                                       CornerRadius="8,8,0,0"
+                                       Margin="0,0,2,0"
+                                       Padding="16,12">
+                                    <ContentPresenter ContentSource="Header" 
+                                                     HorizontalAlignment="Center"
+                                                     VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#FF4299E1"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#FF374151"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                    <Setter Property="FontWeight" Value="Medium"/>
+                </Style>
+            </TabControl.Resources>
+            
+            <!-- Security Groups Tab -->
+            <TabItem Header="🛡️ Security Groups">
+                <Border Background="#FF1A202C" 
+                       BorderBrush="#FF2D3748" 
+                       BorderThickness="1" 
+                       CornerRadius="0,8,8,8">
+                    <DataGrid ItemsSource="{Binding SecurityGroups}" 
+                             AutoGenerateColumns="False"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             GridLinesVisibility="None"
+                             HeadersVisibility="Column"
+                             CanUserAddRows="False"
+                             CanUserDeleteRows="False"
+                             IsReadOnly="True"
+                             SelectionMode="Single"
+                             Margin="1">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Group Name" Binding="{Binding Name}" Width="250" />
+                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150" />
+                            <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="300" />
+                            <DataGridTextColumn Header="Member Count" Binding="{Binding MemberCount}" Width="120" />
+                        </DataGrid.Columns>
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#FF2D3748"/>
+                                <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="FontSize" Value="13"/>
+                                <Setter Property="Padding" Value="12,8"/>
+                            </Style>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#FF2D3748"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Padding" Value="12,8"/>
+                            </Style>
+                        </DataGrid.Resources>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+            
+            <!-- Applications Tab -->
+            <TabItem Header="📱 Applications">
+                <Border Background="#FF1A202C" 
+                       BorderBrush="#FF2D3748" 
+                       BorderThickness="1" 
+                       CornerRadius="0,8,8,8">
+                    <DataGrid ItemsSource="{Binding Applications}" 
+                             AutoGenerateColumns="False"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             GridLinesVisibility="None"
+                             HeadersVisibility="Column"
+                             CanUserAddRows="False"
+                             CanUserDeleteRows="False"
+                             IsReadOnly="True"
+                             SelectionMode="Single"
+                             Margin="1">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Application Name" Binding="{Binding Name}" Width="250" />
+                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150" />
+                            <DataGridTextColumn Header="Owner" Binding="{Binding Owner}" Width="200" />
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120" />
+                        </DataGrid.Columns>
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#FF2D3748"/>
+                                <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="FontSize" Value="13"/>
+                                <Setter Property="Padding" Value="12,8"/>
+                            </Style>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#FF2D3748"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Padding" Value="12,8"/>
+                            </Style>
+                        </DataGrid.Resources>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+            
+            <!-- Infrastructure Assets Tab -->
+            <TabItem Header="🖥️ Assets">
+                <Border Background="#FF1A202C" 
+                       BorderBrush="#FF2D3748" 
+                       BorderThickness="1" 
+                       CornerRadius="0,8,8,8">
+                    <DataGrid ItemsSource="{Binding InfrastructureAssets}" 
+                             AutoGenerateColumns="False"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             GridLinesVisibility="None"
+                             HeadersVisibility="Column"
+                             CanUserAddRows="False"
+                             CanUserDeleteRows="False"
+                             IsReadOnly="True"
+                             SelectionMode="Single"
+                             Margin="1">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Asset Name" Binding="{Binding Name}" Width="200" />
+                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150" />
+                            <DataGridTextColumn Header="Operating System" Binding="{Binding OperatingSystem}" Width="180" />
+                            <DataGridTextColumn Header="Owner" Binding="{Binding Owner}" Width="150" />
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120" />
+                        </DataGrid.Columns>
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#FF2D3748"/>
+                                <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="FontSize" Value="13"/>
+                                <Setter Property="Padding" Value="12,8"/>
+                            </Style>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#FF2D3748"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Padding" Value="12,8"/>
+                            </Style>
+                        </DataGrid.Resources>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+            
+            <!-- Group Memberships Tab (Legacy) -->
+            <TabItem Header="📋 Group Memberships">
+                <Border Background="#FF1A202C" 
+                       BorderBrush="#FF2D3748" 
+                       BorderThickness="1" 
+                       CornerRadius="0,8,8,8">
+                    <DataGrid ItemsSource="{Binding GroupMemberships}" 
+                             AutoGenerateColumns="False"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             GridLinesVisibility="None"
+                             HeadersVisibility="Column"
+                             CanUserAddRows="False"
+                             CanUserDeleteRows="False"
+                             IsReadOnly="True"
+                             SelectionMode="Single"
+                             Margin="1">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Group Name" Binding="{Binding DisplayName}" Width="300" />
+                            <DataGridTextColumn Header="Type" Binding="{Binding GroupType}" Width="150" />
+                        </DataGrid.Columns>
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#FF2D3748"/>
+                                <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="FontSize" Value="13"/>
+                                <Setter Property="Padding" Value="12,8"/>
+                            </Style>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#FF2D3748"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Padding" Value="12,8"/>
+                            </Style>
+                        </DataGrid.Resources>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+        </TabControl>
+        
+        <!-- Status Bar -->
+        <Border Grid.Row="3" 
+                Background="#FF1A202C" 
+                BorderBrush="#FF2D3748" 
+                BorderThickness="1" 
+                CornerRadius="8" 
+                Padding="16,8" 
+                Margin="0,16,0,0">
+            <TextBlock Text="{Binding StatusMessage, FallbackValue='Ready'}" 
+                       FontSize="13" 
+                       Foreground="#FFA0AEC0"/>
+        </Border>
+    </Grid>
+</UserControl>

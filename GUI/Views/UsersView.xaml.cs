@@ -1,4 +1,7 @@
+using System.Windows;
 using System.Windows.Controls;
+using MandADiscoverySuite.ViewModels;
+using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite.Views
 {
@@ -10,6 +13,9 @@ namespace MandADiscoverySuite.Views
         public UsersView()
         {
             InitializeComponent();
+            
+            // DataContext will be set by the DataTemplate binding in MainWindow
+            // Don't create our own UsersViewModel here as it conflicts with the MainViewModel's tab system
         }
     }
 }

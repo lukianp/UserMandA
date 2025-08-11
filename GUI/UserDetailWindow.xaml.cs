@@ -20,5 +20,12 @@ namespace MandADiscoverySuite
             // Bind window title
             SetBinding(TitleProperty, new System.Windows.Data.Binding(nameof(UserDetailViewModel.WindowTitle)));
         }
+        
+        // Parameterless constructor for enhanced functionality
+        public UserDetailWindow()
+        {
+            InitializeComponent();
+            // DataContext will be set externally when using this constructor
+        }
     }
 }

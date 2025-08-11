@@ -28,6 +28,8 @@
             <converters:BoolToExpandIconConverter x:Key="BoolToExpandIconConverter"/>
             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
             <converters:StringListToStringConverter x:Key="StringListToStringConverter"/>
+            <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+            <converters:IntToVisibilityConverter x:Key="ProgressToVisibilityConverter"/>
             
             <!-- Common Colors -->
             <SolidColorBrush x:Key="PrimaryBrush" Color="#4CAF50"/>
