@@ -12,7 +12,8 @@ namespace MandADiscoverySuite.ViewModels
 {
     public class DebugLogWindowViewModel : BaseViewModel
     {
-        private List<LogEntry> _logEntries;
+        private readonly Queue<LogEntry> _logEntries;
+        private readonly int _maxLogEntries = 5000; // Maximum number of log entries to keep
         private string _sessionName;
         private bool _showVerbose = true;
         private bool _showDebug = true;
@@ -91,7 +92,7 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _logCount, value);
         }
 
-        public List<LogEntry> LogEntries => _logEntries;
+        public IEnumerable<LogEntry> LogEntries => _logEntries;
 
         #region Commands
 
@@ -109,7 +110,7 @@ namespace MandADiscoverySuite.ViewModels
 
         public DebugLogWindowViewModel(string sessionName = "Main")
         {
-            _logEntries = new List<LogEntry>();
+            _logEntries = new Queue<LogEntry>();
             SessionName = sessionName;
 
             InitializeCommands();
@@ -142,7 +143,13 @@ namespace MandADiscoverySuite.ViewModels
                 Exception = exception
             };
 
-            _logEntries.Add(entry);
+            // Implement bounded queue - remove oldest entry if at capacity
+            if (_logEntries.Count >= _maxLogEntries)
+            {
+                _logEntries.Dequeue();
+            }
+            
+            _logEntries.Enqueue(entry);
 
             if (ShouldShowLogLevel(level))
             {

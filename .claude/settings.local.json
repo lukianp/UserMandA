@@ -98,7 +98,8 @@
       "Bash(pkill:*)",
       "Bash(msbuild:*)",
       "Bash(Start-Sleep 120)",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "Bash(Start-Process \"C:\\EnterpriseDiscovery\\MandADiscoverySuite.exe\" -PassThru)"
     ],
     "deny": []
   }

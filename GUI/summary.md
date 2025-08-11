@@ -1,5 +1,30 @@
 # M&A Discovery Suite Development Summary
 
+## ✅ Critical Bug Fixes and Performance Enhancements (Completed - 2025-08-11)
+
+### Memory Leak Fix in DebugLogWindow
+**Implementation:** Fixed potential memory leak in DebugLogWindow by replacing unbounded List<LogEntry> with bounded Queue<LogEntry>
+
+**Key Changes:**
+- **Bounded Collection**: Implemented Queue<LogEntry> with 5,000 entry limit to prevent memory exhaustion
+- **Automatic Cleanup**: Old entries automatically removed when queue reaches capacity
+- **Performance Improvement**: Reduced memory footprint for long-running applications
+- **Maintained Functionality**: All existing log filtering and display features preserved
+
+**Files Modified:**
+- `ViewModels/DebugLogWindowViewModel.cs` - Replaced List<LogEntry> with Queue<LogEntry> and added capacity management
+
+**Technical Implementation Details:**
+- **Maximum Entries**: Configurable limit of 5,000 log entries (const _maxLogEntries = 5000)
+- **Queue Management**: FIFO (First In, First Out) behavior - oldest entries removed automatically
+- **Thread Safety**: Maintains existing thread-safe patterns for UI updates
+- **Memory Efficiency**: Prevents unbounded memory growth during extended application sessions
+
+**Build Status:** ✅ Successfully built and deployed
+- No breaking changes to existing functionality
+- All log filtering and display features work as expected
+- Memory usage now bounded for long-running sessions
+
 ## ✅ Task 16: Comprehensive Logging and Audit Trails (Completed - 2025-08-11)
 
 ### Advanced Logging System with Full Audit Trail Capabilities
