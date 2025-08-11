@@ -572,8 +572,8 @@ namespace MandADiscoverySuite.ViewModels
                 return currentDir;
             }
             
-            // Default to system location
-            return @"C:\enterprisediscovery";
+            // Default to application directory
+            return AppDomain.CurrentDomain.BaseDirectory;
         }
 
         private static (string Icon, string Category) GetModuleIconAndCategory(string moduleName)

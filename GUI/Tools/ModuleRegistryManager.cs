@@ -365,19 +365,16 @@ namespace MandADiscoverySuite.Tools
                     return parentDir;
                 }
                 
-                // Check for C:\EnterpriseDiscovery as fallback
-                if (Directory.Exists(@"C:\EnterpriseDiscovery"))
-                {
-                    return @"C:\EnterpriseDiscovery";
-                }
+                // Use AppDomain base directory as fallback
+                return appDirectory;
                 
                 // Ultimate fallback to current directory
                 return Environment.CurrentDirectory;
             }
             catch
             {
-                // If all else fails, use the traditional default
-                return @"C:\EnterpriseDiscovery";
+                // If all else fails, use the application base directory
+                return AppDomain.CurrentDomain.BaseDirectory;
             }
         }
     }
