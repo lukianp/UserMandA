@@ -161,17 +161,31 @@ namespace MandADiscoverySuite.ViewModels
                     OnPropertiesChanged(nameof(FilteredGroupsCount), nameof(TotalGroupsCount), nameof(HasGroups));
 
                     LoadingMessage = $"Loaded {SecurityGroups.Count} security groups successfully";
+                    
+                    // CRITICAL FIX: Set IsLoading = false in the same dispatcher call to prevent race condition
+                    IsLoading = false;
+                    
+                    // Force property change notifications to ensure XAML bindings update
+                    OnPropertiesChanged(nameof(IsLoading), nameof(HasGroups), nameof(TotalGroupsCount), nameof(FilteredGroupsCount));
                 });
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Failed to load security groups: {ex.Message}";
-                HasErrors = true;
-                LoadingMessage = "Failed to load security groups";
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    ErrorMessage = $"Failed to load security groups: {ex.Message}";
+                    HasErrors = true;
+                    LoadingMessage = "Failed to load security groups";
+                    IsLoading = false;
+                });
             }
             finally
             {
-                IsLoading = false;
+                // Only set IsLoading = false if it wasn't already set in the success/error paths
+                if (IsLoading)
+                {
+                    IsLoading = false;
+                }
             }
         }
 

@@ -201,12 +201,14 @@ namespace MandADiscoverySuite.ViewModels
 
         private async Task RefreshUsersAsync(string dataDirectory = null)
         {
+            _ = EnhancedLoggingService.Instance.LogInformationAsync("=== UsersViewModel.RefreshUsersAsync STARTED ===");
             System.Diagnostics.Debug.WriteLine("RefreshUsersAsync started");
             try
             {
                 IsLoading = true;
                 LoadingMessage = "Refreshing users data...";
                 LoadingProgress = 10;
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"UsersViewModel: Set IsLoading=true, LoadingMessage='{LoadingMessage}'");
 
                 Users.Clear();
                 
@@ -253,23 +255,39 @@ namespace MandADiscoverySuite.ViewModels
 
                     LoadingMessage = $"Loaded {Users.Count} users successfully";
                     LoadingProgress = 100;
-                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"UsersViewModel: Completed loading {Users.Count} users");
+                    
+                    // CRITICAL FIX: Set IsLoading = false in the same dispatcher call to prevent race condition
+                    IsLoading = false;
+                    
+                    // Force property change notifications to ensure XAML bindings update
+                    OnPropertiesChanged(nameof(IsLoading), nameof(HasUsers), nameof(TotalUserCount), nameof(FilteredUserCount));
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"=== UsersViewModel.RefreshUsersAsync COMPLETED === Users.Count: {Users.Count}, HasUsers: {HasUsers}, IsLoading: {IsLoading}");
                 });
             }
             catch (Exception ex)
             {
                 _ = EnhancedLoggingService.Instance.LogErrorAsync($"UsersViewModel: Exception during refresh: {ex.Message}");
                 _ = EnhancedLoggingService.Instance.LogErrorAsync($"UsersViewModel: Exception stack trace: {ex.StackTrace}");
-                ErrorMessage = $"Failed to refresh users: {ex.Message}";
-                HasErrors = true;
-                LoadingMessage = "Failed to load users";
+                
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    ErrorMessage = $"Failed to refresh users: {ex.Message}";
+                    HasErrors = true;
+                    LoadingMessage = "Failed to load users";
+                    IsLoading = false;
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"=== UsersViewModel CATCH === Set IsLoading = false after exception, Final Users.Count: {Users.Count}, Final HasUsers: {HasUsers}");
+                });
             }
             finally
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    IsLoading = false;
-                    _ = EnhancedLoggingService.Instance.LogInformationAsync("UsersViewModel: Set IsLoading = false");
+                    // Only set IsLoading = false if it wasn't already set in the success path
+                    if (IsLoading)
+                    {
+                        IsLoading = false;
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync($"=== UsersViewModel FINALLY === Exception path - Set IsLoading = false, Final Users.Count: {Users.Count}, Final HasUsers: {HasUsers}");
+                    }
                 });
             }
         }

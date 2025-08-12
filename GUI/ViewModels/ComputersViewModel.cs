@@ -260,20 +260,35 @@ namespace MandADiscoverySuite.ViewModels
 
                     LoadingMessage = $"Loaded {Computers.Count} computers successfully";
                     LoadingProgress = 100;
+                    
+                    // CRITICAL FIX: Set IsLoading = false in the same dispatcher call to prevent race condition
+                    IsLoading = false;
+                    
+                    // Force property change notifications to ensure XAML bindings update
+                    OnPropertiesChanged(nameof(IsLoading), nameof(HasComputers), nameof(TotalComputerCount), nameof(FilteredComputerCount));
                 });
             }
             catch (Exception ex)
             {
                 _ = EnhancedLoggingService.Instance.LogErrorAsync("ComputersViewModel.RefreshComputersAsync: Error during data refresh", ex);
-                ErrorMessage = $"Failed to refresh computers: {ex.Message}";
-                HasErrors = true;
-                LoadingMessage = "Failed to load computers";
+                
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    ErrorMessage = $"Failed to refresh computers: {ex.Message}";
+                    HasErrors = true;
+                    LoadingMessage = "Failed to load computers";
+                    IsLoading = false;
+                });
             }
             finally
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    IsLoading = false;
+                    // Only set IsLoading = false if it wasn't already set in the success/error paths
+                    if (IsLoading)
+                    {
+                        IsLoading = false;
+                    }
                 });
             }
         }

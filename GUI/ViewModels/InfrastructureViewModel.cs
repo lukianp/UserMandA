@@ -287,16 +287,27 @@ namespace MandADiscoverySuite.ViewModels
 
                 LoadingMessage = $"Loaded {Infrastructure.Count} infrastructure items successfully";
                 LoadingProgress = 100;
+                
+                // CRITICAL FIX: Set IsLoading = false in the success path to prevent race condition
+                IsLoading = false;
+                
+                // Force property change notifications to ensure XAML bindings update
+                OnPropertiesChanged(nameof(IsLoading), nameof(TotalInfrastructureCount), nameof(FilteredInfrastructureCount));
             }
             catch (Exception ex)
             {
                 ErrorMessage = $"Failed to refresh infrastructure: {ex.Message}";
                 HasErrors = true;
                 LoadingMessage = "Failed to load infrastructure";
+                IsLoading = false;
             }
             finally
             {
-                IsLoading = false;
+                // Only set IsLoading = false if it wasn't already set in the success/error paths
+                if (IsLoading)
+                {
+                    IsLoading = false;
+                }
             }
         }
 

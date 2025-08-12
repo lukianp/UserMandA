@@ -619,7 +619,7 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand AnalyzeDependenciesCommand { get; }
         public ICommand GenerateWavesCommand { get; }
         public ICommand TimelineViewCommand { get; }
-
+        
         // Clipboard Commands
         public ICommand CopySelectedUsersCommand { get; }
         public ICommand CopySelectedInfrastructureCommand { get; }
@@ -1214,6 +1214,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #endregion
 
+        
         #region Lazy Loading Methods
         
         /// <summary>
@@ -4956,6 +4957,7 @@ This directory is strictly for storing discovery results and company data.
         /// </summary>
         private void OpenTab(string viewType)
         {
+            _ = EnhancedLoggingService.Instance.LogInformationAsync($"=== OpenTab CALLED === ViewType: {viewType}");
             try
             {
                 BaseViewModel tabViewModel = null;
@@ -5168,6 +5170,7 @@ This directory is strictly for storing discovery results and company data.
 
                     OpenTabs.Add(tabViewModel);
                     SelectedTab = tabViewModel;
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"=== TAB ADDED === Title: {tabViewModel.TabTitle}, Type: {tabViewModel.GetType().Name}, OpenTabs.Count: {OpenTabs.Count}");
                     Logger?.LogInformation("Opened new tab: {TabTitle}", tabViewModel.TabTitle);
                 }
             }
