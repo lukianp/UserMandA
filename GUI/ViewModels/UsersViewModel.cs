@@ -116,12 +116,12 @@ namespace MandADiscoverySuite.ViewModels
 
         public UsersViewModel(IDataService dataService = null, CsvDataService csvDataService = null, MainViewModel mainViewModel = null)
         {
-            System.Diagnostics.Debug.WriteLine("UsersViewModel constructor started");
+            _ = EnhancedLoggingService.Instance.LogInformationAsync("UsersViewModel constructor started");
             _dataService = dataService ?? SimpleServiceLocator.GetService<IDataService>();
             _csvDataService = csvDataService ?? SimpleServiceLocator.GetService<CsvDataService>();
             _mainViewModel = mainViewModel;
             
-            System.Diagnostics.Debug.WriteLine($"UsersViewModel services: _dataService={_dataService != null}, _csvDataService={_csvDataService != null}");
+            _ = EnhancedLoggingService.Instance.LogInformationAsync($"UsersViewModel services: _dataService={_dataService != null}, _csvDataService={_csvDataService != null}");
             
             Users = new OptimizedObservableCollection<UserData>();
             Users.CollectionChanged += (s, e) => 
@@ -159,9 +159,9 @@ namespace MandADiscoverySuite.ViewModels
         
         private async Task LoadDataAsync()
         {
-            System.Diagnostics.Debug.WriteLine("UsersViewModel.LoadDataAsync started");
+            _ = EnhancedLoggingService.Instance.LogInformationAsync("UsersViewModel.LoadDataAsync started");
             await RefreshUsersAsync();
-            System.Diagnostics.Debug.WriteLine("UsersViewModel.LoadDataAsync completed");
+            _ = EnhancedLoggingService.Instance.LogInformationAsync("UsersViewModel.LoadDataAsync completed");
         }
 
         /// <summary>
@@ -215,7 +215,7 @@ namespace MandADiscoverySuite.ViewModels
                 var currentProfile = await profileService?.GetCurrentProfileAsync();
                 var profileName = currentProfile?.CompanyName ?? "ljpops";
                 
-                System.Diagnostics.Debug.WriteLine($"UsersViewModel: profileService={profileService != null}, currentProfile={currentProfile != null}, profileName={profileName}");
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"UsersViewModel: profileService={profileService != null}, currentProfile={currentProfile != null}, profileName={profileName}");
 
                 LoadingMessage = "Loading user accounts...";
                 LoadingProgress = 30;
@@ -235,7 +235,7 @@ namespace MandADiscoverySuite.ViewModels
                 LoadingProgress = 70;
 
                 var userList = userData.ToList(); // Convert to list to get count
-                System.Diagnostics.Debug.WriteLine($"UsersViewModel: Processing {userList.Count} users");
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"UsersViewModel: Processing {userList.Count} users");
 
                 // Ensure UI updates happen on UI thread
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
@@ -253,13 +253,13 @@ namespace MandADiscoverySuite.ViewModels
 
                     LoadingMessage = $"Loaded {Users.Count} users successfully";
                     LoadingProgress = 100;
-                    System.Diagnostics.Debug.WriteLine($"UsersViewModel: Completed loading {Users.Count} users");
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"UsersViewModel: Completed loading {Users.Count} users");
                 });
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"UsersViewModel: Exception during refresh: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"UsersViewModel: Exception stack trace: {ex.StackTrace}");
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"UsersViewModel: Exception during refresh: {ex.Message}");
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"UsersViewModel: Exception stack trace: {ex.StackTrace}");
                 ErrorMessage = $"Failed to refresh users: {ex.Message}";
                 HasErrors = true;
                 LoadingMessage = "Failed to load users";
@@ -269,7 +269,7 @@ namespace MandADiscoverySuite.ViewModels
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     IsLoading = false;
-                    System.Diagnostics.Debug.WriteLine("UsersViewModel: Set IsLoading = false");
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync("UsersViewModel: Set IsLoading = false");
                 });
             }
         }
@@ -566,7 +566,7 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex)
             {
                 StatusMessage = $"Failed to open user details: {ex.Message}";
-                System.Diagnostics.Debug.WriteLine($"Error opening user detail for {user?.DisplayName}: {ex}");
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"Error opening user detail for {user?.DisplayName}: {ex}");
             }
         }
 

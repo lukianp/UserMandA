@@ -5011,15 +5011,16 @@ This directory is strictly for storing discovery results and company data.
                         break;
                     case "infrastructure":
                         var infrastructureDataService = SimpleServiceLocator.GetService<IDataService>();
-                        var infrastructureViewModel = new MandADiscoverySuite.ViewModels.InfrastructureViewModel(infrastructureDataService) { TabTitle = "Infrastructure" };
+                        var infrastructureCsvService = SimpleServiceLocator.GetService<CsvDataService>();
+                        var infrastructureViewModel = new InfrastructureAssetsViewModel(infrastructureDataService, infrastructureCsvService) { TabTitle = "Infrastructure" };
                         // Trigger data loading by executing the refresh command
                         _ = Task.Run(() =>
                         {
                             try
                             {
-                                if (infrastructureViewModel.RefreshInfrastructureCommand.CanExecute(null))
+                                if (infrastructureViewModel.RefreshAssetsCommand.CanExecute(null))
                                 {
-                                    infrastructureViewModel.RefreshInfrastructureCommand.Execute(null);
+                                    infrastructureViewModel.RefreshAssetsCommand.Execute(null);
                                 }
                             }
                             catch (Exception ex)
@@ -5034,7 +5035,8 @@ This directory is strictly for storing discovery results and company data.
                         break;
                     case "groups":
                         var groupsDataService = SimpleServiceLocator.GetService<IDataService>();
-                        var groupsViewModel = new GroupsViewModel(groupsDataService);
+                        var groupsCsvDataService = SimpleServiceLocator.GetService<CsvDataService>();
+                        var groupsViewModel = new GroupsViewModel(groupsDataService, groupsCsvDataService);
                         groupsViewModel.TabTitle = "Groups";
                         // Trigger data loading by executing the refresh command
                         _ = Task.Run(() =>

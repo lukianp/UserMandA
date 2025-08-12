@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -19,6 +20,7 @@ namespace MandADiscoverySuite.ViewModels
         #region Fields
 
         private readonly IDataService _dataService;
+        private readonly CsvDataService _csvDataService;
         private string _searchText;
         private bool _isLoading;
         private string _loadingMessage;
@@ -166,9 +168,10 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Constructor
 
-        public GroupsViewModel(IDataService dataService = null)
+        public GroupsViewModel(IDataService dataService = null, CsvDataService csvDataService = null)
         {
             _dataService = dataService ?? SimpleServiceLocator.GetService<IDataService>();
+            _csvDataService = csvDataService ?? SimpleServiceLocator.GetService<CsvDataService>();
             
             Groups = new OptimizedObservableCollection<GroupData>();
             Groups.CollectionChanged += (s, e) => 
@@ -251,6 +254,7 @@ namespace MandADiscoverySuite.ViewModels
 
         private async Task RefreshGroupsAsync(string dataDirectory = null)
         {
+            _ = EnhancedLoggingService.Instance.LogInformationAsync("GroupsViewModel.RefreshGroupsAsync started");
             try
             {
                 IsLoading = true;
@@ -267,7 +271,18 @@ namespace MandADiscoverySuite.ViewModels
                 LoadingMessage = "Loading security groups...";
                 LoadingProgress = 30;
 
-                var groupData = await _dataService?.LoadGroupsAsync(profileName) ?? new System.Collections.Generic.List<GroupData>();
+                // Use CsvDataService directly if available, otherwise fall back to IDataService
+                IEnumerable<GroupData> groupData;
+                if (_csvDataService != null)
+                {
+                    groupData = await _csvDataService.LoadGroupsAsync(profileName) ?? new System.Collections.Generic.List<GroupData>();
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"GroupsViewModel: Using CsvDataService, loaded {groupData?.Count() ?? 0} groups");
+                }
+                else
+                {
+                    groupData = await _dataService?.LoadGroupsAsync(profileName) ?? new System.Collections.Generic.List<GroupData>();
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"GroupsViewModel: Using IDataService fallback, loaded {groupData?.Count() ?? 0} groups");
+                }
                 
                 LoadingMessage = "Processing group data...";
                 LoadingProgress = 70;
@@ -285,9 +300,12 @@ namespace MandADiscoverySuite.ViewModels
 
                 LoadingMessage = $"Loaded {Groups.Count} groups successfully";
                 LoadingProgress = 100;
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"GroupsViewModel.RefreshGroupsAsync completed: {Groups.Count} groups loaded");
             }
             catch (Exception ex)
             {
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"GroupsViewModel.RefreshGroupsAsync failed: {ex.Message}");
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"GroupsViewModel exception stack trace: {ex.StackTrace}");
                 ErrorMessage = $"Failed to refresh groups: {ex.Message}";
                 HasErrors = true;
                 LoadingMessage = "Failed to load groups";
@@ -295,6 +313,7 @@ namespace MandADiscoverySuite.ViewModels
             finally
             {
                 IsLoading = false;
+                _ = EnhancedLoggingService.Instance.LogInformationAsync("GroupsViewModel.RefreshGroupsAsync: Set IsLoading = false");
             }
         }
 
