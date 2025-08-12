@@ -949,37 +949,135 @@ namespace MandADiscoverySuite.Services
         {
             var infrastructureFiles = new[]
             {
-                "PhysicalServer_", "Security_", "NetworkInfrastructure", "VMware", "Intune",
-                "SQLServer_", "Certificate_", "Applications.csv", "ServicePrincipals.csv",
-                "EntraIDServicePrincipals", "AzureApplications", "EntraIDAppRegistrations",
-                "EntraIDEnterpriseApps", "AzureResourceGroups", "PowerPlatform_"
+                // Physical infrastructure
+                "PhysicalServer_", "VMware", "StorageArray", "NetworkInfrastructure",
+                
+                // Azure and cloud resources
+                "AzureResourceGroups", "AzureApplications", "AzureResource",
+                "EntraIDServicePrincipals", "EntraIDAppRegistrations", "EntraIDEnterpriseApps",
+                "MultiCloudDiscovery",
+                
+                // Security infrastructure
+                "Security_", "SecurityInfrastructure", "SecurityGroupAnalysis",
+                "PaloAlto", "ThreatDetection",
+                
+                // Applications and services
+                "Applications.csv", "ServicePrincipals.csv", "ApplicationDependency",
+                "PowerPlatform_", "ContainerOrchestration",
+                
+                // Database and data
+                "SQLServer_", "DatabaseSchema", "DataClassification",
+                "DataGovernance", "DataLineage",
+                
+                // Directory and identity
+                "Certificate_", "ExternalIdentity", "EntraIDApp", "GraphDiscovery",
+                
+                // Infrastructure services
+                "FileServer", "Printer", "BackupRecovery", "ScheduledTask",
+                
+                // Endpoint management
+                "Intune",
+                
+                // Management and governance
+                "Licensing", "GPO", "MultiDomainForest",
+                
+                // Risk and scoring
+                "EnvironmentRiskScoring"
             };
 
-            return infrastructureFiles.Any(pattern => fileName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase));
+            return infrastructureFiles.Any(pattern => 
+                fileName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase) ||
+                fileName.Contains(pattern, StringComparison.OrdinalIgnoreCase));
         }
 
         private string DetermineInfrastructureType(string fileName)
         {
+            // Physical infrastructure
             if (fileName.StartsWith("PhysicalServer", StringComparison.OrdinalIgnoreCase))
                 return "Physical Server";
-            if (fileName.StartsWith("Security_", StringComparison.OrdinalIgnoreCase))
-                return "Security Device";
-            if (fileName.StartsWith("NetworkInfrastructure", StringComparison.OrdinalIgnoreCase))
-                return "Network Device";
             if (fileName.StartsWith("VMware", StringComparison.OrdinalIgnoreCase))
                 return "Virtual Machine";
+            if (fileName.StartsWith("StorageArray", StringComparison.OrdinalIgnoreCase))
+                return "Storage Device";
+            if (fileName.StartsWith("NetworkInfrastructure", StringComparison.OrdinalIgnoreCase))
+                return "Network Device";
+            
+            // Security infrastructure
+            if (fileName.StartsWith("Security_", StringComparison.OrdinalIgnoreCase) ||
+                fileName.StartsWith("SecurityInfrastructure", StringComparison.OrdinalIgnoreCase))
+                return "Security Device";
+            if (fileName.StartsWith("PaloAlto", StringComparison.OrdinalIgnoreCase))
+                return "Firewall";
+            if (fileName.StartsWith("ThreatDetection", StringComparison.OrdinalIgnoreCase))
+                return "Threat Detection";
+            if (fileName.StartsWith("SecurityGroupAnalysis", StringComparison.OrdinalIgnoreCase))
+                return "Security Group";
+            
+            // Database and data
             if (fileName.StartsWith("SQLServer", StringComparison.OrdinalIgnoreCase))
                 return "Database Server";
+            if (fileName.StartsWith("DatabaseSchema", StringComparison.OrdinalIgnoreCase))
+                return "Database Schema";
+            if (fileName.StartsWith("DataClassification", StringComparison.OrdinalIgnoreCase))
+                return "Data Classification";
+            if (fileName.StartsWith("DataGovernance", StringComparison.OrdinalIgnoreCase))
+                return "Data Governance";
+            if (fileName.StartsWith("DataLineage", StringComparison.OrdinalIgnoreCase))
+                return "Data Lineage";
+            
+            // Azure and cloud resources
+            if (fileName.StartsWith("AzureResourceGroups", StringComparison.OrdinalIgnoreCase))
+                return "Azure Resource Group";
+            if (fileName.StartsWith("AzureResource", StringComparison.OrdinalIgnoreCase))
+                return "Azure Resource";
+            if (fileName.StartsWith("MultiCloudDiscovery", StringComparison.OrdinalIgnoreCase))
+                return "Multi-Cloud Resource";
+            
+            // Identity and access
             if (fileName.StartsWith("Certificate", StringComparison.OrdinalIgnoreCase))
                 return "Certificate";
-            if (fileName.StartsWith("AzureResourceGroups", StringComparison.OrdinalIgnoreCase))
-                return "Azure Resource";
-            if (fileName.StartsWith("PowerPlatform", StringComparison.OrdinalIgnoreCase))
-                return "Power Platform";
-            if (fileName.Contains("Application", StringComparison.OrdinalIgnoreCase))
-                return "Application";
             if (fileName.Contains("ServicePrincipal", StringComparison.OrdinalIgnoreCase))
                 return "Service Principal";
+            if (fileName.StartsWith("ExternalIdentity", StringComparison.OrdinalIgnoreCase))
+                return "External Identity";
+            if (fileName.StartsWith("EntraIDApp", StringComparison.OrdinalIgnoreCase))
+                return "Entra ID Application";
+            if (fileName.StartsWith("GraphDiscovery", StringComparison.OrdinalIgnoreCase))
+                return "Graph Resource";
+            
+            // Applications and services
+            if (fileName.Contains("Application", StringComparison.OrdinalIgnoreCase))
+                return "Application";
+            if (fileName.StartsWith("PowerPlatform", StringComparison.OrdinalIgnoreCase))
+                return "Power Platform";
+            if (fileName.StartsWith("ContainerOrchestration", StringComparison.OrdinalIgnoreCase))
+                return "Container";
+            
+            // Infrastructure services
+            if (fileName.StartsWith("FileServer", StringComparison.OrdinalIgnoreCase))
+                return "File Server";
+            if (fileName.StartsWith("Printer", StringComparison.OrdinalIgnoreCase))
+                return "Printer";
+            if (fileName.StartsWith("BackupRecovery", StringComparison.OrdinalIgnoreCase))
+                return "Backup System";
+            if (fileName.StartsWith("ScheduledTask", StringComparison.OrdinalIgnoreCase))
+                return "Scheduled Task";
+            
+            // Endpoint management
+            if (fileName.StartsWith("Intune", StringComparison.OrdinalIgnoreCase))
+                return "Intune Device";
+            
+            // Management and governance
+            if (fileName.StartsWith("Licensing", StringComparison.OrdinalIgnoreCase))
+                return "License";
+            if (fileName.StartsWith("GPO", StringComparison.OrdinalIgnoreCase))
+                return "Group Policy";
+            if (fileName.StartsWith("MultiDomainForest", StringComparison.OrdinalIgnoreCase))
+                return "Domain/Forest";
+            
+            // Risk and scoring
+            if (fileName.StartsWith("EnvironmentRiskScoring", StringComparison.OrdinalIgnoreCase))
+                return "Risk Assessment";
 
             return "Unknown";
         }
@@ -1532,5 +1630,100 @@ namespace MandADiscoverySuite.Services
         }
 
         #endregion
+
+        /// <summary>
+        /// Exports infrastructure data to CSV file
+        /// </summary>
+        public async Task ExportInfrastructureAsync(IEnumerable<InfrastructureData> infrastructure, string exportPath)
+        {
+            try
+            {
+                var directory = Path.GetDirectoryName(exportPath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                using (var writer = new StreamWriter(exportPath))
+                {
+                    // Write header
+                    await writer.WriteLineAsync("Name,Type,Description,OperatingSystem,Version,IPAddress,Status,Location,Manufacturer,Model,LastSeen");
+
+                    // Write data
+                    foreach (var item in infrastructure)
+                    {
+                        var lastSeenStr = item.LastSeen ?? "";
+                        var line = string.Format("\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\",\"{5}\",\"{6}\",\"{7}\",\"{8}\",\"{9}\",\"{10}\"",
+                            item.Name ?? "",
+                            item.Type ?? "",
+                            item.Description ?? "",
+                            item.OperatingSystem ?? "",
+                            item.Version ?? "",
+                            item.IPAddress ?? "",
+                            item.Status ?? "",
+                            item.Location ?? "",
+                            item.Manufacturer ?? "",
+                            item.Model ?? "",
+                            lastSeenStr);
+                        await writer.WriteLineAsync(line);
+                    }
+                }
+
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.ExportInfrastructureAsync: Successfully exported {infrastructure.Count()} items to {exportPath}");
+            }
+            catch (Exception ex)
+            {
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"CsvDataService.ExportInfrastructureAsync: Error exporting infrastructure data", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Exports data to CSV file (generic method)
+        /// </summary>
+        public async Task ExportToCsvAsync<T>(IEnumerable<T> data, string exportPath)
+        {
+            try
+            {
+                var directory = Path.GetDirectoryName(exportPath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                using (var writer = new StreamWriter(exportPath))
+                {
+                    var properties = typeof(T).GetProperties();
+                    
+                    // Write header
+                    var header = string.Join(",", properties.Select(p => p.Name));
+                    await writer.WriteLineAsync(header);
+
+                    // Write data
+                    foreach (var item in data)
+                    {
+                        var values = properties.Select(p => 
+                        {
+                            var value = p.GetValue(item)?.ToString() ?? "";
+                            // Escape quotes and wrap in quotes if contains comma
+                            if (value.Contains(",") || value.Contains("\""))
+                            {
+                                value = "\"" + value.Replace("\"", "\"\"") + "\"";
+                            }
+                            return value;
+                        });
+                        var line = string.Join(",", values);
+                        await writer.WriteLineAsync(line);
+                    }
+                }
+
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.ExportToCsvAsync: Successfully exported {data.Count()} items to {exportPath}");
+            }
+            catch (Exception ex)
+            {
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"CsvDataService.ExportToCsvAsync: Error exporting data", ex);
+                throw;
+            }
+        }
     }
 }

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
+using MandADiscoverySuite.Collections;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using Newtonsoft.Json;
@@ -595,14 +596,14 @@ namespace MandADiscoverySuite.ViewModels
             if (user == null || asset == null)
                 return false;
 
-            // Check various fields that might link users to assets
-            var assetIdentifiers = new[] { asset.Name, asset.IPAddress, asset.Id }.Where(id => !string.IsNullOrEmpty(id));
+            // For now, use a simple heuristic - in real scenarios, this would
+            // be based on actual CSV data relationships or a separate mapping file
+            // Check if user's SAM account name or UPN contains any part of the asset name
+            var assetNameParts = asset.Name?.Split(new[] { '.', '-', '_' }, StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
             
-            return assetIdentifiers.Any(id => 
-                user.DeviceId?.Equals(id, StringComparison.OrdinalIgnoreCase) == true ||
-                user.PrimaryDevice?.Equals(id, StringComparison.OrdinalIgnoreCase) == true ||
-                user.ComputerName?.Equals(id, StringComparison.OrdinalIgnoreCase) == true ||
-                user.AssignedDevices?.Contains(id, StringComparison.OrdinalIgnoreCase) == true);
+            return assetNameParts.Any(part => 
+                user.SamAccountName?.Contains(part, StringComparison.OrdinalIgnoreCase) == true ||
+                user.UserPrincipalName?.Contains(part, StringComparison.OrdinalIgnoreCase) == true);
         }
 
         /// <summary>
@@ -613,13 +614,11 @@ namespace MandADiscoverySuite.ViewModels
             if (app == null || asset == null)
                 return false;
 
-            // Check if application is installed on or linked to this asset
+            // Check if application's install location contains asset identifiers
             var assetIdentifiers = new[] { asset.Name, asset.IPAddress, asset.Id }.Where(id => !string.IsNullOrEmpty(id));
             
             return assetIdentifiers.Any(id => 
-                app.InstallLocation?.Contains(id, StringComparison.OrdinalIgnoreCase) == true ||
-                app.DeviceId?.Equals(id, StringComparison.OrdinalIgnoreCase) == true ||
-                app.AssignedDevices?.Contains(id, StringComparison.OrdinalIgnoreCase) == true);
+                app.InstallLocation?.Contains(id, StringComparison.OrdinalIgnoreCase) == true);
         }
 
         /// <summary>
@@ -630,13 +629,14 @@ namespace MandADiscoverySuite.ViewModels
             if (group == null || asset == null)
                 return false;
 
-            // Check if asset is a member of the group or controlled by it
-            var assetIdentifiers = new[] { asset.Name, asset.IPAddress, asset.Id }.Where(id => !string.IsNullOrEmpty(id));
+            // For now, link computer/device-related groups to assets
+            // In real scenarios, this would be based on actual membership data
+            var assetType = asset.Type?.ToLower() ?? "";
+            var groupName = group.Name?.ToLower() ?? "";
             
-            return assetIdentifiers.Any(id => 
-                group.Members?.Contains(id, StringComparison.OrdinalIgnoreCase) == true ||
-                group.MemberIds?.Contains(id, StringComparison.OrdinalIgnoreCase) == true ||
-                group.DeviceIds?.Contains(id, StringComparison.OrdinalIgnoreCase) == true);
+            return (assetType.Contains("server") && groupName.Contains("server")) ||
+                   (assetType.Contains("computer") && groupName.Contains("computer")) ||
+                   (assetType.Contains("device") && groupName.Contains("device"));
         }
 
         /// <summary>
@@ -647,10 +647,23 @@ namespace MandADiscoverySuite.ViewModels
             if (potentialChild == null || parent == null || potentialChild.Id == parent.Id)
                 return false;
 
-            // Check parent-child relationships
-            return potentialChild.ParentId?.Equals(parent.Id, StringComparison.OrdinalIgnoreCase) == true ||
-                   potentialChild.HostName?.Equals(parent.Name, StringComparison.OrdinalIgnoreCase) == true ||
-                   potentialChild.Location?.Equals(parent.Name, StringComparison.OrdinalIgnoreCase) == true;
+            // Check if the location contains parent's name (simplified check)
+            var parentName = parent.Name?.ToLower() ?? "";
+            var childLocation = potentialChild.Location?.ToLower() ?? "";
+            
+            // Check type relationships and location containment
+            if (!string.IsNullOrEmpty(parentName) && childLocation.Contains(parentName))
+            {
+                // Also check type relationships
+                if ((parent.Type == "Physical Server" && potentialChild.Type == "Virtual Machine") ||
+                    (parent.Type == "VMware" && potentialChild.Type == "Virtual Machine") ||
+                    (parent.Type?.Contains("Server") == true && potentialChild.Type == "Certificate"))
+                {
+                    return true;
+                }
+            }
+            
+            return false;
         }
 
         /// <summary>

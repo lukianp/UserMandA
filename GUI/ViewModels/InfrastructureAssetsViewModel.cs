@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
+using MandADiscoverySuite.Collections;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 
