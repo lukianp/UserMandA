@@ -129,7 +129,7 @@
 
             <!-- Assets DataGrid -->
             <DataGrid x:Name="AssetsDataGrid"
-                      ItemsSource="{Binding AssetsView}"
+                      ItemsSource="{Binding Assets}"
                       SelectedItem="{Binding SelectedAsset}"
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
@@ -177,6 +177,16 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
+                    <!-- IP Address -->
+                    <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="120" MinWidth="100">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontFamily" Value="Consolas"/>
+                                <Setter Property="Padding" Value="8,4"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
                     <!-- Operating System -->
                     <DataGridTextColumn Header="OS" Binding="{Binding OperatingSystem}" Width="120" MinWidth="80">
                         <DataGridTextColumn.ElementStyle>
@@ -186,11 +196,19 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <!-- IP Address -->
-                    <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="120" MinWidth="100">
+                    <!-- Version -->
+                    <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="100" MinWidth="80">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
-                                <Setter Property="FontFamily" Value="Consolas"/>
+                                <Setter Property="Padding" Value="8,4"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Location -->
+                    <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="120" MinWidth="100">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
                                 <Setter Property="Padding" Value="8,4"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
@@ -202,15 +220,6 @@
                             <Style TargetType="TextBlock">
                                 <Setter Property="Padding" Value="8,4"/>
                                 <Setter Property="HorizontalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-
-                    <!-- Location -->
-                    <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="120" MinWidth="100">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Padding" Value="8,4"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
@@ -247,8 +256,8 @@
                     <DataGridTemplateColumn Header="Actions" Width="100" MinWidth="80">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <Button Content="View Details" 
-                                        Command="{Binding DataContext.OpenAssetDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                <Button Content="View Details"
+                                        Command="{Binding DataContext.OpenAssetDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                         CommandParameter="{Binding}"
                                         Padding="8,4" Margin="4"
                                         FontSize="10"
