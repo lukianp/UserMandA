@@ -38,6 +38,7 @@ namespace MandADiscoverySuite.Services
         private readonly SemaphoreSlim _writeSemaphore = new SemaphoreSlim(1, 1);
         private readonly Dictionary<string, PerformanceTracker> _performanceTrackers = new();
         private readonly object _trackerLock = new object();
+        private readonly LogLevel _minimumLogLevel = LogLevel.Debug;
         private bool _disposed = false;
 
         public static EnhancedLoggingService Instance
@@ -58,18 +59,23 @@ namespace MandADiscoverySuite.Services
 
         private EnhancedLoggingService()
         {
-            _logDirectory = Path.Combine(@"C:\DiscoveryData\ljpops\Logs", "Application");
+            var config = ConfigurationService.Instance;
+            var companyName = config.Settings?.DefaultCompany ?? "default";
+            var companyPath = config.GetCompanyDataPath(companyName);
+            _logDirectory = Path.Combine(companyPath, "Logs", "Application");
             Directory.CreateDirectory(_logDirectory);
-            
+
             _logQueue = new ConcurrentQueue<LogEntry>();
-            
+
             // Flush logs every 15 seconds
             _flushTimer = new Timer(FlushLogs, null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+
+            _ = LogAsync(LogLevel.Debug, $"EnhancedLoggingService initialized. Directory: {_logDirectory}");
         }
 
         #region Helper Methods
 
-        public bool IsEnabled(LogLevel logLevel) => true;
+        public bool IsEnabled(LogLevel logLevel) => logLevel >= _minimumLogLevel;
 
         /// <summary>
         /// Converts Microsoft.Extensions.Logging.LogLevel to our custom LogLevel
