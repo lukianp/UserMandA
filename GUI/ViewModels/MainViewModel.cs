@@ -4966,23 +4966,33 @@ This directory is strictly for storing discovery results and company data.
                         tabViewModel = new DashboardViewModel() { TabTitle = "Dashboard", CanClose = false };
                         break;
                     case "users":
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Users tab");
                         var dataService = SimpleServiceLocator.GetService<IDataService>();
                         var csvDataService = SimpleServiceLocator.GetService<CsvDataService>();
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync($"MainViewModel: Services - dataService={dataService != null}, csvDataService={csvDataService != null}");
                         var usersViewModel = new UsersViewModel(dataService, csvDataService, this);
                         usersViewModel.TabTitle = "Users";
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: UsersViewModel created, triggering data load");
                         // Trigger data loading by executing the refresh command
                         _ = Task.Run(() =>
                         {
                             try
                             {
+                                _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Attempting to execute RefreshUsersCommand");
                                 if (usersViewModel.RefreshUsersCommand.CanExecute(null))
                                 {
+                                    _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: RefreshUsersCommand can execute, executing now");
                                     usersViewModel.RefreshUsersCommand.Execute(null);
+                                    _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: RefreshUsersCommand executed");
+                                }
+                                else
+                                {
+                                    _ = EnhancedLoggingService.Instance.LogWarningAsync("MainViewModel: RefreshUsersCommand cannot execute");
                                 }
                             }
                             catch (Exception ex)
                             {
-                                System.Diagnostics.Debug.WriteLine($"Error loading users data: {ex.Message}");
+                                _ = EnhancedLoggingService.Instance.LogErrorAsync($"MainViewModel: Error loading users data: {ex.Message}");
                             }
                         });
                         tabViewModel = usersViewModel;

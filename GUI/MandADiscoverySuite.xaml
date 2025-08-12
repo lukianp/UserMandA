@@ -788,7 +788,7 @@
                                 <Setter Property="ContentTemplate">
                                     <Setter.Value>
                                         <DataTemplate>
-                                            <views:SecurityGroupsView/>
+                                            <views:SecurityGroupsView DataContext="{Binding}"/>
                                         </DataTemplate>
                                     </Setter.Value>
                                 </Setter>

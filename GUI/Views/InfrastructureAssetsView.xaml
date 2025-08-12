@@ -109,7 +109,7 @@
         <!-- Main Content Area -->
         <Grid Grid.Row="3">
             <!-- Loading Indicator -->
-            <Border Background="White" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
+            <Border Background="#FF1A202C" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
                     Panel.ZIndex="10">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,0,0,16"/>
@@ -140,7 +140,7 @@
                       HeadersVisibility="Column"
                       RowHeaderWidth="0"
                       AlternatingRowBackground="#FFF8FAFC"
-                      Background="White"
+                      Background="#FF1A202C"
                       BorderBrush="#FFE2E8F0"
                       BorderThickness="1"
                       VirtualizingPanel.IsVirtualizing="True"
@@ -295,7 +295,7 @@
         <!-- Empty State -->
         <Border Grid.Row="3" 
                 Visibility="{Binding HasAssets, Converter={StaticResource BoolToVisibilityConverter}}"
-                Background="White">
+                Background="#FF1A202C">
             <Border.Style>
                 <Style TargetType="Border">
                     <Style.Triggers>
