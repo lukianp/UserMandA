@@ -229,11 +229,11 @@ namespace MandADiscoverySuite.Services
                 
                 foreach (var wave in waves)
                 {
-                    if (!string.IsNullOrEmpty(wave.Dependencies))
+                    if (wave.Dependencies != null && wave.Dependencies.Any())
                     {
                         try
                         {
-                            var dependencies = JsonSerializer.Deserialize<string[]>(wave.Dependencies);
+                            var dependencies = wave.Dependencies;
                             foreach (var dependency in dependencies)
                             {
                                 if (!waveIds.Contains(dependency))
@@ -476,7 +476,7 @@ namespace MandADiscoverySuite.Services
                 PlannedStartDate = today,
                 PlannedEndDate = today.AddDays(30),
                 Status = "InProgress",
-                Priority = 1,
+                Priority = "High",
                 AssignedTo = "Migration Team"
             };
 
@@ -488,7 +488,7 @@ namespace MandADiscoverySuite.Services
                 PlannedStartDate = today.AddDays(30),
                 PlannedEndDate = today.AddDays(75),
                 Status = "Planned",
-                Priority = 2,
+                Priority = "Medium",
                 AssignedTo = "Infrastructure Team"
             };
 
@@ -500,7 +500,7 @@ namespace MandADiscoverySuite.Services
                 PlannedStartDate = today.AddDays(60),
                 PlannedEndDate = today.AddDays(120),
                 Status = "Planned",
-                Priority = 3,
+                Priority = "Low",
                 AssignedTo = "Application Team"
             };
 

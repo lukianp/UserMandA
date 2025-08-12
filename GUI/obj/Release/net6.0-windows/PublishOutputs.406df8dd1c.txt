@@ -82,7 +82,9 @@ C:\enterprisediscovery\Modules\Infrastructure\MultiTenantArchitecture.psm1
 C:\enterprisediscovery\Modules\Infrastructure\ServiceMeshArchitecture.psm1
 C:\enterprisediscovery\Modules\Integration\CMDBIntegration.psm1
 C:\enterprisediscovery\Modules\Integration\EnterpriseServiceBusIntegration.psm1
+C:\enterprisediscovery\Modules\Migration\ApplicationMigration.psm1
 C:\enterprisediscovery\Modules\Migration\MailboxMigration.psm1
+C:\enterprisediscovery\Modules\Migration\ServerMigration.psm1
 C:\enterprisediscovery\Modules\Migration\UserMigration.psm1
 C:\enterprisediscovery\Modules\Processing\DataAggregation.psm1
 C:\enterprisediscovery\Modules\Processing\DataValidation.psm1

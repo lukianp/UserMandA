@@ -778,17 +778,17 @@
                                 <Setter Property="ContentTemplate">
                                     <Setter.Value>
                                         <DataTemplate>
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                <Grid Margin="32">
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Row="0" Text="Infrastructure" Style="{StaticResource HeaderTextStyle}"/>
-                                                    <TextBlock Grid.Row="1" Text="Infrastructure content will be loaded here..." 
-                                                              Foreground="#FFA0AEC0" FontSize="16" Margin="0,16"/>
-                                                </Grid>
-                                            </ScrollViewer>
+                                            <views:InfrastructureAssetsView/>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <!-- Security Groups Template -->
+                            <DataTrigger Binding="{Binding TabTitle}" Value="Security Groups">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <views:SecurityGroupsView/>
                                         </DataTemplate>
                                     </Setter.Value>
                                 </Setter>
@@ -1175,6 +1175,17 @@
                             <StackPanel>
                                 <TextBlock Text="Infrastructure"/>
                                 <TextBlock Text="Network &amp; Topology" FontSize="10" Foreground="#FFA0AEC0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="SecurityGroupsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="security groups"
+                            ToolTip="View security groups, distribution lists, and group memberships">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔐" FontSize="18" Margin="0,0,16,0"/>
+                            <StackPanel>
+                                <TextBlock Text="Security Groups"/>
+                                <TextBlock Text="Groups &amp; Memberships" FontSize="10" Foreground="#FFA0AEC0"/>
                             </StackPanel>
                         </StackPanel>
                     </Button>

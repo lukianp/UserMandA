@@ -129,7 +129,7 @@
 
             <!-- Assets DataGrid -->
             <DataGrid x:Name="AssetsDataGrid"
-                      ItemsSource="{Binding Assets}"
+                      ItemsSource="{Binding AssetsView}"
                       SelectedItem="{Binding SelectedAsset}"
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"

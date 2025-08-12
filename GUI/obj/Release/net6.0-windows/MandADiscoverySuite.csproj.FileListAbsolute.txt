@@ -81,7 +81,9 @@ C:\enterprisediscovery\net6.0-windows\Modules\Infrastructure\MultiTenantArchitec
 C:\enterprisediscovery\net6.0-windows\Modules\Infrastructure\ServiceMeshArchitecture.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Integration\CMDBIntegration.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Integration\EnterpriseServiceBusIntegration.psm1
+C:\enterprisediscovery\net6.0-windows\Modules\Migration\ApplicationMigration.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Migration\MailboxMigration.psm1
+C:\enterprisediscovery\net6.0-windows\Modules\Migration\ServerMigration.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Migration\UserMigration.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Processing\DataAggregation.psm1
 C:\enterprisediscovery\net6.0-windows\Modules\Processing\DataValidation.psm1
@@ -237,6 +239,8 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ManagementDashboardVie
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\NotesTaggingView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\PhaseTrackerView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\RiskAnalysisView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SecurityGroupDetailView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SecurityGroupsView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ShortcutEditDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SnapshotComparisonView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ThemeSelectionDialog.baml
@@ -332,6 +336,8 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ProjectManagementView.
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ReportBuilderView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\RiskAnalysisView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ScriptEditorView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SecurityGroupDetailView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SecurityGroupsView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ShortcutEditDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SnapshotComparisonView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\TaskSchedulerView.g.cs

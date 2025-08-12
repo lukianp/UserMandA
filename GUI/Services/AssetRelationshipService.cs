@@ -7,7 +7,8 @@ using MandADiscoverySuite.Models;
 namespace MandADiscoverySuite.Services
 {
     /// <summary>
-    /// Service for managing relationships between assets, users, groups, and applications
+    /// Service for managing comprehensive relationships between assets, users, groups, applications, and policies
+    /// Supports migration planning with relationship graph analysis
     /// </summary>
     public class AssetRelationshipService
     {
@@ -370,6 +371,343 @@ namespace MandADiscoverySuite.Services
         }
 
         /// <summary>
+        /// Analyzes migration waves based on relationship dependencies
+        /// </summary>
+        public List<MigrationWave> AnalyzeMigrationWaves(List<string> entityIds, string entityType)
+        {
+            var waves = new List<MigrationWave>();
+            var processed = new HashSet<string>();
+            var currentWave = 1;
+
+            lock (_lockObject)
+            {
+                while (processed.Count < entityIds.Count)
+                {
+                    var waveEntities = new List<string>();
+                    
+                    foreach (var entityId in entityIds.Where(id => !processed.Contains(id)))
+                    {
+                        var nodeId = GetNodeId(entityType, entityId);
+                        if (_relationshipGraph.TryGetValue(nodeId, out var node))
+                        {
+                            // Check if all dependencies are already processed
+                            var dependencies = GetEntityDependencies(entityId, entityType);
+                            var unresolvedDeps = dependencies.Where(dep => !processed.Contains($"{dep.DependentEntityType}:{dep.DependentEntityId}")).ToList();
+                            
+                            if (unresolvedDeps.Count == 0)
+                            {
+                                waveEntities.Add(entityId);
+                                processed.Add($"{entityType}:{entityId}");
+                            }
+                        }
+                        else
+                        {
+                            // No dependencies found, can be migrated in first wave
+                            waveEntities.Add(entityId);
+                            processed.Add($"{entityType}:{entityId}");
+                        }
+                    }
+                    
+                    if (waveEntities.Any())
+                    {
+                        waves.Add(new MigrationWave
+                        {
+                            WaveNumber = currentWave++,
+                            EntityIds = waveEntities,
+                            EntityType = entityType,
+                            EstimatedDuration = TimeSpan.FromHours(waveEntities.Count * 0.5) // Rough estimate
+                        });
+                    }
+                    else
+                    {
+                        // Break infinite loop - add remaining entities to final wave
+                        var remainingIds = entityIds.Where(id => !processed.Contains($"{entityType}:{id}")).ToList();
+                        if (remainingIds.Any())
+                        {
+                            waves.Add(new MigrationWave
+                            {
+                                WaveNumber = currentWave,
+                                EntityIds = remainingIds,
+                                EntityType = entityType,
+                                EstimatedDuration = TimeSpan.FromHours(remainingIds.Count * 0.5),
+                                HasCircularDependencies = true
+                            });
+                        }
+                        break;
+                    }
+                }
+            }
+
+            return waves;
+        }
+
+        /// <summary>
+        /// Gets migration dependencies for a specific entity
+        /// </summary>
+        public List<MigrationDependency> GetEntityDependencies(string entityId, string entityType)
+        {
+            var dependencies = new List<MigrationDependency>();
+            var nodeId = GetNodeId(entityType, entityId);
+
+            lock (_lockObject)
+            {
+                if (_relationshipGraph.TryGetValue(nodeId, out var entityNode))
+                {
+                    foreach (var relationship in entityNode.Relationships)
+                    {
+                        if (_relationshipGraph.TryGetValue(relationship.ToNodeId, out var relatedNode))
+                        {
+                            var severity = DetermineDependencySeverity(relationship.RelationshipType);
+                            dependencies.Add(new MigrationDependency
+                            {
+                                DependentEntityId = ExtractIdFromNodeId(relatedNode.Id),
+                                DependentEntityType = ExtractTypeFromNodeId(relatedNode.Id),
+                                DependentEntityName = relatedNode.Name,
+                                DependencyType = relationship.RelationshipType,
+                                Severity = severity
+                            });
+                        }
+                    }
+                }
+            }
+
+            return dependencies;
+        }
+
+        /// <summary>
+        /// Builds comprehensive relationship graph from all loaded data
+        /// </summary>
+        public async Task BuildComprehensiveRelationshipGraph(string profileName, CsvDataService csvDataService)
+        {
+            try
+            {
+                // Load all entities
+                var users = await csvDataService.LoadUsersAsync(profileName);
+                var groups = await csvDataService.LoadGroupsAsync(profileName);
+                var infrastructure = await csvDataService.LoadInfrastructureAsync(profileName);
+                var applications = await csvDataService.LoadApplicationsAsync(profileName);
+
+                lock (_lockObject)
+                {
+                    _relationshipGraph.Clear();
+
+                    // Add all entities to the graph
+                    foreach (var user in users)
+                    {
+                        AddOrUpdateUser(user);
+                    }
+
+                    foreach (var group in groups)
+                    {
+                        AddOrUpdateGroup(group);
+                    }
+
+                    foreach (var asset in infrastructure)
+                    {
+                        AddOrUpdateAsset(asset);
+                    }
+
+                    foreach (var app in applications)
+                    {
+                        AddOrUpdateApplication(app);
+                    }
+
+                    // Create relationships between entities
+                    CreateUserGroupRelationships(users, groups);
+                    CreateUserAssetRelationships(users, infrastructure);
+                    CreateGroupAssetRelationships(groups, infrastructure);
+                    CreateApplicationRelationships(applications, users, groups, infrastructure);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error building relationship graph: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Creates relationships between users and groups
+        /// </summary>
+        private void CreateUserGroupRelationships(IEnumerable<UserData> users, IEnumerable<GroupData> groups)
+        {
+            foreach (var group in groups)
+            {
+                if (group.UserIds != null && group.UserIds.Any())
+                {
+                    foreach (var userId in group.UserIds)
+                    {
+                        var user = users.FirstOrDefault(u => 
+                            u.Id == userId || 
+                            u.UserPrincipalName == userId || 
+                            u.SamAccountName == userId);
+                        
+                        if (user != null)
+                        {
+                            CreateRelationship("user", user.Id, "group", group.Id, "member_of");
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates relationships between users and assets
+        /// </summary>
+        private void CreateUserAssetRelationships(IEnumerable<UserData> users, IEnumerable<InfrastructureData> assets)
+        {
+            // This would be based on actual CSV data structure
+            // For now, create basic relationships where user names match asset names
+            foreach (var user in users)
+            {
+                foreach (var asset in assets)
+                {
+                    if (!string.IsNullOrEmpty(user.SamAccountName) && 
+                        !string.IsNullOrEmpty(asset.Name) &&
+                        asset.Name.Contains(user.SamAccountName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        CreateRelationship("user", user.Id, "asset", asset.Id, "uses");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates relationships between groups and assets
+        /// </summary>
+        private void CreateGroupAssetRelationships(IEnumerable<GroupData> groups, IEnumerable<InfrastructureData> assets)
+        {
+            // This would be based on actual CSV data structure
+            // For now, create basic relationships where group names match asset descriptions
+            foreach (var group in groups)
+            {
+                foreach (var asset in assets)
+                {
+                    if (!string.IsNullOrEmpty(group.DisplayName) && 
+                        !string.IsNullOrEmpty(asset.Description) &&
+                        asset.Description.Contains(group.DisplayName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        CreateRelationship("group", group.Id, "asset", asset.Id, "manages");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates relationships for applications
+        /// </summary>
+        private void CreateApplicationRelationships(IEnumerable<ApplicationData> applications, IEnumerable<UserData> users, IEnumerable<GroupData> groups, IEnumerable<InfrastructureData> assets)
+        {
+            foreach (var app in applications)
+            {
+                // Link applications to users
+                if (app.UserIds != null && app.UserIds.Any())
+                {
+                    foreach (var userId in app.UserIds)
+                    {
+                        var user = users.FirstOrDefault(u => u.Id == userId || u.UserPrincipalName == userId);
+                        if (user != null)
+                        {
+                            CreateRelationship("application", app.Id, "user", user.Id, "assigned_to");
+                        }
+                    }
+                }
+
+                // Link applications to groups based on naming patterns
+                // This is a simplified approach - in reality you'd use proper CSV relationships
+                foreach (var group in groups)
+                {
+                    if (!string.IsNullOrEmpty(app.Name) && !string.IsNullOrEmpty(group.DisplayName) &&
+                        (app.Name.Contains(group.DisplayName, StringComparison.OrdinalIgnoreCase) ||
+                         group.DisplayName.Contains(app.Name, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        CreateRelationship("application", app.Id, "group", group.Id, "assigned_to");
+                    }
+                }
+
+                // Link applications to assets where they're installed
+                foreach (var asset in assets)
+                {
+                    if (!string.IsNullOrEmpty(app.InstallLocation) && 
+                        !string.IsNullOrEmpty(asset.Name) &&
+                        app.InstallLocation.Contains(asset.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        CreateRelationship("application", app.Id, "asset", asset.Id, "installed_on");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets migration impact analysis for an entity
+        /// </summary>
+        public MigrationImpactAnalysis GetMigrationImpact(string entityId, string entityType)
+        {
+            var analysis = new MigrationImpactAnalysis
+            {
+                EntityId = entityId,
+                EntityType = entityType,
+                ImpactedEntities = new List<MigrationDependency>()
+            };
+
+            var relatedEntities = GetRelatedEntities(entityType, entityId);
+            
+            foreach (var related in relatedEntities)
+            {
+                var dependency = new MigrationDependency
+                {
+                    DependentEntityId = ExtractIdFromNodeId(related.Id),
+                    DependentEntityType = ExtractTypeFromNodeId(related.Id),
+                    DependentEntityName = related.Name,
+                    DependencyType = "Related Entity",
+                    Severity = "Medium"
+                };
+                
+                analysis.ImpactedEntities.Add(dependency);
+            }
+
+            analysis.TotalImpactedEntities = analysis.ImpactedEntities.Count;
+            analysis.RiskLevel = analysis.TotalImpactedEntities > 10 ? "High" : 
+                                analysis.TotalImpactedEntities > 5 ? "Medium" : "Low";
+
+            return analysis;
+        }
+
+        /// <summary>
+        /// Determines dependency severity based on relationship type
+        /// </summary>
+        private string DetermineDependencySeverity(string relationshipType)
+        {
+            return relationshipType switch
+            {
+                "owns" or "owned_by" => "Critical",
+                "member_of" or "has_member" => "High",
+                "uses" or "used_by" => "Medium",
+                "manages" or "managed_by" => "High",
+                "assigned_to" => "Medium",
+                "installed_on" => "Low",
+                _ => "Low"
+            };
+        }
+
+        /// <summary>
+        /// Extracts entity type from node ID
+        /// </summary>
+        private string ExtractTypeFromNodeId(string nodeId)
+        {
+            var colonIndex = nodeId.IndexOf(':');
+            return colonIndex > 0 ? nodeId.Substring(0, colonIndex) : "unknown";
+        }
+
+        /// <summary>
+        /// Extracts entity ID from node ID
+        /// </summary>
+        private string ExtractIdFromNodeId(string nodeId)
+        {
+            var colonIndex = nodeId.IndexOf(':');
+            return colonIndex > 0 && colonIndex < nodeId.Length - 1 ? nodeId.Substring(colonIndex + 1) : nodeId;
+        }
+
+        /// <summary>
         /// Clears all relationships for testing or reset
         /// </summary>
         public void ClearAllRelationships()
@@ -441,5 +779,87 @@ namespace MandADiscoverySuite.Services
         public string DependencyType { get; set; }
         public string Severity { get; set; }
         public string Notes { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a migration wave for phased migration planning
+    /// </summary>
+    public class MigrationWave
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public int WaveNumber { get; set; }
+        public List<string> EntityIds { get; set; } = new List<string>();
+        public string EntityType { get; set; }
+        public TimeSpan EstimatedDuration { get; set; }
+        public bool HasCircularDependencies { get; set; }
+        public string Notes { get; set; }
+        public string Status { get; set; } = "Planned";
+        public string Priority { get; set; } = "Medium";
+        public string AssignedTo { get; set; }
+        public List<MigrationTask> Tasks { get; set; } = new List<MigrationTask>();
+        public DateTime PlannedStartDate { get; set; } = DateTime.Now;
+        public DateTime PlannedEndDate { get; set; } = DateTime.Now.AddDays(7);
+        public List<string> Dependencies { get; set; } = new List<string>();
+    }
+
+    /// <summary>
+    /// Represents a migration task within a wave
+    /// </summary>
+    public class MigrationTask
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public string Status { get; set; } = "Planned";
+        public string Priority { get; set; } = "Medium";
+        public string AssignedTo { get; set; }
+        public DateTime PlannedStartDate { get; set; } = DateTime.Now;
+        public DateTime PlannedEndDate { get; set; } = DateTime.Now.AddDays(1);
+        public DateTime? ActualStartDate { get; set; }
+        public DateTime? ActualEndDate { get; set; }
+        public string Notes { get; set; }
+        public List<string> Dependencies { get; set; } = new List<string>();
+        public int ProgressPercent { get; set; } = 0;
+        public string WaveId { get; set; }
+        public int CompletionPercentage { get; set; } = 0;
+        public double EstimatedHours { get; set; } = 8.0;
+        public double ActualHours { get; set; } = 0.0;
+
+        public bool IsOverdue()
+        {
+            return DateTime.Now > PlannedEndDate && Status != "Completed";
+        }
+    }
+
+    /// <summary>
+    /// Represents migration impact analysis results
+    /// </summary>
+    public class MigrationImpactAnalysis
+    {
+        public string EntityId { get; set; }
+        public string EntityType { get; set; }
+        public List<MigrationDependency> ImpactedEntities { get; set; } = new List<MigrationDependency>();
+        public int TotalImpactedEntities { get; set; }
+        public string RiskLevel { get; set; }
+        public string Notes { get; set; }
+    }
+
+    /// <summary>
+    /// Extension methods for MigrationWave
+    /// </summary>
+    public static class MigrationWaveExtensions
+    {
+        public static int GetCompletionPercentage(this MigrationWave wave)
+        {
+            if (wave.Tasks == null || !wave.Tasks.Any())
+                return 0;
+
+            var totalTasks = wave.Tasks.Count;
+            var completedTasks = wave.Tasks.Count(t => t.Status == "Completed");
+            
+            return (int)Math.Round((double)completedTasks / totalTasks * 100);
+        }
     }
 }
