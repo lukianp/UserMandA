@@ -367,6 +367,124 @@ namespace MandADiscoverySuite.Services
             return groups;
         }
 
+        /// <summary>
+        /// Loads group policy objects (GPOs) from discovery CSV files in a specific directory.
+        /// </summary>
+        /// <param name="rawDataPath">Path to the raw discovery data directory</param>
+        /// <returns>List of discovered policies</returns>
+        public async Task<List<PolicyData>> LoadGroupPoliciesAsync(string rawDataPath)
+        {
+            var policies = new List<PolicyData>();
+            try
+            {
+                if (!Directory.Exists(rawDataPath))
+                    return policies;
+
+                var files = Directory.GetFiles(rawDataPath, "*.csv", SearchOption.TopDirectoryOnly)
+                    .Where(f =>
+                    {
+                        var name = Path.GetFileName(f);
+                        return name.StartsWith("GPO_", StringComparison.OrdinalIgnoreCase) ||
+                               name.Contains("GPO", StringComparison.OrdinalIgnoreCase);
+                    });
+
+                foreach (var file in files)
+                {
+                    var filePolicies = await LoadPoliciesFromCsvAsync(file);
+                    policies.AddRange(filePolicies);
+                }
+
+                // Deduplicate by Id or Name
+                policies = policies
+                    .GroupBy(p => p.Id ?? p.Name ?? Guid.NewGuid().ToString())
+                    .Select(g => g.First())
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                ErrorHandlingService.Instance.HandleException(ex, "Loading policy data from CSV");
+            }
+
+            return policies;
+        }
+
+        private async Task<List<PolicyData>> LoadPoliciesFromCsvAsync(string filePath)
+        {
+            return await Task.Run(async () =>
+            {
+                var list = new List<PolicyData>();
+                try
+                {
+                    var lines = await File.ReadAllLinesAsync(filePath, System.Text.Encoding.UTF8);
+                    if (lines.Length < 2) return list;
+
+                    var headers = ParseCsvLine(lines[0]);
+                    for (int i = 1; i < lines.Length; i++)
+                    {
+                        var values = ParseCsvLine(lines[i]);
+                        if (values.Length < headers.Length) continue;
+
+                        var policy = new PolicyData();
+                        for (int j = 0; j < headers.Length && j < values.Length; j++)
+                        {
+                            var header = headers[j].ToLowerInvariant();
+                            var value = values[j];
+                            switch (header)
+                            {
+                                case "id":
+                                case "gpoid":
+                                    policy.Id = value; break;
+                                case "name":
+                                case "gponame":
+                                    policy.Name = value; break;
+                                case "path":
+                                case "gpopath":
+                                    policy.Path = value; break;
+                                case "type":
+                                    policy.Type = value; break;
+                                case "createdtime":
+                                case "createddate":
+                                    if (DateTime.TryParse(value, out var cdt)) policy.CreatedTime = cdt; break;
+                                case "modifiedtime":
+                                case "modifieddate":
+                                    if (DateTime.TryParse(value, out var mdt)) policy.ModifiedTime = mdt; break;
+                                case "scope":
+                                    policy.Scope = value; break;
+                                case "linkedou":
+                                case "linkedous":
+                                    policy.LinkedOUs = value; break;
+                                case "enabled":
+                                    policy.Enabled = ParseBool(value); break;
+                                case "computersettingsenabled":
+                                    policy.ComputerSettingsEnabled = ParseBool(value); break;
+                                case "usersettingsenabled":
+                                    policy.UserSettingsEnabled = ParseBool(value); break;
+                                case "description":
+                                    policy.Description = value; break;
+                                case "securityfiltering":
+                                    policy.SecurityFiltering = value; break;
+                                case "wmifilters":
+                                    policy.WmiFilters = value; break;
+                                case "additionalsettings":
+                                    policy.AdditionalSettings = value; break;
+                            }
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(policy.Name))
+                        {
+                            list.Add(policy);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorHandlingService.Instance.HandleException(ex, $"Parsing policies from {Path.GetFileName(filePath)}");
+                }
+
+                return list;
+            });
+        }
+
         private async Task<List<UserData>> LoadUsersFromCsvAsync(string filePath)
         {
             // Use Task.Run to offload CPU-bound CSV parsing from the UI thread
@@ -1318,6 +1436,44 @@ namespace MandADiscoverySuite.Services
 
             _logger?.LogInformation($"Loaded {allApplications.Count} applications for profile {profileName}");
             return allApplications;
+        }
+
+        public async Task<IEnumerable<PolicyData>> LoadGroupPoliciesAsync(string profileName, bool forceRefresh = false, CancellationToken cancellationToken = default)
+        {
+            var cacheKey = $"Policies_{profileName}";
+
+            if (!forceRefresh && _cacheService != null)
+            {
+                var cached = _cacheService.GetOrCreate<List<PolicyData>>(cacheKey, () => null);
+                if (cached != null)
+                {
+                    _logger?.LogInformation($"Loaded {cached.Count} policies from cache for profile {profileName}");
+                    return cached;
+                }
+            }
+
+            var allDataPaths = GetAllDataPaths(profileName);
+            var allPolicies = new List<PolicyData>();
+
+            foreach (var dataPath in allDataPaths)
+            {
+                var policies = await LoadGroupPoliciesAsync(dataPath);
+                allPolicies.AddRange(policies);
+            }
+
+            // Deduplicate by Id or Name
+            allPolicies = allPolicies
+                .GroupBy(p => p.Id ?? p.Name)
+                .Select(g => g.First())
+                .ToList();
+
+            if (_cacheService != null)
+            {
+                await _cacheService.SetAsync(cacheKey, allPolicies, TimeSpan.FromMinutes(15));
+            }
+
+            _logger?.LogInformation($"Loaded {allPolicies.Count} policies for profile {profileName}");
+            return allPolicies;
         }
 
         public async Task<DataSummary> GetDataSummaryAsync(string profileName, CancellationToken cancellationToken = default)

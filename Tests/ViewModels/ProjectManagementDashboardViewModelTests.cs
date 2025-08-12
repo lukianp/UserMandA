@@ -26,6 +26,8 @@ namespace MandADiscoverySuite.Tests.ViewModels
                 Task.FromResult<IEnumerable<GroupData>>(Array.Empty<GroupData>());
             public Task<IEnumerable<ApplicationData>> LoadApplicationsAsync(string profileName, bool forceRefresh = false, CancellationToken cancellationToken = default) =>
                 Task.FromResult<IEnumerable<ApplicationData>>(Array.Empty<ApplicationData>());
+            public Task<IEnumerable<PolicyData>> LoadGroupPoliciesAsync(string profileName, bool forceRefresh = false, CancellationToken cancellationToken = default) =>
+                Task.FromResult<IEnumerable<PolicyData>>(Array.Empty<PolicyData>());
             public Task<DataSummary> GetDataSummaryAsync(string profileName, CancellationToken cancellationToken = default) =>
                 Task.FromResult(Summary);
             public Task<SearchResults> SearchAsync(string profileName, string searchTerm, SearchOptions searchOptions = null, CancellationToken cancellationToken = default) =>
