@@ -135,6 +135,11 @@ namespace MandADiscoverySuite.ViewModels
         public int DistributionGroupCount => Groups?.Count(g => g.Type?.Contains("Distribution", StringComparison.OrdinalIgnoreCase) == true) ?? 0;
 
         /// <summary>
+        /// Whether there are groups to display
+        /// </summary>
+        public bool HasGroups => TotalGroupCount > 0;
+
+        /// <summary>
         /// Status information text
         /// </summary>
         public string StatusInfo => $"Showing {FilteredGroupCount} of {TotalGroupCount} groups ({SecurityGroupCount} security, {DistributionGroupCount} distribution)";
@@ -168,7 +173,7 @@ namespace MandADiscoverySuite.ViewModels
             Groups = new OptimizedObservableCollection<GroupData>();
             Groups.CollectionChanged += (s, e) => 
             {
-                OnPropertiesChanged(nameof(TotalGroupCount), nameof(SecurityGroupCount), nameof(DistributionGroupCount), nameof(StatusInfo));
+                OnPropertiesChanged(nameof(TotalGroupCount), nameof(SecurityGroupCount), nameof(DistributionGroupCount), nameof(StatusInfo), nameof(HasGroups));
             };
 
             // Create collection view for filtering and sorting

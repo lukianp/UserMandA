@@ -106,7 +106,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Whether data is currently loading
         /// </summary>
-        public bool IsLoading
+        public new bool IsLoading
         {
             get => _isLoading;
             set => SetProperty(ref _isLoading, value);
@@ -115,7 +115,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Loading progress message
         /// </summary>
-        public string LoadingMessage
+        public new string LoadingMessage
         {
             get => _loadingMessage;
             set => SetProperty(ref _loadingMessage, value);
@@ -124,7 +124,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Whether there are errors
         /// </summary>
-        public bool HasErrors
+        public new bool HasErrors
         {
             get => _hasErrors;
             set => SetProperty(ref _hasErrors, value);
@@ -133,7 +133,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Error message if any
         /// </summary>
-        public string ErrorMessage
+        public new string ErrorMessage
         {
             get => _errorMessage;
             set => SetProperty(ref _errorMessage, value);
@@ -691,18 +691,4 @@ namespace MandADiscoverySuite.ViewModels
         public string Priority { get; set; } = "Medium";
     }
 
-    /// <summary>
-    /// Represents policy or access control information
-    /// </summary>
-    public class PolicyData
-    {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Type { get; set; }
-        public string Description { get; set; }
-        public string Scope { get; set; }
-        public string Status { get; set; }
-        public DateTime? CreatedDate { get; set; }
-        public DateTime? ModifiedDate { get; set; }
-    }
 }

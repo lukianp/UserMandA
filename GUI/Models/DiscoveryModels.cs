@@ -976,6 +976,7 @@ namespace MandADiscoverySuite.Models
         public string DisplayIcon { get; set; }
         public string Comments { get; set; }
         public string Contact { get; set; }
+        public string Description { get; set; }
         public string DisplayVersion { get; set; }
         public string HelpLink { get; set; }
         public string URLInfoAbout { get; set; }

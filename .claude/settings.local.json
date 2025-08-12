@@ -115,7 +115,8 @@
       "Bash(Start-Sleep 15)",
       "Bash(Start-Process \"C:\\enterprisediscovery\\MandADiscoverySuite.exe\" -WindowStyle Normal)",
       "Bash(Start-Sleep 10)",
-      "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\MandADiscovery_20250811_235008.log\" -Tail 50)"
+      "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\MandADiscovery_20250811_235008.log\" -Tail 50)",
+      "Bash(Start-Sleep 30)"
     ],
     "deny": []
   }

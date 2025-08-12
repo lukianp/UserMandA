@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -12,13 +13,18 @@ namespace MandADiscoverySuite.ViewModels
         private readonly MainViewModel _mainViewModel;
         private PolicyData _selectedPolicy;
 
-        public ObservableCollection<PolicyData> Policies { get; } = new();
+        public ObservableCollection<PolicyData> Policies { get; private set; }
 
         public PolicyData SelectedPolicy
         {
             get => _selectedPolicy;
             set => SetProperty(ref _selectedPolicy, value);
         }
+
+        /// <summary>
+        /// Whether there are policies to display
+        /// </summary>
+        public bool HasPolicies => Policies?.Count > 0;
 
         public ICommand OpenPolicyDetailCommand { get; }
         public ICommand RefreshPoliciesCommand { get; }
@@ -27,6 +33,9 @@ namespace MandADiscoverySuite.ViewModels
         {
             _csvDataService = csvDataService;
             _mainViewModel = mainViewModel;
+
+            Policies = new ObservableCollection<PolicyData>();
+            Policies.CollectionChanged += (s, e) => OnPropertyChanged(nameof(HasPolicies));
 
             OpenPolicyDetailCommand = new RelayCommand<PolicyData>(p => OpenPolicyDetail(p ?? SelectedPolicy));
             RefreshPoliciesCommand = new AsyncRelayCommand(RefreshPoliciesAsync);
@@ -52,14 +61,31 @@ namespace MandADiscoverySuite.ViewModels
 
         public async Task RefreshPoliciesAsync()
         {
-            var profileService = SimpleServiceLocator.GetService<IProfileService>();
-            var currentProfile = await profileService?.GetCurrentProfileAsync();
-            var profileName = currentProfile?.CompanyName ?? "ljpops";
+            try
+            {
+                IsLoading = true;
+                LoadingMessage = "Loading group policies...";
 
-            var list = await _csvDataService.LoadGroupPoliciesAsync(profileName);
-            Policies.Clear();
-            foreach (var p in list)
-                Policies.Add(p);
+                var profileService = SimpleServiceLocator.GetService<IProfileService>();
+                var currentProfile = await profileService?.GetCurrentProfileAsync();
+                var profileName = currentProfile?.CompanyName ?? "ljpops";
+
+                var list = await _csvDataService.LoadGroupPoliciesAsync(profileName);
+                Policies.Clear();
+                foreach (var p in list)
+                    Policies.Add(p);
+                    
+                LoadingMessage = $"Loaded {Policies.Count} policies";
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Failed to load policies: {ex.Message}";
+                HasErrors = true;
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
     }
 }

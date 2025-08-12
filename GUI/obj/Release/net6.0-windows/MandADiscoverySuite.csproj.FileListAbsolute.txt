@@ -231,6 +231,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ExportFormatSelectionD
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GanttChartView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GanttView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GenericDetailWindow.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GroupPoliciesView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GroupsView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\InfrastructureAssetsView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\KeyboardShortcutsView.baml
@@ -238,6 +239,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\LogViewerDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ManagementDashboardView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\NotesTaggingView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\PhaseTrackerView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\PolicyDetailView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\RiskAnalysisView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SecurityGroupDetailView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SecurityGroupsView.baml
@@ -323,6 +325,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ExportFormatSelectionD
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GanttChartView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GanttView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GenericDetailWindow.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GroupPoliciesView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GroupsView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\InfrastructureAssetsView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\KeyboardShortcutsView.g.cs
@@ -331,6 +334,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ManagementDashboardVie
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ManagementView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\NotesTaggingView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\PhaseTrackerView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\PolicyDetailView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ProjectManagementDashboard.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ProjectManagementView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ReportBuilderView.g.cs

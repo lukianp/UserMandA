@@ -3,9 +3,74 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d">
-    <Grid>
-        <DataGrid ItemsSource="{Binding Policies}" AutoGenerateColumns="False" SelectedItem="{Binding SelectedPolicy}" Margin="5">
+             mc:Ignorable="d"
+             Background="#FF0F1419">
+    
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </UserControl.Resources>
+    
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,24">
+            <TextBlock Text="Group Policies" 
+                       FontSize="28" 
+                       FontWeight="SemiBold"
+                       Foreground="#FFE2E8F0"/>
+            <TextBlock Text="Manage and view group policy information" 
+                       FontSize="14" 
+                       Foreground="#FFA0AEC0" 
+                       Margin="0,4,0,0"/>
+        </StackPanel>
+        
+        <!-- Content -->
+        <Border Grid.Row="1" 
+                Background="#FF1A202C" 
+                BorderBrush="#FF2D3748" 
+                BorderThickness="1" 
+                CornerRadius="8">
+            <Grid>
+                <!-- Loading Indicator -->
+                <StackPanel HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock Text="⏳" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                    <TextBlock Text="{Binding LoadingMessage}" 
+                               FontSize="16" 
+                               Foreground="#FFA0AEC0" 
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+                <!-- Data Grid -->
+                <DataGrid ItemsSource="{Binding Policies}" 
+                          AutoGenerateColumns="False" 
+                          SelectedItem="{Binding SelectedPolicy}" 
+                          Background="Transparent"
+                          BorderThickness="0"
+                          GridLinesVisibility="None"
+                          HeadersVisibility="Column"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          Margin="1">
+                    <DataGrid.Style>
+                        <Style TargetType="DataGrid">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding HasPolicies}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.Style>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="200"/>
                 <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="200"/>
@@ -17,14 +82,68 @@
                 <DataGridTextColumn Header="Created" Binding="{Binding CreatedTime}" Width="150"/>
                 <DataGridTextColumn Header="Modified" Binding="{Binding ModifiedTime}" Width="150"/>
                 <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="200"/>
-                <DataGridTemplateColumn Header="Details" Width="100">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Button Content="View" Command="{Binding DataContext.OpenPolicyDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" />
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+                        <DataGridTemplateColumn Header="Details" Width="100">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="View" 
+                                            Command="{Binding DataContext.OpenPolicyDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                            CommandParameter="{Binding}" 
+                                            Background="#FF10B981" 
+                                            Foreground="White" 
+                                            BorderThickness="0"
+                                            Padding="8,4"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                    
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#FF2D3748"/>
+                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Padding" Value="12,8"/>
+                        </Style>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                        </Style>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Padding" Value="12,8"/>
+                        </Style>
+                    </DataGrid.Resources>
+                </DataGrid>
+                
+                <!-- Empty State -->
+                <StackPanel HorizontalAlignment="Center" 
+                           VerticalAlignment="Center">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsLoading}" Value="False"/>
+                                        <Condition Binding="{Binding HasPolicies}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="📋" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="#FF6B7280"/>
+                    <TextBlock Text="No group policies found" 
+                               FontSize="18" 
+                               Foreground="#FF6B7280" 
+                               HorizontalAlignment="Center" 
+                               Margin="0,0,0,8"/>
+                    <TextBlock Text="Group policies will appear here once discovery is run" 
+                               FontSize="14" 
+                               Foreground="#FF4B5563" 
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>
