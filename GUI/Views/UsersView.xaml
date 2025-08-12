@@ -163,8 +163,6 @@
                         <DataGridTextColumn Header="Manager" Binding="{Binding ManagerDisplayName}" Width="150" />
                         <!-- Created Date -->
                         <DataGridTextColumn Header="Created" Binding="{Binding CreatedDateTime, StringFormat=yyyy-MM-dd}" Width="120" />
-                        <!-- Last Sign In -->
-                        <DataGridTextColumn Header="Last Sign In" Binding="{Binding LastSignInDate, StringFormat=yyyy-MM-dd}" Width="100" />
                         <!-- View Details Button -->
                         <DataGridTemplateColumn Header="Actions" Width="100">
                             <DataGridTemplateColumn.CellTemplate>
