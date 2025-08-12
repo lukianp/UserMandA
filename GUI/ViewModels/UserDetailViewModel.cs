@@ -62,6 +62,7 @@ namespace MandADiscoverySuite.ViewModels
             SecurityGroups = new ObservableCollection<GroupData>();
             Applications = new ObservableCollection<ApplicationData>();
             InfrastructureAssets = new ObservableCollection<InfrastructureData>();
+            Policies = new ObservableCollection<PolicyData>();
             
             CloseCommand = new RelayCommand(() => CloseRequested?.Invoke());
             ExportProfileCommand = new RelayCommand(ExportProfile);
@@ -96,6 +97,7 @@ namespace MandADiscoverySuite.ViewModels
         public ObservableCollection<GroupData> SecurityGroups { get; private set; }
         public ObservableCollection<ApplicationData> Applications { get; private set; }
         public ObservableCollection<InfrastructureData> InfrastructureAssets { get; private set; }
+        public ObservableCollection<PolicyData> Policies { get; private set; }
         
         public ICommand CloseCommand { get; }
         public ICommand ExportProfileCommand { get; }
@@ -611,6 +613,10 @@ Last Sign-In: {LastSignIn}
                     LoadingProgress = 80;
                     await LoadInfrastructureAssetsAsync(profileName);
 
+                    LoadingMessage = "Loading policies...";
+                    LoadingProgress = 90;
+                    await LoadPoliciesAsync(profileName);
+
                     LoadingProgress = 100;
                     LoadingMessage = "User data loaded successfully";
                     StatusMessage = $"Loaded related data for {_user.DisplayName}";
@@ -708,6 +714,29 @@ Last Sign-In: {LastSignIn}
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading infrastructure assets: {ex.Message}");
+            }
+        }
+
+        private async Task LoadPoliciesAsync(string profileName)
+        {
+            try
+            {
+                var policies = await _csvDataService.LoadGroupPoliciesAsync(profileName);
+                Policies.Clear();
+                var identifier = _user.Id ?? _user.UserPrincipalName;
+                foreach (var policy in policies)
+                {
+                    if (!string.IsNullOrWhiteSpace(policy.SecurityFiltering) &&
+                        policy.SecurityFiltering.Contains(identifier, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Policies.Add(policy);
+                        AssetRelationshipService.Instance.CreateRelationship("user", identifier, "policy", policy.Id ?? policy.Name, "affected_by");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading policies for user: {ex.Message}");
             }
         }
 

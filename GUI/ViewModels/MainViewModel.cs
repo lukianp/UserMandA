@@ -5053,6 +5053,13 @@ This directory is strictly for storing discovery results and company data.
                         });
                         tabViewModel = groupsViewModel;
                         break;
+                    case "policies":
+                    case "grouppolicies":
+                        var policyCsv = SimpleServiceLocator.GetService<CsvDataService>();
+                        var policiesVm = new GroupPoliciesViewModel(policyCsv, this);
+                        policiesVm.TabTitle = "Group Policies";
+                        tabViewModel = policiesVm;
+                        break;
                     case "applications":
                         tabViewModel = new ApplicationsViewModel { TabTitle = "Applications" };
                         break;

@@ -168,6 +168,12 @@
             <DataTemplate DataType="{x:Type vm:ManagementViewModel}">
                 <views:ManagementView/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:GroupPoliciesViewModel}">
+                <views:GroupPoliciesView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:PolicyDetailViewModel}">
+                <views:PolicyDetailView/>
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
