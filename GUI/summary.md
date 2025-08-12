@@ -2,9 +2,9 @@
 
 ## ✅ Data Binding Corrections for CSV Views (2025-08-12)
 
-- Fixed `UsersView`, `GroupsView`, `ComputersView`, and `AssetInventoryView` bindings to match CSV property names and disabled auto-generated columns for clarity.
+- Fixed `UsersView`, `GroupsView`, `ComputersView`, and `InfrastructureAssetsView` bindings to match CSV property names and disabled auto-generated columns for clarity.
 - Set `ConfigurationService.DiscoveryDataRootPath` to `C:\discoverydata` to ensure CSV files load from the correct directory.
-- Verified that user, group, and infrastructure data now populate correctly in their respective tabs.
+- Verified that user, group, computer, and infrastructure data now populate correctly in their respective tabs.
 
 ## ✅ USERS VIEW & DETAIL PANE IMPLEMENTATION COMPLETED (2025-08-11 22:39)
 
