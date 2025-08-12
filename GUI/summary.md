@@ -45,6 +45,13 @@
 ## ✅ Data Binding Corrections for CSV Views (2025-08-12)
 
 - Fixed `UsersView`, `GroupsView`, `ComputersView`, and `InfrastructureAssetsView` bindings to match CSV property names and disabled auto-generated columns for clarity.
+
+## 🚀 Group Policy Integration (2025-08-12)
+
+- Added `PolicyData` model with migration notes support.
+- Extended `CsvDataService` and `IDataService` to load GPO discovery files.
+- Introduced `GroupPoliciesViewModel`, `PolicyDetailViewModel`, and new views for listing and drilling into policies.
+- Expanded `AssetRelationshipService` and `UserDetailViewModel` to link policies with users and other assets.
 - Set `ConfigurationService.DiscoveryDataRootPath` to `C:\discoverydata` to ensure CSV files load from the correct directory.
 - Verified that user, group, computer, and infrastructure data now populate correctly in their respective tabs.
 

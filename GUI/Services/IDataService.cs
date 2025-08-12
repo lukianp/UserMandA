@@ -48,6 +48,15 @@ namespace MandADiscoverySuite.Services
         Task<IEnumerable<ApplicationData>> LoadApplicationsAsync(string profileName, bool forceRefresh = false, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Loads group policy data for a specific company profile
+        /// </summary>
+        /// <param name="profileName">Company profile name</param>
+        /// <param name="forceRefresh">Force refresh from source files</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Collection of policy data</returns>
+        Task<IEnumerable<PolicyData>> LoadGroupPoliciesAsync(string profileName, bool forceRefresh = false, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Gets data summary statistics for a company profile
         /// </summary>
         /// <param name="profileName">Company profile name</param>

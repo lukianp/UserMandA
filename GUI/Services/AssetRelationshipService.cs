@@ -144,6 +144,36 @@ namespace MandADiscoverySuite.Services
         }
 
         /// <summary>
+        /// Adds or updates a group policy object in the relationship graph
+        /// </summary>
+        public void AddOrUpdatePolicy(PolicyData policy)
+        {
+            if (policy == null) return;
+
+            lock (_lockObject)
+            {
+                var nodeId = GetNodeId("policy", policy.Id ?? policy.Name);
+
+                if (!_relationshipGraph.TryGetValue(nodeId, out var node))
+                {
+                    node = new AssetRelationshipNode
+                    {
+                        Id = nodeId,
+                        Type = "policy",
+                        Name = policy.Name,
+                        Data = policy
+                    };
+                    _relationshipGraph[nodeId] = node;
+                }
+                else
+                {
+                    node.Data = policy;
+                    node.Name = policy.Name;
+                }
+            }
+        }
+
+        /// <summary>
         /// Creates a relationship between two entities
         /// </summary>
         public void CreateRelationship(string fromType, string fromId, string toType, string toId, string relationshipType)
@@ -253,6 +283,21 @@ namespace MandADiscoverySuite.Services
 
             return relatedEntities;
         }
+
+        /// <summary>
+        /// Gets policies related to a user
+        /// </summary>
+        public List<PolicyData> GetPoliciesForUser(string userId) => GetRelatedEntitiesOfType<PolicyData>("user", userId, "policy");
+
+        /// <summary>
+        /// Gets policies related to a computer
+        /// </summary>
+        public List<PolicyData> GetPoliciesForComputer(string computerId) => GetRelatedEntitiesOfType<PolicyData>("asset", computerId, "policy");
+
+        /// <summary>
+        /// Gets policies related to a group
+        /// </summary>
+        public List<PolicyData> GetPoliciesForGroup(string groupId) => GetRelatedEntitiesOfType<PolicyData>("group", groupId, "policy");
 
         /// <summary>
         /// Finds all paths between two entities
