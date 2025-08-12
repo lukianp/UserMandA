@@ -61,6 +61,10 @@ namespace MandADiscoverySuite.Services
             _logDirectory = Path.Combine(@"C:\DiscoveryData\ljpops\Logs", "Application");
             Directory.CreateDirectory(_logDirectory);
             
+            // Also ensure the main logs directory exists
+            var mainLogDirectory = @"C:\DiscoveryData\ljpops\Logs";
+            Directory.CreateDirectory(mainLogDirectory);
+            
             _logQueue = new ConcurrentQueue<LogEntry>();
             
             // Flush logs every 15 seconds
@@ -166,6 +170,26 @@ namespace MandADiscoverySuite.Services
         public async Task LogDebugAsync(string message, object data = null, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "", [CallerLineNumber] int lineNumber = 0)
         {
             await LogAsync(LogLevel.Debug, message, null, null, null, data, memberName, filePath, lineNumber);
+        }
+
+        /// <summary>
+        /// Logs GUI-specific debug information to gui-debug.log
+        /// </summary>
+        public async Task LogGuiDebugAsync(string message, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "", [CallerLineNumber] int lineNumber = 0)
+        {
+            try
+            {
+                var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                var className = Path.GetFileNameWithoutExtension(filePath);
+                var logEntry = $"[{timestamp}] [GUI-DEBUG] [{className}.{memberName}:{lineNumber}] {message}";
+                
+                var guiDebugPath = Path.Combine(@"C:\DiscoveryData\ljpops\Logs", "gui-debug.log");
+                await File.AppendAllTextAsync(guiDebugPath, logEntry + Environment.NewLine);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to write GUI debug log: {ex.Message}");
+            }
         }
 
         #endregion

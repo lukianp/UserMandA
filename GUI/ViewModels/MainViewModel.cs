@@ -4957,7 +4957,8 @@ This directory is strictly for storing discovery results and company data.
         /// </summary>
         private void OpenTab(string viewType)
         {
-            _ = EnhancedLoggingService.Instance.LogInformationAsync($"=== OpenTab CALLED === ViewType: {viewType}");
+            _ = EnhancedLoggingService.Instance.LogInformationAsync($"=== OpenTab CALLED === ViewType: '{viewType}', CurrentOpenTabs: {OpenTabs.Count}");
+            _ = EnhancedLoggingService.Instance.LogGuiDebugAsync($"Navigation Click: OpenTab called with viewType='{viewType}', OpenTabs.Count={OpenTabs.Count}");
             try
             {
                 BaseViewModel tabViewModel = null;
@@ -5075,10 +5076,14 @@ This directory is strictly for storing discovery results and company data.
                         tabViewModel = policiesVm;
                         break;
                     case "applications":
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Applications tab");
                         tabViewModel = new ApplicationsViewModel { TabTitle = "Applications" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: ApplicationsViewModel created");
                         break;
                     case "discovery":
-                        tabViewModel = new DiscoveryViewModel { TabTitle = "Discovery" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Discovery Dashboard tab");
+                        tabViewModel = new DiscoveryDashboardViewModel(this) { TabTitle = "Discovery" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: DiscoveryDashboardViewModel created");
                         break;
                     case "snapshotcomparison":
                         tabViewModel = new SnapshotComparisonViewModel { TabTitle = "Snapshot Comparison" };
@@ -5136,7 +5141,9 @@ This directory is strictly for storing discovery results and company data.
                         tabViewModel = securityViewModel;
                         break;
                     case "waves":
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Migration Waves tab");
                         tabViewModel = new ProjectManagementViewModel { TabTitle = "Waves" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: ProjectManagementViewModel created for Waves");
                         break;
                     case "migrate":
                         tabViewModel = new ProjectManagementDashboardViewModel { TabTitle = "Migrate" };
@@ -5150,7 +5157,41 @@ This directory is strictly for storing discovery results and company data.
                     case "management":
                         tabViewModel = new ManagementViewModel { TabTitle = "Management" };
                         break;
+                    case "security groups":
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Security Groups tab");
+                        var securityGroupsDataService = SimpleServiceLocator.GetService<IDataService>();
+                        var securityGroupsCsvDataService = SimpleServiceLocator.GetService<CsvDataService>();
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync($"MainViewModel: SecurityGroups Services - dataService={securityGroupsDataService != null}, csvDataService={securityGroupsCsvDataService != null}");
+                        var securityGroupsViewModel = new SecurityGroupsViewModel(securityGroupsCsvDataService, this);
+                        securityGroupsViewModel.TabTitle = "Security Groups";
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: SecurityGroupsViewModel created, triggering data load");
+                        // Trigger data loading by executing the refresh command
+                        _ = Task.Run(() =>
+                        {
+                            try
+                            {
+                                _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Attempting to execute LoadGroupsAsync");
+                                if (securityGroupsViewModel.RefreshGroupsCommand.CanExecute(null))
+                                {
+                                    _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: RefreshGroupsCommand can execute, executing now");
+                                    securityGroupsViewModel.RefreshGroupsCommand.Execute(null);
+                                    _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: RefreshGroupsCommand executed");
+                                }
+                                else
+                                {
+                                    _ = EnhancedLoggingService.Instance.LogWarningAsync("MainViewModel: RefreshGroupsCommand cannot execute");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _ = EnhancedLoggingService.Instance.LogErrorAsync($"MainViewModel: Error loading security groups data: {ex.Message}");
+                            }
+                        });
+                        tabViewModel = securityGroupsViewModel;
+                        break;
                     default:
+                        _ = EnhancedLoggingService.Instance.LogWarningAsync($"Unknown view type for tab: {viewType}");
+                        _ = EnhancedLoggingService.Instance.LogGuiDebugAsync($"Navigation Error: Unknown viewType='{viewType}' - no case in switch statement");
                         Logger?.LogWarning("Unknown view type for tab: {ViewType}", viewType);
                         return;
                 }
@@ -5171,11 +5212,14 @@ This directory is strictly for storing discovery results and company data.
                     OpenTabs.Add(tabViewModel);
                     SelectedTab = tabViewModel;
                     _ = EnhancedLoggingService.Instance.LogInformationAsync($"=== TAB ADDED === Title: {tabViewModel.TabTitle}, Type: {tabViewModel.GetType().Name}, OpenTabs.Count: {OpenTabs.Count}");
+                    _ = EnhancedLoggingService.Instance.LogGuiDebugAsync($"Tab Successfully Added: Title='{tabViewModel.TabTitle}', Type={tabViewModel.GetType().Name}, TotalTabs={OpenTabs.Count}");
                     Logger?.LogInformation("Opened new tab: {TabTitle}", tabViewModel.TabTitle);
                 }
             }
             catch (Exception ex)
             {
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"Exception in OpenTab: {ex.Message}", ex);
+                _ = EnhancedLoggingService.Instance.LogGuiDebugAsync($"Navigation Exception: viewType='{viewType}', Error='{ex.Message}'");
                 Logger?.LogError(ex, "Error opening tab for view type: {ViewType}", viewType);
                 StatusMessage = $"Error opening tab: {ex.Message}";
             }
