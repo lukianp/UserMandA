@@ -61,7 +61,11 @@ namespace MandADiscoverySuite.Services
         {
             var config = ConfigurationService.Instance;
             var companyName = config.Settings?.DefaultCompany ?? "default";
+
+            // Ensure company-level folder exists before creating log directory
             var companyPath = config.GetCompanyDataPath(companyName);
+            Directory.CreateDirectory(companyPath);
+
             _logDirectory = Path.Combine(companyPath, "Logs", "Application");
             Directory.CreateDirectory(_logDirectory);
 
@@ -105,6 +109,9 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
+                if (!IsEnabled(level))
+                    return;
+
                 var logEntry = new LogEntry
                 {
                     Id = Guid.NewGuid(),
