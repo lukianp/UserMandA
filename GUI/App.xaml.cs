@@ -34,6 +34,7 @@ namespace MandADiscoverySuite
                 logAction?.Invoke("Initializing logging and audit services...");
                 var loggingService = EnhancedLoggingService.Instance;
                 var auditService = AuditService.Instance;
+                _ = Task.Run(async () => await loggingService.LogAsync(LogLevel.Debug, "Debug logging enabled"));
                 logAction?.Invoke("Logging and audit services initialized");
 
                 // Initialize SimpleServiceLocator early (moved before UI logging service)
