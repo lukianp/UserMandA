@@ -213,6 +213,9 @@ namespace MandADiscoverySuite.ViewModels
                     // Set additional properties
                     module.Category = moduleInfo.Category ?? "Discovery";
                     
+                    // The DiscoveryModuleViewModel already has RunDiscoveryCommand configured
+                    // in its constructor, so we don't need to add it here
+                    
                     discoveryModules.Add(module);
                 }
             }
