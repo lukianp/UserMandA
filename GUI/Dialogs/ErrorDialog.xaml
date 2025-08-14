@@ -1,4 +1,4 @@
-<Window x:Class="MandADiscoverySuite.ErrorDialog"
+<Window x:Class="MandADiscoverySuite.Dialogs.ErrorDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Error - M&amp;A Discovery Suite" 

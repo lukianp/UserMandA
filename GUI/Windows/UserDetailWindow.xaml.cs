@@ -1,7 +1,7 @@
 using System.Windows;
 using MandADiscoverySuite.ViewModels;
 
-namespace MandADiscoverySuite
+namespace MandADiscoverySuite.Windows
 {
     public partial class UserDetailWindow : Window
     {

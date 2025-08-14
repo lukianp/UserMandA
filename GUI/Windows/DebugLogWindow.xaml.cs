@@ -8,7 +8,7 @@ using System.Windows.Media;
 using Microsoft.Win32;
 using MandADiscoverySuite.ViewModels;
 
-namespace MandADiscoverySuite
+namespace MandADiscoverySuite.Windows
 {
     public partial class DebugLogWindow : Window
     {

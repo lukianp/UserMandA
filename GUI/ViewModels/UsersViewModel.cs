@@ -11,6 +11,7 @@ using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Collections;
 using CommunityToolkit.Mvvm.Messaging;
+using MandADiscoverySuite.Windows;
 
 namespace MandADiscoverySuite.ViewModels
 {

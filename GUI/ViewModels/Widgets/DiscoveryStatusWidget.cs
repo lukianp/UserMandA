@@ -60,44 +60,19 @@ namespace MandADiscoverySuite.ViewModels.Widgets
             {
                 IsLoading = true;
 
-                await Task.Delay(800);
+                await Task.Delay(100);
 
-                var modules = new[]
-                {
-                    new DiscoveryStatusItem { ModuleName = "Active Directory", Status = "Completed", StatusIcon = "✅", LastRun = DateTime.Now.AddMinutes(-15) },
-                    new DiscoveryStatusItem { ModuleName = "Azure AD", Status = "Running", StatusIcon = "⏳", LastRun = null },
-                    new DiscoveryStatusItem { ModuleName = "Exchange", Status = "Completed", StatusIcon = "✅", LastRun = DateTime.Now.AddMinutes(-30) },
-                    new DiscoveryStatusItem { ModuleName = "SharePoint", Status = "Failed", StatusIcon = "❌", LastRun = DateTime.Now.AddHours(-2) },
-                    new DiscoveryStatusItem { ModuleName = "SQL Server", Status = "Pending", StatusIcon = "⏸️", LastRun = null },
-                };
-
+                // Clear existing modules
                 DiscoveryModules.Clear();
-                foreach (var module in modules)
-                {
-                    DiscoveryModules.Add(module);
-                }
-
-                // Calculate summaries
+                
+                // Reset counters
                 RunningModules = 0;
                 CompletedModules = 0;
                 FailedModules = 0;
 
-                foreach (var module in modules)
-                {
-                    switch (module.Status)
-                    {
-                        case "Running":
-                            RunningModules++;
-                            break;
-                        case "Completed":
-                            CompletedModules++;
-                            break;
-                        case "Failed":
-                            FailedModules++;
-                            break;
-                    }
-                }
-
+                // TODO: Get actual status from DiscoveryDashboardViewModel or discovery service
+                // For now, just show empty state
+                
                 OnRefreshCompleted();
             }
             catch (Exception ex)

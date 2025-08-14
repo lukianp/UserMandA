@@ -120,7 +120,10 @@
       "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\Application\\app_log_20250812.json\" -Tail 20)",
       "Bash(Sleep 5)",
       "Bash(Start-Sleep 5)",
-      "Bash(Start-Sleep 3)"
+      "Bash(Start-Sleep 3)",
+      "Bash(if exist \"D:\\Scripts\\UserMandA\\GUI\\bin\" rmdir /s /q \"D:\\Scripts\\UserMandA\\GUI\\bin\")",
+      "Bash(Start-Process \"C:/enterprisediscovery/net6.0-windows/MandADiscoverySuite.exe\" -WindowStyle Normal)",
+      "Bash(\"C:/enterprisediscovery/net6.0-windows/MandADiscoverySuite.exe\")"
     ],
     "deny": []
   }

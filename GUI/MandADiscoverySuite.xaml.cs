@@ -6,6 +6,7 @@ using System.Windows.Input;
 using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Themes;
 using MandADiscoverySuite.Services;
+using MandADiscoverySuite.Dialogs;
 
 namespace MandADiscoverySuite
 {

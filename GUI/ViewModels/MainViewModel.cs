@@ -18,6 +18,7 @@ using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Themes;
 using MandADiscoverySuite.Windows;
+using MandADiscoverySuite.Dialogs;
 
 namespace MandADiscoverySuite.ViewModels
 {

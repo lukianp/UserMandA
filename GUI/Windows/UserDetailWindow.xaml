@@ -1,4 +1,4 @@
-<Window x:Class="MandADiscoverySuite.UserDetailWindow"
+<Window x:Class="MandADiscoverySuite.Windows.UserDetailWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="User Details - {Binding UserName}" 

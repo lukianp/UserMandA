@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace MandADiscoverySuite
+namespace MandADiscoverySuite.Windows
 {
     public partial class TestWindow : Window
     {
