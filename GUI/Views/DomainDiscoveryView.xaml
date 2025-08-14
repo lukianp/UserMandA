@@ -1,0 +1,331 @@
+<UserControl x:Class="MandADiscoverySuite.Views.DomainDiscoveryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:vm="clr-namespace:MandADiscoverySuite.ViewModels"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1200"
+             Background="#F8F9FA">
+
+    <UserControl.Resources>
+        <!-- KPI Card Style -->
+        <Style x:Key="KpiCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="10"/>
+            <Setter Property="MinWidth" Value="180"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.1" Color="Black"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Module Tile Style -->
+        <Style x:Key="ModuleTileStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="MinWidth" Value="280"/>
+            <Setter Property="MaxWidth" Value="320"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.1" Color="Black"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="12" ShadowDepth="4" Opacity="0.15" Color="Black"/>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Button Styles -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#0078D4"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#106EBE"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#E1E1E1"/>
+                    <Setter Property="Foreground" Value="#A19F9D"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#0078D4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#0078D4"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#F3F2F1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header Section -->
+        <Border Grid.Row="0" Background="White" Padding="20,16" BorderBrush="#E1E1E1" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="🔍 Domain Discovery" FontSize="24" FontWeight="Bold" Foreground="#323130" Margin="0,0,0,4"/>
+                    <TextBlock Text="Launch discovery modules and monitor data collection progress" 
+                               FontSize="14" Foreground="#605E5C"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="🔄 Refresh Data" Style="{StaticResource SecondaryButtonStyle}" 
+                            Command="{Binding RefreshDataCommand}" Margin="0,0,8,0"/>
+                    <Button Content="▶️ Run All Enabled" Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding RunAllEnabledModulesCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- KPI Cards Section -->
+        <Border Grid.Row="1" Background="#F8F9FA" Padding="20,16">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal">
+                    <!-- Users KPI -->
+                    <Border Style="{StaticResource KpiCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="👥" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding UsersCount, StringFormat=N0}" FontSize="24" FontWeight="Bold" 
+                                       HorizontalAlignment="Center" Foreground="#0078D4"/>
+                            <TextBlock Text="Users Discovered" FontSize="12" HorizontalAlignment="Center" 
+                                       Foreground="#605E5C"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Computers KPI -->
+                    <Border Style="{StaticResource KpiCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="💻" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding ComputersCount, StringFormat=N0}" FontSize="24" FontWeight="Bold" 
+                                       HorizontalAlignment="Center" Foreground="#107C10"/>
+                            <TextBlock Text="Computers Found" FontSize="12" HorizontalAlignment="Center" 
+                                       Foreground="#605E5C"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Infrastructure KPI -->
+                    <Border Style="{StaticResource KpiCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="🏗️" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding InfrastructureCount, StringFormat=N0}" FontSize="24" FontWeight="Bold" 
+                                       HorizontalAlignment="Center" Foreground="#D13438"/>
+                            <TextBlock Text="Infrastructure Items" FontSize="12" HorizontalAlignment="Center" 
+                                       Foreground="#605E5C"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Applications KPI -->
+                    <Border Style="{StaticResource KpiCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="📦" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding ApplicationsCount, StringFormat=N0}" FontSize="24" FontWeight="Bold" 
+                                       HorizontalAlignment="Center" Foreground="#8B5CF6"/>
+                            <TextBlock Text="Applications" FontSize="12" HorizontalAlignment="Center" 
+                                       Foreground="#605E5C"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Active Modules KPI -->
+                    <Border Style="{StaticResource KpiCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="⚙️" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding ActiveModulesCount, StringFormat=N0}" FontSize="24" FontWeight="Bold" 
+                                       HorizontalAlignment="Center" Foreground="#CA5010"/>
+                            <TextBlock Text="Active Modules" FontSize="12" HorizontalAlignment="Center" 
+                                       Foreground="#605E5C"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Running Modules KPI -->
+                    <Border Style="{StaticResource KpiCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="🔄" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding RunningModulesCount, StringFormat=N0}" FontSize="24" FontWeight="Bold" 
+                                       HorizontalAlignment="Center" Foreground="#0EA5E9"/>
+                            <TextBlock Text="Running Now" FontSize="12" HorizontalAlignment="Center" 
+                                       Foreground="#605E5C"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Filter and Status Bar -->
+            <Border Grid.Row="0" Background="White" Padding="20,12" BorderBrush="#E1E1E1" BorderThickness="0,1,0,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Category Filter -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <TextBlock Text="Filter by Category:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="Medium"/>
+                        <ComboBox ItemsSource="{Binding Categories}" 
+                                  SelectedItem="{Binding SelectedCategory}"
+                                  MinWidth="120" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Last Refresh -->
+                    <TextBlock Grid.Column="2" Text="{Binding LastRefreshText}" 
+                               VerticalAlignment="Center" FontSize="12" Foreground="#605E5C"/>
+                </Grid>
+            </Border>
+
+            <!-- Loading Overlay -->
+            <Border Grid.Row="1" Background="White" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="4" Margin="0,0,0,16"/>
+                    <TextBlock Text="{Binding LoadingMessage}" FontSize="14" Foreground="#605E5C" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Discovery Modules Grid -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20">
+                <ItemsControl ItemsSource="{Binding ModulesView}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:DiscoveryModuleViewModel}">
+                            <Border Style="{StaticResource ModuleTileStyle}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Module Header -->
+                                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="24" 
+                                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" FontSize="14" 
+                                                       TextWrapping="Wrap" Foreground="#323130"/>
+                                            <Border Background="{Binding CategoryColor}" CornerRadius="3" Padding="6,2" 
+                                                    HorizontalAlignment="Left" Margin="0,4,0,0">
+                                                <TextBlock Text="{Binding Category}" FontSize="10" Foreground="White" FontWeight="Medium"/>
+                                            </Border>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <Ellipse Width="12" Height="12" Fill="{Binding StatusColor}"/>
+                                            <TextBlock Text="{Binding StatusText}" FontSize="10" Foreground="#605E5C" 
+                                                       HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Module Description -->
+                                    <TextBlock Grid.Row="1" Text="{Binding Description}" TextWrapping="Wrap" 
+                                               FontSize="12" Foreground="#605E5C" Margin="0,0,0,12"/>
+
+                                    <!-- Progress Bar (when running) -->
+                                    <ProgressBar Grid.Row="2" Value="{Binding Progress}" Maximum="100" Height="4" 
+                                                 Visibility="{Binding IsRunning, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                 Margin="0,0,0,8"/>
+
+                                    <!-- Last Run Info -->
+                                    <Grid Grid.Row="3" Margin="0,0,0,12" 
+                                          Visibility="{Binding HasLastRun, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Last Run:" FontSize="10" Foreground="#605E5C"/>
+                                            <TextBlock Text="{Binding LastRunTimeText}" FontSize="11" FontWeight="Medium"/>
+                                        </StackPanel>
+                                        
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Items Found:" FontSize="10" Foreground="#605E5C"/>
+                                            <TextBlock Text="{Binding LastRunItemCountText}" FontSize="11" FontWeight="Medium"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Action Buttons -->
+                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Stretch">
+                                        <Button Content="▶️ Run" Style="{StaticResource PrimaryButtonStyle}" 
+                                                Command="{Binding RunDiscoveryCommand}" 
+                                                IsEnabled="{Binding CanRun}" Margin="0,0,8,0" MinWidth="60"/>
+                                        
+                                        <Button Content="⚙️" Style="{StaticResource SecondaryButtonStyle}"
+                                                Command="{Binding DataContext.OpenModuleConfigurationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" Width="32" Padding="0"
+                                                ToolTip="Configure Module" Margin="0,0,4,0"/>
+                                        
+                                        <Button Content="📁" Style="{StaticResource SecondaryButtonStyle}"
+                                                Command="{Binding DataContext.ViewModuleResultsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" Width="32" Padding="0"
+                                                ToolTip="View Results"/>
+
+                                        <Button Content="🛑" Style="{StaticResource SecondaryButtonStyle}"
+                                                Command="{Binding StopModuleCommand}" Width="32" Padding="0"
+                                                Visibility="{Binding IsRunning, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                ToolTip="Stop Module" Margin="4,0,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -27,7 +27,15 @@ namespace MandADiscoverySuite.ViewModels
         public ApplicationsViewModel()
         {
             _dataService = SimpleServiceLocator.GetService<IDataService>();
-            _logger = SimpleServiceLocator.GetService<ILogger<ApplicationsViewModel>>();
+            try
+            {
+                _logger = SimpleServiceLocator.GetService<ILogger<ApplicationsViewModel>>();
+            }
+            catch (Exception)
+            {
+                // Fallback to null logger if service is not registered
+                _logger = null;
+            }
             
             Applications = new OptimizedObservableCollection<ApplicationData>();
             

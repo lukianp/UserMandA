@@ -1,0 +1,15 @@
+using System.Windows.Controls;
+
+namespace MandADiscoverySuite.Views.Placeholders
+{
+    /// <summary>
+    /// Placeholder view for missing or unregistered views
+    /// </summary>
+    public partial class MissingView : UserControl
+    {
+        public MissingView()
+        {
+            InitializeComponent();
+        }
+    }
+}

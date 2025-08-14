@@ -218,6 +218,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Themes\RefinedColorPalette.b
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Themes\SpacingSystem.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Themes\ThemeStyles.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\UserDetailWindow.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AnalyticsView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ApplicationInventoryView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AssetDetailView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AssetInventoryView.baml
@@ -237,12 +238,15 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\InfrastructureAssetsVi
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\KeyboardShortcutsView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\LogViewerDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ManagementDashboardView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\MigrateView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\NotesTaggingView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\PhaseTrackerView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\Placeholders\MissingView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\PolicyDetailView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\RiskAnalysisView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SecurityGroupDetailView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SecurityGroupsView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SettingsView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ShortcutEditDialog.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SnapshotComparisonView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ThemeSelectionDialog.baml
@@ -311,6 +315,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\RefreshSettingsDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\TestWindow.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\UserDetailWindow.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AdvancedFilterView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AnalyticsView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ApplicationInventoryView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AssetDetailView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AssetInventoryView.g.cs
@@ -321,6 +326,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ComputersView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DataExportManagerView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DependencyGraphView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DiscoveryDashboardView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DomainDiscoveryView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ExportFormatSelectionDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GanttChartView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\GanttView.g.cs
@@ -332,8 +338,10 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\KeyboardShortcutsView.
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\LogViewerDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ManagementDashboardView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ManagementView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\MigrateView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\NotesTaggingView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\PhaseTrackerView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\Placeholders\MissingView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\PolicyDetailView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ProjectManagementDashboard.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ProjectManagementView.g.cs
@@ -342,6 +350,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\RiskAnalysisView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ScriptEditorView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SecurityGroupDetailView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SecurityGroupsView.g.cs
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SettingsView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ShortcutEditDialog.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\SnapshotComparisonView.g.cs
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\TaskSchedulerView.g.cs
@@ -371,6 +380,7 @@ D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Themes\OptimizedGridLayouts.
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Themes\OptimizedImages.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\AdvancedFilterView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DependencyGraphView.baml
+D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\DomainDiscoveryView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ManagementView.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ProjectManagementDashboard.baml
 D:\Scripts\UserMandA\GUI\obj\Release\net6.0-windows\Views\ProjectManagementView.baml

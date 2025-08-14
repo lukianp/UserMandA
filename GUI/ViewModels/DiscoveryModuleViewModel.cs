@@ -264,6 +264,7 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ViewResultsCommand { get; }
         public ICommand ViewLogsCommand { get; }
         public ICommand RunDiscoveryCommand { get; }
+        public ICommand StopModuleCommand { get; }
 
         #endregion
 
@@ -289,6 +290,7 @@ namespace MandADiscoverySuite.ViewModels
             ViewResultsCommand = new RelayCommand(OnViewResults, () => HasLastRun);
             ViewLogsCommand = new RelayCommand(OnViewLogs);
             RunDiscoveryCommand = new AsyncRelayCommand(OnRunDiscoveryAsync, () => IsEnabled && !IsRunning);
+            StopModuleCommand = new RelayCommand(OnStopModule, () => IsRunning);
 
             // Set default configuration
             _hasConfiguration = true;
@@ -518,6 +520,20 @@ namespace MandADiscoverySuite.ViewModels
             {
                 LastMessage = $"Failed to launch discovery: {ex.Message}";
                 Status = DiscoveryModuleStatus.Failed;
+            }
+        }
+
+        private void OnStopModule()
+        {
+            try
+            {
+                Status = DiscoveryModuleStatus.Cancelled;
+                LastMessage = "Module stopped by user";
+                Progress = 0;
+            }
+            catch (Exception ex)
+            {
+                LastMessage = $"Failed to stop module: {ex.Message}";
             }
         }
 

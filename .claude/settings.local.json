@@ -118,7 +118,9 @@
       "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\MandADiscovery_20250811_235008.log\" -Tail 50)",
       "Bash(Start-Sleep 30)",
       "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\Application\\app_log_20250812.json\" -Tail 20)",
-      "Bash(Sleep 5)"
+      "Bash(Sleep 5)",
+      "Bash(Start-Sleep 5)",
+      "Bash(Start-Sleep 3)"
     ],
     "deny": []
   }

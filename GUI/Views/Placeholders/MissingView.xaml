@@ -1,0 +1,107 @@
+<UserControl x:Class="MandADiscoverySuite.Views.Placeholders.MissingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="#FF0F1419">
+    
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,24">
+            <TextBlock Text="{Binding HeaderText}" 
+                       FontSize="28" 
+                       FontWeight="SemiBold"
+                       Foreground="#FFE2E8F0"/>
+            <TextBlock Text="{Binding SubHeaderText}" 
+                       FontSize="14" 
+                       Foreground="#FFA0AEC0" 
+                       Margin="0,4,0,0"/>
+        </StackPanel>
+        
+        <!-- Content -->
+        <Border Grid.Row="1" 
+                Background="#FF1A202C" 
+                BorderBrush="#FF2D3748" 
+                BorderThickness="1" 
+                CornerRadius="8"
+                Padding="48">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="🚧" FontSize="72" HorizontalAlignment="Center" Margin="0,0,0,24" 
+                           Foreground="#FFFBBF24"/>
+                <TextBlock Text="{Binding Key}" 
+                           FontSize="24" 
+                           FontWeight="Bold"
+                           Foreground="#FFE2E8F0" 
+                           HorizontalAlignment="Center" 
+                           Margin="0,0,0,16"/>
+                <TextBlock Text="View Under Construction" 
+                           FontSize="16" 
+                           Foreground="#FFA0AEC0" 
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,24"/>
+                
+                <!-- Status Card -->
+                <Border Background="#FF374151" CornerRadius="8" Padding="24,16" MinWidth="400">
+                    <StackPanel>
+                        <TextBlock Text="Status Information" FontSize="14" FontWeight="Bold" 
+                                   Foreground="#FFE2E8F0" Margin="0,0,0,12"/>
+                        
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="View Key:" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Key}" FontSize="12" Foreground="#FFE2E8F0"/>
+                        </Grid>
+                        
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Reason:" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Reason}" FontSize="12" Foreground="#FFE2E8F0" TextWrapping="Wrap"/>
+                        </Grid>
+                        
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Timestamp:" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontSize="12" Foreground="#FFE2E8F0"/>
+                        </Grid>
+                        
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Next Steps:" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Grid.Column="1" Text="This view needs to be implemented and registered in ViewRegistry" 
+                                       FontSize="12" Foreground="#FFE2E8F0" TextWrapping="Wrap"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                
+                <Button Content="Refresh View" 
+                        Command="{Binding RefreshCommand}"
+                        Background="#FF3B82F6" 
+                        Foreground="White" 
+                        BorderThickness="0"
+                        Padding="16,8" 
+                        Margin="0,24,0,0"
+                        FontSize="14"
+                        FontWeight="Bold"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

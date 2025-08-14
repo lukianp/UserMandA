@@ -1881,5 +1881,378 @@ namespace MandADiscoverySuite.Services
                 throw;
             }
         }
+
+        /// <summary>
+        /// Load file servers and shares data from CSV files
+        /// </summary>
+        public async Task<List<FileServerData>> LoadFileServersAsync(string profileName)
+        {
+            var fileServers = new List<FileServerData>();
+            
+            try
+            {
+                var dataPaths = GetDataPaths(profileName);
+                var loadStartTime = DateTime.UtcNow;
+                
+                foreach (var rawDataPath in dataPaths)
+                {
+                    var fileServerFiles = new[]
+                    {
+                        Path.Combine(rawDataPath, "FileServers.csv"),
+                        Path.Combine(rawDataPath, "Shares.csv"),
+                        Path.Combine(rawDataPath, "FileShares.csv"),
+                        Path.Combine(rawDataPath, "SharedFolders.csv")
+                    };
+
+                    int totalFiles = 0, processedFiles = 0;
+                    
+                    foreach (var filePath in fileServerFiles.Where(File.Exists))
+                    {
+                        totalFiles++;
+                        try
+                        {
+                            var data = await LoadFileServerDataFromCsvAsync(filePath);
+                            fileServers.AddRange(data);
+                            processedFiles++;
+                            
+                            _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService: Loaded {data.Count} file servers from {Path.GetFileName(filePath)}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _ = EnhancedLoggingService.Instance.LogWarningAsync($"CsvDataService: Error loading {Path.GetFileName(filePath)}: {ex.Message}");
+                        }
+                    }
+                    
+                    var duration = DateTime.UtcNow - loadStartTime;
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.LoadFileServersAsync: Loaded {fileServers.Count} file servers from {processedFiles}/{totalFiles} files in {duration.TotalMilliseconds:F0}ms");
+                }
+            }
+            catch (Exception ex)
+            {
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"CsvDataService.LoadFileServersAsync failed: {ex.Message}");
+            }
+            
+            return fileServers;
+        }
+
+        /// <summary>
+        /// Load database servers and instances from CSV files
+        /// </summary>
+        public async Task<List<DatabaseServerData>> LoadDatabasesAsync(string profileName)
+        {
+            var databaseServers = new List<DatabaseServerData>();
+            
+            try
+            {
+                var dataPaths = GetDataPaths(profileName);
+                var loadStartTime = DateTime.UtcNow;
+                
+                foreach (var rawDataPath in dataPaths)
+                {
+                    var dbFiles = new[]
+                    {
+                        Path.Combine(rawDataPath, "SqlServers.csv"),
+                        Path.Combine(rawDataPath, "SqlInstances.csv"),
+                        Path.Combine(rawDataPath, "Databases.csv"),
+                        Path.Combine(rawDataPath, "DatabaseServers.csv"),
+                        Path.Combine(rawDataPath, "SQLServer.csv")
+                    };
+
+                    int totalFiles = 0, processedFiles = 0;
+                    
+                    foreach (var filePath in dbFiles.Where(File.Exists))
+                    {
+                        totalFiles++;
+                        try
+                        {
+                            var data = await LoadDatabaseServerDataFromCsvAsync(filePath);
+                            databaseServers.AddRange(data);
+                            processedFiles++;
+                            
+                            _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService: Loaded {data.Count} database servers from {Path.GetFileName(filePath)}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _ = EnhancedLoggingService.Instance.LogWarningAsync($"CsvDataService: Error loading {Path.GetFileName(filePath)}: {ex.Message}");
+                        }
+                    }
+                    
+                    var duration = DateTime.UtcNow - loadStartTime;
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.LoadDatabasesAsync: Loaded {databaseServers.Count} database servers from {processedFiles}/{totalFiles} files in {duration.TotalMilliseconds:F0}ms");
+                }
+            }
+            catch (Exception ex)
+            {
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"CsvDataService.LoadDatabasesAsync failed: {ex.Message}");
+            }
+            
+            return databaseServers;
+        }
+
+        /// <summary>
+        /// Load security posture data for risk assessment
+        /// </summary>
+        public async Task<List<SecurityRiskData>> LoadSecurityPostureAsync(string profileName)
+        {
+            var securityData = new List<SecurityRiskData>();
+            
+            try
+            {
+                var dataPaths = GetDataPaths(profileName);
+                var loadStartTime = DateTime.UtcNow;
+                
+                foreach (var rawDataPath in dataPaths)
+                {
+                    var securityFiles = new[]
+                    {
+                        Path.Combine(rawDataPath, "RiskyUsers.csv"),
+                        Path.Combine(rawDataPath, "MFAStatus.csv"),
+                        Path.Combine(rawDataPath, "PasswordExpiry.csv"),
+                        Path.Combine(rawDataPath, "DirectoryRoles.csv"),
+                        Path.Combine(rawDataPath, "AdminRoles.csv"),
+                        Path.Combine(rawDataPath, "SecurityIncidents.csv")
+                    };
+
+                    int totalFiles = 0, processedFiles = 0;
+                    
+                    foreach (var filePath in securityFiles.Where(File.Exists))
+                    {
+                        totalFiles++;
+                        try
+                        {
+                            var data = await LoadSecurityRiskDataFromCsvAsync(filePath);
+                            securityData.AddRange(data);
+                            processedFiles++;
+                            
+                            _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService: Loaded {data.Count} security items from {Path.GetFileName(filePath)}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _ = EnhancedLoggingService.Instance.LogWarningAsync($"CsvDataService: Error loading {Path.GetFileName(filePath)}: {ex.Message}");
+                        }
+                    }
+                    
+                    var duration = DateTime.UtcNow - loadStartTime;
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.LoadSecurityPostureAsync: Loaded {securityData.Count} security items from {processedFiles}/{totalFiles} files in {duration.TotalMilliseconds:F0}ms");
+                }
+            }
+            catch (Exception ex)
+            {
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"CsvDataService.LoadSecurityPostureAsync failed: {ex.Message}");
+            }
+            
+            return securityData;
+        }
+
+        /// <summary>
+        /// Load network infrastructure data
+        /// </summary>
+        public async Task<List<NetworkDeviceData>> LoadNetworkAsync(string profileName)
+        {
+            var networkDevices = new List<NetworkDeviceData>();
+            
+            try
+            {
+                var dataPaths = GetDataPaths(profileName);
+                var loadStartTime = DateTime.UtcNow;
+                
+                foreach (var rawDataPath in dataPaths)
+                {
+                    var networkFiles = new[]
+                    {
+                        Path.Combine(rawDataPath, "NetworkDevices.csv"),
+                        Path.Combine(rawDataPath, "NetworkInfrastructure.csv"),
+                        Path.Combine(rawDataPath, "AzureNetworking.csv"),
+                        Path.Combine(rawDataPath, "VirtualNetworks.csv"),
+                        Path.Combine(rawDataPath, "Subnets.csv")
+                    };
+
+                    int totalFiles = 0, processedFiles = 0;
+                    
+                    foreach (var filePath in networkFiles.Where(File.Exists))
+                    {
+                        totalFiles++;
+                        try
+                        {
+                            var data = await LoadNetworkDeviceDataFromCsvAsync(filePath);
+                            networkDevices.AddRange(data);
+                            processedFiles++;
+                            
+                            _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService: Loaded {data.Count} network devices from {Path.GetFileName(filePath)}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _ = EnhancedLoggingService.Instance.LogWarningAsync($"CsvDataService: Error loading {Path.GetFileName(filePath)}: {ex.Message}");
+                        }
+                    }
+                    
+                    var duration = DateTime.UtcNow - loadStartTime;
+                    _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.LoadNetworkAsync: Loaded {networkDevices.Count} network devices from {processedFiles}/{totalFiles} files in {duration.TotalMilliseconds:F0}ms");
+                }
+            }
+            catch (Exception ex)
+            {
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"CsvDataService.LoadNetworkAsync failed: {ex.Message}");
+            }
+            
+            return networkDevices;
+        }
+
+        /// <summary>
+        /// Load analytics data by computing from existing data
+        /// </summary>
+        public async Task<AnalyticsData> LoadAnalyticsAsync(string profileName)
+        {
+            var analytics = new AnalyticsData();
+            
+            try
+            {
+                var loadStartTime = DateTime.UtcNow;
+                
+                // Load base data for analytics computation
+                var users = await LoadUsersAsync(profileName);
+                var infrastructure = await LoadInfrastructureAsync(profileName);
+                var groups = await LoadGroupsAsync(profileName);
+                var applications = await LoadApplicationsAsync(profileName);
+                
+                // Compute analytics
+                analytics.TotalUsers = users.Count();
+                analytics.TotalComputers = infrastructure.Count();
+                analytics.TotalGroups = groups.Count();
+                analytics.TotalApplications = applications.Count();
+                
+                analytics.StaleDevices = infrastructure.Count(i => 
+                    DateTime.TryParse(i.LastSeen, out var lastSeenDate) && (DateTime.Now - lastSeenDate).TotalDays > 30);
+                    
+                // TODO: Add MfaEnabled to UserData model or compute from other fields
+                analytics.UsersWithoutMfa = 0; // Placeholder until MfaEnabled is added
+                    
+                // Top groups by membership
+                analytics.TopGroupsByMembership = groups
+                    .OrderByDescending(g => int.TryParse(g.MemberCount, out var count) ? count : 0)
+                    .Take(10)
+                    .ToDictionary(g => g.Name, g => int.TryParse(g.MemberCount, out var count) ? count : 0);
+                    
+                var duration = DateTime.UtcNow - loadStartTime;
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"CsvDataService.LoadAnalyticsAsync: Computed analytics in {duration.TotalMilliseconds:F0}ms");
+            }
+            catch (Exception ex)
+            {
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"CsvDataService.LoadAnalyticsAsync failed: {ex.Message}");
+            }
+            
+            return analytics;
+        }
+
+        private async Task<List<FileServerData>> LoadFileServerDataFromCsvAsync(string filePath)
+        {
+            var data = new List<FileServerData>();
+            
+            try
+            {
+                using var reader = new StreamReader(filePath);
+                var headerLine = await reader.ReadLineAsync();
+                if (string.IsNullOrEmpty(headerLine)) return data;
+
+                var headers = ParseCsvLine(headerLine);
+
+                while (!reader.EndOfStream)
+                {
+                    var line = await reader.ReadLineAsync();
+                    if (string.IsNullOrEmpty(line)) continue;
+
+                    var values = ParseCsvLine(line);
+                    if (values.Length < headers.Length) continue;
+
+                    var item = new FileServerData();
+
+                    for (int j = 0; j < headers.Length && j < values.Length; j++)
+                    {
+                        var header = headers[j].ToLowerInvariant();
+                        var value = values[j];
+
+                        switch (header)
+                        {
+                            case "name":
+                            case "servername": item.ServerName = value; break;
+                            case "operatingsystem": item.OperatingSystem = value; break;
+                            case "version": item.Version = value; break;
+                            case "location": item.Location = value; break;
+                            case "domain": item.Domain = value; break;
+                            case "ipaddress": item.IPAddress = value; break;
+                            case "sharecount": 
+                                if (int.TryParse(value, out var shareCount)) 
+                                    item.ShareCount = shareCount; 
+                                break;
+                            case "totalsizebytes": 
+                                if (long.TryParse(value, out var totalSize)) 
+                                    item.TotalSizeBytes = totalSize; 
+                                break;
+                            case "status": item.Status = value; break;
+                            case "type": item.Type = value; break;
+                        }
+                    }
+
+                    data.Add(item);
+                }
+            }
+            catch (Exception ex)
+            {
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"LoadFileServerDataFromCsvAsync failed for {filePath}: {ex.Message}");
+            }
+
+            return data;
+        }
+
+        private async Task<List<DatabaseServerData>> LoadDatabaseServerDataFromCsvAsync(string filePath)
+        {
+            var data = new List<DatabaseServerData>();
+            // TODO: Implement database server CSV parsing
+            return data;
+        }
+
+        private async Task<List<SecurityRiskData>> LoadSecurityRiskDataFromCsvAsync(string filePath)
+        {
+            var data = new List<SecurityRiskData>();
+            // TODO: Implement security risk CSV parsing
+            return data;
+        }
+
+        private async Task<List<NetworkDeviceData>> LoadNetworkDeviceDataFromCsvAsync(string filePath)
+        {
+            var data = new List<NetworkDeviceData>();
+            // TODO: Implement network device CSV parsing
+            return data;
+        }
+
+        private List<string> GetDataPaths(string profileName)
+        {
+            var dataPaths = new List<string>();
+            
+            try
+            {
+                var rootPath = @"C:\discoverydata";
+                
+                // Primary path: C:\discoverydata\profileName\Raw
+                var primaryPath = Path.Combine(rootPath, profileName, "Raw");
+                if (Directory.Exists(primaryPath))
+                {
+                    dataPaths.Add(primaryPath);
+                }
+                
+                // Alternative path: C:\discoverydata\Profiles\profileName\Raw
+                var profilesPath = Path.Combine(rootPath, "Profiles", profileName, "Raw");
+                if (Directory.Exists(profilesPath))
+                {
+                    dataPaths.Add(profilesPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _ = EnhancedLoggingService.Instance.LogErrorAsync($"GetDataPaths failed for profile '{profileName}': {ex.Message}");
+            }
+            
+            return dataPaths;
+        }
     }
 }

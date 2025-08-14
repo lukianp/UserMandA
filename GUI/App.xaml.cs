@@ -4,10 +4,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Diagnostics;
+using System.Windows.Data;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Helpers;
+using MandADiscoverySuite.Navigation;
+using MandADiscoverySuite.Views;
 
 namespace MandADiscoverySuite
 {
@@ -88,6 +92,16 @@ namespace MandADiscoverySuite
                 logAction?.Invoke("Initializing keyboard shortcuts...");
                 InitializeKeyboardShortcuts();
                 logAction?.Invoke("Keyboard shortcuts initialized successfully");
+                
+                // Initialize ViewRegistry for navigation
+                logAction?.Invoke("Initializing ViewRegistry...");
+                InitializeViewRegistry();
+                logAction?.Invoke("ViewRegistry initialized successfully");
+                
+                // Enable WPF binding tracing for debugging
+                logAction?.Invoke("Enabling WPF binding tracing...");
+                EnableBindingTracing();
+                logAction?.Invoke("WPF binding tracing enabled");
                 
                 logAction?.Invoke("Calling base.OnStartup...");
                 base.OnStartup(e);
@@ -441,6 +455,70 @@ namespace MandADiscoverySuite
             }
             
             base.OnExit(e);
+        }
+
+        /// <summary>
+        /// Initialize the ViewRegistry with all navigation mappings
+        /// </summary>
+        private void InitializeViewRegistry()
+        {
+            try
+            {
+                // Register all navigation views
+                ViewRegistry.Register("dashboard", () => new DiscoveryDashboardView());
+                ViewRegistry.Register("discovery", () => new DomainDiscoveryView());
+                ViewRegistry.Register("users", () => new UsersView());
+                ViewRegistry.Register("computers", () => new ComputersView());
+                ViewRegistry.Register("infrastructure", () => new InfrastructureAssetsView());
+                ViewRegistry.Register("security groups", () => new SecurityGroupsView());
+                ViewRegistry.Register("assets", () => new AssetInventoryView());
+                ViewRegistry.Register("groups", () => new GroupsView());
+                ViewRegistry.Register("management", () => new ManagementView());
+                ViewRegistry.Register("waves", () => new WaveView());
+                ViewRegistry.Register("migrate", () => new MigrateView());
+                ViewRegistry.Register("reports", () => new ReportBuilderView());
+                ViewRegistry.Register("analytics", () => new AnalyticsView());
+                ViewRegistry.Register("settings", () => new SettingsView());
+                
+                // Map complex navigation items to existing views for now
+                ViewRegistry.Register("domaindiscovery", () => new DomainDiscoveryView());
+                ViewRegistry.Register("fileservers", () => new InfrastructureAssetsView());
+                ViewRegistry.Register("databases", () => new InfrastructureAssetsView());
+                ViewRegistry.Register("security", () => new GroupPoliciesView());
+                ViewRegistry.Register("applications", () => new ApplicationInventoryView());
+
+                System.Diagnostics.Debug.WriteLine("ViewRegistry initialized with 19 view registrations");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to initialize ViewRegistry: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Enable WPF binding error tracing for debugging
+        /// </summary>
+        private void EnableBindingTracing()
+        {
+            try
+            {
+                // Ensure logs directory exists
+                var logsDirectory = @"C:\discoverydata\ljpops\Logs";
+                Directory.CreateDirectory(logsDirectory);
+                
+                // Set up WPF binding trace listener
+                PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning | SourceLevels.Error;
+                PresentationTraceSources.DataBindingSource.Listeners.Add(
+                    new TextWriterTraceListener(Path.Combine(logsDirectory, "gui-binding.log"))
+                );
+                Trace.AutoFlush = true;
+
+                System.Diagnostics.Debug.WriteLine("WPF binding tracing enabled");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to enable binding tracing: {ex.Message}");
+            }
         }
     }
 }

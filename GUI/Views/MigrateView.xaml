@@ -1,0 +1,93 @@
+<UserControl x:Class="MandADiscoverySuite.Views.MigrateView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="#FF0F1419">
+    
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </UserControl.Resources>
+    
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,24">
+            <TextBlock Text="Migration Execution" 
+                       FontSize="28" 
+                       FontWeight="SemiBold"
+                       Foreground="#FFE2E8F0"/>
+            <TextBlock Text="Execute and monitor migration operations" 
+                       FontSize="14" 
+                       Foreground="#FFA0AEC0" 
+                       Margin="0,4,0,0"/>
+        </StackPanel>
+        
+        <!-- Content -->
+        <Border Grid.Row="1" 
+                Background="#FF1A202C" 
+                BorderBrush="#FF2D3748" 
+                BorderThickness="1" 
+                CornerRadius="8"
+                Padding="24">
+            <Grid>
+                <!-- Loading Indicator -->
+                <StackPanel HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock Text="⏳" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                    <TextBlock Text="{Binding LoadingMessage}" 
+                               FontSize="16" 
+                               Foreground="#FFA0AEC0" 
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+                
+                <!-- Migration Content -->
+                <StackPanel Visibility="{Binding HasData, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock Text="⚡ Migration Status" FontSize="20" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,16"/>
+                    
+                    <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Current Wave:" Foreground="#FFA0AEC0" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CurrentWave}" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
+                            
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Progress:" Foreground="#FFA0AEC0" Margin="0,0,0,8"/>
+                            <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding MigrationProgress}" Maximum="100" Height="20" Margin="0,0,0,8"/>
+                            
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Status:" Foreground="#FFA0AEC0"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding MigrationStatus}" Foreground="#FF10B981" FontWeight="Bold"/>
+                        </Grid>
+                    </Border>
+                    
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="▶️ Start Migration" Command="{Binding StartMigrationCommand}" 
+                                Background="#FF10B981" Foreground="White" BorderThickness="0" 
+                                Padding="16,8" Margin="0,0,8,0" FontWeight="Bold"/>
+                        <Button Content="⏸️ Pause" Command="{Binding PauseMigrationCommand}" 
+                                Background="#FFFBBF24" Foreground="#FF1A202C" BorderThickness="0" 
+                                Padding="16,8" Margin="0,0,8,0" FontWeight="Bold"/>
+                        <Button Content="⏹️ Stop" Command="{Binding StopMigrationCommand}" 
+                                Background="#FFEF4444" Foreground="White" BorderThickness="0" 
+                                Padding="16,8" FontWeight="Bold"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
