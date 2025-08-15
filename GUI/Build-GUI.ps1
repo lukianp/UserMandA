@@ -173,17 +173,36 @@ if (Test-Path $OutputPath) {
 # Build the application directly to target location
 Write-Host "Building application..." -ForegroundColor Yellow
 
+# Set environment variables to force build isolation
+$env:TEMP = Join-Path $OutputPath "temp"
+$env:TMP = Join-Path $OutputPath "temp" 
+$env:NUGET_PACKAGES = Join-Path $OutputPath "packages"
+$env:MSBuildEnableWorkloadResolver = "false"
+
+# Create temp directory if it doesn't exist
+if (!(Test-Path $env:TEMP)) {
+    New-Item -Path $env:TEMP -ItemType Directory -Force | Out-Null
+}
+
 $BuildArgs = @(
     'publish'
     '--configuration', $Configuration
     '--output', $OutputPath
     '--verbosity', 'minimal'
     '--nologo'
+    '--force'
+    '--no-restore'
     '-p:OutputPath=' + $OutputPath
     '-p:BaseOutputPath=' + $OutputPath
     '-p:BaseIntermediateOutputPath=' + $OutputPath + '\obj\'
     '-p:IntermediateOutputPath=' + $OutputPath + '\obj\'
     '-p:MSBuildProjectExtensionsPath=' + $OutputPath + '\obj\'
+    '-p:MSBuildAllProjects=' + $OutputPath + '\obj\'
+    '-p:ProjectAssetsFile=' + $OutputPath + '\obj\project.assets.json'
+    '-p:RestorePackagesPath=' + $OutputPath + '\packages\'
+    '-p:NuGetPackageRoot=' + $OutputPath + '\packages\'
+    '-p:TEMP=' + $OutputPath + '\temp\'
+    '-p:TMP=' + $OutputPath + '\temp\'
 )
 
 if ($SelfContained) {

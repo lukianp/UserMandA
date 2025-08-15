@@ -1,6 +1,11 @@
 using System;
+using System.Collections.ObjectModel;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
+using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Services;
 using MandADiscoverySuite.ViewModels;
 using CommunityToolkit.Mvvm.Input;
 
@@ -59,6 +64,65 @@ namespace MandADiscoverySuite.ViewModels
         {
             get => _selectedViewModel;
             set => SetProperty(ref _selectedViewModel, value);
+        }
+
+        /// <summary>
+        /// Collection of management data items
+        /// </summary>
+        public ObservableCollection<object> Items { get; } = new ObservableCollection<object>();
+
+        /// <summary>
+        /// Whether the view has data to display
+        /// </summary>
+        public override bool HasData => Items?.Count > 0;
+
+        #endregion
+
+        #region Unified Loading Pipeline
+
+        /// <summary>
+        /// Loads management data using the unified loading pipeline
+        /// </summary>
+        public override async Task LoadAsync()
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                IsLoading = true; 
+                LastError = null; 
+                HasErrors = false;
+                RaiseAllLoadingProperties();
+                
+                // Clear existing data
+                Application.Current.Dispatcher.Invoke(() => Items.Clear());
+                
+                // Load management data - for now just create sample data
+                // TODO: Replace with actual CSV data loading
+                var sampleData = new[]
+                {
+                    new { Name = "Migration Project 1", Status = "Active", Progress = 75 },
+                    new { Name = "Migration Project 2", Status = "Planning", Progress = 25 },
+                    new { Name = "Migration Project 3", Status = "Completed", Progress = 100 }
+                };
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    foreach (var item in sampleData) 
+                        Items.Add(item);
+                    RaiseAllLoadingProperties();
+                });
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message; 
+                HasErrors = true;
+                RaiseAllLoadingProperties();
+            }
+            finally
+            {
+                IsLoading = false; 
+                RaiseAllLoadingProperties();
+            }
         }
 
         #endregion

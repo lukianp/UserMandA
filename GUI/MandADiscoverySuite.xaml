@@ -10,7 +10,7 @@
         xmlns:helpers="clr-namespace:MandADiscoverySuite.Helpers"
         xmlns:views="clr-namespace:MandADiscoverySuite.Views"
         mc:Ignorable="d"
-        Title="M&amp;A Discovery Suite - FIXED VERSION 2025" Height="1000" Width="1600"
+        Title="M&amp;A Discovery Suite - SUPER AGGRESSIVE BUILD FIX 2025" Height="1000" Width="1600"
         WindowStartupLocation="CenterScreen" WindowState="Maximized"
         Background="#FF0F1419" KeyDown="MainWindow_KeyDown"
         Closing="Window_Closing"

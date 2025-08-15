@@ -426,6 +426,61 @@ namespace MandADiscoverySuite.ViewModels
 
         #endregion
 
+        #region Unified Loading Pipeline
+
+        /// <summary>
+        /// Virtual LoadAsync method that derived ViewModels must override
+        /// Implements the foolproof loading pipeline pattern
+        /// </summary>
+        public virtual async Task LoadAsync()
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                IsLoading = true; 
+                LastError = null; 
+                HasErrors = false;
+                OnPropertyChanged(nameof(IsLoading));
+                OnPropertyChanged(nameof(LastError));
+                OnPropertyChanged(nameof(HasErrors));
+                OnPropertyChanged(nameof(HasData));
+                
+                Logger?.LogDebug($"[{GetType().Name}] Load start");
+
+                // Default implementation - derived classes should override
+                await Task.Delay(100); // Simulate loading
+
+                Logger?.LogDebug($"[{GetType().Name}] Load ok: default implementation in {sw.ElapsedMilliseconds}ms");
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message; 
+                HasErrors = true;
+                OnPropertyChanged(nameof(LastError));
+                OnPropertyChanged(nameof(HasErrors));
+                Logger?.LogError(ex, $"[{GetType().Name}] Load failed: {ex}");
+            }
+            finally
+            {
+                IsLoading = false; 
+                OnPropertyChanged(nameof(IsLoading));
+                OnPropertyChanged(nameof(HasData));
+            }
+        }
+
+        /// <summary>
+        /// Helper method to raise all common property change notifications
+        /// </summary>
+        protected void RaiseAllLoadingProperties()
+        {
+            OnPropertyChanged(nameof(IsLoading));
+            OnPropertyChanged(nameof(HasData));
+            OnPropertyChanged(nameof(LastError));
+            OnPropertyChanged(nameof(HasErrors));
+        }
+
+        #endregion
+
         #region IDisposable
 
         private bool _disposed = false;

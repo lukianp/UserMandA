@@ -11,27 +11,11 @@ namespace MandADiscoverySuite.Views
         public ManagementView()
         {
             InitializeComponent();
-        }
-
-        private void UserControl_Loaded(object sender, System.Windows.RoutedEventArgs e)
-        {
-            // Ensure DataContext is properly set - this is for debugging
-            if (DataContext is ManagementViewModel viewModel)
-            {
-                // DataContext is properly inherited, this is good
-                System.Diagnostics.Debug.WriteLine($"ManagementView loaded with DataContext: {viewModel.GetType().Name}");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"ManagementView loaded with unexpected DataContext: {DataContext?.GetType().Name ?? "null"}");
-                // If DataContext is null or incorrect, try to set it manually
-                if (DataContext == null)
-                {
-                    // Create a new ManagementViewModel if none exists
-                    DataContext = new ManagementViewModel();
-                    System.Diagnostics.Debug.WriteLine("ManagementView: Created new ManagementViewModel");
-                }
-            }
+            
+            // Set DataContext and wire up the Loaded event for LoadAsync
+            var viewModel = new ManagementViewModel();
+            DataContext = viewModel;
+            Loaded += async (_, __) => await viewModel.LoadAsync();
         }
     }
 }
