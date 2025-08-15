@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "/ZLPBOVjvC5AjZzi/xW2wCTNExyXcs16h10T6+LIEuHJN/DmCfHT93k9qyQZ/gR6nMPMm4mkhu/fEU7U5KEhzQ==",
+  "dgSpecHash": "LRsYJXsovbEovlLGu/gh0GuGX2nPmPR/su7Sz9dzUj/MYJjF+b002Wqi1JY6ZysRdx9Z3mlDf9W0J8vjY8njKg==",
   "success": true,
-  "projectFilePath": "D:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj",
+  "projectFilePath": "D:\\Scripts\\UserMandA-1\\Tests\\MandADiscoverySuite.Tests.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\lukia\\.nuget\\packages\\avalonedit\\6.2.0.78\\avalonedit.6.2.0.78.nupkg.sha512",
     "C:\\Users\\lukia\\.nuget\\packages\\azure.core\\1.28.0\\azure.core.1.28.0.nupkg.sha512",
