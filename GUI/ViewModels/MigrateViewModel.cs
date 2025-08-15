@@ -10,30 +10,11 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class MigrateViewModel : BaseViewModel, IAutoLoadable
     {
-        private bool _isLoading;
-        private bool _hasData;
-        private string _loadingMessage = "Loading migration status...";
         private string _currentWave = "Wave 1";
         private int _migrationProgress = 0;
         private string _migrationStatus = "Ready";
 
-        public bool IsLoading
-        {
-            get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
-        }
-
-        public bool HasData
-        {
-            get => _hasData;
-            set => SetProperty(ref _hasData, value);
-        }
-
-        public string LoadingMessage
-        {
-            get => _loadingMessage;
-            set => SetProperty(ref _loadingMessage, value);
-        }
+        public override bool HasData => !string.IsNullOrEmpty(_currentWave);
 
         public string CurrentWave
         {
@@ -75,7 +56,7 @@ namespace MandADiscoverySuite.ViewModels
                 await Task.Delay(500);
                 
                 // TODO: Load actual migration status
-                HasData = true;
+                // HasData is automatically true since _currentWave has a default value
                 
                 _ = EnhancedLoggingService.Instance.LogInformationAsync("MigrateViewModel: LoadAsync completed");
             }

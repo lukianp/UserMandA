@@ -480,14 +480,15 @@ namespace MandADiscoverySuite
                 ViewRegistry.Register("analytics", () => new AnalyticsView());
                 ViewRegistry.Register("settings", () => new SettingsView());
                 
-                // Map complex navigation items to existing views for now
+                // Map complex navigation items to specific views
                 ViewRegistry.Register("domaindiscovery", () => new DomainDiscoveryView());
-                ViewRegistry.Register("fileservers", () => new InfrastructureAssetsView());
-                ViewRegistry.Register("databases", () => new InfrastructureAssetsView());
-                ViewRegistry.Register("security", () => new GroupPoliciesView());
-                ViewRegistry.Register("applications", () => new ApplicationInventoryView());
+                ViewRegistry.Register("fileservers", () => new FileServersView());
+                ViewRegistry.Register("databases", () => new DatabasesView());
+                ViewRegistry.Register("security", () => new SecurityView());
+                ViewRegistry.Register("applications", () => new ApplicationsView());
+                ViewRegistry.Register("grouppolicies", () => new GroupPoliciesView());
 
-                System.Diagnostics.Debug.WriteLine("ViewRegistry initialized with 19 view registrations");
+                System.Diagnostics.Debug.WriteLine("ViewRegistry initialized with 20 view registrations");
             }
             catch (Exception ex)
             {

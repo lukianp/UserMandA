@@ -32,8 +32,6 @@ namespace MandADiscoverySuite.ViewModels
         private int _activeModulesCount = 0;
         private int _runningModulesCount = 0;
         private string _selectedCategory = "All";
-        private bool _isLoading = true;
-        private string _loadingMessage = "Loading discovery modules...";
         private DateTime? _lastDataRefresh;
 
         public ObservableCollection<DiscoveryModuleViewModel> Modules
@@ -102,17 +100,6 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        public bool IsLoading
-        {
-            get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
-        }
-
-        public string LoadingMessage
-        {
-            get => _loadingMessage;
-            set => SetProperty(ref _loadingMessage, value);
-        }
 
         public DateTime? LastDataRefresh
         {

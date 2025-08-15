@@ -1,0 +1,167 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using CommunityToolkit.Mvvm.Input;
+using MandADiscoverySuite.Models;
+using ApplicationData = MandADiscoverySuite.Models.ApplicationData;
+using MandADiscoverySuite.Services;
+
+namespace MandADiscoverySuite.ViewModels
+{
+    public class ApplicationsMainViewModel : BaseViewModel
+    {
+        private readonly CsvDataService _csvDataService;
+        private ObservableCollection<ApplicationData> _applications;
+        private ApplicationData _selectedApplication;
+        private string _searchText;
+        private string _selectedCategory;
+        private string _selectedStatus;
+
+        public ApplicationsMainViewModel()
+        {
+            _csvDataService = SimpleServiceLocator.GetService<CsvDataService>() ?? new CsvDataService();
+            _applications = new ObservableCollection<ApplicationData>();
+            
+            // Initialize filter options
+            CategoryFilter = new List<string> { "All", "Business", "System", "Security", "Development", "Utilities", "Media" };
+            StatusFilter = new List<string> { "All", "Active", "Outdated", "Unlicensed", "Deprecated" };
+            _selectedCategory = "All";
+            _selectedStatus = "All";
+            
+            // Initialize commands
+            SearchCommand = new RelayCommand(PerformSearch);
+            ViewInstallLocationsCommand = new RelayCommand(ViewInstallLocations, () => SelectedApplication != null);
+            ViewLicenseAnalysisCommand = new RelayCommand(ViewLicenseAnalysis, () => SelectedApplication != null);
+            ViewDependenciesCommand = new RelayCommand(ViewDependencies, () => SelectedApplication != null);
+        }
+
+        public ObservableCollection<ApplicationData> Applications
+        {
+            get => _applications;
+            set => SetProperty(ref _applications, value);
+        }
+
+        public ApplicationData SelectedApplication
+        {
+            get => _selectedApplication;
+            set
+            {
+                SetProperty(ref _selectedApplication, value);
+                OnPropertyChanged(nameof(HasSelectedApplication));
+                OnPropertyChanged(nameof(HasNoSelectedApplication));
+            }
+        }
+
+        public string SearchText
+        {
+            get => _searchText;
+            set => SetProperty(ref _searchText, value);
+        }
+
+        public string SelectedCategory
+        {
+            get => _selectedCategory;
+            set => SetProperty(ref _selectedCategory, value);
+        }
+
+        public string SelectedStatus
+        {
+            get => _selectedStatus;
+            set => SetProperty(ref _selectedStatus, value);
+        }
+
+        public List<string> CategoryFilter { get; }
+        public List<string> StatusFilter { get; }
+
+        public override bool HasData => _applications?.Count > 0;
+        public bool HasNoData => !IsLoading && _applications?.Count == 0;
+        public bool HasSelectedApplication => _selectedApplication != null;
+        public bool HasNoSelectedApplication => _selectedApplication == null;
+
+        public int TotalApplicationsCount => _applications?.Count ?? 0;
+        public int UniqueApplicationsCount => _applications?.Count ?? 0;
+        public int OutdatedApplicationsCount => _applications?.Count(a => a.Version?.Contains("old", StringComparison.OrdinalIgnoreCase) == true) ?? 0;
+        public int UnlicensedApplicationsCount => _applications?.Count(a => a.Publisher?.Contains("unknown", StringComparison.OrdinalIgnoreCase) == true) ?? 0;
+
+        public ICommand SearchCommand { get; }
+        public ICommand ViewInstallLocationsCommand { get; }
+        public ICommand ViewLicenseAnalysisCommand { get; }
+        public ICommand ViewDependenciesCommand { get; }
+
+        public async Task LoadAsync()
+        {
+            try
+            {
+                IsLoading = true;
+                LastError = null;
+                
+                await EnhancedLoggingService.Instance.LogInformationAsync("ApplicationsMainViewModel: Starting LoadAsync");
+
+                // Load applications from CSV
+                var applications = await _csvDataService.LoadApplicationsAsync("ljpops");
+                
+                Applications.Clear();
+                foreach (var app in applications)
+                {
+                    Applications.Add(app);
+                }
+
+                await EnhancedLoggingService.Instance.LogInformationAsync($"ApplicationsMainViewModel: Loaded {Applications.Count} applications");
+
+                // Update counts
+                OnPropertyChanged(nameof(HasData));
+                OnPropertyChanged(nameof(HasNoData));
+                OnPropertyChanged(nameof(TotalApplicationsCount));
+                OnPropertyChanged(nameof(UniqueApplicationsCount));
+                OnPropertyChanged(nameof(OutdatedApplicationsCount));
+                OnPropertyChanged(nameof(UnlicensedApplicationsCount));
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message;
+                await EnhancedLoggingService.Instance.LogErrorAsync($"ApplicationsMainViewModel.LoadAsync failed: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private void PerformSearch()
+        {
+            // Implement search and filtering logic
+            OnPropertyChanged(nameof(Applications));
+        }
+
+        private void ViewInstallLocations()
+        {
+            if (SelectedApplication != null)
+            {
+                // Open install locations view for selected application
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"ApplicationsMainViewModel: Viewing install locations for {SelectedApplication.Name}");
+            }
+        }
+
+        private void ViewLicenseAnalysis()
+        {
+            if (SelectedApplication != null)
+            {
+                // Open license analysis for selected application
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"ApplicationsMainViewModel: Viewing license analysis for {SelectedApplication.Name}");
+            }
+        }
+
+        private void ViewDependencies()
+        {
+            if (SelectedApplication != null)
+            {
+                // Open dependency mapping for selected application
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"ApplicationsMainViewModel: Viewing dependencies for {SelectedApplication.Name}");
+            }
+        }
+    }
+}

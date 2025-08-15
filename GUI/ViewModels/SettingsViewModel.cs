@@ -11,9 +11,6 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class SettingsViewModel : BaseViewModel, IAutoLoadable
     {
-        private bool _isLoading;
-        private bool _hasData;
-        private string _loadingMessage = "Loading settings...";
         private string _selectedProfile = "ljpops";
         private string _selectedTheme = "Dark";
         private int _refreshInterval = 30;
@@ -23,23 +20,7 @@ namespace MandADiscoverySuite.ViewModels
         public ObservableCollection<string> CompanyProfiles { get; }
         public ObservableCollection<string> Themes { get; }
 
-        public bool IsLoading
-        {
-            get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
-        }
-
-        public bool HasData
-        {
-            get => _hasData;
-            set => SetProperty(ref _hasData, value);
-        }
-
-        public string LoadingMessage
-        {
-            get => _loadingMessage;
-            set => SetProperty(ref _loadingMessage, value);
-        }
+        public override bool HasData => !string.IsNullOrEmpty(_selectedProfile);
 
         public string SelectedProfile
         {
@@ -94,7 +75,7 @@ namespace MandADiscoverySuite.ViewModels
                 await Task.Delay(500); // Simulate loading
                 
                 // TODO: Load actual settings from ConfigurationService
-                HasData = true;
+                // HasData is automatically true since _selectedProfile has a default value
                 
                 _ = EnhancedLoggingService.Instance.LogInformationAsync("SettingsViewModel: LoadAsync completed");
             }

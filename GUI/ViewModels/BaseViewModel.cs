@@ -80,6 +80,20 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         /// <summary>
+        /// Alias for ErrorMessage to match unified pattern requirements
+        /// </summary>
+        public string LastError
+        {
+            get => _errorMessage;
+            set => SetProperty(ref _errorMessage, value);
+        }
+
+        /// <summary>
+        /// Whether the view has data to display - must be overridden by derived classes
+        /// </summary>
+        public virtual bool HasData => false;
+
+        /// <summary>
         /// Tab title for the document interface
         /// </summary>
         public virtual string TabTitle

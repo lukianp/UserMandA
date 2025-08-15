@@ -213,8 +213,8 @@ namespace MandADiscoverySuite.ViewModels
                     // Set additional properties
                     module.Category = moduleInfo.Category ?? "Discovery";
                     
-                    // The DiscoveryModuleViewModel already has RunDiscoveryCommand configured
-                    // in its constructor, so we don't need to add it here
+                    // Subscribe to status changes to refresh data when module completes
+                    module.PropertyChanged += OnModulePropertyChanged;
                     
                     discoveryModules.Add(module);
                 }
@@ -235,6 +235,27 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         /// <summary>
+        /// Handles property changes from discovery modules
+        /// </summary>
+        private async void OnModulePropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(DiscoveryModuleViewModel.Status) && sender is DiscoveryModuleViewModel module)
+            {
+                // If a module completed successfully, refresh the data
+                if (module.Status == DiscoveryModuleStatus.Completed)
+                {
+                    StatusMessage = $"{module.DisplayName} completed - refreshing data...";
+                    
+                    // Delay refresh slightly to allow CSV files to be written
+                    await Task.Delay(2000);
+                    await ReloadDataAsync();
+                    
+                    StatusMessage = $"Data refreshed after {module.DisplayName} completion";
+                }
+            }
+        }
+
+        /// <summary>
         /// Loads fallback modules if registry loading fails
         /// </summary>
         private void LoadFallbackModules()
@@ -252,6 +273,12 @@ namespace MandADiscoverySuite.ViewModels
                 new DiscoveryModuleViewModel("SQLServerDiscovery", "SQL Server Discovery", "Discover SQL Server instances and databases", true),
                 new DiscoveryModuleViewModel("FileServerDiscovery", "File Server Discovery", "Discover file servers and shares", true)
             };
+            
+            // Subscribe to property changes for each fallback module
+            foreach (var module in fallbackModules)
+            {
+                module.PropertyChanged += OnModulePropertyChanged;
+            }
             
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {

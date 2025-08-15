@@ -437,7 +437,7 @@ namespace MandADiscoverySuite.ViewModels
                 Status = DiscoveryModuleStatus.Running;
                 LastMessage = "Initializing discovery...";
 
-                // Perform path validation asynchronously, but create window on UI thread
+                // Perform path validation asynchronously
                 string launcherScriptPath = null;
                 string companyName = "ljpops";
 
@@ -445,15 +445,14 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     try
                     {
-                        // Get the root path for scripts
-                        var rootPath = GetRootPath();
-                        launcherScriptPath = System.IO.Path.Combine(rootPath, "Scripts", "DiscoveryModuleLauncher.ps1");
+                        // Get the root path for scripts - use C:\enterprisediscovery as per instructions
+                        launcherScriptPath = System.IO.Path.Combine("C:\\enterprisediscovery", "Scripts", "DiscoveryModuleLauncher.ps1");
                         
                         if (!System.IO.File.Exists(launcherScriptPath))
                         {
                             System.Windows.Application.Current.Dispatcher.Invoke(() =>
                             {
-                                LastMessage = "Discovery launcher script not found";
+                                LastMessage = $"Discovery launcher script not found at {launcherScriptPath}";
                                 Status = DiscoveryModuleStatus.Failed;
                             });
                             launcherScriptPath = null;
@@ -494,26 +493,65 @@ namespace MandADiscoverySuite.ViewModels
                     return;
                 }
 
-                // Create and show PowerShell window on UI thread
+                // Launch PowerShell process using the launcher script as specified in instructions
                 try
                 {
-                    LastMessage = $"Creating PowerShell window for script: {launcherScriptPath}";
+                    LastMessage = $"Launching PowerShell process for {ModuleName} module...";
                     
-                    var powerShellWindow = new PowerShellWindow(
-                        launcherScriptPath,
-                        $"{DisplayName}",
-                        $"{Description} for {companyName}",
-                        "-ModuleName", ModuleName,
-                        "-CompanyName", companyName
-                    );
+                    var processInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{launcherScriptPath}\" -ModuleName \"{ModuleName}\" -CompanyName \"{companyName}\"",
+                        WorkingDirectory = "C:\\enterprisediscovery",
+                        UseShellExecute = true,
+                        WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal
+                    };
                     
-                    LastMessage = "PowerShell window created, attempting to show...";
-                    powerShellWindow.Show();
-                    LastMessage = "Discovery window launched successfully";
+                    var process = System.Diagnostics.Process.Start(processInfo);
+                    
+                    if (process != null)
+                    {
+                        LastMessage = $"Discovery launched successfully for {DisplayName} (Process ID: {process.Id})";
+                        
+                        // Monitor process in background to update status when complete
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                var startTime = DateTime.Now;
+                                await process.WaitForExitAsync();
+                                var duration = DateTime.Now - startTime;
+                                
+                                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    if (process.ExitCode == 0)
+                                    {
+                                        UpdateRunResults(0, duration, $"Discovery completed successfully in {duration.TotalMinutes:F1} minutes");
+                                    }
+                                    else
+                                    {
+                                        MarkAsFailed($"Discovery failed with exit code {process.ExitCode}");
+                                    }
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    MarkAsFailed($"Error monitoring process: {ex.Message}");
+                                });
+                            }
+                        });
+                    }
+                    else
+                    {
+                        LastMessage = "Failed to start PowerShell process";
+                        Status = DiscoveryModuleStatus.Failed;
+                    }
                 }
-                catch (Exception showEx)
+                catch (Exception launchEx)
                 {
-                    LastMessage = $"Failed to show window: {showEx.Message} | Stack: {showEx.StackTrace}";
+                    LastMessage = $"Failed to launch discovery: {launchEx.Message}";
                     Status = DiscoveryModuleStatus.Failed;
                 }
             }

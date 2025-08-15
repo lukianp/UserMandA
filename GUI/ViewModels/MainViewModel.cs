@@ -5077,9 +5077,12 @@ This directory is strictly for storing discovery results and company data.
                         tabViewModel = policiesVm;
                         break;
                     case "applications":
-                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Applications tab");
-                        tabViewModel = new ApplicationsViewModel { TabTitle = "Applications" };
-                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: ApplicationsViewModel created");
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Applications Catalogue tab");
+                        var applicationsViewModel = new ApplicationsMainViewModel { TabTitle = "Applications Catalogue ⭐ FIXED" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: ApplicationsMainViewModel created, triggering data load");
+                        // Trigger data loading immediately
+                        _ = applicationsViewModel.LoadAsync();
+                        tabViewModel = applicationsViewModel;
                         break;
                     case "discovery":
                         _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Discovery Dashboard tab");
@@ -5121,24 +5124,30 @@ This directory is strictly for storing discovery results and company data.
                         tabViewModel = new ReportBuilderViewModel { TabTitle = "Reports" };
                         break;
                     case "domaindiscovery":
-                        tabViewModel = new RiskAnalysisViewModel { TabTitle = "Domain Discovery" };
+                        tabViewModel = new DomainDiscoveryViewModel(this) { TabTitle = "Domain Discovery" };
                         break;
                     case "fileservers":
-                        var fileServersDataService = SimpleServiceLocator.GetService<IDataService>();
-                        var fileServersViewModel = new MandADiscoverySuite.ViewModels.InfrastructureViewModel(fileServersDataService) { TabTitle = "File Servers" };
-                        System.Diagnostics.Debug.WriteLine("Creating File Servers tab with InfrastructureViewModel");
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating File Servers tab");
+                        var fileServersViewModel = new MandADiscoverySuite.ViewModels.FileServersViewModel() { TabTitle = "File Servers" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: FileServersViewModel created, triggering data load");
+                        // Trigger data loading immediately
+                        _ = fileServersViewModel.LoadAsync();
                         tabViewModel = fileServersViewModel;
                         break;
                     case "databases":
-                        var databasesDataService = SimpleServiceLocator.GetService<IDataService>();
-                        var databasesViewModel = new MandADiscoverySuite.ViewModels.InfrastructureViewModel(databasesDataService) { TabTitle = "Databases" };
-                        System.Diagnostics.Debug.WriteLine("Creating Databases tab with InfrastructureViewModel");
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Databases tab");
+                        var databasesViewModel = new DatabasesViewModel { TabTitle = "Databases" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: DatabasesViewModel created, triggering data load");
+                        // Trigger data loading immediately
+                        _ = databasesViewModel.LoadAsync();
                         tabViewModel = databasesViewModel;
                         break;
                     case "security":
-                        var securityDataService = SimpleServiceLocator.GetService<IDataService>();
-                        var securityViewModel = new GroupsViewModel(securityDataService) { TabTitle = "Security" };
-                        System.Diagnostics.Debug.WriteLine("Creating Security tab with GroupsViewModel");
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Security tab");
+                        var securityViewModel = new SecurityViewModel { TabTitle = "Security" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: SecurityViewModel created, triggering data load");
+                        // Trigger data loading immediately
+                        _ = securityViewModel.LoadAsync();
                         tabViewModel = securityViewModel;
                         break;
                     case "waves":
@@ -5147,16 +5156,28 @@ This directory is strictly for storing discovery results and company data.
                         _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: ProjectManagementViewModel created for Waves");
                         break;
                     case "migrate":
-                        tabViewModel = new ProjectManagementDashboardViewModel { TabTitle = "Migrate" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Migrate tab");
+                        var migrateViewModel = new MigrateViewModel { TabTitle = "Migrate" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: MigrateViewModel created (no LoadAsync available)");
+                        tabViewModel = migrateViewModel;
                         break;
                     case "analytics":
-                        tabViewModel = new DashboardViewModel { TabTitle = "Analytics" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Analytics tab");
+                        var analyticsViewModel = new AnalyticsViewModel { TabTitle = "Analytics" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: AnalyticsViewModel created (no LoadAsync available)");
+                        tabViewModel = analyticsViewModel;
                         break;
                     case "settings":
-                        tabViewModel = new DashboardViewModel { TabTitle = "Settings" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Settings tab");
+                        var settingsViewModel = new SettingsViewModel { TabTitle = "Settings" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: SettingsViewModel created (no LoadAsync available)");
+                        tabViewModel = settingsViewModel;
                         break;
                     case "management":
-                        tabViewModel = new ManagementViewModel { TabTitle = "Management" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Management tab");
+                        var managementViewModel = new ManagementViewModel { TabTitle = "Management" };
+                        _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: ManagementViewModel created (no LoadAsync available)");
+                        tabViewModel = managementViewModel;
                         break;
                     case "security groups":
                         _ = EnhancedLoggingService.Instance.LogInformationAsync("MainViewModel: Creating Security Groups tab");

@@ -87,6 +87,11 @@ namespace MandADiscoverySuite.ViewModels
         public bool HasComputers => TotalComputerCount > 0;
 
         /// <summary>
+        /// Override HasData for unified pipeline
+        /// </summary>
+        public override bool HasData => TotalComputerCount > 0;
+
+        /// <summary>
         /// Currently selected computer for detail view
         /// </summary>
         public InfrastructureData SelectedComputer
@@ -168,6 +173,38 @@ namespace MandADiscoverySuite.ViewModels
         #endregion
 
         #region Public Methods
+
+        /// <summary>
+        /// Standardized load method for unified pipeline
+        /// </summary>
+        public async Task LoadAsync()
+        {
+            try
+            {
+                IsLoading = true;
+                LastError = null;
+                LoadingMessage = "Loading computers data...";
+                LoadingProgress = 0;
+
+                await EnhancedLoggingService.Instance.LogInformationAsync("ComputersViewModel: Starting LoadAsync");
+
+                // Use existing RefreshComputersAsync method
+                await RefreshComputersAsync();
+
+                await EnhancedLoggingService.Instance.LogInformationAsync($"ComputersViewModel: Loaded {Computers.Count} computers");
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message;
+                await EnhancedLoggingService.Instance.LogErrorAsync($"ComputersViewModel.LoadAsync failed: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+                LoadingMessage = "Ready";
+                LoadingProgress = 100;
+            }
+        }
 
         /// <summary>
         /// Initialize computers data from the specified directory

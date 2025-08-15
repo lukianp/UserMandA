@@ -9,29 +9,10 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class AnalyticsViewModel : BaseViewModel, IAutoLoadable
     {
-        private bool _isLoading;
-        private bool _hasData;
-        private string _loadingMessage = "Loading analytics...";
         private int _totalUsers = 0;
         private int _totalAssets = 0;
 
-        public bool IsLoading
-        {
-            get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
-        }
-
-        public bool HasData
-        {
-            get => _hasData;
-            set => SetProperty(ref _hasData, value);
-        }
-
-        public string LoadingMessage
-        {
-            get => _loadingMessage;
-            set => SetProperty(ref _loadingMessage, value);
-        }
+        public override bool HasData => _totalUsers > 0 || _totalAssets > 0;
 
         public int TotalUsers
         {
@@ -58,7 +39,6 @@ namespace MandADiscoverySuite.ViewModels
                 // TODO: Load actual analytics data from CsvDataService
                 TotalUsers = 1234;
                 TotalAssets = 567;
-                HasData = true;
                 
                 _ = EnhancedLoggingService.Instance.LogDataOperationAsync("Load", "Analytics", 2, new { Users = TotalUsers, Assets = TotalAssets });
                 _ = EnhancedLoggingService.Instance.LogInformationAsync($"AnalyticsViewModel: LoadAsync completed with {TotalUsers} users and {TotalAssets} assets");

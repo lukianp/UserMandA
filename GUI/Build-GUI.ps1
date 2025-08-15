@@ -100,14 +100,24 @@ foreach ($file in $RequiredFiles) {
     Write-Host "  [OK] $file" -ForegroundColor Green
 }
 
-# Clean previous builds
-Write-Host "Cleaning previous builds..." -ForegroundColor Yellow
-if (Test-Path "bin") {
-    Remove-Item -Path "bin" -Recurse -Force
+# AGGRESSIVE: Clean workspace completely before starting
+Write-Host "AGGRESSIVELY cleaning workspace before build..." -ForegroundColor Yellow
+for ($i = 1; $i -le 3; $i++) {
+    Write-Host "  Pre-build cleanup pass $i..." -ForegroundColor Cyan
+    if (Test-Path "bin") {
+        Remove-Item -Path "bin" -Recurse -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 100
+    }
+    if (Test-Path "obj") {
+        Remove-Item -Path "obj" -Recurse -Force -ErrorAction SilentlyContinue  
+        Start-Sleep -Milliseconds 100
+    }
+    # Also clean any stray build artifacts
+    Get-ChildItem -Path "." -Filter "*.exe" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path "." -Filter "*.dll" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path "." -Filter "*.pdb" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
-if (Test-Path "obj") {
-    Remove-Item -Path "obj" -Recurse -Force
-}
+Write-Host "  [OK] Pre-build workspace AGGRESSIVELY cleaned" -ForegroundColor Green
 
 # Restore dependencies
 Write-Host "Restoring dependencies..." -ForegroundColor Yellow
@@ -169,6 +179,11 @@ $BuildArgs = @(
     '--output', $OutputPath
     '--verbosity', 'minimal'
     '--nologo'
+    '-p:OutputPath=' + $OutputPath
+    '-p:BaseOutputPath=' + $OutputPath
+    '-p:BaseIntermediateOutputPath=' + $OutputPath + '\obj\'
+    '-p:IntermediateOutputPath=' + $OutputPath + '\obj\'
+    '-p:MSBuildProjectExtensionsPath=' + $OutputPath + '\obj\'
 )
 
 if ($SelfContained) {
@@ -185,6 +200,32 @@ if ($SelfContained) {
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Build failed"
     exit 1
+}
+
+# AGGRESSIVE: Force clean workspace build artifacts BEFORE AND AFTER build
+Write-Host "AGGRESSIVELY cleaning workspace build artifacts..." -ForegroundColor Yellow
+try {
+    # Clean multiple times to be absolutely sure
+    for ($i = 1; $i -le 3; $i++) {
+        Write-Host "  Cleanup pass $i..." -ForegroundColor Cyan
+        if (Test-Path "bin") {
+            Remove-Item -Path "bin" -Recurse -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 100
+        }
+        if (Test-Path "obj") {
+            Remove-Item -Path "obj" -Recurse -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 100
+        }
+        if (Test-Path "*.exe") {
+            Remove-Item -Path "*.exe" -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "*.dll") {
+            Remove-Item -Path "*.dll" -Force -ErrorAction SilentlyContinue
+        }
+    }
+    Write-Host "  [OK] Workspace AGGRESSIVELY cleaned" -ForegroundColor Green
+} catch {
+    Write-Warning "Could not clean workspace: $($_.Exception.Message)"
 }
 
 # Create application icon if it doesn't exist

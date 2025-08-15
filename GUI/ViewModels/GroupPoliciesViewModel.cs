@@ -26,6 +26,11 @@ namespace MandADiscoverySuite.ViewModels
         /// </summary>
         public bool HasPolicies => Policies?.Count > 0;
 
+        /// <summary>
+        /// Override HasData for unified pipeline
+        /// </summary>
+        public override bool HasData => Policies?.Count > 0;
+
         public ICommand OpenPolicyDetailCommand { get; }
         public ICommand RefreshPoliciesCommand { get; }
 
@@ -57,6 +62,42 @@ namespace MandADiscoverySuite.ViewModels
                 Height = 600
             };
             window.Show();
+        }
+
+        /// <summary>
+        /// Standardized load method for unified pipeline
+        /// </summary>
+        public async Task LoadAsync()
+        {
+            try
+            {
+                IsLoading = true;
+                LastError = null;
+                LoadingMessage = "Loading group policies...";
+
+                await EnhancedLoggingService.Instance.LogInformationAsync("GroupPoliciesViewModel: Starting LoadAsync");
+
+                // Use existing RefreshPoliciesAsync logic
+                var profileService = SimpleServiceLocator.GetService<IProfileService>();
+                var currentProfile = await profileService?.GetCurrentProfileAsync();
+                var profileName = currentProfile?.CompanyName ?? "ljpops";
+
+                var list = await _csvDataService.LoadGroupPoliciesAsync(profileName);
+                Policies.Clear();
+                foreach (var p in list)
+                    Policies.Add(p);
+
+                await EnhancedLoggingService.Instance.LogInformationAsync($"GroupPoliciesViewModel: Loaded {Policies.Count} policies");
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message;
+                await EnhancedLoggingService.Instance.LogErrorAsync($"GroupPoliciesViewModel.LoadAsync failed: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
 
         public async Task RefreshPoliciesAsync()

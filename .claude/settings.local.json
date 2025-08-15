@@ -123,8 +123,15 @@
       "Bash(Start-Sleep 3)",
       "Bash(if exist \"D:\\Scripts\\UserMandA\\GUI\\bin\" rmdir /s /q \"D:\\Scripts\\UserMandA\\GUI\\bin\")",
       "Bash(Start-Process \"C:/enterprisediscovery/net6.0-windows/MandADiscoverySuite.exe\" -WindowStyle Normal)",
-      "Bash(\"C:/enterprisediscovery/net6.0-windows/MandADiscoverySuite.exe\")"
+      "Bash(\"C:/enterprisediscovery/net6.0-windows/MandADiscoverySuite.exe\")",
+      "Bash(if exist \"bin\" rmdir /s /q \"bin\")",
+      "Bash(if exist \"obj\" rmdir /s /q \"obj\")",
+      "Bash(if exist \"D:\\Scripts\\UserMandA\\GUI\\obj\" rmdir /s /q \"D:\\Scripts\\UserMandA\\GUI\\obj\")"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "C:\\enterprisediscovery"
+    ]
   }
 }
