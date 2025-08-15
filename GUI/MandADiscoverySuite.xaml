@@ -1347,7 +1347,7 @@
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,16">
                             <TextBlock Text="Theme" FontSize="13" FontWeight="Medium" Foreground="#FFA0AEC0" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                            <controls:ThemeToggleButton Margin="0,0,10,0"/>
+                            <ToggleButton Content="🌙" Margin="0,0,10,0" Width="32" Height="32" ToolTip="Theme Toggle (Disabled)" IsEnabled="False"/>
                             <Button Content="Theme Options..." 
                                     Command="{Binding ShowThemeSelectionCommand}"
                                     Background="Transparent" 
@@ -1445,10 +1445,10 @@
                     </DataTemplate>
                 </TabControl.ItemTemplate>
                 
-                <!-- Tab Content Template -->
+                <!-- Tab Content Template - Simplified for unified pipeline -->
                 <TabControl.ContentTemplate>
                     <DataTemplate>
-                        <ContentPresenter Content="{Binding}" ContentTemplate="{DynamicResource TabViewTemplate}"/>
+                        <ContentPresenter Content="{Binding}"/>
                     </DataTemplate>
                 </TabControl.ContentTemplate>
                 
@@ -1525,7 +1525,8 @@
             </TabControl>
             
             <!-- Legacy Dashboard View (will be replaced by TDI) -->
-            <ScrollViewer Grid.Row="1" x:Name="DashboardView" Visibility="{Binding IsDashboardVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <!-- DashboardView - DISABLED for unified TabControl system -->
+            <ScrollViewer Grid.Row="1" x:Name="DashboardView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -1965,7 +1966,8 @@
             </ScrollViewer>
             
             <!-- Enhanced Users View -->
-            <ScrollViewer Grid.Row="1" x:Name="UsersView" Visibility="{Binding IsUsersVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <!-- UsersView - DISABLED for unified TabControl system -->
+            <ScrollViewer Grid.Row="1" x:Name="UsersView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -2266,7 +2268,8 @@
             
             
             <!-- Enhanced Infrastructure View -->
-            <ScrollViewer Grid.Row="1" x:Name="InfrastructureView" Visibility="{Binding IsInfrastructureVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <!-- InfrastructureView - DISABLED for unified TabControl system -->
+            <ScrollViewer Grid.Row="1" x:Name="InfrastructureView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -2698,7 +2701,8 @@
             </ScrollViewer>
             
             <!-- Enhanced Groups View -->
-            <ScrollViewer Grid.Row="1" x:Name="GroupsView" Visibility="{Binding IsGroupsVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <!-- GroupsView - DISABLED for unified TabControl system -->
+            <ScrollViewer Grid.Row="1" x:Name="GroupsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -2896,7 +2900,8 @@
             </ScrollViewer>
             
             <!-- Enhanced Migration Waves View -->
-            <ScrollViewer Grid.Row="1" x:Name="WavesView" Visibility="{Binding IsWavesVisible, Converter={StaticResource BoolToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+            <!-- WavesView - DISABLED for unified TabControl system -->
+            <ScrollViewer Grid.Row="1" x:Name="WavesView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -3102,8 +3107,8 @@
                 </Grid>
             </ScrollViewer>
             
-            <!-- Migrate View -->
-            <Grid Grid.Row="1" x:Name="MigrateView" Visibility="{Binding IsMigrateVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="30">
+            <!-- Migrate View - DISABLED for unified TabControl system -->
+            <Grid Grid.Row="1" x:Name="MigrateView" Visibility="Collapsed" Margin="30">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -3204,7 +3209,8 @@
             </Grid>
             
             <!-- Reports View -->
-            <Grid Grid.Row="1" x:Name="ReportsView" Visibility="{Binding IsReportsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
+            <!-- ReportsView - DISABLED for unified TabControl system -->
+            <Grid Grid.Row="1" x:Name="ReportsView" Visibility="Collapsed" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -3362,7 +3368,8 @@
             </Grid>
             
             <!-- Analytics View -->
-            <Grid Grid.Row="1" x:Name="AnalyticsView" Visibility="{Binding IsAnalyticsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
+            <!-- AnalyticsView - DISABLED for unified TabControl system -->
+            <Grid Grid.Row="1" x:Name="AnalyticsView" Visibility="Collapsed" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -3529,8 +3536,8 @@
                 </ScrollViewer>
             </Grid>
             
-            <!-- Settings View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="SettingsView" Visibility="{Binding IsSettingsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
+            <!-- Settings View - DISABLED for unified TabControl system -->
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="SettingsView" Visibility="Collapsed" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -3766,7 +3773,8 @@
             </Grid>
             
             <!-- Applications View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="ApplicationsView" Visibility="{Binding IsApplicationsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
+            <!-- ApplicationsView - DISABLED for unified TabControl system -->
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="ApplicationsView" Visibility="Collapsed" Margin="32">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -4115,7 +4123,8 @@
         </Grid>
 
             <!-- Domain Discovery View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="DomainDiscoveryView" Visibility="{Binding IsDomainDiscoveryVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
+            <!-- DomainDiscoveryView - DISABLED for unified TabControl system -->
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="DomainDiscoveryView" Visibility="Collapsed" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -4207,7 +4216,8 @@
             </Grid>
 
             <!-- File Servers View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="FileServersView" Visibility="{Binding IsFileServersVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
+            <!-- FileServersView - DISABLED for unified TabControl system -->
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="FileServersView" Visibility="Collapsed" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -4302,7 +4312,8 @@
             </Grid>
 
             <!-- Databases View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="DatabasesView" Visibility="{Binding IsDatabasesVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
+            <!-- DatabasesView - DISABLED for unified TabControl system -->
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="DatabasesView" Visibility="Collapsed" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -4408,7 +4419,8 @@
             </Grid>
 
             <!-- Security View -->
-            <Grid Grid.Row="0" Grid.Column="1" x:Name="SecurityView" Visibility="{Binding IsSecurityVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="32">
+            <!-- SecurityView - DISABLED for unified TabControl system -->
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="SecurityView" Visibility="Collapsed" Margin="32">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>

@@ -26,7 +26,7 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _totalAssets, value);
         }
 
-        public async Task LoadAsync()
+        public override async Task LoadAsync()
         {
             try
             {

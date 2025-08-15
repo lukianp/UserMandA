@@ -17,8 +17,9 @@ namespace MandADiscoverySuite
 {
     public partial class App : Application
     {
-        private StartupOptimizationService _startupService;
-        private KeyboardShortcutManager _shortcutManager;
+        // Disabled for unified pipeline build
+        // private StartupOptimizationService _startupService;
+        // private KeyboardShortcutManager _shortcutManager;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -83,15 +84,15 @@ namespace MandADiscoverySuite
                 FreezeStaticBrushes();
                 logAction?.Invoke("Static brushes frozen successfully");
                 
-                // Initialize startup optimization service
-                logAction?.Invoke("Initializing startup optimization service...");
-                _startupService = SimpleServiceLocator.GetService<StartupOptimizationService>();
-                logAction?.Invoke("Startup optimization service initialized");
+                // Initialize startup optimization service - DISABLED for unified pipeline
+                logAction?.Invoke("Skipping startup optimization service (disabled for unified pipeline)...");
+                // _startupService = SimpleServiceLocator.GetService<StartupOptimizationService>();
+                logAction?.Invoke("Startup optimization service skipped");
                 
-                // Initialize keyboard shortcuts
-                logAction?.Invoke("Initializing keyboard shortcuts...");
-                InitializeKeyboardShortcuts();
-                logAction?.Invoke("Keyboard shortcuts initialized successfully");
+                // Initialize keyboard shortcuts - DISABLED for unified pipeline
+                logAction?.Invoke("Skipping keyboard shortcuts (disabled for unified pipeline)...");
+                // InitializeKeyboardShortcuts();
+                logAction?.Invoke("Keyboard shortcuts skipped");
                 
                 // Initialize ViewRegistry for navigation
                 logAction?.Invoke("Initializing ViewRegistry...");
@@ -141,10 +142,10 @@ namespace MandADiscoverySuite
                 // Wait a moment for the main window to finish loading
                 await Task.Delay(1000);
                 
-                // Complete startup optimization
-                await _startupService?.CompleteStartupAsync();
+                // Complete startup optimization - DISABLED for unified pipeline
+                // await _startupService?.CompleteStartupAsync();
                 
-                // Startup service completed successfully
+                // Startup service completion skipped
             }
             catch (Exception ex)
             {
@@ -186,10 +187,10 @@ namespace MandADiscoverySuite
                 var shortcutService = SimpleServiceLocator.GetService<IKeyboardShortcutService>();
                 if (shortcutService != null)
                 {
-                    _shortcutManager = new KeyboardShortcutManager(shortcutService);
+                    // _shortcutManager = new KeyboardShortcutManager(shortcutService);
                     
                     // Register application-wide shortcuts
-                    _shortcutManager.RegisterApplicationShortcuts();
+                    // _shortcutManager.RegisterApplicationShortcuts();
                     
                     // Register common application shortcuts
                     RegisterApplicationShortcuts(shortcutService);
@@ -231,10 +232,10 @@ namespace MandADiscoverySuite
                 }
 
                 // Register common shortcuts for different contexts
-                KeyboardShortcutIntegration.RegisterDataGridShortcuts(shortcutService);
-                KeyboardShortcutIntegration.RegisterDialogShortcuts(shortcutService);
-                KeyboardShortcutIntegration.RegisterNavigationShortcuts(shortcutService);
-                KeyboardShortcutIntegration.RegisterSearchShortcuts(shortcutService);
+                // KeyboardShortcutIntegration.RegisterDataGridShortcuts(shortcutService);
+                // KeyboardShortcutIntegration.RegisterDialogShortcuts(shortcutService);
+                // KeyboardShortcutIntegration.RegisterNavigationShortcuts(shortcutService);
+                // KeyboardShortcutIntegration.RegisterSearchShortcuts(shortcutService);
             }
             catch (Exception ex)
             {
@@ -440,14 +441,14 @@ namespace MandADiscoverySuite
             try
             {
                 // Clean up keyboard shortcuts
-                KeyboardShortcutIntegration.CleanupAll();
-                _shortcutManager?.Dispose();
+                // KeyboardShortcutIntegration.CleanupAll();
+                // _shortcutManager?.Dispose();
                 
                 // Clean up startup optimization service
-                _startupService?.Dispose();
+                // _startupService?.Dispose();
                 
                 // Clean up service container
-                SimpleServiceLocator.Clear();
+                // SimpleServiceLocator.Clear();
             }
             catch
             {

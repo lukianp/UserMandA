@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -23,12 +24,15 @@ namespace MandADiscoverySuite.ViewModels
         private readonly HashSet<string> _pendingNotifications = new HashSet<string>();
         private readonly object _notificationLock = new object();
         private bool _isNotificationScheduled;
-        private readonly DispatcherTimer _notificationTimer;
+        private DispatcherTimer _notificationTimer;
         
         // Modern MVVM infrastructure
-        protected readonly ILogger Logger;
+        protected readonly ILogger _log;
+        
+        // Provide Logger property for backwards compatibility
+        protected ILogger Logger => _log;
         protected readonly IMessenger Messenger;
-        protected readonly ProgressTrackingService ProgressTracker;
+        protected ProgressTrackingService ProgressTracker;
 
         // Common state properties
         private bool _isLoading;
@@ -39,6 +43,9 @@ namespace MandADiscoverySuite.ViewModels
         private string _errorMessage = string.Empty;
         private string _tabTitle = "Untitled";
         private bool _canClose = true;
+        
+        // Header warnings collection for CSV validation
+        public ObservableCollection<string> HeaderWarnings { get; } = new ObservableCollection<string>();
 
         public bool IsLoading
         {
@@ -89,9 +96,14 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         /// <summary>
-        /// Whether the view has data to display - must be overridden by derived classes
+        /// Whether the view has data to display - can be overridden by derived classes
         /// </summary>
-        public virtual bool HasData => false;
+        private bool _hasData;
+        public virtual bool HasData
+        {
+            get => _hasData;
+            protected set => SetProperty(ref _hasData, value);
+        }
 
         /// <summary>
         /// Tab title for the document interface
@@ -112,13 +124,29 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         /// <summary>
-        /// Initializes the BaseViewModel with modern MVVM infrastructure
+        /// Initializes the BaseViewModel with unified loading pipeline
+        /// </summary>
+        protected BaseViewModel(ILogger log)
+        {
+            _log = log ?? throw new ArgumentNullException(nameof(log));
+            Messenger = WeakReferenceMessenger.Default;
+            
+            Initialize();
+        }
+        
+        /// <summary>
+        /// Legacy constructor for backwards compatibility
         /// </summary>
         protected BaseViewModel(ILogger logger = null, IMessenger messenger = null)
         {
-            Logger = logger;
+            _log = logger;
             Messenger = messenger ?? WeakReferenceMessenger.Default;
             
+            Initialize();
+        }
+        
+        private void Initialize()
+        {
             try
             {
                 ProgressTracker = SimpleServiceLocator.GetService<ProgressTrackingService>();
@@ -281,9 +309,9 @@ namespace MandADiscoverySuite.ViewModels
                 ErrorMessage = string.Empty;
                 StatusMessage = $"Executing {operationName}...";
 
-                Logger?.LogInformation("Starting {OperationName}", operationName);
+                _log?.LogInformation("Starting {OperationName}", operationName);
                 await operation();
-                Logger?.LogInformation("Completed {OperationName}", operationName);
+                _log?.LogInformation("Completed {OperationName}", operationName);
 
                 StatusMessage = $"{operationName} completed successfully";
             }
@@ -292,7 +320,7 @@ namespace MandADiscoverySuite.ViewModels
                 HasErrors = true;
                 ErrorMessage = ex.Message;
                 StatusMessage = $"{operationName} failed: {ex.Message}";
-                Logger?.LogError(ex, "Error in {OperationName}", operationName);
+                _log?.LogError(ex, "Error in {OperationName}", operationName);
             }
             finally
             {
@@ -312,9 +340,9 @@ namespace MandADiscoverySuite.ViewModels
                 ErrorMessage = string.Empty;
                 StatusMessage = $"Executing {operationName}...";
 
-                Logger?.LogInformation("Starting {OperationName}", operationName);
+                _log?.LogInformation("Starting {OperationName}", operationName);
                 var result = await operation();
-                Logger?.LogInformation("Completed {OperationName}", operationName);
+                _log?.LogInformation("Completed {OperationName}", operationName);
 
                 StatusMessage = $"{operationName} completed successfully";
                 return result;
@@ -324,7 +352,7 @@ namespace MandADiscoverySuite.ViewModels
                 HasErrors = true;
                 ErrorMessage = ex.Message;
                 StatusMessage = $"{operationName} failed: {ex.Message}";
-                Logger?.LogError(ex, "Error in {OperationName}", operationName);
+                _log?.LogError(ex, "Error in {OperationName}", operationName);
                 return defaultValue;
             }
             finally
@@ -414,7 +442,7 @@ namespace MandADiscoverySuite.ViewModels
                 HasErrors = true;
                 ErrorMessage = ex.Message;
                 StatusMessage = $"{description} failed: {ex.Message}";
-                Logger?.LogError(ex, "Error in {OperationDescription}", description);
+                _log?.LogError(ex, "Error in {OperationDescription}", description);
                 return defaultValue;
             }
             finally
@@ -430,41 +458,32 @@ namespace MandADiscoverySuite.ViewModels
 
         /// <summary>
         /// Virtual LoadAsync method that derived ViewModels must override
-        /// Implements the foolproof loading pipeline pattern
+        /// Implements the unified loading pipeline pattern exactly as specified
         /// </summary>
         public virtual async Task LoadAsync()
         {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            try
+            IsLoading = true; 
+            HasData = false; 
+            LastError = null; 
+            HeaderWarnings.Clear();
+
+            try 
             {
-                IsLoading = true; 
-                LastError = null; 
-                HasErrors = false;
-                OnPropertyChanged(nameof(IsLoading));
-                OnPropertyChanged(nameof(LastError));
-                OnPropertyChanged(nameof(HasErrors));
-                OnPropertyChanged(nameof(HasData));
+                _log?.LogDebug($"[{GetType().Name}] Load start");
                 
-                Logger?.LogDebug($"[{GetType().Name}] Load start");
-
-                // Default implementation - derived classes should override
+                // Default implementation - derived classes should override this
                 await Task.Delay(100); // Simulate loading
-
-                Logger?.LogDebug($"[{GetType().Name}] Load ok: default implementation in {sw.ElapsedMilliseconds}ms");
+                
+                _log?.LogInformation($"[{GetType().Name}] Load ok rows=0");
             }
-            catch (Exception ex)
+            catch (Exception ex) 
             {
-                LastError = ex.Message; 
-                HasErrors = true;
-                OnPropertyChanged(nameof(LastError));
-                OnPropertyChanged(nameof(HasErrors));
-                Logger?.LogError(ex, $"[{GetType().Name}] Load failed: {ex}");
+                LastError = $"Unexpected error: {ex.Message}";
+                _log?.LogError($"[{GetType().Name}] Load fail ex={ex}");
             }
-            finally
-            {
+            finally 
+            { 
                 IsLoading = false; 
-                OnPropertyChanged(nameof(IsLoading));
-                OnPropertyChanged(nameof(HasData));
             }
         }
 

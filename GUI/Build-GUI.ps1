@@ -121,7 +121,7 @@ Write-Host "  [OK] Pre-build workspace AGGRESSIVELY cleaned" -ForegroundColor Gr
 
 # Restore dependencies
 Write-Host "Restoring dependencies..." -ForegroundColor Yellow
-& dotnet restore
+& dotnet restore MandADiscoverySuite.csproj
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to restore dependencies"
     exit 1
@@ -186,6 +186,7 @@ if (!(Test-Path $env:TEMP)) {
 
 $BuildArgs = @(
     'publish'
+    'MandADiscoverySuite.csproj'
     '--configuration', $Configuration
     '--output', $OutputPath
     '--verbosity', 'minimal'

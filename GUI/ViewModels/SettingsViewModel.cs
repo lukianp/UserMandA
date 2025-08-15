@@ -64,7 +64,7 @@ namespace MandADiscoverySuite.ViewModels
             ResetSettingsCommand = new RelayCommand(ResetSettings);
         }
 
-        public async Task LoadAsync()
+        public override async Task LoadAsync()
         {
             try
             {

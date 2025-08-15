@@ -8,6 +8,8 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <!-- Core converters resource dictionary -->
+                <ResourceDictionary Source="Resources/Converters.xaml"/>
                 <!-- DISABLED: Include optimized resources to fix stack overflow -->
                 <!-- <ResourceDictionary Source="Themes/OptimizedResources.xaml"/> -->
                 <!-- <ResourceDictionary Source="Themes/OptimizedAnimations.xaml"/> -->

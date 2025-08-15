@@ -1,0 +1,141 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using CommunityToolkit.Mvvm.Input;
+using MandADiscoverySuite.Models;
+using FileServerData = MandADiscoverySuite.Models.FileServerData;
+using MandADiscoverySuite.Services;
+
+namespace MandADiscoverySuite.ViewModels
+{
+    public class FileServersViewModel : BaseViewModel
+    {
+        private readonly CsvDataService _csvDataService;
+        private ObservableCollection<FileServerData> _fileServers;
+        private FileServerData _selectedServer;
+        private string _searchText;
+
+        public FileServersViewModel()
+        {
+            _csvDataService = SimpleServiceLocator.GetService<CsvDataService>() ?? new CsvDataService();
+            _fileServers = new ObservableCollection<FileServerData>();
+            
+            // Initialize commands
+            SearchCommand = new RelayCommand(PerformSearch);
+            ClearSearchCommand = new RelayCommand(ClearSearch);
+            ViewSharesCommand = new RelayCommand(ViewShares, () => SelectedServer != null);
+            ViewPermissionsCommand = new RelayCommand(ViewPermissions, () => SelectedServer != null);
+        }
+
+        public ObservableCollection<FileServerData> FileServers
+        {
+            get => _fileServers;
+            set => SetProperty(ref _fileServers, value);
+        }
+
+        public FileServerData SelectedServer
+        {
+            get => _selectedServer;
+            set
+            {
+                SetProperty(ref _selectedServer, value);
+                OnPropertyChanged(nameof(HasSelectedServer));
+                OnPropertyChanged(nameof(HasNoSelectedServer));
+            }
+        }
+
+        public string SearchText
+        {
+            get => _searchText;
+            set => SetProperty(ref _searchText, value);
+        }
+
+        public override bool HasData => _fileServers?.Count > 0;
+        public bool HasNoData => !IsLoading && _fileServers?.Count == 0;
+        public bool HasSelectedServer => _selectedServer != null;
+        public bool HasNoSelectedServer => _selectedServer == null;
+
+        public int ServersCount => _fileServers?.Count ?? 0;
+        public int SharesCount => _fileServers?.Count * 3 ?? 0; // Estimate - will be calculated from actual data
+        public int EncryptedCount => _fileServers?.Count(s => s.Name?.Contains("encrypt", StringComparison.OrdinalIgnoreCase) == true) ?? 0;
+        public int LargeFilesCount => _fileServers?.Count * 10 ?? 0; // Estimate - will be calculated from actual data
+
+        public ICommand SearchCommand { get; }
+        public ICommand ClearSearchCommand { get; }
+        public ICommand ViewSharesCommand { get; }
+        public ICommand ViewPermissionsCommand { get; }
+
+        public override async Task LoadAsync()
+        {
+            try
+            {
+                IsLoading = true;
+                LastError = null;
+                
+                await EnhancedLoggingService.Instance.LogInformationAsync("FileServersViewModel: Starting LoadAsync");
+
+                // Load file servers from CSV
+                var fileServers = await _csvDataService.LoadFileServersAsync("ljpops");
+                
+                FileServers.Clear();
+                foreach (var server in fileServers)
+                {
+                    FileServers.Add(server);
+                }
+
+                await EnhancedLoggingService.Instance.LogInformationAsync($"FileServersViewModel: Loaded {FileServers.Count} file servers");
+
+                // Update counts
+                OnPropertyChanged(nameof(HasData));
+                OnPropertyChanged(nameof(HasNoData));
+                OnPropertyChanged(nameof(ServersCount));
+                OnPropertyChanged(nameof(SharesCount));
+                OnPropertyChanged(nameof(EncryptedCount));
+                OnPropertyChanged(nameof(LargeFilesCount));
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message;
+                await EnhancedLoggingService.Instance.LogErrorAsync($"FileServersViewModel.LoadAsync failed: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private void PerformSearch()
+        {
+            // Implement search logic
+            OnPropertyChanged(nameof(FileServers));
+        }
+
+        private void ClearSearch()
+        {
+            SearchText = string.Empty;
+            PerformSearch();
+        }
+
+        private void ViewShares()
+        {
+            if (SelectedServer != null)
+            {
+                // Open shares view for selected server
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"FileServersViewModel: Viewing shares for {SelectedServer.Name}");
+            }
+        }
+
+        private void ViewPermissions()
+        {
+            if (SelectedServer != null)
+            {
+                // Open NTFS permissions view for selected server
+                _ = EnhancedLoggingService.Instance.LogInformationAsync($"FileServersViewModel: Viewing permissions for {SelectedServer.Name}");
+            }
+        }
+    }
+}

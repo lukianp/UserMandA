@@ -11,11 +11,6 @@
     <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>
-    <OutputPath>C:\enterprisediscovery\</OutputPath>
-    <BaseOutputPath>C:\enterprisediscovery\</BaseOutputPath>
-    <BaseIntermediateOutputPath>C:\enterprisediscovery\obj\</BaseIntermediateOutputPath>
-    <IntermediateOutputPath>C:\enterprisediscovery\obj\</IntermediateOutputPath>
-    <MSBuildProjectExtensionsPath>C:\enterprisediscovery\obj\</MSBuildProjectExtensionsPath>
     <!-- Enable binding optimization for better performance -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <WarningsAsErrors />

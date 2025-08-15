@@ -45,7 +45,7 @@ namespace MandADiscoverySuite.ViewModels
             StopMigrationCommand = new RelayCommand(StopMigration);
         }
 
-        public async Task LoadAsync()
+        public override async Task LoadAsync()
         {
             try
             {

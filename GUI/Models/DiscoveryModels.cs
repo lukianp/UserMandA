@@ -659,7 +659,7 @@ namespace MandADiscoverySuite.Models
     /// <summary>
     /// User data model for main views
     /// </summary>
-    public class UserData : INotifyPropertyChanged
+    public class UserDataOld : INotifyPropertyChanged
     {
         private string _displayName;
         private string _userPrincipalName;
@@ -763,7 +763,7 @@ namespace MandADiscoverySuite.Models
     /// <summary>
     /// Infrastructure device data model
     /// </summary>
-    public class InfrastructureData : INotifyPropertyChanged
+    public class InfrastructureDataOld : INotifyPropertyChanged
     {
         private string _name;
         private string _type;
@@ -836,7 +836,7 @@ namespace MandADiscoverySuite.Models
     /// <summary>
     /// Group data model
     /// </summary>
-    public class GroupData : INotifyPropertyChanged
+    public class GroupDataOld : INotifyPropertyChanged
     {
         private string _displayName;
         private string _description;
@@ -921,7 +921,7 @@ namespace MandADiscoverySuite.Models
     /// <summary>
     /// Application data model for discovered applications
     /// </summary>
-    public class ApplicationData : INotifyPropertyChanged
+    public class ApplicationDataOld : INotifyPropertyChanged
     {
         private string _name;
         private string _version;

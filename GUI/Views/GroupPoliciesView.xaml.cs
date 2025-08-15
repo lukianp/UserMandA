@@ -1,47 +1,33 @@
-using System;
-using System.Windows;
 using System.Windows.Controls;
-using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Services;
+using MandADiscoverySuite.ViewModels;
+using Microsoft.Extensions.Logging;
 
 namespace MandADiscoverySuite.Views
 {
     /// <summary>
-    /// Interaction logic for GroupPoliciesView.xaml
+    /// Interaction logic for GroupPoliciesView.xaml - converted to new architecture
     /// </summary>
     public partial class GroupPoliciesView : UserControl
     {
         public GroupPoliciesView()
         {
-            _ = EnhancedLoggingService.Instance.LogInformationAsync("GroupPoliciesView: Constructor started");
             InitializeComponent();
             
-            // Wire up the DataContext to GroupPoliciesViewModel
-            try
-            {
-                var mainWindow = Application.Current?.MainWindow;
-                _ = EnhancedLoggingService.Instance.LogInformationAsync($"GroupPoliciesView: MainWindow found = {mainWindow != null}");
-                
-                if (mainWindow?.DataContext is MainViewModel mainVM)
-                {
-                    _ = EnhancedLoggingService.Instance.LogInformationAsync("GroupPoliciesView: MainViewModel found, creating GroupPoliciesViewModel");
-                    var csvDataService = SimpleServiceLocator.GetService<CsvDataService>();
-                    var viewModel = new GroupPoliciesViewModel(csvDataService, mainVM);
-                    DataContext = viewModel;
-                    _ = EnhancedLoggingService.Instance.LogInformationAsync("GroupPoliciesView: ViewModel created and DataContext set");
-                }
-                else
-                {
-                    _ = EnhancedLoggingService.Instance.LogErrorAsync("GroupPoliciesView: MainViewModel not found in MainWindow.DataContext");
-                    System.Diagnostics.Debug.WriteLine("GroupPoliciesView: MainViewModel not found in MainWindow.DataContext");
-                }
-            }
-            catch (Exception ex)
-            {
-                _ = EnhancedLoggingService.Instance.LogErrorAsync($"GroupPoliciesView: Error setting DataContext: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"GroupPoliciesView: Error setting DataContext: {ex.Message}");
-            }
-            _ = EnhancedLoggingService.Instance.LogInformationAsync("GroupPoliciesView: Constructor completed");
+            // Create dependencies using the unified pattern
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddDebug());
+            var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
+            var vmLogger = loggerFactory.CreateLogger<GroupPoliciesViewModelNew>();
+            
+            var csvService = new CsvDataServiceNew(csvLogger);
+            var profileService = ProfileService.Instance;
+            
+            // Create and set ViewModel
+            var vm = new GroupPoliciesViewModelNew(csvService, vmLogger, profileService);
+            DataContext = vm;
+            
+            // Load data when view loads
+            Loaded += async (_, __) => await vm.LoadAsync();
         }
     }
 }

@@ -1,24 +1,33 @@
 using System.Windows.Controls;
+using MandADiscoverySuite.Services;
 using MandADiscoverySuite.ViewModels;
+using Microsoft.Extensions.Logging;
 
 namespace MandADiscoverySuite.Views
 {
     /// <summary>
-    /// Interaction logic for ApplicationsView.xaml
+    /// Interaction logic for ApplicationsView.xaml - converted to new architecture
     /// </summary>
     public partial class ApplicationsView : UserControl
     {
         public ApplicationsView()
         {
             InitializeComponent();
-            DataContext = new ApplicationsMainViewModel();
-            Loaded += async (s, e) =>
-            {
-                if (DataContext is ApplicationsMainViewModel vm)
-                {
-                    await vm.LoadAsync();
-                }
-            };
+            
+            // Create dependencies using the unified pattern
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddDebug());
+            var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
+            var vmLogger = loggerFactory.CreateLogger<ApplicationsViewModelNew>();
+            
+            var csvService = new CsvDataServiceNew(csvLogger);
+            var profileService = ProfileService.Instance;
+            
+            // Create and set ViewModel
+            var vm = new ApplicationsViewModelNew(csvService, vmLogger, profileService);
+            DataContext = vm;
+            
+            // Load data when view loads
+            Loaded += async (_, __) => await vm.LoadAsync();
         }
     }
 }

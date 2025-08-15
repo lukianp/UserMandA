@@ -1,0 +1,263 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using CommunityToolkit.Mvvm.Input;
+using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Services;
+
+namespace MandADiscoverySuite.ViewModels
+{
+    public class SecurityViewModel : BaseViewModel
+    {
+        private readonly CsvDataService _csvDataService;
+        private ObservableCollection<SecurityIssueData> _securityIssues;
+        private ObservableCollection<SecurityRecommendationData> _securityRecommendations;
+        private SecurityIssueData _selectedIssue;
+        private string _selectedSeverity;
+        private string _selectedCategory;
+
+        public SecurityViewModel()
+        {
+            _csvDataService = SimpleServiceLocator.GetService<CsvDataService>() ?? new CsvDataService();
+            _securityIssues = new ObservableCollection<SecurityIssueData>();
+            _securityRecommendations = new ObservableCollection<SecurityRecommendationData>();
+            
+            // Initialize filter options
+            SeverityFilter = new List<string> { "All", "Critical", "High", "Medium", "Low", "Info" };
+            CategoryFilter = new List<string> { "All", "MFA", "Identity", "Permissions", "Configuration", "Compliance" };
+            _selectedSeverity = "All";
+            _selectedCategory = "All";
+            
+            // Initialize commands
+            RefreshCommand = new AsyncRelayCommand(LoadAsync);
+            ViewSecurityGroupsCommand = new RelayCommand(ViewSecurityGroups);
+            ViewGroupPoliciesCommand = new RelayCommand(ViewGroupPolicies);
+            ViewRiskyUsersCommand = new RelayCommand(ViewRiskyUsers);
+            ViewMFAReportCommand = new RelayCommand(ViewMFAReport);
+            ViewCertificatesCommand = new RelayCommand(ViewCertificates);
+        }
+
+        public ObservableCollection<SecurityIssueData> SecurityIssues
+        {
+            get => _securityIssues;
+            set => SetProperty(ref _securityIssues, value);
+        }
+
+        public ObservableCollection<SecurityRecommendationData> SecurityRecommendations
+        {
+            get => _securityRecommendations;
+            set => SetProperty(ref _securityRecommendations, value);
+        }
+
+        public SecurityIssueData SelectedIssue
+        {
+            get => _selectedIssue;
+            set => SetProperty(ref _selectedIssue, value);
+        }
+
+        public string SelectedSeverity
+        {
+            get => _selectedSeverity;
+            set => SetProperty(ref _selectedSeverity, value);
+        }
+
+        public string SelectedCategory
+        {
+            get => _selectedCategory;
+            set => SetProperty(ref _selectedCategory, value);
+        }
+
+        public List<string> SeverityFilter { get; }
+        public List<string> CategoryFilter { get; }
+
+        public override bool HasData => _securityIssues?.Count > 0;
+        public bool HasNoData => !IsLoading && _securityIssues?.Count == 0;
+
+        // Security KPIs
+        public int MFAPercentage => CalculateMFAPercentage();
+        public string MFAUsersText => $"{MFAEnabledUsers} of {TotalUsers} users";
+        public int AdminAccountsCount => _securityIssues?.Count(i => i.Category == "Identity" && i.Title.Contains("Admin")) ?? 0;
+        public int RiskyUsersCount => _securityIssues?.Count(i => i.Severity == "High" || i.Severity == "Critical") ?? 0;
+        public int SecurityScore => CalculateSecurityScore();
+        public string SecurityScoreText => GetSecurityScoreText();
+
+        private int MFAEnabledUsers => 150; // Placeholder - calculate from actual data
+        private int TotalUsers => 200; // Placeholder - calculate from actual data
+
+        public ICommand RefreshCommand { get; }
+        public ICommand ViewSecurityGroupsCommand { get; }
+        public ICommand ViewGroupPoliciesCommand { get; }
+        public ICommand ViewRiskyUsersCommand { get; }
+        public ICommand ViewMFAReportCommand { get; }
+        public ICommand ViewCertificatesCommand { get; }
+
+        public override async Task LoadAsync()
+        {
+            try
+            {
+                IsLoading = true;
+                LastError = null;
+                
+                await EnhancedLoggingService.Instance.LogInformationAsync("SecurityViewModel: Starting LoadAsync");
+
+                // Load security posture data from CSV
+                var securityPosture = await _csvDataService.LoadSecurityPostureAsync("ljpops");
+                
+                SecurityIssues.Clear();
+                foreach (var risk in securityPosture)
+                {
+                    // Convert SecurityRiskData to SecurityIssueData
+                    SecurityIssues.Add(new SecurityIssueData
+                    {
+                        Severity = risk.Severity,
+                        Category = risk.Category,
+                        Title = risk.ResourceName,
+                        Description = risk.Description,
+                        AffectedCount = 1, // Will be calculated
+                        Status = risk.Status,
+                        DiscoveredDate = risk.DetectedDate ?? DateTime.Now,
+                        RecommendedAction = risk.Recommendation
+                    });
+                }
+
+                // Load security recommendations
+                LoadSecurityRecommendations();
+
+                await EnhancedLoggingService.Instance.LogInformationAsync($"SecurityViewModel: Loaded {SecurityIssues.Count} security issues");
+
+                // Update KPIs
+                OnPropertyChanged(nameof(HasData));
+                OnPropertyChanged(nameof(HasNoData));
+                OnPropertyChanged(nameof(MFAPercentage));
+                OnPropertyChanged(nameof(MFAUsersText));
+                OnPropertyChanged(nameof(AdminAccountsCount));
+                OnPropertyChanged(nameof(RiskyUsersCount));
+                OnPropertyChanged(nameof(SecurityScore));
+                OnPropertyChanged(nameof(SecurityScoreText));
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message;
+                await EnhancedLoggingService.Instance.LogErrorAsync($"SecurityViewModel.LoadAsync failed: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private int CalculateMFAPercentage()
+        {
+            if (TotalUsers == 0) return 0;
+            return (int)Math.Round((double)MFAEnabledUsers / TotalUsers * 100);
+        }
+
+        private int CalculateSecurityScore()
+        {
+            // Simple security score calculation based on issues
+            int critical = _securityIssues?.Count(i => i.Severity == "Critical") ?? 0;
+            int high = _securityIssues?.Count(i => i.Severity == "High") ?? 0;
+            int medium = _securityIssues?.Count(i => i.Severity == "Medium") ?? 0;
+            
+            int penalty = critical * 20 + high * 10 + medium * 5;
+            return Math.Max(0, 100 - penalty);
+        }
+
+        private string GetSecurityScoreText()
+        {
+            var score = SecurityScore;
+            return score switch
+            {
+                >= 90 => "Excellent",
+                >= 80 => "Good",
+                >= 70 => "Fair",
+                >= 60 => "Poor",
+                _ => "Critical"
+            };
+        }
+
+        private void LoadSecurityRecommendations()
+        {
+            SecurityRecommendations.Clear();
+            
+            // Add sample recommendations based on security posture
+            var recommendations = new[]
+            {
+                new SecurityRecommendationData
+                {
+                    Title = "Enable MFA for all users",
+                    Description = "Increase MFA coverage from 75% to 100% to improve security posture"
+                },
+                new SecurityRecommendationData
+                {
+                    Title = "Review admin accounts",
+                    Description = "Audit privileged accounts and remove unnecessary admin rights"
+                },
+                new SecurityRecommendationData
+                {
+                    Title = "Update Group Policies",
+                    Description = "Apply latest security baselines and remove outdated policies"
+                }
+            };
+
+            foreach (var rec in recommendations)
+            {
+                SecurityRecommendations.Add(rec);
+            }
+        }
+
+        private void ViewSecurityGroups()
+        {
+            // Navigate to Security Groups view with filter applied
+            _ = EnhancedLoggingService.Instance.LogInformationAsync("SecurityViewModel: Navigating to Security Groups");
+        }
+
+        private void ViewGroupPolicies()
+        {
+            // Navigate to Group Policies view
+            _ = EnhancedLoggingService.Instance.LogInformationAsync("SecurityViewModel: Navigating to Group Policies");
+        }
+
+        private void ViewRiskyUsers()
+        {
+            // Navigate to Users view with risky users filter
+            _ = EnhancedLoggingService.Instance.LogInformationAsync("SecurityViewModel: Navigating to Risky Users");
+        }
+
+        private void ViewMFAReport()
+        {
+            // Generate and display MFA coverage report
+            _ = EnhancedLoggingService.Instance.LogInformationAsync("SecurityViewModel: Generating MFA Report");
+        }
+
+        private void ViewCertificates()
+        {
+            // Navigate to certificates view
+            _ = EnhancedLoggingService.Instance.LogInformationAsync("SecurityViewModel: Navigating to Certificates");
+        }
+    }
+
+    public class SecurityIssueData
+    {
+        public string Severity { get; set; } = "";
+        public string Category { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public int AffectedCount { get; set; }
+        public string Status { get; set; } = "";
+        public DateTime DiscoveredDate { get; set; } = DateTime.Now;
+        public string RecommendedAction { get; set; } = "";
+    }
+
+    public class SecurityRecommendationData
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Priority { get; set; } = "Medium";
+        public string Category { get; set; } = "";
+    }
+}

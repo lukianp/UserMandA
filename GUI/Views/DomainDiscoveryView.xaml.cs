@@ -1,12 +1,13 @@
-using System.Windows;
 using System.Windows.Controls;
-using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Services;
+using MandADiscoverySuite.ViewModels;
+using Microsoft.Extensions.Logging;
 
 namespace MandADiscoverySuite.Views
 {
     /// <summary>
-    /// Interaction logic for DomainDiscoveryView.xaml
+    /// Interaction logic for DomainDiscoveryView.xaml - converted to new architecture
+    /// Uses UsersViewModelNew as a placeholder until proper domain discovery is implemented
     /// </summary>
     public partial class DomainDiscoveryView : UserControl
     {
@@ -14,37 +15,20 @@ namespace MandADiscoverySuite.Views
         {
             InitializeComponent();
             
-            try
-            {
-                // Get MainViewModel from Application
-                var mainVM = (MainViewModel)Application.Current.MainWindow.DataContext;
-                DataContext = new DomainDiscoveryViewModel(mainVM);
-                
-                _ = EnhancedLoggingService.Instance.LogInformationAsync("DomainDiscoveryView: DataContext set successfully");
-            }
-            catch (System.Exception ex)
-            {
-                _ = EnhancedLoggingService.Instance.LogErrorAsync($"DomainDiscoveryView constructor failed: {ex.Message}");
-                
-                // Create a minimal DataContext to prevent binding errors
-                DataContext = new DomainDiscoveryViewModel(null);
-            }
-        }
-
-        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                if (DataContext is DomainDiscoveryViewModel viewModel)
-                {
-                    _ = EnhancedLoggingService.Instance.LogInformationAsync("DomainDiscoveryView: Loading data asynchronously");
-                    await viewModel.LoadAsync();
-                }
-            }
-            catch (System.Exception ex)
-            {
-                _ = EnhancedLoggingService.Instance.LogErrorAsync($"DomainDiscoveryView.UserControl_Loaded failed: {ex.Message}");
-            }
+            // Create dependencies using the unified pattern
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddDebug());
+            var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
+            var vmLogger = loggerFactory.CreateLogger<UsersViewModelNew>();
+            
+            var csvService = new CsvDataServiceNew(csvLogger);
+            var profileService = ProfileService.Instance;
+            
+            // Create and set ViewModel - using Users data as placeholder for domain discovery
+            var vm = new UsersViewModelNew(csvService, vmLogger, profileService);
+            DataContext = vm;
+            
+            // Load data when view loads
+            Loaded += async (_, __) => await vm.LoadAsync();
         }
     }
 }

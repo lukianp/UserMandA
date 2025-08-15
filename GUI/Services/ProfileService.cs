@@ -16,6 +16,11 @@ namespace MandADiscoverySuite.Services
         private readonly string _profilesPath;
         private readonly string _profilesFile;
         private List<CompanyProfile> _cachedProfiles;
+        private static ProfileService _instance;
+
+        public static ProfileService Instance => _instance ??= new ProfileService();
+        
+        public string CurrentProfile => "ljpops"; // Hardcoded for now
 
         public event EventHandler ProfilesChanged;
 

@@ -1,46 +1,33 @@
-using System;
-using System.Windows;
 using System.Windows.Controls;
-using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Services;
+using MandADiscoverySuite.ViewModels;
+using Microsoft.Extensions.Logging;
 
 namespace MandADiscoverySuite.Views
 {
     /// <summary>
-    /// Interaction logic for UsersView.xaml
+    /// Interaction logic for UsersView.xaml - converted to new architecture
     /// </summary>
     public partial class UsersView : UserControl
     {
         public UsersView()
         {
-            _ = EnhancedLoggingService.Instance.LogInformationAsync("UsersView: Constructor started");
             InitializeComponent();
             
-            // Wire up the DataContext to UsersViewModel
-            try
-            {
-                var mainWindow = Application.Current?.MainWindow;
-                _ = EnhancedLoggingService.Instance.LogInformationAsync($"UsersView: MainWindow found = {mainWindow != null}");
-                
-                if (mainWindow?.DataContext is MainViewModel mainVM)
-                {
-                    _ = EnhancedLoggingService.Instance.LogInformationAsync("UsersView: MainViewModel found, creating UsersViewModel");
-                    var viewModel = new UsersViewModel(mainViewModel: mainVM);
-                    DataContext = viewModel;
-                    _ = EnhancedLoggingService.Instance.LogInformationAsync("UsersView: ViewModel created and DataContext set");
-                }
-                else
-                {
-                    _ = EnhancedLoggingService.Instance.LogErrorAsync("UsersView: MainViewModel not found in MainWindow.DataContext");
-                    System.Diagnostics.Debug.WriteLine("UsersView: MainViewModel not found in MainWindow.DataContext");
-                }
-            }
-            catch (Exception ex)
-            {
-                _ = EnhancedLoggingService.Instance.LogErrorAsync($"UsersView: Error setting DataContext: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"UsersView: Error setting DataContext: {ex.Message}");
-            }
-            _ = EnhancedLoggingService.Instance.LogInformationAsync("UsersView: Constructor completed");
+            // Create dependencies using the unified pattern
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddDebug());
+            var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
+            var vmLogger = loggerFactory.CreateLogger<UsersViewModelNew>();
+            
+            var csvService = new CsvDataServiceNew(csvLogger);
+            var profileService = ProfileService.Instance;
+            
+            // Create and set ViewModel
+            var vm = new UsersViewModelNew(csvService, vmLogger, profileService);
+            DataContext = vm;
+            
+            // Load data when view loads
+            Loaded += async (_, __) => await vm.LoadAsync();
         }
     }
 }

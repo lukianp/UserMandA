@@ -1,123 +1,86 @@
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace MandADiscoverySuite.Services
 {
     /// <summary>
-    /// Simple service locator implementation without external dependencies
+    /// Simple service locator for dependency injection - temporary implementation
     /// </summary>
+    [Obsolete("To be replaced by proper dependency injection")]
     public static class SimpleServiceLocator
     {
-        private static readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
-        private static readonly Dictionary<Type, Func<object>> _factories = new Dictionary<Type, Func<object>>();
+        private static readonly Dictionary<Type, object> _services = new();
+        private static ILoggerFactory _loggerFactory;
+        private static IMessenger _messenger;
 
-        /// <summary>
-        /// Register a singleton service instance
-        /// </summary>
-        public static void RegisterSingleton<T>(T instance) where T : class
+        static SimpleServiceLocator()
         {
-            _services[typeof(T)] = instance;
+            // Initialize basic services
+            _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            _messenger = WeakReferenceMessenger.Default;
+            
+            // Register known services
+            RegisterService<IMessenger>(_messenger);
         }
 
-        /// <summary>
-        /// Register a service factory
-        /// </summary>
-        public static void RegisterFactory<T>(Func<T> factory) where T : class
+        public static void Initialize()
         {
-            _factories[typeof(T)] = () => factory();
+            // Method for compatibility - initialization happens in static constructor
         }
 
-        /// <summary>
-        /// Get a service instance
-        /// </summary>
+        public static T Get<T>() where T : class
+        {
+            return GetService<T>();
+        }
+        
         public static T GetService<T>() where T : class
         {
             var type = typeof(T);
             
-            // Try to get existing instance
-            if (_services.TryGetValue(type, out var instance))
+            // Handle logger requests
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ILogger<>))
             {
-                return (T)instance;
+                var genericType = type.GetGenericArguments()[0];
+                return (T)_loggerFactory.CreateLogger(genericType);
             }
             
-            // Try to create from factory
-            if (_factories.TryGetValue(type, out var factory))
+            // Handle registered services
+            if (_services.TryGetValue(type, out var service))
             {
-                var newInstance = (T)factory();
-                _services[type] = newInstance; // Cache as singleton
-                return newInstance;
+                return (T)service;
             }
             
-            // Try to create with default constructor
-            try
+            // Handle special cases
+            if (type == typeof(ThemeService))
             {
-                var newInstance = Activator.CreateInstance<T>();
-                _services[type] = newInstance;
-                return newInstance;
+                var logger = _loggerFactory.CreateLogger<ThemeService>();
+                var themeService = new ThemeService(logger, _messenger);
+                RegisterService<ThemeService>(themeService);
+                return (T)(object)themeService;
             }
-            catch
+            
+            if (type == typeof(UIInteractionLoggingService))
             {
-                throw new InvalidOperationException($"Service {typeof(T).Name} is not registered and cannot be created");
+                var logger = _loggerFactory.CreateLogger<UIInteractionLoggingService>();
+                var uiLoggingService = new UIInteractionLoggingService(logger);
+                RegisterService<UIInteractionLoggingService>(uiLoggingService);
+                return (T)(object)uiLoggingService;
             }
+            
+            // Try to create with parameterless constructor
+            if (type.GetConstructor(Type.EmptyTypes) != null)
+            {
+                return (T)Activator.CreateInstance(type);
+            }
+            
+            throw new InvalidOperationException($"Service {type.Name} is not registered and cannot be created");
         }
-
-        /// <summary>
-        /// Initialize default services
-        /// </summary>
-        public static void Initialize()
+        
+        public static void RegisterService<T>(T service) where T : class
         {
-            // Register default services as singletons
-            RegisterSingleton(ConfigurationService.Instance);
-            RegisterSingleton(ErrorHandlingService.Instance);
-            RegisterSingleton(InputValidationService.Instance);
-            
-            // Register factories for other services
-            RegisterFactory<DiscoveryService>(() => new DiscoveryService());
-            RegisterFactory<IDiscoveryService>(() => new DiscoveryService());
-            RegisterFactory<ProfileService>(() => new ProfileService());
-            RegisterFactory<IProfileService>(() => new ProfileService());
-            RegisterFactory<CsvDataService>(() => new CsvDataService());
-            RegisterFactory<IDataService>(() => new CsvDataService()); // Use CsvDataService as IDataService implementation
-            RegisterFactory<IWidgetLayoutService>(() => new WidgetLayoutService());
-            RegisterFactory<ISnapshotService>(() => new SnapshotService());
-            RegisterFactory<IAdvancedFilterService>(() => new AdvancedFilterService());
-            RegisterFactory<IGanttService>(() => new GanttService());
-            RegisterFactory<IGlobalSearchService>(() => new GlobalSearchService());
-            RegisterFactory<IReportBuilderService>(() => new ReportBuilderService());
-            RegisterFactory<IKeyboardShortcutService>(() => new KeyboardShortcutService());
-            RegisterFactory<IDetailWindowService>(() => new DetailWindowService());
-            RegisterFactory<IDataGridColumnService>(() => new DataGridColumnService());
-            RegisterFactory<IWhatIfSimulationService>(() => new WhatIfSimulationService());
-            RegisterFactory<ITaskSchedulerService>(() => new TaskSchedulerService());
-            RegisterFactory<INotesTaggingService>(() => new NotesTaggingService());
-            RegisterFactory<IRiskAnalysisService>(() => new RiskAnalysisService());
-            RegisterFactory<ThemeService>(() => 
-            {
-                // Create a null logger since we don't have the full DI container
-                var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<ThemeService>.Instance;
-                var messenger = CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger.Default;
-                return new ThemeService(logger, messenger);
-            });
-            
-            RegisterFactory<UIInteractionLoggingService>(() =>
-            {
-                // Use a null logger since we don't have the full DI container
-                var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<UIInteractionLoggingService>.Instance;
-                return new UIInteractionLoggingService(logger);
-            });
-            
-            // Register ViewModels
-            RegisterFactory<MandADiscoverySuite.ViewModels.MainViewModel>(() => 
-                new MandADiscoverySuite.ViewModels.MainViewModel());
-        }
-
-        /// <summary>
-        /// Clear all services (for testing)
-        /// </summary>
-        public static void Clear()
-        {
-            _services.Clear();
-            _factories.Clear();
+            _services[typeof(T)] = service;
         }
     }
 }

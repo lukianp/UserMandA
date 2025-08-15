@@ -11,7 +11,7 @@
         "projectName": "MandADiscoverySuite",
         "projectPath": "D:\\Scripts\\UserMandA-1\\GUI\\MandADiscoverySuite.csproj",
         "packagesPath": "C:\\Users\\lukia\\.nuget\\packages\\",
-        "outputPath": "C:\\enterprisediscovery\\obj\\",
+        "outputPath": "D:\\Scripts\\UserMandA-1\\GUI\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\lukia\\AppData\\Roaming\\NuGet\\NuGet.Config"

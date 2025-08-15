@@ -126,12 +126,26 @@
       "Bash(\"C:/enterprisediscovery/net6.0-windows/MandADiscoverySuite.exe\")",
       "Bash(if exist \"bin\" rmdir /s /q \"bin\")",
       "Bash(if exist \"obj\" rmdir /s /q \"obj\")",
-      "Bash(if exist \"D:\\Scripts\\UserMandA\\GUI\\obj\" rmdir /s /q \"D:\\Scripts\\UserMandA\\GUI\\obj\")"
+      "Bash(if exist \"D:\\Scripts\\UserMandA\\GUI\\obj\" rmdir /s /q \"D:\\Scripts\\UserMandA\\GUI\\obj\")",
+      "Bash(move:*)",
+      "Bash(Start-Process \"./obj/apphost.exe\" -WindowStyle Normal)",
+      "Bash(\"./MandADiscoverySuite.exe\")",
+      "Bash(for:*)",
+      "Bash(do mv \"$file\" \"$file.disabled\")",
+      "Bash(test:*)",
+      "Bash(if exist \"Modules\" rmdir /s /q \"Modules\")",
+      "Bash(if [ -f \"MandADiscoverySuite.xaml.cs.disabled\" ])",
+      "Bash(then mv \"MandADiscoverySuite.xaml.cs.disabled\" \"MandADiscoverySuite.xaml.cs\")",
+      "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\MandADiscovery_20250815_155053.log\" -Tail 50)",
+      "Bash(Start-Process \"D:\\Scripts\\UserMandA-1\\GUI\\bin\\Release\\net6.0-windows\\MandADiscoverySuite.exe\" -WindowStyle Normal)",
+      "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\MandADiscovery_20250815_170117.log\" -Tail 50)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [
-      "C:\\enterprisediscovery"
+      "C:\\enterprisediscovery",
+      "D:\\d\\Scripts\\UserMandA-1",
+      "C:\\discoverydata\\ljpops\\Raw"
     ]
   }
 }
