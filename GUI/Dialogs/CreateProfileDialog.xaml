@@ -11,8 +11,8 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Themes/ThemeStyles.xaml"/>
-                <ResourceDictionary Source="Styles/ValidationStyles.xaml"/>
+                <ResourceDictionary Source="../Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="../Styles/ValidationStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             <converters:ValidationLevelToColorConverter x:Key="ValidationLevelToColorConverter"/>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>

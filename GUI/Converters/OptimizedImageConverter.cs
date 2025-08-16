@@ -20,7 +20,8 @@ namespace MandADiscoverySuite.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException();
+            // ConvertBack not supported for this converter
+            return Binding.DoNothing;
         }
     }
 }

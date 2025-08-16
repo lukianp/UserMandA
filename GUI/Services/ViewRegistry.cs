@@ -31,7 +31,7 @@ namespace MandADiscoverySuite.Services
                 ["assets"] = () => new AssetInventoryView(), // Re-enabled with new architecture
                 ["domaindiscovery"] = () => new DomainDiscoveryView(),
                 ["security"] = () => new SecurityView(), // Re-enabled with new architecture
-                ["security groups"] = () => new Views.Placeholders.MissingView(), // Temporarily disabled due to ViewModel issues
+                // Removed duplicate "security groups" - use "groups" instead
                 ["waves"] = () => new WaveView(),
                 ["migrate"] = () => new MigrateView(),
                 ["management"] = () => new ManagementView(),
@@ -39,7 +39,7 @@ namespace MandADiscoverySuite.Services
                 ["analytics"] = () => new AnalyticsView(),
                 ["settings"] = () => new SettingsView(),
                 ["dashboard"] = () => new DashboardView(), // Implemented with new architecture
-                ["discovery"] = () => new Views.Placeholders.MissingView(), // TODO: Implement discovery module runner
+                ["discovery"] = () => new DiscoveryDashboardView(), // Real discovery dashboard implementation
                 
                 // Legacy keys for backwards compatibility (PascalCase) - Updated to use New views
                 ["DomainDiscovery"] = () => new DomainDiscoveryView(),

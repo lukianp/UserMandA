@@ -115,9 +115,8 @@ namespace MandADiscoverySuite.ViewModels
                 
                 if (!System.IO.File.Exists(launcherPath))
                 {
-                    // Try alternate location
-                    scriptsPath = @"D:\Scripts\UserMandA\Scripts";
-                    launcherPath = System.IO.Path.Combine(scriptsPath, "DiscoveryModuleLauncher.ps1");
+                    // Try ConfigurationService path
+                    launcherPath = ConfigurationService.Instance.GetDiscoveryLauncherScriptPath();
                     
                     if (!System.IO.File.Exists(launcherPath))
                     {

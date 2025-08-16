@@ -41,7 +41,8 @@ namespace MandADiscoverySuite.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException();
+            // ConvertBack not supported for brush to boolean conversion
+            return Binding.DoNothing;
         }
     }
 }

@@ -148,7 +148,7 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 // Use PowerShell to create the profile with proper structure
-                var scriptPath = @"D:\Scripts\UserMandA\Scripts\CreateCompanyProfile.ps1";
+                var scriptPath = Path.Combine(ConfigurationService.Instance.ScriptsPath, "CreateCompanyProfile.ps1");
                 
                 if (!System.IO.File.Exists(scriptPath))
                 {
@@ -216,7 +216,7 @@ To configure credentials, edit the files in the Credentials directory.
 Write-Host ""Company profile created successfully at: $profilePath"" -ForegroundColor Green
 ";
 
-                    var scriptsDir = @"D:\Scripts\UserMandA\Scripts";
+                    var scriptsDir = ConfigurationService.Instance.ScriptsPath;
                     if (!System.IO.Directory.Exists(scriptsDir))
                         System.IO.Directory.CreateDirectory(scriptsDir);
 

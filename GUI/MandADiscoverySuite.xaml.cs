@@ -32,7 +32,61 @@ namespace MandADiscoverySuite
         }
 
         // XAML event handler stubs for compilation
-        private void HelpButton_Click(object sender, RoutedEventArgs e) { }
+        private void HelpButton_Click(object sender, RoutedEventArgs e) 
+        { 
+            ShowKeyboardShortcuts();
+        }
+        
+        /// <summary>
+        /// Show keyboard shortcuts dialog
+        /// </summary>
+        private void ShowKeyboardShortcuts()
+        {
+            var shortcuts = @"M&A Discovery Suite - Keyboard Shortcuts
+
+Navigation:
+F1 - Dashboard
+F2 - Discovery
+F3 - Users
+F4 - Groups  
+F5 - Infrastructure
+F6 - Start Discovery
+F9 - Settings
+F10 - Reports
+
+General:
+Ctrl+T - New Tab
+Ctrl+W - Close Tab
+Ctrl+R - Refresh Data
+Ctrl+F - Search/Filter
+Ctrl+E - Export Results
+Ctrl+P - Print Preview
+Ctrl+S - Save/Export
+
+Theme:
+Ctrl+Alt+T - Toggle Theme
+
+Window:
+Ctrl+Shift+P - Command Palette
+F11 - Full Screen
+Esc - Close Dialog
+
+Company Profiles:
+Ctrl+N - New Profile
+Ctrl+D - Delete Profile
+Ctrl+Shift+S - Switch Profile
+
+Discovery:
+Ctrl+Shift+D - Start Discovery
+Ctrl+Shift+R - Run Module
+Ctrl+Shift+E - Export Discovery
+
+Help:
+F1 - This Help Dialog";
+
+            MessageBox.Show(shortcuts, "Keyboard Shortcuts - M&A Discovery Suite", 
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
         private void NetworkRangesTextBox_TextChanged(object sender, TextChangedEventArgs e) { }
         private void TimeoutTextBox_TextChanged(object sender, TextChangedEventArgs e) { }
         private void ThreadsTextBox_TextChanged(object sender, TextChangedEventArgs e) { }

@@ -1089,7 +1089,7 @@ namespace MandADiscoverySuite.Services
                         ["Email"] = u.Email,
                         ["Department"] = u.Department,
                         ["JobTitle"] = u.JobTitle,
-                        ["Enabled"] = u.Enabled
+                        ["Enabled"] = u.AccountEnabled
                     }).ToList();
                 }
             }

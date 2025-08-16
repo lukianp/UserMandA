@@ -931,6 +931,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             
                             <ComboBox Grid.Column="0" x:Name="CompanySelector" 
@@ -943,7 +944,40 @@
                                       DisplayMemberPath="CompanyName">
                             </ComboBox>
                             
-                            <Button Grid.Column="1" x:Name="CreateProfileButton"
+                            <Button Grid.Column="1" x:Name="SwitchProfileButton"
+                                    Command="{Binding SwitchProfileCommand}"
+                                    Background="{StaticResource SuccessGradient}"
+                                    BorderThickness="0"
+                                    Width="40" Height="40"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Switch to Selected Company Profile">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" 
+                                                CornerRadius="8"
+                                                x:Name="SwitchButtonBorder">
+                                            <TextBlock Text="→" FontSize="20" FontWeight="Bold"
+                                                      Foreground="White" 
+                                                      HorizontalAlignment="Center" 
+                                                      VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="SwitchButtonBorder" Property="Background">
+                                                    <Setter.Value>
+                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                            <GradientStop Color="#FF66BB6A" Offset="0"/>
+                                                            <GradientStop Color="#FF4CAF50" Offset="1"/>
+                                                        </LinearGradientBrush>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                            
+                            <Button Grid.Column="2" x:Name="CreateProfileButton"
                                     Command="{Binding CreateProfileCommand}"
                                     Background="{StaticResource AccentGradient}"
                                     BorderThickness="0"
@@ -976,8 +1010,8 @@
                                 </Button.Template>
                             </Button>
                             
-                            <Button Grid.Column="2" x:Name="DeleteProfileButton"
-                                    Command="{Binding DeleteProfileCommand}" CommandParameter="{Binding SelectedProfile}"
+                            <Button Grid.Column="3" x:Name="DeleteProfileButton"
+                                    Command="{Binding DeleteProfileCommand}"
                                     Background="{StaticResource DangerGradient}"
                                     BorderThickness="0"
                                     Width="40" Height="40"
@@ -1179,16 +1213,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="SecurityGroupsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="security groups"
-                            ToolTip="View security groups, distribution lists, and group memberships">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🔐" FontSize="18" Margin="0,0,16,0"/>
-                            <StackPanel>
-                                <TextBlock Text="Security Groups"/>
-                                <TextBlock Text="Groups &amp; Memberships" FontSize="10" Foreground="#FFA0AEC0"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Button>
+                    <!-- Security Groups button removed - functionality included in Groups section -->
 
                     <Button x:Name="AssetsButton" Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTabCommand}" CommandParameter="assets"
                             ToolTip="View asset inventory">
@@ -1347,7 +1372,8 @@
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,16">
                             <TextBlock Text="Theme" FontSize="13" FontWeight="Medium" Foreground="#FFA0AEC0" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                            <ToggleButton Content="🌙" Margin="0,0,10,0" Width="32" Height="32" ToolTip="Theme Toggle (Disabled)" IsEnabled="False"/>
+                            <ToggleButton x:Name="ThemeToggle" Content="🌙" Margin="0,0,10,0" Width="32" Height="32" ToolTip="Toggle Dark/Light Theme" 
+                                          Command="{Binding ToggleThemeCommand}" IsEnabled="True"/>
                             <Button Content="Theme Options..." 
                                     Command="{Binding ShowThemeSelectionCommand}"
                                     Background="Transparent" 
