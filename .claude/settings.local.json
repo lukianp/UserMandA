@@ -138,7 +138,9 @@
       "Bash(then mv \"MandADiscoverySuite.xaml.cs.disabled\" \"MandADiscoverySuite.xaml.cs\")",
       "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\MandADiscovery_20250815_155053.log\" -Tail 50)",
       "Bash(Start-Process \"D:\\Scripts\\UserMandA-1\\GUI\\bin\\Release\\net6.0-windows\\MandADiscoverySuite.exe\" -WindowStyle Normal)",
-      "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\MandADiscovery_20250815_170117.log\" -Tail 50)"
+      "Bash(Get-Content \"C:\\DiscoveryData\\ljpops\\Logs\\MandADiscovery_20250815_170117.log\" -Tail 50)",
+      "Bash(Test-Path \"D:\\Scripts\\UserMandA\\Modules\\Core\\CompanyProfileManager.psm1\")",
+      "Bash(Get-Process MandADiscoverySuite -ErrorAction SilentlyContinue)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

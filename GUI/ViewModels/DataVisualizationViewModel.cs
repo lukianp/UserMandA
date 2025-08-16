@@ -391,7 +391,9 @@ namespace MandADiscoverySuite.ViewModels
             if (dataList.Any())
             {
                 statisticItems.Add(new StatisticItem("Latest Discovery", dataList.Max(r => r.DiscoveryTime).ToString("yyyy-MM-dd HH:mm"), "🕐"));
-                statisticItems.Add(new StatisticItem("Largest Module", dataList.OrderByDescending(r => r.ItemCount).First().DisplayName, "🎯"));
+                var largestModule = dataList.OrderByDescending(r => r.ItemCount).FirstOrDefault();
+                if (largestModule != null)
+                    statisticItems.Add(new StatisticItem("Largest Module", largestModule.DisplayName, "🎯"));
             }
 
             // Update UI on main thread

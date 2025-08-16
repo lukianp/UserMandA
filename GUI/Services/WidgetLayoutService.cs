@@ -94,13 +94,7 @@ namespace MandADiscoverySuite.Services
                     RowSpan = 1,
                     ColumnSpan = 2
                 },
-                new DiscoveryStatusWidget
-                {
-                    Row = 0,
-                    Column = 2,
-                    RowSpan = 2,
-                    ColumnSpan = 1
-                },
+                // Removed DiscoveryStatusWidget - replaced with Dashboard tiles
                 new RiskAssessmentWidget
                 {
                     Row = 0,
@@ -154,7 +148,7 @@ namespace MandADiscoverySuite.Services
             WidgetViewModel widget = config.WidgetType switch
             {
                 "SystemOverview" => new SystemOverviewWidget(),
-                "DiscoveryStatus" => new DiscoveryStatusWidget(),
+                // "DiscoveryStatus" => new DiscoveryStatusWidget(), // Removed - replaced with Dashboard tiles
                 "RiskAssessment" => new RiskAssessmentWidget(),
                 "MigrationProgress" => new MigrationProgressWidget(),
                 _ => throw new ArgumentException($"Unknown widget type: {config.WidgetType}")

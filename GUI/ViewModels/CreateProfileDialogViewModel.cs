@@ -122,6 +122,18 @@ namespace MandADiscoverySuite.ViewModels
                 }
                 else
                 {
+                    // Check if company already exists
+                    var companyDataPath = System.IO.Path.Combine(GetDiscoveryDataRootPath(), sanitizedName);
+                    
+                    if (System.IO.Directory.Exists(companyDataPath))
+                    {
+                        // Company directory already exists - show that it exists and prompt user
+                        ShowValidationWarning($"Company '{sanitizedName}' already exists. Select it from the profile list instead.");
+                        ErrorMessage = $"Company profile for '{sanitizedName}' already exists in the discovery data directory.";
+                        HasErrors = true;
+                        return;
+                    }
+
                     // Create new profile
                     profile = new CompanyProfile
                     {
@@ -130,15 +142,15 @@ namespace MandADiscoverySuite.ViewModels
                         DomainController = "",
                         TenantId = "",
                         IsActive = true,
-                        Path = System.IO.Path.Combine(GetDiscoveryDataRootPath(), ProfileName.Trim()),
+                        Path = companyDataPath,
                         Industry = "",
                         IsHybrid = false
                     };
 
-                    // Create directory structure
-                    System.IO.Directory.CreateDirectory(profile.Path);
+                    // Create full directory structure like ljpops
+                    await CreateCompanyDirectoryStructure(profile.Path, sanitizedName);
 
-                    StatusMessage = $"Profile '{ProfileName}' created successfully";
+                    StatusMessage = $"Profile '{sanitizedName}' created successfully with full directory structure";
                 }
 
                 // Simulate some processing time
@@ -183,6 +195,99 @@ namespace MandADiscoverySuite.ViewModels
             return @"C:\DiscoveryData";
         }
 
+        /// <summary>
+        /// Creates the complete directory structure for a new company profile
+        /// </summary>
+        private async Task CreateCompanyDirectoryStructure(string companyPath, string companyName)
+        {
+            try
+            {
+                // Create main company directory
+                System.IO.Directory.CreateDirectory(companyPath);
+
+                // Create subdirectories following ljpops structure
+                var directories = new[]
+                {
+                    "Archives",
+                    "Backups", 
+                    "Credentials",
+                    "Credentials\\Backups",
+                    "Discovery",
+                    "Exports",
+                    "Logs",
+                    "Logs\\Application",
+                    "Logs\\Audit",
+                    "Logs\\Security",
+                    "Raw",
+                    "Reports",
+                    "Temp"
+                };
+
+                foreach (var dir in directories)
+                {
+                    var fullPath = System.IO.Path.Combine(companyPath, dir);
+                    System.IO.Directory.CreateDirectory(fullPath);
+                }
+
+                // Create README.txt file
+                var readmeContent = $@"M&A Discovery Suite - Company Data Directory
+Company: {companyName}
+Created: {DateTime.Now:yyyy-MM-dd HH:mm:ss}
+
+This directory contains discovery OUTPUT data for {companyName}:
+
+- Reports\     : Generated reports and analysis documents
+- Exports\     : Exported discovery data (CSV, JSON, XML files)
+- Logs\        : Discovery operation logs and troubleshooting data
+- Archives\    : Historical discovery data snapshots
+- Temp\        : Temporary files during discovery processing
+- Raw\         : Raw CSV discovery output data
+- Credentials\ : Company-specific authentication credentials
+
+NOTE: Discovery PowerShell modules (.psm1) are loaded from the application
+build directory (C:\enterprisediscovery\Scripts\), NOT from this data directory.
+This directory is strictly for storing discovery results and company data.
+";
+
+                var readmePath = System.IO.Path.Combine(companyPath, "README.txt");
+                await System.IO.File.WriteAllTextAsync(readmePath, readmeContent);
+
+                // Create placeholder credentials file structure
+                var credentialsPath = System.IO.Path.Combine(companyPath, "Credentials", "discoverycredentials.config");
+                var credentialsTemplate = @"{
+    ""TenantId"": """",
+    ""ApplicationObjectId"": """",
+    ""ExpiryDate"": """",
+    ""PermissionCount"": 0,
+    ""SecretKeyId"": """",
+    ""CreatedDate"": """ + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + @""",
+    ""ScriptVersion"": ""4.0.0"",
+    ""ValidityYears"": 2,
+    ""AzureRoles"": ""Reader"",
+    ""AzureSubscriptionCount"": 0,
+    ""DaysUntilExpiry"": 0,
+    ""ApplicationName"": ""MandADiscovery"",
+    ""AzureADRoles"": [],
+    ""ClientSecret"": """",
+    ""ComputerName"": """ + Environment.MachineName + @""",
+    ""Domain"": """ + Environment.MachineName + @""",
+    ""PowerShellVersion"": ""5.1"",
+    ""ClientId"": """",
+    ""CreatedBy"": """ + Environment.UserName + @""",
+    ""CreatedOnComputer"": """ + Environment.MachineName + @""",
+    ""RoleAssignmentSuccess"": false
+}";
+
+                await System.IO.File.WriteAllTextAsync(credentialsPath, credentialsTemplate);
+
+                StatusMessage = $"Created complete directory structure for '{companyName}' at {companyPath}";
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to create directory structure for '{companyName}': {ex.Message}", ex);
+            }
+        }
+
         private void Cancel()
         {
             DialogClosed?.Invoke(this, EventArgs.Empty);
@@ -192,16 +297,30 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                var validationResult = InputValidationService.Instance.ValidateCompanyName(ProfileName);
+                if (string.IsNullOrWhiteSpace(ProfileName))
+                {
+                    ShowValidationError("Company name is required");
+                    return;
+                }
+
+                var sanitizedName = DataSanitizationService.Instance.SanitizeFileName(ProfileName.Trim());
+                var validationResult = InputValidationService.Instance.ValidateCompanyName(sanitizedName);
                 
                 if (!validationResult.IsValid)
                 {
                     ShowValidationError(validationResult.GetSummaryMessage());
+                    return;
                 }
-                else
+
+                // Check if company directory already exists
+                var companyDataPath = System.IO.Path.Combine(GetDiscoveryDataRootPath(), sanitizedName);
+                if (System.IO.Directory.Exists(companyDataPath))
                 {
-                    ShowValidationSuccess("Valid company name");
+                    ShowValidationWarning($"Company '{sanitizedName}' already exists. Select from profile list instead.");
+                    return;
                 }
+
+                ShowValidationSuccess("Valid company name - ready to create");
             }
             catch (Exception ex)
             {

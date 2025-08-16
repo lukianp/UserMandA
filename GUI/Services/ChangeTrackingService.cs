@@ -741,7 +741,7 @@ namespace MandADiscoverySuite.Services
             {
                 try
                 {
-                    SaveChangeHistoryAsync().Wait();
+                    SaveChangeHistoryAsync().GetAwaiter().GetResult();
                     ClearTracking();
                     _logger?.LogInformation("Change tracking service disposed");
                 }

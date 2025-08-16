@@ -7321,7 +7321,7 @@
     ]
   },
   "packageFolders": {
-    "C:\\enterprisediscovery\\packages": {}
+    "C:\\Users\\lukia\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
@@ -7329,7 +7329,7 @@
       "projectUniqueName": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
       "projectName": "MandADiscoverySuite",
       "projectPath": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
-      "packagesPath": "C:\\enterprisediscovery\\packages",
+      "packagesPath": "C:\\Users\\lukia\\.nuget\\packages\\",
       "outputPath": "D:\\Scripts\\UserMandA\\GUI\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [

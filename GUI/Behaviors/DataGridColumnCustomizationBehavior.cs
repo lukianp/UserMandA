@@ -378,7 +378,7 @@ namespace MandADiscoverySuite.Behaviors
             }
         }
 
-        private static void LoadConfigurationDialog(DataGrid dataGrid)
+        private static async void LoadConfigurationDialog(DataGrid dataGrid)
         {
             // Show load dialog
             var loadDialog = new Microsoft.Win32.OpenFileDialog
@@ -396,7 +396,7 @@ namespace MandADiscoverySuite.Behaviors
                     
                     if (columnService != null)
                     {
-                        var configuration = columnService.ImportConfigurationAsync(loadDialog.FileName).Result;
+                        var configuration = await columnService.ImportConfigurationAsync(loadDialog.FileName);
                         SetColumnConfiguration(dataGrid, configuration);
                         MessageBox.Show("Configuration loaded successfully.", "Load Configuration", 
                                       MessageBoxButton.OK, MessageBoxImage.Information);

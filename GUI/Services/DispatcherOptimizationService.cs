@@ -87,7 +87,8 @@ namespace MandADiscoverySuite.Services
 
             try
             {
-                return await _dispatcher.InvokeAsync(asyncFunc, priority).Result;
+                var result = await _dispatcher.InvokeAsync(asyncFunc, priority);
+                return await result;
             }
             finally
             {

@@ -13,6 +13,24 @@ namespace MandADiscoverySuite.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
+            // Handle string status values for Discovery modules
+            if (value is string statusString)
+            {
+                switch (statusString.ToLower())
+                {
+                    case "ready":
+                        return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF6B7280")); // Gray
+                    case "running":
+                        return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFF59E0B")); // Yellow
+                    case "completed":
+                        return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF10B981")); // Green
+                    case "failed":
+                        return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFEF4444")); // Red
+                    default:
+                        return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF6B7280")); // Gray default
+                }
+            }
+            
             switch (value)
             {
                 // PhaseStatus

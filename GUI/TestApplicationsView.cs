@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Extensions.Logging;
@@ -13,7 +14,7 @@ namespace MandADiscoverySuite
     /// </summary>
     public class TestApplicationsView
     {
-        public static void RunTest()
+        public static async Task RunTest()
         {
             try
             {
@@ -39,7 +40,7 @@ namespace MandADiscoverySuite
                 // Test LoadAsync method
                 Console.WriteLine("\n--- Testing LoadAsync ---");
                 var loadTask = viewModel.LoadAsync();
-                loadTask.Wait();
+                await loadTask;
                 
                 Console.WriteLine("✅ LoadAsync completed");
                 Console.WriteLine($"   HasData: {viewModel.HasData}");

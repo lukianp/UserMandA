@@ -319,7 +319,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Create a new script file
         /// </summary>
-        private void NewFile()
+        private async void NewFile()
         {
             if (HasUnsavedChanges)
             {
@@ -331,7 +331,7 @@ namespace MandADiscoverySuite.ViewModels
                     
                 if (result == MessageBoxResult.Yes)
                 {
-                    SaveFileAsync().Wait();
+                    await SaveFileAsync();
                 }
             }
 

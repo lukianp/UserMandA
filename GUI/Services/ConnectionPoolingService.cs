@@ -321,7 +321,7 @@ namespace MandADiscoverySuite.Services
             try
             {
                 var maintenanceTasks = _connectionPools.Values.Select(pool => pool.PerformMaintenanceAsync());
-                Task.WhenAll(maintenanceTasks).Wait();
+                Task.WhenAll(maintenanceTasks).GetAwaiter().GetResult();
                 
                 // Update statistics
                 var stats = GetStatistics();
@@ -348,7 +348,7 @@ namespace MandADiscoverySuite.Services
                     _maintenanceTimer?.Dispose();
                     
                     var disposeTasks = _connectionPools.Values.Select(pool => pool.DisposeAsync().AsTask());
-                    Task.WhenAll(disposeTasks).Wait();
+                    Task.WhenAll(disposeTasks).GetAwaiter().GetResult();
                     
                     _connectionPools.Clear();
                     

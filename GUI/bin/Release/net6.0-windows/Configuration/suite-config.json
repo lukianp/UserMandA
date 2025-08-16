@@ -1,0 +1,129 @@
+{
+  "discovery": {
+    "defaultTimeout": 300,
+    "longRunningTimeout": 1800,
+    "retryAttempts": 3,
+    "retryDelay": 5,
+    "maxConcurrentJobs": 8,
+    "batchSize": 100,
+    "throttleDelayMs": 50,
+    "realTimeDiscovery": {
+      "enabled": true,
+      "intervalMinutes": 5,
+      "fileWatcherEnabled": true,
+      "eventLogMonitoring": true
+    },
+    "activeDirectory": {
+      "pageSize": 1000,
+      "searchScope": "Subtree",
+      "includeDeleted": false,
+      "maxResults": 10000
+    },
+    "networkInfrastructure": {
+      "enableSNMP": false,
+      "snmpCommunity": "public",
+      "snmpTimeout": 30,
+      "pingTimeout": 5000
+    },
+    "applications": {
+      "includeSystemApps": false,
+      "scanRegistry": true,
+      "scanProgramFiles": true,
+      "scanStartMenu": true
+    }
+  },
+  "storage": {
+    "type": "CSV",
+    "csvPath": "Raw",
+    "database": {
+      "connectionString": "",
+      "commandTimeout": 30,
+      "bulkInsertBatchSize": 1000,
+      "enableIndexing": true
+    },
+    "archival": {
+      "enabled": false,
+      "retentionDays": 365,
+      "compressionEnabled": true,
+      "archivePath": "Archive"
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "enableFileLogging": true,
+    "enableConsoleLogging": true,
+    "enableEventLog": true,
+    "enablePerformanceLogging": true,
+    "logPath": "Logs",
+    "maxLogSizeMB": 100,
+    "maxLogFiles": 10,
+    "enableMetrics": true,
+    "metricsRetentionDays": 30
+  },
+  "security": {
+    "enableAuditTrail": true,
+    "auditRetentionDays": 90,
+    "enableDataObfuscation": false,
+    "allowUnsignedScripts": false,
+    "credentialStorage": "WindowsCredentialManager",
+    "encryptionKey": ""
+  },
+  "ui": {
+    "theme": "Dark",
+    "autoRefreshInterval": 30,
+    "enableRealTimeUpdates": true,
+    "defaultPageSize": 50,
+    "enableVirtualization": true,
+    "dashboard": {
+      "refreshInterval": 15,
+      "enableAnimations": true,
+      "showPerformanceMetrics": true
+    }
+  },
+  "reporting": {
+    "defaultFormat": "CSV",
+    "includeCharts": true,
+    "includeSummary": true,
+    "enableScheduledReports": false,
+    "export": {
+      "includeRawData": true,
+      "compressOutput": true,
+      "splitLargeFiles": true,
+      "maxFileSizeMB": 50
+    }
+  },
+  "integration": {
+    "email": {
+      "enabled": false,
+      "smtpServer": "",
+      "smtpPort": 587,
+      "enableSsl": true,
+      "from": "",
+      "to": []
+    },
+    "webhooks": {
+      "enabled": false,
+      "endpoints": [],
+      "timeout": 30,
+      "retryAttempts": 3
+    },
+    "api": {
+      "enabled": false,
+      "port": 8080,
+      "enableAuthentication": true,
+      "rateLimitPerMinute": 100
+    }
+  },
+  "advanced": {
+    "enableDebugMode": false,
+    "enableProfiling": false,
+    "memoryLimitMB": 2048,
+    "tempPath": "",
+    "plugins": {
+      "enabled": false,
+      "pluginPath": "Plugins",
+      "allowThirdParty": false,
+      "signatureValidation": true
+    }
+  }
+}
