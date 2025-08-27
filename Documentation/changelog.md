@@ -15,6 +15,7 @@ Company data root: `C:\discoverydata\ljpops\`
   - Additional theme brush keys: PrimaryTextBrush, SecondaryTextBrush, ButtonHoverBrush, ValidBorderBrush, InvalidBorderBrush
   - Theme system documentation with developer guidelines and best practices
   - Runtime theme switching infrastructure ready for seamless light/dark/accent color changes
+  - Dedicated `HighContrastTheme.xaml` dictionary and ThemeService support
 - **LogicEngineService** - Unified data fabric and inference engine for CSV consolidation
   - Typed DTOs for all discovery entities (Users, Groups, Devices, Apps, GPOs, etc.)
   - Thread-safe in-memory indices with O(1) entity lookups

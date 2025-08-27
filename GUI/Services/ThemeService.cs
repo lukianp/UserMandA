@@ -311,12 +311,6 @@ namespace MandADiscoverySuite.Services
                 var themeDict = new ResourceDictionary { Source = themeUri };
                 app.Resources.MergedDictionaries.Add(themeDict);
 
-                // Apply high contrast if enabled
-                if (HighContrast)
-                {
-                    ApplyHighContrastOverrides();
-                }
-
                 _logger.LogDebug("Applied theme: {Theme}", CurrentTheme);
             }
             catch (Exception ex)
@@ -390,32 +384,13 @@ namespace MandADiscoverySuite.Services
             }
         }
 
-        private void ApplyHighContrastOverrides()
-        {
-            try
-            {
-                var app = Application.Current;
-                if (app == null) return;
-
-                // Apply high contrast color overrides
-                var highContrastColors = GetHighContrastColors();
-                
-                foreach (var colorPair in highContrastColors)
-                {
-                    app.Resources[colorPair.Key] = colorPair.Value;
-                }
-
-                _logger.LogDebug("Applied high contrast overrides");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error applying high contrast overrides");
-            }
-        }
-
         private Uri GetThemeResourceUri()
         {
-            var themeName = CurrentTheme == ThemeMode.Dark ? "DarkTheme" : "LightTheme";
+            string themeName;
+            if (HighContrast)
+                themeName = "HighContrastTheme";
+            else
+                themeName = CurrentTheme == ThemeMode.Dark ? "DarkTheme" : "LightTheme";
             return new Uri($"pack://application:,,,/MandADiscoverySuite;component/Themes/{themeName}.xaml");
         }
 
@@ -472,30 +447,6 @@ namespace MandADiscoverySuite.Services
                     Pressed = new SolidColorBrush(Color.FromRgb(67, 56, 202))
                 }
             };
-        }
-
-        private Dictionary<string, SolidColorBrush> GetHighContrastColors()
-        {
-            if (CurrentTheme == ThemeMode.Dark)
-            {
-                return new Dictionary<string, SolidColorBrush>
-                {
-                    ["ForegroundBrush"] = new SolidColorBrush(Colors.White),
-                    ["BackgroundBrush"] = new SolidColorBrush(Colors.Black),
-                    ["BorderBrush"] = new SolidColorBrush(Colors.White),
-                    ["SurfaceBrush"] = new SolidColorBrush(Color.FromRgb(32, 32, 32))
-                };
-            }
-            else
-            {
-                return new Dictionary<string, SolidColorBrush>
-                {
-                    ["ForegroundBrush"] = new SolidColorBrush(Colors.Black),
-                    ["BackgroundBrush"] = new SolidColorBrush(Colors.White),
-                    ["BorderBrush"] = new SolidColorBrush(Colors.Black),
-                    ["SurfaceBrush"] = new SolidColorBrush(Color.FromRgb(248, 248, 248))
-                };
-            }
         }
 
         private ThemeMode GetSystemTheme()

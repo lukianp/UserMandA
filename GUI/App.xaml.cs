@@ -12,6 +12,8 @@ using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Helpers;
 using MandADiscoverySuite.Navigation;
 using MandADiscoverySuite.Views;
+using CommunityToolkit.Mvvm.Messaging;
+using MandADiscoverySuite.Messages;
 
 namespace MandADiscoverySuite
 {
@@ -77,6 +79,13 @@ namespace MandADiscoverySuite
                     logAction?.Invoke("Initializing ThemeService...");
                     themeService.Initialize();
                     logAction?.Invoke("ThemeService initialized successfully");
+
+                    // Register for theme change messages to reload theme resources
+                    var messenger = SimpleServiceLocator.Instance.GetService<IMessenger>();
+                    messenger?.Register<App, ThemeChangedMessage>(this, (r, m) =>
+                    {
+                        r.ApplyThemeDictionary(m.IsDarkTheme);
+                    });
                 }
                 
                 // Freeze static gradient brushes for performance
@@ -557,6 +566,33 @@ namespace MandADiscoverySuite
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to initialize LogicEngineService: {ex.Message}");
+            }
+        }
+
+        private void ApplyThemeDictionary(bool isDarkTheme)
+        {
+            try
+            {
+                var themeName = isDarkTheme ? "DarkTheme" : "LightTheme";
+                var app = Application.Current;
+                if (app == null) return;
+
+                for (int i = app.Resources.MergedDictionaries.Count - 1; i >= 0; i--)
+                {
+                    var dict = app.Resources.MergedDictionaries[i];
+                    if (dict.Source?.OriginalString?.Contains("Theme") == true)
+                    {
+                        app.Resources.MergedDictionaries.RemoveAt(i);
+                    }
+                }
+
+                var themeUri = new Uri($"pack://application:,,,/MandADiscoverySuite;component/Themes/{themeName}.xaml");
+                var themeDict = new ResourceDictionary { Source = themeUri };
+                app.Resources.MergedDictionaries.Add(themeDict);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to apply theme dictionary: {ex.Message}");
             }
         }
 

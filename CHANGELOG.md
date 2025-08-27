@@ -1,5 +1,15 @@
 # M&A Discovery Suite - Change Log
 
+## [1.1.1] - 2025-08-27 - LOGIC ENGINE REFINEMENTS
+
+### Added
+- File timestamp caching in `LogicEngineService` to skip reloads when CSV data is unchanged
+- Documentation for Logic Engine architecture and DTO schemas
+- Sample discovery CSVs and unit tests covering edge cases and ACL→Group→User inference
+
+### Changed
+- Implemented ACL→Group→User inference mapping in `LogicEngineService`
+
 ## [1.1.0] - 2025-08-26 - LOGIC ENGINE ARCHITECTURE - UNIFIED DATA LAYER ✅
 
 ### MAJOR FEATURE - LOGIC ENGINE SERVICE IMPLEMENTATION 🚀

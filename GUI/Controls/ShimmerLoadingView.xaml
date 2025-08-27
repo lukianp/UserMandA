@@ -45,13 +45,13 @@
 
         <!-- Shimmer Rectangle Style -->
         <Style x:Key="ShimmerRectangleStyle" TargetType="Rectangle">
-            <Setter Property="Fill" Value="{StaticResource ShimmerBrush}"/>
+            <Setter Property="Fill" Value="{DynamicResource ShimmerBrush}"/>
             <Setter Property="RadiusX" Value="4"/>
             <Setter Property="RadiusY" Value="4"/>
             <Style.Triggers>
                 <!-- Use dark shimmer for dark theme -->
                 <DataTrigger Binding="{Binding Source={x:Static Application.Current}, Path=(FrameworkElement.ActualTheme)}" Value="Dark">
-                    <Setter Property="Fill" Value="{StaticResource DarkShimmerBrush}"/>
+                    <Setter Property="Fill" Value="{DynamicResource DarkShimmerBrush}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -68,7 +68,7 @@
                 <!-- Avatar placeholder -->
                 <Ellipse Grid.Column="0" 
                         Width="40" Height="40"
-                        Fill="{StaticResource ShimmerBrush}"
+                        Fill="{DynamicResource ShimmerBrush}"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"/>
 
@@ -77,12 +77,12 @@
                            VerticalAlignment="Center" 
                            Margin="12,0,12,0">
                     <Rectangle Height="14" 
-                              Style="{StaticResource ShimmerRectangleStyle}"
+                              Style="{DynamicResource ShimmerRectangleStyle}"
                               Margin="0,2"/>
                     <Rectangle Height="12" 
                               Width="120"
                               HorizontalAlignment="Left"
-                              Style="{StaticResource ShimmerRectangleStyle}"
+                              Style="{DynamicResource ShimmerRectangleStyle}"
                               Margin="0,6,0,2"/>
                 </StackPanel>
 
@@ -91,7 +91,7 @@
                           Height="12" Width="60"
                           HorizontalAlignment="Right"
                           VerticalAlignment="Center"
-                          Style="{StaticResource ShimmerRectangleStyle}"/>
+                          Style="{DynamicResource ShimmerRectangleStyle}"/>
             </Grid>
         </DataTemplate>
 
@@ -107,27 +107,27 @@
                 
                 <StackPanel>
                     <!-- Title placeholder -->
-                    <Rectangle Height="16" 
+                    <Rectangle Height="16"
                               Width="140"
                               HorizontalAlignment="Left"
-                              Style="{StaticResource ShimmerRectangleStyle}"
+                              Style="{DynamicResource ShimmerRectangleStyle}"
                               Margin="0,0,0,12"/>
                     
                     <!-- Content placeholders -->
-                    <Rectangle Height="12" 
-                              Style="{StaticResource ShimmerRectangleStyle}"
+                    <Rectangle Height="12"
+                              Style="{DynamicResource ShimmerRectangleStyle}"
                               Margin="0,2"/>
-                    <Rectangle Height="12" 
+                    <Rectangle Height="12"
                               Width="180"
                               HorizontalAlignment="Left"
-                              Style="{StaticResource ShimmerRectangleStyle}"
+                              Style="{DynamicResource ShimmerRectangleStyle}"
                               Margin="0,6,0,2"/>
                     
                     <!-- Value placeholder -->
-                    <Rectangle Height="24" 
+                    <Rectangle Height="24"
                               Width="80"
                               HorizontalAlignment="Left"
-                              Style="{StaticResource ShimmerRectangleStyle}"
+                              Style="{DynamicResource ShimmerRectangleStyle}"
                               Margin="0,16,0,0"/>
                 </StackPanel>
             </Border>
@@ -144,33 +144,33 @@
                     <ColumnDefinition Width="80"/>
                 </Grid.ColumnDefinitions>
 
-                <Rectangle Grid.Column="0" 
+                <Rectangle Grid.Column="0"
                           Height="12"
-                          Style="{StaticResource ShimmerRectangleStyle}"
+                          Style="{DynamicResource ShimmerRectangleStyle}"
                           Margin="4,0"/>
                           
-                <Rectangle Grid.Column="1" 
+                <Rectangle Grid.Column="1"
                           Height="12" Width="60"
                           HorizontalAlignment="Left"
-                          Style="{StaticResource ShimmerRectangleStyle}"
+                          Style="{DynamicResource ShimmerRectangleStyle}"
                           Margin="4,0"/>
                           
-                <Rectangle Grid.Column="2" 
+                <Rectangle Grid.Column="2"
                           Height="12" Width="80"
                           HorizontalAlignment="Left"
-                          Style="{StaticResource ShimmerRectangleStyle}"
+                          Style="{DynamicResource ShimmerRectangleStyle}"
                           Margin="4,0"/>
                           
                 <Rectangle Grid.Column="3" 
                           Height="12" Width="50"
                           HorizontalAlignment="Left"
-                          Style="{StaticResource ShimmerRectangleStyle}"
+                          Style="{DynamicResource ShimmerRectangleStyle}"
                           Margin="4,0"/>
                           
                 <Rectangle Grid.Column="4" 
                           Height="12" Width="40"
                           HorizontalAlignment="Center"
-                          Style="{StaticResource ShimmerRectangleStyle}"
+                          Style="{DynamicResource ShimmerRectangleStyle}"
                           Margin="4,0"/>
             </Grid>
         </DataTemplate>
@@ -185,7 +185,7 @@
     <Grid x:Name="ShimmerContainer">
         <!-- Dynamic shimmer content based on ShimmerType -->
         <ItemsControl x:Name="ShimmerItemsControl"
-                      ItemTemplate="{StaticResource ListItemShimmerTemplate}">
+                      ItemTemplate="{DynamicResource ListItemShimmerTemplate}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <StackPanel Orientation="Vertical"/>

@@ -67,6 +67,7 @@ namespace MandADiscoverySuite.Services
         private DataLoadStatistics? _lastLoadStats;
         private bool _isLoading = false;
         private DateTime? _lastLoadTime;
+        private readonly ConcurrentDictionary<string, DateTime> _fileLoadTimes = new();
 
         public bool IsLoading => _isLoading;
         public DateTime? LastLoadTime => _lastLoadTime;
@@ -96,6 +97,20 @@ namespace MandADiscoverySuite.Services
             try
             {
                 _logger.LogInformation("Starting LogicEngine data load from {DataRoot}", _dataRoot);
+
+                var csvFiles = Directory.Exists(_dataRoot)
+                    ? Directory.GetFiles(_dataRoot, "*.csv", SearchOption.TopDirectoryOnly)
+                    : Array.Empty<string>();
+
+                var hasChanges = csvFiles.Any(f =>
+                    !_fileLoadTimes.TryGetValue(f, out var last) || File.GetLastWriteTimeUtc(f) > last);
+
+                if (!hasChanges && _lastLoadTime.HasValue)
+                {
+                    _logger.LogInformation("No CSV changes detected. Using cached data");
+                    _isLoading = false;
+                    return true;
+                }
 
                 // Clear existing data
                 await ClearDataStoresAsync();
@@ -149,6 +164,10 @@ namespace MandADiscoverySuite.Services
                     LoadDuration: duration,
                     LoadTimestamp: startTime
                 );
+                foreach (var file in csvFiles)
+                {
+                    _fileLoadTimes[file] = File.GetLastWriteTimeUtc(file);
+                }
 
                 _lastLoadTime = DateTime.UtcNow;
                 _logger.LogInformation("LogicEngine data load completed successfully in {Duration}ms", duration.TotalMilliseconds);
@@ -2635,7 +2654,25 @@ namespace MandADiscoverySuite.Services
 
         private void ApplyAclGroupUserInference()
         {
-            // TODO: Implement ACL→Group→User inference
+            foreach (var kvp in _aclByIdentitySid.ToArray())
+            {
+                var identitySid = kvp.Key;
+                var entries = kvp.Value;
+
+                // If the identity is a group, propagate ACLs to its members
+                if (_groupsBySid.ContainsKey(identitySid))
+                {
+                    var members = _membersByGroupSid.GetValueOrDefault(identitySid, new List<string>());
+                    foreach (var memberSid in members)
+                    {
+                        foreach (var entry in entries)
+                        {
+                            _aclByIdentitySid.AddToValueList(memberSid, entry);
+                        }
+                    }
+                }
+            }
+
             _appliedInferenceRules.Add("ACL→Group→User inference");
         }
 

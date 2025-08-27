@@ -1,0 +1,2 @@
+Guid,Name,Links,SecurityFilter,WmiFilter,Enabled,DiscoveryTimestamp,DiscoveryModule,SessionId
+{00000000-0000-0000-0000-000000000001},Default Policy,OU=Computers,S-1-5-21-1-1-1-2001,,True,2024-01-01T03:00:00Z,GroupPolicyDiscovery,session-001

@@ -74,7 +74,7 @@
             
             <!-- Modern Button Style -->
             <Style x:Key="ModernButtonStyle" TargetType="Button">
-                <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>
+                <Setter Property="Background" Value="{DynamicResource PrimaryGradient}"/>
                 <Setter Property="Foreground" Value="White"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Padding" Value="20,12"/>
@@ -101,7 +101,7 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource AccentGradient}"/>
+                                    <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource AccentGradient}"/>
                                     <Trigger.EnterActions>
                                         <BeginStoryboard>
                                             <Storyboard>
