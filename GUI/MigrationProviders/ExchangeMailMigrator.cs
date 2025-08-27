@@ -1,0 +1,42 @@
+using System;
+using System.Threading.Tasks;
+using MandADiscoverySuite.Migration;
+
+namespace MandADiscoverySuite.MigrationProviders
+{
+    /// <summary>
+    /// Abstraction over Exchange mailbox move operations.
+    /// </summary>
+    public interface IExchangeMailClient
+    {
+        Task MoveMailboxAsync(MailboxDto mailbox);
+    }
+
+    /// <summary>
+    /// Implements mailbox migration using Exchange management interfaces.
+    /// </summary>
+    public class ExchangeMailMigrator : IMailMigrator
+    {
+        private readonly IExchangeMailClient _client;
+
+        public ExchangeMailMigrator(IExchangeMailClient client)
+        {
+            _client = client;
+        }
+
+        public async Task<MigrationResult> MigrateMailboxAsync(MailboxDto mailbox, MigrationSettings settings, TargetContext target, IProgress<MigrationProgress>? progress = null)
+        {
+            try
+            {
+                progress?.Report(new MigrationProgress { Percentage = 0, Message = $"Moving mailbox {mailbox.PrimarySmtpAddress}" });
+                await _client.MoveMailboxAsync(mailbox);
+                progress?.Report(new MigrationProgress { Percentage = 100, Message = $"Mailbox {mailbox.PrimarySmtpAddress} moved" });
+                return MigrationResult.Succeeded();
+            }
+            catch (Exception ex)
+            {
+                return MigrationResult.Failed(ex.Message);
+            }
+        }
+    }
+}
