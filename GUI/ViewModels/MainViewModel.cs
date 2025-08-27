@@ -27,7 +27,7 @@ namespace MandADiscoverySuite.ViewModels
         
         // Service instances for real functionality
         private readonly IDiscoveryService _discoveryService;
-        private readonly IDataExportService _dataExportService;
+        private readonly DataExportService _dataExportService;
         private readonly ModuleRegistryService _moduleRegistryService;
         private readonly LogicEngineService _logicEngineService;
         private TabItem? _selectedTab;
@@ -1117,8 +1117,7 @@ namespace MandADiscoverySuite.ViewModels
                 _logger?.LogInformation("[MainViewModel] RefreshDashboard started");
                 
                 // Clear logic engine cache and reload data
-                await _logicEngineService.ClearCacheAsync();
-                await _logicEngineService.LoadDataAsync(CurrentProfileName);
+                await _logicEngineService.LoadAllAsync();
                 
                 // Reload UI data
                 await ReloadDataAsync();
@@ -1151,7 +1150,7 @@ namespace MandADiscoverySuite.ViewModels
                     return;
                 }
                 
-                var moduleNames = enabledModules.Select(m => m.Name).ToArray();
+                var moduleNames = enabledModules.Select(m => m.DisplayName).ToArray();
                 _logger?.LogInformation($"[MainViewModel] Starting discovery for profile '{CurrentProfileName}' with modules: {string.Join(", ", moduleNames)}");
                 
                 // Show progress dialog
@@ -1269,16 +1268,18 @@ namespace MandADiscoverySuite.ViewModels
                 
                 if (parameter is string moduleName)
                 {
-                    var modules = await _moduleRegistryService.GetAllModulesAsync();
-                    var module = modules.FirstOrDefault(m => m.Name == moduleName);
+                    var modules = await _moduleRegistryService.GetAvailableModulesAsync();
+                    var module = modules.FirstOrDefault(m => m.DisplayName == moduleName);
                     
                     if (module != null)
                     {
-                        module.IsEnabled = !module.IsEnabled;
-                        await _moduleRegistryService.UpdateModuleAsync(module);
+                        module.Enabled = !module.Enabled;
+                        // Save the entire registry since there's no individual update method
+                        var registry = await _moduleRegistryService.LoadRegistryAsync();
+                        await _moduleRegistryService.SaveRegistryAsync(registry);
                         
-                        _logger?.LogInformation($"[MainViewModel] Module '{moduleName}' toggled to {module.IsEnabled}");
-                        MessageBox.Show($"Module '{moduleName}' {(module.IsEnabled ? "enabled" : "disabled")}.", 
+                        _logger?.LogInformation($"[MainViewModel] Module '{moduleName}' toggled to {module.Enabled}");
+                        MessageBox.Show($"Module '{moduleName}' {(module.Enabled ? "enabled" : "disabled")}.", 
                             "Module Updated", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     else
@@ -1336,7 +1337,7 @@ namespace MandADiscoverySuite.ViewModels
                         success = await _dataExportService.ExportToExcelAsync(Users, $"{CurrentProfileName}_Discovery_Data");
                         break;
                     case MessageBoxResult.Cancel: // JSON
-                        success = await _dataExportService.ExportToJsonAsync(allData, $"{CurrentProfileName}_All_Data");
+                        success = await _dataExportService.ExportToJsonAsync<object>(new[] { allData }, $"{CurrentProfileName}_All_Data");
                         break;
                 }
                 
@@ -1416,7 +1417,123 @@ namespace MandADiscoverySuite.ViewModels
                 }
                 
                 dataWindow.Content = tabControl;
-                dataWindow.ShowDialog();\n            }\n            catch (Exception ex)\n            {\n                _logger?.LogError(ex, \"[MainViewModel] Error showing all discovery data\");\n                MessageBox.Show($\"Error showing discovery data: {ex.Message}\", \"Error\", MessageBoxButton.OK, MessageBoxImage.Error);\n            }\n        }\n        \n        /// <summary>\n        /// Show refresh settings dialog\n        /// </summary>\n        private async Task ShowRefreshSettingsAsync()\n        {\n            try\n            {\n                _logger?.LogInformation(\"[MainViewModel] ShowRefreshSettings started\");\n                \n                var settingsDialog = new System.Windows.Window\n                {\n                    Title = \"Refresh Settings\",\n                    Width = 400,\n                    Height = 300,\n                    WindowStartupLocation = WindowStartupLocation.CenterOwner,\n                    Owner = Application.Current.MainWindow,\n                    ResizeMode = ResizeMode.NoResize\n                };\n                \n                var stackPanel = new System.Windows.Controls.StackPanel { Margin = new Thickness(20) };\n                \n                stackPanel.Children.Add(new System.Windows.Controls.TextBlock \n                { \n                    Text = \"Auto-refresh Settings\", \n                    FontSize = 16, \n                    FontWeight = FontWeights.Bold,\n                    Margin = new Thickness(0, 0, 0, 15)\n                });\n                \n                var enableAutoRefresh = new System.Windows.Controls.CheckBox\n                {\n                    Content = \"Enable automatic data refresh\",\n                    Margin = new Thickness(0, 0, 0, 10)\n                };\n                stackPanel.Children.Add(enableAutoRefresh);\n                \n                stackPanel.Children.Add(new System.Windows.Controls.TextBlock \n                { \n                    Text = \"Refresh interval (minutes):\", \n                    Margin = new Thickness(0, 10, 0, 5)\n                });\n                \n                var intervalSlider = new System.Windows.Controls.Slider\n                {\n                    Minimum = 1,\n                    Maximum = 60,\n                    Value = 10,\n                    TickFrequency = 5,\n                    TickPlacement = System.Windows.Controls.Primitives.TickPlacement.BottomRight\n                };\n                stackPanel.Children.Add(intervalSlider);\n                \n                var buttonPanel = new System.Windows.Controls.StackPanel\n                {\n                    Orientation = System.Windows.Controls.Orientation.Horizontal,\n                    HorizontalAlignment = HorizontalAlignment.Right,\n                    Margin = new Thickness(0, 20, 0, 0)\n                };\n                \n                var okButton = new System.Windows.Controls.Button { Content = \"OK\", Width = 80, Margin = new Thickness(0, 0, 10, 0) };\n                var cancelButton = new System.Windows.Controls.Button { Content = \"Cancel\", Width = 80 };\n                \n                okButton.Click += (s, e) => settingsDialog.DialogResult = true;\n                cancelButton.Click += (s, e) => settingsDialog.DialogResult = false;\n                \n                buttonPanel.Children.Add(okButton);\n                buttonPanel.Children.Add(cancelButton);\n                stackPanel.Children.Add(buttonPanel);\n                \n                settingsDialog.Content = stackPanel;\n                \n                var result = settingsDialog.ShowDialog();\n                if (result == true)\n                {\n                    _logger?.LogInformation($\"[MainViewModel] Refresh settings updated: AutoRefresh={enableAutoRefresh.IsChecked}, Interval={intervalSlider.Value}\");\n                    MessageBox.Show(\"Refresh settings updated.\", \"Settings Saved\", MessageBoxButton.OK, MessageBoxImage.Information);\n                }\n            }\n            catch (Exception ex)\n            {\n                _logger?.LogError(ex, \"[MainViewModel] Error showing refresh settings\");\n                MessageBox.Show($\"Error showing refresh settings: {ex.Message}\", \"Error\", MessageBoxButton.OK, MessageBoxImage.Error);\n            }\n        }\n        \n        /// <summary>\n        /// Select manager for user assignment\n        /// </summary>\n        private async Task SelectManagerAsync()\n        {\n            try\n            {\n                _logger?.LogInformation(\"[MainViewModel] SelectManager started\");\n                \n                // For now, just navigate to the Users view where manager assignment can be done\n                await _navigationService.NavigateToTabAsync(\"users\", \"Users\");\n                \n                MessageBox.Show(\"Navigate to Users view to assign managers to users.\", \n                    \"Manager Selection\", MessageBoxButton.OK, MessageBoxImage.Information);\n            }\n            catch (Exception ex)\n            {\n                _logger?.LogError(ex, \"[MainViewModel] Error in SelectManager\");\n                MessageBox.Show($\"Error in manager selection: {ex.Message}\", \"Error\", MessageBoxButton.OK, MessageBoxImage.Error);\n            }\n        }\n        \n        #endregion
+                dataWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error showing all discovery data");
+                MessageBox.Show($"Error showing discovery data: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        
+        /// <summary>
+        /// Show refresh settings dialog
+        /// </summary>
+        private async Task ShowRefreshSettingsAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] ShowRefreshSettings started");
+                
+                var settingsDialog = new System.Windows.Window
+                {
+                    Title = "Refresh Settings",
+                    Width = 400,
+                    Height = 300,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    Owner = Application.Current.MainWindow,
+                    ResizeMode = ResizeMode.NoResize
+                };
+                
+                var stackPanel = new System.Windows.Controls.StackPanel { Margin = new Thickness(20) };
+                
+                stackPanel.Children.Add(new System.Windows.Controls.TextBlock 
+                { 
+                    Text = "Auto-refresh Settings", 
+                    FontSize = 16, 
+                    FontWeight = FontWeights.Bold,
+                    Margin = new Thickness(0, 0, 0, 15)
+                });
+                
+                var enableAutoRefresh = new System.Windows.Controls.CheckBox
+                {
+                    Content = "Enable automatic data refresh",
+                    Margin = new Thickness(0, 0, 0, 10)
+                };
+                stackPanel.Children.Add(enableAutoRefresh);
+                
+                stackPanel.Children.Add(new System.Windows.Controls.TextBlock 
+                { 
+                    Text = "Refresh interval (minutes):", 
+                    Margin = new Thickness(0, 10, 0, 5)
+                });
+                
+                var intervalSlider = new System.Windows.Controls.Slider
+                {
+                    Minimum = 1,
+                    Maximum = 60,
+                    Value = 10,
+                    TickFrequency = 5,
+                    TickPlacement = System.Windows.Controls.Primitives.TickPlacement.BottomRight
+                };
+                stackPanel.Children.Add(intervalSlider);
+                
+                var buttonPanel = new System.Windows.Controls.StackPanel
+                {
+                    Orientation = System.Windows.Controls.Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Margin = new Thickness(0, 20, 0, 0)
+                };
+                
+                var okButton = new System.Windows.Controls.Button { Content = "OK", Width = 80, Margin = new Thickness(0, 0, 10, 0) };
+                var cancelButton = new System.Windows.Controls.Button { Content = "Cancel", Width = 80 };
+                
+                okButton.Click += (s, e) => settingsDialog.DialogResult = true;
+                cancelButton.Click += (s, e) => settingsDialog.DialogResult = false;
+                
+                buttonPanel.Children.Add(okButton);
+                buttonPanel.Children.Add(cancelButton);
+                stackPanel.Children.Add(buttonPanel);
+                
+                settingsDialog.Content = stackPanel;
+                
+                var result = settingsDialog.ShowDialog();
+                if (result == true)
+                {
+                    _logger?.LogInformation($"[MainViewModel] Refresh settings updated: AutoRefresh={enableAutoRefresh.IsChecked}, Interval={intervalSlider.Value}");
+                    MessageBox.Show("Refresh settings updated.", "Settings Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error showing refresh settings");
+                MessageBox.Show($"Error showing refresh settings: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        
+        /// <summary>
+        /// Select manager for user assignment
+        /// </summary>
+        private async Task SelectManagerAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] SelectManager started");
+                
+                // For now, just navigate to the Users view where manager assignment can be done
+                await _navigationService.NavigateToTabAsync("users", "Users");
+                
+                MessageBox.Show("Navigate to Users view to assign managers to users.", 
+                    "Manager Selection", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error in SelectManager");
+                MessageBox.Show($"Error in manager selection: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        
+        #endregion
         
     }
 }

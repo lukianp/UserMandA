@@ -188,8 +188,8 @@ namespace MandADiscoverySuite.Services
                 .Distinct()
                 .ToList();
 
-            var drives = _drivesByUserSid.GetValueOrDefault(user.Sid, new List<MappedDriveDto>());
-            var shares = ConvertAclEntryDtoToAclEntry(_aclByIdentitySid.GetValueOrDefault(user.Sid, new List<AclEntryDto>()));
+            var drives = _drivesByUserSid.GetValueOrDefault<string, List<MappedDriveDto>>(user.Sid, new List<MappedDriveDto>());
+            var shares = _aclByIdentitySid.GetValueOrDefault<string, List<AclEntry>>(user.Sid, new List<AclEntry>());
 
             var gpoLinks = GetUserApplicableGpos(user);
             var gpoFilters = _gposBySidFilter.GetValueOrDefault(user.Sid, new List<GpoDto>());
@@ -220,7 +220,7 @@ namespace MandADiscoverySuite.Services
                 .Cast<AppDto>()
                 .ToList();
 
-            var sharesUsed = ConvertAclEntryDtoToAclEntry(GetDeviceShareUsage(device.Name));
+            var sharesUsed = GetDeviceShareUsage(device.Name);
             var gposApplied = GetDeviceApplicableGpos(device);
             var backups = GetDeviceBackupInfo(device.Name);
             var vulnFindings = GetDeviceVulnerabilities(device.Name);
@@ -677,6 +677,775 @@ namespace MandADiscoverySuite.Services
             }
         }
 
+        private Dictionary<string, int> BuildGroupHeaderMap(string[] headers)
+        {
+            var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var header = headers[i].Trim();
+                
+                // Map common header variations to standard names
+                switch (header.ToLowerInvariant())
+                {
+                    case "sid":
+                    case "objectsid":
+                    case "groupsid":
+                        map["Sid"] = i;
+                        break;
+                    case "name":
+                    case "groupname":
+                    case "cn":
+                        map["Name"] = i;
+                        break;
+                    case "type":
+                    case "grouptype":
+                    case "groupscope":
+                        map["Type"] = i;
+                        break;
+                    case "members":
+                    case "memberof":
+                    case "groupmembers":
+                        map["Members"] = i;
+                        break;
+                    case "_discoverytimestamp":
+                        map["DiscoveryTimestamp"] = i;
+                        break;
+                    case "_discoverymodule":
+                        map["DiscoveryModule"] = i;
+                        break;
+                    case "_sessionid":
+                        map["SessionId"] = i;
+                        break;
+                }
+            }
+            
+            return map;
+        }
+
+        private GroupDto? ParseGroupFromCsv(string[] values, Dictionary<string, int> headerMap)
+        {
+            try
+            {
+                var getValueSafe = new Func<string, string?>((key) =>
+                {
+                    return headerMap.TryGetValue(key, out int index) && index < values.Length 
+                        ? values[index] 
+                        : null;
+                });
+                
+                // Required fields
+                var sid = getValueSafe("Sid") ?? "";
+                var name = getValueSafe("Name") ?? "";
+                
+                if (string.IsNullOrEmpty(sid) || string.IsNullOrEmpty(name))
+                {
+                    return null; // Skip incomplete records
+                }
+                
+                // Parse members (semicolon-separated)
+                var membersStr = getValueSafe("Members") ?? "";
+                var members = string.IsNullOrEmpty(membersStr) 
+                    ? new List<string>() 
+                    : membersStr.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
+                
+                // Parse discovery metadata
+                var timestampStr = getValueSafe("DiscoveryTimestamp") ?? DateTime.UtcNow.ToString();
+                var timestamp = DateTime.TryParse(timestampStr, out var parsedTime) ? parsedTime : DateTime.UtcNow;
+                
+                return new GroupDto(
+                    Sid: sid,
+                    Name: name,
+                    Type: getValueSafe("Type") ?? "Security",
+                    Members: members,
+                    DiscoveryTimestamp: timestamp,
+                    DiscoveryModule: getValueSafe("DiscoveryModule") ?? "ActiveDirectory",
+                    SessionId: getValueSafe("SessionId") ?? Guid.NewGuid().ToString(),
+                    NestedGroups: null // Will be populated during index building
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse group from CSV values");
+                return null;
+            }
+        }
+
+        private Dictionary<string, int> BuildDeviceHeaderMap(string[] headers)
+        {
+            var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var header = headers[i].Trim();
+                
+                // Map common header variations to standard names
+                switch (header.ToLowerInvariant())
+                {
+                    case "name":
+                    case "computername":
+                    case "hostname":
+                        map["Name"] = i;
+                        break;
+                    case "dns":
+                    case "dnshostname":
+                    case "fqdn":
+                        map["DNS"] = i;
+                        break;
+                    case "ou":
+                    case "organizationalunit":
+                    case "distinguishedname":
+                        map["OU"] = i;
+                        break;
+                    case "os":
+                    case "operatingsystem":
+                    case "osversion":
+                        map["OS"] = i;
+                        break;
+                    case "primaryusersid":
+                    case "primaryuser":
+                    case "owner":
+                        map["PrimaryUserSid"] = i;
+                        break;
+                    case "installedapps":
+                    case "applications":
+                    case "software":
+                        map["InstalledApps"] = i;
+                        break;
+                    case "_discoverytimestamp":
+                        map["DiscoveryTimestamp"] = i;
+                        break;
+                    case "_discoverymodule":
+                        map["DiscoveryModule"] = i;
+                        break;
+                    case "_sessionid":
+                        map["SessionId"] = i;
+                        break;
+                }
+            }
+            
+            return map;
+        }
+
+        private DeviceDto? ParseDeviceFromCsv(string[] values, Dictionary<string, int> headerMap)
+        {
+            try
+            {
+                var getValueSafe = new Func<string, string?>((key) =>
+                {
+                    return headerMap.TryGetValue(key, out int index) && index < values.Length 
+                        ? values[index] 
+                        : null;
+                });
+                
+                // Required fields
+                var name = getValueSafe("Name") ?? "";
+                
+                if (string.IsNullOrEmpty(name))
+                {
+                    return null; // Skip incomplete records
+                }
+                
+                // Parse installed apps (semicolon-separated)
+                var appsStr = getValueSafe("InstalledApps") ?? "";
+                var apps = string.IsNullOrEmpty(appsStr) 
+                    ? new List<string>() 
+                    : appsStr.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
+                
+                // Parse discovery metadata
+                var timestampStr = getValueSafe("DiscoveryTimestamp") ?? DateTime.UtcNow.ToString();
+                var timestamp = DateTime.TryParse(timestampStr, out var parsedTime) ? parsedTime : DateTime.UtcNow;
+                
+                return new DeviceDto(
+                    Name: name,
+                    DNS: getValueSafe("DNS"),
+                    OU: getValueSafe("OU"),
+                    OS: getValueSafe("OS"),
+                    PrimaryUserSid: getValueSafe("PrimaryUserSid"),
+                    InstalledApps: apps,
+                    DiscoveryTimestamp: timestamp,
+                    DiscoveryModule: getValueSafe("DiscoveryModule") ?? "ComputerInventory",
+                    SessionId: getValueSafe("SessionId") ?? Guid.NewGuid().ToString()
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse device from CSV values");
+                return null;
+            }
+        }
+
+        private Dictionary<string, int> BuildApplicationHeaderMap(string[] headers)
+        {
+            var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var header = headers[i].Trim();
+                
+                // Map common header variations to standard names
+                switch (header.ToLowerInvariant())
+                {
+                    case "id":
+                    case "appid":
+                    case "applicationid":
+                        map["Id"] = i;
+                        break;
+                    case "name":
+                    case "appname":
+                    case "applicationname":
+                        map["Name"] = i;
+                        break;
+                    case "source":
+                    case "installsource":
+                    case "deploymentmethod":
+                        map["Source"] = i;
+                        break;
+                    case "installcounts":
+                    case "installcount":
+                    case "installations":
+                        map["InstallCounts"] = i;
+                        break;
+                    case "executables":
+                    case "exes":
+                    case "binaries":
+                        map["Executables"] = i;
+                        break;
+                    case "publishers":
+                    case "publisher":
+                    case "vendor":
+                        map["Publishers"] = i;
+                        break;
+                    case "_discoverytimestamp":
+                        map["DiscoveryTimestamp"] = i;
+                        break;
+                    case "_discoverymodule":
+                        map["DiscoveryModule"] = i;
+                        break;
+                    case "_sessionid":
+                        map["SessionId"] = i;
+                        break;
+                }
+            }
+            
+            return map;
+        }
+
+        private AppDto? ParseApplicationFromCsv(string[] values, Dictionary<string, int> headerMap)
+        {
+            try
+            {
+                var getValueSafe = new Func<string, string?>((key) =>
+                {
+                    return headerMap.TryGetValue(key, out int index) && index < values.Length 
+                        ? values[index] 
+                        : null;
+                });
+                
+                // Required fields
+                var id = getValueSafe("Id") ?? Guid.NewGuid().ToString();
+                var name = getValueSafe("Name") ?? "";
+                
+                if (string.IsNullOrEmpty(name))
+                {
+                    return null; // Skip incomplete records
+                }
+                
+                // Parse install count
+                var installCountStr = getValueSafe("InstallCounts") ?? "0";
+                var installCount = int.TryParse(installCountStr, out var count) ? count : 0;
+                
+                // Parse executables (semicolon-separated)
+                var executablesStr = getValueSafe("Executables") ?? "";
+                var executables = string.IsNullOrEmpty(executablesStr) 
+                    ? new List<string>() 
+                    : executablesStr.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
+                
+                // Parse publishers (semicolon-separated)
+                var publishersStr = getValueSafe("Publishers") ?? "";
+                var publishers = string.IsNullOrEmpty(publishersStr) 
+                    ? new List<string>() 
+                    : publishersStr.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
+                
+                // Parse discovery metadata
+                var timestampStr = getValueSafe("DiscoveryTimestamp") ?? DateTime.UtcNow.ToString();
+                var timestamp = DateTime.TryParse(timestampStr, out var parsedTime) ? parsedTime : DateTime.UtcNow;
+                
+                return new AppDto(
+                    Id: id,
+                    Name: name,
+                    Source: getValueSafe("Source"),
+                    InstallCounts: installCount,
+                    Executables: executables,
+                    Publishers: publishers,
+                    DiscoveryTimestamp: timestamp,
+                    DiscoveryModule: getValueSafe("DiscoveryModule") ?? "AppInventory",
+                    SessionId: getValueSafe("SessionId") ?? Guid.NewGuid().ToString()
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse application from CSV values");
+                return null;
+            }
+        }
+
+        // Additional parsing methods for core discovery modules
+        
+        private Dictionary<string, int> BuildGpoHeaderMap(string[] headers)
+        {
+            var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var header = headers[i].Trim();
+                switch (header.ToLowerInvariant())
+                {
+                    case "guid":
+                    case "gpoguid":
+                    case "id":
+                        map["Guid"] = i;
+                        break;
+                    case "name":
+                    case "gponame":
+                        map["Name"] = i;
+                        break;
+                    case "ou":
+                    case "linkedou":
+                        map["LinkedOU"] = i;
+                        break;
+                    case "securityfilter":
+                    case "filter":
+                        map["SecurityFilter"] = i;
+                        break;
+                    case "_discoverytimestamp":
+                        map["DiscoveryTimestamp"] = i;
+                        break;
+                    case "_discoverymodule":
+                        map["DiscoveryModule"] = i;
+                        break;
+                    case "_sessionid":
+                        map["SessionId"] = i;
+                        break;
+                }
+            }
+            return map;
+        }
+        
+        private GpoDto? ParseGpoFromCsv(string[] values, Dictionary<string, int> headerMap)
+        {
+            try
+            {
+                var getValueSafe = new Func<string, string?>((key) =>
+                {
+                    return headerMap.TryGetValue(key, out int index) && index < values.Length 
+                        ? values[index] 
+                        : null;
+                });
+                
+                var guid = getValueSafe("Guid") ?? Guid.NewGuid().ToString();
+                var name = getValueSafe("Name") ?? "";
+                
+                if (string.IsNullOrEmpty(name))
+                    return null;
+                    
+                var timestampStr = getValueSafe("DiscoveryTimestamp") ?? DateTime.UtcNow.ToString();
+                var timestamp = DateTime.TryParse(timestampStr, out var parsedTime) ? parsedTime : DateTime.UtcNow;
+                
+                return new GpoDto(
+                    Guid: guid,
+                    Name: name,
+                    Links: new List<string>(),
+                    SecurityFilter: new List<string>(),
+                    WmiFilter: null,
+                    Enabled: true,
+                    DiscoveryTimestamp: timestamp,
+                    DiscoveryModule: getValueSafe("DiscoveryModule") ?? "GroupPolicy",
+                    SessionId: getValueSafe("SessionId") ?? Guid.NewGuid().ToString()
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse GPO from CSV values");
+                return null;
+            }
+        }
+        
+        private Dictionary<string, int> BuildAclHeaderMap(string[] headers)
+        {
+            var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var header = headers[i].Trim();
+                switch (header.ToLowerInvariant())
+                {
+                    case "identitysid":
+                    case "sid":
+                        map["IdentitySid"] = i;
+                        break;
+                    case "path":
+                    case "filepath":
+                    case "sharepath":
+                        map["Path"] = i;
+                        break;
+                    case "rights":
+                    case "permissions":
+                        map["Rights"] = i;
+                        break;
+                    case "_discoverytimestamp":
+                        map["DiscoveryTimestamp"] = i;
+                        break;
+                    case "_discoverymodule":
+                        map["DiscoveryModule"] = i;
+                        break;
+                    case "_sessionid":
+                        map["SessionId"] = i;
+                        break;
+                }
+            }
+            return map;
+        }
+        
+        private AclEntryDto? ParseAclFromCsv(string[] values, Dictionary<string, int> headerMap)
+        {
+            try
+            {
+                var getValueSafe = new Func<string, string?>((key) =>
+                {
+                    return headerMap.TryGetValue(key, out int index) && index < values.Length 
+                        ? values[index] 
+                        : null;
+                });
+                
+                var identitySid = getValueSafe("IdentitySid") ?? "";
+                var path = getValueSafe("Path") ?? "";
+                
+                if (string.IsNullOrEmpty(identitySid) || string.IsNullOrEmpty(path))
+                    return null;
+                    
+                var timestampStr = getValueSafe("DiscoveryTimestamp") ?? DateTime.UtcNow.ToString();
+                var timestamp = DateTime.TryParse(timestampStr, out var parsedTime) ? parsedTime : DateTime.UtcNow;
+                
+                return new AclEntryDto(
+                    Path: path,
+                    IdentitySid: identitySid,
+                    Rights: getValueSafe("Rights") ?? "Read",
+                    Inherited: false,
+                    IsShare: false,
+                    IsNTFS: true,
+                    DiscoveryTimestamp: timestamp,
+                    DiscoveryModule: getValueSafe("DiscoveryModule") ?? "NTFS_ACL",
+                    SessionId: getValueSafe("SessionId") ?? Guid.NewGuid().ToString()
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse ACL from CSV values");
+                return null;
+            }
+        }
+        
+        private Dictionary<string, int> BuildMappedDriveHeaderMap(string[] headers)
+        {
+            var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var header = headers[i].Trim();
+                switch (header.ToLowerInvariant())
+                {
+                    case "usersid":
+                    case "sid":
+                        map["UserSid"] = i;
+                        break;
+                    case "driveletter":
+                    case "letter":
+                    case "drive":
+                        map["DriveLetter"] = i;
+                        break;
+                    case "networkpath":
+                    case "path":
+                    case "uncpath":
+                        map["NetworkPath"] = i;
+                        break;
+                    case "_discoverytimestamp":
+                        map["DiscoveryTimestamp"] = i;
+                        break;
+                    case "_discoverymodule":
+                        map["DiscoveryModule"] = i;
+                        break;
+                    case "_sessionid":
+                        map["SessionId"] = i;
+                        break;
+                }
+            }
+            return map;
+        }
+        
+        private MappedDriveDto? ParseMappedDriveFromCsv(string[] values, Dictionary<string, int> headerMap)
+        {
+            try
+            {
+                var getValueSafe = new Func<string, string?>((key) =>
+                {
+                    return headerMap.TryGetValue(key, out int index) && index < values.Length 
+                        ? values[index] 
+                        : null;
+                });
+                
+                var userSid = getValueSafe("UserSid") ?? "";
+                var driveLetter = getValueSafe("DriveLetter") ?? "";
+                
+                if (string.IsNullOrEmpty(userSid) || string.IsNullOrEmpty(driveLetter))
+                    return null;
+                    
+                var timestampStr = getValueSafe("DiscoveryTimestamp") ?? DateTime.UtcNow.ToString();
+                var timestamp = DateTime.TryParse(timestampStr, out var parsedTime) ? parsedTime : DateTime.UtcNow;
+                
+                return new MappedDriveDto(
+                    UserSid: userSid,
+                    Letter: driveLetter,
+                    UNC: getValueSafe("NetworkPath") ?? "",
+                    Label: null,
+                    DiscoveryTimestamp: timestamp,
+                    DiscoveryModule: getValueSafe("DiscoveryModule") ?? "MappedDrives",
+                    SessionId: getValueSafe("SessionId") ?? Guid.NewGuid().ToString()
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse mapped drive from CSV values");
+                return null;
+            }
+        }
+        
+        private Dictionary<string, int> BuildMailboxHeaderMap(string[] headers)
+        {
+            var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var header = headers[i].Trim();
+                switch (header.ToLowerInvariant())
+                {
+                    case "upn":
+                    case "userprincipalname":
+                        map["UPN"] = i;
+                        break;
+                    case "size":
+                    case "mailboxsize":
+                    case "sizemb":
+                        map["Size"] = i;
+                        break;
+                    case "type":
+                    case "mailboxtype":
+                        map["Type"] = i;
+                        break;
+                    case "_discoverytimestamp":
+                        map["DiscoveryTimestamp"] = i;
+                        break;
+                    case "_discoverymodule":
+                        map["DiscoveryModule"] = i;
+                        break;
+                    case "_sessionid":
+                        map["SessionId"] = i;
+                        break;
+                }
+            }
+            return map;
+        }
+        
+        private MailboxDto? ParseMailboxFromCsv(string[] values, Dictionary<string, int> headerMap)
+        {
+            try
+            {
+                var getValueSafe = new Func<string, string?>((key) =>
+                {
+                    return headerMap.TryGetValue(key, out int index) && index < values.Length 
+                        ? values[index] 
+                        : null;
+                });
+                
+                var upn = getValueSafe("UPN") ?? "";
+                if (string.IsNullOrEmpty(upn))
+                    return null;
+                    
+                var sizeStr = getValueSafe("Size") ?? "0";
+                var size = long.TryParse(sizeStr, out var parsedSize) ? parsedSize : 0;
+                    
+                var timestampStr = getValueSafe("DiscoveryTimestamp") ?? DateTime.UtcNow.ToString();
+                var timestamp = DateTime.TryParse(timestampStr, out var parsedTime) ? parsedTime : DateTime.UtcNow;
+                
+                return new MailboxDto(
+                    UPN: upn,
+                    MailboxGuid: null,
+                    SizeMB: (decimal)size,
+                    Type: getValueSafe("Type") ?? "UserMailbox",
+                    DiscoveryTimestamp: timestamp,
+                    DiscoveryModule: getValueSafe("DiscoveryModule") ?? "Mailboxes",
+                    SessionId: getValueSafe("SessionId") ?? Guid.NewGuid().ToString()
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse mailbox from CSV values");
+                return null;
+            }
+        }
+        
+        private Dictionary<string, int> BuildAzureRoleHeaderMap(string[] headers)
+        {
+            var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var header = headers[i].Trim();
+                switch (header.ToLowerInvariant())
+                {
+                    case "principalid":
+                    case "userid":
+                    case "objectid":
+                        map["PrincipalId"] = i;
+                        break;
+                    case "rolename":
+                    case "role":
+                        map["RoleName"] = i;
+                        break;
+                    case "scope":
+                    case "resource":
+                        map["Scope"] = i;
+                        break;
+                    case "_discoverytimestamp":
+                        map["DiscoveryTimestamp"] = i;
+                        break;
+                    case "_discoverymodule":
+                        map["DiscoveryModule"] = i;
+                        break;
+                    case "_sessionid":
+                        map["SessionId"] = i;
+                        break;
+                }
+            }
+            return map;
+        }
+        
+        private AzureRoleAssignment? ParseAzureRoleFromCsv(string[] values, Dictionary<string, int> headerMap)
+        {
+            try
+            {
+                var getValueSafe = new Func<string, string?>((key) =>
+                {
+                    return headerMap.TryGetValue(key, out int index) && index < values.Length 
+                        ? values[index] 
+                        : null;
+                });
+                
+                var principalId = getValueSafe("PrincipalId") ?? "";
+                var roleName = getValueSafe("RoleName") ?? "";
+                
+                if (string.IsNullOrEmpty(principalId) || string.IsNullOrEmpty(roleName))
+                    return null;
+                    
+                var timestampStr = getValueSafe("DiscoveryTimestamp") ?? DateTime.UtcNow.ToString();
+                var timestamp = DateTime.TryParse(timestampStr, out var parsedTime) ? parsedTime : DateTime.UtcNow;
+                
+                return new AzureRoleAssignment(
+                    PrincipalObjectId: principalId,
+                    RoleName: roleName,
+                    Scope: getValueSafe("Scope") ?? "/",
+                    DiscoveryTimestamp: timestamp,
+                    DiscoveryModule: getValueSafe("DiscoveryModule") ?? "AzureRoles",
+                    SessionId: getValueSafe("SessionId") ?? Guid.NewGuid().ToString()
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse Azure role from CSV values");
+                return null;
+            }
+        }
+        
+        private Dictionary<string, int> BuildSqlDbHeaderMap(string[] headers)
+        {
+            var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var header = headers[i].Trim();
+                switch (header.ToLowerInvariant())
+                {
+                    case "name":
+                    case "databasename":
+                    case "dbname":
+                        map["Name"] = i;
+                        break;
+                    case "server":
+                    case "servername":
+                    case "instance":
+                        map["Server"] = i;
+                        break;
+                    case "owner":
+                    case "ownersid":
+                        map["OwnerSid"] = i;
+                        break;
+                    case "size":
+                    case "sizemb":
+                        map["SizeMB"] = i;
+                        break;
+                    case "_discoverytimestamp":
+                        map["DiscoveryTimestamp"] = i;
+                        break;
+                    case "_discoverymodule":
+                        map["DiscoveryModule"] = i;
+                        break;
+                    case "_sessionid":
+                        map["SessionId"] = i;
+                        break;
+                }
+            }
+            return map;
+        }
+        
+        private SqlDbDto? ParseSqlDbFromCsv(string[] values, Dictionary<string, int> headerMap)
+        {
+            try
+            {
+                var getValueSafe = new Func<string, string?>((key) =>
+                {
+                    return headerMap.TryGetValue(key, out int index) && index < values.Length 
+                        ? values[index] 
+                        : null;
+                });
+                
+                var name = getValueSafe("Name") ?? "";
+                if (string.IsNullOrEmpty(name))
+                    return null;
+                    
+                var sizeStr = getValueSafe("SizeMB") ?? "0";
+                var size = long.TryParse(sizeStr, out var parsedSize) ? parsedSize : 0;
+                    
+                var timestampStr = getValueSafe("DiscoveryTimestamp") ?? DateTime.UtcNow.ToString();
+                var timestamp = DateTime.TryParse(timestampStr, out var parsedTime) ? parsedTime : DateTime.UtcNow;
+                
+                return new SqlDbDto(
+                    Server: getValueSafe("Server") ?? "localhost",
+                    Instance: getValueSafe("Instance"),
+                    Database: name,
+                    Owners: new List<string>(),
+                    AppHints: new List<string>(),
+                    DiscoveryTimestamp: timestamp,
+                    DiscoveryModule: getValueSafe("DiscoveryModule") ?? "SqlDatabases",
+                    SessionId: getValueSafe("SessionId") ?? Guid.NewGuid().ToString()
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse SQL database from CSV values");
+                return null;
+            }
+        }
+        
         // T-029: New parsing methods for expanded modules
         
         private ThreatDetectionDTO? ParseThreatDetectionFromCsv(string[] values, Dictionary<string, int> headerMap)
@@ -1123,12 +1892,8 @@ namespace MandADiscoverySuite.Services
                                 {
                                     _appsById.TryAdd(app.Id, app);
                                     
-                                    // Build device-app mapping
-                                    var deviceName = GetValueSafe("DeviceName", headerMap, values);
-                                    if (!string.IsNullOrEmpty(deviceName))
-                                    {
-                                        _appsByDevice.AddToValueList(deviceName, app.Id);
-                                    }
+                                    // Build device-app mapping (if device info is in the CSV)
+                                    // Note: This will be populated during index building from device InstalledApps
                                     
                                     loadedCount++;
                                 }
@@ -1259,11 +2024,17 @@ namespace MandADiscoverySuite.Services
                                 var values = line.Split(',').Select(v => v.Trim('"')).ToArray();
                                 if (values.Length < headers.Length) continue;
                                 
-                                var acl = ParseAclFromCsv(values, headerMap);
-                                if (acl != null)
+                                var aclDto = ParseAclFromCsv(values, headerMap);
+                                if (aclDto != null)
                                 {
-                                    _aclByIdentitySid.AddToValueList(acl.IdentitySid, acl);
-                                    loadedCount++;
+                                    // Convert AclEntryDto to AclEntry
+                                    var aclEntries = ConvertAclEntryDtoToAclEntry(new List<AclEntryDto> { aclDto });
+                                    if (aclEntries.Any())
+                                    {
+                                        var acl = aclEntries.First();
+                                        _aclByIdentitySid.AddToValueList<string, AclEntry>(acl.IdentitySid, acl);
+                                        loadedCount++;
+                                    }
                                 }
                             }
                         }
@@ -1807,6 +2578,21 @@ namespace MandADiscoverySuite.Services
                             new List<DeviceDto> { device },
                             (key, existing) => { existing.Add(device); return existing; });
                     }
+                    
+                    // Build app-device mapping from device's installed apps
+                    foreach (var appName in device.InstalledApps)
+                    {
+                        // Try to match app name to app ID
+                        var app = _appsById.Values.FirstOrDefault(a => 
+                            a.Name.Equals(appName, StringComparison.OrdinalIgnoreCase));
+                        
+                        if (app != null)
+                        {
+                            _appsByDevice.AddOrUpdate(device.Name,
+                                new List<string> { app.Id },
+                                (key, existing) => { existing.Add(app.Id); return existing; });
+                        }
+                    }
                 }
 
                 _logger.LogInformation("Indices built successfully");
@@ -1874,7 +2660,8 @@ namespace MandADiscoverySuite.Services
         private void ApplyAzureRoleInference()
         {
             // TODO: Implement Azure role inference
-            _appliedInferenceRules.Add($"Azure role inference ({linkedRoles} role assignments)");
+            var linkedRolesCount = _rolesByPrincipalId.Values.Sum(list => list.Count);
+            _appliedInferenceRules.Add($"Azure role inference ({linkedRolesCount} role assignments)");
         }
 
         private void ApplySqlOwnershipInference()
@@ -2298,13 +3085,13 @@ namespace MandADiscoverySuite.Services
                         }
                         
                         // Check for orphaned ACL entries
-                        var userAcls = _aclByIdentitySid.GetValueOrDefault(entityId, new List<AclEntryDto>());
+                        var userAcls = _aclByIdentitySid.GetValueOrDefault<string, List<AclEntry>>(entityId, new List<AclEntry>());
                         foreach (var acl in userAcls)
                         {
                             // Check if ACL path still exists or is accessible
-                            if (string.IsNullOrEmpty(acl.Rights) || acl.Rights == "None")
+                            if (string.IsNullOrEmpty(acl.AccessMask) || acl.AccessMask == "None")
                             {
-                                orphanedAcls.Add(acl.Path);
+                                orphanedAcls.Add(acl.SourcePath);
                             }
                         }
                     }
@@ -2502,9 +3289,9 @@ namespace MandADiscoverySuite.Services
             return applicableGpos;
         }
         
-        private List<AclEntryDto> GetDeviceShareUsage(string deviceName)
+        private List<AclEntry> GetDeviceShareUsage(string deviceName)
         {
-            var shareUsage = new List<AclEntryDto>();
+            var shareUsage = new List<AclEntry>();
             
             try
             {
@@ -2514,8 +3301,8 @@ namespace MandADiscoverySuite.Services
                 {
                     foreach (var acl in aclList)
                     {
-                        if (acl.Path.Contains(deviceName, StringComparison.OrdinalIgnoreCase) ||
-                            acl.Path.StartsWith($"\\\\{deviceName}", StringComparison.OrdinalIgnoreCase))
+                        if (acl.SourcePath.Contains(deviceName, StringComparison.OrdinalIgnoreCase) ||
+                            acl.SourcePath.StartsWith($"\\\\{deviceName}", StringComparison.OrdinalIgnoreCase))
                         {
                             shareUsage.Add(acl);
                         }
@@ -2639,6 +3426,55 @@ namespace MandADiscoverySuite.Services
             }
             
             return result;
+        }
+        
+        private void ApplyPrimaryDeviceInference()
+        {
+            _logger.LogDebug("Applying primary device inference rules");
+            
+            // Infer primary devices based on device ownership
+            foreach (var device in _devicesByName.Values)
+            {
+                if (!string.IsNullOrEmpty(device.PrimaryUserSid))
+                {
+                    _devicesByPrimaryUserSid.AddOrUpdate(device.PrimaryUserSid,
+                        new List<DeviceDto> { device },
+                        (key, existing) => 
+                        {
+                            if (!existing.Any(d => d.Name == device.Name))
+                                existing.Add(device);
+                            return existing;
+                        });
+                }
+            }
+        }
+        
+        private void ApplyApplicationUsageInference()
+        {
+            _logger.LogDebug("Applying application usage inference rules");
+            
+            // Build app-device relationships from device installed apps
+            foreach (var device in _devicesByName.Values)
+            {
+                foreach (var appName in device.InstalledApps)
+                {
+                    // Try to match app name to app ID
+                    var app = _appsById.Values.FirstOrDefault(a => 
+                        a.Name.Equals(appName, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (app != null)
+                    {
+                        _appsByDevice.AddOrUpdate(device.Name,
+                            new List<string> { app.Id },
+                            (key, existing) => 
+                            {
+                                if (!existing.Contains(app.Id))
+                                    existing.Add(app.Id);
+                                return existing;
+                            });
+                    }
+                }
+            }
         }
         
         #endregion

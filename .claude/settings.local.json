@@ -252,7 +252,17 @@
       "Bash(cd:*)",
       "Bash(git push:*)",
       "Bash(git gc:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(git branch:*)",
+      "Bash(git remote:*)",
+      "Read(C:\\discoverydata/**)",
+      "Read(C:\\discoverydata\\ljpops\\RawData/**)",
+      "Read(C:\\discoverydata\\ljpops\\RawData/**)",
+      "Read(C:\\discoverydata\\ljpops\\RawData/**)",
+      "Read(C:\\discoverydata\\ljpops\\RawData/**)",
+      "Read(D:\\d\\Scripts\\UserMandA/**)",
+      "Read(D:\\d\\Scripts\\UserMandA\\GUI/**)",
+      "Read(C:\\discoverydata\\ljpops\\RawData/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",
