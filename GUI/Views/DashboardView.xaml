@@ -1,0 +1,188 @@
+<UserControl x:Class="MandADiscoverySuite.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800"
+             Background="#FF0F1419">
+    
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        
+        <!-- Dashboard Card Style -->
+        <Style x:Key="DashboardCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Margin" Value="8"/>
+        </Style>
+        
+        <!-- Stat Number Style -->
+        <Style x:Key="StatNumberStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="36"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- Stat Label Style -->
+        <Style x:Key="StatLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,8,0,0"/>
+        </Style>
+    </UserControl.Resources>
+    
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="32">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,32">
+                <TextBlock Text="📊 Overview" 
+                          FontSize="32" 
+                          FontWeight="Bold" 
+                          Foreground="#FFF7FAFC" 
+                          Margin="0,0,0,8"/>
+                <TextBlock Text="Project status and discovered IT infrastructure overview" 
+                          FontSize="16" 
+                          Foreground="#FFA0AEC0"/>
+            </StackPanel>
+            
+            <!-- Loading Indicator -->
+            <Border Grid.Row="1" 
+                    Background="#FF2D3748" 
+                    CornerRadius="8" 
+                    Padding="16" 
+                    Margin="0,0,0,24"
+                    Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="🔄" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Loading dashboard statistics..." 
+                              FontSize="14" 
+                              Foreground="#FFE2E8F0" 
+                              VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+            
+            <!-- Main Content Grid -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Left Side - Statistics Grid -->
+                <Grid Grid.Column="0" Margin="0,0,16,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                
+                <!-- Top Row Statistics -->
+                <UniformGrid Grid.Row="0" Columns="3" Margin="0,0,0,16">
+                    
+                    <!-- Users Card -->
+                    <Border Style="{DynamicResource DashboardCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="👥" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding TotalUsers}" Style="{DynamicResource StatNumberStyle}"/>
+                            <TextBlock Text="Users" Style="{DynamicResource StatLabelStyle}"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Computers Card -->
+                    <Border Style="{DynamicResource DashboardCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="💻" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding TotalComputers}" Style="{DynamicResource StatNumberStyle}"/>
+                            <TextBlock Text="Computers" Style="{DynamicResource StatLabelStyle}"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Applications Card -->
+                    <Border Style="{DynamicResource DashboardCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="📱" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding TotalApplications}" Style="{DynamicResource StatNumberStyle}"/>
+                            <TextBlock Text="Applications" Style="{DynamicResource StatLabelStyle}"/>
+                        </StackPanel>
+                    </Border>
+                    
+                </UniformGrid>
+                
+                <!-- Bottom Row Statistics -->
+                <UniformGrid Grid.Row="1" Columns="3">
+                    
+                    <!-- Groups Card -->
+                    <Border Style="{DynamicResource DashboardCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="🔐" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding TotalGroups}" Style="{DynamicResource StatNumberStyle}"/>
+                            <TextBlock Text="Groups" Style="{DynamicResource StatLabelStyle}"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- File Servers Card -->
+                    <Border Style="{DynamicResource DashboardCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="📁" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding TotalFileServers}" Style="{DynamicResource StatNumberStyle}"/>
+                            <TextBlock Text="File Servers" Style="{DynamicResource StatLabelStyle}"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Databases Card -->
+                    <Border Style="{DynamicResource DashboardCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="🗄️" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding TotalDatabases}" Style="{DynamicResource StatNumberStyle}"/>
+                            <TextBlock Text="Databases" Style="{DynamicResource StatLabelStyle}"/>
+                        </StackPanel>
+                    </Border>
+                    
+                </UniformGrid>
+                
+                </Grid>
+                
+                <!-- Right Side - Project Countdown Widget -->
+                <Border Grid.Column="1" Background="#FF1A202C" CornerRadius="8" Padding="24">
+                    <StackPanel>
+                        <TextBlock Text="Project Countdown" FontSize="18" FontWeight="SemiBold" 
+                                   Foreground="#FFE2E8F0" Margin="0,0,0,16"/>
+                        
+                        <TextBlock Text="{Binding ProjectName, FallbackValue='Not set'}" FontSize="16" FontWeight="Bold"
+                                   Foreground="#FF3B82F6" Margin="0,0,0,12"/>
+                        
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="Target Cutover" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Text="{Binding DaysToCutover.Days, FallbackValue='--'}" FontSize="24" FontWeight="Bold" 
+                                       Foreground="#FFFBBF24"/>
+                            <TextBlock Text="days remaining" FontSize="12" Foreground="#FFA0AEC0"/>
+                        </StackPanel>
+                        
+                        <StackPanel Margin="0,0,0,16">
+                            <TextBlock Text="Next Wave" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Text="{Binding DaysToNextWave.Days, FallbackValue='--'}" FontSize="20" FontWeight="Bold" 
+                                       Foreground="#FF10B981"/>
+                            <TextBlock Text="days remaining" FontSize="12" Foreground="#FFA0AEC0"/>
+                        </StackPanel>
+                        
+                        <Button Content="Configure" Command="{Binding ConfigureProjectCommand}" 
+                                Background="#FF374151" Foreground="#FFE2E8F0" BorderThickness="0" 
+                                Padding="12,6" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </Border>
+                
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

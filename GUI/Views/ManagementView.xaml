@@ -1,0 +1,100 @@
+<UserControl x:Class="MandADiscoverySuite.Views.ManagementView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="1000">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/GUI/Resources/Converters.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Management" FontSize="24" FontWeight="Bold" 
+                       Foreground="{DynamicResource ForegroundBrush}"/>
+            <TextBlock Text="Operational management and task monitoring" 
+                       FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,5,0,0"/>
+        </StackPanel>
+
+        <!-- Header Warnings Banner -->
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding HeaderWarnings}" 
+                      Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibility}}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="#55FF0000" Padding="10" Margin="0,0,0,5" CornerRadius="4">
+                        <TextBlock Text="{Binding}" Foreground="White" FontWeight="Medium"/>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Error Banner -->
+        <Border Grid.Row="2" Background="#55FF6B6B" Padding="10" Margin="0,0,0,10" CornerRadius="4"
+                Visibility="{Binding LastError, Converter={StaticResource NullToVisibility}}">
+            <TextBlock Text="{Binding LastError}" Foreground="White" FontWeight="Medium"/>
+        </Border>
+
+        <!-- Toolbar -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,16">
+            <TextBox Width="240" Margin="0,0,8,0" 
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                     Background="{DynamicResource SurfaceBrush}"
+                     Foreground="{DynamicResource ForegroundBrush}"
+                     BorderBrush="{DynamicResource MutedForegroundBrush}"/>
+            <Button Content="🔄 Refresh" Command="{Binding LoadCommand}" 
+                    Background="{DynamicResource PrimaryBrush}" 
+                    Foreground="White" Padding="12,6"/>
+        </StackPanel>
+
+        <!-- Content -->
+        <Grid Grid.Row="4">
+            <!-- Loading Spinner -->
+            <StackPanel Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" Width="200" Height="6" Margin="0,0,0,10"/>
+                <TextBlock Text="Loading management data..." FontSize="14" 
+                           Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Data Grid -->
+            <DataGrid ItemsSource="{Binding Items}"
+                      Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}"
+                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                      GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                      Background="{DynamicResource BackgroundBrush}"
+                      BorderBrush="{DynamicResource MutedForegroundBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
+                    <DataGridTextColumn Header="Progress" Binding="{Binding Progress}" Width="100"/>
+                    <DataGridTextColumn Header="Last Updated" Binding="{Binding LastUpdated}" Width="140"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            
+            <!-- No Data State -->
+            <StackPanel Visibility="{Binding HasData, Converter={StaticResource InverseBoolToVisibility}}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <TextBlock Text="No management data available" FontSize="16" FontWeight="SemiBold"
+                           Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="Use the refresh button to load management tasks" FontSize="14"
+                           Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

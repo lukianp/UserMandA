@@ -1,0 +1,434 @@
+<UserControl x:Class="MandADiscoverySuite.Controls.AdvancedFilteringUI"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="1000">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Filter Group Style -->
+            <Style x:Key="FilterGroupStyle" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="6"/>
+                <Setter Property="Padding" Value="16"/>
+                <Setter Property="Margin" Value="0,0,0,12"/>
+            </Style>
+
+            <!-- Filter Condition Style -->
+            <Style x:Key="FilterConditionStyle" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="4"/>
+                <Setter Property="Padding" Value="12"/>
+                <Setter Property="Margin" Value="0,0,0,8"/>
+            </Style>
+
+            <!-- Operator Button Style -->
+            <Style x:Key="OperatorButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="8,4"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="FontWeight" Value="Medium"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="3"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Quick Filter Chip Style -->
+            <Style x:Key="QuickFilterChipStyle" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="12,6"/>
+                <Setter Property="Margin" Value="0,0,8,8"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="12"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </DataTrigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header with Quick Filters -->
+        <Border Grid.Row="0" Style="{StaticResource FilterGroupStyle}">
+            <StackPanel>
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Advanced Filtering" 
+                                   FontSize="18" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="{DynamicResource ForegroundBrush}"
+                                   Margin="0,0,0,4"/>
+                        <TextBlock Text="Create complex filters to find exactly what you need" 
+                                   FontSize="13" 
+                                   Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Content="Manage Presets" 
+                                Command="{Binding ManagePresetsCommand}"
+                                Style="{StaticResource ThemedSecondaryButtonStyle}"
+                                Margin="0,0,8,0"/>
+                        <Button Content="Load Filter" 
+                                Command="{Binding LoadFilterCommand}"
+                                Style="{StaticResource ThemedSecondaryButtonStyle}"
+                                Margin="0,0,8,0"/>
+                        <Button Content="Save Filter" 
+                                Command="{Binding SaveFilterCommand}"
+                                Style="{StaticResource ThemedSecondaryButtonStyle}"
+                                Margin="0,0,8,0"/>
+                        <Button Content="Clear All" 
+                                Command="{Binding ClearAllFiltersCommand}"
+                                Style="{StaticResource ThemedDangerButtonStyle}"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Quick Filter Chips -->
+                <StackPanel>
+                    <TextBlock Text="Quick Filters" 
+                               FontWeight="Medium" 
+                               Foreground="{DynamicResource ForegroundBrush}"
+                               Margin="0,0,0,8"/>
+                    
+                    <WrapPanel>
+                        <Button Content="Active Users Only" 
+                                Command="{Binding ApplyQuickFilterCommand}"
+                                CommandParameter="ActiveUsers"
+                                Style="{StaticResource QuickFilterChipStyle}"/>
+                        <Button Content="Admin Accounts" 
+                                Command="{Binding ApplyQuickFilterCommand}"
+                                CommandParameter="AdminAccounts"
+                                Style="{StaticResource QuickFilterChipStyle}"/>
+                        <Button Content="Inactive Computers" 
+                                Command="{Binding ApplyQuickFilterCommand}"
+                                CommandParameter="InactiveComputers"
+                                Style="{StaticResource QuickFilterChipStyle}"/>
+                        <Button Content="Critical Vulnerabilities" 
+                                Command="{Binding ApplyQuickFilterCommand}"
+                                CommandParameter="CriticalVulns"
+                                Style="{StaticResource QuickFilterChipStyle}"/>
+                        <Button Content="Last 30 Days" 
+                                Command="{Binding ApplyQuickFilterCommand}"
+                                CommandParameter="Last30Days"
+                                Style="{StaticResource QuickFilterChipStyle}"/>
+                        <Button Content="High Risk Users" 
+                                Command="{Binding ApplyQuickFilterCommand}"
+                                CommandParameter="HighRiskUsers"
+                                Style="{StaticResource QuickFilterChipStyle}"/>
+                        <Button Content="External Access" 
+                                Command="{Binding ApplyQuickFilterCommand}"
+                                CommandParameter="ExternalAccess"
+                                Style="{StaticResource QuickFilterChipStyle}"/>
+                    </WrapPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Filter Builder -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,16">
+            <StackPanel>
+                <!-- Data Source Selection -->
+                <Border Style="{StaticResource FilterGroupStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Data Source" 
+                                   FontWeight="Medium" 
+                                   Foreground="{DynamicResource ForegroundBrush}"
+                                   Margin="0,0,0,12"/>
+                        
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox SelectedItem="{Binding SelectedDataSource}" 
+                                      ItemsSource="{Binding DataSources}"
+                                      Width="200" 
+                                      Margin="0,0,16,0">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Icon}" 
+                                                       FontFamily="Segoe MDL2 Assets" 
+                                                       Margin="0,0,8,0"/>
+                                            <TextBlock Text="{Binding DisplayName}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            
+                            <TextBlock Text="{Binding RecordCount, StringFormat={}{0:N0} records available}" 
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource MutedForegroundBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Filter Groups -->
+                <ItemsControl ItemsSource="{Binding FilterGroups}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource FilterGroupStyle}">
+                                <StackPanel>
+                                    <!-- Group Header -->
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <ComboBox Grid.Column="0" 
+                                                  SelectedItem="{Binding LogicalOperator}"
+                                                  Width="80"
+                                                  Margin="0,0,12,0"
+                                                  Visibility="{Binding ShowLogicalOperator, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <ComboBoxItem Content="AND"/>
+                                            <ComboBoxItem Content="OR"/>
+                                        </ComboBox>
+
+                                        <TextBlock Grid.Column="1" 
+                                                   Text="{Binding GroupName}" 
+                                                   FontWeight="Medium"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource ForegroundBrush}"/>
+
+                                        <Button Grid.Column="2" 
+                                                Command="{Binding DataContext.RemoveFilterGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Content="✕"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Foreground="{DynamicResource ErrorBrush}"
+                                                FontSize="16"
+                                                Cursor="Hand"
+                                                ToolTip="Remove filter group"/>
+                                    </Grid>
+
+                                    <!-- Filter Conditions -->
+                                    <ItemsControl ItemsSource="{Binding Conditions}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Style="{StaticResource FilterConditionStyle}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="150"/>
+                                                            <ColumnDefinition Width="120"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <!-- Logical Operator -->
+                                                        <Button Grid.Column="0" 
+                                                                Content="{Binding LogicalOperator}"
+                                                                Command="{Binding ToggleLogicalOperatorCommand}"
+                                                                Style="{StaticResource OperatorButtonStyle}"
+                                                                Margin="0,0,8,0"
+                                                                Width="40"
+                                                                Visibility="{Binding ShowLogicalOperator, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                                                        <!-- Field Selection -->
+                                                        <ComboBox Grid.Column="1" 
+                                                                  SelectedItem="{Binding SelectedField}"
+                                                                  ItemsSource="{Binding AvailableFields}"
+                                                                  DisplayMemberPath="DisplayName"
+                                                                  Margin="0,0,8,0"/>
+
+                                                        <!-- Operator Selection -->
+                                                        <ComboBox Grid.Column="2" 
+                                                                  SelectedItem="{Binding SelectedOperator}"
+                                                                  ItemsSource="{Binding AvailableOperators}"
+                                                                  DisplayMemberPath="DisplayName"
+                                                                  Margin="0,0,8,0"/>
+
+                                                        <!-- Value Input -->
+                                                        <Grid Grid.Column="3" Margin="0,0,8,0">
+                                                            <!-- Text Input -->
+                                                            <TextBox Text="{Binding TextValue}" 
+                                                                     Visibility="{Binding IsTextValue, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                            
+                                                            <!-- Number Input -->
+                                                            <TextBox Text="{Binding NumberValue}" 
+                                                                     Visibility="{Binding IsNumberValue, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                            
+                                                            <!-- Date Input -->
+                                                            <DatePicker SelectedDate="{Binding DateValue}" 
+                                                                        Visibility="{Binding IsDateValue, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                            
+                                                            <!-- Boolean Input -->
+                                                            <CheckBox IsChecked="{Binding BooleanValue}" 
+                                                                      Content="True"
+                                                                      Visibility="{Binding IsBooleanValue, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                            
+                                                            <!-- List Selection -->
+                                                            <ComboBox SelectedItem="{Binding ListValue}"
+                                                                      ItemsSource="{Binding ListOptions}"
+                                                                      Visibility="{Binding IsListValue, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                        </Grid>
+
+                                                        <!-- Remove Condition -->
+                                                        <Button Grid.Column="4" 
+                                                                Command="{Binding DataContext.RemoveConditionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Content="✕"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Foreground="{DynamicResource ErrorBrush}"
+                                                                FontSize="14"
+                                                                Cursor="Hand"
+                                                                ToolTip="Remove condition"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- Add Condition Button -->
+                                    <Button Content="+ Add Condition" 
+                                            Command="{Binding DataContext.AddConditionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,8,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Add Filter Group -->
+                <Button Content="+ Add Filter Group" 
+                        Command="{Binding AddFilterGroupCommand}"
+                        Style="{StaticResource ThemedButtonStyle}"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,16"/>
+
+                <!-- Filter Preview -->
+                <Border Style="{StaticResource FilterGroupStyle}" 
+                        Visibility="{Binding HasFilters, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="Filter Preview" 
+                                   FontWeight="Medium" 
+                                   Foreground="{DynamicResource ForegroundBrush}"
+                                   Margin="0,0,0,12"/>
+                        
+                        <Border Background="{DynamicResource CardBrush}" 
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" 
+                                CornerRadius="4" 
+                                Padding="12"
+                                MaxHeight="120">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <TextBlock Text="{Binding FilterPreviewText}" 
+                                           FontFamily="Consolas"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource MutedForegroundBrush}"
+                                           TextWrapping="Wrap"/>
+                            </ScrollViewer>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Action Bar -->
+        <Border Grid.Row="2" 
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Results Summary -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding FilteredRecordCount, StringFormat={}Showing {0:N0} of}" 
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               Margin="0,0,4,0"/>
+                    <TextBlock Text="{Binding TotalRecordCount, StringFormat={}{0:N0} records}" 
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               Margin="0,0,16,0"/>
+                    
+                    <TextBlock Text="•" 
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               Margin="0,0,16,0"/>
+                    
+                    <TextBlock Text="{Binding FilterExecutionTime, StringFormat={}Filter executed in {0}ms}" 
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               FontSize="11"/>
+                </StackPanel>
+
+                <!-- Action Buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="Export Filtered Data" 
+                            Command="{Binding ExportFilteredDataCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Margin="0,0,12,0"
+                            IsEnabled="{Binding HasFilters}"/>
+                    
+                    <Button Content="Apply Filters" 
+                            Command="{Binding ApplyFiltersCommand}"
+                            Style="{StaticResource ThemedButtonStyle}"
+                            IsEnabled="{Binding HasFilters}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,23 @@
+using System.Windows.Controls;
+using MandADiscoverySuite.ViewModels;
+
+namespace MandADiscoverySuite.Views
+{
+    /// <summary>
+    /// Interaction logic for VMMigrationView.xaml
+    /// VM Migration interface with Azure Site Recovery integration
+    /// </summary>
+    public partial class VMMigrationView : UserControl
+    {
+        public VMMigrationView()
+        {
+            InitializeComponent();
+            
+            // Set DataContext to VMMigrationViewModel
+            if (DataContext == null)
+            {
+                DataContext = new VMMigrationViewModel();
+            }
+        }
+    }
+}

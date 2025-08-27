@@ -1,0 +1,516 @@
+<UserControl x:Class="MandADiscoverySuite.Views.ExchangeMigrationViewSimple"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:MandADiscoverySuite.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1200">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        
+        <!-- Material Design Color Palette -->
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#2196F3"/>
+        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#FAFAFA"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#212121"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#757575"/>
+        
+        <!-- Card Style -->
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#40000000" Direction="270" ShadowDepth="2" Opacity="0.3" BlurRadius="6"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Button Style -->
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Mailbox Item Template -->
+        <DataTemplate x:Key="MailboxItemTemplate">
+            <Border Style="{StaticResource CardStyle}" Margin="2" Padding="12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding DisplayName}" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{Binding PrimarySmtpAddress}" 
+                                   FontSize="12" 
+                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock Text="{Binding Department}" 
+                                   FontSize="11" 
+                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding MailboxSizeGB, StringFormat='{}{0:F1} GB'}" 
+                                   FontSize="12" 
+                                   HorizontalAlignment="Right"/>
+                        <TextBlock Text="{Binding ItemCount, StringFormat='{}{0:N0} items'}" 
+                                   FontSize="11" 
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Right"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid Background="{StaticResource SurfaceBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Style="{StaticResource CardStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Exchange Migration" 
+                               FontSize="24" 
+                               FontWeight="SemiBold" 
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="Migrate Exchange mailboxes between tenants with real-time progress tracking"
+                               FontSize="14"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="Refresh" 
+                            Command="{Binding RefreshStatusCommand}"
+                            Style="{StaticResource PrimaryButton}"/>
+                    <Button Content="Options" 
+                            Command="{Binding ToggleAdvancedOptionsCommand}"
+                            Style="{StaticResource PrimaryButton}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <TabControl Grid.Row="1" Margin="8">
+            
+            <!-- Configuration Tab -->
+            <TabItem Header="Configuration">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        
+                        <!-- Connection Configuration -->
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Connection Configuration" 
+                                           FontSize="18" 
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,16"/>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- Source Configuration -->
+                                    <Border Grid.Column="0" Style="{StaticResource CardStyle}" Background="LightBlue">
+                                        <StackPanel>
+                                            <TextBlock Text="Source Tenant" 
+                                                       FontWeight="16" Height="16" 
+                                                       FontWeight="SemiBold"
+                                                       Margin="0,0,0,8"/>
+                                            
+                                            <TextBox Text="{Binding SourceTenantUrl, UpdateSourceTrigger=PropertyChanged}"
+                                                     Margin="0,0,0,8"
+                                                     Padding="8"/>
+                                            
+                                            <TextBox Text="{Binding SourceUsername, UpdateSourceTrigger=PropertyChanged}"
+                                                     Margin="0,0,0,8"
+                                                     Padding="8"/>
+                                            
+                                            <Button Content="Test Connection"
+                                                    Command="{Binding TestSourceConnectionCommand}"
+                                                    Style="{StaticResource PrimaryButton}"
+                                                    HorizontalAlignment="Left"/>
+                                            
+                                            <StackPanel Orientation="Horizontal" 
+                                                        Margin="0,8,0,0"
+                                                        Visibility="{Binding IsSourceConfigured, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <Ellipse Width="12" Height="12" Fill="Green" Margin="0,0,4,0"/>
+                                                <TextBlock Text="Connected" 
+                                                           Foreground="Green" 
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                    
+                                    <!-- Target Configuration -->
+                                    <Border Grid.Column="2" Style="{StaticResource CardStyle}" Background="LightGreen">
+                                        <StackPanel>
+                                            <TextBlock Text="Target Tenant" 
+                                                       FontWeight="16" Height="16" 
+                                                       FontWeight="SemiBold"
+                                                       Margin="0,0,0,8"/>
+                                            
+                                            <TextBox Text="{Binding TargetTenantUrl, UpdateSourceTrigger=PropertyChanged}"
+                                                     Margin="0,0,0,8"
+                                                     Padding="8"/>
+                                            
+                                            <TextBox Text="{Binding TargetUsername, UpdateSourceTrigger=PropertyChanged}"
+                                                     Margin="0,0,0,8"
+                                                     Padding="8"/>
+                                            
+                                            <Button Content="Test Connection"
+                                                    Command="{Binding TestTargetConnectionCommand}"
+                                                    Style="{StaticResource PrimaryButton}"
+                                                    HorizontalAlignment="Left"/>
+                                            
+                                            <StackPanel Orientation="Horizontal" 
+                                                        Margin="0,8,0,0"
+                                                        Visibility="{Binding IsTargetConfigured, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <Ellipse Width="12" Height="12" Fill="Green" Margin="0,0,4,0"/>
+                                                <TextBlock Text="Connected" 
+                                                           Foreground="Green" 
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Advanced Options -->
+                        <Border Style="{StaticResource CardStyle}"
+                                Visibility="{Binding ShowAdvancedOptions, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel>
+                                <TextBlock Text="Migration Settings" 
+                                           FontSize="18" 
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,16"/>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                        <CheckBox IsChecked="{Binding PreservePermissions}"
+                                                  Content="Preserve mailbox permissions"
+                                                  Margin="0,0,0,8"/>
+                                        
+                                        <CheckBox IsChecked="{Binding MigrateDelegateAccess}"
+                                                  Content="Migrate delegate access"
+                                                  Margin="0,0,0,8"/>
+                                        
+                                        <CheckBox IsChecked="{Binding MigrateArchiveData}"
+                                                  Content="Include archive mailboxes"
+                                                  Margin="0,0,0,8"/>
+                                        
+                                        <CheckBox IsChecked="{Binding EnableDeltaSync}"
+                                                  Content="Enable delta synchronization"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Batch Size:" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding BatchSize, UpdateSourceTrigger=PropertyChanged}"
+                                                 Margin="0,0,0,8"
+                                                 Padding="8"/>
+                                        
+                                        <TextBlock Text="Max Concurrent Migrations:" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding MaxConcurrentMigrations, UpdateSourceTrigger=PropertyChanged}"
+                                                 Padding="8"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            
+            <!-- Mailbox Selection Tab -->
+            <TabItem Header="Mailbox Selection">
+                <Grid Margin="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="2*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Available Mailboxes -->
+                    <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Text="Available Mailboxes" 
+                                           FontWeight="16" Height="16" FontWeight="SemiBold"/>
+                                
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding AvailableMailboxes.Count, StringFormat='{}{0:N0} mailboxes'}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </Grid>
+                            
+                            <TextBox Text="{Binding SearchFilter, UpdateSourceTrigger=PropertyChanged}"
+                                     Padding="8"
+                                     Margin="0,0,0,8">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding LoadMailboxesCommand}"/>
+                                </TextBox.InputBindings>
+                            </TextBox>
+                            
+                            <ListBox ItemsSource="{Binding AvailableMailboxesView}"
+                                     SelectedItem="{Binding SelectedMailbox}"
+                                     ItemTemplate="{StaticResource MailboxItemTemplate}"
+                                     Height="400"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <ListBox.InputBindings>
+                                    <MouseBinding MouseAction="LeftDoubleClick" 
+                                                  Command="{Binding AddMailboxToSelectionCommand}" 
+                                                  CommandParameter="{Binding SelectedMailbox}"/>
+                                </ListBox.InputBindings>
+                            </ListBox>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Selection Controls -->
+                    <StackPanel Grid.Column="1" 
+                                VerticalAlignment="Center" 
+                                HorizontalAlignment="Center"
+                                Margin="16">
+                        <Button Content="→" 
+                                Command="{Binding AddMailboxToSelectionCommand}" 
+                                CommandParameter="{Binding SelectedMailbox}"
+                                Style="{StaticResource PrimaryButton}"
+                                Width="40" Height="40"
+                                Margin="0,0,0,8"/>
+                        
+                        <Button Content="⇒" 
+                                Command="{Binding AddAllMailboxesCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                Width="40" Height="40"
+                                Margin="0,0,0,16"/>
+                        
+                        <Button Content="←" 
+                                Command="{Binding RemoveMailboxFromSelectionCommand}"
+                                CommandParameter="{Binding SelectedMailboxes/}"
+                                Style="{StaticResource PrimaryButton}"
+                                Width="40" Height="40"
+                                Margin="0,0,0,8"/>
+                        
+                        <Button Content="⇐" 
+                                Command="{Binding RemoveAllMailboxesCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                Width="40" Height="40"/>
+                    </StackPanel>
+                    
+                    <!-- Selected Mailboxes -->
+                    <Border Grid.Column="2" Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Text="Selected for Migration" 
+                                           FontWeight="16" Height="16" FontWeight="SemiBold"/>
+                                
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding SelectedMailboxes.Count, StringFormat='{}{0:N0} selected'}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </Grid>
+                            
+                            <Button Content="Create Batch"
+                                    Command="{Binding CreateBatchCommand}"
+                                    Style="{StaticResource PrimaryButton}"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,0,0,8"/>
+                            
+                            <ListBox ItemsSource="{Binding SelectedMailboxesView}"
+                                     ItemTemplate="{StaticResource MailboxItemTemplate}"
+                                     Height="400"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+            
+            <!-- Migration Progress Tab -->
+            <TabItem Header="Migration Progress">
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Status Summary -->
+                    <Border Grid.Row="0" Style="{StaticResource CardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0" Margin="8">
+                                <TextBlock Text="Total Mailboxes" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding TotalMailboxes}" FontSize="24" FontWeight="SemiBold"/>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="1" Margin="8">
+                                <TextBlock Text="Migrated" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding MigratedMailboxes}" FontSize="24" FontWeight="SemiBold" Foreground="Green"/>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="2" Margin="8">
+                                <TextBlock Text="Failed" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding FailedMigrations}" FontSize="24" FontWeight="SemiBold" Foreground="Red"/>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="3" Margin="8">
+                                <TextBlock Text="Remaining" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding RemainingMailboxes}" FontSize="24" FontWeight="SemiBold" Foreground="Orange"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Progress and Controls -->
+                    <Border Grid.Row="1" Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <!-- Progress Bar -->
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <ProgressBar Grid.Column="0"
+                                             Value="{Binding OverallProgress}"
+                                             Height="8"
+                                             VerticalAlignment="Center"/>
+                                
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding OverallProgress, StringFormat='{}{0:F1}%'}"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                            
+                            <!-- Status Text -->
+                            <TextBlock Text="{Binding CurrentOperation}"
+                                       Margin="0,0,0,8"/>
+                            
+                            <!-- Control Buttons -->
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Start Migration"
+                                        Command="{Binding StartMigrationCommand}"
+                                        Style="{StaticResource PrimaryButton}"/>
+                                
+                                <Button Content="Pause"
+                                        Command="{Binding PauseMigrationCommand}"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Visibility="{Binding IsMigrationRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                
+                                <Button Content="Cancel"
+                                        Command="{Binding CancelMigrationCommand}"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Visibility="{Binding IsMigrationRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                
+                                <Button Content="Resume"
+                                        Command="{Binding ResumeMigrationCommand}"
+                                        Style="{StaticResource PrimaryButton}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Migration Logs -->
+                    <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Migration Logs" 
+                                       FontWeight="16" Height="16" FontWeight="SemiBold"
+                                       Margin="0,0,0,8"/>
+                            
+                            <ListBox ItemsSource="{Binding MigrationLogs}"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.CanContentScroll="True">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="4">
+                                            <TextBlock Text="{Binding Timestamp, StringFormat='HH:mm:ss'}" 
+                                                       FontSize="10" 
+                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                       Width="60"/>
+                                            <TextBlock Text="{Binding Message}" 
+                                                       FontSize="11" 
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0"
+                           Text="{Binding StatusMessage}"
+                           VerticalAlignment="Center"/>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <controls:BusyIndicator Visibility="{Binding IsLoading}" 
+                                            Width="16" Height="16" 
+                                            Margin="0,0,8,0"/>
+                    
+                    <TextBlock Text="{Binding EstimatedTimeRemaining, StringFormat='ETA: {0:hh\\:mm\\:ss}'}"
+                               Visibility="{Binding IsMigrationRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

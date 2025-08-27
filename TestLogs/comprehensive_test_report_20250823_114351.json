@@ -1,0 +1,34 @@
+{
+    "PerformanceMetrics":  {
+
+                           },
+    "TestSuites":  {
+
+                   },
+    "StartTime":  "\/Date(1755945831049)\/",
+    "DataValidationResults":  {
+
+                              },
+    "OverallResults":  {
+                           "Warnings":  0,
+                           "SkippedTests":  0,
+                           "TotalTests":  0,
+                           "PassedTests":  0,
+                           "FailedTests":  0
+                       },
+    "ProductionReadinessStatus":  "NOT PRODUCTION READY",
+    "Recommendations":  [
+                            "Establish continuous monitoring for data validation failures",
+                            "Implement automated backup procedures for migration operations",
+                            "Set up alerting for performance threshold breaches",
+                            "Create rollback procedures for each migration type",
+                            "Conduct additional testing cycles to improve reliability"
+                        ],
+    "SessionId":  "989b0038-8cdd-492d-872d-921f47165dcb",
+    "Errors":  [
+                   "Data Integrity Tests: Parameter cannot be processed because the parameter name \u0027Output\u0027 is ambiguous. Possible matches include: -OutputXml -OutputFile -OutputFormat."
+               ],
+    "Duration":  0.00087104,
+    "EndTime":  "\/Date(1755945831101)\/",
+    "TestScope":  "DataOnly"
+}

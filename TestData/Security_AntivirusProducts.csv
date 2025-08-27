@@ -1,0 +1,21 @@
+ProductName,Version,Vendor,ComputerName,Domain,IsEnabled,IsUpToDate,LastUpdate,LastScan,ScanType,ThreatsDetected,Status,ConfigurationStatus
+Windows Defender,4.18.24030.7,Microsoft,DC01,contoso.com,True,True,2024-03-20T08:30:00Z,2024-03-25T02:15:00Z,Full,0,protected,Standard
+Windows Defender,4.18.24030.7,Microsoft,DC02,contoso.com,True,True,2024-03-20T08:30:00Z,2024-03-25T02:15:00Z,Full,0,protected,Standard
+Symantec Endpoint Protection,14.3.558.0000,Symantec,FS01,contoso.com,True,False,2024-03-15T14:20:00Z,2024-03-24T23:45:00Z,Quick,1,at_risk,Standard
+Windows Defender,4.18.24030.7,Microsoft,WEB01,contoso.com,True,True,2024-03-20T08:30:00Z,2024-03-25T01:30:00Z,Full,0,protected,Standard
+McAfee VirusScan Enterprise,8.8.0.2024,McAfee,SQL01,contoso.com,True,True,2024-03-18T16:45:00Z,2024-03-24T22:10:00Z,Full,2,at_risk,Standard
+Windows Defender,4.18.24030.7,Microsoft,EXCH01,contoso.com,True,True,2024-03-20T08:30:00Z,2024-03-25T01:00:00Z,Full,0,protected,Standard
+Trend Micro Apex One,2019.0.6221,Trend Micro,APP01,contoso.com,False,False,2024-02-28T10:15:00Z,2024-03-10T14:20:00Z,Quick,0,critical,Misconfigured
+Windows Defender,4.18.24030.7,Microsoft,WS001,contoso.com,True,True,2024-03-20T08:30:00Z,2024-03-24T18:45:00Z,Quick,0,protected,Standard
+Windows Defender,4.18.24030.7,Microsoft,WS002,contoso.com,True,True,2024-03-20T08:30:00Z,2024-03-24T19:20:00Z,Quick,0,protected,Standard
+Symantec Endpoint Protection,14.3.558.0000,Symantec,WS003,contoso.com,True,True,2024-03-19T12:00:00Z,2024-03-24T20:15:00Z,Full,0,protected,Standard
+Windows Defender,4.18.24030.7,Microsoft,WS004,contoso.com,True,False,2024-03-05T09:30:00Z,2024-03-24T21:30:00Z,Quick,0,at_risk,Standard
+McAfee VirusScan Enterprise,8.8.0.2024,McAfee,WS005,contoso.com,True,True,2024-03-18T16:45:00Z,2024-03-24T17:45:00Z,Full,1,at_risk,Standard
+Windows Defender,4.18.24030.7,Microsoft,LAP001,contoso.com,True,True,2024-03-20T08:30:00Z,2024-03-24T15:20:00Z,Quick,0,protected,Standard
+Windows Defender,4.18.24030.7,Microsoft,LAP002,contoso.com,True,True,2024-03-20T08:30:00Z,2024-03-24T16:10:00Z,Quick,0,protected,Standard
+Trend Micro Apex One,2019.0.6221,Trend Micro,LAP003,contoso.com,True,False,2024-03-10T11:20:00Z,2024-03-23T14:35:00Z,Full,0,at_risk,Standard
+Windows Defender,4.18.24030.7,Microsoft,PRINT01,contoso.com,True,True,2024-03-20T08:30:00Z,2024-03-25T00:45:00Z,Full,0,protected,Standard
+Symantec Endpoint Protection,14.3.558.0000,Symantec,BACKUP01,contoso.com,True,True,2024-03-19T12:00:00Z,2024-03-24T23:15:00Z,Full,0,protected,Standard
+Windows Defender,4.18.24030.7,Microsoft,MON01,contoso.com,True,True,2024-03-20T08:30:00Z,2024-03-25T02:30:00Z,Full,0,protected,Standard
+McAfee VirusScan Enterprise,8.8.0.2024,McAfee,DEV01,contoso.com,True,False,2024-03-12T13:15:00Z,2024-03-24T12:40:00Z,Quick,3,at_risk,Custom
+Windows Defender,4.18.24030.7,Microsoft,TEST01,contoso.com,True,True,2024-03-20T08:30:00Z,2024-03-24T11:25:00Z,Quick,0,protected,Standard

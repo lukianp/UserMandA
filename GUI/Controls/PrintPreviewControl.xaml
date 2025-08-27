@@ -1,0 +1,343 @@
+<UserControl x:Class="MandADiscoverySuite.Controls.PrintPreviewControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="900">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Print Preview Toolbar Style -->
+            <Style x:Key="PrintToolbarStyle" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                <Setter Property="Padding" Value="12,8"/>
+            </Style>
+
+            <!-- Page Style -->
+            <Style x:Key="PageStyle" TargetType="Border">
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="BorderBrush" Value="#CCCCCC"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Margin" Value="16"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect Color="Black" Direction="315" ShadowDepth="4" Opacity="0.3" BlurRadius="8"/>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Page Number Style -->
+            <Style x:Key="PageNumberStyle" TargetType="TextBlock">
+                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="Padding" Value="8,4"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Print Toolbar -->
+        <Border Grid.Row="0" Style="{StaticResource PrintToolbarStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Print Actions -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button Content="🖨️ Print"
+                            Command="{Binding PrintCommand}"
+                            Style="{StaticResource ThemedButtonStyle}"
+                            Padding="12,6"
+                            Margin="0,0,8,0"/>
+                    
+                    <Button Content="📄 Page Setup"
+                            Command="{Binding PageSetupCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="8,6"
+                            Margin="0,0,8,0"/>
+                    
+                    <Button Content="💾 Export"
+                            Command="{Binding ExportCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="8,6"
+                            Margin="0,0,16,0"/>
+                    
+                    <!-- Page Size -->
+                    <TextBlock Text="Page Size:"
+                               VerticalAlignment="Center"
+                               Margin="0,0,4,0"
+                               FontSize="11"/>
+                    <ComboBox Width="100"
+                              ItemsSource="{Binding PageSizes}"
+                              SelectedItem="{Binding SelectedPageSize}"
+                              Style="{StaticResource ThemedComboBoxStyle}"
+                              Margin="0,0,8,0"/>
+                    
+                    <!-- Orientation -->
+                    <TextBlock Text="Orientation:"
+                               VerticalAlignment="Center"
+                               Margin="0,0,4,0"
+                               FontSize="11"/>
+                    <ComboBox Width="90"
+                              ItemsSource="{Binding OrientationOptions}"
+                              SelectedItem="{Binding SelectedOrientation}"
+                              Style="{StaticResource ThemedComboBoxStyle}"/>
+                </StackPanel>
+
+                <!-- Zoom Controls -->
+                <StackPanel Grid.Column="1" 
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Center">
+                    <Button Content="🔍-"
+                            ToolTip="Zoom Out"
+                            Command="{Binding ZoomOutCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="6"
+                            FontSize="12"/>
+                    
+                    <Slider Width="100"
+                            Minimum="25"
+                            Maximum="200"
+                            Value="{Binding ZoomLevel}"
+                            TickPlacement="None"
+                            Margin="8,0"/>
+                    
+                    <Button Content="🔍+"
+                            ToolTip="Zoom In"
+                            Command="{Binding ZoomInCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="6"
+                            FontSize="12"/>
+                    
+                    <TextBlock Text="{Binding ZoomLevel, StringFormat={}{0:F0}%}"
+                               VerticalAlignment="Center"
+                               FontSize="11"
+                               Margin="8,0,0,0"/>
+                </StackPanel>
+
+                <!-- View Options -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Content="📑"
+                            ToolTip="Single Page"
+                            Command="{Binding SetViewModeCommand}"
+                            CommandParameter="Single"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="6"
+                            Margin="0,0,4,0"/>
+                    
+                    <Button Content="📄📄"
+                            ToolTip="Two Pages"
+                            Command="{Binding SetViewModeCommand}"
+                            CommandParameter="TwoPages"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="6"
+                            Margin="0,0,4,0"/>
+                    
+                    <Button Content="📋"
+                            ToolTip="Multiple Pages"
+                            Command="{Binding SetViewModeCommand}"
+                            CommandParameter="Multiple"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="6"
+                            Margin="0,0,8,0"/>
+                    
+                    <Button Content="⚙️"
+                            ToolTip="Print Settings"
+                            Command="{Binding ShowSettingsCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="6"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Print Preview Area -->
+        <ScrollViewer Grid.Row="1"
+                      Background="#F5F5F5"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+            
+            <!-- Pages Container -->
+            <ItemsControl ItemsSource="{Binding PreviewPages}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="{Binding PageOrientation}" 
+                                   HorizontalAlignment="Center"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="8">
+                            <!-- Page Number -->
+                            <Border Style="{StaticResource PageNumberStyle}"
+                                    Margin="0,0,0,4">
+                                <TextBlock Text="{Binding PageNumber, StringFormat={}Page {0}}"/>
+                            </Border>
+                            
+                            <!-- Page Content -->
+                            <Border Style="{StaticResource PageStyle}"
+                                    Width="{Binding PageWidth}"
+                                    Height="{Binding PageHeight}">
+                                <Grid Margin="40,40,40,60"> <!-- Page margins -->
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Header -->
+                                    <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                                        <TextBlock Text="{Binding Header.Title}"
+                                                   FontSize="16"
+                                                   FontWeight="Bold"
+                                                   HorizontalAlignment="Center"
+                                                   Visibility="{Binding Header.ShowTitle, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        
+                                        <TextBlock Text="{Binding Header.Subtitle}"
+                                                   FontSize="12"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,4,0,0"
+                                                   Visibility="{Binding Header.ShowSubtitle, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        
+                                        <Border Height="1" 
+                                                Background="Black" 
+                                                Margin="0,10,0,0"
+                                                Visibility="{Binding Header.ShowLine, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    </StackPanel>
+
+                                    <!-- Content -->
+                                    <ContentPresenter Grid.Row="1" 
+                                                      Content="{Binding Content}"/>
+
+                                    <!-- Footer -->
+                                    <StackPanel Grid.Row="2" Margin="0,20,0,0">
+                                        <Border Height="1" 
+                                                Background="Black" 
+                                                Margin="0,0,0,10"
+                                                Visibility="{Binding Footer.ShowLine, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        
+                                        <Grid>
+                                            <TextBlock Text="{Binding Footer.LeftText}"
+                                                       FontSize="10"
+                                                       HorizontalAlignment="Left"
+                                                       Visibility="{Binding Footer.ShowLeftText, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            
+                                            <TextBlock Text="{Binding Footer.CenterText}"
+                                                       FontSize="10"
+                                                       HorizontalAlignment="Center"
+                                                       Visibility="{Binding Footer.ShowCenterText, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            
+                                            <TextBlock Text="{Binding Footer.RightText}"
+                                                       FontSize="10"
+                                                       HorizontalAlignment="Right"
+                                                       Visibility="{Binding Footer.ShowRightText, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="12,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Print Info -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="{Binding PageCount, StringFormat={}Pages: {0}}"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,16,0"/>
+                    
+                    <TextBlock Text="{Binding SelectedPageSize, StringFormat={}Size: {0}}"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,16,0"/>
+                    
+                    <TextBlock Text="{Binding SelectedOrientation, StringFormat={}Orientation: {0}}"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,16,0"/>
+                    
+                    <TextBlock Text="{Binding PrinterName, StringFormat={}Printer: {0}}"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Navigation -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="⏮️"
+                            ToolTip="First Page"
+                            Command="{Binding FirstPageCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="4"
+                            FontSize="10"
+                            Margin="0,0,2,0"/>
+                    
+                    <Button Content="◀️"
+                            ToolTip="Previous Page"
+                            Command="{Binding PreviousPageCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="4"
+                            FontSize="10"
+                            Margin="0,0,2,0"/>
+                    
+                    <TextBlock Text="{Binding CurrentPageIndex, StringFormat={}Page {0}}"
+                               VerticalAlignment="Center"
+                               FontSize="11"
+                               Margin="8,0"/>
+                    
+                    <Button Content="▶️"
+                            ToolTip="Next Page"
+                            Command="{Binding NextPageCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="4"
+                            FontSize="10"
+                            Margin="2,0,0,0"/>
+                    
+                    <Button Content="⏭️"
+                            ToolTip="Last Page"
+                            Command="{Binding LastPageCommand}"
+                            Style="{StaticResource ThemedSecondaryButtonStyle}"
+                            Padding="4"
+                            FontSize="10"
+                            Margin="2,0,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

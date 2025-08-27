@@ -1,0 +1,29 @@
+<UserControl x:Class="MandADiscoverySuite.Controls.SystemStatusPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="200" d:DesignWidth="400">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{DynamicResource HeaderBackground}" Padding="5">
+            <TextBlock Text="System Status" 
+                      Style="{DynamicResource HeaderTextStyle}"
+                      FontSize="14"/>
+        </Border>
+        
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="5">
+                <TextBlock Text="System status information goes here..." 
+                          Style="{DynamicResource BodyTextStyle}"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

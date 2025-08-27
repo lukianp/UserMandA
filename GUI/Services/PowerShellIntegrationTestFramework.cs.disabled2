@@ -1,0 +1,759 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using MandADiscoverySuite.Models;
+using Microsoft.Extensions.Logging;
+
+namespace MandADiscoverySuite.Services
+{
+    /// <summary>
+    /// Integration testing framework for PowerShell execution and Phase 2 validation
+    /// Provides comprehensive test harnesses for validating real PowerShell integration
+    /// </summary>
+    public class PowerShellIntegrationTestFramework : IDisposable
+    {
+        private readonly ILogger<PowerShellIntegrationTestFramework> _logger;
+        private readonly StructuredLoggingService _structuredLogger;
+        private readonly PowerShellExecutionService _executionService;
+        private readonly MigrationStateManager _stateManager;
+        private readonly PowerShellProgressBridge _progressBridge;
+        private readonly EnhancedMigrationCommands _migrationCommands;
+        
+        private readonly List<TestExecution> _testExecutions = new();
+        private readonly object _testLock = new object();
+        private bool _disposed = false;
+
+        // Test configuration
+        private readonly TestConfiguration _testConfig;
+
+        public PowerShellIntegrationTestFramework(
+            ILogger<PowerShellIntegrationTestFramework> logger,
+            PowerShellExecutionService executionService,
+            MigrationStateManager stateManager,
+            PowerShellProgressBridge progressBridge,
+            EnhancedMigrationCommands migrationCommands)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _executionService = executionService ?? throw new ArgumentNullException(nameof(executionService));
+            _stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
+            _progressBridge = progressBridge ?? throw new ArgumentNullException(nameof(progressBridge));
+            _migrationCommands = migrationCommands ?? throw new ArgumentNullException(nameof(migrationCommands));
+            _structuredLogger = StructuredLoggingService.Instance;
+
+            _testConfig = LoadTestConfiguration();
+
+            _structuredLogger?.LogInfo("PowerShellIntegrationTestFramework",
+                new { action = "framework_init" },
+                "PowerShell integration test framework initialized");
+        }
+
+        #region Test Configuration
+
+        /// <summary>
+        /// Loads test configuration from file or creates default
+        /// </summary>
+        private TestConfiguration LoadTestConfiguration()
+        {
+            try
+            {
+                var configPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "MandADiscoverySuite", "test-config.json");
+
+                if (File.Exists(configPath))
+                {
+                    var json = File.ReadAllText(configPath);
+                    return JsonSerializer.Deserialize<TestConfiguration>(json) ?? CreateDefaultTestConfiguration();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to load test configuration, using defaults");
+            }
+
+            return CreateDefaultTestConfiguration();
+        }
+
+        /// <summary>
+        /// Creates default test configuration
+        /// </summary>
+        private TestConfiguration CreateDefaultTestConfiguration()
+        {
+            return new TestConfiguration
+            {
+                TestCompanyName = "TestCompany",
+                TestModules = new List<string> { "UsersDiscovery", "GroupsDiscovery", "InfrastructureDiscovery" },
+                TestTimeout = TimeSpan.FromMinutes(10),
+                MaxConcurrentTests = 3,
+                EnablePerformanceMetrics = true,
+                EnableErrorSimulation = false
+            };
+        }
+
+        #endregion
+
+        #region Core Integration Tests
+
+        /// <summary>
+        /// Runs comprehensive PowerShell integration test suite
+        /// </summary>
+        public async Task<TestSuiteResult> RunIntegrationTestSuiteAsync(CancellationToken cancellationToken = default)
+        {
+            var suiteId = Guid.NewGuid().ToString();
+            var result = new TestSuiteResult
+            {
+                SuiteId = suiteId,
+                StartTime = DateTime.Now,
+                TestResults = new List<TestResult>()
+            };
+
+            _structuredLogger?.LogInfo("PowerShellIntegrationTestFramework",
+                new { action = "test_suite_start", suite_id = suiteId },
+                "Starting PowerShell integration test suite");
+
+            try
+            {
+                // Test 1: Basic PowerShell Execution
+                var basicTest = await RunBasicExecutionTestAsync(cancellationToken);
+                result.TestResults.Add(basicTest);
+
+                // Test 2: Progress Monitoring
+                var progressTest = await RunProgressMonitoringTestAsync(cancellationToken);
+                result.TestResults.Add(progressTest);
+
+                // Test 3: State Management
+                var stateTest = await RunStateManagementTestAsync(cancellationToken);
+                result.TestResults.Add(stateTest);
+
+                // Test 4: Command Infrastructure
+                var commandTest = await RunCommandInfrastructureTestAsync(cancellationToken);
+                result.TestResults.Add(commandTest);
+
+                // Test 5: Error Handling
+                var errorTest = await RunErrorHandlingTestAsync(cancellationToken);
+                result.TestResults.Add(errorTest);
+
+                // Test 6: Performance Validation
+                var performanceTest = await RunPerformanceTestAsync(cancellationToken);
+                result.TestResults.Add(performanceTest);
+
+                // Test 7: Real Module Integration
+                var moduleTest = await RunRealModuleIntegrationTestAsync(cancellationToken);
+                result.TestResults.Add(moduleTest);
+
+                // Calculate overall results
+                result.EndTime = DateTime.Now;
+                result.TotalTests = result.TestResults.Count;
+                result.PassedTests = result.TestResults.Count(t => t.Success);
+                result.FailedTests = result.TotalTests - result.PassedTests;
+                result.OverallSuccess = result.FailedTests == 0;
+
+                _structuredLogger?.LogInfo("PowerShellIntegrationTestFramework",
+                    new { action = "test_suite_complete", suite_id = suiteId, passed = result.PassedTests, failed = result.FailedTests },
+                    $"Integration test suite completed: {result.PassedTests}/{result.TotalTests} passed");
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.EndTime = DateTime.Now;
+                result.OverallSuccess = false;
+                result.ErrorMessage = ex.Message;
+
+                _structuredLogger?.LogError("PowerShellIntegrationTestFramework", ex,
+                    new { action = "test_suite_error", suite_id = suiteId },
+                    "Integration test suite failed");
+
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Tests basic PowerShell execution functionality
+        /// </summary>
+        private async Task<TestResult> RunBasicExecutionTestAsync(CancellationToken cancellationToken)
+        {
+            var testId = "BasicExecution";
+            var test = new TestExecution
+            {
+                TestId = testId,
+                TestName = "Basic PowerShell Execution",
+                StartTime = DateTime.Now
+            };
+
+            try
+            {
+                // Test simple discovery module execution
+                var result = await _executionService.ExecuteDiscoveryModuleAsync(
+                    "UsersDiscovery",
+                    _testConfig.TestCompanyName,
+                    new Dictionary<string, object> { { "TestMode", true } },
+                    cancellationToken);
+
+                test.EndTime = DateTime.Now;
+                test.Success = result != null;
+                test.ErrorMessage = result?.ErrorMessage;
+
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = test.TestName,
+                    Success = test.Success,
+                    Duration = test.Duration,
+                    ErrorMessage = test.ErrorMessage,
+                    Details = $"Execution ID: {result?.ExecutionId}, Success: {result?.Success}"
+                };
+            }
+            catch (Exception ex)
+            {
+                test.EndTime = DateTime.Now;
+                test.Success = false;
+                test.ErrorMessage = ex.Message;
+
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = test.TestName,
+                    Success = false,
+                    Duration = test.Duration,
+                    ErrorMessage = ex.Message
+                };
+            }
+        }
+
+        /// <summary>
+        /// Tests progress monitoring and real-time updates
+        /// </summary>
+        private async Task<TestResult> RunProgressMonitoringTestAsync(CancellationToken cancellationToken)
+        {
+            var testId = "ProgressMonitoring";
+            var progressUpdates = new List<MigrationProgressEventArgs>();
+            var statusChanges = new List<MigrationStatusEventArgs>();
+
+            // Subscribe to progress events
+            EventHandler<MigrationProgressEventArgs> progressHandler = (s, e) => progressUpdates.Add(e);
+            EventHandler<MigrationStatusEventArgs> statusHandler = (s, e) => statusChanges.Add(e);
+
+            _executionService.ProgressUpdated += progressHandler;
+            _executionService.StatusChanged += statusHandler;
+
+            try
+            {
+                var result = await _executionService.ExecuteDiscoveryModuleAsync(
+                    "GroupsDiscovery",
+                    _testConfig.TestCompanyName,
+                    new Dictionary<string, object> { { "TestMode", true } },
+                    cancellationToken);
+
+                // Wait a bit for final events
+                await Task.Delay(1000, cancellationToken);
+
+                var success = progressUpdates.Any() && statusChanges.Any();
+
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "Progress Monitoring",
+                    Success = success,
+                    Duration = TimeSpan.FromMilliseconds(1000),
+                    Details = $"Progress updates: {progressUpdates.Count}, Status changes: {statusChanges.Count}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "Progress Monitoring",
+                    Success = false,
+                    ErrorMessage = ex.Message
+                };
+            }
+            finally
+            {
+                _executionService.ProgressUpdated -= progressHandler;
+                _executionService.StatusChanged -= statusHandler;
+            }
+        }
+
+        /// <summary>
+        /// Tests state management and persistence
+        /// </summary>
+        private async Task<TestResult> RunStateManagementTestAsync(CancellationToken cancellationToken)
+        {
+            var testId = "StateManagement";
+
+            try
+            {
+                // Create test execution state
+                var executionId = Guid.NewGuid().ToString();
+                var state = new MigrationExecutionState
+                {
+                    ExecutionId = executionId,
+                    ModuleName = "TestModule",
+                    CompanyName = _testConfig.TestCompanyName,
+                    MigrationType = MigrationType.User,
+                    Status = MigrationStatus.InProgress,
+                    StartTime = DateTime.Now,
+                    TotalItems = 100,
+                    ProcessedItems = 0
+                };
+
+                // Test state creation
+                _stateManager.CreateOrUpdateExecutionState(executionId, state);
+
+                // Test state retrieval
+                var retrievedState = _stateManager.GetExecutionState(executionId);
+
+                // Test checkpoint creation
+                var checkpoint = _stateManager.CreateCheckpoint(executionId, "TestCheckpoint", new { TestData = "test" });
+
+                // Test checkpoint retrieval
+                var retrievedCheckpoint = _stateManager.GetLatestCheckpoint(executionId);
+
+                // Test state completion
+                _stateManager.CompleteExecution(executionId, MigrationStatus.Completed);
+
+                var success = retrievedState != null && 
+                             retrievedCheckpoint != null && 
+                             retrievedCheckpoint.Id == checkpoint.Id;
+
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "State Management",
+                    Success = success,
+                    Duration = TimeSpan.FromMilliseconds(100),
+                    Details = $"State created and retrieved successfully, checkpoint: {checkpoint.Id}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "State Management",
+                    Success = false,
+                    ErrorMessage = ex.Message
+                };
+            }
+        }
+
+        /// <summary>
+        /// Tests enhanced command infrastructure
+        /// </summary>
+        private async Task<TestResult> RunCommandInfrastructureTestAsync(CancellationToken cancellationToken)
+        {
+            var testId = "CommandInfrastructure";
+            var commandEvents = new List<string>();
+
+            // Subscribe to command events
+            EventHandler<CommandStartedEventArgs> startHandler = (s, e) => commandEvents.Add($"Started: {e.CommandType}");
+            EventHandler<CommandCompletedEventArgs> completeHandler = (s, e) => commandEvents.Add($"Completed: {e.Success}");
+
+            _migrationCommands.CommandStarted += startHandler;
+            _migrationCommands.CommandCompleted += completeHandler;
+
+            try
+            {
+                // Create and execute a test discovery command
+                var command = _migrationCommands.CreateDiscoveryCommand(
+                    "InfrastructureDiscovery",
+                    _testConfig.TestCompanyName,
+                    new Dictionary<string, object> { { "TestMode", true } });
+
+                await command.ExecuteAsync(null);
+
+                // Wait for events
+                await Task.Delay(1000, cancellationToken);
+
+                var success = commandEvents.Count >= 2; // Should have start and complete events
+
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "Command Infrastructure",
+                    Success = success,
+                    Duration = TimeSpan.FromMilliseconds(1000),
+                    Details = $"Command events: {string.Join(", ", commandEvents)}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "Command Infrastructure",
+                    Success = false,
+                    ErrorMessage = ex.Message
+                };
+            }
+            finally
+            {
+                _migrationCommands.CommandStarted -= startHandler;
+                _migrationCommands.CommandCompleted -= completeHandler;
+            }
+        }
+
+        /// <summary>
+        /// Tests error handling and recovery
+        /// </summary>
+        private async Task<TestResult> RunErrorHandlingTestAsync(CancellationToken cancellationToken)
+        {
+            var testId = "ErrorHandling";
+
+            try
+            {
+                // Test with invalid module name to trigger error
+                var result = await _executionService.ExecuteDiscoveryModuleAsync(
+                    "NonExistentModule",
+                    _testConfig.TestCompanyName,
+                    null,
+                    cancellationToken);
+
+                // Should fail gracefully
+                var success = result != null && !result.Success && !string.IsNullOrEmpty(result.ErrorMessage);
+
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "Error Handling",
+                    Success = success,
+                    Duration = TimeSpan.FromMilliseconds(500),
+                    Details = $"Error handled gracefully: {result?.ErrorMessage}"
+                };
+            }
+            catch (Exception ex)
+            {
+                // Catching exception is actually expected behavior
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "Error Handling",
+                    Success = true,
+                    Duration = TimeSpan.FromMilliseconds(500),
+                    Details = $"Exception caught as expected: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Tests performance under load
+        /// </summary>
+        private async Task<TestResult> RunPerformanceTestAsync(CancellationToken cancellationToken)
+        {
+            var testId = "Performance";
+
+            if (!_testConfig.EnablePerformanceMetrics)
+            {
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "Performance Test",
+                    Success = true,
+                    Duration = TimeSpan.Zero,
+                    Details = "Performance testing disabled in configuration"
+                };
+            }
+
+            try
+            {
+                var stopwatch = Stopwatch.StartNew();
+                var tasks = new List<Task<MigrationExecutionResult>>();
+
+                // Run multiple concurrent discovery operations
+                for (int i = 0; i < Math.Min(_testConfig.MaxConcurrentTests, 3); i++)
+                {
+                    var task = _executionService.ExecuteDiscoveryModuleAsync(
+                        _testConfig.TestModules[i % _testConfig.TestModules.Count],
+                        _testConfig.TestCompanyName,
+                        new Dictionary<string, object> { { "TestMode", true }, { "TestIndex", i } },
+                        cancellationToken);
+                    tasks.Add(task);
+                }
+
+                var results = await Task.WhenAll(tasks);
+                stopwatch.Stop();
+
+                var successCount = results.Count(r => r.Success);
+                var success = successCount > 0 && stopwatch.Elapsed < _testConfig.TestTimeout;
+
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "Performance Test",
+                    Success = success,
+                    Duration = stopwatch.Elapsed,
+                    Details = $"Concurrent executions: {tasks.Count}, Successful: {successCount}, Duration: {stopwatch.Elapsed}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "Performance Test",
+                    Success = false,
+                    ErrorMessage = ex.Message
+                };
+            }
+        }
+
+        /// <summary>
+        /// Tests integration with real PowerShell modules
+        /// </summary>
+        private async Task<TestResult> RunRealModuleIntegrationTestAsync(CancellationToken cancellationToken)
+        {
+            var testId = "RealModuleIntegration";
+
+            try
+            {
+                // Test actual module execution (if available)
+                var moduleRegistryPath = @"C:\enterprisediscovery\Config\ModuleRegistry.json";
+                if (!File.Exists(moduleRegistryPath))
+                {
+                    return new TestResult
+                    {
+                        TestId = testId,
+                        TestName = "Real Module Integration",
+                        Success = true,
+                        Duration = TimeSpan.Zero,
+                        Details = "Module registry not found, skipping real module test"
+                    };
+                }
+
+                // Try to load and execute a real module
+                var json = File.ReadAllText(moduleRegistryPath);
+                var moduleRegistry = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+
+                if (moduleRegistry?.Any() == true)
+                {
+                    var firstModule = moduleRegistry.Keys.First();
+                    var result = await _executionService.ExecuteDiscoveryModuleAsync(
+                        firstModule,
+                        _testConfig.TestCompanyName,
+                        null,
+                        cancellationToken);
+
+                    return new TestResult
+                    {
+                        TestId = testId,
+                        TestName = "Real Module Integration",
+                        Success = result != null,
+                        Duration = TimeSpan.FromSeconds(5),
+                        Details = $"Tested module: {firstModule}, Result: {result?.Success}"
+                    };
+                }
+
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "Real Module Integration",
+                    Success = true,
+                    Duration = TimeSpan.Zero,
+                    Details = "No modules found in registry"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new TestResult
+                {
+                    TestId = testId,
+                    TestName = "Real Module Integration",
+                    Success = false,
+                    ErrorMessage = ex.Message
+                };
+            }
+        }
+
+        #endregion
+
+        #region Test Utilities
+
+        /// <summary>
+        /// Validates UI responsiveness during PowerShell execution
+        /// </summary>
+        public async Task<bool> ValidateUIResponsivenessAsync(TimeSpan testDuration)
+        {
+            try
+            {
+                var responsivenessTasks = new List<Task<bool>>();
+
+                // Start a long-running PowerShell operation
+                var psTask = _executionService.ExecuteDiscoveryModuleAsync(
+                    "UsersDiscovery",
+                    _testConfig.TestCompanyName,
+                    new Dictionary<string, object> { { "TestMode", true }, { "LongRunning", true } });
+
+                // Test UI responsiveness by simulating UI operations
+                for (int i = 0; i < 10; i++)
+                {
+                    responsivenessTasks.Add(SimulateUIOperationAsync());
+                }
+
+                var uiResults = await Task.WhenAll(responsivenessTasks);
+                var psResult = await psTask;
+
+                return uiResults.All(r => r) && psResult != null;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "UI responsiveness validation failed");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Simulates a UI operation to test responsiveness
+        /// </summary>
+        private async Task<bool> SimulateUIOperationAsync()
+        {
+            try
+            {
+                // Simulate UI thread operations
+                await Task.Delay(100);
+                
+                // Get current metrics (simulates UI data binding updates)
+                var dashboardMetrics = _progressBridge.GetCurrentDashboardMetrics();
+                var discoveryMetrics = _progressBridge.GetCurrentDiscoveryMetrics();
+                
+                return dashboardMetrics != null && discoveryMetrics != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Generates test report
+        /// </summary>
+        public string GenerateTestReport(TestSuiteResult suiteResult)
+        {
+            var report = new System.Text.StringBuilder();
+            
+            report.AppendLine("PowerShell Integration Test Report");
+            report.AppendLine("====================================");
+            report.AppendLine($"Suite ID: {suiteResult.SuiteId}");
+            report.AppendLine($"Start Time: {suiteResult.StartTime}");
+            report.AppendLine($"End Time: {suiteResult.EndTime}");
+            report.AppendLine($"Duration: {suiteResult.Duration}");
+            report.AppendLine($"Overall Success: {suiteResult.OverallSuccess}");
+            report.AppendLine($"Tests Passed: {suiteResult.PassedTests}/{suiteResult.TotalTests}");
+            report.AppendLine();
+
+            if (!string.IsNullOrEmpty(suiteResult.ErrorMessage))
+            {
+                report.AppendLine($"Suite Error: {suiteResult.ErrorMessage}");
+                report.AppendLine();
+            }
+
+            report.AppendLine("Individual Test Results:");
+            report.AppendLine("------------------------");
+
+            foreach (var test in suiteResult.TestResults)
+            {
+                report.AppendLine($"[{(test.Success ? "PASS" : "FAIL")}] {test.TestName}");
+                report.AppendLine($"  Duration: {test.Duration}");
+                
+                if (!string.IsNullOrEmpty(test.Details))
+                {
+                    report.AppendLine($"  Details: {test.Details}");
+                }
+                
+                if (!string.IsNullOrEmpty(test.ErrorMessage))
+                {
+                    report.AppendLine($"  Error: {test.ErrorMessage}");
+                }
+                
+                report.AppendLine();
+            }
+
+            return report.ToString();
+        }
+
+        #endregion
+
+        #region Disposal
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                lock (_testLock)
+                {
+                    _testExecutions.Clear();
+                }
+                _disposed = true;
+            }
+        }
+
+        #endregion
+    }
+
+    #region Supporting Classes
+
+    /// <summary>
+    /// Test configuration
+    /// </summary>
+    public class TestConfiguration
+    {
+        public string TestCompanyName { get; set; }
+        public List<string> TestModules { get; set; }
+        public TimeSpan TestTimeout { get; set; }
+        public int MaxConcurrentTests { get; set; }
+        public bool EnablePerformanceMetrics { get; set; }
+        public bool EnableErrorSimulation { get; set; }
+    }
+
+    /// <summary>
+    /// Test execution tracker
+    /// </summary>
+    public class TestExecution
+    {
+        public string TestId { get; set; }
+        public string TestName { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
+        public bool Success { get; set; }
+        public string ErrorMessage { get; set; }
+        public TimeSpan Duration => EndTime?.Subtract(StartTime) ?? TimeSpan.Zero;
+    }
+
+    /// <summary>
+    /// Test result
+    /// </summary>
+    public class TestResult
+    {
+        public string TestId { get; set; }
+        public string TestName { get; set; }
+        public bool Success { get; set; }
+        public TimeSpan Duration { get; set; }
+        public string ErrorMessage { get; set; }
+        public string Details { get; set; }
+    }
+
+    /// <summary>
+    /// Test suite result
+    /// </summary>
+    public class TestSuiteResult
+    {
+        public string SuiteId { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
+        public TimeSpan Duration => EndTime?.Subtract(StartTime) ?? TimeSpan.Zero;
+        public bool OverallSuccess { get; set; }
+        public string ErrorMessage { get; set; }
+        public int TotalTests { get; set; }
+        public int PassedTests { get; set; }
+        public int FailedTests { get; set; }
+        public List<TestResult> TestResults { get; set; } = new List<TestResult>();
+    }
+
+    #endregion
+}

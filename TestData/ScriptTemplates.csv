@@ -1,0 +1,416 @@
+Name,Description,Category,Content,CreatedBy,CreatedDate,LastModified,UsageCount,_DiscoveryTimestamp,_DiscoveryModule,_SessionId
+Basic User Discovery,Template for discovering Active Directory users,Discovery,"# Basic User Discovery Script
+param(
+    [string]$Domain = $env:USERDNSDOMAIN,
+    [string]$OutputPath = 'C:\DiscoveryData\Users.csv'
+)
+
+try {
+    Write-Host 'Starting user discovery...'
+    $Users = Get-ADUser -Filter * -Properties DisplayName,Department,Title,Manager,LastLogonDate
+    
+    $Results = $Users | Select-Object @{
+        Name = 'DisplayName'; Expression = {$_.DisplayName}
+    }, @{
+        Name = 'SamAccountName'; Expression = {$_.SamAccountName}
+    }, @{
+        Name = 'Department'; Expression = {$_.Department}
+    }, @{
+        Name = 'Title'; Expression = {$_.Title}
+    }, @{
+        Name = 'LastLogon'; Expression = {$_.LastLogonDate}
+    }, @{
+        Name = '_DiscoveryTimestamp'; Expression = {Get-Date}
+    }, @{
+        Name = '_DiscoveryModule'; Expression = {'UserDiscoveryScript'}
+    }, @{
+        Name = '_SessionId'; Expression = {'SES-' + (Get-Date -Format 'yyyyMMdd-HHmmss')}
+    }
+    
+    $Results | Export-Csv -Path $OutputPath -NoTypeInformation
+    Write-Host ""Discovered $($Results.Count) users""
+}
+catch {
+    Write-Error ""Failed to discover users: $($_.Exception.Message)""
+}","John Smith",2025-01-15 10:30:00,2025-08-18 14:22:00,156,2025-08-19 10:30:00,ScriptEditorEngine,SES-20250819-001
+Server Inventory Collection,Template for collecting server inventory information,Infrastructure,"# Server Inventory Collection Script
+param(
+    [string[]]$ComputerNames = @(),
+    [string]$OutputPath = 'C:\DiscoveryData\Servers.csv'
+)
+
+function Get-ServerInfo {
+    param($ComputerName)
+    
+    try {
+        $OS = Get-WmiObject -Class Win32_OperatingSystem -ComputerName $ComputerName
+        $CS = Get-WmiObject -Class Win32_ComputerSystem -ComputerName $ComputerName
+        $BIOS = Get-WmiObject -Class Win32_BIOS -ComputerName $ComputerName
+        
+        return [PSCustomObject]@{
+            ServerName = $ComputerName
+            OperatingSystem = $OS.Caption
+            Version = $OS.Version
+            Manufacturer = $CS.Manufacturer
+            Model = $CS.Model
+            TotalMemoryGB = [math]::Round($CS.TotalPhysicalMemory / 1GB, 2)
+            SerialNumber = $BIOS.SerialNumber
+            LastBootTime = $OS.ConvertToDateTime($OS.LastBootUpTime)
+            _DiscoveryTimestamp = Get-Date
+            _DiscoveryModule = 'ServerInventoryScript'
+            _SessionId = 'SES-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+        }
+    }
+    catch {
+        Write-Warning ""Failed to get info for $ComputerName: $($_.Exception.Message)""
+        return $null
+    }
+}
+
+# Auto-discover domain computers if no list provided
+if ($ComputerNames.Count -eq 0) {
+    $ComputerNames = (Get-ADComputer -Filter {OperatingSystem -like '*Server*'}).Name
+}
+
+$Results = @()
+foreach ($Computer in $ComputerNames) {
+    Write-Progress -Activity 'Collecting Server Information' -Status $Computer
+    $ServerInfo = Get-ServerInfo -ComputerName $Computer
+    if ($ServerInfo) { $Results += $ServerInfo }
+}
+
+$Results | Export-Csv -Path $OutputPath -NoTypeInformation
+Write-Host ""Collected information for $($Results.Count) servers""","David Thompson",2025-02-10 09:15:00,2025-08-17 16:45:00,89,2025-08-19 10:30:00,ScriptEditorEngine,SES-20250819-001
+Application Discovery,Template for discovering installed applications,Applications,"# Application Discovery Script
+param(
+    [string[]]$ComputerNames = @('localhost'),
+    [string]$OutputPath = 'C:\DiscoveryData\Applications.csv'
+)
+
+function Get-InstalledApplications {
+    param($ComputerName)
+    
+    try {
+        $Apps = @()
+        
+        # Get applications from registry (32-bit and 64-bit)
+        $RegPaths = @(
+            'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+            'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        )
+        
+        foreach ($RegPath in $RegPaths) {
+            $Installed = Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+                Get-ItemProperty -Path $using:RegPath | Where-Object {
+                    $_.DisplayName -and $_.DisplayName.Trim() -ne ''
+                }
+            }
+            
+            foreach ($App in $Installed) {
+                $Apps += [PSCustomObject]@{
+                    ComputerName = $ComputerName
+                    Name = $App.DisplayName
+                    Version = $App.DisplayVersion
+                    Publisher = $App.Publisher
+                    InstallDate = $App.InstallDate
+                    InstallLocation = $App.InstallLocation
+                    UninstallString = $App.UninstallString
+                    _DiscoveryTimestamp = Get-Date
+                    _DiscoveryModule = 'ApplicationDiscoveryScript'
+                    _SessionId = 'SES-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+                }
+            }
+        }
+        
+        return $Apps
+    }
+    catch {
+        Write-Error ""Failed to get applications from $ComputerName: $($_.Exception.Message)""
+        return @()
+    }
+}
+
+$AllApps = @()
+foreach ($Computer in $ComputerNames) {
+    Write-Progress -Activity 'Discovering Applications' -Status $Computer
+    $Apps = Get-InstalledApplications -ComputerName $Computer
+    $AllApps += $Apps
+}
+
+$AllApps | Export-Csv -Path $OutputPath -NoTypeInformation
+Write-Host ""Discovered $($AllApps.Count) applications across $($ComputerNames.Count) computers""","Ashley Moore",2025-03-05 11:20:00,2025-08-16 13:30:00,124,2025-08-19 10:30:00,ScriptEditorEngine,SES-20250819-001
+Database Connection Test,Template for testing database connectivity,Database,"# Database Connection Test Script
+param(
+    [string[]]$ServerNames = @('localhost'),
+    [string]$OutputPath = 'C:\DiscoveryData\DatabaseConnections.csv'
+)
+
+function Test-DatabaseConnection {
+    param(
+        [string]$ServerName,
+        [string]$DatabaseName = 'master'
+    )
+    
+    try {
+        $ConnectionString = ""Server=$ServerName;Database=$DatabaseName;Integrated Security=true;Connection Timeout=10""
+        $Connection = New-Object System.Data.SqlClient.SqlConnection($ConnectionString)
+        
+        $Connection.Open()
+        $Version = $Connection.ServerVersion
+        $Connection.Close()
+        
+        return [PSCustomObject]@{
+            ServerName = $ServerName
+            DatabaseName = $DatabaseName
+            Status = 'Connected'
+            Version = $Version
+            ResponseTime = (Measure-Command { $Connection.Open(); $Connection.Close() }).TotalMilliseconds
+            TestTime = Get-Date
+            _DiscoveryTimestamp = Get-Date
+            _DiscoveryModule = 'DatabaseConnectionTest'
+            _SessionId = 'SES-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+        }
+    }
+    catch {
+        return [PSCustomObject]@{
+            ServerName = $ServerName
+            DatabaseName = $DatabaseName
+            Status = 'Failed'
+            Version = $null
+            ResponseTime = $null
+            TestTime = Get-Date
+            Error = $_.Exception.Message
+            _DiscoveryTimestamp = Get-Date
+            _DiscoveryModule = 'DatabaseConnectionTest'
+            _SessionId = 'SES-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+        }
+    }
+}
+
+$Results = @()
+foreach ($Server in $ServerNames) {
+    Write-Progress -Activity 'Testing Database Connections' -Status $Server
+    $Result = Test-DatabaseConnection -ServerName $Server
+    $Results += $Result
+}
+
+$Results | Export-Csv -Path $OutputPath -NoTypeInformation
+$SuccessCount = ($Results | Where-Object {$_.Status -eq 'Connected'}).Count
+Write-Host ""Tested $($Results.Count) connections, $SuccessCount successful""","Christopher Garcia",2025-04-12 14:45:00,2025-08-15 10:20:00,67,2025-08-19 10:30:00,ScriptEditorEngine,SES-20250819-001
+Group Policy Report,Template for generating Group Policy reports,Security,"# Group Policy Report Script
+param(
+    [string]$Domain = $env:USERDNSDOMAIN,
+    [string]$OutputPath = 'C:\DiscoveryData\GroupPolicies.csv'
+)
+
+Import-Module GroupPolicy
+
+try {
+    Write-Host 'Generating Group Policy report...'
+    $GPOs = Get-GPO -All -Domain $Domain
+    
+    $Results = @()
+    foreach ($GPO in $GPOs) {
+        Write-Progress -Activity 'Processing Group Policies' -Status $GPO.DisplayName
+        
+        $GPOReport = Get-GPOReport -Guid $GPO.Id -ReportType Xml
+        $Links = (Get-GPInheritance -Target $Domain).GpoLinks | Where-Object {$_.GpoId -eq $GPO.Id}
+        
+        $Results += [PSCustomObject]@{
+            Name = $GPO.DisplayName
+            GUID = $GPO.Id
+            Status = $GPO.GpoStatus
+            CreationTime = $GPO.CreationTime
+            ModificationTime = $GPO.ModificationTime
+            Version = $GPO.User.DSVersion
+            LinkedTo = ($Links.Target -join '; ')
+            Description = $GPO.Description
+            _DiscoveryTimestamp = Get-Date
+            _DiscoveryModule = 'GroupPolicyReportScript'
+            _SessionId = 'SES-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+        }
+    }
+    
+    $Results | Export-Csv -Path $OutputPath -NoTypeInformation
+    Write-Host ""Generated report for $($Results.Count) Group Policy Objects""
+}
+catch {
+    Write-Error ""Failed to generate GPO report: $($_.Exception.Message)""
+}","Andrew Harris",2025-05-20 16:10:00,2025-08-14 12:15:00,45,2025-08-19 10:30:00,ScriptEditorEngine,SES-20250819-001
+File Share Enumeration,Template for enumerating network file shares,Storage,"# File Share Enumeration Script
+param(
+    [string[]]$ServerNames = @(),
+    [string]$OutputPath = 'C:\DiscoveryData\FileShares.csv'
+)
+
+function Get-FileShares {
+    param($ServerName)
+    
+    try {
+        $Shares = Get-WmiObject -Class Win32_Share -ComputerName $ServerName | Where-Object {
+            $_.Type -eq 0 -and $_.Name -notmatch '^[A-Z]\$|^ADMIN\$|^IPC\$'
+        }
+        
+        $Results = @()
+        foreach ($Share in $Shares) {
+            try {
+                $SharePath = ""\\$ServerName\$($Share.Name)""
+                $FolderInfo = Get-ChildItem -Path $SharePath -Force -ErrorAction SilentlyContinue | Measure-Object
+                
+                $Results += [PSCustomObject]@{
+                    ServerName = $ServerName
+                    ShareName = $Share.Name
+                    SharePath = $SharePath
+                    Description = $Share.Description
+                    Type = switch($Share.Type) {
+                        0 { 'Disk Drive' }
+                        1 { 'Print Queue' }
+                        2 { 'Device' }
+                        3 { 'IPC' }
+                        default { 'Unknown' }
+                    }
+                    ItemCount = $FolderInfo.Count
+                    MaxUsers = $Share.MaximumAllowed
+                    _DiscoveryTimestamp = Get-Date
+                    _DiscoveryModule = 'FileShareEnumerationScript'
+                    _SessionId = 'SES-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+                }
+            }
+            catch {
+                Write-Warning ""Cannot access share $SharePath: $($_.Exception.Message)""
+            }
+        }
+        
+        return $Results
+    }
+    catch {
+        Write-Error ""Failed to enumerate shares on $ServerName: $($_.Exception.Message)""
+        return @()
+    }
+}
+
+# Auto-discover file servers if no list provided
+if ($ServerNames.Count -eq 0) {
+    $ServerNames = (Get-ADComputer -Filter {OperatingSystem -like '*Server*'}).Name
+}
+
+$AllShares = @()
+foreach ($Server in $ServerNames) {
+    Write-Progress -Activity 'Enumerating File Shares' -Status $Server
+    $Shares = Get-FileShares -ServerName $Server
+    $AllShares += $Shares
+}
+
+$AllShares | Export-Csv -Path $OutputPath -NoTypeInformation
+Write-Host ""Found $($AllShares.Count) file shares across $($ServerNames.Count) servers""","Robert Wilson",2025-06-08 08:30:00,2025-08-13 15:40:00,78,2025-08-19 10:30:00,ScriptEditorEngine,SES-20250819-001
+Network Connectivity Test,Template for testing network connectivity,Network,"# Network Connectivity Test Script
+param(
+    [string[]]$TargetHosts = @('8.8.8.8', 'google.com'),
+    [int[]]$Ports = @(80, 443, 53),
+    [string]$OutputPath = 'C:\DiscoveryData\NetworkConnectivity.csv'
+)
+
+function Test-NetworkConnectivity {
+    param(
+        [string]$TargetHost,
+        [int]$Port = $null
+    )
+    
+    $Results = @()
+    
+    # Test ping connectivity
+    try {
+        $PingResult = Test-Connection -ComputerName $TargetHost -Count 1 -Quiet
+        $PingTime = (Test-Connection -ComputerName $TargetHost -Count 1).ResponseTime
+        
+        $Results += [PSCustomObject]@{
+            TargetHost = $TargetHost
+            TestType = 'Ping'
+            Port = $null
+            Status = if($PingResult) {'Success'} else {'Failed'}
+            ResponseTime = $PingTime
+            TestTime = Get-Date
+            _DiscoveryTimestamp = Get-Date
+            _DiscoveryModule = 'NetworkConnectivityTest'
+            _SessionId = 'SES-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+        }
+    }
+    catch {
+        $Results += [PSCustomObject]@{
+            TargetHost = $TargetHost
+            TestType = 'Ping'
+            Port = $null
+            Status = 'Error'
+            ResponseTime = $null
+            TestTime = Get-Date
+            Error = $_.Exception.Message
+            _DiscoveryTimestamp = Get-Date
+            _DiscoveryModule = 'NetworkConnectivityTest'
+            _SessionId = 'SES-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+        }
+    }
+    
+    # Test port connectivity if ports specified
+    if ($Port) {
+        try {
+            $TcpClient = New-Object System.Net.Sockets.TcpClient
+            $Connect = $TcpClient.BeginConnect($TargetHost, $Port, $null, $null)
+            $Wait = $Connect.AsyncWaitHandle.WaitOne(3000, $false)
+            
+            if ($Wait) {
+                $TcpClient.EndConnect($Connect)
+                $Status = 'Open'
+            } else {
+                $Status = 'Closed'
+            }
+            $TcpClient.Close()
+            
+            $Results += [PSCustomObject]@{
+                TargetHost = $TargetHost
+                TestType = 'Port'
+                Port = $Port
+                Status = $Status
+                ResponseTime = $null
+                TestTime = Get-Date
+                _DiscoveryTimestamp = Get-Date
+                _DiscoveryModule = 'NetworkConnectivityTest'
+                _SessionId = 'SES-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+            }
+        }
+        catch {
+            $Results += [PSCustomObject]@{
+                TargetHost = $TargetHost
+                TestType = 'Port'
+                Port = $Port
+                Status = 'Error'
+                ResponseTime = $null
+                TestTime = Get-Date
+                Error = $_.Exception.Message
+                _DiscoveryTimestamp = Get-Date
+                _DiscoveryModule = 'NetworkConnectivityTest'
+                _SessionId = 'SES-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+            }
+        }
+    }
+    
+    return $Results
+}
+
+$AllResults = @()
+foreach ($Host in $TargetHosts) {
+    Write-Progress -Activity 'Testing Network Connectivity' -Status $Host
+    
+    # Test ping
+    $Results = Test-NetworkConnectivity -TargetHost $Host
+    $AllResults += $Results
+    
+    # Test each port
+    foreach ($Port in $Ports) {
+        $PortResults = Test-NetworkConnectivity -TargetHost $Host -Port $Port
+        $AllResults += $PortResults
+    }
+}
+
+$AllResults | Export-Csv -Path $OutputPath -NoTypeInformation
+$SuccessCount = ($AllResults | Where-Object {$_.Status -eq 'Success' -or $_.Status -eq 'Open'}).Count
+Write-Host ""Completed $($AllResults.Count) connectivity tests, $SuccessCount successful""","David Thompson",2025-07-15 13:25:00,2025-08-12 11:30:00,92,2025-08-19 10:30:00,ScriptEditorEngine,SES-20250819-001

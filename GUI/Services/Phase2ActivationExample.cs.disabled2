@@ -1,0 +1,491 @@
+using System;
+using System.Threading.Tasks;
+using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace MandADiscoverySuite.Services
+{
+    /// <summary>
+    /// Example demonstrating how to activate and use Phase 2 PowerShell integration
+    /// This shows the complete process from activation to real-time PowerShell execution
+    /// </summary>
+    public static class Phase2ActivationExample
+    {
+        /// <summary>
+        /// Complete example of Phase 2 activation and usage
+        /// </summary>
+        public static async Task<bool> RunCompletePhase2ExampleAsync(IServiceProvider serviceProvider)
+        {
+            var logger = serviceProvider.GetService<ILogger<Phase2IntegrationService>>();
+            
+            try
+            {
+                Console.WriteLine("=== Phase 2 PowerShell Integration Activation Example ===\n");
+
+                // Step 1: Initialize Phase 2 Integration Service
+                Console.WriteLine("Step 1: Initializing Phase 2 Integration Service...");
+                using var phase2Service = new Phase2IntegrationService(logger, serviceProvider);
+
+                // Step 2: Activate Phase 2
+                Console.WriteLine("Step 2: Activating Phase 2 (this validates environment and runs tests)...");
+                var activationSuccess = await phase2Service.ActivatePhase2Async();
+                
+                if (!activationSuccess)
+                {
+                    Console.WriteLine("❌ Phase 2 activation failed!");
+                    return false;
+                }
+                
+                Console.WriteLine("✅ Phase 2 activated successfully!");
+                
+                // Step 3: Get Phase 2 status
+                var status = phase2Service.GetPhase2Status();
+                Console.WriteLine($"   - Activation Time: {status.ActivationTime}");
+                Console.WriteLine($"   - Active Executions: {status.ActiveExecutions}");
+                Console.WriteLine();
+
+                // Step 4: Demonstrate Discovery Module Execution
+                Console.WriteLine("Step 3: Running PowerShell Discovery Module...");
+                await DemonstrateDiscoveryExecutionAsync(phase2Service);
+
+                // Step 5: Demonstrate Migration Batch Execution
+                Console.WriteLine("Step 4: Running PowerShell Migration Batch...");
+                await DemonstrateMigrationExecutionAsync(phase2Service);
+
+                // Step 6: Demonstrate Real-Time Progress Monitoring
+                Console.WriteLine("Step 5: Demonstrating Real-Time Progress Monitoring...");
+                await DemonstrateProgressMonitoringAsync(phase2Service);
+
+                // Step 7: Demonstrate State Management
+                Console.WriteLine("Step 6: Demonstrating State Management...");
+                await DemonstrateStateManagementAsync(phase2Service);
+
+                // Step 8: Show Enhanced ViewModel Usage
+                Console.WriteLine("Step 7: Demonstrating Enhanced ViewModel...");
+                await DemonstrateEnhancedViewModelAsync(phase2Service, serviceProvider);
+
+                Console.WriteLine("\n✅ Phase 2 example completed successfully!");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\n❌ Phase 2 example failed: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Demonstrates discovery module execution with real PowerShell
+        /// </summary>
+        private static async Task DemonstrateDiscoveryExecutionAsync(Phase2IntegrationService phase2Service)
+        {
+            try
+            {
+                var executionService = phase2Service.ExecutionService;
+                
+                // Subscribe to progress events
+                executionService.ProgressUpdated += (s, e) =>
+                {
+                    Console.WriteLine($"   Progress: {e.ProgressPercentage:F1}% - {e.CurrentOperation}");
+                };
+
+                executionService.StatusChanged += (s, e) =>
+                {
+                    Console.WriteLine($"   Status: {e.Status} for {e.ModuleName}");
+                };
+
+                // Execute a discovery module
+                var result = await executionService.ExecuteDiscoveryModuleAsync(
+                    "UsersDiscovery",
+                    "ExampleCompany",
+                    new System.Collections.Generic.Dictionary<string, object>
+                    {
+                        { "TestMode", true },
+                        { "MaxItems", 10 }
+                    });
+
+                if (result.Success)
+                {
+                    Console.WriteLine($"   ✅ Discovery completed - Execution ID: {result.ExecutionId}");
+                    Console.WriteLine($"   📊 Processed {result.ProcessedItems}/{result.TotalItems} items");
+                }
+                else
+                {
+                    Console.WriteLine($"   ❌ Discovery failed: {result.ErrorMessage}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ❌ Discovery execution error: {ex.Message}");
+            }
+
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// Demonstrates migration batch execution
+        /// </summary>
+        private static async Task DemonstrateMigrationExecutionAsync(Phase2IntegrationService phase2Service)
+        {
+            try
+            {
+                var executionService = phase2Service.ExecutionService;
+
+                // Create a sample migration batch
+                var batch = new MandADiscoverySuite.Models.MigrationBatch
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Name = "Example User Migration",
+                    Type = MandADiscoverySuite.Models.MigrationType.User,
+                    Items = new System.Collections.Generic.List<MandADiscoverySuite.Models.MigrationItem>
+                    {
+                        new MandADiscoverySuite.Models.MigrationItem { SourceIdentity = "user1@company.com", DisplayName = "User 1" },
+                        new MandADiscoverySuite.Models.MigrationItem { SourceIdentity = "user2@company.com", DisplayName = "User 2" },
+                        new MandADiscoverySuite.Models.MigrationItem { SourceIdentity = "user3@company.com", DisplayName = "User 3" }
+                    }
+                };
+
+                var settings = new MandADiscoverySuite.Models.MigrationSettings
+                {
+                    MaxConcurrentMigrations = 2,
+                    ValidateBeforeMigration = true,
+                    NotificationEmail = "admin@company.com"
+                };
+
+                // Execute migration batch
+                var result = await executionService.ExecuteMigrationBatchAsync(batch, settings);
+
+                if (result.Success)
+                {
+                    Console.WriteLine($"   ✅ Migration completed - Execution ID: {result.ExecutionId}");
+                    Console.WriteLine($"   📊 Migrated {result.ProcessedItems}/{result.TotalItems} items");
+                }
+                else
+                {
+                    Console.WriteLine($"   ❌ Migration failed: {result.ErrorMessage}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ❌ Migration execution error: {ex.Message}");
+            }
+
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// Demonstrates real-time progress monitoring
+        /// </summary>
+        private static async Task DemonstrateProgressMonitoringAsync(Phase2IntegrationService phase2Service)
+        {
+            try
+            {
+                var progressBridge = phase2Service.ProgressBridge;
+
+                // Subscribe to real-time metric updates
+                progressBridge.DashboardMetricsUpdated += (s, e) =>
+                {
+                    Console.WriteLine($"   📊 Dashboard: {e.Metrics.ActiveMigrations} active, {e.Metrics.CompletedMigrations} completed");
+                };
+
+                progressBridge.ExecutionMetricsUpdated += (s, e) =>
+                {
+                    Console.WriteLine($"   ⚡ Execution: {e.Metrics.ItemsPerMinute:F1} items/min, {e.Metrics.DataThroughputMBps:F1} MB/s");
+                };
+
+                // Force a metrics refresh to demonstrate
+                progressBridge.RefreshMetrics();
+
+                // Wait a moment for events to fire
+                await Task.Delay(2000);
+
+                // Show current metrics
+                var dashboardMetrics = progressBridge.GetCurrentDashboardMetrics();
+                var executionMetrics = progressBridge.GetCurrentExecutionMetrics();
+
+                Console.WriteLine($"   Current Dashboard Metrics:");
+                Console.WriteLine($"     - Total Projects: {dashboardMetrics.TotalProjects}");
+                Console.WriteLine($"     - Active Migrations: {dashboardMetrics.ActiveMigrations}");
+                Console.WriteLine($"     - Completion Rate: {dashboardMetrics.OverallCompletionPercentage:F1}%");
+
+                Console.WriteLine($"   Current Execution Metrics:");
+                Console.WriteLine($"     - Active Streams: {executionMetrics.ActiveStreams}");
+                Console.WriteLine($"     - Error Count: {executionMetrics.ErrorCount}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ❌ Progress monitoring error: {ex.Message}");
+            }
+
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// Demonstrates state management and persistence
+        /// </summary>
+        private static async Task DemonstrateStateManagementAsync(Phase2IntegrationService phase2Service)
+        {
+            try
+            {
+                var stateManager = phase2Service.StateManager;
+
+                // Create a test execution state
+                var executionId = Guid.NewGuid().ToString();
+                var state = new MigrationExecutionState
+                {
+                    ExecutionId = executionId,
+                    ModuleName = "TestModule",
+                    CompanyName = "ExampleCompany",
+                    MigrationType = MandADiscoverySuite.Models.MigrationType.User,
+                    Status = MandADiscoverySuite.Models.MigrationStatus.InProgress,
+                    StartTime = DateTime.Now,
+                    TotalItems = 100,
+                    ProcessedItems = 25,
+                    ProgressPercentage = 25.0,
+                    CurrentOperation = "Processing users..."
+                };
+
+                // Store the state
+                stateManager.CreateOrUpdateExecutionState(executionId, state);
+                Console.WriteLine($"   ✅ Created execution state: {executionId}");
+
+                // Create a checkpoint
+                var checkpoint = stateManager.CreateCheckpoint(executionId, "Quarter Complete", new { ItemsProcessed = 25 });
+                Console.WriteLine($"   ✅ Created checkpoint: {checkpoint.Name}");
+
+                // Retrieve the state
+                var retrievedState = stateManager.GetExecutionState(executionId);
+                Console.WriteLine($"   📊 Retrieved state - Progress: {retrievedState.ProgressPercentage}%");
+
+                // Update progress
+                stateManager.UpdateExecutionProgress(executionId, 75.0, "Almost complete...");
+                Console.WriteLine($"   📈 Updated progress to 75%");
+
+                // Complete the execution
+                stateManager.CompleteExecution(executionId, MandADiscoverySuite.Models.MigrationStatus.Completed);
+                Console.WriteLine($"   ✅ Marked execution as completed");
+
+                // Get statistics
+                var stats = stateManager.GetMigrationStatistics();
+                Console.WriteLine($"   📊 Migration Statistics:");
+                Console.WriteLine($"     - Total Executions: {stats.TotalExecutions}");
+                Console.WriteLine($"     - Success Rate: {stats.SuccessRate:F1}%");
+
+                // Force save state
+                stateManager.SaveStateImmediate();
+                Console.WriteLine($"   💾 State saved to disk");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ❌ State management error: {ex.Message}");
+            }
+
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// Demonstrates enhanced ViewModel with Phase 2 integration
+        /// </summary>
+        private static async Task DemonstrateEnhancedViewModelAsync(Phase2IntegrationService phase2Service, IServiceProvider serviceProvider)
+        {
+            try
+            {
+                var viewModelLogger = serviceProvider.GetService<ILogger<MigrateViewModel>>();
+                
+                // Create enhanced ViewModel that uses PowerShell instead of data generators
+                var enhancedViewModel = phase2Service.CreateEnhancedMigrateViewModel(viewModelLogger);
+
+                Console.WriteLine($"   ✅ Created enhanced MigrateViewModel with Phase 2 integration");
+
+                // Load data (this will use PowerShell instead of generators)
+                await enhancedViewModel.LoadAsync();
+                Console.WriteLine($"   📊 Loaded data using PowerShell integration");
+
+                // Show that real-time updates are working
+                Console.WriteLine($"   Current data from enhanced ViewModel:");
+                Console.WriteLine($"     - Dashboard: {enhancedViewModel.Metrics.TotalProjects} projects");
+                Console.WriteLine($"     - Discovery: {enhancedViewModel.DiscoveryMetrics.UserCount} users");
+                Console.WriteLine($"     - Execution: {enhancedViewModel.ExecutionMetrics.ActiveStreams} streams");
+
+                // Demonstrate command execution
+                var discoveryCommand = enhancedViewModel.StartDiscoveryCommand;
+                if (discoveryCommand.CanExecute(null))
+                {
+                    Console.WriteLine($"   ▶️ Executing discovery command...");
+                    await discoveryCommand.ExecuteAsync(null);
+                    Console.WriteLine($"   ✅ Discovery command completed");
+                }
+
+                enhancedViewModel.Dispose();
+                Console.WriteLine($"   🧹 Enhanced ViewModel disposed");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ❌ Enhanced ViewModel error: {ex.Message}");
+            }
+
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// Demonstrates how to integrate with existing MainWindow
+        /// </summary>
+        public static async Task<bool> IntegrateWithMainWindowAsync(Window mainWindow, IServiceProvider serviceProvider)
+        {
+            try
+            {
+                Console.WriteLine("=== Integrating Phase 2 with Main Window ===\n");
+
+                var logger = serviceProvider.GetService<ILogger<Phase2IntegrationService>>();
+                
+                // Create and activate Phase 2 service
+                var phase2Service = new Phase2IntegrationService(logger, serviceProvider);
+                var activationSuccess = await phase2Service.ActivatePhase2Async();
+
+                if (!activationSuccess)
+                {
+                    Console.WriteLine("❌ Could not activate Phase 2 for main window integration");
+                    return false;
+                }
+
+                // Store Phase 2 service in window resources for access by ViewModels
+                mainWindow.Resources["Phase2Service"] = phase2Service;
+
+                Console.WriteLine("✅ Phase 2 service stored in MainWindow resources");
+                Console.WriteLine("   ViewModels can now access via: (Phase2IntegrationService)Application.Current.MainWindow.Resources[\"Phase2Service\"]");
+
+                // Example of how a ViewModel would access Phase 2
+                var phase2FromResources = (Phase2IntegrationService)mainWindow.Resources["Phase2Service"];
+                var status = phase2FromResources.GetPhase2Status();
+                Console.WriteLine($"   Phase 2 Status: Enabled={status.IsEnabled}, ActiveExecutions={status.ActiveExecutions}");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Main window integration failed: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Shows how to transition from Phase 1 (simulation) to Phase 2 (real PowerShell)
+        /// </summary>
+        public static async Task DemonstratePhaseTransitionAsync(IServiceProvider serviceProvider)
+        {
+            Console.WriteLine("=== Demonstrating Phase 1 → Phase 2 Transition ===\n");
+
+            try
+            {
+                var logger = serviceProvider.GetService<ILogger<Phase2IntegrationService>>();
+                var viewModelLogger = serviceProvider.GetService<ILogger<MigrateViewModel>>();
+
+                // Step 1: Create standard MigrateViewModel (Phase 1 - simulation)
+                Console.WriteLine("Phase 1: Creating standard MigrateViewModel with data generators...");
+                var standardViewModel = new MigrateViewModel(viewModelLogger);
+                await standardViewModel.LoadAsync();
+                
+                Console.WriteLine($"   📊 Phase 1 Data: {standardViewModel.Metrics.TotalProjects} projects (simulated)");
+                
+                // Step 2: Initialize Phase 2
+                Console.WriteLine("\nPhase 2: Initializing PowerShell integration...");
+                var phase2Service = new Phase2IntegrationService(logger, serviceProvider);
+                await phase2Service.ActivatePhase2Async();
+
+                // Step 3: Create enhanced ViewModel (Phase 2 - real PowerShell)
+                Console.WriteLine("Phase 2: Creating enhanced MigrateViewModel with PowerShell integration...");
+                var enhancedViewModel = phase2Service.CreateEnhancedMigrateViewModel(viewModelLogger);
+                await enhancedViewModel.LoadAsync();
+
+                Console.WriteLine($"   📊 Phase 2 Data: {enhancedViewModel.Metrics.TotalProjects} projects (from PowerShell)");
+
+                // Step 4: Demonstrate side-by-side comparison
+                Console.WriteLine("\nComparison:");
+                Console.WriteLine($"   Phase 1 (Simulation) - Active Migrations: {standardViewModel.Metrics.ActiveMigrations}");
+                Console.WriteLine($"   Phase 2 (PowerShell)  - Active Migrations: {enhancedViewModel.Metrics.ActiveMigrations}");
+
+                // Step 5: Clean up
+                standardViewModel.Dispose();
+                enhancedViewModel.Dispose();
+                phase2Service.Dispose();
+
+                Console.WriteLine("\n✅ Phase transition demonstration completed successfully!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\n❌ Phase transition demonstration failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Demonstrates performance comparison between Phase 1 and Phase 2
+        /// </summary>
+        public static async Task DemonstratePerformanceComparisonAsync(IServiceProvider serviceProvider)
+        {
+            Console.WriteLine("=== Performance Comparison: Phase 1 vs Phase 2 ===\n");
+
+            try
+            {
+                var logger = serviceProvider.GetService<ILogger<Phase2IntegrationService>>();
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+                // Test Phase 1 performance
+                Console.WriteLine("Testing Phase 1 (Data Generators) Performance...");
+                var phase1Start = stopwatch.ElapsedMilliseconds;
+                
+                // Simulate multiple data generator calls
+                for (int i = 0; i < 10; i++)
+                {
+                    var metrics = MandADiscoverySuite.Models.MigrationDataGenerator.GenerateRealtimeMetrics();
+                    var migrations = MandADiscoverySuite.Models.MigrationDataGenerator.GenerateActiveMigrations(3);
+                    // Simulate some processing time
+                    await Task.Delay(10);
+                }
+                
+                var phase1Duration = stopwatch.ElapsedMilliseconds - phase1Start;
+                Console.WriteLine($"   Phase 1 Duration: {phase1Duration}ms");
+
+                // Test Phase 2 performance
+                Console.WriteLine("\nTesting Phase 2 (PowerShell Integration) Performance...");
+                var phase2Service = new Phase2IntegrationService(logger, serviceProvider);
+                await phase2Service.ActivatePhase2Async();
+
+                var phase2Start = stopwatch.ElapsedMilliseconds;
+                
+                // Test PowerShell bridge performance
+                for (int i = 0; i < 10; i++)
+                {
+                    var metrics = phase2Service.ProgressBridge.GetCurrentDashboardMetrics();
+                    phase2Service.ProgressBridge.RefreshMetrics();
+                    await Task.Delay(10);
+                }
+                
+                var phase2Duration = stopwatch.ElapsedMilliseconds - phase2Start;
+                Console.WriteLine($"   Phase 2 Duration: {phase2Duration}ms");
+
+                stopwatch.Stop();
+
+                // Performance analysis
+                Console.WriteLine("\nPerformance Analysis:");
+                Console.WriteLine($"   Phase 1 (Generators): {phase1Duration}ms");
+                Console.WriteLine($"   Phase 2 (PowerShell): {phase2Duration}ms");
+                
+                if (phase2Duration <= phase1Duration * 1.5) // Allow 50% overhead for PowerShell integration
+                {
+                    Console.WriteLine("   ✅ Phase 2 performance is acceptable");
+                }
+                else
+                {
+                    Console.WriteLine("   ⚠️ Phase 2 has significant performance overhead");
+                }
+
+                phase2Service.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\n❌ Performance comparison failed: {ex.Message}");
+            }
+        }
+    }
+}

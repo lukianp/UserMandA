@@ -1,0 +1,196 @@
+<UserControl x:Class="MandADiscoverySuite.Views.FileServersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="1000">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/GUI/Resources/Converters.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="File Servers" FontSize="24" FontWeight="Bold" 
+                       Foreground="{DynamicResource ForegroundBrush}"/>
+            <TextBlock Text="Discover and analyze file servers, shares, and NTFS permissions" 
+                       FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,5,0,0"/>
+        </StackPanel>
+        
+        <!-- Summary Cards -->
+        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <Border Grid.Column="0" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" 
+                    Padding="15" Margin="0,0,10,0" BorderBrush="{DynamicResource PrimaryBrush}" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="File Servers" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding ServersCount}" FontSize="20" FontWeight="Bold" 
+                               Foreground="{DynamicResource PrimaryBrush}"/>
+                </StackPanel>
+            </Border>
+            
+            <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" 
+                    Padding="15" Margin="5,0" BorderBrush="{DynamicResource SecondaryBrush}" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="Total Shares" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding SharesCount}" FontSize="20" FontWeight="Bold" 
+                               Foreground="{DynamicResource SecondaryBrush}"/>
+                </StackPanel>
+            </Border>
+            
+            <Border Grid.Column="2" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" 
+                    Padding="15" Margin="5,0" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="Encrypted" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding EncryptedCount}" FontSize="20" FontWeight="Bold" 
+                               Foreground="{DynamicResource AccentBrush}"/>
+                </StackPanel>
+            </Border>
+            
+            <Border Grid.Column="3" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" 
+                    Padding="15" Margin="10,0,0,0" BorderBrush="#FF9B59B6" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="Large Files (>1GB)" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding LargeFilesCount}" FontSize="20" FontWeight="Bold" 
+                               Foreground="#FF9B59B6"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+        
+        <!-- Main Content Area -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- File Servers Grid -->
+            <Border Grid.Column="0" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" 
+                    Padding="20" Margin="0,0,10,0" BorderBrush="{DynamicResource MutedForegroundBrush}" BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="File Servers" FontSize="16" FontWeight="SemiBold" 
+                               Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,10"/>
+                    
+                    <!-- Search/Filter Bar -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
+                        <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                 Width="300" Height="32" VerticalContentAlignment="Center"
+                                 Background="{DynamicResource BackgroundBrush}"
+                                 BorderBrush="{DynamicResource MutedForegroundBrush}"/>
+                        <Button Content="Search" Margin="10,0,0,0" Padding="15,5"
+                                Command="{Binding SearchCommand}"/>
+                        <Button Content="Clear" Margin="10,0,0,0" Padding="15,5"
+                                Command="{Binding ClearSearchCommand}"/>
+                    </StackPanel>
+                    
+                    <!-- Loading/Content States -->
+                    <Grid Grid.Row="2">
+                        <!-- Loading State -->
+                        <StackPanel Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <ProgressBar IsIndeterminate="True" Width="200" Height="6" Margin="0,0,0,10"/>
+                            <TextBlock Text="Loading file servers..." FontSize="14" 
+                                       Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <!-- Data Grid -->
+                        <DataGrid ItemsSource="{Binding FileServers}" SelectedItem="{Binding SelectedServer}"
+                                  Visibility="{Binding HasData, Converter={StaticResource BoolToVisibilityConverter}}"
+                                  AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                                  Background="{DynamicResource BackgroundBrush}"
+                                  BorderBrush="{DynamicResource MutedForegroundBrush}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Server Name" Binding="{Binding ServerName}" Width="*"/>
+                                <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="120"/>
+                                <DataGridTextColumn Header="OS" Binding="{Binding OperatingSystem}" Width="120"/>
+                                <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="100"/>
+                                <DataGridTextColumn Header="Shares" Binding="{Binding ShareCount}" Width="80"/>
+                                <DataGridTextColumn Header="Total Size" Binding="{Binding TotalSizeFormatted}" Width="100"/>
+                                <DataGridTextColumn Header="Last Scan" Binding="{Binding LastScan, StringFormat=yyyy-MM-dd}" Width="100"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        
+                        <!-- No Data State -->
+                        <StackPanel Visibility="{Binding HasNoData, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="📁" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                            <TextBlock Text="No file servers found" FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Run file server discovery to populate data" FontSize="14"
+                                       Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+            
+            <!-- Details Panel -->
+            <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" 
+                    Padding="20" BorderBrush="{DynamicResource MutedForegroundBrush}" BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Server Details" FontSize="16" FontWeight="SemiBold" 
+                               Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,15"/>
+                    
+                    <StackPanel Grid.Row="1" Visibility="{Binding HasSelectedServer, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="{Binding SelectedServer.Name}" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,10"/>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                            <TextBlock Text="IP Address: " FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedServer.IPAddress}" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                            <TextBlock Text="Operating System: " FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedServer.OperatingSystem}" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                            <TextBlock Text="Status: " FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedServer.Status}" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                        </StackPanel>
+                        
+                        <Button Content="View Shares" Margin="0,15,0,0" Padding="15,8"
+                                Command="{Binding ViewSharesCommand}"/>
+                        <Button Content="View NTFS Permissions" Margin="0,10,0,0" Padding="15,8"
+                                Command="{Binding ViewPermissionsCommand}"/>
+                    </StackPanel>
+                    
+                    <TextBlock Grid.Row="1" Text="Select a file server to view details" 
+                               FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Visibility="{Binding HasNoSelectedServer, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

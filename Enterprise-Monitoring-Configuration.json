@@ -1,0 +1,312 @@
+{
+  "enterpriseMonitoringConfiguration": {
+    "customerId": "FORTUNE500_CUSTOMER",
+    "customerName": "Fortune 500 Enterprise Customer",
+    "environmentName": "Production",
+    "deployment": {
+      "region": "North America",
+      "tier": "Enterprise Premium",
+      "supportLevel": "24x7 White Glove"
+    },
+    "healthChecks": {
+      "interval": "00:05:00",
+      "timeoutSeconds": 30,
+      "retryAttempts": 3,
+      "checks": [
+        {
+          "name": "ApplicationHealth",
+          "enabled": true,
+          "critical": true,
+          "autoRemediate": true
+        },
+        {
+          "name": "DatabaseConnectivity",
+          "enabled": true,
+          "critical": true,
+          "autoRemediate": true
+        },
+        {
+          "name": "PowerShellModules",
+          "enabled": true,
+          "critical": true,
+          "autoRemediate": true
+        },
+        {
+          "name": "SystemResources",
+          "enabled": true,
+          "critical": false,
+          "autoRemediate": false
+        },
+        {
+          "name": "NetworkConnectivity",
+          "enabled": true,
+          "critical": true,
+          "autoRemediate": false
+        },
+        {
+          "name": "ServiceDependencies",
+          "enabled": true,
+          "critical": false,
+          "autoRemediate": true
+        },
+        {
+          "name": "LicensingHealth",
+          "enabled": true,
+          "critical": true,
+          "autoRemediate": false
+        }
+      ]
+    },
+    "performanceMetrics": {
+      "collectionInterval": "00:00:30",
+      "retentionDays": 90,
+      "thresholds": {
+        "memoryThresholdMB": 2048,
+        "cpuThresholdPercent": 80.0,
+        "threadCountThreshold": 200,
+        "systemCpuThreshold": 85.0,
+        "systemMemoryThreshold": 85.0,
+        "diskIoThreshold": 80.0,
+        "diskSpaceThresholdPercent": 15.0,
+        "databaseResponseThresholdMs": 1000,
+        "networkLatencyThresholdMs": 100,
+        "migrationSuccessRateThreshold": 95.0
+      }
+    },
+    "externalServices": {
+      "exchangeOnlineEndpoint": "https://outlook.office365.com",
+      "sharePointOnlineEndpoint": "https://graph.microsoft.com",
+      "azureADEndpoint": "https://login.microsoftonline.com",
+      "timeoutSeconds": 10,
+      "retryCount": 3
+    },
+    "alerting": {
+      "enabled": true,
+      "channels": {
+        "email": {
+          "enabled": true,
+          "smtpServer": "smtp.company.com",
+          "smtpPort": 587,
+          "useSSL": true,
+          "username": "monitoring@company.com",
+          "passwordEncrypted": "AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAA...",
+          "fromAddress": "noc@company.com",
+          "toAddresses": [
+            "noc-alerts@company.com",
+            "sysadmins@company.com",
+            "platform-team@company.com"
+          ],
+          "criticalAlertToAddresses": [
+            "cto@company.com",
+            "operations-director@company.com",
+            "emergency-response@company.com"
+          ]
+        },
+        "slack": {
+          "enabled": true,
+          "webhookUrl": "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+          "channel": "#platform-alerts",
+          "username": "M&A Discovery Monitor",
+          "iconEmoji": ":warning:"
+        },
+        "teams": {
+          "enabled": true,
+          "webhookUrl": "https://company.webhook.office.com/webhookb2/...",
+          "theme": "attention"
+        },
+        "siem": {
+          "enabled": true,
+          "siemType": "Splunk",
+          "endpoint": "https://splunk.company.com:8088/services/collector/event",
+          "apiKey": "Splunk B5A79AAD-D822-46CC-80D1-819F80D7BFB0",
+          "customFields": {
+            "sourcetype": "mandadiscovery:monitoring",
+            "index": "enterprise_monitoring",
+            "host": "mandadiscovery-prod"
+          }
+        },
+        "webhook": {
+          "enabled": false,
+          "url": "https://api.company.com/webhooks/monitoring",
+          "headers": {
+            "Content-Type": "application/json",
+            "X-API-Version": "v1"
+          },
+          "authenticationScheme": "Bearer",
+          "authenticationToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        },
+        "eventLog": {
+          "enabled": true,
+          "source": "M&A Discovery Suite",
+          "logName": "Application"
+        }
+      },
+      "escalationRules": [
+        {
+          "severity": "Critical",
+          "immediateNotification": true,
+          "escalateAfterMinutes": 15,
+          "escalateTo": ["cto@company.com", "operations-director@company.com"]
+        },
+        {
+          "severity": "Warning",
+          "immediateNotification": true,
+          "escalateAfterMinutes": 60,
+          "escalateTo": ["platform-lead@company.com"]
+        }
+      ]
+    },
+    "security": {
+      "monitoring": {
+        "enabled": true,
+        "eventLogMonitoring": true,
+        "failedLoginThreshold": 5,
+        "suspiciousActivityDetection": true,
+        "threatIntelligenceIntegration": false
+      },
+      "incidentResponse": {
+        "autoContainment": true,
+        "forensicLogging": true,
+        "legalNotificationThreshold": "DataExfiltration",
+        "isolationProcedures": true
+      }
+    },
+    "compliance": {
+      "frameworks": {
+        "sox": {
+          "enabled": true,
+          "auditTrailRetention": 2555,
+          "accessControlMonitoring": true,
+          "changeManagementTracking": true
+        },
+        "gdpr": {
+          "enabled": true,
+          "dataProcessingLogging": true,
+          "consentTracking": false,
+          "dataRetentionPolicies": true
+        },
+        "hipaa": {
+          "enabled": false,
+          "auditLogging": false,
+          "accessControls": false,
+          "encryptionValidation": false
+        },
+        "iso27001": {
+          "enabled": true,
+          "riskAssessment": true,
+          "controlsMonitoring": true,
+          "incidentManagement": true
+        }
+      },
+      "reporting": {
+        "frequency": "Monthly",
+        "recipients": [
+          "compliance@company.com",
+          "audit@company.com",
+          "legal@company.com"
+        ],
+        "automatedReports": true
+      }
+    },
+    "customerSuccess": {
+      "monitoring": {
+        "healthScoring": true,
+        "usageAnalytics": true,
+        "adoptionTracking": true,
+        "satisfactionSurveys": false
+      },
+      "sla": {
+        "uptimeTarget": 99.9,
+        "responseTimeTarget": 100,
+        "supportResponseTime": {
+          "critical": 60,
+          "high": 240,
+          "medium": 480,
+          "low": 1440
+        }
+      }
+    },
+    "noc": {
+      "dashboard": {
+        "enabled": true,
+        "refreshInterval": 30,
+        "autoRefresh": true,
+        "historicalSnapshots": true,
+        "snapshotInterval": 900
+      },
+      "operations": {
+        "24x7Monitoring": true,
+        "autoRemediation": true,
+        "escalationMatrix": true,
+        "runbookAutomation": true
+      }
+    },
+    "logging": {
+      "paths": {
+        "alertLogs": "C:\\ProgramData\\MandADiscoverySuite\\Logs\\Alerts",
+        "metricsLogs": "C:\\ProgramData\\MandADiscoverySuite\\Logs\\Metrics",
+        "complianceLogs": "C:\\ProgramData\\MandADiscoverySuite\\Logs\\Compliance",
+        "securityLogs": "C:\\ProgramData\\MandADiscoverySuite\\Logs\\Security",
+        "nocLogs": "C:\\ProgramData\\MandADiscoverySuite\\NOC\\Logs",
+        "dashboardArchives": "C:\\ProgramData\\MandADiscoverySuite\\NOC\\Archives"
+      },
+      "retention": {
+        "alertLogs": 365,
+        "metricsLogs": 90,
+        "complianceLogs": 2555,
+        "securityLogs": 730,
+        "dashboardArchives": 90
+      },
+      "compression": true,
+      "encryption": true
+    },
+    "integrations": {
+      "prometheus": {
+        "enabled": false,
+        "endpoint": "http://prometheus.company.com:9090",
+        "scrapeInterval": "30s"
+      },
+      "grafana": {
+        "enabled": false,
+        "endpoint": "http://grafana.company.com:3000",
+        "dashboardId": "mandadiscovery-monitoring"
+      },
+      "datadog": {
+        "enabled": false,
+        "apiKey": "",
+        "appKey": "",
+        "site": "datadoghq.com"
+      },
+      "newRelic": {
+        "enabled": false,
+        "licenseKey": "",
+        "appName": "M&A Discovery Suite"
+      }
+    }
+  },
+  "deployment": {
+    "version": "1.0.0",
+    "deployedBy": "Platform Engineering",
+    "deploymentDate": "2025-08-23T21:57:00Z",
+    "environment": "Production",
+    "region": "us-east-1",
+    "availability": "Multi-AZ"
+  },
+  "contacts": {
+    "technical": {
+      "primaryContact": "platform-team@company.com",
+      "escalation": "cto@company.com",
+      "oncall": "oncall-engineer@company.com"
+    },
+    "business": {
+      "customerSuccessManager": "csm@company.com",
+      "accountManager": "am@company.com",
+      "supportManager": "support-mgr@company.com"
+    },
+    "compliance": {
+      "complianceOfficer": "compliance@company.com",
+      "dataProtectionOfficer": "dpo@company.com",
+      "legalCounsel": "legal@company.com"
+    }
+  }
+}

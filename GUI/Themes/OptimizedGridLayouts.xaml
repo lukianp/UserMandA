@@ -1,0 +1,398 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:services="clr-namespace:MandADiscoverySuite.Services">
+    
+    <!-- Base Grid Style with Performance Optimizations -->
+    <Style x:Key="OptimizedGridStyle" TargetType="Grid">
+        <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.6"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    
+    <!-- Form Grid Styles with SharedSizeGroup -->
+    <Style x:Key="TwoColumnFormGridStyle" TargetType="Grid" BasedOn="{StaticResource OptimizedGridStyle}">
+        <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
+        <Style.Resources>
+            <!-- Label Column Style -->
+            <Style x:Key="FormLabelColumnStyle" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="Auto"/>
+                <Setter Property="SharedSizeGroup" Value="FormLabel"/>
+                <Setter Property="MinWidth" Value="120"/>
+            </Style>
+            
+            <!-- Input Column Style -->
+            <Style x:Key="FormInputColumnStyle" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="*"/>
+                <Setter Property="SharedSizeGroup" Value="FormInput"/>
+                <Setter Property="MinWidth" Value="200"/>
+            </Style>
+        </Style.Resources>
+    </Style>
+    
+    <Style x:Key="ThreeColumnFormGridStyle" TargetType="Grid" BasedOn="{StaticResource OptimizedGridStyle}">
+        <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
+        <Style.Resources>
+            <!-- Label Column Style -->
+            <Style x:Key="FormLabelColumnStyle" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="Auto"/>
+                <Setter Property="SharedSizeGroup" Value="FormLabel"/>
+                <Setter Property="MinWidth" Value="120"/>
+            </Style>
+            
+            <!-- Input Column Style -->
+            <Style x:Key="FormInputColumnStyle" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="*"/>
+                <Setter Property="SharedSizeGroup" Value="FormInput"/>
+                <Setter Property="MinWidth" Value="200"/>
+            </Style>
+            
+            <!-- Action Column Style -->
+            <Style x:Key="FormActionColumnStyle" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="Auto"/>
+                <Setter Property="SharedSizeGroup" Value="FormAction"/>
+                <Setter Property="MinWidth" Value="80"/>
+            </Style>
+        </Style.Resources>
+    </Style>
+    
+    <!-- Dashboard Grid Style -->
+    <Style x:Key="DashboardGridStyle" TargetType="Grid" BasedOn="{StaticResource OptimizedGridStyle}">
+        <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
+        <Setter Property="Margin" Value="16"/>
+        <Style.Resources>
+            <!-- Dashboard Card Column Style -->
+            <Style x:Key="DashCardColumnStyle" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="*"/>
+                <Setter Property="SharedSizeGroup" Value="DashCard"/>
+                <Setter Property="MinWidth" Value="300"/>
+            </Style>
+            
+            <!-- Dashboard Row Style -->
+            <Style x:Key="DashRowStyle" TargetType="RowDefinition">
+                <Setter Property="Height" Value="*"/>
+                <Setter Property="SharedSizeGroup" Value="DashRow"/>
+                <Setter Property="MinHeight" Value="200"/>
+            </Style>
+        </Style.Resources>
+    </Style>
+    
+    <!-- List Item Grid Style -->
+    <Style x:Key="ListItemGridStyle" TargetType="Grid" BasedOn="{StaticResource OptimizedGridStyle}">
+        <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
+        <Style.Resources>
+            <!-- Icon Column Style -->
+            <Style x:Key="ListIconColumnStyle" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="Auto"/>
+                <Setter Property="SharedSizeGroup" Value="ListIcon"/>
+                <Setter Property="MinWidth" Value="32"/>
+            </Style>
+            
+            <!-- Content Column Style -->
+            <Style x:Key="ListContentColumnStyle" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="*"/>
+                <Setter Property="SharedSizeGroup" Value="ListContent"/>
+                <Setter Property="MinWidth" Value="200"/>
+            </Style>
+            
+            <!-- Action Column Style -->
+            <Style x:Key="ListActionColumnStyle" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="Auto"/>
+                <Setter Property="SharedSizeGroup" Value="ListAction"/>
+                <Setter Property="MinWidth" Value="100"/>
+            </Style>
+        </Style.Resources>
+    </Style>
+    
+    <!-- Detail View Grid Style -->
+    <Style x:Key="DetailViewGridStyle" TargetType="Grid" BasedOn="{StaticResource OptimizedGridStyle}">
+        <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
+        <Style.Resources>
+            <!-- Detail Label Column Style -->
+            <Style x:Key="DetailLabelColumnStyle" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="Auto"/>
+                <Setter Property="SharedSizeGroup" Value="DetailLabel"/>
+                <Setter Property="MinWidth" Value="140"/>
+            </Style>
+            
+            <!-- Detail Value Column Style -->
+            <Style x:Key="DetailValueColumnStyle" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="*"/>
+                <Setter Property="SharedSizeGroup" Value="DetailValue"/>
+                <Setter Property="MinWidth" Value="200"/>
+            </Style>
+        </Style.Resources>
+    </Style>
+    
+    <!-- Data Grid Header Grid Style -->
+    <Style x:Key="DataGridHeaderGridStyle" TargetType="Grid" BasedOn="{StaticResource OptimizedGridStyle}">
+        <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
+        <Style.Resources>
+            <!-- Column definitions that match DataGrid columns -->
+            <Style x:Key="DataCol1Style" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="*"/>
+                <Setter Property="SharedSizeGroup" Value="DataCol1"/>
+            </Style>
+            
+            <Style x:Key="DataCol2Style" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="*"/>
+                <Setter Property="SharedSizeGroup" Value="DataCol2"/>
+            </Style>
+            
+            <Style x:Key="DataCol3Style" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="*"/>
+                <Setter Property="SharedSizeGroup" Value="DataCol3"/>
+            </Style>
+            
+            <Style x:Key="DataCol4Style" TargetType="ColumnDefinition">
+                <Setter Property="Width" Value="*"/>
+                <Setter Property="SharedSizeGroup" Value="DataCol4"/>
+            </Style>
+        </Style.Resources>
+    </Style>
+    
+    <!-- Control Templates using Optimized Grids -->
+    
+    <!-- Form Row Template -->
+    <ControlTemplate x:Key="FormRowTemplate">
+        <Grid Style="{StaticResource TwoColumnFormGridStyle}" Margin="0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Style="{StaticResource FormLabelColumnStyle}"/>
+                <ColumnDefinition Style="{StaticResource FormInputColumnStyle}"/>
+            </Grid.ColumnDefinitions>
+            
+            <TextBlock Grid.Column="0" 
+                      Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Tag}"
+                      Style="{DynamicResource ModernTextStyle}"
+                      VerticalAlignment="Center"
+                      Margin="0,0,16,0"/>
+            
+            <ContentPresenter Grid.Column="1" 
+                            VerticalAlignment="Center"/>
+        </Grid>
+    </ControlTemplate>
+    
+    <!-- Three Column Form Row Template -->
+    <ControlTemplate x:Key="ThreeColumnFormRowTemplate">
+        <Grid Style="{StaticResource ThreeColumnFormGridStyle}" Margin="0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Style="{StaticResource FormLabelColumnStyle}"/>
+                <ColumnDefinition Style="{StaticResource FormInputColumnStyle}"/>
+                <ColumnDefinition Style="{StaticResource FormActionColumnStyle}"/>
+            </Grid.ColumnDefinitions>
+            
+            <TextBlock Grid.Column="0" 
+                      Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Tag}"
+                      Style="{DynamicResource ModernTextStyle}"
+                      VerticalAlignment="Center"
+                      Margin="0,0,16,0"/>
+            
+            <ContentPresenter Grid.Column="1" 
+                            VerticalAlignment="Center"
+                            Margin="0,0,8,0"/>
+            
+            <ContentPresenter Grid.Column="2" 
+                            Content="{TemplateBinding Tag}"
+                            VerticalAlignment="Center"/>
+        </Grid>
+    </ControlTemplate>
+    
+    <!-- List Item Template -->
+    <ControlTemplate x:Key="ListItemTemplate">
+        <Grid Style="{StaticResource ListItemGridStyle}" Margin="4,2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Style="{StaticResource ListIconColumnStyle}"/>
+                <ColumnDefinition Style="{StaticResource ListContentColumnStyle}"/>
+                <ColumnDefinition Style="{StaticResource ListActionColumnStyle}"/>
+            </Grid.ColumnDefinitions>
+            
+            <ContentPresenter Grid.Column="0" 
+                            Content="{TemplateBinding Tag}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Margin="8"/>
+            
+            <ContentPresenter Grid.Column="1" 
+                            VerticalAlignment="Center"
+                            Margin="8,4"/>
+            
+            <ContentPresenter Grid.Column="2" 
+                            Content="{TemplateBinding Tag}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Margin="8"/>
+        </Grid>
+    </ControlTemplate>
+    
+    <!-- Dashboard Card Template -->
+    <ControlTemplate x:Key="DashboardCardTemplate">
+        <Border Background="{DynamicResource CardBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16"
+                Margin="8">
+            
+            <Grid Style="{StaticResource OptimizedGridStyle}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Card Header -->
+                <TextBlock Grid.Row="0" 
+                          Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Tag}"
+                          Style="{DynamicResource ModernTextStyle}"
+                          FontWeight="SemiBold"
+                          FontSize="16"
+                          Margin="0,0,0,12"/>
+                
+                <!-- Card Content -->
+                <ContentPresenter Grid.Row="1" 
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center"/>
+                
+                <!-- Card Footer -->
+                <ContentPresenter Grid.Row="2" 
+                                Content="{TemplateBinding Tag}"
+                                HorizontalAlignment="Right"
+                                Margin="0,12,0,0"/>
+            </Grid>
+        </Border>
+    </ControlTemplate>
+    
+    <!-- Data Templates using Optimized Grids -->
+    
+    <!-- User Data Template -->
+    <DataTemplate x:Key="UserListItemTemplate">
+        <Grid Style="{StaticResource ListItemGridStyle}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Style="{StaticResource ListIconColumnStyle}"/>
+                <ColumnDefinition Style="{StaticResource ListContentColumnStyle}"/>
+                <ColumnDefinition Style="{StaticResource ListActionColumnStyle}"/>
+            </Grid.ColumnDefinitions>
+            
+            <Ellipse Grid.Column="0" 
+                    Width="32" Height="32"
+                    Fill="{DynamicResource AccentBrush}"
+                    Margin="8"/>
+            
+            <StackPanel Grid.Column="1" 
+                       Orientation="Vertical"
+                       VerticalAlignment="Center"
+                       Margin="8,4">
+                <TextBlock Text="{Binding Name}" 
+                          FontWeight="Medium"
+                          Style="{DynamicResource ModernTextStyle}"/>
+                <TextBlock Text="{Binding Email}" 
+                          FontSize="11"
+                          Foreground="{DynamicResource SecondaryForegroundBrush}"
+                          Style="{DynamicResource ModernTextStyle}"/>
+            </StackPanel>
+            
+            <TextBlock Grid.Column="2" 
+                      Text="{Binding Status}"
+                      VerticalAlignment="Center"
+                      HorizontalAlignment="Right"
+                      Margin="8"
+                      Style="{DynamicResource ModernTextStyle}"/>
+        </Grid>
+    </DataTemplate>
+    
+    <!-- Detail Property Template -->
+    <DataTemplate x:Key="DetailPropertyTemplate">
+        <Grid Style="{StaticResource DetailViewGridStyle}" Margin="0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Style="{StaticResource DetailLabelColumnStyle}"/>
+                <ColumnDefinition Style="{StaticResource DetailValueColumnStyle}"/>
+            </Grid.ColumnDefinitions>
+            
+            <TextBlock Grid.Column="0" 
+                      Text="{Binding PropertyName}"
+                      FontWeight="Medium"
+                      VerticalAlignment="Top"
+                      Margin="0,0,16,0"
+                      Style="{DynamicResource ModernTextStyle}"/>
+            
+            <TextBlock Grid.Column="1" 
+                      Text="{Binding PropertyValue}"
+                      VerticalAlignment="Top"
+                      TextWrapping="Wrap"
+                      Style="{DynamicResource ModernTextStyle}"/>
+        </Grid>
+    </DataTemplate>
+    
+    <!-- Settings Item Template -->
+    <DataTemplate x:Key="SettingsItemTemplate">
+        <Grid Style="{StaticResource ThreeColumnFormGridStyle}" Margin="0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Style="{StaticResource FormLabelColumnStyle}"/>
+                <ColumnDefinition Style="{StaticResource FormInputColumnStyle}"/>
+                <ColumnDefinition Style="{StaticResource FormActionColumnStyle}"/>
+            </Grid.ColumnDefinitions>
+            
+            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                <TextBlock Text="{Binding Name}" 
+                          FontWeight="Medium"
+                          Style="{DynamicResource ModernTextStyle}"/>
+                <TextBlock Text="{Binding Description}" 
+                          FontSize="11"
+                          Foreground="{DynamicResource SecondaryForegroundBrush}"
+                          TextWrapping="Wrap"
+                          Style="{DynamicResource ModernTextStyle}"/>
+            </StackPanel>
+            
+            <ContentPresenter Grid.Column="1" 
+                            Content="{Binding Control}"
+                            VerticalAlignment="Center"
+                            Margin="0,0,8,0"/>
+            
+            <Button Grid.Column="2" 
+                   Content="Reset"
+                   Command="{Binding ResetCommand}"
+                   Style="{DynamicResource ModernButtonStyle}"
+                   Padding="8,4"
+                   Margin="8,0,0,0"/>
+        </Grid>
+    </DataTemplate>
+    
+    <!-- Styles for different Grid layout scenarios -->
+    
+    <!-- Responsive Grid Style -->
+    <Style x:Key="ResponsiveGridStyle" TargetType="Grid" BasedOn="{StaticResource OptimizedGridStyle}">
+        <Style.Triggers>
+            <!-- Collapse to single column on small screens -->
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ActualWidth, Converter={StaticResource LessThanConverter}, ConverterParameter=800}" Value="True">
+                <Setter Property="Visibility" Value="Collapsed"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    
+    <!-- Animation-optimized Grid Style -->
+    <Style x:Key="AnimatedGridStyle" TargetType="Grid" BasedOn="{StaticResource OptimizedGridStyle}">
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <TranslateTransform/>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <EventTrigger RoutedEvent="Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Y"
+                                       From="20" To="0" Duration="0:0:0.3"
+                                       DecelerationRatio="0.7"/>
+                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                       From="0" To="1" Duration="0:0:0.3"/>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Style.Triggers>
+    </Style>
+    
+</ResourceDictionary>

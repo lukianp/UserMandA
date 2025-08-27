@@ -1,0 +1,50 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:converters="clr-namespace:MandADiscoverySuite.Converters">
+
+    <!-- Boolean to Visibility Converter -->
+    <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    
+    <!-- Inverted Boolean to Visibility Converter -->
+    <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility" />
+    
+    <!-- Null to Visibility Converter -->
+    <converters:NullToVisibilityConverter x:Key="NullToVisibility" />
+    
+    <!-- Count to Visibility Converter (0=Collapsed, >0=Visible) -->
+    <converters:CountToVisibilityConverter x:Key="CountToVisibility" />
+    
+    <!-- Boolean Inverse Converter -->
+    <converters:InverseBooleanConverter x:Key="InverseBool" />
+    
+    <!-- Empty String to Visibility Converter -->
+    <converters:EmptyStringToVisibilityConverter x:Key="EmptyStringToVisibility" />
+    
+    <!-- Date Format Converter -->
+    <converters:DateFormatConverter x:Key="DateFormat" />
+    
+    <!-- File Size Converter -->
+    <converters:FileSizeConverter x:Key="FileSize" />
+    
+    <!-- Status to Color Converter -->
+    <converters:StatusToColorConverter x:Key="StatusToColor" />
+    
+    <!-- Progress to Visibility Converter -->
+    <converters:ProgressToVisibilityConverter x:Key="ProgressToVisibility" />
+    
+    <!-- Inverted Bool to Visibility Converter -->
+    <converters:InvertedBoolToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter" />
+
+    <!-- Additional Converters for Management Views -->
+    <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    <converters:RiskLevelToBrushConverter x:Key="RiskLevelToBrushConverter" />
+    <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
+    <converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
+    <converters:TaskCountToHeightConverter x:Key="TaskCountToHeightConverter" />
+    <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
+    
+    <!-- Security Policy View Converters -->
+    <converters:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter" />
+    <converters:StringEmptyToVisibilityConverter x:Key="StringEmptyToVisibilityConverter" />
+
+</ResourceDictionary>

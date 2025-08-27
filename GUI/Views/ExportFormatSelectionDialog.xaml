@@ -1,0 +1,97 @@
+<Window x:Class="MandADiscoverySuite.Views.ExportFormatSelectionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Export Format Selection" 
+        Width="450" 
+        Height="350"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <TextBlock Grid.Row="0" 
+                   Text="Select Export Format" 
+                   FontSize="16" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,20"/>
+        
+        <!-- Format Options -->
+        <StackPanel Grid.Row="1" Orientation="Vertical">
+            
+            <!-- CSV Option -->
+            <RadioButton x:Name="CsvRadioButton" Content="CSV (Comma Separated Values)" 
+                         GroupName="ExportFormat" IsChecked="True" FontSize="14"
+                         ToolTip="Export data as CSV file - compatible with Excel and other spreadsheet applications"
+                         Margin="0,0,0,10"/>
+            
+            <!-- Excel Option -->
+            <RadioButton x:Name="ExcelRadioButton" Content="Excel Workbook (XLSX)" 
+                         GroupName="ExportFormat" FontSize="14"
+                         ToolTip="Export data as Excel workbook with formatting and charts"
+                         Margin="0,0,0,10"/>
+            
+            <!-- JSON Option -->
+            <RadioButton x:Name="JsonRadioButton" Content="JSON (JavaScript Object Notation)" 
+                         GroupName="ExportFormat" FontSize="14"
+                         ToolTip="Export data as JSON file - useful for data integration and APIs"
+                         Margin="0,0,0,15"/>
+            
+            <!-- Excel Options Panel -->
+            <Border x:Name="ExcelOptionsPanel" 
+                    BorderBrush="LightGray" 
+                    BorderThickness="1" 
+                    CornerRadius="5" 
+                    Padding="15"
+                    Margin="20,10,0,0"
+                    IsEnabled="{Binding IsChecked, ElementName=ExcelRadioButton}">
+                
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="Excel Export Options:" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,10"/>
+                    
+                    <CheckBox x:Name="IncludeChartsCheckBox" 
+                              Content="Include summary charts" 
+                              IsChecked="True"
+                              ToolTip="Add charts showing data summaries in the Excel workbook"
+                              Margin="0,0,0,10"/>
+                    
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                        <TextBlock Text="Worksheet Name:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBox x:Name="WorksheetNameTextBox" 
+                                 Text="Data" 
+                                 Width="100" 
+                                 ToolTip="Name for the main data worksheet"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+        
+        <!-- Buttons -->
+        <StackPanel Grid.Row="3" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right" 
+                    Margin="0,20,0,0">
+            
+            <Button x:Name="ExportButton" 
+                    Content="Export" 
+                    Width="80" 
+                    Height="30" 
+                    IsDefault="True" 
+                    Click="ExportButton_Click"
+                    Margin="0,0,10,0"/>
+            
+            <Button x:Name="CancelButton" 
+                    Content="Cancel" 
+                    Width="80" 
+                    Height="30" 
+                    IsCancel="True" 
+                    Click="CancelButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

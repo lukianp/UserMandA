@@ -1,0 +1,35 @@
+SimulationName,ParameterName,DisplayName,Value,DefaultValue,Type,Category,IsEnabled,Description,_DiscoveryTimestamp,_DiscoveryModule,_SessionId
+Office 365 Migration Impact,UserCount,Number of Users,487,500,Integer,Users,True,Total number of users to migrate,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Office 365 Migration Impact,MigrationDuration,Migration Duration (days),90,120,Integer,Timeline,True,Expected duration for complete migration,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Office 365 Migration Impact,TrainingHours,Training Hours per User,8,10,Integer,Training,True,Hours of training required per user,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Office 365 Migration Impact,DataMigrationGB,Data to Migrate (GB),15360,20000,Integer,Data,True,Total data volume to migrate,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Office 365 Migration Impact,CostPerUser,Cost per User License,12.5,15.0,Decimal,Financial,True,Monthly licensing cost per user,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Legacy System Decommission,ServersToDecommission,Servers to Decommission,3,5,Integer,Infrastructure,True,Number of legacy servers to decommission,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Legacy System Decommission,ApplicationsToMigrate,Applications to Migrate,15,20,Integer,Applications,True,Number of applications requiring migration,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Legacy System Decommission,DataMigrationComplexity,Data Migration Complexity,High,Medium,String,Data,True,Complexity level of data migration,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Legacy System Decommission,DowntimeHours,Expected Downtime (hours),24,48,Integer,Operations,True,Expected system downtime for migration,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Legacy System Decommission,TestingDuration,Testing Duration (days),30,45,Integer,Timeline,True,Duration for testing migrated systems,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Network Security Upgrade,FirewallCount,Number of Firewalls,2,3,Integer,Security,True,Number of firewalls to upgrade,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Network Security Upgrade,MonitoringNodes,Monitoring Nodes,12,15,Integer,Monitoring,True,Number of monitoring nodes to deploy,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Network Security Upgrade,SecurityPolicies,Security Policies to Update,25,30,Integer,Policy,True,Number of security policies requiring updates,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Network Security Upgrade,StaffTrainingDays,Staff Training (days),5,7,Integer,Training,True,Days of security training for staff,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+ERP Implementation Scenarios,BusinessProcesses,Business Processes,45,50,Integer,Business,True,Number of business processes to map,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+ERP Implementation Scenarios,UserTrainingWeeks,User Training (weeks),12,16,Integer,Training,True,Weeks of user training required,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+ERP Implementation Scenarios,DataMigrationMonths,Data Migration (months),6,8,Integer,Data,True,Months required for data migration,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+ERP Implementation Scenarios,SystemIntegrations,System Integrations,18,25,Integer,Integration,True,Number of system integrations required,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+ERP Implementation Scenarios,GoLiveRisk,Go-Live Risk Level,Medium,High,String,Risk,True,Risk level for go-live operations,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Data Center Consolidation,ServersToMigrate,Servers to Migrate,45,60,Integer,Infrastructure,True,Number of servers to migrate,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Data Center Consolidation,NetworkUpgradeRequired,Network Upgrade Required,True,True,Boolean,Network,True,Whether network infrastructure upgrade is needed,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Data Center Consolidation,PowerRequirementKW,Power Requirement (kW),150,200,Integer,Power,True,Additional power requirement in kilowatts,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Data Center Consolidation,CoolingUpgrade,Cooling Upgrade Required,True,False,Boolean,Infrastructure,True,Whether cooling system upgrade is required,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Data Center Consolidation,MigrationWindows,Migration Windows,8,12,Integer,Timeline,True,Number of maintenance windows for migration,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Remote Work Expansion,AdditionalUsers,Additional Remote Users,200,300,Integer,Users,True,Number of additional remote workers,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Remote Work Expansion,VPNCapacityIncrease,VPN Capacity Increase (%),75,100,Integer,Network,True,Percentage increase in VPN capacity,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Remote Work Expansion,SecurityTrainingHours,Security Training (hours),4,6,Integer,Training,True,Hours of security training for remote workers,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Remote Work Expansion,LaptopDeployment,Laptops to Deploy,180,250,Integer,Hardware,True,Number of laptops to deploy for remote work,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Remote Work Expansion,SupportTicketIncrease,Support Ticket Increase (%),35,50,Integer,Support,True,Expected percentage increase in support tickets,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Cloud Migration Strategy,WorkloadsToMigrate,Workloads to Migrate,32,40,Integer,Workloads,True,Number of workloads to migrate to cloud,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Cloud Migration Strategy,MigrationPhases,Migration Phases,4,6,Integer,Planning,True,Number of migration phases,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Cloud Migration Strategy,CloudProvider,Cloud Provider,Azure,AWS,String,Platform,True,Primary cloud provider for migration,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Cloud Migration Strategy,MonthlyCloudCost,Monthly Cloud Cost,15000,20000,Decimal,Financial,True,Estimated monthly cloud costs,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001
+Cloud Migration Strategy,NetworkBandwidthMbps,Network Bandwidth (Mbps),1000,1500,Integer,Network,True,Required network bandwidth for cloud connectivity,2025-08-19 10:30:00,WhatIfSimulationEngine,SES-20250819-001

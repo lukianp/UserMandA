@@ -1,0 +1,558 @@
+<UserControl x:Class="MandADiscoverySuite.Views.MigrationPlanningView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:MandADiscoverySuite.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1200">
+
+    <UserControl.Resources>
+        <!-- Material Design Color Palette -->
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#2196F3"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#FF4081"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#FAFAFA"/>
+        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#212121"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#757575"/>
+        <SolidColorBrush x:Key="DividerBrush" Color="#E0E0E0"/>
+        <SolidColorBrush x:Key="ErrorBrush" Color="#F44336"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#4CAF50"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#FF9800"/>
+
+        <!-- Card Style -->
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="Black" Opacity="0.1" ShadowDepth="2" BlurRadius="8"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Header Style -->
+        <Style x:Key="HeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <!-- Subheader Style -->
+        <Style x:Key="SubHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- Primary Button Style -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#1976D2"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#1565C0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Secondary Button Style -->
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4" 
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#E3F2FD"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Metric Card Style -->
+        <Style x:Key="MetricCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="Black" Opacity="0.1" ShadowDepth="1" BlurRadius="4"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="{StaticResource SurfaceBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource CardBrush}" Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Migration Planning" Style="{StaticResource HeaderStyle}"/>
+                    <TextBlock Text="Plan and organize migrations using discovery-driven intelligence" 
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="Export Plan" Style="{StaticResource SecondaryButtonStyle}" 
+                            Command="{Binding ExportPlanCommand}"/>
+                    <Button Content="Import Plan" Style="{StaticResource SecondaryButtonStyle}" 
+                            Command="{Binding ImportPlanCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid Margin="24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Discovery Data Analysis Panel -->
+                <Border Grid.Row="0" Style="{StaticResource CardStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Discovery Analysis Header -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" Text="Discovery Data Analysis" Style="{StaticResource SubHeaderStyle}"/>
+                            
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <ComboBox ItemsSource="{Binding AvailableProfiles}"
+                                          SelectedItem="{Binding SelectedProfile}"
+                                          Width="200" Margin="0,0,8,0"
+                                          IsEnabled="{Binding IsAnalyzing, Converter={StaticResource InvertBooleanConverter}}"/>
+                                <Button Content="Analyze" Style="{StaticResource PrimaryButtonStyle}"
+                                        Command="{Binding LoadDiscoveryDataCommand}"
+                                        IsEnabled="{Binding IsAnalyzing, Converter={StaticResource InvertBooleanConverter}}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Analysis Status -->
+                        <TextBlock Grid.Row="1" Text="{Binding AnalysisStatus}" 
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8"/>
+
+                        <!-- Analysis Results -->
+                        <Grid Grid.Row="2" Visibility="{Binding AnalysisResult, Converter={StaticResource NullToVisibilityConverter}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Metrics Cards -->
+                            <UniformGrid Grid.Row="0" Columns="4" Margin="0,16,0,0">
+                                <Border Style="{StaticResource MetricCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding AnalysisResult.UserCount}" FontSize="24" FontWeight="Bold" 
+                                                   Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Users" HorizontalAlignment="Center" 
+                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource MetricCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding AnalysisResult.GroupCount}" FontSize="24" FontWeight="Bold" 
+                                                   Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Groups" HorizontalAlignment="Center" 
+                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource MetricCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding AnalysisResult.InfrastructureCount}" FontSize="24" FontWeight="Bold" 
+                                                   Foreground="{StaticResource WarningBrush}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Infrastructure" HorizontalAlignment="Center" 
+                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource MetricCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding AnalysisResult.ComplexityScore}" FontSize="24" FontWeight="Bold" 
+                                                   Foreground="{StaticResource ErrorBrush}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Complexity" HorizontalAlignment="Center" 
+                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+
+                            <!-- Summary Info -->
+                            <Grid Grid.Row="1" Margin="0,16,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Estimated Duration" FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding AnalysisResult.EstimatedDuration}" 
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Recommended Waves" FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding AnalysisResult.RecommendedWaveCount}" 
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+                                    <Button Content="Generate Migration Items" Style="{StaticResource PrimaryButtonStyle}"
+                                            Command="{Binding GenerateMigrationItemsCommand}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- Main Planning Interface -->
+                <Grid Grid.Row="1" Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left Panel: Migration Items -->
+                    <Grid Grid.Column="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Migration Items Header -->
+                        <Border Grid.Row="0" Style="{StaticResource CardStyle}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Header and Actions -->
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Migration Items" Style="{StaticResource SubHeaderStyle}"/>
+                                        <TextBlock Text="{Binding TotalGeneratedItems, StringFormat='{}{0} items generated'}" 
+                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Content="Select All" Style="{StaticResource SecondaryButtonStyle}"
+                                                Command="{Binding SelectAllItemsCommand}"/>
+                                        <Button Content="Select None" Style="{StaticResource SecondaryButtonStyle}"
+                                                Command="{Binding SelectNoneItemsCommand}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Filters -->
+                                <Grid Grid.Row="1" Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="0,0,8,0">
+                                    </TextBox>
+
+                                    <ComboBox Grid.Column="1" ItemsSource="{Binding MigrationTypes}"
+                                              SelectedItem="{Binding SelectedTypeFilter}"
+                                              Width="120" Margin="0,0,8,0">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                    <ComboBox Grid.Column="2" ItemsSource="{Binding MigrationPriorities}"
+                                              SelectedItem="{Binding SelectedPriorityFilter}"
+                                              Width="100" Margin="0,0,8,0"/>
+
+                                    <CheckBox Grid.Column="3" Content="Validation Required" 
+                                              IsChecked="{Binding ShowOnlyValidationRequired}"
+                                              VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                                    <Button Grid.Column="4" Content="Clear" Style="{StaticResource SecondaryButtonStyle}"
+                                            Command="{Binding ClearFiltersCommand}"/>
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <!-- Migration Items List -->
+                        <Border Grid.Row="1" Style="{StaticResource CardStyle}">
+                            <DataGrid ItemsSource="{Binding GeneratedItemsView}"
+                                      SelectionMode="Extended"
+                                      AutoGenerateColumns="False"
+                                      CanUserAddRows="False"
+                                      CanUserDeleteRows="False"
+                                      GridLinesVisibility="Horizontal"
+                                      HeadersVisibility="Column"
+                                      BorderThickness="0">
+                                <DataGrid.Columns>
+                                    <DataGridCheckBoxColumn Binding="{Binding IsSelected}" Width="Auto"/>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="100"/>
+                                    <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="*"/>
+                                    <DataGridTextColumn Header="Source" Binding="{Binding SourceIdentity}" Width="200"/>
+                                    <DataGridTextColumn Header="Target" Binding="{Binding TargetIdentity}" Width="200"/>
+                                    <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="100"/>
+                                    <DataGridTextColumn Header="Complexity" Binding="{Binding Complexity}" Width="100"/>
+                                    <DataGridTextColumn Header="Wave" Binding="{Binding Wave}" Width="150"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Border>
+
+                        <!-- Generation Options -->
+                        <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="Generation Options" Style="{StaticResource SubHeaderStyle}"/>
+
+                                <Grid Grid.Row="1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <CheckBox Content="Include Users" IsChecked="{Binding GenerationOptions.IncludeUsers}" Margin="0,4"/>
+                                        <CheckBox Content="Include Mailboxes" IsChecked="{Binding GenerationOptions.IncludeMailboxes}" Margin="0,4"/>
+                                        <CheckBox Content="Include Groups" IsChecked="{Binding GenerationOptions.IncludeGroups}" Margin="0,4"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Target Domain:" FontWeight="Medium" Margin="0,4"/>
+                                        <TextBox Text="{Binding GenerationOptions.TargetDomain}" Margin="0,4"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <!-- Splitter -->
+                    <GridSplitter Grid.Column="1" Width="8" Background="Transparent" 
+                                  HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+
+                    <!-- Right Panel: Waves and Remapping -->
+                    <Grid Grid.Column="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Wave Composer -->
+                        <Border Grid.Row="0" Style="{StaticResource CardStyle}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="Migration Waves" Style="{StaticResource SubHeaderStyle}"/>
+
+                                <!-- Waves List -->
+                                <ListView Grid.Row="1" ItemsSource="{Binding MigrationWaves}"
+                                          SelectedItem="{Binding SelectedWave}">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Medium"/>
+                                                    <TextBlock Text="{Binding PlannedStartDate, StringFormat='Start: {0:MM/dd/yyyy}'}" 
+                                                               FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    <TextBlock Text="{Binding Status}" FontSize="12"/>
+                                                </StackPanel>
+
+                                                <Button Grid.Column="1" Content="Delete" 
+                                                        Style="{StaticResource SecondaryButtonStyle}"
+                                                        Command="{Binding DataContext.DeleteWaveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+
+                                <!-- Create Wave -->
+                                <Expander Grid.Row="2" Header="Create New Wave" Margin="0,16,0,0">
+                                    <Grid Margin="8">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBox Grid.Row="0" Text="{Binding NewWaveName}" 
+                                                 Margin="0,4">
+                                        </TextBox>
+                                        <DatePicker Grid.Row="1" SelectedDate="{Binding NewWaveStartDate}" Margin="0,4"/>
+                                        <DatePicker Grid.Row="2" SelectedDate="{Binding NewWaveEndDate}" Margin="0,4"/>
+                                        <Button Grid.Row="3" Content="Create Wave" Style="{StaticResource PrimaryButtonStyle}"
+                                                Command="{Binding CreateWaveCommand}" Margin="0,8,0,0"/>
+                                    </Grid>
+                                </Expander>
+                            </Grid>
+                        </Border>
+
+                        <!-- Vertical Splitter -->
+                        <GridSplitter Grid.Row="1" Height="8" Background="Transparent" 
+                                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+
+                        <!-- Group Remapping Panel -->
+                        <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0" Text="Group Remapping" Style="{StaticResource SubHeaderStyle}"/>
+                                    <Button Grid.Column="1" Content="Apply Rules" Style="{StaticResource PrimaryButtonStyle}"
+                                            Command="{Binding ApplyRemappingCommand}"/>
+                                </Grid>
+
+                                <!-- Remapping Rules List -->
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding RemappingRules}"
+                                          SelectedItem="{Binding SelectedRule}"
+                                          AutoGenerateColumns="False"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="Auto"/>
+                                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                                        <DataGridTextColumn Header="Strategy" Binding="{Binding Strategy}" Width="100"/>
+                                        <DataGridTemplateColumn Width="Auto">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="Delete" Style="{StaticResource SecondaryButtonStyle}"
+                                                            Command="{Binding DataContext.DeleteRemappingRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- Add Remapping Rule -->
+                                <Expander Grid.Row="2" Header="Add Remapping Rule" Margin="0,8,0,0">
+                                    <Grid Margin="8">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBox Grid.Row="0" Text="{Binding NewRuleName}" 
+                                                 Margin="0,4">
+                                        </TextBox>
+                                        <TextBox Grid.Row="1" Text="{Binding SourcePattern}" 
+                                                 Margin="0,4">
+                                        </TextBox>
+                                        <TextBox Grid.Row="2" Text="{Binding TargetPattern}" 
+                                                 Margin="0,4">
+                                        </TextBox>
+                                        <ComboBox Grid.Row="3" ItemsSource="{Binding RemappingStrategies}"
+                                                  SelectedItem="{Binding SelectedStrategy}" Margin="0,4"/>
+                                        <Button Grid.Row="4" Content="Add Rule" Style="{StaticResource PrimaryButtonStyle}"
+                                                Command="{Binding AddRemappingRuleCommand}" Margin="0,8,0,0"/>
+                                    </Grid>
+                                </Expander>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Loading Overlay -->
+        <controls:LoadingOverlay Grid.RowSpan="2" 
+                                 Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+    </Grid>
+</UserControl>

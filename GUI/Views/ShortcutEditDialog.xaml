@@ -1,0 +1,168 @@
+<Window x:Class="MandADiscoverySuite.Views.ShortcutEditDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Edit Keyboard Shortcut" Height="400" Width="500"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    
+    <Window.Resources>
+        <Style x:Key="LabelStyle" TargetType="Label">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,5,10,5"/>
+        </Style>
+        
+        <Style x:Key="TextBoxStyle" TargetType="TextBox">
+            <Setter Property="Height" Value="25"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,5"/>
+        </Style>
+    </Window.Resources>
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="Configure Keyboard Shortcut" 
+                   FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
+        
+        <!-- Form -->
+        <ScrollViewer Grid.Row="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Name -->
+                <Label Grid.Row="0" Grid.Column="0" Content="Name:" Style="{StaticResource LabelStyle}"/>
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding EditingShortcut.DisplayName}"
+                         Style="{StaticResource TextBoxStyle}"/>
+                
+                <!-- Description -->
+                <Label Grid.Row="1" Grid.Column="0" Content="Description:" Style="{StaticResource LabelStyle}"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding EditingShortcut.Description}"
+                         Style="{StaticResource TextBoxStyle}"/>
+                
+                <!-- Category -->
+                <Label Grid.Row="2" Grid.Column="0" Content="Category:" Style="{StaticResource LabelStyle}"/>
+                <ComboBox Grid.Row="2" Grid.Column="1" Height="25" Margin="0,5"
+                          ItemsSource="{Binding Categories}"
+                          SelectedItem="{Binding EditingShortcut.Category}"/>
+                
+                <!-- Key Combination -->
+                <Label Grid.Row="3" Grid.Column="0" Content="Shortcut:" Style="{StaticResource LabelStyle}"/>
+                <Grid Grid.Row="3" Grid.Column="1" Margin="0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBox x:Name="ShortcutTextBox" Grid.Column="0" Height="25"
+                             Text="{Binding EditingShortcut.KeyCombination, Mode=OneWay}"
+                             IsReadOnly="True" Background="#FFF8F8F8"
+                             PreviewKeyDown="ShortcutTextBox_PreviewKeyDown"/>
+                    
+                    <Button Grid.Column="1" Content="Clear" Width="50" Height="25" 
+                            Margin="5,0,0,0" Click="ClearShortcut_Click"/>
+                </Grid>
+                
+                <!-- Modifiers Help -->
+                <TextBlock Grid.Row="4" Grid.Column="1" 
+                           Text="Press the key combination you want to assign, or click Clear to remove"
+                           FontSize="11" Foreground="Gray" Margin="0,2,0,10" TextWrapping="Wrap"/>
+                
+                <!-- Context -->
+                <Label Grid.Row="5" Grid.Column="0" Content="Context:" Style="{StaticResource LabelStyle}"/>
+                <ComboBox Grid.Row="5" Grid.Column="1" Height="25" Margin="0,5"
+                          SelectedItem="{Binding EditingShortcut.Context}" IsEditable="True">
+                    <ComboBoxItem Content=""/>
+                    <ComboBoxItem Content="General"/>
+                    <ComboBoxItem Content="DataGrid"/>
+                    <ComboBoxItem Content="TextEditor"/>
+                    <ComboBoxItem Content="TreeView"/>
+                    <ComboBoxItem Content="ListView"/>
+                </ComboBox>
+                
+                <!-- Options -->
+                <Label Grid.Row="6" Grid.Column="0" Content="Options:" Style="{StaticResource LabelStyle}"
+                       VerticalAlignment="Top" Margin="0,10,10,5"/>
+                <StackPanel Grid.Row="6" Grid.Column="1" Margin="0,10,0,5">
+                    <CheckBox Content="Enabled" IsChecked="{Binding EditingShortcut.IsEnabled}" Margin="0,2"/>
+                    <CheckBox Content="Global shortcut" IsChecked="{Binding EditingShortcut.IsGlobal}" 
+                              Margin="0,2"/>
+                    <CheckBox Content="Customizable" IsChecked="{Binding EditingShortcut.IsCustomizable}" 
+                              Margin="0,2"/>
+                </StackPanel>
+                
+                <!-- Priority -->
+                <Label Grid.Row="7" Grid.Column="0" Content="Priority:" Style="{StaticResource LabelStyle}"/>
+                <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Margin="0,5">
+                    <TextBox Text="{Binding EditingShortcut.Priority}" Width="60" Height="25"/>
+                    <TextBlock Text="(Higher priority shortcuts take precedence)" 
+                               FontSize="11" Foreground="Gray" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                </StackPanel>
+                
+                <!-- Conflict Warning -->
+                <Border Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" 
+                        Background="#FFFFE6E6" BorderBrush="#FFFF6B6B" BorderThickness="1"
+                        Padding="10" Margin="0,10,0,0" CornerRadius="3"
+                        Visibility="{Binding HasConflict, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="⚠ Conflict Detected" FontWeight="Bold" Foreground="#FFD63031"/>
+                        <TextBlock Text="{Binding ConflictMessage}" TextWrapping="Wrap" 
+                                   Margin="0,5,0,0" FontSize="12"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Conflict List -->
+                <ItemsControl Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2"
+                              ItemsSource="{Binding ConflictingShortcuts}" Margin="0,10,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#FFFFF0E6" BorderBrush="#FFFF8C00" BorderThickness="1"
+                                    Padding="8" Margin="0,2" CornerRadius="3">
+                                <TextBlock>
+                                    <Run Text="Conflicts with:"/>
+                                    <Run Text="{Binding DisplayName}" FontWeight="Bold"/>
+                                    <Run Text="in"/>
+                                    <Run Text="{Binding Context, TargetNullValue='General context'}"/>
+                                </TextBlock>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </ScrollViewer>
+        
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" 
+                    Margin="0,20,0,0">
+            <Button Content="Test Shortcut" Width="100" Height="30" Margin="0,0,10,0"
+                    Click="TestShortcut_Click"/>
+            <Button Content="OK" Width="80" Height="30" Margin="0,0,10,0" 
+                    IsDefault="True" Click="OK_Click"/>
+            <Button Content="Cancel" Width="80" Height="30" IsCancel="True" 
+                    Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

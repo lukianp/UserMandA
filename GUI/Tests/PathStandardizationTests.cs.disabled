@@ -1,0 +1,427 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using MandADiscoverySuite.Services;
+
+namespace MandADiscoverySuite.Tests
+{
+    /// <summary>
+    /// Comprehensive tests for path standardization and consistency validation
+    /// Tests all path-related functionality to ensure T-021 success criteria are met
+    /// </summary>
+    [TestClass]
+    public class PathStandardizationTests
+    {
+        private ConfigurationService _configService;
+        private string _originalEnvPath;
+        private string _testDiscoveryPath;
+
+        [TestInitialize]
+        public void Setup()
+        {
+            // Store original environment variable
+            _originalEnvPath = Environment.GetEnvironmentVariable("MANDA_DISCOVERY_PATH");
+            
+            // Create test discovery path
+            _testDiscoveryPath = Path.Combine(Path.GetTempPath(), "TestDiscoveryData", Guid.NewGuid().ToString());
+            Directory.CreateDirectory(_testDiscoveryPath);
+            
+            // Reset singleton for clean testing
+            typeof(ConfigurationService)
+                .GetField("_instance", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)?
+                .SetValue(null, null);
+                
+            _configService = ConfigurationService.Instance;
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            // Restore original environment variable
+            if (_originalEnvPath != null)
+                Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _originalEnvPath);
+            else
+                Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", null);
+
+            // Clean up test directory
+            if (Directory.Exists(_testDiscoveryPath))
+            {
+                try
+                {
+                    Directory.Delete(_testDiscoveryPath, true);
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
+            }
+        }
+
+        #region Test Suite 1: Path Consistency Validation
+
+        [TestMethod]
+        public void TestDefaultDiscoveryDataPathIsStandardized()
+        {
+            // Clear environment variable to test default behavior
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", null);
+            
+            // Reset singleton to pick up environment change
+            typeof(ConfigurationService)
+                .GetField("_instance", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)?
+                .SetValue(null, null);
+            
+            var config = ConfigurationService.Instance;
+            var defaultPath = config.DiscoveryDataRootPath;
+
+            Assert.AreEqual(@"c:\discoverydata", defaultPath, "Default discovery data path must be standardized lowercase");
+        }
+
+        [TestMethod]
+        public void TestPathNormalizationConsistency()
+        {
+            var testCases = new[]
+            {
+                (@"C:\DiscoveryData", @"c:\discoverydata"),
+                (@"C:\DISCOVERYDATA", @"c:\discoverydata"),
+                (@"c:\DiscoveryData\", @"c:\discoverydata"),
+                (@"c:\discoverydata/", @"c:\discoverydata"),
+                (@"C:\DiscoveryData\\", @"c:\discoverydata")
+            };
+
+            foreach (var (input, expected) in testCases)
+            {
+                Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", input);
+                
+                // Reset singleton
+                typeof(ConfigurationService)
+                    .GetField("_instance", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)?
+                    .SetValue(null, null);
+                
+                var config = ConfigurationService.Instance;
+                var normalizedPath = config.DiscoveryDataRootPath;
+
+                Assert.AreEqual(expected, normalizedPath, $"Path normalization failed for input: {input}");
+            }
+        }
+
+        [TestMethod]
+        public void TestCompanyDataPathConsistency()
+        {
+            var companyName = "TestCompany";
+            
+            // Test with default path
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", null);
+            ResetConfigurationService();
+            
+            var expectedPath = Path.Combine(@"c:\discoverydata", companyName);
+            var actualPath = _configService.GetCompanyDataPath(companyName);
+            
+            Assert.AreEqual(expectedPath, actualPath, "Company data path should use standardized root");
+        }
+
+        [TestMethod]
+        public void TestRawDataPathConsistency()
+        {
+            var companyName = "TestCompany";
+            var expectedPath = Path.Combine(@"c:\discoverydata", companyName, "Raw");
+            var actualPath = _configService.GetCompanyRawDataPath(companyName);
+            
+            Assert.AreEqual(expectedPath, actualPath, "Raw data path should use standardized structure");
+        }
+
+        [TestMethod]
+        public void TestExportsPathConsistency()
+        {
+            var companyName = "TestCompany";
+            var expectedPath = Path.Combine(@"c:\discoverydata", companyName, "Exports");
+            var actualPath = _configService.GetCompanyExportsPath(companyName);
+            
+            Assert.AreEqual(expectedPath, actualPath, "Exports path should use standardized structure");
+        }
+
+        #endregion
+
+        #region Test Suite 2: Environment Variable Testing
+
+        [TestMethod]
+        public void TestEnvironmentVariableOverride()
+        {
+            var customPath = _testDiscoveryPath;
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", customPath);
+            
+            ResetConfigurationService();
+            
+            var config = ConfigurationService.Instance;
+            var actualPath = config.DiscoveryDataRootPath;
+            
+            Assert.AreEqual(customPath.ToLowerInvariant(), actualPath, "Environment variable should override default path");
+        }
+
+        [TestMethod]
+        public void TestEnvironmentVariableNormalization()
+        {
+            var customPath = _testDiscoveryPath.ToUpperInvariant();
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", customPath);
+            
+            ResetConfigurationService();
+            
+            var config = ConfigurationService.Instance;
+            var actualPath = config.DiscoveryDataRootPath;
+            
+            Assert.AreEqual(customPath.ToLowerInvariant().TrimEnd('\\', '/'), actualPath, "Environment variable path should be normalized");
+        }
+
+        [TestMethod]
+        public void TestEnvironmentVariableAffectsAllServices()
+        {
+            var customPath = _testDiscoveryPath;
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", customPath);
+            
+            ResetConfigurationService();
+            
+            var config = ConfigurationService.Instance;
+            var companyName = "TestCompany";
+            
+            var companyPath = config.GetCompanyDataPath(companyName);
+            var rawDataPath = config.GetCompanyRawDataPath(companyName);
+            var exportsPath = config.GetCompanyExportsPath(companyName);
+            
+            Assert.IsTrue(companyPath.StartsWith(customPath.ToLowerInvariant()), "Company path should use custom root");
+            Assert.IsTrue(rawDataPath.StartsWith(customPath.ToLowerInvariant()), "Raw data path should use custom root");
+            Assert.IsTrue(exportsPath.StartsWith(customPath.ToLowerInvariant()), "Exports path should use custom root");
+        }
+
+        [TestMethod]
+        public void TestEmptyEnvironmentVariableUsesDefault()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", "");
+            
+            ResetConfigurationService();
+            
+            var config = ConfigurationService.Instance;
+            var actualPath = config.DiscoveryDataRootPath;
+            
+            Assert.AreEqual(@"c:\discoverydata", actualPath, "Empty environment variable should use default path");
+        }
+
+        [TestMethod]
+        public void TestWhitespaceEnvironmentVariableUsesDefault()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", "   ");
+            
+            ResetConfigurationService();
+            
+            var config = ConfigurationService.Instance;
+            var actualPath = config.DiscoveryDataRootPath;
+            
+            Assert.AreEqual(@"c:\discoverydata", actualPath, "Whitespace-only environment variable should use default path");
+        }
+
+        #endregion
+
+        #region Test Suite 3: Data Directory Consolidation
+
+        [TestMethod]
+        public void TestCaseInsensitiveDirectoryMatching()
+        {
+            var companyName = "TestCompany";
+            
+            // Create directories with different cases
+            var upperCaseDir = Path.Combine(_testDiscoveryPath, companyName.ToUpperInvariant());
+            var lowerCaseDir = Path.Combine(_testDiscoveryPath, companyName.ToLowerInvariant());
+            
+            Directory.CreateDirectory(upperCaseDir);
+            
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+            
+            var config = ConfigurationService.Instance;
+            var foundPath = config.GetCompanyDataPath(companyName.ToLowerInvariant());
+            
+            Assert.AreEqual(upperCaseDir, foundPath, "Should find case-insensitive directory match");
+        }
+
+        [TestMethod]
+        public void TestProfilesSubdirectoryMatching()
+        {
+            var companyName = "TestCompany";
+            
+            // Create company directory in Profiles subdirectory
+            var profilesDir = Path.Combine(_testDiscoveryPath, "Profiles");
+            var companyDir = Path.Combine(profilesDir, companyName);
+            Directory.CreateDirectory(companyDir);
+            
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+            
+            var config = ConfigurationService.Instance;
+            var foundPath = config.GetCompanyDataPath(companyName);
+            
+            Assert.AreEqual(companyDir, foundPath, "Should find company in Profiles subdirectory");
+        }
+
+        [TestMethod]
+        public void TestBackwardCompatibilityWithExistingStructures()
+        {
+            var companyName = "ljpops";
+            
+            // Create both possible structures
+            var directPath = Path.Combine(_testDiscoveryPath, companyName);
+            var profilesPath = Path.Combine(_testDiscoveryPath, "Profiles", companyName);
+            
+            Directory.CreateDirectory(directPath);
+            Directory.CreateDirectory(profilesPath);
+            
+            // Create test files in both locations
+            File.WriteAllText(Path.Combine(directPath, "test1.csv"), "test data");
+            File.WriteAllText(Path.Combine(profilesPath, "test2.csv"), "test data");
+            
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+            
+            var config = ConfigurationService.Instance;
+            var foundPath = config.GetCompanyDataPath(companyName);
+            
+            // Should prefer direct path over Profiles path
+            Assert.AreEqual(directPath, foundPath, "Should prefer direct company path over Profiles subdirectory");
+        }
+
+        #endregion
+
+        #region Test Suite 4: Service Integration Testing
+
+        [TestMethod]
+        public void TestPathValidationWithStandardizedPaths()
+        {
+            var config = ConfigurationService.Instance;
+            var validationResult = config.ValidatePaths();
+            
+            // Test should pass even if paths don't exist (discovery data path is optional)
+            Assert.IsNotNull(validationResult, "Validation result should not be null");
+            
+            // Check that error messages don't contain mixed-case paths
+            foreach (var error in validationResult.Errors)
+            {
+                Assert.IsFalse(error.Contains("DiscoveryData"), $"Error message should not contain mixed-case paths: {error}");
+            }
+        }
+
+        [TestMethod]
+        public void TestCurrentDirectoryRejection()
+        {
+            var currentDir = Environment.CurrentDirectory;
+            
+            _configService.DiscoveryDataRootPath = currentDir;
+            
+            // Should reject current directory and keep existing value
+            Assert.AreNotEqual(currentDir, _configService.DiscoveryDataRootPath, 
+                "Should reject setting discovery path to current directory");
+        }
+
+        [TestMethod]
+        public void TestPathConsistencyAcrossMultipleInstances()
+        {
+            // Set environment variable
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            
+            // Create multiple instances (singleton should ensure consistency)
+            var instance1 = ConfigurationService.Instance;
+            var instance2 = ConfigurationService.Instance;
+            
+            Assert.AreSame(instance1, instance2, "Should return same singleton instance");
+            Assert.AreEqual(instance1.DiscoveryDataRootPath, instance2.DiscoveryDataRootPath, 
+                "Path should be consistent across instances");
+        }
+
+        [TestMethod]
+        public void TestScriptPathsUsesEnterpriseDiscoveryRoot()
+        {
+            var config = ConfigurationService.Instance;
+            
+            var scriptsPath = config.ScriptsPath;
+            var modulesPath = config.ModulesPath;
+            var launcherPath = config.GetDiscoveryLauncherScriptPath();
+            var appRegPath = config.GetAppRegistrationScriptPath();
+            
+            // All should use the enterprise discovery root, not discovery data root
+            Assert.IsTrue(scriptsPath.StartsWith(@"C:\enterprisediscovery"), "Scripts path should use enterprise discovery root");
+            Assert.IsTrue(modulesPath.StartsWith(@"C:\enterprisediscovery"), "Modules path should use enterprise discovery root");
+            Assert.IsTrue(launcherPath.StartsWith(@"C:\enterprisediscovery"), "Launcher path should use enterprise discovery root");
+            Assert.IsTrue(appRegPath.StartsWith(@"C:\enterprisediscovery"), "App registration path should use enterprise discovery root");
+        }
+
+        #endregion
+
+        #region Critical Issue Detection Tests
+
+        [TestMethod]
+        public void TestForMixedCasePathReferences()
+        {
+            // This test would need to scan actual source files for mixed-case references
+            // For now, we'll test the configuration service behavior
+            var config = ConfigurationService.Instance;
+            var discoveryPath = config.DiscoveryDataRootPath;
+            
+            // Should not contain any uppercase letters in the default path
+            if (discoveryPath == @"c:\discoverydata")
+            {
+                Assert.IsTrue(discoveryPath.All(c => !char.IsUpper(c)), 
+                    "Default discovery path should be all lowercase");
+            }
+        }
+
+        [TestMethod]
+        public void TestDualDirectoryHandling()
+        {
+            // Test that service can handle both C:\discoverydata and C:\DiscoveryData existing
+            var lowerPath = Path.Combine(_testDiscoveryPath, "discoverydata");
+            var upperPath = Path.Combine(_testDiscoveryPath, "DiscoveryData");
+            
+            Directory.CreateDirectory(lowerPath);
+            Directory.CreateDirectory(upperPath);
+            
+            // Create test company in upper case directory
+            var companyDir = Path.Combine(upperPath, "TestCompany");
+            Directory.CreateDirectory(companyDir);
+            
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", lowerPath);
+            ResetConfigurationService();
+            
+            var config = ConfigurationService.Instance;
+            
+            // Should still find company in the configured path structure
+            var foundPath = config.GetCompanyDataPath("TestCompany");
+            Assert.IsTrue(foundPath.StartsWith(lowerPath), "Should use configured path even with dual structure");
+        }
+
+        [TestMethod]
+        public void TestLogFilePathConsistency()
+        {
+            var config = ConfigurationService.Instance;
+            
+            // Test that log paths would use the discovery data structure
+            var companyPath = config.GetCompanyDataPath("ljpops");
+            var expectedLogPath = Path.Combine(companyPath, "Logs");
+            
+            // Verify path structure is consistent
+            Assert.IsTrue(companyPath.Contains("discoverydata") || companyPath.Contains("DiscoveryData"), 
+                "Company path should contain discovery data directory");
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        private void ResetConfigurationService()
+        {
+            // Reset singleton instance to pick up environment changes
+            var instanceField = typeof(ConfigurationService)
+                .GetField("_instance", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            instanceField?.SetValue(null, null);
+        }
+
+        #endregion
+    }
+}

@@ -1,0 +1,23 @@
+using System.Windows.Controls;
+using MandADiscoverySuite.ViewModels;
+
+namespace MandADiscoverySuite.Views
+{
+    /// <summary>
+    /// Interaction logic for GroupRemappingView.xaml
+    /// Advanced group remapping with intelligent conflict resolution
+    /// </summary>
+    public partial class GroupRemappingView : UserControl
+    {
+        public GroupRemappingView()
+        {
+            InitializeComponent();
+            
+            // Set DataContext to GroupRemappingViewModel
+            if (DataContext == null)
+            {
+                DataContext = new GroupRemappingViewModel();
+            }
+        }
+    }
+}

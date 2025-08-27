@@ -1,0 +1,6 @@
+Server,Instance,Version,Edition,DatabaseCount,TotalSizeGB,LastSeen,Engine,ServiceState,ServiceStatus,StartMode,DetectionMethod,Collation,Authentication,BackupStatus
+SQL-SRV-01,MSSQLSERVER,15.0.4198.2,Enterprise,12,45.78,2025-08-20,SQL Server,Running,OK,Auto,WMI-Service,SQL_Latin1_General_CP1_CI_AS,Mixed,Connected
+SQL-SRV-01,REPORTING,15.0.4198.2,Standard,8,23.45,2025-08-20,SQL Server,Running,OK,Auto,Registry,SQL_Latin1_General_CP1_CI_AS,Windows,Connected
+SQL-SRV-02,MSSQLSERVER,14.0.3456.2,Standard,6,12.34,2025-08-20,SQL Server,Running,OK,Auto,WMI-Service,SQL_Latin1_General_CP1_CI_AS,Mixed,Connected
+DEV-SQL-03,DEVELOPMENT,13.0.5026.0,Developer,15,67.89,2025-08-20,SQL Server,Running,OK,Manual,Registry,SQL_Latin1_General_CP1_CI_AS,Windows,Connected
+BACKUP-SQL,MSSQLSERVER,12.0.6024.0,Express,3,2.15,2025-08-20,SQL Server,Stopped,OK,Manual,WMI-Service,SQL_Latin1_General_CP1_CI_AS,Windows,Connection Failed

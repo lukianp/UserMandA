@@ -1,0 +1,57 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Performance Optimized Resources -->
+    <!-- Use StaticResource for resources that don't change at runtime -->
+    
+    <!-- Typography Resources (safe to use StaticResource) -->
+    <FontFamily x:Key="PrimaryFontFamily">Segoe UI</FontFamily>
+    <FontFamily x:Key="MonospaceFontFamily">Consolas</FontFamily>
+    <FontFamily x:Key="IconFontFamily">Segoe MDL2 Assets</FontFamily>
+    
+    <!-- Standard Font Sizes -->
+    <sys:Double x:Key="FontSizeXSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">10</sys:Double>
+    <sys:Double x:Key="FontSizeSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">12</sys:Double>
+    <sys:Double x:Key="FontSizeMedium" xmlns:sys="clr-namespace:System;assembly=mscorlib">14</sys:Double>
+    <sys:Double x:Key="FontSizeLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">16</sys:Double>
+    <sys:Double x:Key="FontSizeXLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">18</sys:Double>
+    <sys:Double x:Key="FontSizeXXLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">24</sys:Double>
+
+    <!-- Standard Spacing (safe to use StaticResource) -->
+    <Thickness x:Key="SpacingXSmall">2</Thickness>
+    <Thickness x:Key="SpacingSmall">4</Thickness>
+    <Thickness x:Key="SpacingMedium">8</Thickness>
+    <Thickness x:Key="SpacingLarge">12</Thickness>
+    <Thickness x:Key="SpacingXLarge">16</Thickness>
+    <Thickness x:Key="SpacingXXLarge">24</Thickness>
+    
+    <!-- Specialized Spacings -->
+    <Thickness x:Key="HorizontalSpacingSmall">4,0</Thickness>
+    <Thickness x:Key="HorizontalSpacingMedium">8,0</Thickness>
+    <Thickness x:Key="HorizontalSpacingLarge">12,0</Thickness>
+    <Thickness x:Key="VerticalSpacingSmall">0,4</Thickness>
+    <Thickness x:Key="VerticalSpacingMedium">0,8</Thickness>
+    <Thickness x:Key="VerticalSpacingLarge">0,12</Thickness>
+
+    <!-- Border Radius (safe to use StaticResource) -->
+    <CornerRadius x:Key="CornerRadiusSmall">2</CornerRadius>
+    <CornerRadius x:Key="CornerRadiusMedium">4</CornerRadius>
+    <CornerRadius x:Key="CornerRadiusLarge">8</CornerRadius>
+    <CornerRadius x:Key="CornerRadiusXLarge">12</CornerRadius>
+
+    <!-- Animation Durations (safe to use StaticResource) -->
+    <Duration x:Key="AnimationDurationFast">0:0:0.15</Duration>
+    <Duration x:Key="AnimationDurationMedium">0:0:0.25</Duration>
+    <Duration x:Key="AnimationDurationSlow">0:0:0.35</Duration>
+
+    <!-- Easing Functions (safe to use StaticResource) -->
+    <CubicEase x:Key="StandardEasing" EasingMode="EaseInOut"/>
+    <ExponentialEase x:Key="AcceleratingEasing" EasingMode="EaseIn"/>
+    <ExponentialEase x:Key="DeceleratingEasing" EasingMode="EaseOut"/>
+
+    <!-- Frozen Static Brushes for Performance -->
+    <SolidColorBrush x:Key="TransparentBrush" Color="Transparent" po:Freeze="True" xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"/>
+    <SolidColorBrush x:Key="WhiteBrush" Color="White" po:Freeze="True" xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"/>
+    <SolidColorBrush x:Key="BlackBrush" Color="Black" po:Freeze="True" xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"/>
+
+</ResourceDictionary>

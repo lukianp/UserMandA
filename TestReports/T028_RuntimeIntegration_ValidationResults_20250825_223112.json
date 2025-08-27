@@ -1,0 +1,282 @@
+﻿{
+    "Summary":  {
+                    "StartTime":  "\/Date(1756157472691)\/",
+                    "FailedTests":  1,
+                    "EndTime":  {
+                                    "value":  "\/Date(1756157472776)\/",
+                                    "DisplayHint":  2,
+                                    "DateTime":  "25 August 2025 22:31:12"
+                                },
+                    "PassedTests":  19,
+                    "Duration":  {
+                                     "Ticks":  845954,
+                                     "Days":  0,
+                                     "Hours":  0,
+                                     "Milliseconds":  84,
+                                     "Minutes":  0,
+                                     "Seconds":  0,
+                                     "TotalDays":  9.79113425925926E-07,
+                                     "TotalHours":  2.349872222222222E-05,
+                                     "TotalMilliseconds":  84.5954,
+                                     "TotalMinutes":  0.0014099233333333334,
+                                     "TotalSeconds":  0.0845954
+                                 },
+                    "WarningTests":  3,
+                    "TotalTests":  23
+                },
+    "RuntimeTests":  [
+                         {
+                             "TestName":  "File Existence Check",
+                             "Status":  "PASS",
+                             "Details":  "MigrationExecutionViewModel.cs found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472736)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "T-027 Engine File Check",
+                             "Status":  "PASS",
+                             "Details":  "MigrationEngineService.cs found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472744)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Constructor T-027 Parameter",
+                             "Status":  "PASS",
+                             "Details":  "Constructor accepts MigrationEngineService parameter",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472749)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Migration Engine Resolver Method",
+                             "Status":  "PASS",
+                             "Details":  "ResolveOrCreateMigrationEngine method found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472751)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Wave Creation Method",
+                             "Status":  "PASS",
+                             "Details":  "CreateMigrationWaveFromExecutionItems method found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472751)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Migration Context Method",
+                             "Status":  "PASS",
+                             "Details":  "CreateMigrationContext method found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472752)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "T-027 Engine Call",
+                             "Status":  "PASS",
+                             "Details":  "ExecuteMigrationWaveAsync call found in ViewModel",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472754)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Event Handler Methods",
+                             "Status":  "PASS",
+                             "Details":  "All 3 T-027 event handlers found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472756)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Event Subscription",
+                             "Status":  "PASS",
+                             "Details":  "Migration engine event subscription found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472757)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Thread-Safe UI Updates",
+                             "Status":  "FAIL",
+                             "Details":  "Dispatcher.Invoke pattern not found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472758)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "T-027 Wave Execution Method",
+                             "Status":  "PASS",
+                             "Details":  "ExecuteMigrationWaveAsync method found in T-027 engine",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472761)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "T-027 Engine Events",
+                             "Status":  "PASS",
+                             "Details":  "All 3 migration events found in T-027 engine",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472762)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "T-027 Event Arguments",
+                             "Status":  "PASS",
+                             "Details":  "All 3 event argument classes found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472763)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "T-027 Provider Adapters",
+                             "Status":  "PASS",
+                             "Details":  "All 4 migration provider adapters found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472764)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "UI to Engine Data Flow",
+                             "Status":  "WARNING",
+                             "Details":  "Data transformation pattern should be verified",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472765)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Engine to UI Result Flow",
+                             "Status":  "PASS",
+                             "Details":  "WaveExecutionResult to UI update found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472767)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Error Integration",
+                             "Status":  "PASS",
+                             "Details":  "Error handling integration between UI and Engine found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472768)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Progress Integration",
+                             "Status":  "PASS",
+                             "Details":  "Progress handling integration found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472769)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Service Locator Pattern",
+                             "Status":  "PASS",
+                             "Details":  "SimpleServiceLocator pattern found for T-027 engine",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472770)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Fallback Service Provider",
+                             "Status":  "PASS",
+                             "Details":  "DefaultServiceProvider fallback found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472771)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Engine Creation Pattern",
+                             "Status":  "PASS",
+                             "Details":  "T-027 engine creation pattern found",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472773)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Event Cleanup",
+                             "Status":  "WARNING",
+                             "Details":  "Event cleanup pattern should be verified",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472774)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         },
+                         {
+                             "TestName":  "Timer Cleanup",
+                             "Status":  "WARNING",
+                             "Details":  "Timer cleanup should be verified",
+                             "Exception":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157472775)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:31:12"
+                                           }
+                         }
+                     ]
+}

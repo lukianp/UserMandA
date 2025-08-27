@@ -1,0 +1,229 @@
+<UserControl x:Class="MandADiscoverySuite.Controls.FilterIndicator"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="FilterIndicatorControl">
+    
+    <Grid x:Name="IndicatorGrid" 
+          Visibility="{Binding HasActiveFilters, ElementName=FilterIndicatorControl, Converter={StaticResource BooleanToVisibilityConverter}}">
+        
+        <!-- Main Filter Badge -->
+        <Border x:Name="FilterBadge"
+                Background="#FF4CAF50"
+                BorderBrush="#FF2E7D32"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="8,4"
+                MinWidth="80">
+            <Border.Effect>
+                <DropShadowEffect Color="#40000000" 
+                                BlurRadius="4" 
+                                ShadowDepth="2" 
+                                Opacity="0.5"/>
+            </Border.Effect>
+            
+            <StackPanel Orientation="Horizontal">
+                <!-- Filter Icon -->
+                <Path x:Name="FilterIcon"
+                      Width="14" Height="14"
+                      Fill="White"
+                      Data="M3,2V4H21V2H3M15,8V6H9V8H15M12,14V10H10V14H12Z"
+                      VerticalAlignment="Center"
+                      Margin="0,0,6,0"/>
+                
+                <!-- Filter Text -->
+                <TextBlock x:Name="FilterTextBlock"
+                          Text="{Binding FilterText, ElementName=FilterIndicatorControl}"
+                          Foreground="White"
+                          FontWeight="Medium"
+                          FontSize="11"
+                          VerticalAlignment="Center"/>
+                
+                <!-- Filter Count -->
+                <TextBlock x:Name="FilterCount"
+                          Text="{Binding ActiveFilterCount, ElementName=FilterIndicatorControl, StringFormat=' ({0})'}"
+                          Foreground="White"
+                          FontWeight="Bold"
+                          FontSize="11"
+                          VerticalAlignment="Center"
+                          Visibility="{Binding ShowCount, ElementName=FilterIndicatorControl, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                
+                <!-- Clear Filters Button -->
+                <Button x:Name="ClearFiltersButton"
+                        Content="×"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="White"
+                        FontWeight="Bold"
+                        FontSize="16"
+                        Width="20"
+                        Height="20"
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        ToolTip="Clear All Filters"
+                        Click="ClearFiltersButton_Click"
+                        Visibility="{Binding ShowClearButton, ElementName=FilterIndicatorControl, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="ButtonBorder"
+                                                Background="{TemplateBinding Background}"
+                                                CornerRadius="10">
+                                            <ContentPresenter HorizontalAlignment="Center" 
+                                                            VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="ButtonBorder" Property="Background" Value="#40FFFFFF"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter TargetName="ButtonBorder" Property="Background" Value="#60FFFFFF"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+        </Border>
+        
+        <!-- Filter Details Popup -->
+        <Popup x:Name="FilterDetailsPopup"
+               PlacementTarget="{Binding ElementName=FilterBadge}"
+               Placement="Bottom"
+               StaysOpen="False">
+            <Border Background="White"
+                    BorderBrush="#CCCCCC"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    MaxWidth="300"
+                    MinWidth="200">
+                <Border.Effect>
+                    <DropShadowEffect Color="#40000000" 
+                                    BlurRadius="8" 
+                                    ShadowDepth="4" 
+                                    Opacity="0.6"/>
+                </Border.Effect>
+                
+                <StackPanel Margin="8">
+                    <!-- Header -->
+                    <TextBlock Text="Active Filters"
+                              FontWeight="Bold"
+                              FontSize="12"
+                              Margin="0,0,0,8"/>
+                    
+                    <!-- Filter List -->
+                    <ItemsControl x:Name="FilterListControl"
+                                 ItemsSource="{Binding ActiveFilters, ElementName=FilterIndicatorControl}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#F5F5F5"
+                                       BorderBrush="#E0E0E0"
+                                       BorderThickness="1"
+                                       CornerRadius="3"
+                                       Margin="0,2"
+                                       Padding="6,3">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Filter Type -->
+                                        <TextBlock Grid.Column="0"
+                                                  Text="{Binding FilterType}"
+                                                  FontWeight="Medium"
+                                                  FontSize="10"
+                                                  Foreground="#666666"
+                                                  Margin="0,0,8,0"/>
+                                        
+                                        <!-- Filter Value -->
+                                        <TextBlock Grid.Column="1"
+                                                  Text="{Binding FilterValue}"
+                                                  FontSize="10"
+                                                  TextTrimming="CharacterEllipsis"/>
+                                        
+                                        <!-- Remove Filter -->
+                                        <Button Grid.Column="2"
+                                               Content="×"
+                                               Background="Transparent"
+                                               BorderThickness="0"
+                                               Foreground="#999999"
+                                               FontSize="12"
+                                               Width="16"
+                                               Height="16"
+                                               Padding="0"
+                                               ToolTip="Remove Filter"
+                                               Tag="{Binding}">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}"
+                                                                       CornerRadius="8">
+                                                                    <ContentPresenter HorizontalAlignment="Center" 
+                                                                                    VerticalAlignment="Center"/>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter Property="Background" Value="#FFCCCCCCC"/>
+                                                                        <Setter Property="Foreground" Value="#FF666666"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    
+                    <!-- No Filters Message -->
+                    <TextBlock Text="No active filters"
+                              FontStyle="Italic"
+                              Foreground="#999999"
+                              FontSize="10"
+                              HorizontalAlignment="Center"
+                              Visibility="{Binding HasActiveFilters, ElementName=FilterIndicatorControl, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                </StackPanel>
+            </Border>
+        </Popup>
+        
+        <!-- Triggers for showing details -->
+        <Grid.Triggers>
+            <EventTrigger RoutedEvent="MouseEnter">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="FilterBadge"
+                                       Storyboard.TargetProperty="(FrameworkElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                       To="1.05" Duration="0:0:0.1"/>
+                        <DoubleAnimation Storyboard.TargetName="FilterBadge"
+                                       Storyboard.TargetProperty="(FrameworkElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                       To="1.05" Duration="0:0:0.1"/>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+            <EventTrigger RoutedEvent="MouseLeave">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="FilterBadge"
+                                       Storyboard.TargetProperty="(FrameworkElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                       To="1.0" Duration="0:0:0.1"/>
+                        <DoubleAnimation Storyboard.TargetName="FilterBadge"
+                                       Storyboard.TargetProperty="(FrameworkElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                       To="1.0" Duration="0:0:0.1"/>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Grid.Triggers>
+    </Grid>
+</UserControl>

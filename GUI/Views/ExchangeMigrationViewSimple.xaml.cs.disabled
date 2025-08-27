@@ -1,0 +1,22 @@
+using System.Windows.Controls;
+using Microsoft.Extensions.Logging;
+using MandADiscoverySuite.ViewModels;
+
+namespace MandADiscoverySuite.Views
+{
+    /// <summary>
+    /// Interaction logic for ExchangeMigrationViewSimple.xaml
+    /// ShareGate-quality Exchange migration interface with real-time progress tracking
+    /// </summary>
+    public partial class ExchangeMigrationViewSimple : UserControl
+    {
+        public ExchangeMigrationViewSimple()
+        {
+            InitializeComponent();
+            
+            // Initialize ViewModel with proper DI
+            var logger = App.ServiceProvider?.GetService(typeof(ILogger<ExchangeMigrationViewModel>)) as ILogger<ExchangeMigrationViewModel>;
+            DataContext = new ExchangeMigrationViewModel(logger);
+        }
+    }
+}

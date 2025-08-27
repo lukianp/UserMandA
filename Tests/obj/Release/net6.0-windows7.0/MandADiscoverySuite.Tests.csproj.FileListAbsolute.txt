@@ -1,0 +1,12 @@
+D:\Scripts\UserMandA-1\Tests\bin\Release\net6.0-windows7.0\CoverletSourceRootsMapping_MandADiscoverySuite.Tests
+D:\Scripts\UserMandA-1\Tests\obj\Release\net6.0-windows7.0\MandADiscoverySuite.Tests.csproj.AssemblyReference.cache
+D:\Scripts\UserMandA-1\Tests\obj\Release\net6.0-windows7.0\MandADiscoverySuite.Tests.GeneratedMSBuildEditorConfig.editorconfig
+D:\Scripts\UserMandA-1\Tests\obj\Release\net6.0-windows7.0\MandADiscoverySuite.Tests.AssemblyInfoInputs.cache
+D:\Scripts\UserMandA-1\Tests\obj\Release\net6.0-windows7.0\MandADiscoverySuite.Tests.AssemblyInfo.cs
+D:\Scripts\UserMandA-1\Tests\obj\Release\net6.0-windows7.0\MandADiscoverySuite.Tests.csproj.CoreCompileInputs.cache
+D:\Scripts\UserMandA\Tests\bin\Release\net6.0-windows7.0\CoverletSourceRootsMapping_MandADiscoverySuite.Tests
+D:\Scripts\UserMandA\Tests\obj\Release\net6.0-windows7.0\MandADiscoverySuite.Tests.csproj.AssemblyReference.cache
+D:\Scripts\UserMandA\Tests\obj\Release\net6.0-windows7.0\MandADiscoverySuite.Tests.GeneratedMSBuildEditorConfig.editorconfig
+D:\Scripts\UserMandA\Tests\obj\Release\net6.0-windows7.0\MandADiscoverySuite.Tests.AssemblyInfoInputs.cache
+D:\Scripts\UserMandA\Tests\obj\Release\net6.0-windows7.0\MandADiscoverySuite.Tests.AssemblyInfo.cs
+D:\Scripts\UserMandA\Tests\obj\Release\net6.0-windows7.0\MandADiscoverySuite.Tests.csproj.CoreCompileInputs.cache

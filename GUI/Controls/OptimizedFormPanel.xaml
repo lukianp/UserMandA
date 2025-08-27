@@ -1,0 +1,34 @@
+<UserControl x:Class="MandADiscoverySuite.Controls.OptimizedFormPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="400" d:DesignWidth="600">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Themes/OptimizedGridLayouts.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <!-- Main Form Grid with SharedSizeGroup optimization -->
+    <Grid x:Name="MainGrid" Style="{StaticResource TwoColumnFormGridStyle}">
+        <Grid.ColumnDefinitions>
+            <!-- These columns will use SharedSizeGroup for consistent alignment -->
+            <ColumnDefinition Width="Auto" SharedSizeGroup="FormLabel" MinWidth="120"/>
+            <ColumnDefinition Width="*" SharedSizeGroup="FormInput" MinWidth="200"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Dynamic content will be added here programmatically -->
+        <ScrollViewer Grid.ColumnSpan="2" 
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Disabled">
+            <StackPanel x:Name="FormContentPanel" 
+                       Orientation="Vertical"
+                       Margin="16"/>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

@@ -1,0 +1,737 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using MandADiscoverySuite.Models;
+using Microsoft.Extensions.Logging;
+
+namespace MandADiscoverySuite.Services
+{
+    /// <summary>
+    /// Bridge service that converts PowerShell progress streams into real-time GUI updates
+    /// Maintains current UI update patterns and responsiveness while integrating with actual PowerShell execution
+    /// </summary>
+    public class PowerShellProgressBridge : IDisposable
+    {
+        private readonly ILogger<PowerShellProgressBridge> _logger;
+        private readonly StructuredLoggingService _structuredLogger;
+        private readonly PowerShellExecutionService _executionService;
+        private readonly MigrationStateManager _stateManager;
+        
+        // Progress monitoring
+        private readonly ConcurrentDictionary<string, ProgressStreamProcessor> _progressProcessors = new();
+        private readonly Timer _progressUpdateTimer;
+        private readonly Timer _metricsUpdateTimer;
+        private readonly object _bridgeLock = new object();
+        private bool _disposed = false;
+
+        // Real-time update events that mirror the existing pattern
+        public event EventHandler<DashboardMetricsUpdatedEventArgs> DashboardMetricsUpdated;
+        public event EventHandler<DiscoveryMetricsUpdatedEventArgs> DiscoveryMetricsUpdated;
+        public event EventHandler<ExecutionMetricsUpdatedEventArgs> ExecutionMetricsUpdated;
+        public event EventHandler<ValidationMetricsUpdatedEventArgs> ValidationMetricsUpdated;
+        public event EventHandler<MigrationProgressUpdatedEventArgs> MigrationProgressUpdated;
+
+        // Current metrics (maintained for consistency with existing UI patterns)
+        private MigrationMetrics _currentDashboardMetrics;
+        private DiscoveryMetrics _currentDiscoveryMetrics;
+        private ExecutionMetrics _currentExecutionMetrics;
+        private ValidationMetrics _currentValidationMetrics;
+
+        public PowerShellProgressBridge(
+            ILogger<PowerShellProgressBridge> logger,
+            PowerShellExecutionService executionService,
+            MigrationStateManager stateManager)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _executionService = executionService ?? throw new ArgumentNullException(nameof(executionService));
+            _stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
+            _structuredLogger = StructuredLoggingService.Instance;
+
+            // Initialize current metrics
+            InitializeMetrics();
+
+            // Set up progress update timer (maintains existing 2-3 second update frequency)
+            _progressUpdateTimer = new Timer(ProcessProgressUpdates, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+            
+            // Set up metrics update timer (maintains existing update patterns)
+            _metricsUpdateTimer = new Timer(UpdateMetrics, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+
+            // Subscribe to PowerShell execution events
+            _executionService.ProgressUpdated += OnPowerShellProgressUpdated;
+            _executionService.StatusChanged += OnPowerShellStatusChanged;
+            _executionService.LogReceived += OnPowerShellLogReceived;
+
+            // Subscribe to state manager events
+            _stateManager.StateChanged += OnMigrationStateChanged;
+
+            _structuredLogger?.LogInfo("PowerShellProgressBridge",
+                new { action = "bridge_init" },
+                "PowerShell progress bridge initialized");
+        }
+
+        #region Initialization
+
+        /// <summary>
+        /// Initialize metrics with realistic starting values
+        /// </summary>
+        private void InitializeMetrics()
+        {
+            _currentDashboardMetrics = new MigrationMetrics
+            {
+                TotalProjects = 0,
+                ActiveMigrations = 0,
+                CompletedMigrations = 0,
+                OverallCompletionPercentage = 0.0
+            };
+
+            _currentDiscoveryMetrics = new DiscoveryMetrics
+            {
+                UserCount = 0,
+                MailboxCount = 0,
+                FileShareCount = 0,
+                DependencyCount = 0,
+                ApplicationCount = 0,
+                SecurityGroupCount = 0
+            };
+
+            _currentExecutionMetrics = new ExecutionMetrics
+            {
+                ActiveStreams = 0,
+                ItemsPerMinute = 0.0,
+                DataThroughputMBps = 0.0,
+                ErrorCount = 0,
+                EtaMinutes = 0.0
+            };
+
+            _currentValidationMetrics = new ValidationMetrics
+            {
+                TotalChecks = 0,
+                PassedChecks = 0,
+                FailedChecks = 0,
+                SuccessRate = 0.0
+            };
+        }
+
+        #endregion
+
+        #region PowerShell Event Handlers
+
+        /// <summary>
+        /// Handles PowerShell progress updates and converts them to GUI-compatible format
+        /// </summary>
+        private void OnPowerShellProgressUpdated(object sender, MigrationProgressEventArgs e)
+        {
+            try
+            {
+                lock (_bridgeLock)
+                {
+                    // Get or create progress processor for this execution
+                    var processor = _progressProcessors.GetOrAdd(e.ExecutionId, id => new ProgressStreamProcessor
+                    {
+                        ExecutionId = id,
+                        LastUpdate = DateTime.Now,
+                        IsActive = true
+                    });
+
+                    // Update processor state
+                    processor.CurrentProgress = e.ProgressPercentage;
+                    processor.CurrentOperation = e.CurrentOperation;
+                    processor.LastUpdate = DateTime.Now;
+                    processor.Status = e.Status;
+
+                    // Convert to migration progress format that matches existing UI expectations
+                    var migrationProgress = new MigrationProgressUpdate
+                    {
+                        ExecutionId = e.ExecutionId,
+                        ProgressPercentage = e.ProgressPercentage,
+                        CurrentOperation = e.CurrentOperation,
+                        Status = e.Status,
+                        ItemsPerMinute = CalculateItemsPerMinute(processor),
+                        EstimatedCompletion = CalculateEstimatedCompletion(processor)
+                    };
+
+                    // Fire update event on UI thread (maintains existing thread-safe pattern)
+                    Application.Current?.Dispatcher.BeginInvoke(() =>
+                    {
+                        MigrationProgressUpdated?.Invoke(this, new MigrationProgressUpdatedEventArgs
+                        {
+                            Progress = migrationProgress
+                        });
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error processing PowerShell progress update for execution {e.ExecutionId}");
+            }
+        }
+
+        /// <summary>
+        /// Handles PowerShell status changes and updates metrics accordingly
+        /// </summary>
+        private void OnPowerShellStatusChanged(object sender, MigrationStatusEventArgs e)
+        {
+            try
+            {
+                lock (_bridgeLock)
+                {
+                    // Update progress processor status
+                    if (_progressProcessors.TryGetValue(e.ExecutionId, out var processor))
+                    {
+                        processor.Status = e.Status.ToString();
+                        processor.LastUpdate = DateTime.Now;
+
+                        if (e.Status == MigrationStatus.Completed || 
+                            e.Status == MigrationStatus.Failed || 
+                            e.Status == MigrationStatus.Cancelled)
+                        {
+                            processor.IsActive = false;
+                            processor.EndTime = DateTime.Now;
+                        }
+                    }
+
+                    // Update dashboard metrics based on status change
+                    UpdateDashboardMetricsFromStatus(e.Status);
+                }
+
+                _structuredLogger?.LogInfo("PowerShellProgressBridge",
+                    new { action = "status_changed", execution_id = e.ExecutionId, status = e.Status.ToString() },
+                    $"PowerShell status changed: {e.ExecutionId} -> {e.Status}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error processing PowerShell status change for execution {e.ExecutionId}");
+            }
+        }
+
+        /// <summary>
+        /// Handles PowerShell log messages and processes them for metrics
+        /// </summary>
+        private void OnPowerShellLogReceived(object sender, MigrationLogEventArgs e)
+        {
+            try
+            {
+                // Process log messages for discovery metrics updates
+                if (e.Level.Equals("Info", StringComparison.OrdinalIgnoreCase))
+                {
+                    ProcessDiscoveryLogMessage(e.Message);
+                }
+                else if (e.Level.Equals("Error", StringComparison.OrdinalIgnoreCase))
+                {
+                    UpdateErrorMetrics();
+                }
+
+                _structuredLogger?.LogDebug("PowerShellProgressBridge",
+                    new { action = "log_received", execution_id = e.ExecutionId, level = e.Level },
+                    $"PowerShell log: {e.Message}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error processing PowerShell log message from execution {e.ExecutionId}");
+            }
+        }
+
+        /// <summary>
+        /// Handles migration state changes from the state manager
+        /// </summary>
+        private void OnMigrationStateChanged(object sender, MigrationStateChangedEventArgs e)
+        {
+            try
+            {
+                // Update metrics based on state changes
+                UpdateMetricsFromStateChange(e.State);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error processing migration state change for execution {e.ExecutionId}");
+            }
+        }
+
+        #endregion
+
+        #region Metrics Updates
+
+        /// <summary>
+        /// Periodic metrics update (maintains existing update frequency)
+        /// </summary>
+        private void UpdateMetrics(object state)
+        {
+            try
+            {
+                // Get current active executions
+                var activeExecutions = _stateManager.GetActiveExecutionStates();
+                var allExecutions = _stateManager.GetMigrationHistory(100);
+
+                // Update dashboard metrics
+                UpdateDashboardMetrics(activeExecutions, allExecutions);
+
+                // Update execution metrics
+                UpdateExecutionMetrics(activeExecutions);
+
+                // Update discovery metrics from recent discovery executions
+                UpdateDiscoveryMetrics(allExecutions);
+
+                // Update validation metrics
+                UpdateValidationMetrics(allExecutions);
+
+                // Fire update events on UI thread (maintains existing pattern)
+                Application.Current?.Dispatcher.BeginInvoke(() =>
+                {
+                    DashboardMetricsUpdated?.Invoke(this, new DashboardMetricsUpdatedEventArgs 
+                    { 
+                        Metrics = _currentDashboardMetrics 
+                    });
+                    
+                    DiscoveryMetricsUpdated?.Invoke(this, new DiscoveryMetricsUpdatedEventArgs 
+                    { 
+                        Metrics = _currentDiscoveryMetrics 
+                    });
+                    
+                    ExecutionMetricsUpdated?.Invoke(this, new ExecutionMetricsUpdatedEventArgs 
+                    { 
+                        Metrics = _currentExecutionMetrics 
+                    });
+                    
+                    ValidationMetricsUpdated?.Invoke(this, new ValidationMetricsUpdatedEventArgs 
+                    { 
+                        Metrics = _currentValidationMetrics 
+                    });
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error updating metrics in PowerShell progress bridge");
+            }
+        }
+
+        /// <summary>
+        /// Updates dashboard metrics based on current execution states
+        /// </summary>
+        private void UpdateDashboardMetrics(List<MigrationExecutionState> activeExecutions, List<MigrationHistoryEntry> allExecutions)
+        {
+            var completedCount = allExecutions.Count(e => e.Status == MigrationStatus.Completed);
+            var totalProjects = allExecutions.GroupBy(e => e.CompanyName).Count();
+
+            _currentDashboardMetrics.TotalProjects = Math.Max(totalProjects, 1);
+            _currentDashboardMetrics.ActiveMigrations = activeExecutions.Count;
+            _currentDashboardMetrics.CompletedMigrations = completedCount;
+            
+            if (allExecutions.Any())
+            {
+                _currentDashboardMetrics.OverallCompletionPercentage = 
+                    allExecutions.Average(e => e.ProgressPercentage);
+            }
+        }
+
+        /// <summary>
+        /// Updates execution metrics based on active streams
+        /// </summary>
+        private void UpdateExecutionMetrics(List<MigrationExecutionState> activeExecutions)
+        {
+            _currentExecutionMetrics.ActiveStreams = activeExecutions.Count;
+            
+            if (activeExecutions.Any())
+            {
+                // Calculate average throughput from active processors
+                var activeProcessors = _progressProcessors.Values.Where(p => p.IsActive).ToList();
+                if (activeProcessors.Any())
+                {
+                    _currentExecutionMetrics.ItemsPerMinute = activeProcessors.Average(p => p.ItemsPerMinute);
+                    _currentExecutionMetrics.DataThroughputMBps = activeProcessors.Average(p => p.ThroughputMBps);
+                    _currentExecutionMetrics.EtaMinutes = activeProcessors.Average(p => p.EtaMinutes);
+                }
+            }
+            else
+            {
+                _currentExecutionMetrics.ItemsPerMinute = 0;
+                _currentExecutionMetrics.DataThroughputMBps = 0;
+                _currentExecutionMetrics.EtaMinutes = 0;
+            }
+        }
+
+        /// <summary>
+        /// Updates discovery metrics from PowerShell output analysis
+        /// </summary>
+        private void UpdateDiscoveryMetrics(List<MigrationHistoryEntry> allExecutions)
+        {
+            // Look for recent discovery executions and parse their results
+            var recentDiscovery = allExecutions
+                .Where(e => e.MigrationType == MigrationType.User || 
+                           e.MigrationType == MigrationType.SecurityGroup ||
+                           e.MigrationType == MigrationType.Application)
+                .Where(e => e.EndTime.HasValue && (DateTime.Now - e.EndTime.Value).TotalHours < 24)
+                .ToList();
+
+            if (recentDiscovery.Any())
+            {
+                _currentDiscoveryMetrics.UserCount = recentDiscovery
+                    .Where(e => e.MigrationType == MigrationType.User)
+                    .Sum(e => e.ItemsProcessed);
+                    
+                _currentDiscoveryMetrics.SecurityGroupCount = recentDiscovery
+                    .Where(e => e.MigrationType == MigrationType.SecurityGroup)
+                    .Sum(e => e.ItemsProcessed);
+                    
+                _currentDiscoveryMetrics.ApplicationCount = recentDiscovery
+                    .Where(e => e.MigrationType == MigrationType.Application)
+                    .Sum(e => e.ItemsProcessed);
+
+                // Estimate related counts
+                _currentDiscoveryMetrics.MailboxCount = (int)(_currentDiscoveryMetrics.UserCount * 0.8);
+                _currentDiscoveryMetrics.FileShareCount = Math.Max(5, _currentDiscoveryMetrics.UserCount / 20);
+                _currentDiscoveryMetrics.DependencyCount = _currentDiscoveryMetrics.UserCount + 
+                                                          _currentDiscoveryMetrics.SecurityGroupCount + 
+                                                          _currentDiscoveryMetrics.ApplicationCount;
+            }
+        }
+
+        /// <summary>
+        /// Updates validation metrics from execution results
+        /// </summary>
+        private void UpdateValidationMetrics(List<MigrationHistoryEntry> allExecutions)
+        {
+            var recentExecutions = allExecutions
+                .Where(e => e.EndTime.HasValue && (DateTime.Now - e.EndTime.Value).TotalHours < 24)
+                .ToList();
+
+            if (recentExecutions.Any())
+            {
+                _currentValidationMetrics.TotalChecks = recentExecutions.Count;
+                _currentValidationMetrics.PassedChecks = recentExecutions.Count(e => e.Status == MigrationStatus.Completed);
+                _currentValidationMetrics.FailedChecks = recentExecutions.Count(e => e.Status == MigrationStatus.Failed);
+                _currentValidationMetrics.SuccessRate = _currentValidationMetrics.TotalChecks > 0 
+                    ? (double)_currentValidationMetrics.PassedChecks / _currentValidationMetrics.TotalChecks * 100 
+                    : 0;
+            }
+        }
+
+        #endregion
+
+        #region Progress Processing
+
+        /// <summary>
+        /// Processes progress updates (maintains existing update frequency)
+        /// </summary>
+        private void ProcessProgressUpdates(object state)
+        {
+            try
+            {
+                var currentTime = DateTime.Now;
+                var processorsToRemove = new List<string>();
+
+                lock (_bridgeLock)
+                {
+                    foreach (var kvp in _progressProcessors)
+                    {
+                        var processor = kvp.Value;
+                        
+                        // Remove inactive processors older than 5 minutes
+                        if (!processor.IsActive && (currentTime - processor.LastUpdate).TotalMinutes > 5)
+                        {
+                            processorsToRemove.Add(kvp.Key);
+                            continue;
+                        }
+
+                        // Update calculated metrics for active processors
+                        if (processor.IsActive)
+                        {
+                            UpdateProcessorMetrics(processor);
+                        }
+                    }
+
+                    // Clean up old processors
+                    foreach (var id in processorsToRemove)
+                    {
+                        _progressProcessors.TryRemove(id, out _);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error processing progress updates");
+            }
+        }
+
+        /// <summary>
+        /// Updates calculated metrics for a progress processor
+        /// </summary>
+        private void UpdateProcessorMetrics(ProgressStreamProcessor processor)
+        {
+            var elapsed = DateTime.Now - processor.StartTime;
+            if (elapsed.TotalMinutes > 0)
+            {
+                // Calculate items per minute based on progress
+                var estimatedTotalItems = 100; // Default estimate
+                var itemsProcessed = (processor.CurrentProgress / 100.0) * estimatedTotalItems;
+                processor.ItemsPerMinute = itemsProcessed / elapsed.TotalMinutes;
+
+                // Estimate throughput (simplified calculation)
+                processor.ThroughputMBps = processor.ItemsPerMinute * 0.5; // Assume 0.5MB per item
+
+                // Calculate ETA
+                if (processor.CurrentProgress > 0 && processor.CurrentProgress < 100)
+                {
+                    var remainingProgress = 100 - processor.CurrentProgress;
+                    var progressRate = processor.CurrentProgress / elapsed.TotalMinutes;
+                    if (progressRate > 0)
+                    {
+                        processor.EtaMinutes = remainingProgress / progressRate;
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Calculates items per minute for a processor
+        /// </summary>
+        private double CalculateItemsPerMinute(ProgressStreamProcessor processor)
+        {
+            return processor.ItemsPerMinute;
+        }
+
+        /// <summary>
+        /// Calculates estimated completion time
+        /// </summary>
+        private DateTime CalculateEstimatedCompletion(ProgressStreamProcessor processor)
+        {
+            if (processor.EtaMinutes > 0)
+            {
+                return DateTime.Now.AddMinutes(processor.EtaMinutes);
+            }
+            return DateTime.Now.AddHours(1); // Default estimate
+        }
+
+        /// <summary>
+        /// Updates dashboard metrics from status changes
+        /// </summary>
+        private void UpdateDashboardMetricsFromStatus(MigrationStatus status)
+        {
+            switch (status)
+            {
+                case MigrationStatus.InProgress:
+                    // Active migration count will be updated in the main metrics update
+                    break;
+                case MigrationStatus.Completed:
+                    _currentDashboardMetrics.CompletedMigrations++;
+                    break;
+                case MigrationStatus.Failed:
+                    // Error counts will be updated in execution metrics
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Processes discovery log messages for metrics
+        /// </summary>
+        private void ProcessDiscoveryLogMessage(string message)
+        {
+            try
+            {
+                // Look for patterns in log messages that indicate discovery counts
+                if (message.Contains("users discovered", StringComparison.OrdinalIgnoreCase))
+                {
+                    var count = ExtractCountFromMessage(message);
+                    if (count > 0)
+                    {
+                        _currentDiscoveryMetrics.UserCount = Math.Max(_currentDiscoveryMetrics.UserCount, count);
+                    }
+                }
+                else if (message.Contains("groups discovered", StringComparison.OrdinalIgnoreCase))
+                {
+                    var count = ExtractCountFromMessage(message);
+                    if (count > 0)
+                    {
+                        _currentDiscoveryMetrics.SecurityGroupCount = Math.Max(_currentDiscoveryMetrics.SecurityGroupCount, count);
+                    }
+                }
+                // Add more patterns as needed
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, $"Error processing discovery log message: {message}");
+            }
+        }
+
+        /// <summary>
+        /// Extracts numeric count from log message
+        /// </summary>
+        private int ExtractCountFromMessage(string message)
+        {
+            var words = message.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var word in words)
+            {
+                if (int.TryParse(word, out var count))
+                {
+                    return count;
+                }
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// Updates error metrics
+        /// </summary>
+        private void UpdateErrorMetrics()
+        {
+            _currentExecutionMetrics.ErrorCount++;
+        }
+
+        /// <summary>
+        /// Updates metrics from state changes
+        /// </summary>
+        private void UpdateMetricsFromStateChange(MigrationExecutionState state)
+        {
+            // Update relevant metrics based on state change
+            if (state.Status == MigrationStatus.InProgress)
+            {
+                _currentDashboardMetrics.ActiveMigrations = _stateManager.GetActiveExecutionStates().Count;
+            }
+        }
+
+        #endregion
+
+        #region Public Interface
+
+        /// <summary>
+        /// Gets current dashboard metrics (maintains existing interface)
+        /// </summary>
+        public MigrationMetrics GetCurrentDashboardMetrics()
+        {
+            return _currentDashboardMetrics;
+        }
+
+        /// <summary>
+        /// Gets current discovery metrics (maintains existing interface)
+        /// </summary>
+        public DiscoveryMetrics GetCurrentDiscoveryMetrics()
+        {
+            return _currentDiscoveryMetrics;
+        }
+
+        /// <summary>
+        /// Gets current execution metrics (maintains existing interface)
+        /// </summary>
+        public ExecutionMetrics GetCurrentExecutionMetrics()
+        {
+            return _currentExecutionMetrics;
+        }
+
+        /// <summary>
+        /// Gets current validation metrics (maintains existing interface)
+        /// </summary>
+        public ValidationMetrics GetCurrentValidationMetrics()
+        {
+            return _currentValidationMetrics;
+        }
+
+        /// <summary>
+        /// Forces immediate metrics update
+        /// </summary>
+        public void RefreshMetrics()
+        {
+            UpdateMetrics(null);
+        }
+
+        #endregion
+
+        #region Disposal
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _progressUpdateTimer?.Dispose();
+                _metricsUpdateTimer?.Dispose();
+
+                // Unsubscribe from events
+                if (_executionService != null)
+                {
+                    _executionService.ProgressUpdated -= OnPowerShellProgressUpdated;
+                    _executionService.StatusChanged -= OnPowerShellStatusChanged;
+                    _executionService.LogReceived -= OnPowerShellLogReceived;
+                }
+
+                if (_stateManager != null)
+                {
+                    _stateManager.StateChanged -= OnMigrationStateChanged;
+                }
+
+                _progressProcessors.Clear();
+                _disposed = true;
+            }
+        }
+
+        #endregion
+    }
+
+    #region Supporting Classes
+
+    /// <summary>
+    /// Progress stream processor for individual executions
+    /// </summary>
+    public class ProgressStreamProcessor
+    {
+        public string ExecutionId { get; set; }
+        public DateTime StartTime { get; set; } = DateTime.Now;
+        public DateTime? EndTime { get; set; }
+        public DateTime LastUpdate { get; set; } = DateTime.Now;
+        public bool IsActive { get; set; } = true;
+        public double CurrentProgress { get; set; }
+        public string CurrentOperation { get; set; }
+        public string Status { get; set; }
+        public double ItemsPerMinute { get; set; }
+        public double ThroughputMBps { get; set; }
+        public double EtaMinutes { get; set; }
+    }
+
+    /// <summary>
+    /// Migration progress update structure
+    /// </summary>
+    public class MigrationProgressUpdate
+    {
+        public string ExecutionId { get; set; }
+        public double ProgressPercentage { get; set; }
+        public string CurrentOperation { get; set; }
+        public string Status { get; set; }
+        public double ItemsPerMinute { get; set; }
+        public DateTime EstimatedCompletion { get; set; }
+    }
+
+    // Event argument classes that mirror existing patterns
+    public class DashboardMetricsUpdatedEventArgs : EventArgs
+    {
+        public MigrationMetrics Metrics { get; set; }
+    }
+
+    public class DiscoveryMetricsUpdatedEventArgs : EventArgs
+    {
+        public DiscoveryMetrics Metrics { get; set; }
+    }
+
+    public class ExecutionMetricsUpdatedEventArgs : EventArgs
+    {
+        public ExecutionMetrics Metrics { get; set; }
+    }
+
+    public class ValidationMetricsUpdatedEventArgs : EventArgs
+    {
+        public ValidationMetrics Metrics { get; set; }
+    }
+
+    public class MigrationProgressUpdatedEventArgs : EventArgs
+    {
+        public MigrationProgressUpdate Progress { get; set; }
+    }
+
+    #endregion
+}

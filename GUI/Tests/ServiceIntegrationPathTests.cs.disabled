@@ -1,0 +1,411 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using MandADiscoverySuite.Services;
+using MandADiscoverySuite.ViewModels;
+
+namespace MandADiscoverySuite.Tests
+{
+    /// <summary>
+    /// Integration tests for service path consistency across the application
+    /// Validates that all services use standardized paths and handle path scenarios correctly
+    /// </summary>
+    [TestClass]
+    public class ServiceIntegrationPathTests
+    {
+        private ConfigurationService _configService;
+        private string _originalEnvPath;
+        private string _testDiscoveryPath;
+        private string _testCompanyName = "TestCompany";
+
+        [TestInitialize]
+        public void Setup()
+        {
+            _originalEnvPath = Environment.GetEnvironmentVariable("MANDA_DISCOVERY_PATH");
+            _testDiscoveryPath = Path.Combine(Path.GetTempPath(), "IntegrationTestDiscoveryData", Guid.NewGuid().ToString());
+            Directory.CreateDirectory(_testDiscoveryPath);
+
+            // Reset ConfigurationService singleton
+            ResetConfigurationService();
+            _configService = ConfigurationService.Instance;
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            if (_originalEnvPath != null)
+                Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _originalEnvPath);
+            else
+                Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", null);
+
+            if (Directory.Exists(_testDiscoveryPath))
+            {
+                try
+                {
+                    Directory.Delete(_testDiscoveryPath, true);
+                }
+                catch { /* Ignore cleanup errors */ }
+            }
+        }
+
+        #region ConfigurationService Integration Tests
+
+        [TestMethod]
+        public void TestConfigurationServicePathConsistency()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+
+            var config = ConfigurationService.Instance;
+            
+            // All discovery-related paths should use the same root
+            var rootPath = config.DiscoveryDataRootPath;
+            var companyPath = config.GetCompanyDataPath(_testCompanyName);
+            var rawDataPath = config.GetCompanyRawDataPath(_testCompanyName);
+            var exportsPath = config.GetCompanyExportsPath(_testCompanyName);
+
+            Assert.AreEqual(_testDiscoveryPath.ToLowerInvariant(), rootPath);
+            Assert.IsTrue(companyPath.StartsWith(rootPath), "Company path should start with root path");
+            Assert.IsTrue(rawDataPath.StartsWith(rootPath), "Raw data path should start with root path");
+            Assert.IsTrue(exportsPath.StartsWith(rootPath), "Exports path should start with root path");
+
+            // Enterprise paths should use different root
+            Assert.IsFalse(config.ScriptsPath.StartsWith(rootPath), "Scripts path should not use discovery data root");
+            Assert.IsFalse(config.ModulesPath.StartsWith(rootPath), "Modules path should not use discovery data root");
+        }
+
+        [TestMethod]
+        public void TestMultipleServiceInstancesUseSamePaths()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+
+            var config1 = ConfigurationService.Instance;
+            var config2 = ConfigurationService.Instance;
+
+            Assert.AreSame(config1, config2, "Should return same singleton instance");
+            Assert.AreEqual(config1.DiscoveryDataRootPath, config2.DiscoveryDataRootPath);
+            Assert.AreEqual(config1.GetCompanyDataPath(_testCompanyName), config2.GetCompanyDataPath(_testCompanyName));
+        }
+
+        [TestMethod]
+        public async Task TestConfigurationPersistenceWithCustomPaths()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+
+            var config = ConfigurationService.Instance;
+            
+            // Verify settings can be saved and loaded with custom discovery path
+            var originalTheme = config.Settings.Theme;
+            config.Settings.Theme = "TestTheme";
+            
+            await config.SaveSettingsAsync();
+            
+            // Reset and reload
+            config.LoadSettings();
+            
+            Assert.AreEqual("TestTheme", config.Settings.Theme, "Settings should persist with custom discovery path");
+        }
+
+        #endregion
+
+        #region ViewModel Integration Tests
+
+        [TestMethod]
+        public void TestViewModelsUseConfigurationServicePaths()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+
+            // Test that ViewModels would use ConfigurationService paths
+            var config = ConfigurationService.Instance;
+            var expectedRootPath = config.DiscoveryDataRootPath;
+            
+            Assert.AreEqual(_testDiscoveryPath.ToLowerInvariant(), expectedRootPath);
+
+            // Simulate ViewModel path usage
+            var companyDataPath = config.GetCompanyDataPath(_testCompanyName);
+            var rawDataPath = config.GetCompanyRawDataPath(_testCompanyName);
+
+            Assert.IsTrue(companyDataPath.StartsWith(expectedRootPath));
+            Assert.IsTrue(rawDataPath.Contains("Raw"));
+        }
+
+        [TestMethod]
+        public void TestCreateProfileDialogPathHandling()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+
+            var config = ConfigurationService.Instance;
+            
+            // Simulate profile creation with custom path
+            var profilePath = config.GetCompanyDataPath("NewCompany");
+            var expectedPath = Path.Combine(_testDiscoveryPath.ToLowerInvariant(), "NewCompany");
+            
+            Assert.AreEqual(expectedPath, profilePath);
+        }
+
+        #endregion
+
+        #region Data Service Integration Tests
+
+        [TestMethod]
+        public void TestCsvDataServicePathResolution()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+
+            var config = ConfigurationService.Instance;
+            
+            // Create test CSV structure
+            var companyRawPath = config.GetCompanyRawDataPath(_testCompanyName);
+            Directory.CreateDirectory(companyRawPath);
+            
+            var testCsvPath = Path.Combine(companyRawPath, "ActiveDirectoryUsers_20240101_120000.csv");
+            var csvContent = "_DiscoveryTimestamp,_DiscoveryModule,_SessionId,UserPrincipalName,DisplayName\n" +
+                           "2024-01-01T12:00:00,ActiveDirectory,TEST123,user@test.com,Test User";
+            
+            File.WriteAllText(testCsvPath, csvContent);
+
+            // Verify CSV can be found and read
+            Assert.IsTrue(File.Exists(testCsvPath), "Test CSV should exist in standardized path");
+            
+            var csvLines = File.ReadAllLines(testCsvPath);
+            Assert.IsTrue(csvLines.Length > 1, "CSV should have header and data");
+            Assert.IsTrue(csvLines[0].Contains("_DiscoveryTimestamp"), "CSV should have required columns");
+        }
+
+        [TestMethod]
+        public void TestLogServicePathIntegration()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+
+            var config = ConfigurationService.Instance;
+            
+            // Create logs directory structure
+            var companyPath = config.GetCompanyDataPath(_testCompanyName);
+            var logsPath = Path.Combine(companyPath, "Logs");
+            Directory.CreateDirectory(logsPath);
+            
+            // Test log file creation
+            var testLogPath = Path.Combine(logsPath, "test_integration.log");
+            var logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - Integration test log entry";
+            File.WriteAllText(testLogPath, logEntry);
+
+            Assert.IsTrue(File.Exists(testLogPath), "Log file should be created in standardized path");
+            
+            var logContent = File.ReadAllText(testLogPath);
+            Assert.IsTrue(logContent.Contains("Integration test"), "Log content should be preserved");
+        }
+
+        #endregion
+
+        #region PowerShell Integration Tests
+
+        [TestMethod]
+        public void TestPowerShellModulePathSeparation()
+        {
+            var config = ConfigurationService.Instance;
+            
+            // PowerShell modules should use enterprise discovery path, not discovery data path
+            var modulesPath = config.ModulesPath;
+            var scriptsPath = config.ScriptsPath;
+            var discoveryDataPath = config.DiscoveryDataRootPath;
+
+            Assert.IsFalse(modulesPath.Contains("discoverydata"), 
+                "Modules path should not contain discovery data directory");
+            Assert.IsFalse(scriptsPath.Contains("discoverydata"), 
+                "Scripts path should not contain discovery data directory");
+            
+            Assert.IsTrue(modulesPath.Contains("enterprisediscovery"), 
+                "Modules path should contain enterprise discovery directory");
+            Assert.IsTrue(scriptsPath.Contains("enterprisediscovery"), 
+                "Scripts path should contain enterprise discovery directory");
+        }
+
+        [TestMethod]
+        public void TestPowerShellScriptPathResolution()
+        {
+            var config = ConfigurationService.Instance;
+            
+            var launcherPath = config.GetDiscoveryLauncherScriptPath();
+            var appRegPath = config.GetAppRegistrationScriptPath();
+            
+            // Both should point to enterprise discovery scripts
+            Assert.IsTrue(launcherPath.EndsWith("DiscoveryModuleLauncher.ps1"), 
+                "Launcher path should end with correct script name");
+            Assert.IsTrue(appRegPath.EndsWith("DiscoveryCreateAppRegistration.ps1"), 
+                "App registration path should end with correct script name");
+            
+            // Neither should use discovery data path
+            Assert.IsFalse(launcherPath.Contains("discoverydata"));
+            Assert.IsFalse(appRegPath.Contains("discoverydata"));
+        }
+
+        #endregion
+
+        #region Error Handling Integration Tests
+
+        [TestMethod]
+        public void TestPathValidationIntegration()
+        {
+            var config = ConfigurationService.Instance;
+            var validationResult = config.ValidatePaths();
+            
+            // Validation should not fail due to path case issues
+            Assert.IsNotNull(validationResult);
+            
+            foreach (var error in validationResult.Errors)
+            {
+                // No error should reference mixed-case paths
+                Assert.IsFalse(error.Contains("DiscoveryData"), 
+                    $"Validation error should not contain mixed-case paths: {error}");
+            }
+        }
+
+        [TestMethod]
+        public void TestErrorHandlingWithInvalidPaths()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", "InvalidPath<>|?");
+            ResetConfigurationService();
+
+            // Should handle invalid path gracefully
+            var config = ConfigurationService.Instance;
+            var discoveryPath = config.DiscoveryDataRootPath;
+            
+            // Should fall back to normalized invalid path or default
+            Assert.IsNotNull(discoveryPath);
+            Assert.IsTrue(discoveryPath.Length > 0);
+        }
+
+        #endregion
+
+        #region Data Migration Integration Tests
+
+        [TestMethod]
+        public void TestDataMigrationBetweenStructures()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+
+            var config = ConfigurationService.Instance;
+            
+            // Create old structure data
+            var oldCompanyPath = Path.Combine(_testDiscoveryPath, _testCompanyName);
+            Directory.CreateDirectory(oldCompanyPath);
+            File.WriteAllText(Path.Combine(oldCompanyPath, "old_data.csv"), "test,data");
+            
+            // Create new structure
+            var newCompanyPath = Path.Combine(_testDiscoveryPath, "Profiles", _testCompanyName);
+            Directory.CreateDirectory(newCompanyPath);
+            File.WriteAllText(Path.Combine(newCompanyPath, "new_data.csv"), "test,data");
+            
+            // Configuration service should find the direct path first
+            var foundPath = config.GetCompanyDataPath(_testCompanyName);
+            Assert.AreEqual(oldCompanyPath, foundPath, "Should prefer direct company path");
+        }
+
+        [TestMethod]
+        public void TestProfileCompatibilityAcrossStructures()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+
+            var config = ConfigurationService.Instance;
+            
+            // Test different company name variations
+            var companies = new[] { "ljpops", "LJPOPS", "LjPops" };
+            
+            foreach (var company in companies)
+            {
+                var companyPath = config.GetCompanyDataPath(company);
+                Assert.IsTrue(companyPath.Contains(_testDiscoveryPath), 
+                    $"Company path for {company} should use test discovery path");
+            }
+        }
+
+        #endregion
+
+        #region Performance Integration Tests
+
+        [TestMethod]
+        public void TestPathResolutionPerformance()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+
+            var config = ConfigurationService.Instance;
+            
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            
+            // Perform multiple path resolutions
+            for (int i = 0; i < 1000; i++)
+            {
+                var companyPath = config.GetCompanyDataPath($"Company{i}");
+                var rawPath = config.GetCompanyRawDataPath($"Company{i}");
+                var exportsPath = config.GetCompanyExportsPath($"Company{i}");
+            }
+            
+            stopwatch.Stop();
+            
+            // Should complete within reasonable time (less than 1 second for 1000 operations)
+            Assert.IsTrue(stopwatch.ElapsedMilliseconds < 1000, 
+                $"Path resolution took too long: {stopwatch.ElapsedMilliseconds}ms");
+        }
+
+        [TestMethod]
+        public void TestConcurrentPathAccess()
+        {
+            Environment.SetEnvironmentVariable("MANDA_DISCOVERY_PATH", _testDiscoveryPath);
+            ResetConfigurationService();
+
+            var config = ConfigurationService.Instance;
+            var results = new List<string>();
+            var tasks = new List<Task>();
+
+            // Create multiple tasks accessing paths concurrently
+            for (int i = 0; i < 10; i++)
+            {
+                var taskId = i;
+                tasks.Add(Task.Run(() =>
+                {
+                    var path = config.GetCompanyDataPath($"ConcurrentCompany{taskId}");
+                    lock (results)
+                    {
+                        results.Add(path);
+                    }
+                }));
+            }
+
+            Task.WaitAll(tasks.ToArray());
+
+            Assert.AreEqual(10, results.Count, "All concurrent tasks should complete");
+            
+            // All results should use the test discovery path
+            foreach (var result in results)
+            {
+                Assert.IsTrue(result.StartsWith(_testDiscoveryPath.ToLowerInvariant()), 
+                    $"Concurrent result should use test path: {result}");
+            }
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        private void ResetConfigurationService()
+        {
+            var instanceField = typeof(ConfigurationService)
+                .GetField("_instance", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            instanceField?.SetValue(null, null);
+        }
+
+        #endregion
+    }
+}

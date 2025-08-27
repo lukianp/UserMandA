@@ -1,0 +1,373 @@
+﻿{
+    "Recommendations":  [
+                            "EXCELLENT: All performance metrics within acceptable ranges"
+                        ],
+    "TestEndTime":  {
+                        "value":  "\/Date(1755979148125)\/",
+                        "DisplayHint":  2,
+                        "DateTime":  "23 August 2025 20:59:08"
+                    },
+    "PerformanceTests":  [
+                             {
+                                 "StartTime":  {
+                                                   "value":  "\/Date(1755979106525)\/",
+                                                   "DisplayHint":  2,
+                                                   "DateTime":  "23 August 2025 20:58:26"
+                                               },
+                                 "AverageProcessingTime":  0.0029674105263157893,
+                                 "TotalFilesProcessed":  19,
+                                 "Files":  [
+                                               {
+                                                   "Records":  228,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0070059,
+                                                   "FileName":  "ServicePrincipals.csv",
+                                                   "Size":  188.75
+                                               },
+                                               {
+                                                   "Records":  25,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0011849,
+                                                   "FileName":  "Users_TestData.csv",
+                                                   "Size":  9.08
+                                               },
+                                               {
+                                                   "Records":  33,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0009661,
+                                                   "FileName":  "Applications_TestData.csv",
+                                                   "Size":  8.54
+                                               },
+                                               {
+                                                   "Records":  6,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0004432,
+                                                   "FileName":  "IntuneManagedApps.csv",
+                                                   "Size":  7.82
+                                               },
+                                               {
+                                                   "Records":  11,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0006158,
+                                                   "FileName":  "Groups.csv",
+                                                   "Size":  6.13
+                                               },
+                                               {
+                                                   "Records":  11,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.00071309999999999993,
+                                                   "FileName":  "Users.csv",
+                                                   "Size":  5.7
+                                               },
+                                               {
+                                                   "Records":  20,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.015764399999999998,
+                                                   "FileName":  "Groups_TestData.csv",
+                                                   "Size":  5.38
+                                               },
+                                               {
+                                                   "Records":  2,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.00037349999999999997,
+                                                   "FileName":  "Applications.csv",
+                                                   "Size":  3.44
+                                               },
+                                               {
+                                                   "Records":  5,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0003068,
+                                                   "FileName":  "ExchangeDistributionGroups.csv",
+                                                   "Size":  3.13
+                                               },
+                                               {
+                                                   "Records":  7,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0002815,
+                                                   "FileName":  "SharePointSites.csv",
+                                                   "Size":  2.69
+                                               },
+                                               {
+                                                   "Records":  5,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0002983,
+                                                   "FileName":  "PhysicalServer_Storage.csv",
+                                                   "Size":  1.52
+                                               },
+                                               {
+                                                   "Records":  6,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0002912,
+                                                   "FileName":  "PhysicalServer_Hardware.csv",
+                                                   "Size":  1.49
+                                               },
+                                               {
+                                                   "Records":  3,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0002525,
+                                                   "FileName":  "PhysicalServer_NetworkHardware.csv",
+                                                   "Size":  1.13
+                                               },
+                                               {
+                                                   "Records":  2,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0002048,
+                                                   "FileName":  "DirectoryRoles.csv",
+                                                   "Size":  0.88
+                                               },
+                                               {
+                                                   "Records":  2,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0002477,
+                                                   "FileName":  "PhysicalServer_BIOS.csv",
+                                                   "Size":  0.87
+                                               },
+                                               {
+                                                   "Records":  null,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.002399,
+                                                   "FileName":  "Tenant.csv",
+                                                   "Size":  0.65
+                                               },
+                                               {
+                                                   "Records":  null,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.00033059999999999996,
+                                                   "FileName":  "ExchangeMailContacts.csv",
+                                                   "Size":  0.45
+                                               },
+                                               {
+                                                   "Records":  null,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0004147,
+                                                   "FileName":  "MicrosoftTeams.csv",
+                                                   "Size":  0.38
+                                               },
+                                               {
+                                                   "Records":  null,
+                                                   "Status":  "Success",
+                                                   "ProcessingTime":  0.0002786,
+                                                   "FileName":  "GPO_PlaceholderData.csv",
+                                                   "Size":  0.25
+                                               }
+                                           ],
+                                 "TestName":  "CSV File Processing",
+                                 "TotalRecordsProcessed":  366,
+                                 "Throughput":  6491.57159884216,
+                                 "EndTime":  {
+                                                 "value":  "\/Date(1755979106581)\/",
+                                                 "DisplayHint":  2,
+                                                 "DateTime":  "23 August 2025 20:58:26"
+                                             }
+                             },
+                             {
+                                 "Samples":  [
+                                                 {
+                                                     "WorkingSet":  242.41,
+                                                     "Timestamp":  {
+                                                                       "value":  "\/Date(1755979110725)\/",
+                                                                       "DisplayHint":  2,
+                                                                       "DateTime":  "23 August 2025 20:58:30"
+                                                                   },
+                                                     "VirtualMemory":  1426.34,
+                                                     "Threads":  47,
+                                                     "Handles":  836,
+                                                     "CPU":  3.06
+                                                 },
+                                                 {
+                                                     "WorkingSet":  242.41,
+                                                     "Timestamp":  {
+                                                                       "value":  "\/Date(1755979114805)\/",
+                                                                       "DisplayHint":  2,
+                                                                       "DateTime":  "23 August 2025 20:58:34"
+                                                                   },
+                                                     "VirtualMemory":  1426.34,
+                                                     "Threads":  47,
+                                                     "Handles":  836,
+                                                     "CPU":  6.16
+                                                 },
+                                                 {
+                                                     "WorkingSet":  242.37,
+                                                     "Timestamp":  {
+                                                                       "value":  "\/Date(1755979118871)\/",
+                                                                       "DisplayHint":  2,
+                                                                       "DateTime":  "23 August 2025 20:58:38"
+                                                                   },
+                                                     "VirtualMemory":  1421.84,
+                                                     "Threads":  44,
+                                                     "Handles":  836,
+                                                     "CPU":  1.55
+                                                 },
+                                                 {
+                                                     "WorkingSet":  242.37,
+                                                     "Timestamp":  {
+                                                                       "value":  "\/Date(1755979122952)\/",
+                                                                       "DisplayHint":  2,
+                                                                       "DateTime":  "23 August 2025 20:58:42"
+                                                                   },
+                                                     "VirtualMemory":  1421.84,
+                                                     "Threads":  44,
+                                                     "Handles":  836,
+                                                     "CPU":  0
+                                                 },
+                                                 {
+                                                     "WorkingSet":  242.42,
+                                                     "Timestamp":  {
+                                                                       "value":  "\/Date(1755979127016)\/",
+                                                                       "DisplayHint":  2,
+                                                                       "DateTime":  "23 August 2025 20:58:47"
+                                                                   },
+                                                     "VirtualMemory":  1426.34,
+                                                     "Threads":  47,
+                                                     "Handles":  846,
+                                                     "CPU":  0
+                                                 },
+                                                 {
+                                                     "WorkingSet":  242.45,
+                                                     "Timestamp":  {
+                                                                       "value":  "\/Date(1755979131091)\/",
+                                                                       "DisplayHint":  2,
+                                                                       "DateTime":  "23 August 2025 20:58:51"
+                                                                   },
+                                                     "VirtualMemory":  1427.84,
+                                                     "Threads":  48,
+                                                     "Handles":  849,
+                                                     "CPU":  3.06
+                                                 },
+                                                 {
+                                                     "WorkingSet":  242.42,
+                                                     "Timestamp":  {
+                                                                       "value":  "\/Date(1755979135154)\/",
+                                                                       "DisplayHint":  2,
+                                                                       "DateTime":  "23 August 2025 20:58:55"
+                                                                   },
+                                                     "VirtualMemory":  1426.34,
+                                                     "Threads":  47,
+                                                     "Handles":  846,
+                                                     "CPU":  4.64
+                                                 },
+                                                 {
+                                                     "WorkingSet":  242.42,
+                                                     "Timestamp":  {
+                                                                       "value":  "\/Date(1755979139241)\/",
+                                                                       "DisplayHint":  2,
+                                                                       "DateTime":  "23 August 2025 20:58:59"
+                                                                   },
+                                                     "VirtualMemory":  1426.34,
+                                                     "Threads":  47,
+                                                     "Handles":  846,
+                                                     "CPU":  0
+                                                 },
+                                                 {
+                                                     "WorkingSet":  242.42,
+                                                     "Timestamp":  {
+                                                                       "value":  "\/Date(1755979143307)\/",
+                                                                       "DisplayHint":  2,
+                                                                       "DateTime":  "23 August 2025 20:59:03"
+                                                                   },
+                                                     "VirtualMemory":  1426.34,
+                                                     "Threads":  47,
+                                                     "Handles":  846,
+                                                     "CPU":  0
+                                                 },
+                                                 {
+                                                     "WorkingSet":  242.39,
+                                                     "Timestamp":  {
+                                                                       "value":  "\/Date(1755979147390)\/",
+                                                                       "DisplayHint":  2,
+                                                                       "DateTime":  "23 August 2025 20:59:07"
+                                                                   },
+                                                     "VirtualMemory":  1423.34,
+                                                     "Threads":  45,
+                                                     "Handles":  846,
+                                                     "CPU":  4.59
+                                                 }
+                                             ],
+                                 "ProcessId":  24108,
+                                 "TestName":  "Application Performance Monitoring",
+                                 "StartTime":  {
+                                                   "value":  "\/Date(1755979106603)\/",
+                                                   "DisplayHint":  2,
+                                                   "DateTime":  "23 August 2025 20:58:26"
+                                               },
+                                 "EndTime":  {
+                                                 "value":  "\/Date(1755979147391)\/",
+                                                 "DisplayHint":  2,
+                                                 "DateTime":  "23 August 2025 20:59:07"
+                                             },
+                                 "Duration":  30
+                             },
+                             {
+                                 "EndTime":  {
+                                                 "value":  "\/Date(1755979148117)\/",
+                                                 "DisplayHint":  2,
+                                                 "DateTime":  "23 August 2025 20:59:08"
+                                             },
+                                 "SuccessfulLoads":  5,
+                                 "FailedLoads":  0,
+                                 "TestName":  "Module Loading Performance",
+                                 "TotalLoadTime":  0.67267360000000009,
+                                 "Modules":  [
+                                                 {
+                                                     "ModuleName":  "ActiveDirectoryDiscovery.psm1",
+                                                     "LoadTime":  0.0495411,
+                                                     "Status":  "Success"
+                                                 },
+                                                 {
+                                                     "ModuleName":  "Application.psm1",
+                                                     "LoadTime":  0.5213219,
+                                                     "Status":  "Success"
+                                                 },
+                                                 {
+                                                     "ModuleName":  "ApplicationDependencyMapping.psm1",
+                                                     "LoadTime":  0.014868999999999999,
+                                                     "Status":  "Success"
+                                                 },
+                                                 {
+                                                     "ModuleName":  "ApplicationDiscovery.psm1",
+                                                     "LoadTime":  0.034941799999999995,
+                                                     "Status":  "Success"
+                                                 },
+                                                 {
+                                                     "ModuleName":  "AzureDiscovery.psm1",
+                                                     "LoadTime":  0.0519998,
+                                                     "Status":  "Success"
+                                                 }
+                                             ],
+                                 "StartTime":  {
+                                                   "value":  "\/Date(1755979147436)\/",
+                                                   "DisplayHint":  2,
+                                                   "DateTime":  "23 August 2025 20:59:07"
+                                               }
+                             }
+                         ],
+    "BaselineMetrics":  {
+                            "CPU":  12.418293640361465,
+                            "Memory":  62896,
+                            "Disk":  4.6303466233034207
+                        },
+    "ApplicationMetrics":  {
+                               "CPUMax":  0,
+                               "MemoryAverage":  0,
+                               "MemoryMin":  0,
+                               "MemoryMax":  0,
+                               "CPUAverage":  0,
+                               "ProcessStability":  "STABLE"
+                           },
+    "SystemInfo":  {
+                       "LogicalProcessors":  24,
+                       "ComputerName":  "DADDY_WALRUS",
+                       "TotalRAM":  95.37,
+                       "OS":  "Windows 10 Pro",
+                       "ProcessorCount":  1
+                   },
+    "DataProcessingMetrics":  {
+
+                              },
+    "TestDuration":  30,
+    "TestStartTime":  {
+                          "value":  "\/Date(1755979099210)\/",
+                          "DisplayHint":  2,
+                          "DateTime":  "23 August 2025 20:58:19"
+                      }
+}

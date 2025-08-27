@@ -1,0 +1,273 @@
+<UserControl x:Class="MandADiscoverySuite.Views.FileSystemMigrationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:controls="clr-namespace:MandADiscoverySuite.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1200">
+
+    <Grid Background="#F8F9FA">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Page Header -->
+        <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="24,20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="File System Migration" FontSize="28" FontWeight="Bold" Foreground="#111827"/>
+                    <TextBlock Text="Enterprise-grade file migration with comprehensive permission preservation and ShareGate-quality experience" 
+                               FontSize="16" Foreground="#6B7280" Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Border Background="#EBF8FF" CornerRadius="6" Padding="12,6" Margin="0,0,12,0">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z" Fill="#0078D4" Width="16" Height="16" Margin="0,0,6,0"/>
+                            <TextBlock Text="Enterprise Ready" FontSize="12" FontWeight="Medium" Foreground="#0078D4"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Background="#F0FDF4" CornerRadius="6" Padding="12,6">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.59,8.09L11,13.67L7.91,10.59L6.5,12L11,16.5Z" 
+                                  Fill="#059669" Width="16" Height="16" Margin="0,0,6,0"/>
+                            <TextBlock Text="Production Ready" FontSize="12" FontWeight="Medium" Foreground="#059669"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <TabControl Margin="24" Background="Transparent" BorderThickness="0">
+                <TabControl.Resources>
+                    <Style TargetType="TabItem">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="TabItem">
+                                    <Border Name="Border" 
+                                            Background="Transparent" 
+                                            BorderThickness="0,0,0,2" 
+                                            BorderBrush="Transparent"
+                                            Padding="20,12">
+                                        <ContentPresenter ContentSource="Header" 
+                                                          HorizontalAlignment="Center" 
+                                                          VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Border" Property="BorderBrush" Value="#0078D4"/>
+                                            <Setter Property="Foreground" Value="#0078D4"/>
+                                            <Setter Property="FontWeight" Value="Medium"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="False">
+                                            <Setter Property="Foreground" Value="#6B7280"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </TabControl.Resources>
+
+                <!-- Migration Tab -->
+                <TabItem Header="📁 Migration">
+                    <controls:FileSystemMigrationControl/>
+                </TabItem>
+
+                <!-- Planning Tab -->
+                <TabItem Header="📋 Planning">
+                    <Grid Background="#FFFFFF" Margin="0,12,0,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
+                            <StackPanel>
+                                <TextBlock Text="Migration Planning" FontSize="20" FontWeight="SemiBold" Foreground="#111827" Margin="0,0,0,16"/>
+                                
+                                <!-- Planning Content -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Planning Steps -->
+                                    <StackPanel Grid.Column="0" Margin="0,0,24,0">
+                                        <!-- Assessment -->
+                                        <Border Background="#F8F9FA" CornerRadius="8" Padding="20" Margin="0,0,0,16">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                                    <Path Data="M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7H14A7,7 0 0,1 21,14H22A1,1 0 0,1 23,15V18A1,1 0 0,1 22,19H21V20A2,2 0 0,1 19,22H5A2,2 0 0,1 3,20V19H2A1,1 0 0,1 1,18V15A1,1 0 0,1 2,14H3A7,7 0 0,1 10,7H11V5.73C10.4,5.39 10,4.74 10,4A2,2 0 0,1 12,2Z" 
+                                                          Fill="#0078D4" Width="20" Height="20" Margin="0,0,8,0"/>
+                                                    <TextBlock Text="1. Assessment and Discovery" FontSize="16" FontWeight="Medium" Foreground="#111827"/>
+                                                </StackPanel>
+                                                <TextBlock Text="Analyze source file systems, identify dependencies, and assess migration complexity. Use the Estimate feature to get detailed sizing and timing information."
+                                                           TextWrapping="Wrap" Foreground="#4B5563" LineHeight="24"/>
+                                                <Button Content="Run Assessment" Margin="0,12,0,0" HorizontalAlignment="Left" Padding="12,8"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Planning -->
+                                        <Border Background="#F8F9FA" CornerRadius="8" Padding="20" Margin="0,0,0,16">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                                    <Path Data="M14,17H7V15H14M17,13H7V11H17M17,9H7V7H17M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3Z" 
+                                                          Fill="#059669" Width="20" Height="20" Margin="0,0,8,0"/>
+                                                    <TextBlock Text="2. Migration Strategy" FontSize="16" FontWeight="Medium" Foreground="#111827"/>
+                                                </StackPanel>
+                                                <TextBlock Text="Define migration waves, prioritize critical systems, and establish rollback procedures. Consider business impact and maintenance windows."
+                                                           TextWrapping="Wrap" Foreground="#4B5563" LineHeight="24"/>
+                                                <Button Content="Create Strategy" Margin="0,12,0,0" HorizontalAlignment="Left" Padding="12,8"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Testing -->
+                                        <Border Background="#F8F9FA" CornerRadius="8" Padding="20" Margin="0,0,0,16">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                                    <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.59,8.09L11,13.67L7.91,10.59L6.5,12L11,16.5Z" 
+                                                          Fill="#F59E0B" Width="20" Height="20" Margin="0,0,8,0"/>
+                                                    <TextBlock Text="3. Testing and Validation" FontSize="16" FontWeight="Medium" Foreground="#111827"/>
+                                                </StackPanel>
+                                                <TextBlock Text="Perform pilot migrations, validate data integrity, and test application compatibility. Ensure all stakeholders approve the process."
+                                                           TextWrapping="Wrap" Foreground="#4B5563" LineHeight="24"/>
+                                                <Button Content="Setup Testing" Margin="0,12,0,0" HorizontalAlignment="Left" Padding="12,8"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <!-- Planning Checklist -->
+                                    <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#E5E7EB" BorderThickness="1" 
+                                            CornerRadius="8" Padding="20">
+                                        <StackPanel>
+                                            <TextBlock Text="Migration Checklist" FontSize="16" FontWeight="Medium" Margin="0,0,0,16"/>
+                                            
+                                            <StackPanel>
+                                                <CheckBox Content="Source system inventory complete" Margin="0,4"/>
+                                                <CheckBox Content="Permission mapping documented" Margin="0,4"/>
+                                                <CheckBox Content="Business impact assessment done" Margin="0,4"/>
+                                                <CheckBox Content="Backup and rollback plan ready" Margin="0,4"/>
+                                                <CheckBox Content="Stakeholder approval obtained" Margin="0,4"/>
+                                                <CheckBox Content="Migration window scheduled" Margin="0,4"/>
+                                                <CheckBox Content="Pilot migration successful" Margin="0,4"/>
+                                                <CheckBox Content="Monitoring and alerting configured" Margin="0,4"/>
+                                                <CheckBox Content="User communication prepared" Margin="0,4"/>
+                                                <CheckBox Content="Post-migration validation plan" Margin="0,4"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </TabItem>
+
+                <!-- Monitoring Tab -->
+                <TabItem Header="📊 Monitoring">
+                    <Grid Background="#FFFFFF" Margin="0,12,0,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
+                            <StackPanel>
+                                <TextBlock Text="Migration Monitoring" FontSize="20" FontWeight="SemiBold" Foreground="#111827" Margin="0,0,0,16"/>
+                                
+                                <!-- Monitoring Dashboard -->
+                                <UniformGrid Rows="1" Columns="4" Margin="0,0,0,24">
+                                    <!-- Active Migrations -->
+                                    <Border Background="#EBF8FF" CornerRadius="8" Padding="16" Margin="0,0,8,0">
+                                        <StackPanel>
+                                            <TextBlock Text="0" FontSize="24" FontWeight="Bold" Foreground="#0078D4"/>
+                                            <TextBlock Text="Active Migrations" FontSize="12" Foreground="#0078D4"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Total Data Migrated -->
+                                    <Border Background="#F0FDF4" CornerRadius="8" Padding="16" Margin="4,0">
+                                        <StackPanel>
+                                            <TextBlock Text="0 GB" FontSize="24" FontWeight="Bold" Foreground="#059669"/>
+                                            <TextBlock Text="Data Migrated" FontSize="12" Foreground="#059669"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Success Rate -->
+                                    <Border Background="#FEF3C7" CornerRadius="8" Padding="16" Margin="4,0">
+                                        <StackPanel>
+                                            <TextBlock Text="100%" FontSize="24" FontWeight="Bold" Foreground="#F59E0B"/>
+                                            <TextBlock Text="Success Rate" FontSize="12" Foreground="#F59E0B"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Average Speed -->
+                                    <Border Background="#EDE9FE" CornerRadius="8" Padding="16" Margin="8,0,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="0 MB/s" FontSize="24" FontWeight="Bold" Foreground="#7C3AED"/>
+                                            <TextBlock Text="Avg Speed" FontSize="12" Foreground="#7C3AED"/>
+                                        </StackPanel>
+                                    </Border>
+                                </UniformGrid>
+
+                                <!-- Recent Activity -->
+                                <Border Background="#F8F9FA" CornerRadius="8" Padding="20">
+                                    <StackPanel>
+                                        <TextBlock Text="Recent Migration Activity" FontSize="16" FontWeight="Medium" Margin="0,0,0,12"/>
+                                        <TextBlock Text="No recent migration activity. Start a migration to see real-time updates here." 
+                                                   Foreground="#6B7280" TextAlignment="Center" Margin="0,40"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </TabItem>
+
+                <!-- Help Tab -->
+                <TabItem Header="❓ Help">
+                    <Grid Background="#FFFFFF" Margin="0,12,0,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
+                            <StackPanel>
+                                <TextBlock Text="File System Migration Help" FontSize="20" FontWeight="SemiBold" Foreground="#111827" Margin="0,0,0,16"/>
+                                
+                                <!-- Help Content -->
+                                <StackPanel>
+                                    <!-- Getting Started -->
+                                    <TextBlock Text="Getting Started" FontSize="16" FontWeight="Medium" Foreground="#111827" Margin="0,0,0,8"/>
+                                    <TextBlock Text="1. Select your source and destination paths using the folder browser buttons" 
+                                               Foreground="#4B5563" Margin="0,0,0,4"/>
+                                    <TextBlock Text="2. Configure migration options based on your requirements" 
+                                               Foreground="#4B5563" Margin="0,0,0,4"/>
+                                    <TextBlock Text="3. Use the Estimate button to preview migration size and time" 
+                                               Foreground="#4B5563" Margin="0,0,0,4"/>
+                                    <TextBlock Text="4. Click Start Migration to begin the process" 
+                                               Foreground="#4B5563" Margin="0,0,0,16"/>
+
+                                    <!-- Best Practices -->
+                                    <TextBlock Text="Best Practices" FontSize="16" FontWeight="Medium" Foreground="#111827" Margin="0,0,0,8"/>
+                                    <TextBlock Text="• Always test with a small subset of data first" 
+                                               Foreground="#4B5563" Margin="0,0,0,4"/>
+                                    <TextBlock Text="• Ensure sufficient disk space at the destination" 
+                                               Foreground="#4B5563" Margin="0,0,0,4"/>
+                                    <TextBlock Text="• Schedule migrations during maintenance windows" 
+                                               Foreground="#4B5563" Margin="0,0,0,4"/>
+                                    <TextBlock Text="• Keep detailed logs of all migration activities" 
+                                               Foreground="#4B5563" Margin="0,0,0,16"/>
+
+                                    <!-- Troubleshooting -->
+                                    <TextBlock Text="Troubleshooting" FontSize="16" FontWeight="Medium" Foreground="#111827" Margin="0,0,0,8"/>
+                                    <TextBlock Text="Permission Errors: Ensure you have administrative rights to both source and destination" 
+                                               Foreground="#4B5563" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Network Issues: Check network connectivity and firewall settings" 
+                                               Foreground="#4B5563" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Performance: Adjust concurrency settings based on system resources" 
+                                               Foreground="#4B5563" Margin="0,0,0,4"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </Grid>
+</UserControl>

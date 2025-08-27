@@ -1,0 +1,861 @@
+﻿{
+    "StartTime":  {
+                      "value":  "\/Date(1756120916178)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "25 August 2025 12:21:56"
+                  },
+    "CsvValidation":  {
+                          "BadTypes":  [
+
+                                       ],
+                          "RecordCountDelta":  146,
+                          "MissingColumns":  [
+
+                                             ],
+                          "CheckedPaths":  [
+                                               "C:\\discoverydata\\ljpops\\Raw",
+                                               "C:\\discoverydata\\Profiles\\ljpops\\Raw",
+                                               "C:\\DiscoveryData\\ljpops\\Raw",
+                                               "C:\\DiscoveryData\\Profiles\\ljpops\\Raw"
+                                           ]
+                      },
+    "FunctionalCases":  [
+                            {
+                                "Status":  "PASS",
+                                "Name":  "Profile Creation Path Handling",
+                                "Company":  "SimTestCompany",
+                                "Details":  [
+                                                {
+                                                    "ExpectedStructure":  [
+                                                                              "Raw",
+                                                                              "Exports",
+                                                                              "Logs"
+                                                                          ],
+                                                    "BasePath":  "C:\\discoverydata",
+                                                    "CanCreate":  true,
+                                                    "CompanyPath":  "C:\\discoverydata\\SimTestCompany"
+                                                },
+                                                {
+                                                    "ExpectedStructure":  [
+                                                                              "Raw",
+                                                                              "Exports",
+                                                                              "Logs"
+                                                                          ],
+                                                    "BasePath":  "C:\\DiscoveryData",
+                                                    "CanCreate":  true,
+                                                    "CompanyPath":  "C:\\DiscoveryData\\SimTestCompany"
+                                                }
+                                            ]
+                            },
+                            {
+                                "LoadedFiles":  [
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\Applications.csv",
+                                                        "File":  "Applications.csv",
+                                                        "Size":  785,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\Applications_TestData.csv",
+                                                        "File":  "Applications_TestData.csv",
+                                                        "Size":  487,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\DirectoryRoles.csv",
+                                                        "File":  "DirectoryRoles.csv",
+                                                        "Size":  833,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\ExchangeDistributionGroups.csv",
+                                                        "File":  "ExchangeDistributionGroups.csv",
+                                                        "Size":  657,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\ExchangeMailContacts.csv",
+                                                        "File":  "ExchangeMailContacts.csv",
+                                                        "Size":  515,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\GPO_PlaceholderData.csv",
+                                                        "File":  "GPO_PlaceholderData.csv",
+                                                        "Size":  698,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\Groups.csv",
+                                                        "File":  "Groups.csv",
+                                                        "Size":  886,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\Groups_TestData.csv",
+                                                        "File":  "Groups_TestData.csv",
+                                                        "Size":  475,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\IntuneManagedApps.csv",
+                                                        "File":  "IntuneManagedApps.csv",
+                                                        "Size":  745,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\MicrosoftTeams.csv",
+                                                        "File":  "MicrosoftTeams.csv",
+                                                        "Size":  850,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\PhysicalServer_BIOS.csv",
+                                                        "File":  "PhysicalServer_BIOS.csv",
+                                                        "Size":  616,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\PhysicalServer_Hardware.csv",
+                                                        "File":  "PhysicalServer_Hardware.csv",
+                                                        "Size":  637,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\PhysicalServer_NetworkHardware.csv",
+                                                        "File":  "PhysicalServer_NetworkHardware.csv",
+                                                        "Size":  706,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\PhysicalServer_Storage.csv",
+                                                        "File":  "PhysicalServer_Storage.csv",
+                                                        "Size":  995,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\ServicePrincipals.csv",
+                                                        "File":  "ServicePrincipals.csv",
+                                                        "Size":  848,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\SharePointSites.csv",
+                                                        "File":  "SharePointSites.csv",
+                                                        "Size":  848,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\Tenant.csv",
+                                                        "File":  "Tenant.csv",
+                                                        "Size":  291,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\Users.csv",
+                                                        "File":  "Users.csv",
+                                                        "Size":  1123,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\discoverydata\\ljpops\\Raw\\Users_TestData.csv",
+                                                        "File":  "Users_TestData.csv",
+                                                        "Size":  647,
+                                                        "Structure":  "C:\\discoverydata"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Applications.csv",
+                                                        "File":  "Applications.csv",
+                                                        "Size":  785,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Applications_TestData.csv",
+                                                        "File":  "Applications_TestData.csv",
+                                                        "Size":  487,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\DirectoryRoles.csv",
+                                                        "File":  "DirectoryRoles.csv",
+                                                        "Size":  833,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\ExchangeDistributionGroups.csv",
+                                                        "File":  "ExchangeDistributionGroups.csv",
+                                                        "Size":  657,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\ExchangeMailContacts.csv",
+                                                        "File":  "ExchangeMailContacts.csv",
+                                                        "Size":  515,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\GPO_PlaceholderData.csv",
+                                                        "File":  "GPO_PlaceholderData.csv",
+                                                        "Size":  698,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Groups.csv",
+                                                        "File":  "Groups.csv",
+                                                        "Size":  886,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Groups_TestData.csv",
+                                                        "File":  "Groups_TestData.csv",
+                                                        "Size":  475,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\IntuneManagedApps.csv",
+                                                        "File":  "IntuneManagedApps.csv",
+                                                        "Size":  745,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\MicrosoftTeams.csv",
+                                                        "File":  "MicrosoftTeams.csv",
+                                                        "Size":  850,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\PhysicalServer_BIOS.csv",
+                                                        "File":  "PhysicalServer_BIOS.csv",
+                                                        "Size":  616,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\PhysicalServer_Hardware.csv",
+                                                        "File":  "PhysicalServer_Hardware.csv",
+                                                        "Size":  637,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\PhysicalServer_NetworkHardware.csv",
+                                                        "File":  "PhysicalServer_NetworkHardware.csv",
+                                                        "Size":  706,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\PhysicalServer_Storage.csv",
+                                                        "File":  "PhysicalServer_Storage.csv",
+                                                        "Size":  995,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\ServicePrincipals.csv",
+                                                        "File":  "ServicePrincipals.csv",
+                                                        "Size":  848,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\SharePointSites.csv",
+                                                        "File":  "SharePointSites.csv",
+                                                        "Size":  848,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Tenant.csv",
+                                                        "File":  "Tenant.csv",
+                                                        "Size":  291,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Users.csv",
+                                                        "File":  "Users.csv",
+                                                        "Size":  1123,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    },
+                                                    {
+                                                        "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Users_TestData.csv",
+                                                        "File":  "Users_TestData.csv",
+                                                        "Size":  647,
+                                                        "Structure":  "C:\\DiscoveryData"
+                                                    }
+                                                ],
+                                "Status":  "PASS",
+                                "Name":  "Data Loading Simulation"
+                            },
+                            {
+                                "Status":  "PASS",
+                                "ResolvedPaths":  {
+                                                      "ScriptsPath":  "C:\\enterprisediscovery\\Scripts",
+                                                      "EnterpriseDiscoveryRoot":  "C:\\enterprisediscovery",
+                                                      "CompanyDataPath":  "c:\\discoverydata\\ljpops",
+                                                      "DiscoveryDataRoot":  "c:\\discoverydata",
+                                                      "ModulesPath":  "C:\\enterprisediscovery\\Modules\\Discovery"
+                                                  },
+                                "Name":  "Application Startup Path Resolution"
+                            }
+                        ],
+    "Artifacts":  [
+
+                  ],
+    "TestSuites":  {
+                       "path_consistency":  {
+                                                "Status":  "PASS",
+                                                "Tests":  [
+                                                              {
+                                                                  "Expected":  "c:\\discoverydata",
+                                                                  "Status":  "PASS",
+                                                                  "Name":  "Default Path Normalization"
+                                                              },
+                                                              {
+                                                                  "Status":  "PASS",
+                                                                  "Name":  "Environment Variable Override"
+                                                              },
+                                                              {
+                                                                  "Status":  "PASS",
+                                                                  "Name":  "Case Normalization"
+                                                              }
+                                                          ]
+                                            },
+                       "environment_variables":  {
+                                                     "Status":  "PASS",
+                                                     "Tests":  [
+                                                                   {
+                                                                       "Status":  "PASS",
+                                                                       "Name":  "Null Environment Variable Handling"
+                                                                   },
+                                                                   {
+                                                                       "Status":  "PASS",
+                                                                       "Name":  "Whitespace Environment Variable Handling"
+                                                                   },
+                                                                   {
+                                                                       "Status":  "PASS",
+                                                                       "Name":  "Environment Variable Path Normalization"
+                                                                   }
+                                                               ]
+                                                 },
+                       "functional_simulation":  {
+                                                     "Status":  "PASS",
+                                                     "Tests":  [
+                                                                   {
+                                                                       "Status":  "PASS",
+                                                                       "Name":  "Profile Creation Path Handling",
+                                                                       "Company":  "SimTestCompany",
+                                                                       "Details":  [
+                                                                                       {
+                                                                                           "ExpectedStructure":  [
+                                                                                                                     "Raw",
+                                                                                                                     "Exports",
+                                                                                                                     "Logs"
+                                                                                                                 ],
+                                                                                           "BasePath":  "C:\\discoverydata",
+                                                                                           "CanCreate":  true,
+                                                                                           "CompanyPath":  "C:\\discoverydata\\SimTestCompany"
+                                                                                       },
+                                                                                       {
+                                                                                           "ExpectedStructure":  [
+                                                                                                                     "Raw",
+                                                                                                                     "Exports",
+                                                                                                                     "Logs"
+                                                                                                                 ],
+                                                                                           "BasePath":  "C:\\DiscoveryData",
+                                                                                           "CanCreate":  true,
+                                                                                           "CompanyPath":  "C:\\DiscoveryData\\SimTestCompany"
+                                                                                       }
+                                                                                   ]
+                                                                   },
+                                                                   {
+                                                                       "LoadedFiles":  [
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\Applications.csv",
+                                                                                               "File":  "Applications.csv",
+                                                                                               "Size":  785,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\Applications_TestData.csv",
+                                                                                               "File":  "Applications_TestData.csv",
+                                                                                               "Size":  487,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\DirectoryRoles.csv",
+                                                                                               "File":  "DirectoryRoles.csv",
+                                                                                               "Size":  833,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\ExchangeDistributionGroups.csv",
+                                                                                               "File":  "ExchangeDistributionGroups.csv",
+                                                                                               "Size":  657,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\ExchangeMailContacts.csv",
+                                                                                               "File":  "ExchangeMailContacts.csv",
+                                                                                               "Size":  515,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\GPO_PlaceholderData.csv",
+                                                                                               "File":  "GPO_PlaceholderData.csv",
+                                                                                               "Size":  698,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\Groups.csv",
+                                                                                               "File":  "Groups.csv",
+                                                                                               "Size":  886,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\Groups_TestData.csv",
+                                                                                               "File":  "Groups_TestData.csv",
+                                                                                               "Size":  475,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\IntuneManagedApps.csv",
+                                                                                               "File":  "IntuneManagedApps.csv",
+                                                                                               "Size":  745,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\MicrosoftTeams.csv",
+                                                                                               "File":  "MicrosoftTeams.csv",
+                                                                                               "Size":  850,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\PhysicalServer_BIOS.csv",
+                                                                                               "File":  "PhysicalServer_BIOS.csv",
+                                                                                               "Size":  616,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\PhysicalServer_Hardware.csv",
+                                                                                               "File":  "PhysicalServer_Hardware.csv",
+                                                                                               "Size":  637,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\PhysicalServer_NetworkHardware.csv",
+                                                                                               "File":  "PhysicalServer_NetworkHardware.csv",
+                                                                                               "Size":  706,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\PhysicalServer_Storage.csv",
+                                                                                               "File":  "PhysicalServer_Storage.csv",
+                                                                                               "Size":  995,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\ServicePrincipals.csv",
+                                                                                               "File":  "ServicePrincipals.csv",
+                                                                                               "Size":  848,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\SharePointSites.csv",
+                                                                                               "File":  "SharePointSites.csv",
+                                                                                               "Size":  848,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\Tenant.csv",
+                                                                                               "File":  "Tenant.csv",
+                                                                                               "Size":  291,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\Users.csv",
+                                                                                               "File":  "Users.csv",
+                                                                                               "Size":  1123,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\discoverydata\\ljpops\\Raw\\Users_TestData.csv",
+                                                                                               "File":  "Users_TestData.csv",
+                                                                                               "Size":  647,
+                                                                                               "Structure":  "C:\\discoverydata"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Applications.csv",
+                                                                                               "File":  "Applications.csv",
+                                                                                               "Size":  785,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Applications_TestData.csv",
+                                                                                               "File":  "Applications_TestData.csv",
+                                                                                               "Size":  487,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\DirectoryRoles.csv",
+                                                                                               "File":  "DirectoryRoles.csv",
+                                                                                               "Size":  833,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\ExchangeDistributionGroups.csv",
+                                                                                               "File":  "ExchangeDistributionGroups.csv",
+                                                                                               "Size":  657,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\ExchangeMailContacts.csv",
+                                                                                               "File":  "ExchangeMailContacts.csv",
+                                                                                               "Size":  515,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\GPO_PlaceholderData.csv",
+                                                                                               "File":  "GPO_PlaceholderData.csv",
+                                                                                               "Size":  698,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Groups.csv",
+                                                                                               "File":  "Groups.csv",
+                                                                                               "Size":  886,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Groups_TestData.csv",
+                                                                                               "File":  "Groups_TestData.csv",
+                                                                                               "Size":  475,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\IntuneManagedApps.csv",
+                                                                                               "File":  "IntuneManagedApps.csv",
+                                                                                               "Size":  745,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\MicrosoftTeams.csv",
+                                                                                               "File":  "MicrosoftTeams.csv",
+                                                                                               "Size":  850,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\PhysicalServer_BIOS.csv",
+                                                                                               "File":  "PhysicalServer_BIOS.csv",
+                                                                                               "Size":  616,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\PhysicalServer_Hardware.csv",
+                                                                                               "File":  "PhysicalServer_Hardware.csv",
+                                                                                               "Size":  637,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\PhysicalServer_NetworkHardware.csv",
+                                                                                               "File":  "PhysicalServer_NetworkHardware.csv",
+                                                                                               "Size":  706,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\PhysicalServer_Storage.csv",
+                                                                                               "File":  "PhysicalServer_Storage.csv",
+                                                                                               "Size":  995,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\ServicePrincipals.csv",
+                                                                                               "File":  "ServicePrincipals.csv",
+                                                                                               "Size":  848,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\SharePointSites.csv",
+                                                                                               "File":  "SharePointSites.csv",
+                                                                                               "Size":  848,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Tenant.csv",
+                                                                                               "File":  "Tenant.csv",
+                                                                                               "Size":  291,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Users.csv",
+                                                                                               "File":  "Users.csv",
+                                                                                               "Size":  1123,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           },
+                                                                                           {
+                                                                                               "Path":  "C:\\DiscoveryData\\ljpops\\Raw\\Users_TestData.csv",
+                                                                                               "File":  "Users_TestData.csv",
+                                                                                               "Size":  647,
+                                                                                               "Structure":  "C:\\DiscoveryData"
+                                                                                           }
+                                                                                       ],
+                                                                       "Status":  "PASS",
+                                                                       "Name":  "Data Loading Simulation"
+                                                                   },
+                                                                   {
+                                                                       "Status":  "PASS",
+                                                                       "ResolvedPaths":  {
+                                                                                             "ScriptsPath":  "C:\\enterprisediscovery\\Scripts",
+                                                                                             "EnterpriseDiscoveryRoot":  "C:\\enterprisediscovery",
+                                                                                             "CompanyDataPath":  "c:\\discoverydata\\ljpops",
+                                                                                             "DiscoveryDataRoot":  "c:\\discoverydata",
+                                                                                             "ModulesPath":  "C:\\enterprisediscovery\\Modules\\Discovery"
+                                                                                         },
+                                                                       "Name":  "Application Startup Path Resolution"
+                                                                   }
+                                                               ]
+                                                 },
+                       "csv_dual_directory":  {
+                                                  "Status":  "PARTIAL",
+                                                  "Tests":  [
+                                                                {
+                                                                    "Path":  "C:\\discoverydata\\ljpops\\Raw",
+                                                                    "CsvFiles":  [
+                                                                                     {
+                                                                                         "Name":  "Applications.csv",
+                                                                                         "Length":  785,
+                                                                                         "LastWriteTime":  "\/Date(1755979840100)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "Applications_TestData.csv",
+                                                                                         "Length":  487,
+                                                                                         "LastWriteTime":  "\/Date(1755979975432)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "DirectoryRoles.csv",
+                                                                                         "Length":  833,
+                                                                                         "LastWriteTime":  "\/Date(1755979884660)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "ExchangeDistributionGroups.csv",
+                                                                                         "Length":  657,
+                                                                                         "LastWriteTime":  "\/Date(1755979815618)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "ExchangeMailContacts.csv",
+                                                                                         "Length":  515,
+                                                                                         "LastWriteTime":  "\/Date(1755979833182)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "GPO_PlaceholderData.csv",
+                                                                                         "Length":  698,
+                                                                                         "LastWriteTime":  "\/Date(1755979975430)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "Groups.csv",
+                                                                                         "Length":  886,
+                                                                                         "LastWriteTime":  "\/Date(1755979809330)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "Groups_TestData.csv",
+                                                                                         "Length":  475,
+                                                                                         "LastWriteTime":  "\/Date(1755979975431)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "IntuneManagedApps.csv",
+                                                                                         "Length":  745,
+                                                                                         "LastWriteTime":  "\/Date(1755979925443)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "MicrosoftTeams.csv",
+                                                                                         "Length":  850,
+                                                                                         "LastWriteTime":  "\/Date(1755979910368)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "PhysicalServer_BIOS.csv",
+                                                                                         "Length":  616,
+                                                                                         "LastWriteTime":  "\/Date(1755979944750)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "PhysicalServer_Hardware.csv",
+                                                                                         "Length":  637,
+                                                                                         "LastWriteTime":  "\/Date(1755979925454)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "PhysicalServer_NetworkHardware.csv",
+                                                                                         "Length":  706,
+                                                                                         "LastWriteTime":  "\/Date(1755979944751)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "PhysicalServer_Storage.csv",
+                                                                                         "Length":  995,
+                                                                                         "LastWriteTime":  "\/Date(1755979944750)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "ServicePrincipals.csv",
+                                                                                         "Length":  848,
+                                                                                         "LastWriteTime":  "\/Date(1755979868381)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "SharePointSites.csv",
+                                                                                         "Length":  848,
+                                                                                         "LastWriteTime":  "\/Date(1755979910378)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "Tenant.csv",
+                                                                                         "Length":  291,
+                                                                                         "LastWriteTime":  "\/Date(1755979884669)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "Users.csv",
+                                                                                         "Length":  1123,
+                                                                                         "LastWriteTime":  "\/Date(1755979800797)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "Users_TestData.csv",
+                                                                                         "Length":  647,
+                                                                                         "LastWriteTime":  "\/Date(1755979975430)\/"
+                                                                                     }
+                                                                                 ],
+                                                                    "Exists":  true,
+                                                                    "Name":  "CSV Access - C:\\discoverydata\\ljpops",
+                                                                    "Status":  "PASS"
+                                                                },
+                                                                {
+                                                                    "Path":  "C:\\discoverydata\\Profiles\\ljpops\\Raw",
+                                                                    "CsvFiles":  [
+
+                                                                                 ],
+                                                                    "Name":  "CSV Access - C:\\discoverydata\\Profiles\\ljpops",
+                                                                    "Status":  "FAIL",
+                                                                    "Exists":  false
+                                                                },
+                                                                {
+                                                                    "Path":  "C:\\DiscoveryData\\ljpops\\Raw",
+                                                                    "CsvFiles":  [
+                                                                                     {
+                                                                                         "Name":  "Applications.csv",
+                                                                                         "Length":  785,
+                                                                                         "LastWriteTime":  "\/Date(1755979840100)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "Applications_TestData.csv",
+                                                                                         "Length":  487,
+                                                                                         "LastWriteTime":  "\/Date(1755979975432)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "DirectoryRoles.csv",
+                                                                                         "Length":  833,
+                                                                                         "LastWriteTime":  "\/Date(1755979884660)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "ExchangeDistributionGroups.csv",
+                                                                                         "Length":  657,
+                                                                                         "LastWriteTime":  "\/Date(1755979815618)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "ExchangeMailContacts.csv",
+                                                                                         "Length":  515,
+                                                                                         "LastWriteTime":  "\/Date(1755979833182)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "GPO_PlaceholderData.csv",
+                                                                                         "Length":  698,
+                                                                                         "LastWriteTime":  "\/Date(1755979975430)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "Groups.csv",
+                                                                                         "Length":  886,
+                                                                                         "LastWriteTime":  "\/Date(1755979809330)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "Groups_TestData.csv",
+                                                                                         "Length":  475,
+                                                                                         "LastWriteTime":  "\/Date(1755979975431)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "IntuneManagedApps.csv",
+                                                                                         "Length":  745,
+                                                                                         "LastWriteTime":  "\/Date(1755979925443)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "MicrosoftTeams.csv",
+                                                                                         "Length":  850,
+                                                                                         "LastWriteTime":  "\/Date(1755979910368)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "PhysicalServer_BIOS.csv",
+                                                                                         "Length":  616,
+                                                                                         "LastWriteTime":  "\/Date(1755979944750)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "PhysicalServer_Hardware.csv",
+                                                                                         "Length":  637,
+                                                                                         "LastWriteTime":  "\/Date(1755979925454)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "PhysicalServer_NetworkHardware.csv",
+                                                                                         "Length":  706,
+                                                                                         "LastWriteTime":  "\/Date(1755979944751)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "PhysicalServer_Storage.csv",
+                                                                                         "Length":  995,
+                                                                                         "LastWriteTime":  "\/Date(1755979944750)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "ServicePrincipals.csv",
+                                                                                         "Length":  848,
+                                                                                         "LastWriteTime":  "\/Date(1755979868381)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "SharePointSites.csv",
+                                                                                         "Length":  848,
+                                                                                         "LastWriteTime":  "\/Date(1755979910378)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "Tenant.csv",
+                                                                                         "Length":  291,
+                                                                                         "LastWriteTime":  "\/Date(1755979884669)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "Users.csv",
+                                                                                         "Length":  1123,
+                                                                                         "LastWriteTime":  "\/Date(1755979800797)\/"
+                                                                                     },
+                                                                                     {
+                                                                                         "Name":  "Users_TestData.csv",
+                                                                                         "Length":  647,
+                                                                                         "LastWriteTime":  "\/Date(1755979975430)\/"
+                                                                                     }
+                                                                                 ],
+                                                                    "Exists":  true,
+                                                                    "Name":  "CSV Access - C:\\DiscoveryData\\ljpops",
+                                                                    "Status":  "PASS"
+                                                                },
+                                                                {
+                                                                    "Path":  "C:\\DiscoveryData\\Profiles\\ljpops\\Raw",
+                                                                    "CsvFiles":  [
+
+                                                                                 ],
+                                                                    "Name":  "CSV Access - C:\\DiscoveryData\\Profiles\\ljpops",
+                                                                    "Status":  "FAIL",
+                                                                    "Exists":  false
+                                                                }
+                                                            ]
+                                              }
+                   },
+    "Status":  "PARTIAL",
+    "Duration":  {
+                     "Ticks":  2772872,
+                     "Days":  0,
+                     "Hours":  0,
+                     "Milliseconds":  277,
+                     "Minutes":  0,
+                     "Seconds":  0,
+                     "TotalDays":  3.2093425925925926E-06,
+                     "TotalHours":  7.7024222222222218E-05,
+                     "TotalMilliseconds":  277.28720000000004,
+                     "TotalMinutes":  0.0046214533333333334,
+                     "TotalSeconds":  0.2772872
+                 },
+    "EndTime":  {
+                    "value":  "\/Date(1756120916455)\/",
+                    "DisplayHint":  2,
+                    "DateTime":  "25 August 2025 12:21:56"
+                }
+}

@@ -1,0 +1,183 @@
+{
+  "DataSchemas": {
+    "Dashboard": {
+      "ExpectedInterval": 3,
+      "FilePattern": "*Dashboard*.csv",
+      "RequiredColumns": [
+        "_DiscoveryTimestamp",
+        "_DiscoveryModule", 
+        "_SessionId",
+        "TotalUsers",
+        "TotalGroups", 
+        "TotalComputers",
+        "TotalApplications",
+        "DiscoveryProgress",
+        "MigrationProgress",
+        "ValidationProgress",
+        "LastUpdateTime"
+      ],
+      "NumericColumns": [
+        "TotalUsers",
+        "TotalGroups",
+        "TotalComputers", 
+        "TotalApplications",
+        "DiscoveryProgress",
+        "MigrationProgress",
+        "ValidationProgress"
+      ],
+      "DateTimeColumns": [
+        "_DiscoveryTimestamp",
+        "LastUpdateTime"
+      ]
+    },
+    "Discovery": {
+      "ExpectedInterval": 10,
+      "FilePattern": "*Discovery*.csv",
+      "RequiredColumns": [
+        "_DiscoveryTimestamp",
+        "_DiscoveryModule",
+        "_SessionId",
+        "ModuleName",
+        "Status",
+        "RecordCount",
+        "LastRunTime",
+        "Duration",
+        "ErrorCount",
+        "WarningCount"
+      ],
+      "NumericColumns": [
+        "RecordCount",
+        "Duration",
+        "ErrorCount", 
+        "WarningCount"
+      ],
+      "DateTimeColumns": [
+        "_DiscoveryTimestamp",
+        "LastRunTime"
+      ]
+    },
+    "Configuration": {
+      "ExpectedInterval": 30,
+      "FilePattern": "*Config*.csv",
+      "RequiredColumns": [
+        "_DiscoveryTimestamp",
+        "_DiscoveryModule",
+        "_SessionId",
+        "SettingName",
+        "SettingValue",
+        "Category",
+        "IsEnabled",
+        "LastModified"
+      ],
+      "NumericColumns": [],
+      "DateTimeColumns": [
+        "_DiscoveryTimestamp",
+        "LastModified"
+      ]
+    },
+    "Planning": {
+      "ExpectedInterval": 15,
+      "FilePattern": "*Planning*.csv", 
+      "RequiredColumns": [
+        "_DiscoveryTimestamp",
+        "_DiscoveryModule",
+        "_SessionId",
+        "WaveName",
+        "UserCount",
+        "Status", 
+        "TargetDate",
+        "Progress",
+        "EstimatedHours"
+      ],
+      "NumericColumns": [
+        "UserCount",
+        "Progress",
+        "EstimatedHours"
+      ],
+      "DateTimeColumns": [
+        "_DiscoveryTimestamp",
+        "TargetDate"
+      ]
+    },
+    "Execution": {
+      "ExpectedInterval": 2,
+      "FilePattern": "*Execution*.csv",
+      "RequiredColumns": [
+        "_DiscoveryTimestamp",
+        "_DiscoveryModule",
+        "_SessionId",
+        "TaskName",
+        "Progress",
+        "Status",
+        "StartTime",
+        "ElapsedTime",
+        "RemainingTime",
+        "UsersMigrated",
+        "ErrorCount"
+      ],
+      "NumericColumns": [
+        "Progress",
+        "ElapsedTime",
+        "RemainingTime", 
+        "UsersMigrated",
+        "ErrorCount"
+      ],
+      "DateTimeColumns": [
+        "_DiscoveryTimestamp",
+        "StartTime"
+      ]
+    },
+    "Validation": {
+      "ExpectedInterval": 15,
+      "FilePattern": "*Validation*.csv",
+      "RequiredColumns": [
+        "_DiscoveryTimestamp",
+        "_DiscoveryModule",
+        "_SessionId",
+        "TestName",
+        "Result",
+        "Duration",
+        "Details",
+        "Severity",
+        "Category"
+      ],
+      "NumericColumns": [
+        "Duration"
+      ],
+      "DateTimeColumns": [
+        "_DiscoveryTimestamp"
+      ]
+    }
+  },
+  "DummyDataPatterns": [
+    "test",
+    "dummy", 
+    "sample",
+    "demo",
+    "lorem",
+    "ipsum",
+    "placeholder",
+    "example",
+    "12345",
+    "00000",
+    "99999",
+    "xxx",
+    "yyy",
+    "zzz",
+    "fake",
+    "mock"
+  ],
+  "PerformanceThresholds": {
+    "MaxMemoryMB": 500,
+    "MaxCPUSeconds": 60,
+    "MaxHandleCount": 10000,
+    "MaxThreadCount": 100,
+    "MaxFileLoadTimeSeconds": 5
+  },
+  "QualityChecks": {
+    "MinSuccessRate": 80,
+    "MaxTimestampVarianceMinutes": 5,
+    "MinRecordsPerFile": 1,
+    "MaxErrorRate": 5
+  }
+}

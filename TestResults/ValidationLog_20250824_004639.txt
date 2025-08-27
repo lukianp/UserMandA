@@ -1,0 +1,109 @@
+﻿2025-08-24 00:46:39 [INFO] === M&A DISCOVERY SUITE ENTERPRISE VALIDATION STARTING ===
+2025-08-24 00:46:39 [INFO] Output Directory: D:\Scripts\UserMandA\TestResults
+2025-08-24 00:46:39 [INFO] === Testing GUI Compilation ===
+2025-08-24 00:46:40 [ERROR] GUI Build: FAILED (1 errors)
+2025-08-24 00:46:40 [INFO] === Testing PowerShell Migration Modules ===
+2025-08-24 00:46:40 [SUCCESS] Module UserMigration: SUCCESS (9 functions, 2106 lines)
+2025-08-24 00:46:40 [SUCCESS] Module MailboxMigration: SUCCESS (1 functions, 913 lines)
+2025-08-24 00:46:40 [ERROR] Module SharePointMigration: FAILED - The running command stopped because the preference variable "ErrorActionPreference" or common parameter is set to Stop: At D:\Scripts\UserMandA\Modules\Migration\SharePointMigration.psm1:485 char:52
++             "00bfea71-d1ce-42de-9c63-a44004ce0104",  # Document Libra ...
++                                                    ~
+Missing expression after ','.
+
+At D:\Scripts\UserMandA\Modules\Migration\SharePointMigration.psm1:1440 char:47
++                         Status = $site.Status ?? "NotStarted"
++                                               ~~
+Unexpected token '??' in expression or statement.
+
+At D:\Scripts\UserMandA\Modules\Migration\SharePointMigration.psm1:1440 char:46
++                         Status = $site.Status ?? "NotStarted"
++                                              ~
+The hash literal was incomplete.
+
+At D:\Scripts\UserMandA\Modules\Migration\SharePointMigration.psm1:1457 char:14
++             }
++              ~
+The Try statement is missing its Catch or Finally block.
+
+At D:\Scripts\UserMandA\Modules\Migration\SharePointMigration.psm1:1405 char:5
++     [hashtable] GetMigrationStatus([string]$batchName = $null) {
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Missing closing '}' in statement block or type definition.
+
+At D:\Scripts\UserMandA\Modules\Migration\SharePointMigration.psm1:1485 char:5
++     }
++     ~
+Unexpected token '}' in expression or statement.
+
+At D:\Scripts\UserMandA\Modules\Migration\SharePointMigration.psm1:1487 char:17
++     [hashtable] GenerateMigrationReport([hashtable]$migrationResult)  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~
+Unexpected token 'GenerateMigrationReport' in expression or statement.
+
+At D:\Scripts\UserMandA\Modules\Migration\SharePointMigration.psm1:1530 char:12
++     [void] ExportMigrationReport([string]$filePath, [hashtable]$repor ...
++            ~~~~~~~~~~~~~~~~~~~~~
+Unexpected token 'ExportMigrationReport' in expression or statement.
+
+At D:\Scripts\UserMandA\Modules\Migration\SharePointMigration.psm1:1542 char:17
++     [hashtable] RollbackMigration([string]$batchName) {
++                 ~~~~~~~~~~~~~~~~~
+Unexpected token 'RollbackMigration' in expression or statement.
+
+At D:\Scripts\UserMandA\Modules\Migration\SharePointMigration.psm1:1593 char:12
++     [void] Cleanup() {
++            ~~~~~~~
+Unexpected token 'Cleanup' in expression or statement.
+
+Not all parse errors were reported.  Correct the reported errors and try again.
+2025-08-24 00:46:40 [ERROR] Module FileSystemMigration: FAILED - The running command stopped because the preference variable "ErrorActionPreference" or common parameter is set to Stop: At D:\Scripts\UserMandA\Modules\Migration\FileSystemMigration.psm1:1693 char:82
++ ... hResult.Warnings += "Failed to set owner for $targetItemPath: $($_.Ex ...
++                                                  ~~~~~~~~~~~~~~~~
+Variable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to delimit the name.
+
+At D:\Scripts\UserMandA\Modules\Migration\FileSystemMigration.psm1:1190 char:21
++     hidden [string] MapSourceToTargetPath([string]$sourcePath) {
++                     ~~~~~~~~~~~~~~~~~~~~~
+Not all code path returns value within method.
+2025-08-24 00:46:42 [ERROR] Module VirtualMachineMigration: FAILED - The script 'VirtualMachineMigration.psm1' cannot be run because the following modules that are specified by the "#requires" statements of the script are missing: Az.RecoveryServices.
+2025-08-24 00:46:42 [ERROR] Module UserProfileMigration: FAILED - The running command stopped because the preference variable "ErrorActionPreference" or common parameter is set to Stop: At D:\Scripts\UserMandA\Modules\Migration\UserProfileMigration.psm1:584 char:9
++         $groupMappings = @{}
++         ~~~~~~~~~~~~~~
+Cannot assign property, use '$this.GroupMappings'.
+
+At D:\Scripts\UserMandA\Modules\Migration\UserProfileMigration.psm1:1266 char:70
++ ... $result.Errors += "Failed to add user to group $($sourceGroup.Name):  ...
++                                                      ~~~~~~~~~~~~
+Variable is not assigned in the method.
+
+At D:\Scripts\UserMandA\Modules\Migration\UserProfileMigration.psm1:1267 char:78
++ ... iteLog("Failed to migrate group membership for $($sourceGroup.Name):  ...
++                                                      ~~~~~~~~~~~~
+Variable is not assigned in the method.
+2025-08-24 00:46:42 [SUCCESS] Module ApplicationMigration: SUCCESS (1 functions, 96 lines)
+2025-08-24 00:46:42 [SUCCESS] Module ServerMigration: SUCCESS (1 functions, 109 lines)
+2025-08-24 00:46:42 [ERROR] PowerShell Modules: FAILED (4/8 - 50%)
+2025-08-24 00:46:42 [INFO] === Testing Data Integrity ===
+2025-08-24 00:46:43 [SUCCESS] Data Integrity: SUCCESS (40/41 files - 97.56%)
+2025-08-24 00:46:43 [INFO] Total records processed: 604
+2025-08-24 00:46:43 [INFO] === Testing Performance Simulation ===
+2025-08-24 00:46:43 [INFO] Simulating enterprise load testing...
+2025-08-24 00:46:46 [SUCCESS] Performance: SUCCESS (Avg: 77.95ms)
+2025-08-24 00:46:46 [INFO] === Competitive Analysis Validation ===
+2025-08-24 00:46:46 [SUCCESS] Competitive Analysis: SUCCESS
+2025-08-24 00:46:46 [INFO] Superior/Unique Features: 6/6 (100%)
+2025-08-24 00:46:46 [INFO] Cost Leadership: 70% savings vs competitors
+2025-08-24 00:46:46 [INFO] 
+2025-08-24 00:46:46 [INFO] === VALIDATION SUMMARY ===
+2025-08-24 00:46:46 [INFO] Tests Passed: 3/5
+2025-08-24 00:46:46 [INFO] Test Duration: 0.12 minutes
+2025-08-24 00:46:46 [INFO] Overall Status: REQUIRES ATTENTION
+2025-08-24 00:46:46 [INFO] Critical Issues: 2
+2025-08-24 00:46:46 [WARNING] 
+2025-08-24 00:46:46 [WARNING] VALIDATION INCOMPLETE: ADDRESS ISSUES BEFORE DEPLOYMENT
+2025-08-24 00:46:46 [WARNING] - GUI compilation failed with 1 errors
+2025-08-24 00:46:46 [WARNING] - PowerShell module pass rate below threshold: 50%
+2025-08-24 00:46:47 [INFO] 
+2025-08-24 00:46:47 [INFO] Report saved to: D:\Scripts\UserMandA\TestResults\ValidationReport_20250824_004639.json
+2025-08-24 00:46:47 [INFO] Log saved to: D:\Scripts\UserMandA\TestResults\ValidationLog_20250824_004639.txt
+2025-08-24 00:46:47 [INFO] === VALIDATION COMPLETE ===

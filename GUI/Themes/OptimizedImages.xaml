@@ -1,0 +1,219 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:converters="clr-namespace:MandADiscoverySuite.Converters"
+                    xmlns:controls="clr-namespace:MandADiscoverySuite.Controls">
+    
+    <!-- Optimized Image Converters -->
+    <converters:OptimizedImageConverter x:Key="OptimizedImageConverter" UseCache="True"/>
+    <converters:ResourceImageConverter x:Key="ResourceImageConverter" ResourceAssembly="MandADiscoverySuite" ResourceFolder="Assets"/>
+    <converters:ThumbnailImageConverter x:Key="ThumbnailImageConverter" ThumbnailSize="64" MaintainAspectRatio="True"/>
+    <converters:FileIconConverter x:Key="FileIconConverter" IconSize="16"/>
+    <converters:StatusIconConverter x:Key="StatusIconConverter" IconSize="16"/>
+    <converters:BooleanIconConverter x:Key="BooleanIconConverter" IconSize="16"/>
+    
+    <!-- Small Icon Converters -->
+    <converters:OptimizedImageConverter x:Key="SmallIconConverter" MaxWidth="16" MaxHeight="16" UseCache="True"/>
+    <converters:OptimizedImageConverter x:Key="MediumIconConverter" MaxWidth="32" MaxHeight="32" UseCache="True"/>
+    <converters:OptimizedImageConverter x:Key="LargeIconConverter" MaxWidth="48" MaxHeight="48" UseCache="True"/>
+    
+    <!-- Thumbnail Converters -->
+    <converters:ThumbnailImageConverter x:Key="SmallThumbnailConverter" ThumbnailSize="32"/>
+    <converters:ThumbnailImageConverter x:Key="MediumThumbnailConverter" ThumbnailSize="64"/>
+    <converters:ThumbnailImageConverter x:Key="LargeThumbnailConverter" ThumbnailSize="128"/>
+    
+    <!-- Optimized Image Styles -->
+    <Style x:Key="OptimizedImageStyle" TargetType="Image">
+        <Setter Property="RenderOptions.BitmapScalingMode" Value="HighQuality"/>
+        <Setter Property="RenderOptions.EdgeMode" Value="Aliased"/>
+        <Setter Property="Stretch" Value="Uniform"/>
+        <Setter Property="StretchDirection" Value="DownOnly"/>
+    </Style>
+    
+    <Style x:Key="ThumbnailImageStyle" TargetType="Image" BasedOn="{StaticResource OptimizedImageStyle}">
+        <Setter Property="Width" Value="64"/>
+        <Setter Property="Height" Value="64"/>
+        <Setter Property="Margin" Value="4"/>
+    </Style>
+    
+    <Style x:Key="IconImageStyle" TargetType="Image" BasedOn="{StaticResource OptimizedImageStyle}">
+        <Setter Property="Width" Value="16"/>
+        <Setter Property="Height" Value="16"/>
+        <Setter Property="Margin" Value="2"/>
+    </Style>
+    
+    <Style x:Key="LargeIconImageStyle" TargetType="Image" BasedOn="{StaticResource OptimizedImageStyle}">
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Margin" Value="4"/>
+    </Style>
+    
+    <!-- Optimized Image Control Styles -->
+    <Style x:Key="OptimizedImageControlStyle" TargetType="controls:OptimizedImage">
+        <Setter Property="Stretch" Value="Uniform"/>
+        <Setter Property="StretchDirection" Value="Both"/>
+        <Setter Property="ShowLoadingIndicator" Value="True"/>
+        <Setter Property="EnableCaching" Value="True"/>
+        <Setter Property="PlaceholderText" Value="Loading..."/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    
+    <Style x:Key="ThumbnailOptimizedImageStyle" TargetType="controls:OptimizedImage" 
+           BasedOn="{StaticResource OptimizedImageControlStyle}">
+        <Setter Property="MaxWidthPixels" Value="64"/>
+        <Setter Property="MaxHeightPixels" Value="64"/>
+        <Setter Property="Width" Value="64"/>
+        <Setter Property="Height" Value="64"/>
+    </Style>
+    
+    <Style x:Key="IconOptimizedImageStyle" TargetType="controls:OptimizedImage" 
+           BasedOn="{StaticResource OptimizedImageControlStyle}">
+        <Setter Property="MaxWidthPixels" Value="16"/>
+        <Setter Property="MaxHeightPixels" Value="16"/>
+        <Setter Property="Width" Value="16"/>
+        <Setter Property="Height" Value="16"/>
+        <Setter Property="ShowLoadingIndicator" Value="False"/>
+    </Style>
+    
+    <!-- Data Templates with Optimized Images -->
+    <DataTemplate x:Key="ImageThumbnailTemplate">
+        <Border Background="{DynamicResource SurfaceBrush}" 
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1" 
+                CornerRadius="4" 
+                Padding="4">
+            <controls:OptimizedImage Source="{Binding ImagePath}" 
+                                   Style="{StaticResource ThumbnailOptimizedImageStyle}"/>
+        </Border>
+    </DataTemplate>
+    
+    <DataTemplate x:Key="FileIconTemplate">
+        <StackPanel Orientation="Horizontal" 
+                   VerticalAlignment="Center">
+            <Image Source="{Binding FilePath, Converter={StaticResource FileIconConverter}}" 
+                   Style="{StaticResource IconImageStyle}"/>
+            <TextBlock Text="{Binding FileName}" 
+                      VerticalAlignment="Center"
+                      Margin="4,0,0,0"/>
+        </StackPanel>
+    </DataTemplate>
+    
+    <DataTemplate x:Key="StatusIconTemplate">
+        <StackPanel Orientation="Horizontal" 
+                   VerticalAlignment="Center">
+            <Image Source="{Binding Status, Converter={StaticResource StatusIconConverter}}" 
+                   Style="{StaticResource IconImageStyle}"/>
+            <TextBlock Text="{Binding Status}" 
+                      VerticalAlignment="Center"
+                      Margin="4,0,0,0"/>
+        </StackPanel>
+    </DataTemplate>
+    
+    <DataTemplate x:Key="BooleanIconTemplate">
+        <Image Source="{Binding IsActive, Converter={StaticResource BooleanIconConverter}}" 
+               Style="{StaticResource IconImageStyle}"/>
+    </DataTemplate>
+    
+    <!-- Performance-Optimized Image Gallery Template -->
+    <DataTemplate x:Key="ImageGalleryItemTemplate">
+        <Border Background="{DynamicResource CardBrush}" 
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1" 
+                CornerRadius="6" 
+                Padding="8"
+                Margin="4">
+            <StackPanel>
+                <controls:OptimizedImage Source="{Binding ImagePath}" 
+                                       MaxWidthPixels="128"
+                                       MaxHeightPixels="128"
+                                       Width="128"
+                                       Height="128"
+                                       Stretch="UniformToFill"/>
+                <TextBlock Text="{Binding Title}" 
+                          TextAlignment="Center"
+                          TextTrimming="CharacterEllipsis"
+                          FontWeight="Medium"
+                          Margin="0,8,0,0"/>
+                <TextBlock Text="{Binding Description}" 
+                          TextAlignment="Center"
+                          TextTrimming="CharacterEllipsis"
+                          FontSize="11"
+                          Foreground="{DynamicResource SecondaryForegroundBrush}"
+                          Margin="0,4,0,0"/>
+            </StackPanel>
+            
+            <!-- Hover Effect -->
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Opacity" Value="0.8"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Opacity" Value="1.0"/>
+                            <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+        </Border>
+    </DataTemplate>
+    
+    <!-- Optimized ListBox Style for Images -->
+    <Style x:Key="ImageListBoxStyle" TargetType="ListBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+        <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel"/>
+        <Setter Property="ScrollViewer.IsDeferredScrollingEnabled" Value="True"/>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" 
+                              ItemWidth="140" 
+                              ItemHeight="180"/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Control Templates with Optimized Images -->
+    <ControlTemplate x:Key="ImageButtonTemplate" TargetType="Button">
+        <Border Name="Border" 
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="4"
+                Padding="{TemplateBinding Padding}">
+            <StackPanel Orientation="Horizontal" 
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center">
+                <controls:OptimizedImage Source="{TemplateBinding Tag}" 
+                                       Style="{StaticResource IconOptimizedImageStyle}"
+                                       Margin="0,0,8,0"/>
+                <ContentPresenter HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+        
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Border" Property="Background" Value="{DynamicResource HoverBrush}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="Border" Property="Background" Value="{DynamicResource PressedBrush}"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+    
+    <Style x:Key="ImageButtonStyle" TargetType="Button">
+        <Setter Property="Template" Value="{StaticResource ImageButtonTemplate}"/>
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Margin" Value="2"/>
+    </Style>
+    
+</ResourceDictionary>

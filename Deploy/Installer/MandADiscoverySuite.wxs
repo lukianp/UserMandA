@@ -1,0 +1,558 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- M&A Discovery Suite - Enterprise MSI Installer -->
+<!-- WiX Toolset Configuration for Fortune 500 Deployment -->
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" 
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension"
+     xmlns:netfx="http://schemas.microsoft.com/wix/NetFxExtension">
+
+  <!-- Product Definition -->
+  <Product Id="*"
+           Name="M&amp;A Discovery Suite"
+           Language="1033"
+           Version="!(bind.FileVersion.MandADiscoverySuite.exe)"
+           Manufacturer="Enterprise M&amp;A Solutions"
+           UpgradeCode="12345678-1234-1234-1234-123456789012">
+
+    <!-- Package Configuration -->
+    <Package InstallerVersion="500"
+             Compressed="yes"
+             InstallScope="perMachine"
+             Description="M&amp;A Discovery Suite - Enterprise Migration Platform"
+             Comments="Production-ready M&amp;A IT integration platform for Fortune 500 companies"
+             Manufacturer="Enterprise M&amp;A Solutions"
+             Keywords="M&amp;A,Migration,Discovery,Enterprise,PowerShell" />
+
+    <!-- Media and Cabinet Configuration -->
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Prerequisites and Launch Conditions -->
+    <PropertyRef Id="WIX_IS_NETFRAMEWORK_46_OR_LATER_INSTALLED" />
+    <Condition Message="This application requires .NET Framework 4.6 or later.">
+      <![CDATA[Installed OR WIX_IS_NETFRAMEWORK_46_OR_LATER_INSTALLED]]>
+    </Condition>
+
+    <!-- Check for PowerShell 5.1 or later -->
+    <Property Id="POWERSHELL_VERSION">
+      <RegistrySearch Id="PowerShellVersionSearch"
+                      Root="HKLM"
+                      Key="SOFTWARE\Microsoft\PowerShell\3\PowerShellEngine"
+                      Name="PowerShellVersion"
+                      Type="raw" />
+    </Property>
+
+    <Condition Message="PowerShell 5.1 or later is required.">
+      <![CDATA[Installed OR (POWERSHELL_VERSION >= "5.1")]]>
+    </Condition>
+
+    <!-- Windows Version Check -->
+    <Condition Message="This application requires Windows 10 or Windows Server 2016 or later.">
+      <![CDATA[Installed OR (VersionNT >= 1000)]]>
+    </Condition>
+
+    <!-- Administrative Privileges Check -->
+    <Condition Message="Administrator privileges are required to install this application.">
+      <![CDATA[Installed OR Privileged]]>
+    </Condition>
+
+    <!-- Installation Properties -->
+    <Property Id="ARPPRODUCTICON" Value="app.ico" />
+    <Property Id="ARPHELPLINK" Value="https://mandadiscovery.com/support" />
+    <Property Id="ARPURLINFOABOUT" Value="https://mandadiscovery.com" />
+    <Property Id="ARPNOREPAIR" Value="yes" />
+    <Property Id="ARPNOMODIFY" Value="yes" />
+    <Property Id="ARPCOMMENTS" Value="Enterprise M&amp;A IT Integration Platform" />
+    <Property Id="ARPCONTACT" Value="support@mandadiscovery.com" />
+
+    <!-- Custom Properties -->
+    <Property Id="INSTALL_POWERSHELL_MODULES" Value="1" />
+    <Property Id="CREATE_DESKTOP_SHORTCUT" Value="1" />
+    <Property Id="START_AFTER_INSTALL" Value="0" />
+    <Property Id="CONFIGURE_FIREWALL" Value="1" />
+    <Property Id="INSTALL_CERTIFICATES" Value="1" />
+
+    <!-- Directory Structure -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      
+      <!-- Program Files -->
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="CompanyFolder" Name="Enterprise MA Solutions">
+          <Directory Id="INSTALLFOLDER" Name="MA Discovery Suite">
+            
+            <!-- Main Application Directory -->
+            <Directory Id="BinFolder" Name="bin" />
+            <Directory Id="ConfigFolder" Name="Configuration" />
+            <Directory Id="LogsFolder" Name="Logs" />
+            <Directory Id="TempFolder" Name="Temp" />
+            
+            <!-- PowerShell Modules -->
+            <Directory Id="ModulesFolder" Name="Modules">
+              <Directory Id="CoreModulesFolder" Name="Core" />
+              <Directory Id="DiscoveryModulesFolder" Name="Discovery" />
+              <Directory Id="MigrationModulesFolder" Name="Migration" />
+              <Directory Id="UtilitiesModulesFolder" Name="Utilities" />
+            </Directory>
+            
+            <!-- Scripts and Tools -->
+            <Directory Id="ScriptsFolder" Name="Scripts" />
+            <Directory Id="ToolsFolder" Name="Tools" />
+            
+            <!-- Documentation -->
+            <Directory Id="DocsFolder" Name="Documentation" />
+            
+          </Directory>
+        </Directory>
+      </Directory>
+
+      <!-- Program Data -->
+      <Directory Id="CommonAppDataFolder">
+        <Directory Id="CompanyDataFolder" Name="Enterprise MA Solutions">
+          <Directory Id="AppDataFolder" Name="MA Discovery Suite">
+            <Directory Id="DataFolder" Name="Data" />
+            <Directory Id="CacheFolder" Name="Cache" />
+            <Directory Id="BackupFolder" Name="Backup" />
+          </Directory>
+        </Directory>
+      </Directory>
+
+      <!-- Start Menu -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="M&amp;A Discovery Suite" />
+      </Directory>
+
+      <!-- Desktop -->
+      <Directory Id="DesktopFolder" />
+
+    </Directory>
+
+    <!-- Feature Definitions -->
+    <Feature Id="MainApplication"
+             Title="M&amp;A Discovery Suite Application"
+             Description="Core application files and components"
+             Level="1"
+             ConfigurableDirectory="INSTALLFOLDER"
+             AllowAdvertise="no">
+
+      <!-- Core Application Files -->
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="ApplicationIcon" />
+      <ComponentRef Id="ConfigurationFiles" />
+      <ComponentRef Id="StartMenuShortcuts" />
+      
+    </Feature>
+
+    <Feature Id="PowerShellModules"
+             Title="PowerShell Modules"
+             Description="PowerShell modules for discovery and migration operations"
+             Level="1"
+             AllowAdvertise="no">
+      
+      <ComponentRef Id="CoreModules" />
+      <ComponentRef Id="DiscoveryModules" />
+      <ComponentRef Id="MigrationModules" />
+      <ComponentRef Id="UtilityModules" />
+      
+    </Feature>
+
+    <Feature Id="Scripts"
+             Title="Scripts and Tools"
+             Description="Additional scripts and administrative tools"
+             Level="1"
+             AllowAdvertise="no">
+      
+      <ComponentRef Id="AdministrativeScripts" />
+      <ComponentRef Id="MaintenanceTools" />
+      
+    </Feature>
+
+    <Feature Id="Documentation"
+             Title="Documentation"
+             Description="User guides, technical documentation, and help files"
+             Level="2"
+             AllowAdvertise="no">
+      
+      <ComponentRef Id="UserDocumentation" />
+      <ComponentRef Id="TechnicalDocumentation" />
+      
+    </Feature>
+
+    <Feature Id="DesktopShortcut"
+             Title="Desktop Shortcut"
+             Description="Create desktop shortcut for easy access"
+             Level="2"
+             AllowAdvertise="no">
+      
+      <ComponentRef Id="DesktopShortcutComponent" />
+      
+    </Feature>
+
+    <!-- Components -->
+    
+    <!-- Main Executable Component -->
+    <Component Id="MainExecutable" Guid="*" Directory="INSTALLFOLDER">
+      <File Id="MandADiscoverySuite.exe"
+            Source="$(var.SourceDir)\MandADiscoverySuite.exe"
+            KeyPath="yes"
+            Checksum="yes" />
+      
+      <!-- Additional application files -->
+      <File Id="MandADiscoverySuite.dll"
+            Source="$(var.SourceDir)\MandADiscoverySuite.dll" />
+      
+      <File Id="MandADiscoverySuite.deps.json"
+            Source="$(var.SourceDir)\MandADiscoverySuite.deps.json" />
+            
+      <File Id="MandADiscoverySuite.runtimeconfig.json"
+            Source="$(var.SourceDir)\MandADiscoverySuite.runtimeconfig.json" />
+
+      <!-- Windows Service Registration -->
+      <ServiceInstall Id="MandADiscoveryService"
+                      Type="ownProcess"
+                      Vital="no"
+                      Name="MandADiscoveryService"
+                      DisplayName="M&amp;A Discovery Suite Service"
+                      Description="Background service for M&amp;A Discovery Suite platform"
+                      Start="auto"
+                      Account="LocalSystem"
+                      ErrorControl="ignore"
+                      Interactive="no" />
+
+      <ServiceControl Id="StartMandADiscoveryService"
+                      Start="install"
+                      Stop="both"
+                      Remove="uninstall"
+                      Name="MandADiscoveryService"
+                      Wait="yes" />
+
+      <!-- Firewall Exception -->
+      <util:FirewallException Id="MandADiscoveryFirewall"
+                             Name="M&amp;A Discovery Suite"
+                             Program="[#MandADiscoverySuite.exe]"
+                             Scope="localSubnet"
+                             IgnoreFailure="yes" />
+
+      <!-- Registry Keys -->
+      <RegistryKey Root="HKLM" Key="SOFTWARE\Enterprise MA Solutions\MA Discovery Suite">
+        <RegistryValue Type="string" Name="InstallPath" Value="[INSTALLFOLDER]" KeyPath="no" />
+        <RegistryValue Type="string" Name="Version" Value="[ProductVersion]" KeyPath="no" />
+        <RegistryValue Type="string" Name="DataPath" Value="[AppDataFolder]" KeyPath="no" />
+      </RegistryKey>
+
+    </Component>
+
+    <!-- Application Icon Component -->
+    <Component Id="ApplicationIcon" Guid="*" Directory="INSTALLFOLDER">
+      <File Id="app.ico" Source="$(var.SourceDir)\app.ico" KeyPath="yes" />
+    </Component>
+
+    <!-- Configuration Files Component -->
+    <Component Id="ConfigurationFiles" Guid="*" Directory="ConfigFolder">
+      <File Id="suite_config.json"
+            Source="$(var.SourceDir)\Configuration\suite-config.json"
+            KeyPath="yes" />
+      
+      <File Id="default_config.json"
+            Source="$(var.SourceDir)\Configuration\default-config.json" />
+      
+      <File Id="module_registry.json"
+            Source="$(var.SourceDir)\Configuration\ModuleRegistry.json" />
+
+      <!-- Environment Variables -->
+      <Environment Id="MandADiscoveryInstallPath"
+                   Action="set"
+                   Name="MANDADISCOVERY_INSTALL_PATH"
+                   Value="[INSTALLFOLDER]"
+                   System="yes"
+                   Part="all" />
+
+      <Environment Id="MandADiscoveryDataPath"
+                   Action="set"
+                   Name="MANDADISCOVERY_DATA_PATH"
+                   Value="[AppDataFolder]"
+                   System="yes"
+                   Part="all" />
+
+    </Component>
+
+    <!-- Core PowerShell Modules Component -->
+    <Component Id="CoreModules" Guid="*" Directory="CoreModulesFolder">
+      <File Id="CompanyProfileManager.psm1"
+            Source="$(var.SourceDir)\Modules\Core\CompanyProfileManager.psm1"
+            KeyPath="yes" />
+      
+      <File Id="ConfigurationManager.psm1"
+            Source="$(var.SourceDir)\Modules\Core\ConfigurationManager.psm1" />
+      
+      <File Id="CredentialLoader.psm1"
+            Source="$(var.SourceDir)\Modules\Core\CredentialLoader.psm1" />
+    </Component>
+
+    <!-- Discovery Modules Component -->
+    <Component Id="DiscoveryModules" Guid="*" Directory="DiscoveryModulesFolder">
+      <File Id="ActiveDirectoryDiscovery.psm1"
+            Source="$(var.SourceDir)\Modules\Discovery\ActiveDirectoryDiscovery.psm1"
+            KeyPath="yes" />
+      
+      <File Id="ExchangeDiscovery.psm1"
+            Source="$(var.SourceDir)\Modules\Discovery\ExchangeDiscovery.psm1" />
+      
+      <File Id="SharePointDiscovery.psm1"
+            Source="$(var.SourceDir)\Modules\Discovery\SharePointDiscovery.psm1" />
+    </Component>
+
+    <!-- Migration Modules Component -->
+    <Component Id="MigrationModules" Guid="*" Directory="MigrationModulesFolder">
+      <File Id="UserMigration.psm1"
+            Source="$(var.SourceDir)\Modules\Migration\UserMigration.psm1"
+            KeyPath="yes" />
+      
+      <File Id="MailboxMigration.psm1"
+            Source="$(var.SourceDir)\Modules\Migration\MailboxMigration.psm1" />
+      
+      <File Id="SharePointMigration.psm1"
+            Source="$(var.SourceDir)\Modules\Migration\SharePointMigration.psm1" />
+    </Component>
+
+    <!-- Utility Modules Component -->
+    <Component Id="UtilityModules" Guid="*" Directory="UtilitiesModulesFolder">
+      <File Id="ErrorHandling.psm1"
+            Source="$(var.SourceDir)\Modules\Utilities\ErrorHandling.psm1"
+            KeyPath="yes" />
+      
+      <File Id="EnhancedLogging.psm1"
+            Source="$(var.SourceDir)\Modules\Utilities\EnhancedLogging.psm1" />
+    </Component>
+
+    <!-- Administrative Scripts Component -->
+    <Component Id="AdministrativeScripts" Guid="*" Directory="ScriptsFolder">
+      <File Id="Start_Discovery.ps1"
+            Source="$(var.SourceDir)\Scripts\Start-Discovery.ps1"
+            KeyPath="yes" />
+      
+      <File Id="DiscoveryModuleLauncher.ps1"
+            Source="$(var.SourceDir)\Scripts\DiscoveryModuleLauncher.ps1" />
+    </Component>
+
+    <!-- Maintenance Tools Component -->
+    <Component Id="MaintenanceTools" Guid="*" Directory="ToolsFolder">
+      <File Id="Manage_ModuleRegistry.ps1"
+            Source="$(var.SourceDir)\Tools\Manage-ModuleRegistry.ps1"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- Documentation Components -->
+    <Component Id="UserDocumentation" Guid="*" Directory="DocsFolder">
+      <File Id="USER_GUIDE.md"
+            Source="$(var.SourceDir)\Documentation\CUSTOMER_ONBOARDING_USER_TRAINING.md"
+            KeyPath="yes" />
+      
+      <File Id="DEPLOYMENT_GUIDE.md"
+            Source="$(var.SourceDir)\Documentation\DEPLOYMENT_GUIDE.md" />
+    </Component>
+
+    <Component Id="TechnicalDocumentation" Guid="*" Directory="DocsFolder">
+      <File Id="TECHNICAL_GUIDE.md"
+            Source="$(var.SourceDir)\Documentation\CUSTOMER_ONBOARDING_TECHNICAL_GUIDE.md"
+            KeyPath="yes" />
+      
+      <File Id="TROUBLESHOOTING_GUIDE.md"
+            Source="$(var.SourceDir)\Documentation\CUSTOMER_ONBOARDING_TROUBLESHOOTING_GUIDE.md" />
+    </Component>
+
+    <!-- Start Menu Shortcuts Component -->
+    <Component Id="StartMenuShortcuts" Guid="*" Directory="ApplicationProgramsFolder">
+      <Shortcut Id="ApplicationStartMenuShortcut"
+                Name="M&amp;A Discovery Suite"
+                Description="Launch M&amp;A Discovery Suite"
+                Target="[INSTALLFOLDER]MandADiscoverySuite.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="app.ico" />
+
+      <Shortcut Id="UserGuideShortcut"
+                Name="User Guide"
+                Description="M&amp;A Discovery Suite User Guide"
+                Target="[DocsFolder]USER_GUIDE.md"
+                WorkingDirectory="DocsFolder" />
+
+      <Shortcut Id="UninstallShortcut"
+                Name="Uninstall M&amp;A Discovery Suite"
+                Description="Uninstall M&amp;A Discovery Suite"
+                Target="[System64Folder]msiexec.exe"
+                Arguments="/x [ProductCode]" />
+
+      <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\Enterprise MA Solutions\MA Discovery Suite"
+                     Name="installed"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+
+    <!-- Desktop Shortcut Component -->
+    <Component Id="DesktopShortcutComponent" Guid="*" Directory="DesktopFolder">
+      <Condition>CREATE_DESKTOP_SHORTCUT = 1</Condition>
+      <Shortcut Id="DesktopShortcut"
+                Name="M&amp;A Discovery Suite"
+                Description="Launch M&amp;A Discovery Suite"
+                Target="[INSTALLFOLDER]MandADiscoverySuite.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="app.ico" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\Enterprise MA Solutions\MA Discovery Suite"
+                     Name="DesktopShortcut"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+
+    <!-- Custom Actions -->
+
+    <!-- Pre-Installation Actions -->
+    <CustomAction Id="CheckDotNetRuntime"
+                  BinaryKey="CustomActionDLL"
+                  DllEntry="CheckDotNetRuntime"
+                  Execute="immediate"
+                  Return="check" />
+
+    <CustomAction Id="ValidateSystemRequirements"
+                  BinaryKey="CustomActionDLL"
+                  DllEntry="ValidateSystemRequirements"
+                  Execute="immediate"
+                  Return="check" />
+
+    <!-- Post-Installation Actions -->
+    <CustomAction Id="ConfigurePowerShellExecutionPolicy"
+                  BinaryKey="CustomActionDLL"
+                  DllEntry="ConfigurePowerShellExecutionPolicy"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check" />
+
+    <CustomAction Id="RegisterPowerShellModules"
+                  BinaryKey="CustomActionDLL"
+                  DllEntry="RegisterPowerShellModules"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check" />
+
+    <CustomAction Id="CreateDataDirectories"
+                  BinaryKey="CustomActionDLL"
+                  DllEntry="CreateDataDirectories"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check" />
+
+    <CustomAction Id="ConfigureWindowsFirewall"
+                  BinaryKey="CustomActionDLL"
+                  DllEntry="ConfigureWindowsFirewall"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <CustomAction Id="StartApplicationAfterInstall"
+                  BinaryKey="CustomActionDLL"
+                  DllEntry="StartApplicationAfterInstall"
+                  Execute="deferred"
+                  Impersonate="yes"
+                  Return="ignore" />
+
+    <!-- Uninstall Actions -->
+    <CustomAction Id="StopApplicationServices"
+                  BinaryKey="CustomActionDLL"
+                  DllEntry="StopApplicationServices"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <CustomAction Id="CleanupDataDirectories"
+                  BinaryKey="CustomActionDLL"
+                  DllEntry="CleanupDataDirectories"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- Binary for Custom Actions -->
+    <Binary Id="CustomActionDLL" SourceFile="$(var.SourceDir)\CustomActions.CA.dll" />
+
+    <!-- Installation Sequence -->
+    <InstallExecuteSequence>
+      
+      <!-- Pre-Installation Validation -->
+      <Custom Action="CheckDotNetRuntime" Before="LaunchConditions">NOT Installed</Custom>
+      <Custom Action="ValidateSystemRequirements" Before="LaunchConditions">NOT Installed</Custom>
+
+      <!-- Post-Installation Configuration -->
+      <Custom Action="CreateDataDirectories" After="InstallFiles">NOT Installed</Custom>
+      <Custom Action="ConfigurePowerShellExecutionPolicy" After="CreateDataDirectories">INSTALL_POWERSHELL_MODULES = 1 AND NOT Installed</Custom>
+      <Custom Action="RegisterPowerShellModules" After="ConfigurePowerShellExecutionPolicy">INSTALL_POWERSHELL_MODULES = 1 AND NOT Installed</Custom>
+      <Custom Action="ConfigureWindowsFirewall" After="RegisterPowerShellModules">CONFIGURE_FIREWALL = 1 AND NOT Installed</Custom>
+      <Custom Action="StartApplicationAfterInstall" After="InstallFinalize">START_AFTER_INSTALL = 1 AND NOT Installed</Custom>
+
+      <!-- Uninstall Actions -->
+      <Custom Action="StopApplicationServices" Before="RemoveFiles">Installed AND (REMOVE = "ALL")</Custom>
+      <Custom Action="CleanupDataDirectories" After="RemoveFiles">Installed AND (REMOVE = "ALL")</Custom>
+
+    </InstallExecuteSequence>
+
+    <!-- UI Configuration -->
+    <UIRef Id="WixUI_FeatureTree" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+
+    <!-- Custom UI for Enterprise Configuration -->
+    <UI Id="EnterpriseInstallUI">
+      <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
+      <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
+      <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
+
+      <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+      <Property Id="WixUI_Mode" Value="FeatureTree" />
+
+      <!-- Welcome Dialog -->
+      <DialogRef Id="WelcomeDlg" />
+      <DialogRef Id="FeaturesDlg" />
+      <DialogRef Id="InstallDirDlg" />
+      <DialogRef Id="VerifyReadyDlg" />
+      <DialogRef Id="ProgressDlg" />
+      <DialogRef Id="ExitDlg" />
+
+      <!-- Custom Enterprise Configuration Dialog -->
+      <Dialog Id="EnterpriseConfigDlg" Width="370" Height="270" Title="Enterprise Configuration">
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Enterprise Configuration" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="Configure enterprise-specific settings for your deployment." />
+
+        <Control Id="PowerShellModulesCheckBox" Type="CheckBox" X="25" Y="60" Width="300" Height="17" Property="INSTALL_POWERSHELL_MODULES" CheckBoxValue="1" Text="Install PowerShell modules for all users" />
+        <Control Id="DesktopShortcutCheckBox" Type="CheckBox" X="25" Y="80" Width="300" Height="17" Property="CREATE_DESKTOP_SHORTCUT" CheckBoxValue="1" Text="Create desktop shortcut" />
+        <Control Id="FirewallConfigCheckBox" Type="CheckBox" X="25" Y="100" Width="300" Height="17" Property="CONFIGURE_FIREWALL" CheckBoxValue="1" Text="Configure Windows Firewall automatically" />
+        <Control Id="StartAfterInstallCheckBox" Type="CheckBox" X="25" Y="120" Width="300" Height="17" Property="START_AFTER_INSTALL" CheckBoxValue="0" Text="Start application after installation" />
+
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel" />
+      </Dialog>
+
+      <!-- Flow Control -->
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="FeaturesDlg">1</Publish>
+      <Publish Dialog="FeaturesDlg" Control="Next" Event="NewDialog" Value="EnterpriseConfigDlg">1</Publish>
+      <Publish Dialog="EnterpriseConfigDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg">1</Publish>
+      <Publish Dialog="EnterpriseConfigDlg" Control="Back" Event="NewDialog" Value="FeaturesDlg">1</Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="EnterpriseConfigDlg">1</Publish>
+    </UI>
+
+    <!-- License Agreement -->
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.SourceDir)\License.rtf" />
+    
+    <!-- Installation Banners and Icons -->
+    <WixVariable Id="WixUIBannerBmp" Value="$(var.SourceDir)\InstallBanner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="$(var.SourceDir)\InstallDialog.bmp" />
+
+    <!-- Upgrade Configuration -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed."
+                  Schedule="afterInstallInitialize"
+                  AllowSameVersionUpgrades="yes" />
+
+    <!-- Installation Logging -->
+    <Property Id="MsiLogging" Value="iwearucmpvx" />
+
+  </Product>
+</Wix>

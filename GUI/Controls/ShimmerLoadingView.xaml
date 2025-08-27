@@ -1,0 +1,196 @@
+<UserControl x:Class="MandADiscoverySuite.Controls.ShimmerLoadingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="200" d:DesignWidth="400">
+
+    <UserControl.Resources>
+        <!-- Shimmer Animation Storyboard -->
+        <Storyboard x:Key="ShimmerAnimation" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="ShimmerGradient"
+                           Storyboard.TargetProperty="Offset"
+                           From="-1" To="2" Duration="0:0:1.5"
+                           AccelerationRatio="0.3" DecelerationRatio="0.3"/>
+        </Storyboard>
+
+        <!-- Shimmer Gradient Brush -->
+        <LinearGradientBrush x:Key="ShimmerBrush" StartPoint="0,0" EndPoint="1,0">
+            <LinearGradientBrush.GradientStops>
+                <GradientStop Color="#FFE8E8E8" Offset="0"/>
+                <GradientStop Color="#FFF0F0F0" Offset="0.4"/>
+                <GradientStop Color="#FFFAFAFA" Offset="0.5" x:Name="ShimmerGradient"/>
+                <GradientStop Color="#FFF0F0F0" Offset="0.6"/>
+                <GradientStop Color="#FFE8E8E8" Offset="1"/>
+            </LinearGradientBrush.GradientStops>
+            <LinearGradientBrush.Transform>
+                <TranslateTransform x:Name="ShimmerTransform"/>
+            </LinearGradientBrush.Transform>
+        </LinearGradientBrush>
+
+        <!-- Dark Theme Shimmer Brush -->
+        <LinearGradientBrush x:Key="DarkShimmerBrush" StartPoint="0,0" EndPoint="1,0">
+            <LinearGradientBrush.GradientStops>
+                <GradientStop Color="#FF2D2D30" Offset="0"/>
+                <GradientStop Color="#FF3E3E42" Offset="0.4"/>
+                <GradientStop Color="#FF4B4B50" Offset="0.5"/>
+                <GradientStop Color="#FF3E3E42" Offset="0.6"/>
+                <GradientStop Color="#FF2D2D30" Offset="1"/>
+            </LinearGradientBrush.GradientStops>
+            <LinearGradientBrush.Transform>
+                <TranslateTransform x:Name="DarkShimmerTransform"/>
+            </LinearGradientBrush.Transform>
+        </LinearGradientBrush>
+
+        <!-- Shimmer Rectangle Style -->
+        <Style x:Key="ShimmerRectangleStyle" TargetType="Rectangle">
+            <Setter Property="Fill" Value="{StaticResource ShimmerBrush}"/>
+            <Setter Property="RadiusX" Value="4"/>
+            <Setter Property="RadiusY" Value="4"/>
+            <Style.Triggers>
+                <!-- Use dark shimmer for dark theme -->
+                <DataTrigger Binding="{Binding Source={x:Static Application.Current}, Path=(FrameworkElement.ActualTheme)}" Value="Dark">
+                    <Setter Property="Fill" Value="{StaticResource DarkShimmerBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- List Item Shimmer Template -->
+        <DataTemplate x:Key="ListItemShimmerTemplate">
+            <Grid Height="60" Margin="8,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="80"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Avatar placeholder -->
+                <Ellipse Grid.Column="0" 
+                        Width="40" Height="40"
+                        Fill="{StaticResource ShimmerBrush}"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"/>
+
+                <!-- Content placeholders -->
+                <StackPanel Grid.Column="1" 
+                           VerticalAlignment="Center" 
+                           Margin="12,0,12,0">
+                    <Rectangle Height="14" 
+                              Style="{StaticResource ShimmerRectangleStyle}"
+                              Margin="0,2"/>
+                    <Rectangle Height="12" 
+                              Width="120"
+                              HorizontalAlignment="Left"
+                              Style="{StaticResource ShimmerRectangleStyle}"
+                              Margin="0,6,0,2"/>
+                </StackPanel>
+
+                <!-- Status placeholder -->
+                <Rectangle Grid.Column="2" 
+                          Height="12" Width="60"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center"
+                          Style="{StaticResource ShimmerRectangleStyle}"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Card Shimmer Template -->
+        <DataTemplate x:Key="CardShimmerTemplate">
+            <Border Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16"
+                    Margin="8"
+                    MinHeight="120">
+                
+                <StackPanel>
+                    <!-- Title placeholder -->
+                    <Rectangle Height="16" 
+                              Width="140"
+                              HorizontalAlignment="Left"
+                              Style="{StaticResource ShimmerRectangleStyle}"
+                              Margin="0,0,0,12"/>
+                    
+                    <!-- Content placeholders -->
+                    <Rectangle Height="12" 
+                              Style="{StaticResource ShimmerRectangleStyle}"
+                              Margin="0,2"/>
+                    <Rectangle Height="12" 
+                              Width="180"
+                              HorizontalAlignment="Left"
+                              Style="{StaticResource ShimmerRectangleStyle}"
+                              Margin="0,6,0,2"/>
+                    
+                    <!-- Value placeholder -->
+                    <Rectangle Height="24" 
+                              Width="80"
+                              HorizontalAlignment="Left"
+                              Style="{StaticResource ShimmerRectangleStyle}"
+                              Margin="0,16,0,0"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- Table Row Shimmer Template -->
+        <DataTemplate x:Key="TableRowShimmerTemplate">
+            <Grid Height="48" Margin="8,2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="80"/>
+                </Grid.ColumnDefinitions>
+
+                <Rectangle Grid.Column="0" 
+                          Height="12"
+                          Style="{StaticResource ShimmerRectangleStyle}"
+                          Margin="4,0"/>
+                          
+                <Rectangle Grid.Column="1" 
+                          Height="12" Width="60"
+                          HorizontalAlignment="Left"
+                          Style="{StaticResource ShimmerRectangleStyle}"
+                          Margin="4,0"/>
+                          
+                <Rectangle Grid.Column="2" 
+                          Height="12" Width="80"
+                          HorizontalAlignment="Left"
+                          Style="{StaticResource ShimmerRectangleStyle}"
+                          Margin="4,0"/>
+                          
+                <Rectangle Grid.Column="3" 
+                          Height="12" Width="50"
+                          HorizontalAlignment="Left"
+                          Style="{StaticResource ShimmerRectangleStyle}"
+                          Margin="4,0"/>
+                          
+                <Rectangle Grid.Column="4" 
+                          Height="12" Width="40"
+                          HorizontalAlignment="Center"
+                          Style="{StaticResource ShimmerRectangleStyle}"
+                          Margin="4,0"/>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <UserControl.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard Storyboard="{StaticResource ShimmerAnimation}"/>
+        </EventTrigger>
+    </UserControl.Triggers>
+
+    <Grid x:Name="ShimmerContainer">
+        <!-- Dynamic shimmer content based on ShimmerType -->
+        <ItemsControl x:Name="ShimmerItemsControl"
+                      ItemTemplate="{StaticResource ListItemShimmerTemplate}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Vertical"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+    </Grid>
+</UserControl>

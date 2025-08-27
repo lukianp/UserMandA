@@ -1,0 +1,189 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="SpacingSystem.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+    
+    <!-- Enhanced Tooltip Style -->
+    <Style x:Key="ModernTooltipStyle" TargetType="ToolTip">
+        <Setter Property="Background">
+            <Setter.Value>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1" Opacity="0.95">
+                    <GradientStop Color="#1A202C" Offset="0"/>
+                    <GradientStop Color="#2D3748" Offset="1"/>
+                </LinearGradientBrush>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BorderBrush">
+            <Setter.Value>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1" Opacity="0.3">
+                    <GradientStop Color="#FFFFFF" Offset="0"/>
+                    <GradientStop Color="#4299E1" Offset="1"/>
+                </LinearGradientBrush>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#E2E8F0"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeS}"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="Padding" Value="{StaticResource PaddingS}"/>
+        <Setter Property="MaxWidth" Value="300"/>
+        <Setter Property="HasDropShadow" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}"
+                           BorderBrush="{TemplateBinding BorderBrush}"
+                           BorderThickness="{TemplateBinding BorderThickness}"
+                           CornerRadius="{StaticResource CornerRadiusM}"
+                           Padding="{TemplateBinding Padding}">
+                        <Border.Effect>
+                            <DropShadowEffect Color="Black" Direction="270" ShadowDepth="4" BlurRadius="12" Opacity="0.6"/>
+                        </Border.Effect>
+                        <TextBlock Text="{TemplateBinding Content}"
+                                  Foreground="{TemplateBinding Foreground}"
+                                  FontSize="{TemplateBinding FontSize}"
+                                  FontWeight="{TemplateBinding FontWeight}"
+                                  TextWrapping="Wrap"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Rich Content Tooltip Template -->
+    <ControlTemplate x:Key="RichTooltipTemplate" TargetType="ToolTip">
+        <Border Background="#F1F5F9" 
+               BorderBrush="#E2E8F0" 
+               BorderThickness="1" 
+               CornerRadius="{StaticResource CornerRadiusM}"
+               Padding="{StaticResource PaddingM}"
+               MaxWidth="350">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Direction="270" ShadowDepth="6" BlurRadius="16" Opacity="0.3"/>
+            </Border.Effect>
+            <StackPanel>
+                <!-- Header with Icon and Title -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <Path Width="16" Height="16" 
+                         Fill="#4299E1" 
+                         Margin="0,0,8,0"
+                         VerticalAlignment="Center"
+                         Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                    <TextBlock Text="{TemplateBinding Tag}" 
+                              FontWeight="SemiBold" 
+                              FontSize="{StaticResource FontSizeM}"
+                              Foreground="#1A202C"/>
+                </StackPanel>
+                
+                <!-- Content -->
+                <ContentPresenter TextBlock.Foreground="#4A5568"
+                                 TextBlock.FontSize="{StaticResource FontSizeS}"/>
+            </StackPanel>
+        </Border>
+    </ControlTemplate>
+    
+    <!-- Error Tooltip Style -->
+    <Style x:Key="ErrorTooltipStyle" TargetType="ToolTip">
+        <Setter Property="Background" Value="#FED7D7"/>
+        <Setter Property="BorderBrush" Value="#E53E3E"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#742A2A"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeS}"/>
+        <Setter Property="Padding" Value="{StaticResource PaddingS}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}"
+                           BorderBrush="{TemplateBinding BorderBrush}"
+                           BorderThickness="{TemplateBinding BorderThickness}"
+                           CornerRadius="{StaticResource CornerRadiusM}"
+                           Padding="{TemplateBinding Padding}">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Width="12" Height="12" 
+                                 Fill="{TemplateBinding BorderBrush}"
+                                 Margin="0,0,6,0"
+                                 VerticalAlignment="Center"
+                                 Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM13 17h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                            <TextBlock Text="{TemplateBinding Content}"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      FontSize="{TemplateBinding FontSize}"
+                                      TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Success Tooltip Style -->
+    <Style x:Key="SuccessTooltipStyle" TargetType="ToolTip">
+        <Setter Property="Background" Value="#C6F6D5"/>
+        <Setter Property="BorderBrush" Value="#38A169"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#22543D"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeS}"/>
+        <Setter Property="Padding" Value="{StaticResource PaddingS}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}"
+                           BorderBrush="{TemplateBinding BorderBrush}"
+                           BorderThickness="{TemplateBinding BorderThickness}"
+                           CornerRadius="{StaticResource CornerRadiusM}"
+                           Padding="{TemplateBinding Padding}">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Width="12" Height="12" 
+                                 Fill="{TemplateBinding BorderBrush}"
+                                 Margin="0,0,6,0"
+                                 VerticalAlignment="Center"
+                                 Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            <TextBlock Text="{TemplateBinding Content}"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      FontSize="{TemplateBinding FontSize}"
+                                      TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Warning Tooltip Style -->
+    <Style x:Key="WarningTooltipStyle" TargetType="ToolTip">
+        <Setter Property="Background" Value="#FEF5E7"/>
+        <Setter Property="BorderBrush" Value="#D69E2E"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#744210"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeS}"/>
+        <Setter Property="Padding" Value="{StaticResource PaddingS}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}"
+                           BorderBrush="{TemplateBinding BorderBrush}"
+                           BorderThickness="{TemplateBinding BorderThickness}"
+                           CornerRadius="{StaticResource CornerRadiusM}"
+                           Padding="{TemplateBinding Padding}">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Width="12" Height="12" 
+                                 Fill="{TemplateBinding BorderBrush}"
+                                 Margin="0,0,6,0"
+                                 VerticalAlignment="Center"
+                                 Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                            <TextBlock Text="{TemplateBinding Content}"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      FontSize="{TemplateBinding FontSize}"
+                                      TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Default Modern Tooltip Style for All Controls -->
+    <Style TargetType="ToolTip" BasedOn="{StaticResource ModernTooltipStyle}"/>
+    
+</ResourceDictionary>

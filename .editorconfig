@@ -1,0 +1,123 @@
+# EditorConfig for M&A Discovery Suite
+# https://editorconfig.org/
+
+root = true
+
+# All files
+[*]
+charset = utf-8-bom
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# PowerShell files
+[*.{ps1,psm1,psd1}]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# C# files
+[*.{cs,csx}]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# XAML files
+[*.xaml]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# JSON files
+[*.json]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+
+# XML files
+[*.{xml,config,props,targets,nuspec,resx,ruleset,vsixmanifest,vsct}]
+indent_style = space
+indent_size = 2
+
+# Markdown files
+[*.md]
+max_line_length = off
+trim_trailing_whitespace = false
+
+# Batch files
+[*.{cmd,bat}]
+end_of_line = crlf
+
+# Shell scripts
+[*.sh]
+end_of_line = lf
+
+# C# Coding Conventions
+[*.cs]
+
+# Organize usings
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# this. preferences
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+
+# Language keywords vs BCL types preferences
+dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
+dotnet_style_predefined_type_for_member_access = true:suggestion
+
+# Parentheses preferences
+dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity:silent
+dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity:silent
+dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:silent
+dotnet_style_parentheses_in_other_operators = never_if_unnecessary:silent
+
+# Modifier preferences
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:suggestion
+dotnet_style_readonly_field = true:suggestion
+
+# Expression-level preferences
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_explicit_tuple_names = true:suggestion
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_coalesce_expression = true:suggestion
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
+dotnet_style_prefer_inferred_tuple_names = true:suggestion
+dotnet_style_prefer_inferred_anonymous_type_member_names = true:suggestion
+dotnet_style_prefer_auto_properties = true:silent
+dotnet_style_prefer_conditional_expression_over_assignment = true:silent
+dotnet_style_prefer_conditional_expression_over_return = true:silent
+
+# C# Specific Preferences
+csharp_prefer_braces = true:silent
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+csharp_space_around_binary_operators = before_and_after
+
+# PowerShell Specific Preferences
+[*.{ps1,psm1,psd1}]
+# Use consistent indentation
+indent_style = space
+indent_size = 4
+
+# Use PascalCase for functions
+# Use camelCase for variables
+# Use UPPER_CASE for constants
+# Use descriptive names
+
+# Performance Guidelines
+# - Use [CmdletBinding()] for advanced functions
+# - Use proper parameter validation
+# - Implement proper error handling
+# - Use Write-Verbose for diagnostic output
+# - Use Write-Progress for long-running operations

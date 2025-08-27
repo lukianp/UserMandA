@@ -1,0 +1,181 @@
+<Application x:Class="MandADiscoverySuite.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:MandADiscoverySuite.Converters"
+             xmlns:views="clr-namespace:MandADiscoverySuite.Views"
+             xmlns:vm="clr-namespace:MandADiscoverySuite.ViewModels"
+             StartupUri="MandADiscoverySuite.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Core converters resource dictionary -->
+                <ResourceDictionary Source="Resources/Converters.xaml"/>
+                <!-- DISABLED: Include optimized resources to fix stack overflow -->
+                <!-- <ResourceDictionary Source="Themes/OptimizedResources.xaml"/> -->
+                <!-- <ResourceDictionary Source="Themes/OptimizedAnimations.xaml"/> -->
+                <!-- <ResourceDictionary Source="Themes/OptimizedGridLayouts.xaml"/> -->
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Standard Converters -->
+            <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:InvertedBoolToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter"/>
+            <converters:ViewModelTypeComparisonConverter x:Key="ViewModelTypeComparisonConverter"/>
+            <converters:RiskLevelToBrushConverter x:Key="RiskLevelToBrushConverter"/>
+            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+            <converters:TaskCountToHeightConverter x:Key="TaskCountToHeightConverter"/>
+            <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
+            <converters:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
+            <converters:ValidationLevelToColorConverter x:Key="ValidationLevelToColorConverter"/>
+            <converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter"/>
+            <converters:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
+            <converters:BoolToExpandIconConverter x:Key="BoolToExpandIconConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <converters:StringListToStringConverter x:Key="StringListToStringConverter"/>
+            <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+            <converters:ProgressToVisibilityConverter x:Key="ProgressToVisibilityConverter"/>
+            
+            <!-- Common Colors -->
+            <SolidColorBrush x:Key="PrimaryBrush" Color="#4CAF50"/>
+            <SolidColorBrush x:Key="SecondaryBrush" Color="#2196F3"/>
+            <SolidColorBrush x:Key="AccentBrush" Color="#FF9800"/>
+            <SolidColorBrush x:Key="BackgroundBrush" Color="#F5F5F5"/>
+            <SolidColorBrush x:Key="SurfaceBrush" Color="White"/>
+            <SolidColorBrush x:Key="ForegroundBrush" Color="#333333"/>
+            
+            <!-- Dark Theme Colors -->
+            <SolidColorBrush x:Key="DarkBackgroundBrush" Color="#1E1E1E"/>
+            <SolidColorBrush x:Key="DarkSurfaceBrush" Color="#2D2D30"/>
+            <SolidColorBrush x:Key="DarkForegroundBrush" Color="#CCCCCC"/>
+            
+            <!-- Additional colors -->
+            <SolidColorBrush x:Key="MutedForegroundBrush" Color="#999999"/>
+            
+            <!-- Modern Gradient Brushes -->
+            <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#FF1e3c72" Offset="0"/>
+                <GradientStop Color="#FF2a5298" Offset="1"/>
+            </LinearGradientBrush>
+            
+            <LinearGradientBrush x:Key="AccentGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#FF667eea" Offset="0"/>
+                <GradientStop Color="#FF764ba2" Offset="1"/>
+            </LinearGradientBrush>
+            
+            <LinearGradientBrush x:Key="SuccessGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#FF11998e" Offset="0"/>
+                <GradientStop Color="#FF38ef7d" Offset="1"/>
+            </LinearGradientBrush>
+            
+            <LinearGradientBrush x:Key="DangerGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#FFff5f6d" Offset="0"/>
+                <GradientStop Color="#FFffc371" Offset="1"/>
+            </LinearGradientBrush>
+            
+            <!-- Modern Button Style -->
+            <Style x:Key="ModernButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="20,12"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="FontWeight" Value="Medium"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+                <Setter Property="RenderTransform">
+                    <Setter.Value>
+                        <ScaleTransform ScaleX="1" ScaleY="1"/>
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="ButtonBorder" 
+                                    Background="{TemplateBinding Background}" 
+                                    CornerRadius="8"
+                                    Padding="{TemplateBinding Padding}">
+                                <Border.Effect>
+                                    <DropShadowEffect ShadowDepth="2" Direction="270" BlurRadius="5" Opacity="0.3" Color="Black"/>
+                                </Border.Effect>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource AccentGradient}"/>
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1.05" Duration="0:0:0.15"/>
+                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1.05" Duration="0:0:0.15"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.15"/>
+                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.15"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="ButtonBorder" Property="Background" Value="#FF4A5568"/>
+                                    <Setter Property="RenderTransform">
+                                        <Setter.Value>
+                                            <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            
+            <!-- Animation performance settings -->
+            <Duration x:Key="FastAnimationDuration">0:0:0.15</Duration>
+            <Duration x:Key="StandardAnimationDuration">0:0:0.25</Duration>
+            <Duration x:Key="SlowAnimationDuration">0:0:0.4</Duration>
+            
+            <!-- Animation easing functions -->
+            <PowerEase x:Key="StandardEase" EasingMode="EaseOut" Power="2"/>
+            <QuadraticEase x:Key="FastEase" EasingMode="EaseOut"/>
+            
+            <!-- Critical font families needed early in startup -->
+            <FontFamily x:Key="IconFontFamily">Segoe MDL2 Assets</FontFamily>
+            <FontFamily x:Key="PrimaryFontFamily">Segoe UI</FontFamily>
+            <FontFamily x:Key="MonospaceFontFamily">Consolas</FontFamily>
+            
+            <!-- Standard font sizes -->
+            <sys:Double x:Key="FontSizeXSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">10</sys:Double>
+            <sys:Double x:Key="FontSizeSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">12</sys:Double>
+            <sys:Double x:Key="FontSizeMedium" xmlns:sys="clr-namespace:System;assembly=mscorlib">14</sys:Double>
+            <sys:Double x:Key="FontSizeLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">16</sys:Double>
+            <sys:Double x:Key="FontSizeXLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">20</sys:Double>
+            
+            <!-- Spacing dimensions -->
+            <sys:Double x:Key="HorizontalSpacingSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">8</sys:Double>
+            <sys:Double x:Key="HorizontalSpacingMedium" xmlns:sys="clr-namespace:System;assembly=mscorlib">16</sys:Double>
+            <sys:Double x:Key="HorizontalSpacingLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">24</sys:Double>
+            <sys:Double x:Key="VerticalSpacingSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">4</sys:Double>
+            <sys:Double x:Key="VerticalSpacingMedium" xmlns:sys="clr-namespace:System;assembly=mscorlib">12</sys:Double>
+            <sys:Double x:Key="VerticalSpacingLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">20</sys:Double>
+
+            <!-- Thickness/Margin values for spacing -->
+            <Thickness x:Key="HorizontalSpacingMediumThickness">16,0,16,0</Thickness>
+            <Thickness x:Key="VerticalSpacingMediumThickness">0,12,0,12</Thickness>
+
+            <!-- View mappings -->
+            <DataTemplate DataType="{x:Type vm:ManagementViewModel}">
+                <views:ManagementView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:GroupPoliciesViewModel}">
+                <views:GroupPoliciesView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:PolicyDetailViewModel}">
+                <views:PolicyDetailView/>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

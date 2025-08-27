@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <appSettings>
+    <!-- Enterprise Configuration -->
+    <add key="Environment" value="Production" />
+    <add key="CompanyProfile" value="{COMPANY_NAME}" />
+    <add key="DataRootPath" value="C:\DiscoveryData" />
+    <add key="LogLevel" value="Information" />
+    <add key="EnableTelemetry" value="true" />
+    
+    <!-- Database Configuration -->
+    <add key="DatabaseServer" value="{SQL_SERVER}" />
+    <add key="DatabaseName" value="MandADiscovery" />
+    <add key="DatabaseAuth" value="Integrated" />
+    
+    <!-- PowerShell Configuration -->
+    <add key="MaxConcurrentRunspaces" value="20" />
+    <add key="RunspaceTimeout" value="300" />
+    <add key="EnableScriptLogging" value="true" />
+    
+    <!-- Security Configuration -->
+    <add key="RequireEncryption" value="true" />
+    <add key="EnableAuditing" value="true" />
+    <add key="SessionTimeout" value="480" />
+  </appSettings>
+  
+  <connectionStrings>
+    <add name="MandADiscoveryDB" 
+         connectionString="Data Source={SQL_SERVER};Initial Catalog=MandADiscovery;Integrated Security=True;Encrypt=True;TrustServerCertificate=False" 
+         providerName="System.Data.SqlClient" />
+  </connectionStrings>
+</configuration>

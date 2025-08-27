@@ -1,0 +1,440 @@
+﻿{
+    "ExecutionFlow":  [
+                          {
+                              "Category":  "ExecutionFlow",
+                              "TestName":  "Real Migration Execution",
+                              "Status":  "PASS",
+                              "Details":  "ExecuteRealMigrationAsync method found",
+                              "Expected":  "",
+                              "Actual":  "",
+                              "Timestamp":  {
+                                                "value":  "\/Date(1756157380674)\/",
+                                                "DisplayHint":  2,
+                                                "DateTime":  "25 August 2025 22:29:40"
+                                            }
+                          },
+                          {
+                              "Category":  "ExecutionFlow",
+                              "TestName":  "T-027 Wave Execution",
+                              "Status":  "PASS",
+                              "Details":  "ExecuteMigrationWaveAsync call found",
+                              "Expected":  "",
+                              "Actual":  "",
+                              "Timestamp":  {
+                                                "value":  "\/Date(1756157380675)\/",
+                                                "DisplayHint":  2,
+                                                "DateTime":  "25 August 2025 22:29:40"
+                                            }
+                          },
+                          {
+                              "Category":  "ExecutionFlow",
+                              "TestName":  "Execution Results Update",
+                              "Status":  "PASS",
+                              "Details":  "UpdateExecutionResultsFromWave method found",
+                              "Expected":  "",
+                              "Actual":  "",
+                              "Timestamp":  {
+                                                "value":  "\/Date(1756157380676)\/",
+                                                "DisplayHint":  2,
+                                                "DateTime":  "25 August 2025 22:29:40"
+                                            }
+                          },
+                          {
+                              "Category":  "ExecutionFlow",
+                              "TestName":  "Pre-flight Validation",
+                              "Status":  "WARNING",
+                              "Details":  "Pre-flight validation check should be implemented",
+                              "Expected":  "",
+                              "Actual":  "",
+                              "Timestamp":  {
+                                                "value":  "\/Date(1756157380682)\/",
+                                                "DisplayHint":  2,
+                                                "DateTime":  "25 August 2025 22:29:40"
+                                            }
+                          },
+                          {
+                              "Category":  "ExecutionFlow",
+                              "TestName":  "Cancellation Support",
+                              "Status":  "PASS",
+                              "Details":  "CancellationToken usage found",
+                              "Expected":  "",
+                              "Actual":  "",
+                              "Timestamp":  {
+                                                "value":  "\/Date(1756157380685)\/",
+                                                "DisplayHint":  2,
+                                                "DateTime":  "25 August 2025 22:29:40"
+                                            }
+                          },
+                          {
+                              "Category":  "ExecutionFlow",
+                              "TestName":  "T-027 Wave Execution Method",
+                              "Status":  "FAIL",
+                              "Details":  "ExecuteMigrationWaveAsync method not found in T-027",
+                              "Expected":  "",
+                              "Actual":  "",
+                              "Timestamp":  {
+                                                "value":  "\/Date(1756157380694)\/",
+                                                "DisplayHint":  2,
+                                                "DateTime":  "25 August 2025 22:29:40"
+                                            }
+                          },
+                          {
+                              "Category":  "ExecutionFlow",
+                              "TestName":  "T-027 Provider Adapters",
+                              "Status":  "PASS",
+                              "Details":  "Migration provider adapter classes found",
+                              "Expected":  "",
+                              "Actual":  "",
+                              "Timestamp":  {
+                                                "value":  "\/Date(1756157380697)\/",
+                                                "DisplayHint":  2,
+                                                "DateTime":  "25 August 2025 22:29:40"
+                                            }
+                          }
+                      ],
+    "ServiceResolution":  [
+                              {
+                                  "Category":  "ServiceResolution",
+                                  "TestName":  "ViewModel File Exists",
+                                  "Status":  "PASS",
+                                  "Details":  "Found at D:\\Scripts\\UserMandA\\GUI\\ViewModels\\MigrationExecutionViewModel.cs",
+                                  "Expected":  "",
+                                  "Actual":  "",
+                                  "Timestamp":  {
+                                                    "value":  "\/Date(1756157380617)\/",
+                                                    "DisplayHint":  2,
+                                                    "DateTime":  "25 August 2025 22:29:40"
+                                                }
+                              },
+                              {
+                                  "Category":  "ServiceResolution",
+                                  "TestName":  "Engine Service File Exists",
+                                  "Status":  "PASS",
+                                  "Details":  "Found at D:\\Scripts\\UserMandA\\GUI\\Services\\Migration\\MigrationEngineService.cs",
+                                  "Expected":  "",
+                                  "Actual":  "",
+                                  "Timestamp":  {
+                                                    "value":  "\/Date(1756157380631)\/",
+                                                    "DisplayHint":  2,
+                                                    "DateTime":  "25 August 2025 22:29:40"
+                                                }
+                              },
+                              {
+                                  "Category":  "ServiceResolution",
+                                  "TestName":  "Constructor T-027 Integration",
+                                  "Status":  "PASS",
+                                  "Details":  "Constructor accepts MigrationEngineService parameter",
+                                  "Expected":  "",
+                                  "Actual":  "",
+                                  "Timestamp":  {
+                                                    "value":  "\/Date(1756157380635)\/",
+                                                    "DisplayHint":  2,
+                                                    "DateTime":  "25 August 2025 22:29:40"
+                                                }
+                              },
+                              {
+                                  "Category":  "ServiceResolution",
+                                  "TestName":  "Migration Engine Resolver",
+                                  "Status":  "FAIL",
+                                  "Details":  "ResolveOrCreateMigrationEngine method not found",
+                                  "Expected":  "",
+                                  "Actual":  "",
+                                  "Timestamp":  {
+                                                    "value":  "\/Date(1756157380637)\/",
+                                                    "DisplayHint":  2,
+                                                    "DateTime":  "25 August 2025 22:29:40"
+                                                }
+                              },
+                              {
+                                  "Category":  "ServiceResolution",
+                                  "TestName":  "Service Provider Fallback",
+                                  "Status":  "PASS",
+                                  "Details":  "DefaultServiceProvider fallback class found",
+                                  "Expected":  "",
+                                  "Actual":  "",
+                                  "Timestamp":  {
+                                                    "value":  "\/Date(1756157380648)\/",
+                                                    "DisplayHint":  2,
+                                                    "DateTime":  "25 August 2025 22:29:40"
+                                                }
+                              },
+                              {
+                                  "Category":  "ServiceResolution",
+                                  "TestName":  "Event Subscription Init",
+                                  "Status":  "PASS",
+                                  "Details":  "InitializeMigrationEngineEvents method found",
+                                  "Expected":  "",
+                                  "Actual":  "",
+                                  "Timestamp":  {
+                                                    "value":  "\/Date(1756157380650)\/",
+                                                    "DisplayHint":  2,
+                                                    "DateTime":  "25 August 2025 22:29:40"
+                                                }
+                              }
+                          ],
+    "WaveCreation":  [
+                         {
+                             "Category":  "WaveCreation",
+                             "TestName":  "Wave Creation Method",
+                             "Status":  "FAIL",
+                             "Details":  "CreateMigrationWaveFromExecutionItems method not found",
+                             "Expected":  "",
+                             "Actual":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157380652)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:29:40"
+                                           }
+                         },
+                         {
+                             "Category":  "WaveCreation",
+                             "TestName":  "Batch Creation Support",
+                             "Status":  "PASS",
+                             "Details":  "MigrationBatchExtended usage found",
+                             "Expected":  "",
+                             "Actual":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157380654)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:29:40"
+                                           }
+                         },
+                         {
+                             "Category":  "WaveCreation",
+                             "TestName":  "Data Transformation",
+                             "Status":  "PASS",
+                             "Details":  "ExecutionItems to MigrationItem transformation found",
+                             "Expected":  "",
+                             "Actual":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157380656)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:29:40"
+                                           }
+                         },
+                         {
+                             "Category":  "WaveCreation",
+                             "TestName":  "Domain Extraction Methods",
+                             "Status":  "PASS",
+                             "Details":  "Domain extraction methods found",
+                             "Expected":  "",
+                             "Actual":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157380657)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:29:40"
+                                           }
+                         },
+                         {
+                             "Category":  "WaveCreation",
+                             "TestName":  "Migration Context Creation",
+                             "Status":  "FAIL",
+                             "Details":  "CreateMigrationContext method not found",
+                             "Expected":  "",
+                             "Actual":  "",
+                             "Timestamp":  {
+                                               "value":  "\/Date(1756157380663)\/",
+                                               "DisplayHint":  2,
+                                               "DateTime":  "25 August 2025 22:29:40"
+                                           }
+                         }
+                     ],
+    "ErrorHandling":  [
+                          {
+                              "Category":  "ErrorHandling",
+                              "TestName":  "Migration Execution Error Handling",
+                              "Status":  "WARNING",
+                              "Details":  "Error handling pattern should be verified",
+                              "Expected":  "",
+                              "Actual":  "",
+                              "Timestamp":  {
+                                                "value":  "\/Date(1756157380687)\/",
+                                                "DisplayHint":  2,
+                                                "DateTime":  "25 August 2025 22:29:40"
+                                            }
+                          },
+                          {
+                              "Category":  "ErrorHandling",
+                              "TestName":  "Rollback Point Creation",
+                              "Status":  "PASS",
+                              "Details":  "CreateAutomaticRollbackPoint method found",
+                              "Expected":  "",
+                              "Actual":  "",
+                              "Timestamp":  {
+                                                "value":  "\/Date(1756157380689)\/",
+                                                "DisplayHint":  2,
+                                                "DateTime":  "25 August 2025 22:29:40"
+                                            }
+                          },
+                          {
+                              "Category":  "ErrorHandling",
+                              "TestName":  "Rollback Execution",
+                              "Status":  "PASS",
+                              "Details":  "ExecuteRollbackAsync method found",
+                              "Expected":  "",
+                              "Actual":  "",
+                              "Timestamp":  {
+                                                "value":  "\/Date(1756157380690)\/",
+                                                "DisplayHint":  2,
+                                                "DateTime":  "25 August 2025 22:29:40"
+                                            }
+                          },
+                          {
+                              "Category":  "ErrorHandling",
+                              "TestName":  "Error Logging",
+                              "Status":  "PASS",
+                              "Details":  "Error level logging found",
+                              "Expected":  "",
+                              "Actual":  "",
+                              "Timestamp":  {
+                                                "value":  "\/Date(1756157380691)\/",
+                                                "DisplayHint":  2,
+                                                "DateTime":  "25 August 2025 22:29:40"
+                                            }
+                          },
+                          {
+                              "Category":  "ErrorHandling",
+                              "TestName":  "User Error Feedback",
+                              "Status":  "PASS",
+                              "Details":  "MessageBox error feedback found",
+                              "Expected":  "",
+                              "Actual":  "",
+                              "Timestamp":  {
+                                                "value":  "\/Date(1756157380692)\/",
+                                                "DisplayHint":  2,
+                                                "DateTime":  "25 August 2025 22:29:40"
+                                            }
+                          }
+                      ],
+    "Summary":  {
+                    "StartTime":  "\/Date(1756157380563)\/",
+                    "FailedTests":  4,
+                    "EndTime":  {
+                                    "value":  "\/Date(1756157380698)\/",
+                                    "DisplayHint":  2,
+                                    "DateTime":  "25 August 2025 22:29:40"
+                                },
+                    "PassedTests":  25,
+                    "Duration":  {
+                                     "Ticks":  1346868,
+                                     "Days":  0,
+                                     "Hours":  0,
+                                     "Milliseconds":  134,
+                                     "Minutes":  0,
+                                     "Seconds":  0,
+                                     "TotalDays":  1.558875E-06,
+                                     "TotalHours":  3.7412999999999996E-05,
+                                     "TotalMilliseconds":  134.6868,
+                                     "TotalMinutes":  0.00224478,
+                                     "TotalSeconds":  0.1346868
+                                 },
+                    "WarningTests":  2,
+                    "TotalTests":  31
+                },
+    "EventIntegration":  [
+                             {
+                                 "Category":  "EventIntegration",
+                                 "TestName":  "Progress Event Handler",
+                                 "Status":  "PASS",
+                                 "Details":  "OnMigrationEngineProgress handler found",
+                                 "Expected":  "",
+                                 "Actual":  "",
+                                 "Timestamp":  {
+                                                   "value":  "\/Date(1756157380665)\/",
+                                                   "DisplayHint":  2,
+                                                   "DateTime":  "25 August 2025 22:29:40"
+                                               }
+                             },
+                             {
+                                 "Category":  "EventIntegration",
+                                 "TestName":  "Completed Event Handler",
+                                 "Status":  "PASS",
+                                 "Details":  "OnMigrationEngineCompleted handler found",
+                                 "Expected":  "",
+                                 "Actual":  "",
+                                 "Timestamp":  {
+                                                   "value":  "\/Date(1756157380667)\/",
+                                                   "DisplayHint":  2,
+                                                   "DateTime":  "25 August 2025 22:29:40"
+                                               }
+                             },
+                             {
+                                 "Category":  "EventIntegration",
+                                 "TestName":  "Error Event Handler",
+                                 "Status":  "PASS",
+                                 "Details":  "OnMigrationEngineError handler found",
+                                 "Expected":  "",
+                                 "Actual":  "",
+                                 "Timestamp":  {
+                                                   "value":  "\/Date(1756157380668)\/",
+                                                   "DisplayHint":  2,
+                                                   "DateTime":  "25 August 2025 22:29:40"
+                                               }
+                             },
+                             {
+                                 "Category":  "EventIntegration",
+                                 "TestName":  "Thread-Safe UI Updates",
+                                 "Status":  "PASS",
+                                 "Details":  "Dispatcher.Invoke pattern found for thread-safe updates",
+                                 "Expected":  "",
+                                 "Actual":  "",
+                                 "Timestamp":  {
+                                                   "value":  "\/Date(1756157380669)\/",
+                                                   "DisplayHint":  2,
+                                                   "DateTime":  "25 August 2025 22:29:40"
+                                               }
+                             },
+                             {
+                                 "Category":  "EventIntegration",
+                                 "TestName":  "Event Subscription",
+                                 "Status":  "PASS",
+                                 "Details":  "Migration engine event subscription found",
+                                 "Expected":  "",
+                                 "Actual":  "",
+                                 "Timestamp":  {
+                                                   "value":  "\/Date(1756157380671)\/",
+                                                   "DisplayHint":  2,
+                                                   "DateTime":  "25 August 2025 22:29:40"
+                                               }
+                             },
+                             {
+                                 "Category":  "EventIntegration",
+                                 "TestName":  "Event Unsubscription",
+                                 "Status":  "PASS",
+                                 "Details":  "Migration engine event unsubscription found in dispose",
+                                 "Expected":  "",
+                                 "Actual":  "",
+                                 "Timestamp":  {
+                                                   "value":  "\/Date(1756157380673)\/",
+                                                   "DisplayHint":  2,
+                                                   "DateTime":  "25 August 2025 22:29:40"
+                                               }
+                             },
+                             {
+                                 "Category":  "EventIntegration",
+                                 "TestName":  "T-027 Engine Events",
+                                 "Status":  "PASS",
+                                 "Details":  "Migration events defined in T-027 engine",
+                                 "Expected":  "",
+                                 "Actual":  "",
+                                 "Timestamp":  {
+                                                   "value":  "\/Date(1756157380693)\/",
+                                                   "DisplayHint":  2,
+                                                   "DateTime":  "25 August 2025 22:29:40"
+                                               }
+                             },
+                             {
+                                 "Category":  "EventIntegration",
+                                 "TestName":  "T-027 Event Arguments",
+                                 "Status":  "PASS",
+                                 "Details":  "Migration event argument classes found",
+                                 "Expected":  "",
+                                 "Actual":  "",
+                                 "Timestamp":  {
+                                                   "value":  "\/Date(1756157380695)\/",
+                                                   "DisplayHint":  2,
+                                                   "DateTime":  "25 August 2025 22:29:40"
+                                               }
+                             }
+                         ]
+}

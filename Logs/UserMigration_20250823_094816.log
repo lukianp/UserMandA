@@ -1,0 +1,8 @@
+[2025-08-23 09:48:16] [INFO] UserMigration module initialized
+[2025-08-23 09:48:16] [INFO] Source Domain: contoso.local
+[2025-08-23 09:48:16] [INFO] Target Domain: fabrikam.com
+[2025-08-23 09:48:16] [INFO] Initializing advanced group mapping capabilities
+[2025-08-23 09:48:16] [INFO] Group naming convention set: DomainReplacement = True
+[2025-08-23 09:48:16] [INFO] Group naming convention set: ConflictStrategy = Append
+[2025-08-23 09:48:16] [INFO] Added group transformation rule: RemoveSourceDomain
+[2025-08-23 09:48:16] [INFO] Advanced group mapping initialized

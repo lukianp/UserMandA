@@ -1,0 +1,700 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using MandADiscoverySuite.Models;
+using Microsoft.Extensions.Logging;
+
+namespace MandADiscoverySuite.Services
+{
+    /// <summary>
+    /// Migration state management service for persistent state storage and recovery
+    /// Maintains cross-tab data consistency during real operations
+    /// </summary>
+    public class MigrationStateManager : IDisposable
+    {
+        private readonly ILogger<MigrationStateManager> _logger;
+        private readonly StructuredLoggingService _structuredLogger;
+        private readonly string _stateFilePath;
+        private readonly Timer _autoSaveTimer;
+        private readonly object _stateLock = new object();
+        private readonly Dictionary<string, MigrationExecutionState> _executionStates = new();
+        private readonly Dictionary<string, List<MigrationCheckpoint>> _checkpoints = new();
+        private bool _disposed = false;
+
+        // State change notifications
+        public event EventHandler<MigrationStateChangedEventArgs> StateChanged;
+        public event EventHandler<MigrationCheckpointCreatedEventArgs> CheckpointCreated;
+
+        public MigrationStateManager(ILogger<MigrationStateManager> logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _structuredLogger = StructuredLoggingService.Instance;
+            
+            // Set up state file path
+            var stateDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
+                "MandADiscoverySuite", "MigrationStates");
+            Directory.CreateDirectory(stateDirectory);
+            _stateFilePath = Path.Combine(stateDirectory, "migration-states.json");
+
+            // Initialize auto-save timer (every 30 seconds)
+            _autoSaveTimer = new Timer(AutoSaveState, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+
+            // Load existing state
+            LoadState();
+
+            _structuredLogger?.LogInfo("MigrationStateManager", 
+                new { action = "service_init", state_file = _stateFilePath }, 
+                "Migration state manager initialized");
+        }
+
+        #region State Management
+
+        /// <summary>
+        /// Creates or updates an execution state
+        /// </summary>
+        public void CreateOrUpdateExecutionState(string executionId, MigrationExecutionState state)
+        {
+            if (string.IsNullOrEmpty(executionId) || state == null)
+                throw new ArgumentException("ExecutionId and state cannot be null or empty");
+
+            lock (_stateLock)
+            {
+                var isNew = !_executionStates.ContainsKey(executionId);
+                _executionStates[executionId] = state;
+                
+                _structuredLogger?.LogInfo("MigrationStateManager",
+                    new { action = isNew ? "state_created" : "state_updated", execution_id = executionId, status = state.Status.ToString() },
+                    $"Execution state {(isNew ? "created" : "updated")}: {executionId}");
+
+                // Fire state change event on UI thread
+                Application.Current?.Dispatcher.BeginInvoke(() =>
+                {
+                    StateChanged?.Invoke(this, new MigrationStateChangedEventArgs
+                    {
+                        ExecutionId = executionId,
+                        State = state,
+                        IsNew = isNew
+                    });
+                });
+            }
+        }
+
+        /// <summary>
+        /// Gets an execution state by ID
+        /// </summary>
+        public MigrationExecutionState GetExecutionState(string executionId)
+        {
+            if (string.IsNullOrEmpty(executionId))
+                return null;
+
+            lock (_stateLock)
+            {
+                return _executionStates.TryGetValue(executionId, out var state) ? state : null;
+            }
+        }
+
+        /// <summary>
+        /// Gets all active execution states
+        /// </summary>
+        public List<MigrationExecutionState> GetActiveExecutionStates()
+        {
+            lock (_stateLock)
+            {
+                return _executionStates.Values
+                    .Where(s => s.Status == MigrationStatus.InProgress || 
+                               s.Status == MigrationStatus.Validating || 
+                               s.Status == MigrationStatus.Ready)
+                    .ToList();
+            }
+        }
+
+        /// <summary>
+        /// Gets all execution states for a specific migration type
+        /// </summary>
+        public List<MigrationExecutionState> GetExecutionStatesByType(MigrationType type)
+        {
+            lock (_stateLock)
+            {
+                return _executionStates.Values
+                    .Where(s => s.MigrationType == type)
+                    .OrderByDescending(s => s.StartTime)
+                    .ToList();
+            }
+        }
+
+        /// <summary>
+        /// Updates execution progress
+        /// </summary>
+        public void UpdateExecutionProgress(string executionId, double progressPercentage, string currentOperation)
+        {
+            lock (_stateLock)
+            {
+                if (_executionStates.TryGetValue(executionId, out var state))
+                {
+                    state.ProgressPercentage = progressPercentage;
+                    state.CurrentOperation = currentOperation;
+                    state.LastUpdate = DateTime.Now;
+
+                    Application.Current?.Dispatcher.BeginInvoke(() =>
+                    {
+                        StateChanged?.Invoke(this, new MigrationStateChangedEventArgs
+                        {
+                            ExecutionId = executionId,
+                            State = state,
+                            IsNew = false
+                        });
+                    });
+                }
+            }
+        }
+
+        /// <summary>
+        /// Marks execution as completed or failed
+        /// </summary>
+        public void CompleteExecution(string executionId, MigrationStatus finalStatus, string errorMessage = null)
+        {
+            lock (_stateLock)
+            {
+                if (_executionStates.TryGetValue(executionId, out var state))
+                {
+                    state.Status = finalStatus;
+                    state.EndTime = DateTime.Now;
+                    state.ErrorMessage = errorMessage;
+                    state.ProgressPercentage = finalStatus == MigrationStatus.Completed ? 100.0 : state.ProgressPercentage;
+
+                    _structuredLogger?.LogInfo("MigrationStateManager",
+                        new { action = "execution_completed", execution_id = executionId, final_status = finalStatus.ToString() },
+                        $"Execution completed: {executionId} - {finalStatus}");
+
+                    Application.Current?.Dispatcher.BeginInvoke(() =>
+                    {
+                        StateChanged?.Invoke(this, new MigrationStateChangedEventArgs
+                        {
+                            ExecutionId = executionId,
+                            State = state,
+                            IsNew = false
+                        });
+                    });
+                }
+            }
+        }
+
+        #endregion
+
+        #region Checkpoint Management
+
+        /// <summary>
+        /// Creates a checkpoint for an execution
+        /// </summary>
+        public MigrationCheckpoint CreateCheckpoint(string executionId, string checkpointName, object checkpointData = null)
+        {
+            if (string.IsNullOrEmpty(executionId) || string.IsNullOrEmpty(checkpointName))
+                throw new ArgumentException("ExecutionId and checkpoint name cannot be null or empty");
+
+            lock (_stateLock)
+            {
+                var checkpoint = new MigrationCheckpoint
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ExecutionId = executionId,
+                    Name = checkpointName,
+                    CreatedAt = DateTime.Now,
+                    Data = checkpointData
+                };
+
+                if (!_checkpoints.ContainsKey(executionId))
+                {
+                    _checkpoints[executionId] = new List<MigrationCheckpoint>();
+                }
+
+                _checkpoints[executionId].Add(checkpoint);
+
+                // Keep only the last 10 checkpoints per execution
+                if (_checkpoints[executionId].Count > 10)
+                {
+                    _checkpoints[executionId] = _checkpoints[executionId]
+                        .OrderByDescending(c => c.CreatedAt)
+                        .Take(10)
+                        .ToList();
+                }
+
+                _structuredLogger?.LogInfo("MigrationStateManager",
+                    new { action = "checkpoint_created", execution_id = executionId, checkpoint_name = checkpointName },
+                    $"Checkpoint created: {checkpointName}");
+
+                Application.Current?.Dispatcher.BeginInvoke(() =>
+                {
+                    CheckpointCreated?.Invoke(this, new MigrationCheckpointCreatedEventArgs
+                    {
+                        Checkpoint = checkpoint
+                    });
+                });
+
+                return checkpoint;
+            }
+        }
+
+        /// <summary>
+        /// Gets all checkpoints for an execution
+        /// </summary>
+        public List<MigrationCheckpoint> GetCheckpoints(string executionId)
+        {
+            lock (_stateLock)
+            {
+                return _checkpoints.TryGetValue(executionId, out var checkpoints) 
+                    ? checkpoints.OrderByDescending(c => c.CreatedAt).ToList() 
+                    : new List<MigrationCheckpoint>();
+            }
+        }
+
+        /// <summary>
+        /// Gets the latest checkpoint for an execution
+        /// </summary>
+        public MigrationCheckpoint GetLatestCheckpoint(string executionId)
+        {
+            lock (_stateLock)
+            {
+                return _checkpoints.TryGetValue(executionId, out var checkpoints) 
+                    ? checkpoints.OrderByDescending(c => c.CreatedAt).FirstOrDefault()
+                    : null;
+            }
+        }
+
+        /// <summary>
+        /// Restores execution state from a checkpoint
+        /// </summary>
+        public bool RestoreFromCheckpoint(string executionId, string checkpointId)
+        {
+            lock (_stateLock)
+            {
+                if (!_checkpoints.TryGetValue(executionId, out var checkpoints))
+                    return false;
+
+                var checkpoint = checkpoints.FirstOrDefault(c => c.Id == checkpointId);
+                if (checkpoint == null)
+                    return false;
+
+                // Update execution state to reflect checkpoint restoration
+                if (_executionStates.TryGetValue(executionId, out var state))
+                {
+                    state.Status = MigrationStatus.Ready; // Ready to resume from checkpoint
+                    state.CurrentOperation = $"Restored from checkpoint: {checkpoint.Name}";
+                    state.LastUpdate = DateTime.Now;
+
+                    _structuredLogger?.LogInfo("MigrationStateManager",
+                        new { action = "checkpoint_restored", execution_id = executionId, checkpoint_id = checkpointId },
+                        $"Execution restored from checkpoint: {checkpoint.Name}");
+
+                    Application.Current?.Dispatcher.BeginInvoke(() =>
+                    {
+                        StateChanged?.Invoke(this, new MigrationStateChangedEventArgs
+                        {
+                            ExecutionId = executionId,
+                            State = state,
+                            IsNew = false
+                        });
+                    });
+
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        #endregion
+
+        #region Migration History
+
+        /// <summary>
+        /// Gets migration history for audit trails
+        /// </summary>
+        public List<MigrationHistoryEntry> GetMigrationHistory(int maxEntries = 100)
+        {
+            lock (_stateLock)
+            {
+                var history = new List<MigrationHistoryEntry>();
+
+                foreach (var kvp in _executionStates)
+                {
+                    var state = kvp.Value;
+                    history.Add(new MigrationHistoryEntry
+                    {
+                        ExecutionId = kvp.Key,
+                        MigrationType = state.MigrationType,
+                        Status = state.Status,
+                        StartTime = state.StartTime,
+                        EndTime = state.EndTime,
+                        ProgressPercentage = state.ProgressPercentage,
+                        ItemsProcessed = state.ItemsProcessed,
+                        TotalItems = state.TotalItems,
+                        ErrorMessage = state.ErrorMessage,
+                        CompanyName = state.CompanyName
+                    });
+                }
+
+                return history.OrderByDescending(h => h.StartTime).Take(maxEntries).ToList();
+            }
+        }
+
+        /// <summary>
+        /// Gets migration statistics for reporting
+        /// </summary>
+        public MigrationStatistics GetMigrationStatistics()
+        {
+            lock (_stateLock)
+            {
+                var stats = new MigrationStatistics();
+                var states = _executionStates.Values.ToList();
+
+                stats.TotalExecutions = states.Count;
+                stats.CompletedExecutions = states.Count(s => s.Status == MigrationStatus.Completed);
+                stats.FailedExecutions = states.Count(s => s.Status == MigrationStatus.Failed);
+                stats.InProgressExecutions = states.Count(s => s.Status == MigrationStatus.InProgress);
+                stats.SuccessRate = stats.TotalExecutions > 0 ? (double)stats.CompletedExecutions / stats.TotalExecutions * 100 : 0;
+
+                var completedStates = states.Where(s => s.EndTime.HasValue).ToList();
+                if (completedStates.Any())
+                {
+                    var durations = completedStates.Select(s => s.EndTime.Value - s.StartTime).ToList();
+                    stats.AverageExecutionTime = TimeSpan.FromTicks((long)durations.Average(d => d.Ticks));
+                }
+
+                stats.TotalItemsProcessed = states.Sum(s => s.ItemsProcessed);
+                stats.TotalItemsPlanned = states.Sum(s => s.TotalItems);
+
+                return stats;
+            }
+        }
+
+        #endregion
+
+        #region Persistence
+
+        /// <summary>
+        /// Loads state from disk
+        /// </summary>
+        private void LoadState()
+        {
+            try
+            {
+                if (!File.Exists(_stateFilePath))
+                    return;
+
+                var json = File.ReadAllText(_stateFilePath);
+                var stateData = JsonSerializer.Deserialize<MigrationStateData>(json);
+
+                if (stateData != null)
+                {
+                    lock (_stateLock)
+                    {
+                        foreach (var kvp in stateData.ExecutionStates ?? new Dictionary<string, MigrationExecutionState>())
+                        {
+                            _executionStates[kvp.Key] = kvp.Value;
+                        }
+
+                        foreach (var kvp in stateData.Checkpoints ?? new Dictionary<string, List<MigrationCheckpoint>>())
+                        {
+                            _checkpoints[kvp.Key] = kvp.Value;
+                        }
+                    }
+
+                    _structuredLogger?.LogInfo("MigrationStateManager",
+                        new { action = "state_loaded", executions = _executionStates.Count, checkpoints = _checkpoints.Count },
+                        "Migration state loaded from disk");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to load migration state from disk");
+                _structuredLogger?.LogError("MigrationStateManager", ex,
+                    new { action = "load_state_fail" },
+                    "Failed to load migration state from disk");
+            }
+        }
+
+        /// <summary>
+        /// Saves state to disk
+        /// </summary>
+        private void SaveState()
+        {
+            try
+            {
+                lock (_stateLock)
+                {
+                    var stateData = new MigrationStateData
+                    {
+                        ExecutionStates = new Dictionary<string, MigrationExecutionState>(_executionStates),
+                        Checkpoints = new Dictionary<string, List<MigrationCheckpoint>>(_checkpoints),
+                        LastSaved = DateTime.Now
+                    };
+
+                    var json = JsonSerializer.Serialize(stateData, new JsonSerializerOptions 
+                    { 
+                        WriteIndented = true,
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    });
+
+                    File.WriteAllText(_stateFilePath, json);
+
+                    _structuredLogger?.LogDebug("MigrationStateManager",
+                        new { action = "state_saved", executions = _executionStates.Count },
+                        "Migration state saved to disk");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to save migration state to disk");
+                _structuredLogger?.LogError("MigrationStateManager", ex,
+                    new { action = "save_state_fail" },
+                    "Failed to save migration state to disk");
+            }
+        }
+
+        /// <summary>
+        /// Auto-save timer callback
+        /// </summary>
+        private void AutoSaveState(object state)
+        {
+            SaveState();
+        }
+
+        /// <summary>
+        /// Forces immediate state save
+        /// </summary>
+        public void SaveStateImmediate()
+        {
+            SaveState();
+        }
+
+        #endregion
+
+        #region Cross-Tab Consistency
+
+        /// <summary>
+        /// Ensures data consistency across multiple UI tabs
+        /// </summary>
+        public void SynchronizeTabData(string tabName, Dictionary<string, object> tabData)
+        {
+            try
+            {
+                // Update tab-specific data in execution states
+                lock (_stateLock)
+                {
+                    foreach (var state in _executionStates.Values)
+                    {
+                        if (state.TabData == null)
+                            state.TabData = new Dictionary<string, object>();
+
+                        state.TabData[tabName] = tabData;
+                    }
+                }
+
+                _structuredLogger?.LogDebug("MigrationStateManager",
+                    new { action = "tab_sync", tab_name = tabName },
+                    $"Tab data synchronized: {tabName}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Failed to synchronize tab data for {tabName}");
+            }
+        }
+
+        /// <summary>
+        /// Gets synchronized data for a specific tab
+        /// </summary>
+        public Dictionary<string, object> GetTabData(string tabName, string executionId = null)
+        {
+            lock (_stateLock)
+            {
+                if (!string.IsNullOrEmpty(executionId) && _executionStates.TryGetValue(executionId, out var state))
+                {
+                    return state.TabData?.TryGetValue(tabName, out var data) == true ? data as Dictionary<string, object> : null;
+                }
+
+                // Return aggregated data from all active executions
+                var aggregatedData = new Dictionary<string, object>();
+                foreach (var executionState in _executionStates.Values.Where(s => s.Status == MigrationStatus.InProgress))
+                {
+                    if (executionState.TabData?.TryGetValue(tabName, out var tabData) == true && tabData is Dictionary<string, object> dict)
+                    {
+                        foreach (var kvp in dict)
+                        {
+                            aggregatedData[kvp.Key] = kvp.Value;
+                        }
+                    }
+                }
+
+                return aggregatedData;
+            }
+        }
+
+        #endregion
+
+        #region Cleanup
+
+        /// <summary>
+        /// Cleans up old completed executions and checkpoints
+        /// </summary>
+        public void CleanupOldData(TimeSpan maxAge)
+        {
+            var cutoffTime = DateTime.Now - maxAge;
+            var removedExecutions = 0;
+            var removedCheckpoints = 0;
+
+            lock (_stateLock)
+            {
+                // Remove old completed executions
+                var executionsToRemove = _executionStates
+                    .Where(kvp => kvp.Value.EndTime.HasValue && 
+                                 kvp.Value.EndTime.Value < cutoffTime &&
+                                 (kvp.Value.Status == MigrationStatus.Completed || 
+                                  kvp.Value.Status == MigrationStatus.Failed ||
+                                  kvp.Value.Status == MigrationStatus.Cancelled))
+                    .Select(kvp => kvp.Key)
+                    .ToList();
+
+                foreach (var executionId in executionsToRemove)
+                {
+                    _executionStates.Remove(executionId);
+                    removedExecutions++;
+
+                    // Also remove associated checkpoints
+                    if (_checkpoints.Remove(executionId))
+                    {
+                        removedCheckpoints++;
+                    }
+                }
+            }
+
+            if (removedExecutions > 0 || removedCheckpoints > 0)
+            {
+                _structuredLogger?.LogInfo("MigrationStateManager",
+                    new { action = "cleanup_completed", removed_executions = removedExecutions, removed_checkpoints = removedCheckpoints },
+                    $"Cleaned up {removedExecutions} old executions and {removedCheckpoints} checkpoint collections");
+                
+                SaveState(); // Save after cleanup
+            }
+        }
+
+        #endregion
+
+        #region Disposal
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _autoSaveTimer?.Dispose();
+                SaveState(); // Final save on disposal
+                _disposed = true;
+            }
+        }
+
+        #endregion
+    }
+
+    #region Supporting Classes
+
+    /// <summary>
+    /// Migration execution state for persistence
+    /// </summary>
+    public class MigrationExecutionState
+    {
+        public string ExecutionId { get; set; }
+        public string ModuleName { get; set; }
+        public string CompanyName { get; set; }
+        public MigrationType MigrationType { get; set; }
+        public MigrationStatus Status { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
+        public DateTime LastUpdate { get; set; }
+        public double ProgressPercentage { get; set; }
+        public string CurrentOperation { get; set; }
+        public int TotalItems { get; set; }
+        public int ProcessedItems { get; set; }
+        public string ErrorMessage { get; set; }
+        public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
+        public Dictionary<string, object> TabData { get; set; } = new Dictionary<string, object>();
+    }
+
+    /// <summary>
+    /// Migration checkpoint for recovery
+    /// </summary>
+    public class MigrationCheckpoint
+    {
+        public string Id { get; set; }
+        public string ExecutionId { get; set; }
+        public string Name { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public object Data { get; set; }
+    }
+
+    /// <summary>
+    /// Migration history entry for audit trails
+    /// </summary>
+    public class MigrationHistoryEntry
+    {
+        public string ExecutionId { get; set; }
+        public MigrationType MigrationType { get; set; }
+        public MigrationStatus Status { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
+        public double ProgressPercentage { get; set; }
+        public int ItemsProcessed { get; set; }
+        public int TotalItems { get; set; }
+        public string ErrorMessage { get; set; }
+        public string CompanyName { get; set; }
+    }
+
+    /// <summary>
+    /// Migration statistics for reporting
+    /// </summary>
+    public class MigrationStatistics
+    {
+        public int TotalExecutions { get; set; }
+        public int CompletedExecutions { get; set; }
+        public int FailedExecutions { get; set; }
+        public int InProgressExecutions { get; set; }
+        public double SuccessRate { get; set; }
+        public TimeSpan AverageExecutionTime { get; set; }
+        public int TotalItemsProcessed { get; set; }
+        public int TotalItemsPlanned { get; set; }
+    }
+
+    /// <summary>
+    /// State data for persistence
+    /// </summary>
+    public class MigrationStateData
+    {
+        public Dictionary<string, MigrationExecutionState> ExecutionStates { get; set; }
+        public Dictionary<string, List<MigrationCheckpoint>> Checkpoints { get; set; }
+        public DateTime LastSaved { get; set; }
+    }
+
+    /// <summary>
+    /// State change event arguments
+    /// </summary>
+    public class MigrationStateChangedEventArgs : EventArgs
+    {
+        public string ExecutionId { get; set; }
+        public MigrationExecutionState State { get; set; }
+        public bool IsNew { get; set; }
+    }
+
+    /// <summary>
+    /// Checkpoint created event arguments
+    /// </summary>
+    public class MigrationCheckpointCreatedEventArgs : EventArgs
+    {
+        public MigrationCheckpoint Checkpoint { get; set; }
+    }
+
+    #endregion
+}

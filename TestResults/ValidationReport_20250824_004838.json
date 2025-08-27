@@ -1,0 +1,592 @@
+﻿{
+    "Summary":  {
+                    "ProductionReady":  false,
+                    "OverallStatus":  "REQUIRES ATTENTION",
+                    "CriticalIssues":  [
+                                           "GUI compilation failed with 1 errors",
+                                           "PowerShell module pass rate below threshold: 50%"
+                                       ],
+                    "PassedTests":  3,
+                    "TotalTests":  5
+                },
+    "EndTime":  {
+                    "value":  "\/Date(1755992924035)\/",
+                    "DisplayHint":  2,
+                    "DateTime":  "24 August 2025 00:48:44"
+                },
+    "TestDuration":  0.085542626666666663,
+    "StartTime":  {
+                      "value":  "\/Date(1755992918902)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "24 August 2025 00:48:38"
+                  },
+    "TestResults":  {
+                        "GUIBuild":  {
+                                         "Status":  "Failed",
+                                         "Details":  {
+                                                         "BuildOutput":  "MSBuild version 17.3.4+a400405ba for .NET\nMSBUILD : error MSB1011: Specify which project or solution file to use because this folder contains more than one project or solution file.",
+                                                         "Succeeded":  false,
+                                                         "Errors":  1,
+                                                         "BuildTime":  0.15
+                                                     }
+                                     },
+                        "Performance":  {
+                                            "Status":  "Passed",
+                                            "Details":  {
+                                                            "AverageResponseTime":  82.95,
+                                                            "MemoryUsage":  {
+                                                                                "Peak":  0,
+                                                                                "End":  17.94,
+                                                                                "Start":  38.68
+                                                                            },
+                                                            "MaxResponseTime":  146,
+                                                            "MinResponseTime":  17,
+                                                            "ResponseTimes":  [
+                                                                                  {
+                                                                                      "value":  27,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "f7af1ec9-385d-43cd-8edc-9af831566bbe",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  116,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "cecea1bf-7912-4ce1-b59f-97c21889eb8d",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  17,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "6f44ed1f-80c1-4947-bcc2-ead7fc68f188",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  144,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "3d675512-29ce-466a-a100-afc187abf157",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  135,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "d45c6583-17af-4a2d-830a-74914a990627",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  118,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "c3192932-0a53-446e-a97e-36da04e9dd3a",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  26,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "8bea5ff4-e958-47c0-9faf-07ab4c9bfdef",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  103,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "7387622b-86b4-418a-aeb4-ab041afb08ab",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  75,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "8468214d-c673-4b8a-9dc4-a3f9f44d8e4a",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  100,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "b7c060c2-b950-4c36-bfa7-1db07b60aa82",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  74,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "9039291a-e54e-42be-9316-ebe806ade65b",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  17,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "a21fd038-5640-4a5e-b2cc-29b93076a499",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  101,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "4fe72dc6-a21d-439e-bbd8-73122fc9d962",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  146,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "2417c529-bc9a-4c95-ac32-80197a1213d0",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  19,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "c13fc27c-ece9-4df7-ad94-ea59da84a4b3",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  118,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "23860ade-1156-4ab5-9979-5edccd72aa79",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  145,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "bee3a1f4-bb53-45e4-bc49-78fe6bfede4e",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  25,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "f1529c29-60d6-4876-bffa-73ab2dd9f9d3",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  41,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "92d27a8e-e991-4839-a7c4-5f43aa52abc9",
+                                                                                      "PSShowComputerName":  false
+                                                                                  },
+                                                                                  {
+                                                                                      "value":  112,
+                                                                                      "PSComputerName":  "localhost",
+                                                                                      "RunspaceId":  "28fd6749-1bd0-4050-a972-28763c190ad1",
+                                                                                      "PSShowComputerName":  false
+                                                                                  }
+                                                                              ]
+                                                        }
+                                        },
+                        "Competitive":  {
+                                            "Status":  "Passed",
+                                            "Details":  {
+                                                            "MarketPosition":  {
+                                                                                   "Revenue Projection":  "$82.5M over 3 years",
+                                                                                   "Market Size":  "$2.5B M\u0026A IT Integration Services",
+                                                                                   "Competitive Advantage":  "First M\u0026A-specialized migration platform"
+                                                                               },
+                                                            "FeatureComparison":  {
+                                                                                      "User Migration":  {
+                                                                                                             "ShareGate":  4,
+                                                                                                             "MandA Platform":  5,
+                                                                                                             "Advantage":  "Superior",
+                                                                                                             "Quest":  4
+                                                                                                         },
+                                                                                      "VM Migration":  {
+                                                                                                           "ShareGate":  0,
+                                                                                                           "MandA Platform":  5,
+                                                                                                           "Advantage":  "Superior",
+                                                                                                           "Quest":  3
+                                                                                                       },
+                                                                                      "PowerShell Integration":  {
+                                                                                                                     "ShareGate":  3,
+                                                                                                                     "MandA Platform":  5,
+                                                                                                                     "Advantage":  "Superior",
+                                                                                                                     "Quest":  2
+                                                                                                                 },
+                                                                                      "Real-Time Monitoring":  {
+                                                                                                                   "ShareGate":  4,
+                                                                                                                   "MandA Platform":  5,
+                                                                                                                   "Advantage":  "Superior",
+                                                                                                                   "Quest":  3
+                                                                                                               },
+                                                                                      "Wave Management":  {
+                                                                                                              "ShareGate":  4,
+                                                                                                              "MandA Platform":  5,
+                                                                                                              "Advantage":  "Superior",
+                                                                                                              "Quest":  3
+                                                                                                          },
+                                                                                      "M\u0026A Specialization":  {
+                                                                                                                      "ShareGate":  0,
+                                                                                                                      "MandA Platform":  5,
+                                                                                                                      "Advantage":  "Unique",
+                                                                                                                      "Quest":  0
+                                                                                                                  }
+                                                                                  },
+                                                            "CompetitiveScore":  100,
+                                                            "CostAnalysis":  {
+                                                                                 "M\u0026A Platform":  "$250K",
+                                                                                 "ShareGate Enterprise":  "$750K-$900K",
+                                                                                 "Quest Migration Manager":  "$750K-$900K",
+                                                                                 "Cost Savings":  "70%"
+                                                                             }
+                                                        }
+                                        },
+                        "PowerShellModules":  {
+                                                  "Status":  "Failed",
+                                                  "Details":  {
+                                                                  "PassedModules":  4,
+                                                                  "TotalModules":  8,
+                                                                  "ModuleDetails":  {
+                                                                                        "FileSystemMigration":  {
+                                                                                                                    "FunctionCount":  0,
+                                                                                                                    "LoadSuccessful":  false,
+                                                                                                                    "Size":  87.6,
+                                                                                                                    "Exists":  true,
+                                                                                                                    "Error":  "The running command stopped because the preference variable \"ErrorActionPreference\" or common parameter is set to Stop: At D:\\Scripts\\UserMandA\\Modules\\Migration\\FileSystemMigration.psm1:1190 char:21\r\n+     hidden [string] MapSourceToTargetPath([string]$sourcePath) {\r\n+                     ~~~~~~~~~~~~~~~~~~~~~\nNot all code path returns value within method.",
+                                                                                                                    "LineCount":  2089
+                                                                                                                },
+                                                                                        "UserProfileMigration":  {
+                                                                                                                     "FunctionCount":  0,
+                                                                                                                     "LoadSuccessful":  false,
+                                                                                                                     "Size":  64.4,
+                                                                                                                     "Exists":  true,
+                                                                                                                     "Error":  "The running command stopped because the preference variable \"ErrorActionPreference\" or common parameter is set to Stop: At D:\\Scripts\\UserMandA\\Modules\\Migration\\UserProfileMigration.psm1:594 char:21\r\n+                     $groupMappings[$group.SID.Value] = $targetGroup.S ...\r\n+                     ~~~~~~~~~~~~~~\nVariable is not assigned in the method.\r\n\r\nAt D:\\Scripts\\UserMandA\\Modules\\Migration\\UserProfileMigration.psm1:606 char:16\r\n+         return $groupMappings\r\n+                ~~~~~~~~~~~~~~\nVariable is not assigned in the method.",
+                                                                                                                     "LineCount":  1593
+                                                                                                                 },
+                                                                                        "VirtualMachineMigration":  {
+                                                                                                                        "FunctionCount":  0,
+                                                                                                                        "LoadSuccessful":  false,
+                                                                                                                        "Size":  66.14,
+                                                                                                                        "Exists":  true,
+                                                                                                                        "Error":  "The script \u0027VirtualMachineMigration.psm1\u0027 cannot be run because the following modules that are specified by the \"#requires\" statements of the script are missing: Az.RecoveryServices.",
+                                                                                                                        "LineCount":  1774
+                                                                                                                    },
+                                                                                        "MailboxMigration":  {
+                                                                                                                 "FunctionCount":  1,
+                                                                                                                 "LoadSuccessful":  true,
+                                                                                                                 "Size":  38.55,
+                                                                                                                 "Exists":  true,
+                                                                                                                 "LineCount":  913
+                                                                                                             },
+                                                                                        "SharePointMigration":  {
+                                                                                                                    "FunctionCount":  0,
+                                                                                                                    "LoadSuccessful":  false,
+                                                                                                                    "Size":  72.6,
+                                                                                                                    "Exists":  true,
+                                                                                                                    "Error":  "The running command stopped because the preference variable \"ErrorActionPreference\" or common parameter is set to Stop: At D:\\Scripts\\UserMandA\\Modules\\Migration\\SharePointMigration.psm1:827 char:21\r\n+     hidden [string] MapSourceToTargetUrl([string]$sourceUrl) {\r\n+                     ~~~~~~~~~~~~~~~~~~~~\nNot all code path returns value within method.",
+                                                                                                                    "LineCount":  1629
+                                                                                                                },
+                                                                                        "ServerMigration":  {
+                                                                                                                "FunctionCount":  1,
+                                                                                                                "LoadSuccessful":  true,
+                                                                                                                "Size":  4.19,
+                                                                                                                "Exists":  true,
+                                                                                                                "LineCount":  109
+                                                                                                            },
+                                                                                        "ApplicationMigration":  {
+                                                                                                                     "FunctionCount":  1,
+                                                                                                                     "LoadSuccessful":  true,
+                                                                                                                     "Size":  3.69,
+                                                                                                                     "Exists":  true,
+                                                                                                                     "LineCount":  96
+                                                                                                                 },
+                                                                                        "UserMigration":  {
+                                                                                                              "FunctionCount":  9,
+                                                                                                              "LoadSuccessful":  true,
+                                                                                                              "Size":  84.33,
+                                                                                                              "Exists":  true,
+                                                                                                              "LineCount":  2106
+                                                                                                          }
+                                                                                    },
+                                                                  "FailedModules":  4
+                                                              }
+                                              },
+                        "DataIntegrity":  {
+                                              "Status":  "Passed",
+                                              "Details":  {
+                                                              "TotalRecords":  604,
+                                                              "ValidFiles":  40,
+                                                              "CSVFilesFound":  41,
+                                                              "InvalidFiles":  1,
+                                                              "FileDetails":  {
+                                                                                  "PhysicalServer_Hardware.csv":  {
+                                                                                                                      "Records":  4,
+                                                                                                                      "Size":  0.62,
+                                                                                                                      "Columns":  9,
+                                                                                                                      "HasRequiredColumns":  false,
+                                                                                                                      "Valid":  true
+                                                                                                                  },
+                                                                                  "Applications_TestData.csv":  {
+                                                                                                                    "Records":  3,
+                                                                                                                    "Size":  0.48,
+                                                                                                                    "Columns":  8,
+                                                                                                                    "HasRequiredColumns":  false,
+                                                                                                                    "Valid":  true
+                                                                                                                },
+                                                                                  "SecurityGroup.csv":  {
+                                                                                                            "Records":  25,
+                                                                                                            "Size":  5.17,
+                                                                                                            "Columns":  17,
+                                                                                                            "HasRequiredColumns":  false,
+                                                                                                            "Valid":  true
+                                                                                                        },
+                                                                                  "Groups_TestData.csv":  {
+                                                                                                              "Records":  2,
+                                                                                                              "Size":  0.46,
+                                                                                                              "Columns":  8,
+                                                                                                              "HasRequiredColumns":  false,
+                                                                                                              "Valid":  true
+                                                                                                          },
+                                                                                  "SharePointSites.csv":  {
+                                                                                                              "Records":  4,
+                                                                                                              "Size":  0.83,
+                                                                                                              "Columns":  9,
+                                                                                                              "HasRequiredColumns":  false,
+                                                                                                              "Valid":  true
+                                                                                                          },
+                                                                                  "Applications.csv":  {
+                                                                                                           "Records":  5,
+                                                                                                           "Size":  0.77,
+                                                                                                           "Columns":  8,
+                                                                                                           "HasRequiredColumns":  false,
+                                                                                                           "Valid":  true
+                                                                                                       },
+                                                                                  "Users_TestData.csv":  {
+                                                                                                             "Records":  3,
+                                                                                                             "Size":  0.63,
+                                                                                                             "Columns":  9,
+                                                                                                             "HasRequiredColumns":  false,
+                                                                                                             "Valid":  true
+                                                                                                         },
+                                                                                  "ScriptTemplates.csv":  {
+                                                                                                              "Records":  7,
+                                                                                                              "Size":  15.9,
+                                                                                                              "Columns":  11,
+                                                                                                              "HasRequiredColumns":  false,
+                                                                                                              "Valid":  true
+                                                                                                          },
+                                                                                  "FileServers.csv":  {
+                                                                                                          "Records":  30,
+                                                                                                          "Size":  7.45,
+                                                                                                          "Columns":  18,
+                                                                                                          "HasRequiredColumns":  false,
+                                                                                                          "Valid":  true
+                                                                                                      },
+                                                                                  "PhysicalServer_NetworkHardware.csv":  {
+                                                                                                                             "Records":  4,
+                                                                                                                             "Size":  0.69,
+                                                                                                                             "Columns":  9,
+                                                                                                                             "HasRequiredColumns":  false,
+                                                                                                                             "Valid":  true
+                                                                                                                         },
+                                                                                  "Security_FirewallProfiles.csv":  {
+                                                                                                                        "Records":  36,
+                                                                                                                        "Size":  3.64,
+                                                                                                                        "Columns":  13,
+                                                                                                                        "HasRequiredColumns":  false,
+                                                                                                                        "Valid":  true
+                                                                                                                    },
+                                                                                  "Groups.csv":  {
+                                                                                                     "Records":  4,
+                                                                                                     "Size":  0.87,
+                                                                                                     "Columns":  8,
+                                                                                                     "HasRequiredColumns":  false,
+                                                                                                     "Valid":  true
+                                                                                                 },
+                                                                                  "DependencyNodes.csv":  {
+                                                                                                              "Records":  30,
+                                                                                                              "Size":  5.11,
+                                                                                                              "Columns":  15,
+                                                                                                              "HasRequiredColumns":  false,
+                                                                                                              "Valid":  true
+                                                                                                          },
+                                                                                  "ThreatIndicators.csv":  {
+                                                                                                               "Records":  15,
+                                                                                                               "Size":  4.54,
+                                                                                                               "Columns":  16,
+                                                                                                               "HasRequiredColumns":  false,
+                                                                                                               "Valid":  true
+                                                                                                           },
+                                                                                  "MicrosoftTeams.csv":  {
+                                                                                                             "Records":  4,
+                                                                                                             "Size":  0.83,
+                                                                                                             "Columns":  9,
+                                                                                                             "HasRequiredColumns":  false,
+                                                                                                             "Valid":  true
+                                                                                                         },
+                                                                                  "ExchangeDistributionGroups.csv":  {
+                                                                                                                         "Records":  4,
+                                                                                                                         "Size":  0.64,
+                                                                                                                         "Columns":  8,
+                                                                                                                         "HasRequiredColumns":  false,
+                                                                                                                         "Valid":  true
+                                                                                                                     },
+                                                                                  "IntuneManagedApps.csv":  {
+                                                                                                                "Records":  4,
+                                                                                                                "Size":  0.73,
+                                                                                                                "Columns":  9,
+                                                                                                                "HasRequiredColumns":  false,
+                                                                                                                "Valid":  true
+                                                                                                            },
+                                                                                  "Reports.csv":  {
+                                                                                                      "Records":  21,
+                                                                                                      "Size":  7.79,
+                                                                                                      "Columns":  18,
+                                                                                                      "HasRequiredColumns":  false,
+                                                                                                      "Valid":  true
+                                                                                                  },
+                                                                                  "SqlServers.csv":  {
+                                                                                                         "Records":  5,
+                                                                                                         "Size":  0.9,
+                                                                                                         "Columns":  15,
+                                                                                                         "HasRequiredColumns":  false,
+                                                                                                         "Valid":  true
+                                                                                                     },
+                                                                                  "Infrastructure.csv":  {
+                                                                                                             "Records":  32,
+                                                                                                             "Size":  6.67,
+                                                                                                             "Columns":  14,
+                                                                                                             "HasRequiredColumns":  false,
+                                                                                                             "Valid":  true
+                                                                                                         },
+                                                                                  "ServicePrincipals.csv":  {
+                                                                                                                "Records":  4,
+                                                                                                                "Size":  0.83,
+                                                                                                                "Columns":  8,
+                                                                                                                "HasRequiredColumns":  false,
+                                                                                                                "Valid":  true
+                                                                                                            },
+                                                                                  "DependencyEdges.csv":  {
+                                                                                                              "Records":  55,
+                                                                                                              "Size":  8.61,
+                                                                                                              "Columns":  12,
+                                                                                                              "HasRequiredColumns":  false,
+                                                                                                              "Valid":  true
+                                                                                                          },
+                                                                                  "GroupPolicies.csv":  {
+                                                                                                            "Records":  25,
+                                                                                                            "Size":  7.23,
+                                                                                                            "Columns":  15,
+                                                                                                            "HasRequiredColumns":  false,
+                                                                                                            "Valid":  true
+                                                                                                        },
+                                                                                  "DirectoryRoles.csv":  {
+                                                                                                             "Records":  4,
+                                                                                                             "Size":  0.81,
+                                                                                                             "Columns":  7,
+                                                                                                             "HasRequiredColumns":  false,
+                                                                                                             "Valid":  true
+                                                                                                         },
+                                                                                  "Users.csv":  {
+                                                                                                    "Records":  6,
+                                                                                                    "Size":  1.1,
+                                                                                                    "Columns":  9,
+                                                                                                    "HasRequiredColumns":  false,
+                                                                                                    "Valid":  true
+                                                                                                },
+                                                                                  "SimulationParameters.csv":  {
+                                                                                                                   "Records":  34,
+                                                                                                                   "Size":  6.58,
+                                                                                                                   "Columns":  12,
+                                                                                                                   "HasRequiredColumns":  false,
+                                                                                                                   "Valid":  true
+                                                                                                               },
+                                                                                  "GPO_GroupPolicies.csv":  {
+                                                                                                                "Records":  15,
+                                                                                                                "Size":  4.66,
+                                                                                                                "Columns":  19,
+                                                                                                                "HasRequiredColumns":  false,
+                                                                                                                "Valid":  true
+                                                                                                            },
+                                                                                  "GPO_PlaceholderData.csv":  {
+                                                                                                                  "Records":  3,
+                                                                                                                  "Size":  0.68,
+                                                                                                                  "Columns":  9,
+                                                                                                                  "HasRequiredColumns":  false,
+                                                                                                                  "Valid":  true
+                                                                                                              },
+                                                                                  "Security_Compliance.csv":  {
+                                                                                                                  "Records":  20,
+                                                                                                                  "Size":  7,
+                                                                                                                  "Columns":  15,
+                                                                                                                  "HasRequiredColumns":  false,
+                                                                                                                  "Valid":  true
+                                                                                                              },
+                                                                                  "PhysicalServer_Storage.csv":  {
+                                                                                                                     "Records":  8,
+                                                                                                                     "Size":  0.97,
+                                                                                                                     "Columns":  9,
+                                                                                                                     "HasRequiredColumns":  false,
+                                                                                                                     "Valid":  true
+                                                                                                                 },
+                                                                                  "Databases.csv":  {
+                                                                                                        "Records":  31,
+                                                                                                        "Size":  8.78,
+                                                                                                        "Columns":  23,
+                                                                                                        "HasRequiredColumns":  false,
+                                                                                                        "Valid":  true
+                                                                                                    },
+                                                                                  "Security_SecurityAppliances.csv":  {
+                                                                                                                          "Records":  15,
+                                                                                                                          "Size":  2.46,
+                                                                                                                          "Columns":  15,
+                                                                                                                          "HasRequiredColumns":  false,
+                                                                                                                          "Valid":  true
+                                                                                                                      },
+                                                                                  "SimulationScenarios.csv":  {
+                                                                                                                  "Records":  15,
+                                                                                                                  "Size":  4.12,
+                                                                                                                  "Columns":  16,
+                                                                                                                  "HasRequiredColumns":  false,
+                                                                                                                  "Valid":  true
+                                                                                                              },
+                                                                                  "Groups_Fixed.csv":  {
+                                                                                                           "Records":  20,
+                                                                                                           "Size":  5.38,
+                                                                                                           "Columns":  18,
+                                                                                                           "HasRequiredColumns":  false,
+                                                                                                           "Valid":  true
+                                                                                                       },
+                                                                                  "PhysicalServer_BIOS.csv":  {
+                                                                                                                  "Records":  4,
+                                                                                                                  "Size":  0.6,
+                                                                                                                  "Columns":  8,
+                                                                                                                  "HasRequiredColumns":  false,
+                                                                                                                  "Valid":  true
+                                                                                                              },
+                                                                                  "Projects.csv":  {
+                                                                                                       "Records":  20,
+                                                                                                       "Size":  9.05,
+                                                                                                       "Columns":  19,
+                                                                                                       "HasRequiredColumns":  false,
+                                                                                                       "Valid":  true
+                                                                                                   },
+                                                                                  "Tasks.csv":  {
+                                                                                                    "Records":  30,
+                                                                                                    "Size":  10.74,
+                                                                                                    "Columns":  20,
+                                                                                                    "HasRequiredColumns":  false,
+                                                                                                    "Valid":  true
+                                                                                                },
+                                                                                  "Tenant.csv":  {
+                                                                                                     "Records":  1,
+                                                                                                     "Size":  0.28,
+                                                                                                     "Columns":  0,
+                                                                                                     "HasRequiredColumns":  false,
+                                                                                                     "Valid":  false
+                                                                                                 },
+                                                                                  "GanttTasks.csv":  {
+                                                                                                         "Records":  30,
+                                                                                                         "Size":  4.78,
+                                                                                                         "Columns":  12,
+                                                                                                         "HasRequiredColumns":  false,
+                                                                                                         "Valid":  true
+                                                                                                     },
+                                                                                  "ExchangeMailContacts.csv":  {
+                                                                                                                   "Records":  3,
+                                                                                                                   "Size":  0.5,
+                                                                                                                   "Columns":  7,
+                                                                                                                   "HasRequiredColumns":  false,
+                                                                                                                   "Valid":  true
+                                                                                                               },
+                                                                                  "Security_AntivirusProducts.csv":  {
+                                                                                                                         "Records":  20,
+                                                                                                                         "Size":  2.89,
+                                                                                                                         "Columns":  13,
+                                                                                                                         "HasRequiredColumns":  false,
+                                                                                                                         "Valid":  true
+                                                                                                                     }
+                                                                              }
+                                                          }
+                                          }
+                    }
+}

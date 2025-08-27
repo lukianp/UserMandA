@@ -1,0 +1,25 @@
+GUI/nul
+nul
+
+# Large binary files - build artifacts
+*.zip
+*.exe
+*.msi
+*.tar.gz
+*.7z
+
+# Build directories
+bin/
+obj/
+Debug/
+Release/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Performance logs
+*.log
