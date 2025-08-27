@@ -22,6 +22,12 @@ namespace MandADiscoverySuite.ViewModels
     public class MainViewModel : INotifyPropertyChanged
     {
         private readonly TabsService _tabsService;
+        
+        /// <summary>
+        /// Static reference to TabsService for access from other ViewModels
+        /// TODO: Replace with proper DI when restructuring services
+        /// </summary>
+        public static TabsService? CurrentTabsService { get; private set; }
         private readonly NavigationService _navigationService;
         private readonly ILogger<MainViewModel>? _logger;
         
@@ -74,6 +80,9 @@ namespace MandADiscoverySuite.ViewModels
         // Theme commands
         public ICommand ToggleThemeCommand { get; }
         public ICommand ShowThemeSelectionCommand { get; }
+        
+        // Logs commands
+        public ICommand ShowLogsCommand { get; }
         
         public TabItem? SelectedTab
         {
@@ -193,6 +202,7 @@ namespace MandADiscoverySuite.ViewModels
             
             // Initialize services
             _tabsService = new TabsService(tabsLogger);
+            CurrentTabsService = _tabsService; // Set static reference for other ViewModels
             var navLogger = loggerFactory.CreateLogger<NavigationService>();
             _navigationService = new NavigationService(_tabsService, navLogger);
             
@@ -234,6 +244,9 @@ namespace MandADiscoverySuite.ViewModels
             // Theme commands
             ToggleThemeCommand = new AsyncRelayCommand(ToggleThemeAsync);
             ShowThemeSelectionCommand = new AsyncRelayCommand(ShowThemeSelectionAsync);
+            
+            // Logs commands
+            ShowLogsCommand = new AsyncRelayCommand(ShowLogsAsync);
             
             _logger?.LogInformation("MainViewModel initialized with new architecture");
             _logger?.LogInformation($"CreateProfileCommand initialized: {CreateProfileCommand != null}");
@@ -758,6 +771,24 @@ namespace MandADiscoverySuite.ViewModels
                 _logger?.LogError(ex, "[MainViewModel] Error showing theme selection");
             }
             await Task.CompletedTask;
+        }
+        
+        /// <summary>
+        /// Show logs and audit view
+        /// </summary>
+        private async Task ShowLogsAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Opening logs and audit view");
+                await _navigationService.NavigateToTabAsync("logs-audit", "Logs & Audit");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error opening logs and audit view");
+                MessageBox.Show($"Error opening logs view: {ex.Message}", "Error", 
+                               MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
         
         /// <summary>

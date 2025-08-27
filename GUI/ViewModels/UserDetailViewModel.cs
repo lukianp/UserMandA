@@ -521,7 +521,7 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class StubMigrationWaveService : IMigrationWaveService
     {
-        private readonly ILogger _logger;
+        internal readonly ILogger _logger;
 
         public StubMigrationWaveService(ILogger logger)
         {
@@ -533,6 +533,12 @@ namespace MandADiscoverySuite.ViewModels
             _logger.LogInformation("STUB: Adding user {UserName} ({UPN}) to migration wave", user.DisplayName, user.UPN);
             await Task.Delay(100); // Simulate work
         }
+
+        public async Task AddAssetToWaveAsync(DeviceDto device)
+        {
+            _logger.LogInformation("STUB: Adding asset {DeviceName} ({DNS}) to migration wave", device.Name, device.DNS);
+            await Task.Delay(100); // Simulate work
+        }
     }
 
     /// <summary>
@@ -540,7 +546,7 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class StubDataExportService : IDataExportService
     {
-        private readonly ILogger _logger;
+        internal readonly ILogger _logger;
 
         public StubDataExportService(ILogger logger)
         {
@@ -553,6 +559,19 @@ namespace MandADiscoverySuite.ViewModels
             var exportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), filename);
             
             _logger.LogInformation("STUB: Exporting user detail for {UserName} to {Path}", userDetail.User.DisplayName, exportPath);
+            
+            // Simulate export work
+            await Task.Delay(200);
+            
+            return exportPath;
+        }
+
+        public async Task<string> ExportAssetDetailAsync(AssetDetailProjection assetDetail)
+        {
+            var filename = $"AssetDetail_{assetDetail.Device.Name}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
+            var exportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), filename);
+            
+            _logger.LogInformation("STUB: Exporting asset detail for {DeviceName} to {Path}", assetDetail.Device.Name, exportPath);
             
             // Simulate export work
             await Task.Delay(200);

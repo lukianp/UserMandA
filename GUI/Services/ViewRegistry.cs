@@ -73,6 +73,8 @@ namespace MandADiscoverySuite.Services
                 ["dashboard"] = () => new DashboardView(), // Implemented with new architecture
                 ["overview"] = () => new DashboardView(), // Overview maps to Dashboard
                 ["stats"] = () => new DashboardView(), // Stats maps to Dashboard for statistics view
+                ["logs-audit"] = () => new LogsAuditView(), // New logs and audit view
+                ["logs"] = () => new LogsAuditView(), // Alternative key
                 
                 // Legacy keys for backwards compatibility (PascalCase) - Updated to use New views
                 ["DomainDiscovery"] = () => new DomainDiscoveryView(),

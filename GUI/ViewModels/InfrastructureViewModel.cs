@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
@@ -19,6 +20,9 @@ namespace MandADiscoverySuite.ViewModels
         // Data collection
         public ObservableCollection<InfrastructureData> Infrastructure { get; } = new();
         
+        // Commands
+        public ICommand ShowAssetDetailCommand { get; private set; }
+        
         // Implement HasData for this specific view
         public override bool HasData => Infrastructure.Count > 0;
         
@@ -30,6 +34,62 @@ namespace MandADiscoverySuite.ViewModels
         {
             _csvService = csvService ?? throw new ArgumentNullException(nameof(csvService));
             _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
+        }
+
+        protected override void InitializeCommands()
+        {
+            base.InitializeCommands();
+            ShowAssetDetailCommand = new RelayCommand<InfrastructureData>(ShowAssetDetail, asset => asset != null);
+        }
+
+        /// <summary>
+        /// Show detailed asset information in a new tab using TabsService
+        /// </summary>
+        private async void ShowAssetDetail(InfrastructureData asset)
+        {
+            if (asset == null) return;
+
+            try
+            {
+                StructuredLogger?.LogDebug(LogSourceName, 
+                    new { action = "show_asset_detail", asset_name = asset.Name }, 
+                    "Opening asset detail tab");
+
+                // Use TabsService from MainViewModel to open asset detail tab
+                if (MainViewModel.CurrentTabsService != null)
+                {
+                    var deviceName = asset.Name ?? asset.IPAddress ?? "Unknown Asset";
+                    var displayName = asset.Name ?? asset.IPAddress ?? "Unknown Asset";
+                    
+                    var success = await MainViewModel.CurrentTabsService.OpenAssetDetailTabAsync(
+                        deviceName, 
+                        displayName);
+
+                    if (success)
+                    {
+                        _log?.LogInformation("Opened asset detail tab for {AssetName}", asset.Name);
+                    }
+                    else
+                    {
+                        _log?.LogWarning("Failed to open asset detail tab for {AssetName}", asset.Name);
+                        StatusMessage = "Failed to open asset details";
+                    }
+                }
+                else
+                {
+                    _log?.LogError("TabsService not available");
+                    StatusMessage = "TabsService not available";
+                }
+            }
+            catch (Exception ex)
+            {
+                StructuredLogger?.LogError(LogSourceName, ex, 
+                    new { action = "show_asset_detail_error", asset_name = asset.Name }, 
+                    "Failed to open asset detail tab");
+                
+                _log?.LogError(ex, "Failed to open asset detail tab for {AssetName}", asset.Name);
+                StatusMessage = $"Failed to open asset details: {ex.Message}";
+            }
         }
         
         /// <summary>

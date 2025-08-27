@@ -95,6 +95,15 @@ namespace MandADiscoverySuite.Services
                 return (T)(object)logicEngineService;
             }
             
+            if (type == typeof(ILogManagementService) || type == typeof(LogManagementService))
+            {
+                var logger = _loggerFactory.CreateLogger<LogManagementService>();
+                var logManagementService = new LogManagementService(logger);
+                RegisterService<ILogManagementService>(logManagementService);
+                RegisterService<LogManagementService>(logManagementService);
+                return (T)(object)logManagementService;
+            }
+            
             // Try to create with parameterless constructor
             if (type.GetConstructor(Type.EmptyTypes) != null)
             {

@@ -44,9 +44,9 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         /// <summary>
-        /// Show detailed user information in a new window
+        /// Show detailed user information in a new tab using TabsService
         /// </summary>
-        private void ShowUserDetail(UserData user)
+        private async void ShowUserDetail(UserData user)
         {
             if (user == null) return;
 
@@ -54,38 +54,40 @@ namespace MandADiscoverySuite.ViewModels
             {
                 StructuredLogger?.LogDebug(LogSourceName, 
                     new { action = "show_user_detail", user_upn = user.UserPrincipalName }, 
-                    "Opening user detail window");
+                    "Opening user detail tab");
 
-                // Create LogicEngineService (TODO: This should be injected via DI)
-                var logicEngineService = new LogicEngineService(
-                    Microsoft.Extensions.Logging.Abstractions.NullLogger<LogicEngineService>.Instance);
-
-                // Create UserDetailViewModel with the selected user
-                var userDetailViewModel = new UserDetailViewModel(logicEngineService, 
-                    Microsoft.Extensions.Logging.Abstractions.NullLogger<UserDetailViewModel>.Instance)
+                // Use TabsService from MainViewModel to open user detail tab
+                if (MainViewModel.CurrentTabsService != null)
                 {
-                    SelectedUserIdentifier = user.UserPrincipalName ?? user.SamAccountName
-                };
+                    var userIdentifier = user.UserPrincipalName ?? user.SamAccountName ?? user.DisplayName;
+                    var success = await MainViewModel.CurrentTabsService.OpenUserDetailTabAsync(
+                        userIdentifier, 
+                        user.DisplayName ?? userIdentifier);
 
-                // Create and show the UserDetailWindow
-                var userDetailWindow = new Views.UserDetailWindow
+                    if (success)
+                    {
+                        _log?.LogInformation("Opened user detail tab for {UserName} ({UPN})", user.DisplayName, user.UserPrincipalName);
+                    }
+                    else
+                    {
+                        _log?.LogWarning("Failed to open user detail tab for {UserName}", user.DisplayName);
+                        StatusMessage = "Failed to open user details";
+                    }
+                }
+                else
                 {
-                    DataContext = userDetailViewModel,
-                    Owner = System.Windows.Application.Current.MainWindow,
-                    Title = $"User Details - {user.DisplayName}"
-                };
-
-                userDetailWindow.Show();
-
-                _log?.LogInformation("Opened user detail window for {UserName} ({UPN})", user.DisplayName, user.UserPrincipalName);
+                    _log?.LogError("TabsService not available");
+                    StatusMessage = "TabsService not available";
+                }
             }
             catch (Exception ex)
             {
                 StructuredLogger?.LogError(LogSourceName, ex, 
                     new { action = "show_user_detail_error", user_upn = user.UserPrincipalName }, 
-                    "Failed to open user detail window");
+                    "Failed to open user detail tab");
                 
-                _log?.LogError(ex, "Failed to open user detail window for {UserName}", user.DisplayName);
+                _log?.LogError(ex, "Failed to open user detail tab for {UserName}", user.DisplayName);
+                StatusMessage = $"Failed to open user details: {ex.Message}";
             }
         }
 

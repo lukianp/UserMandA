@@ -190,7 +190,7 @@
                                             Background="#FF10B981" 
                                             Foreground="White" 
                                             BorderThickness="0"
-                                            Command="{Binding DataContext.OpenUserDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            Command="{Binding DataContext.ShowUserDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                             CommandParameter="{Binding}">
                                         <Button.Style>
                                             <Style TargetType="Button">

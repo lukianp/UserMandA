@@ -262,7 +262,10 @@
       "Read(C:\\discoverydata\\ljpops\\RawData/**)",
       "Read(D:\\d\\Scripts\\UserMandA/**)",
       "Read(D:\\d\\Scripts\\UserMandA\\GUI/**)",
-      "Read(C:\\discoverydata\\ljpops\\RawData/**)"
+      "Read(C:\\discoverydata\\ljpops\\RawData/**)",
+      "Read(C:\\discoverydata/**)",
+      "Read(C:\\discoverydata\\ljpops/**)",
+      "Read(C:\\discoverydata\\ljpops/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

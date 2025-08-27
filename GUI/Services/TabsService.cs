@@ -212,6 +212,181 @@ namespace MandADiscoverySuite.Services
         }
 
         /// <summary>
+        /// Open a user detail tab with specific user identifier
+        /// </summary>
+        public async Task<bool> OpenUserDetailTabAsync(string userIdentifier, string displayName)
+        {
+            if (string.IsNullOrWhiteSpace(userIdentifier))
+                return false;
+
+            try
+            {
+                var tabKey = $"userdetail_{userIdentifier}";
+                var tabTitle = $"User Details - {displayName}";
+
+                // Check if tab already exists
+                var existingTab = _tabs.FirstOrDefault(t => 
+                    t.Tag?.ToString()?.Equals(tabKey, StringComparison.OrdinalIgnoreCase) == true);
+
+                if (existingTab != null)
+                {
+                    // Activate existing tab
+                    if (_tabControl != null)
+                    {
+                        _tabControl.SelectedItem = existingTab;
+                    }
+                    
+                    _logger?.LogInformation($"[TabsService] Activated existing user detail tab: {userIdentifier}");
+                    LogClickToFile("Tab", tabKey, "Reactivated");
+                    return true;
+                }
+
+                // Create new UserDetailView
+                var userDetailView = new MandADiscoverySuite.Views.UserDetailView();
+                
+                // Create ViewModel with LogicEngineService
+                var logicEngineService = new MandADiscoverySuite.Services.LogicEngineService(
+                    Microsoft.Extensions.Logging.Abstractions.NullLogger<MandADiscoverySuite.Services.LogicEngineService>.Instance);
+                
+                var userDetailViewModel = new MandADiscoverySuite.ViewModels.UserDetailViewModel(
+                    logicEngineService, 
+                    Microsoft.Extensions.Logging.Abstractions.NullLogger<MandADiscoverySuite.ViewModels.UserDetailViewModel>.Instance)
+                {
+                    SelectedUserIdentifier = userIdentifier
+                };
+
+                userDetailView.DataContext = userDetailViewModel;
+
+                // Load data asynchronously
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await userDetailViewModel.LoadAsync();
+                        _logger?.LogInformation($"[TabsService] Loaded user detail data for: {userIdentifier}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogError(ex, $"[TabsService] Failed to load user detail data for: {userIdentifier}");
+                    }
+                });
+
+                // Create tab
+                var tab = new TabItem
+                {
+                    Header = tabTitle,
+                    Content = userDetailView,
+                    Tag = tabKey
+                };
+
+                _tabs.Add(tab);
+
+                // Select the new tab
+                if (_tabControl != null)
+                {
+                    _tabControl.SelectedItem = tab;
+                }
+
+                _logger?.LogInformation($"[TabsService] Created user detail tab: {tabKey}");
+                LogClickToFile("Tab", tabKey, "Created");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"[TabsService] Failed to open user detail tab for: {userIdentifier}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Open an asset detail tab with specific device name
+        /// </summary>
+        public async Task<bool> OpenAssetDetailTabAsync(string deviceName, string displayName)
+        {
+            if (string.IsNullOrWhiteSpace(deviceName))
+                return false;
+
+            try
+            {
+                var tabKey = $"assetdetail_{deviceName}";
+                var tabTitle = $"Asset Details - {displayName}";
+
+                // Check if tab already exists
+                var existingTab = _tabs.FirstOrDefault(t => 
+                    t.Tag?.ToString()?.Equals(tabKey, StringComparison.OrdinalIgnoreCase) == true);
+
+                if (existingTab != null)
+                {
+                    // Activate existing tab
+                    if (_tabControl != null)
+                    {
+                        _tabControl.SelectedItem = existingTab;
+                    }
+                    
+                    _logger?.LogInformation($"[TabsService] Activated existing asset detail tab: {deviceName}");
+                    LogClickToFile("Tab", tabKey, "Reactivated");
+                    return true;
+                }
+
+                // Create new AssetDetailView
+                var assetDetailView = new MandADiscoverySuite.Views.AssetDetailView();
+                
+                // Create ViewModel with LogicEngineService (will be implemented next)
+                var logicEngineService = new MandADiscoverySuite.Services.LogicEngineService(
+                    Microsoft.Extensions.Logging.Abstractions.NullLogger<MandADiscoverySuite.Services.LogicEngineService>.Instance);
+                
+                // Create AssetDetailViewModel with LogicEngineService
+                var assetDetailViewModel = new MandADiscoverySuite.ViewModels.AssetDetailViewModel(
+                    logicEngineService, 
+                    Microsoft.Extensions.Logging.Abstractions.NullLogger<MandADiscoverySuite.ViewModels.AssetDetailViewModel>.Instance)
+                {
+                    SelectedDeviceName = deviceName
+                };
+
+                assetDetailView.DataContext = assetDetailViewModel;
+
+                // Load data asynchronously
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await assetDetailViewModel.LoadAsync();
+                        _logger?.LogInformation($"[TabsService] Loaded asset detail data for: {deviceName}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogError(ex, $"[TabsService] Failed to load asset detail data for: {deviceName}");
+                    }
+                });
+
+                // Create tab
+                var tab = new TabItem
+                {
+                    Header = tabTitle,
+                    Content = assetDetailView,
+                    Tag = tabKey
+                };
+
+                _tabs.Add(tab);
+
+                // Select the new tab
+                if (_tabControl != null)
+                {
+                    _tabControl.SelectedItem = tab;
+                }
+
+                _logger?.LogInformation($"[TabsService] Created asset detail tab: {tabKey}");
+                LogClickToFile("Tab", tabKey, "Created");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"[TabsService] Failed to open asset detail tab for: {deviceName}");
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Log click events to gui-clicks.log
         /// </summary>
         private void LogClickToFile(string controlType, string name, string action)
