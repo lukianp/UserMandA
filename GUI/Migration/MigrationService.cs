@@ -64,7 +64,7 @@ namespace MandADiscoverySuite.Migration
             IList<ValidationResult>? validationResults = null;
             if (_validationService != null)
             {
-                validationResults = await _validationService.ValidateWaveAsync(wave, target, progress);
+                validationResults = await _validationService.ValidateWaveAsync(wave, target, null);
             }
 
             return new MigrationWithValidationResult
@@ -91,8 +91,8 @@ namespace MandADiscoverySuite.Migration
                 currentItem++;
                 progress?.Report(new MigrationProgress
                 {
-                    CurrentStep = $"Rolling back {result.GetType().Name}",
-                    PercentageComplete = (currentItem * 100) / totalItems
+                    Message = $"Rolling back {result.GetType().Name}",
+                    Percentage = (currentItem * 100) / totalItems
                 });
 
                 try

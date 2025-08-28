@@ -73,6 +73,7 @@ namespace MandADiscoverySuite.Services
                 ["dashboard"] = () => new DashboardView(), // Implemented with new architecture
                 ["overview"] = () => new DashboardView(), // Overview maps to Dashboard
                 ["stats"] = () => new DashboardView(), // Stats maps to Dashboard for statistics view
+                ["discovery"] = () => new DiscoveryView(), // Discovery modules view
                 ["logs-audit"] = () => new LogsAuditView(), // New logs and audit view
                 ["logs"] = () => new LogsAuditView(), // Alternative key
                 
@@ -115,6 +116,7 @@ namespace MandADiscoverySuite.Services
                 ["Users"] = () => new UsersViewNew(),
                 ["Groups"] = () => new GroupsViewNew(),
                 ["Infrastructure"] = () => new InfrastructureViewNew(),
+                ["Discovery"] = () => new DiscoveryView(), // Discovery modules view (PascalCase)
             };
         }
 

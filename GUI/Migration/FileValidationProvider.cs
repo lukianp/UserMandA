@@ -55,15 +55,16 @@ namespace MandADiscoverySuite.Migration
                     ? "File validation passed successfully"
                     : $"File validation completed with {issues.Count} issues";
 
-                return new ValidationResult
+                var result = new ValidationResult
                 {
                     ValidatedObject = fileItem,
                     ObjectType = ObjectType,
                     ObjectName = fileItem.SourcePath,
                     Severity = severity,
-                    Message = message,
-                    Issues = { issues }
+                    Message = message
                 };
+                result.Issues.AddRange(issues);
+                return result;
             }
             catch (Exception ex)
             {
@@ -524,12 +525,13 @@ namespace MandADiscoverySuite.Migration
                     ? $"File rollback completed with {warnings.Count} warnings"
                     : "File rollback completed successfully";
 
-                return new RollbackResult
+                var result = new RollbackResult
                 {
                     Success = true,
-                    Message = message,
-                    Warnings = warnings
+                    Message = message
                 };
+                result.Warnings.AddRange(warnings);
+                return result;
             }
             catch (UnauthorizedAccessException ex)
             {

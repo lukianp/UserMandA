@@ -285,7 +285,7 @@
 
                 <!-- Progress Information -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <controls:ProgressIndicator IsVisible="{Binding IsValidating}" Size="20" Margin="0,0,10,0"/>
+                    <controls:ProgressIndicator Visibility="{Binding IsValidating, Converter={StaticResource BoolToVisibilityConverter}}" Width="20" Height="20" Margin="0,0,10,0"/>
                     <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" FontSize="12"/>
                     
                     <!-- Progress Bar for Operations -->

@@ -8,11 +8,11 @@ namespace MandADiscoverySuite.Windows
         public TargetProfilesWindow()
         {
             InitializeComponent();
-            Loaded += async (_, __) =>
+            Loaded += (_, __) =>
             {
                 if (DataContext is TargetProfilesViewModel vm)
                 {
-                    await vm.LoadCommand.ExecuteAsync(null);
+                    vm.LoadCommand.Execute(null);
                 }
             };
         }

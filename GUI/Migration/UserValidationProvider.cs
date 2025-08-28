@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Graph;
 
@@ -59,15 +60,16 @@ namespace MandADiscoverySuite.Migration
                     ? "User validation passed successfully" 
                     : $"User validation completed with {issues.Count} issues";
 
-                return new ValidationResult
+                var result = new ValidationResult
                 {
                     ValidatedObject = user,
                     ObjectType = ObjectType,
                     ObjectName = user.DisplayName,
                     Severity = severity,
-                    Message = message,
-                    Issues = { issues }
+                    Message = message
                 };
+                result.Issues.AddRange(issues);
+                return result;
             }
             catch (Exception ex)
             {
@@ -149,7 +151,7 @@ namespace MandADiscoverySuite.Migration
                     .Select("assignedLicenses,licenseAssignmentStates")
                     .GetAsync();
 
-                if (targetUser?.AssignedLicenses?.Count == 0)
+                if (targetUser?.AssignedLicenses == null || !targetUser.AssignedLicenses.Any())
                 {
                     issues.Add(new ValidationIssue
                     {
@@ -391,12 +393,13 @@ namespace MandADiscoverySuite.Migration
                     ? $"Rollback completed with {warnings.Count} warnings"
                     : "User rollback completed successfully";
 
-                return new RollbackResult
+                var result = new RollbackResult
                 {
                     Success = true,
-                    Message = message,
-                    Warnings = warnings
+                    Message = message
                 };
+                result.Warnings.AddRange(warnings);
+                return result;
             }
             catch (ServiceException ex)
             {

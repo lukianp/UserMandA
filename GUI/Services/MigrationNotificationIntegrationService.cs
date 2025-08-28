@@ -375,7 +375,7 @@ namespace MandADiscoverySuite.Services
                     var tokenData = new
                     {
                         WaveName = e.Wave.Wave.Name,
-                        MigrationStatus = e.Result.Success ? "Completed Successfully" : "Completed with Issues",
+                        MigrationStatus = e.Result.IsSuccess ? "Completed Successfully" : "Completed with Issues",
                         MigrationStartTime = e.Wave.ActualStartTime?.ToString("HH:mm") ?? "Unknown",
                         MigrationEndTime = e.Wave.CompletedAt?.ToString("HH:mm") ?? "Unknown",
                         ItemsMigrated = CountWaveItems(e.Wave.Wave).ToString(),
@@ -533,8 +533,8 @@ namespace MandADiscoverySuite.Services
                         if (batch.Items?.Any() == true)
                         {
                             var userItems = batch.Items.Where(item => 
-                                item.Type == MigrationItemType.User || 
-                                item.Type == MigrationItemType.Mailbox);
+                                item.Type == MigrationType.User || 
+                                item.Type == MigrationType.Mailbox);
 
                             foreach (var userItem in userItems)
                             {

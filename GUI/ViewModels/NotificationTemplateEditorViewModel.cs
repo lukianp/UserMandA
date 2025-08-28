@@ -47,8 +47,8 @@ namespace MandADiscoverySuite.ViewModels
             GraphNotificationService notificationService = null,
             ILogger<NotificationTemplateEditorViewModel> logger = null)
         {
-            _templateService = templateService ?? new NotificationTemplateService(logger: logger);
-            _notificationService = notificationService ?? new GraphNotificationService(logger: logger);
+            _templateService = templateService ?? new NotificationTemplateService();
+            _notificationService = notificationService ?? new GraphNotificationService();
             _logger = logger;
 
             InitializeCollections();

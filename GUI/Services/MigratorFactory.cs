@@ -19,23 +19,23 @@ namespace MandADiscoverySuite.Services
         public IIdentityMigrator CreateIdentityMigrator(TargetProfile profile)
         {
             // For Microsoft 365 targets use Graph-based migrator
-            return new GraphIdentityMigrator();
+            return new GraphIdentityMigrator(null); // TODO: Implement proper client injection
         }
 
         public IMailMigrator CreateMailMigrator(TargetProfile profile)
         {
             // For Microsoft 365 targets use Exchange Online migrator
-            return new ExchangeMailMigrator();
+            return new ExchangeMailMigrator(null); // TODO: Implement proper client injection
         }
 
         public IFileMigrator CreateFileMigrator(TargetProfile profile)
         {
-            return new FileServerMigrator();
+            return new FileServerMigrator(null); // TODO: Implement proper client injection
         }
 
         public ISqlMigrator CreateSqlMigrator(TargetProfile profile)
         {
-            return new SqlMigrator();
+            return new SqlMigrator(null); // TODO: Implement proper client injection
         }
 
         public TargetContext CreateTargetContext(TargetProfile profile)

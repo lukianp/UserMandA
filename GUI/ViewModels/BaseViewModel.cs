@@ -720,6 +720,11 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
+        
+        /// <summary>
+        /// Alias for RaiseCanExecuteChanged to match CommunityToolkit.Mvvm naming conventions
+        /// </summary>
+        public void NotifyCanExecuteChanged() => RaiseCanExecuteChanged();
     }
 
     /// <summary>
@@ -762,6 +767,11 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
+        
+        /// <summary>
+        /// Alias for RaiseCanExecuteChanged to match CommunityToolkit.Mvvm naming conventions
+        /// </summary>
+        public void NotifyCanExecuteChanged() => RaiseCanExecuteChanged();
     }
 
     /// <summary>

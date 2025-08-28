@@ -417,13 +417,7 @@ namespace MandADiscoverySuite.ViewModels
                     AvailableTemplates.Clear();
                     foreach (var template in templates.Where(t => t.IsActive))
                     {
-                        AvailableTemplates.Add(new NotificationTemplateViewModel
-                        {
-                            Id = template.Id,
-                            Name = template.Name,
-                            Type = template.Type.ToString(),
-                            Description = template.Description
-                        });
+                        AvailableTemplates.Add(new NotificationTemplateViewModel(template, _templateService));
                     }
 
                     // Select default template
@@ -844,13 +838,6 @@ namespace MandADiscoverySuite.ViewModels
         }
     }
 
-    public class NotificationTemplateViewModel
-    {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Type { get; set; }
-        public string Description { get; set; }
-    }
 
     public class SchedulePreview
     {

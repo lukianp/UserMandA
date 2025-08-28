@@ -35,7 +35,7 @@
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
                     <Button Content="Reload" Margin="0,0,8,8" Command="{Binding LoadCommand}"/>
                     <Button Content="New" Margin="0,0,8,8" Command="{Binding NewCommand}"/>
-                    <Button Content="Delete" Margin="0,0,8,8" Command="{Binding DeleteCommand}" IsEnabled="{Binding Selected, Converter={StaticResource {x:Static x:Reference Type=BooleanToVisibilityConverter}}}" Visibility="Collapsed"/>
+                    <Button Content="Delete" Margin="0,0,8,8" Command="{Binding DeleteCommand}" IsEnabled="{Binding Path=Selected, Converter={StaticResource NullToBoolConverter}}" Visibility="Collapsed"/>
                 </StackPanel>
                 <ListBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding Selected}">
                     <ListBox.ItemTemplate>

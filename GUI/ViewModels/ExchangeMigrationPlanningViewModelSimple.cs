@@ -6,11 +6,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Data;
-using MandADiscoverySuite.Models;
-using MandADiscoverySuite.Services;
 using System.Windows;
 using MandADiscoverySuite.Models;
-using System.Collections.ObjectModel;
+using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Migration;
 
 namespace MandADiscoverySuite.ViewModels
@@ -32,7 +30,7 @@ namespace MandADiscoverySuite.ViewModels
         // Collections
         private ObservableCollection<MigrationItem> _mailboxes;
         private ObservableCollection<MigrationBatch> _migrationWaves;
-        private ObservableCollection<ValidationIssue> _validationIssues;
+        private ObservableCollection<Models.ValidationIssue> _validationIssues;
         private ICollectionView _mailboxesView;
         private ICollectionView _wavesView;
 
@@ -129,7 +127,7 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _migrationWaves, value);
         }
 
-        public ObservableCollection<ValidationIssue> ValidationIssues
+        public ObservableCollection<Models.ValidationIssue> ValidationIssues
         {
             get => _validationIssues;
             set => SetProperty(ref _validationIssues, value);
@@ -307,7 +305,7 @@ namespace MandADiscoverySuite.ViewModels
         {
             Mailboxes = new ObservableCollection<MigrationItem>();
             MigrationWaves = new ObservableCollection<MigrationBatch>();
-            ValidationIssues = new ObservableCollection<ValidationIssue>();
+            ValidationIssues = new ObservableCollection<Models.ValidationIssue>();
 
             // Setup collection views with filtering
             MailboxesView = CollectionViewSource.GetDefaultView(Mailboxes);
@@ -317,7 +315,7 @@ namespace MandADiscoverySuite.ViewModels
             WavesView.Filter = WaveFilter;
 
             // Initialize sample validation issues
-            ValidationIssues.Add(new ValidationIssue 
+            ValidationIssues.Add(new Models.ValidationIssue 
             { 
                 Severity = "Warning", 
                 Category = "Permissions", 
@@ -325,7 +323,7 @@ namespace MandADiscoverySuite.ViewModels
                 Description = "User has no mailbox permissions in target environment",
                 RecommendedAction = "Grant necessary permissions before migration"
             });
-            ValidationIssues.Add(new ValidationIssue 
+            ValidationIssues.Add(new Models.ValidationIssue 
             { 
                 Severity = "Error", 
                 Category = "Licensing", 

@@ -273,7 +273,10 @@
       "Bash(if [ -d \"GUI/bin\" ])",
       "Bash(then rm -rf \"GUI/bin\")",
       "Bash(if [ -d \"GUI/obj\" ])",
-      "Bash(then rm -rf \"GUI/obj\")"
+      "Bash(then rm -rf \"GUI/obj\")",
+      "Read(C:\\DiscoveryData\\ljpops\\Logs/**)",
+      "Read(C:\\DiscoveryData\\ljpops\\Logs\\Application/**)",
+      "Read(C:\\DiscoveryData\\ljpops\\Logs\\Application/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.Services
 {
@@ -74,7 +75,13 @@ namespace MandADiscoverySuite.Services
                 var validationResult = wave.Status != MigrationStatus.InProgress && wave.Batches.Any();
                 if (!validationResult)
                 {
-                    return WaveExecutionResult.Failed(new List<string> { "Wave validation failed" });
+                    return new WaveExecutionResult 
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Wave validation failed",
+                        StartTime = DateTime.UtcNow,
+                        EndTime = DateTime.UtcNow
+                    };
                 }
 
                 // Create execution context
@@ -115,7 +122,13 @@ namespace MandADiscoverySuite.Services
 
                 _logger?.LogInformation($"Started migration wave: {wave.Name} with execution ID: {executionId}");
                 
-                return WaveExecutionResult.Success(executionId);
+                return new WaveExecutionResult 
+                {
+                    IsSuccess = true,
+                    StartTime = DateTime.UtcNow,
+                    WaveId = wave.Id,
+                    WaveName = wave.Name
+                };
             }
             finally
             {
@@ -879,18 +892,6 @@ namespace MandADiscoverySuite.Services
         public List<string> Warnings { get; set; } = new();
     }
 
-    public class WaveExecutionResult
-    {
-        public bool IsSuccess { get; set; }
-        public string ExecutionId { get; set; }
-        public List<string> Errors { get; set; } = new();
-
-        public static WaveExecutionResult Success(string executionId) => 
-            new() { IsSuccess = true, ExecutionId = executionId };
-        
-        public static WaveExecutionResult Failed(List<string> errors) => 
-            new() { IsSuccess = false, Errors = errors };
-    }
 
     public class WaveExecutionSummary
     {

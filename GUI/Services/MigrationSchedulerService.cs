@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Services.Migration;
 using System.Timers;
 using Timer = System.Timers.Timer;
 
@@ -25,7 +26,7 @@ namespace MandADiscoverySuite.Services
         private readonly Timer _schedulerTimer;
         private readonly ConcurrentDictionary<string, ScheduledWave> _scheduledWaves;
         private readonly ConcurrentDictionary<string, Timer> _waveTimers;
-        private readonly SemaphoreSlim _concurrencySemaphore;
+        private SemaphoreSlim _concurrencySemaphore;
         private readonly object _scheduleLock = new object();
         
         private SchedulerConfiguration _configuration;
@@ -52,7 +53,7 @@ namespace MandADiscoverySuite.Services
             ILogger<MigrationSchedulerService> logger = null)
         {
             _logger = logger;
-            _baseScheduler = baseScheduler ?? new MigrationScheduler(_logger);
+            _baseScheduler = baseScheduler ?? new MigrationScheduler(_logger as ILogger<MigrationScheduler>);
             _scheduledWaves = new ConcurrentDictionary<string, ScheduledWave>();
             _waveTimers = new ConcurrentDictionary<string, Timer>();
             
@@ -566,7 +567,7 @@ namespace MandADiscoverySuite.Services
                     var waveResult = await ExecuteWaveAsync(scheduledWave);
 
                     // Update status based on result
-                    if (waveResult.Success)
+                    if (waveResult.IsSuccess)
                     {
                         scheduledWave.Status = ScheduledWaveStatus.Completed;
                         scheduledWave.CompletedAt = DateTime.Now;
@@ -629,16 +630,19 @@ namespace MandADiscoverySuite.Services
                 
                 return new WaveExecutionResult 
                 { 
-                    Success = true,
-                    Message = "Wave executed successfully"
+                    IsSuccess = true,
+                    StartTime = DateTime.UtcNow,
+                    EndTime = DateTime.UtcNow
                 };
             }
             catch (Exception ex)
             {
                 return new WaveExecutionResult 
                 { 
-                    Success = false,
-                    ErrorMessage = ex.Message
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message,
+                    StartTime = DateTime.UtcNow,
+                    EndTime = DateTime.UtcNow
                 };
             }
         }
@@ -1067,14 +1071,6 @@ namespace MandADiscoverySuite.Services
         public List<string> Warnings { get; set; } = new List<string>();
     }
 
-    public class WaveExecutionResult
-    {
-        public bool Success { get; set; }
-        public string Message { get; set; }
-        public string ErrorMessage { get; set; }
-        public DateTime ExecutionTime { get; set; } = DateTime.Now;
-        public TimeSpan Duration { get; set; }
-    }
 
     #region Event Args
 

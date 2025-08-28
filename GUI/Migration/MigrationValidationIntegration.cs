@@ -226,7 +226,7 @@ namespace MandADiscoverySuite.Migration
             try
             {
                 _parentViewModel.StatusMessage = "Running validation...";
-                await ValidationViewModel.RefreshCommand.Execute(null);
+                ValidationViewModel.RefreshCommand.Execute(null);
                 ShowValidationResults = true;
                 _parentViewModel.StatusMessage = "Validation completed";
             }

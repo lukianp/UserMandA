@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Graph;
 
@@ -59,15 +60,16 @@ namespace MandADiscoverySuite.Migration
                     ? "Mailbox validation passed successfully"
                     : $"Mailbox validation completed with {issues.Count} issues";
 
-                return new ValidationResult
+                var result = new ValidationResult
                 {
                     ValidatedObject = mailbox,
                     ObjectType = ObjectType,
                     ObjectName = mailbox.PrimarySmtpAddress,
                     Severity = severity,
-                    Message = message,
-                    Issues = { issues }
+                    Message = message
                 };
+                result.Issues.AddRange(issues);
+                return result;
             }
             catch (Exception ex)
             {
@@ -355,12 +357,13 @@ namespace MandADiscoverySuite.Migration
                     PercentageComplete = 100
                 });
 
-                return new RollbackResult
+                var result = new RollbackResult
                 {
                     Success = true,
-                    Message = "Mailbox rollback initiated - manual verification required",
-                    Warnings = warnings
+                    Message = "Mailbox rollback initiated - manual verification required"
                 };
+                result.Warnings.AddRange(warnings);
+                return result;
             }
             catch (Exception ex)
             {

@@ -6,6 +6,23 @@ using System.Windows.Data;
 namespace MandADiscoverySuite.Converters
 {
     /// <summary>
+    /// Converts null to Boolean (null = false, not null = true)
+    /// </summary>
+    public class NullToBoolConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return value != null;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            // ConvertBack not supported for this converter
+            return Binding.DoNothing;
+        }
+    }
+
+    /// <summary>
     /// Converts null to Visibility
     /// </summary>
     public class NullToVisibilityConverter : IValueConverter
@@ -52,6 +69,30 @@ namespace MandADiscoverySuite.Converters
         {
             // ConvertBack not supported for this converter
             return Binding.DoNothing;
+        }
+    }
+
+    /// <summary>
+    /// Converts boolean to visibility
+    /// </summary>
+    public class BoolToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool boolValue)
+            {
+                return boolValue ? Visibility.Visible : Visibility.Collapsed;
+            }
+            return Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is Visibility visibility)
+            {
+                return visibility == Visibility.Visible;
+            }
+            return false;
         }
     }
 

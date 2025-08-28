@@ -1,15 +1,14 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace MandADiscoverySuite.ViewModels
 {
-    public partial class TargetProfilesViewModel : ObservableObject
+    public class TargetProfilesViewModel : BaseViewModel
     {
         public ObservableCollection<TargetProfile> Profiles { get; } = new();
 
@@ -32,11 +31,11 @@ namespace MandADiscoverySuite.ViewModels
         private string _scopesCsv = "User.Read.All,Group.Read.All";
         public string ScopesCsv { get => _scopesCsv; set => SetProperty(ref _scopesCsv, value); }
 
-        public IAsyncRelayCommand LoadCommand { get; }
-        public IAsyncRelayCommand SaveCommand { get; }
-        public IAsyncRelayCommand DeleteCommand { get; }
-        public IAsyncRelayCommand TestConnectionCommand { get; }
-        public IRelayCommand NewCommand { get; }
+        public ICommand LoadCommand { get; }
+        public ICommand SaveCommand { get; }
+        public ICommand DeleteCommand { get; }
+        public ICommand TestConnectionCommand { get; }
+        public ICommand NewCommand { get; }
 
         public TargetProfilesViewModel()
         {

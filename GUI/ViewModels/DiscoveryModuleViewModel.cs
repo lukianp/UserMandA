@@ -71,6 +71,7 @@ namespace MandADiscoverySuite.ViewModels
                 if (SetProperty(ref _enabled, value))
                 {
                     RunDiscoveryCommand.NotifyCanExecuteChanged();
+                    OnPropertyChanged(nameof(IsEnabled));
                 }
             }
         }
@@ -83,6 +84,8 @@ namespace MandADiscoverySuite.ViewModels
                 if (SetProperty(ref _status, value))
                 {
                     RunDiscoveryCommand.NotifyCanExecuteChanged();
+                    OnPropertyChanged(nameof(IsEnabled));
+                    OnPropertyChanged(nameof(IsRunning));
                 }
             }
         }
@@ -94,6 +97,7 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         public bool IsEnabled => Enabled && Status != "Running";
+        public bool IsRunning => Status == "Running";
 
         public CommunityToolkit.Mvvm.Input.IAsyncRelayCommand RunDiscoveryCommand { get; }
 

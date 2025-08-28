@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MandADiscoverySuite.Migration
@@ -61,15 +62,16 @@ namespace MandADiscoverySuite.Migration
                     ? "Database validation passed successfully"
                     : $"Database validation completed with {issues.Count} issues";
 
-                return new ValidationResult
+                var result = new ValidationResult
                 {
                     ValidatedObject = database,
                     ObjectType = ObjectType,
                     ObjectName = database.Name,
                     Severity = severity,
-                    Message = message,
-                    Issues = { issues }
+                    Message = message
                 };
+                result.Issues.AddRange(issues);
+                return result;
             }
             catch (Exception ex)
             {
@@ -527,12 +529,13 @@ namespace MandADiscoverySuite.Migration
                 warnings.Add("Database rollback is irreversible - ensure source database is available");
                 warnings.Add("Any connections to the target database have been forcibly terminated");
 
-                return new RollbackResult
+                var result = new RollbackResult
                 {
                     Success = true,
-                    Message = "Database rollback completed successfully",
-                    Warnings = warnings
+                    Message = "Database rollback completed successfully"
                 };
+                result.Warnings.AddRange(warnings);
+                return result;
             }
             catch (SqlException ex)
             {

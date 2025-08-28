@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using Microsoft.Identity.Client;
+using Azure.Identity;
 using MandADiscoverySuite.Models;
 using System.Text.Json;
 using System.Net.Http;
@@ -44,7 +45,7 @@ namespace MandADiscoverySuite.Services
             ILogger<GraphNotificationService> logger = null)
         {
             _logger = logger;
-            _templateService = templateService ?? new NotificationTemplateService(logger: logger);
+            _templateService = templateService ?? new NotificationTemplateService(logger: null);
             _logicEngineService = logicEngineService;
             
             _configuration = new GraphNotificationConfiguration();
@@ -92,11 +93,15 @@ namespace MandADiscoverySuite.Services
                     .WithAuthority(_configuration.Authority)
                     .Build();
 
-                // Create authentication provider
-                var authProvider = new ClientCredentialProvider(_clientApp);
+                // Create authentication provider using Azure.Identity
+                var credential = new ClientSecretCredential(
+                    _configuration.TenantId ?? "common",
+                    _configuration.ClientId,
+                    _configuration.ClientSecret
+                );
 
                 // Create Graph service client
-                _graphServiceClient = new GraphServiceClient(authProvider);
+                _graphServiceClient = new GraphServiceClient(credential);
 
                 // Test the connection
                 var connectionTest = await TestConnectionAsync();
@@ -596,7 +601,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                User user = null;
+                Microsoft.Graph.User user = null;
 
                 // Try different ways to find the user
                 if (userIdentifier.Contains("@"))
