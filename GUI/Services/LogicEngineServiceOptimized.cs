@@ -927,6 +927,56 @@ namespace MandADiscoverySuite.Services
             return null;
         }
 
+        /// <summary>
+        /// Gets mailbox by UPN for eligibility checks
+        /// </summary>
+        public async Task<MailboxDto?> GetMailboxByUpnAsync(string upn)
+        {
+            _logger.LogDebug("Getting mailbox by UPN: {UPN}", upn);
+            await Task.Delay(1); // Simulate async work
+            return null; // Stub implementation
+        }
+        
+        /// <summary>
+        /// Gets all users for eligibility analysis
+        /// </summary>
+        public async Task<List<UserDto>> GetAllUsersAsync()
+        {
+            _logger.LogDebug("Getting all users for eligibility analysis");
+            await Task.Delay(1); // Simulate async work
+            return new List<UserDto>(); // Stub implementation
+        }
+        
+        /// <summary>
+        /// Gets all mailboxes for eligibility analysis
+        /// </summary>
+        public async Task<List<MailboxDto>> GetAllMailboxesAsync()
+        {
+            _logger.LogDebug("Getting all mailboxes for eligibility analysis");
+            await Task.Delay(1); // Simulate async work
+            return new List<MailboxDto>(); // Stub implementation
+        }
+        
+        /// <summary>
+        /// Gets all file shares for eligibility analysis
+        /// </summary>
+        public async Task<List<FileShareDto>> GetAllFileSharesAsync()
+        {
+            _logger.LogDebug("Getting all file shares for eligibility analysis");
+            await Task.Delay(1); // Simulate async work
+            return new List<FileShareDto>(); // Stub implementation
+        }
+        
+        /// <summary>
+        /// Gets all SQL databases for eligibility analysis
+        /// </summary>
+        public async Task<List<SqlDbDto>> GetAllSqlDatabasesAsync()
+        {
+            _logger.LogDebug("Getting all SQL databases for eligibility analysis");
+            await Task.Delay(1); // Simulate async work
+            return new List<SqlDbDto>(); // Stub implementation
+        }
+
         public void Dispose()
         {
             if (!_disposed)

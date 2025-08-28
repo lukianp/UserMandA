@@ -123,6 +123,31 @@ namespace MandADiscoverySuite.Services
         /// Gets comprehensive mailbox detail projection including size and permissions
         /// </summary>
         Task<MailboxDto?> GetMailboxDetailAsync(string mailboxName);
+        
+        /// <summary>
+        /// Gets mailbox by UPN for eligibility checks
+        /// </summary>
+        Task<MailboxDto?> GetMailboxByUpnAsync(string upn);
+        
+        /// <summary>
+        /// Gets all users for eligibility analysis
+        /// </summary>
+        Task<List<UserDto>> GetAllUsersAsync();
+        
+        /// <summary>
+        /// Gets all mailboxes for eligibility analysis
+        /// </summary>
+        Task<List<MailboxDto>> GetAllMailboxesAsync();
+        
+        /// <summary>
+        /// Gets all file shares for eligibility analysis
+        /// </summary>
+        Task<List<FileShareDto>> GetAllFileSharesAsync();
+        
+        /// <summary>
+        /// Gets all SQL databases for eligibility analysis
+        /// </summary>
+        Task<List<SqlDbDto>> GetAllSqlDatabasesAsync();
     }
 
     /// <summary>

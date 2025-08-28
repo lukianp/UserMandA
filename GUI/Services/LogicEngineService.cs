@@ -3794,6 +3794,76 @@ namespace MandADiscoverySuite.Services
             var mailbox = _mailboxByUpn.Values.FirstOrDefault(m => m.UserPrincipalName?.Equals(mailboxName, StringComparison.OrdinalIgnoreCase) == true);
             return mailbox;
         }
+        
+        /// <summary>
+        /// Gets mailbox by UPN for eligibility checks
+        /// </summary>
+        public async Task<MailboxDto?> GetMailboxByUpnAsync(string upn)
+        {
+            await Task.CompletedTask; // Async stub
+            _mailboxByUpn.TryGetValue(upn, out var mailbox);
+            return mailbox;
+        }
+        
+        /// <summary>
+        /// Gets all users for eligibility analysis
+        /// </summary>
+        public async Task<List<UserDto>> GetAllUsersAsync()
+        {
+            await Task.CompletedTask; // Async stub
+            return _usersBySid.Values.ToList();
+        }
+        
+        /// <summary>
+        /// Gets all mailboxes for eligibility analysis
+        /// </summary>
+        public async Task<List<MailboxDto>> GetAllMailboxesAsync()
+        {
+            await Task.CompletedTask; // Async stub
+            return _mailboxByUpn.Values.ToList();
+        }
+        
+        /// <summary>
+        /// Gets all file shares for eligibility analysis
+        /// </summary>
+        public async Task<List<FileShareDto>> GetAllFileSharesAsync()
+        {
+            await Task.CompletedTask; // Async stub
+            
+            // For now return a basic list - in real implementation would load from CSV data
+            return new List<FileShareDto>
+            {
+                new FileShareDto(
+                    Name: "SharedDocs",
+                    Path: @"\\server\shareddocs",
+                    Description: "Shared documents folder",
+                    Server: "FileServer01",
+                    Permissions: new List<string> { "Domain Users" },
+                    DiscoveryTimestamp: DateTime.Now.AddDays(-1),
+                    DiscoveryModule: "FileServerDiscovery",
+                    SessionId: "sample-session"
+                ),
+                new FileShareDto(
+                    Name: "UserProfiles",
+                    Path: @"\\server\profiles$",
+                    Description: "User profile share",
+                    Server: "FileServer01", 
+                    Permissions: new List<string> { "Domain Admins" },
+                    DiscoveryTimestamp: DateTime.Now.AddDays(-1),
+                    DiscoveryModule: "FileServerDiscovery",
+                    SessionId: "sample-session"
+                )
+            };
+        }
+        
+        /// <summary>
+        /// Gets all SQL databases for eligibility analysis
+        /// </summary>
+        public async Task<List<SqlDbDto>> GetAllSqlDatabasesAsync()
+        {
+            await Task.CompletedTask; // Async stub
+            return _sqlDbsByKey.Values.ToList();
+        }
     }
     
     /// <summary>

@@ -9,6 +9,9 @@ using System.Windows.Data;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using System.Windows;
+using MandADiscoverySuite.Models;
+using System.Collections.ObjectModel;
+using MandADiscoverySuite.Migration;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -65,6 +68,9 @@ namespace MandADiscoverySuite.ViewModels
             InitializeCommands();
             GenerateSampleData(25);
             RefreshStatistics();
+
+            // Load target profiles for selection
+            _ = LoadTargetProfilesAsync();
         }
 
         #region Properties
@@ -224,6 +230,24 @@ namespace MandADiscoverySuite.ViewModels
         {
             get => _estimatedMigrationDays;
             set => SetProperty(ref _estimatedMigrationDays, value);
+        }
+
+        // Target Profile selection
+        public ObservableCollection<TargetProfile> TargetProfiles { get; } = new();
+        private TargetProfile _selectedTargetProfile;
+        public TargetProfile SelectedTargetProfile
+        {
+            get => _selectedTargetProfile;
+            set => SetProperty(ref _selectedTargetProfile, value);
+        }
+
+        public TargetContext CurrentTargetContext
+        {
+            get
+            {
+                if (SelectedTargetProfile == null) return new TargetContext();
+                return MigratorFactory.Instance.CreateTargetContext(SelectedTargetProfile);
+            }
         }
 
         // Configuration Properties
@@ -520,6 +544,22 @@ namespace MandADiscoverySuite.ViewModels
             }
             
             EstimatedMigrationDays = Math.Max(1, (int)Math.Ceiling(TotalMailboxes / (double)MaxConcurrentMigrations));
+        }
+
+        private async Task LoadTargetProfilesAsync()
+        {
+            try
+            {
+                var company = (await ProfileService.Instance.GetCurrentProfileAsync())?.CompanyName ?? "default";
+                var profiles = await TargetProfileService.Instance.GetProfilesAsync(company);
+                TargetProfiles.Clear();
+                foreach (var p in profiles) TargetProfiles.Add(p);
+                SelectedTargetProfile = TargetProfiles.FirstOrDefault();
+            }
+            catch
+            {
+                // ignore load errors here; UI can still function
+            }
         }
 
         private void GenerateSampleData(int count)

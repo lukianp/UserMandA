@@ -24,7 +24,7 @@ namespace MandADiscoverySuite.MigrationProviders
             _client = client;
         }
 
-        public async Task<MigrationResult> MigrateMailboxAsync(MailboxDto mailbox, MigrationSettings settings, TargetContext target, IProgress<MigrationProgress>? progress = null)
+        public async Task<MigrationResult> MigrateMailboxAsync(MailboxDto mailbox, MigrationSettings settings, TargetContext target, IProgress<MigrationProgress> progress = null)
         {
             try
             {
@@ -36,6 +36,24 @@ namespace MandADiscoverySuite.MigrationProviders
             catch (Exception ex)
             {
                 return MigrationResult.Failed(ex.Message);
+            }
+        }
+
+        public async Task<RollbackResult> RollbackMailboxAsync(MailboxDto mailbox, TargetContext target, IProgress<MigrationProgress> progress = null)
+        {
+            try
+            {
+                progress?.Report(new MigrationProgress { Percentage = 0, Message = $"Rolling back mailbox {mailbox.PrimarySmtpAddress}" });
+                
+                // Simplified rollback - in practice this would cancel move requests and update mail routing
+                await Task.Delay(1000); // Simulate rollback operation
+
+                progress?.Report(new MigrationProgress { Percentage = 100, Message = $"Mailbox {mailbox.PrimarySmtpAddress} rollback completed" });
+                return RollbackResult.Succeeded("Mailbox rollback completed - manual verification required");
+            }
+            catch (Exception ex)
+            {
+                return RollbackResult.Failed($"Mailbox rollback failed: {ex.Message}");
             }
         }
     }

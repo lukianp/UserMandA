@@ -62,7 +62,12 @@
                              FontSize="14" Foreground="#BDC3C7" Margin="0,5,0,0" />
                 </StackPanel>
                 
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <TextBlock Text="Target Profile:" Foreground="#BDC3C7" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <ComboBox Width="260" ItemsSource="{Binding TargetProfiles}" SelectedItem="{Binding SelectedTargetProfile}"
+                                  DisplayMemberPath="Name"/>
+                    </StackPanel>
                     <Button Content="Import Mailboxes" Command="{Binding ImportMailboxesCommand}" 
                           Style="{StaticResource ActionButtonStyle}" />
                     <Button Content="Export Plan" Command="{Binding ExportPlanCommand}" 

@@ -6,6 +6,7 @@ Canonical build & run location (enforced): `C:\enterprisediscovery\`
 Company data root: `C:\discoverydata\ljpops\`
 
 ## [Unreleased]
+- Added Target Profiles (T-043): admins can create, edit, and select multiple target tenants. Secrets are encrypted via DPAPI and stored under `C:\discoverydata\<CompanyProfile>\Configuration\target-profiles.json`. Migration UI now includes a Target Profile selector and a migrator factory bridges to Identity/Mail/File/SQL providers using the selected profile.
 ### Added
 - **Comprehensive Theme Integration** - Full theme support across UI with dynamic resource binding (T-026)
   - Enhanced theme dictionaries: 52 brush resources in both DarkTheme.xaml and LightTheme.xaml

@@ -50,6 +50,8 @@ namespace MandADiscoverySuite.Migration
     public class TargetContext
     {
         public string TenantId { get; set; } = string.Empty;
+        public string ClientId { get; set; } = string.Empty;
+        public string[] AccessScopes { get; set; } = System.Array.Empty<string>();
     }
 
     /// <summary>

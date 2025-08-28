@@ -97,7 +97,21 @@ F1 - This Help Dialog";
         private void WaveDropZone_Drop(object sender, DragEventArgs e) { }
         private void WaveDropZone_DragOver(object sender, DragEventArgs e) { }
         private void WaveDropZone_DragLeave(object sender, DragEventArgs e) { }
-        private void MainWindow_KeyDown(object sender, KeyEventArgs e) { }
+        private void MainWindow_KeyDown(object sender, KeyEventArgs e)
+        {
+            try
+            {
+                if (e.Key == Key.F10)
+                {
+                    var win = new Windows.TargetProfilesWindow { Owner = this };
+                    win.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening Target Profiles: {ex.Message}");
+            }
+        }
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e) { }
         private void WavesDataGrid_Drop(object sender, DragEventArgs e) { }
         private void WavesDataGrid_DragOver(object sender, DragEventArgs e) { }
