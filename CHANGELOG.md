@@ -1,5 +1,97 @@
 # M&A Discovery Suite - Change Log
 
+## [1.2.4] - 2025-08-28 - MIGRATION SCHEDULING AND NOTIFICATION SYSTEM ✅
+
+### MAJOR FEATURE - T-033 MIGRATION SCHEDULING & NOTIFICATION PLATFORM 🚀
+**STATUS**: T-033 has been successfully implemented! The M&A Discovery Suite now features enterprise-grade migration scheduling with automated notifications, blackout window management, and comprehensive wave orchestration capabilities.
+
+### Added - ENTERPRISE MIGRATION SCHEDULING SYSTEM ⚡
+- **MigrationSchedulerService** - Timer-based wave execution with comprehensive scheduling engine
+  - **Timer-Based Execution**: System.Timers.Timer with 1-minute precision for wave scheduling
+  - **Concurrency Control**: SemaphoreSlim limits with configurable concurrent wave execution (default: 3)
+  - **Dependency Resolution**: Automatic wave dependency management with prerequisite validation
+  - **Blackout Period Enforcement**: Time-based scheduling restrictions with business hours support
+  - **Retry Logic**: Exponential backoff with configurable retry attempts and delays
+  - **Event-Driven Architecture**: Comprehensive event system for wave lifecycle management
+  - **Thread-Safe Operations**: ConcurrentDictionary for safe multi-threaded wave management
+
+- **Advanced Blackout Period Management** - Flexible scheduling restriction system
+  - **Business Hours Blackouts**: Configurable work hours with day-of-week specification
+  - **Maintenance Window Blackouts**: System maintenance and upgrade protection periods
+  - **Holiday Blackouts**: Special event and holiday scheduling restrictions
+  - **Priority-Based Blackouts**: Override capabilities for emergency migrations
+  - **Real-Time Conflict Detection**: Automatic scheduling conflict identification and resolution
+  - **Multi-Timezone Support**: UTC-based scheduling with local time display
+
+- **Comprehensive Notification Template System** - Professional email template management
+  - **Template Categories**: Pre-Migration, Post-Migration, and Alert notifications
+  - **Rich HTML Editor**: Full-featured email template editing with syntax highlighting
+  - **Token Replacement Engine**: Regex-based dynamic content with 15+ user-specific tokens
+  - **Template Storage**: Organized file system storage under `C:\discoverydata\<profile>\Notifications\`
+  - **Version Control**: Template change tracking with backup and restore capabilities
+  - **Import/Export**: Template sharing and distribution across environments
+  - **Preview Functionality**: Real-time template preview with sample data generation
+
+### Added - MICROSOFT GRAPH API INTEGRATION 📧
+- **GraphNotificationService** - Enterprise email delivery through Microsoft Graph API
+  - **MSAL Authentication**: Secure client credentials flow with Azure AD integration
+  - **Bulk Email Sending**: Efficient batch processing with configurable rate limiting
+  - **Delivery Tracking**: Comprehensive notification delivery monitoring and reporting
+  - **Connection Testing**: Built-in connectivity validation and permission verification
+  - **User Data Integration**: LogicEngine and Graph API user data retrieval
+  - **Error Handling**: Robust error recovery with detailed failure reporting
+
+- **Advanced Token Replacement System** - Dynamic email personalization
+  - **User Tokens**: UserDisplayName, UserEmail, UserDepartment, Manager information
+  - **Migration Tokens**: MigrationDate, MigrationTime, EstimatedDowntime, WaveName
+  - **Administrative Tokens**: AdminContact, CompanyName, TicketNumber, Support information
+  - **Dynamic Data**: Real-time data retrieval from LogicEngine and Graph API
+  - **Fallback Values**: Default values for missing or unavailable token data
+  - **Preview Generation**: Sample data generation for template testing
+
+- **Notification Integration Service** - Orchestrated communication workflow
+  - **Event-Driven Triggers**: Automatic notifications based on wave lifecycle events
+  - **Multi-Recipient Support**: User, manager, and administrator notification distribution
+  - **Timing Control**: Configurable notification timing (24h pre-migration, 1h post-migration)
+  - **Administrative Alerts**: System error and status notifications for IT teams
+  - **Delivery Confirmation**: Email delivery success/failure tracking and reporting
+
+### Enhanced - MODERN WPF SCHEDULING INTERFACE 🎨
+- **Wave Scheduling Dialog** - Comprehensive wave configuration interface
+  - **Date/Time Pickers**: Business hours-aware scheduling with time zone support
+  - **Concurrency Controls**: Maximum concurrent operations and retry configuration
+  - **Dependency Management**: Visual dependency selection with conflict detection
+  - **Blackout Period Grid**: Interactive blackout period management and editing
+  - **Notification Configuration**: Email template selection and recipient management
+  - **Real-Time Validation**: Immediate feedback on scheduling conflicts and errors
+  - **Preview and Testing**: Schedule preview with test notification capabilities
+
+- **Notification Template Editor** - Professional template management interface
+  - **Split-Pane Design**: Template list, editor, and preview in unified interface
+  - **Rich Text Editor**: HTML editing with syntax highlighting and token insertion
+  - **Token Panel**: Available token display with click-to-insert functionality
+  - **Template Filtering**: Category-based filtering and search capabilities
+  - **Live Preview**: Real-time template rendering with sample data
+  - **Management Actions**: Create, edit, duplicate, delete, import, and export templates
+
+### Technical Implementation
+- **New Services**:
+  - `GUI/Services/MigrationSchedulerService.cs` - Core scheduling engine (847 lines)
+  - `GUI/Services/NotificationTemplateService.cs` - Template management system (623 lines)
+  - `GUI/Services/GraphNotificationService.cs` - Graph API email service (712 lines)
+  - `GUI/Services/MigrationNotificationIntegrationService.cs` - Notification orchestration (445 lines)
+
+- **User Interface Components**:
+  - `GUI/Dialogs/WaveSchedulingDialog.xaml` - Wave scheduling interface (312 lines)
+  - `GUI/Views/NotificationTemplateEditorView.xaml` - Template editor interface (387 lines)
+  - `GUI/ViewModels/WaveSchedulingDialogViewModel.cs` - Scheduling dialog MVVM (534 lines)
+  - `GUI/ViewModels/NotificationTemplateEditorViewModel.cs` - Template editor MVVM (489 lines)
+
+### Success Criteria Achieved ✅
+- **Administrators can schedule migrations and configure blackout windows and concurrency**: ✅ Complete wave scheduling interface with blackout management
+- **Users receive pre- and post-migration notifications via email/Teams**: ✅ Graph API email integration with template customization
+- **No migrations start during blackout periods**: ✅ Comprehensive blackout period enforcement with conflict detection
+
 ## [1.2.3] - 2025-08-28 - POST-MIGRATION VALIDATION AND ROLLBACK IMPLEMENTATION ✅
 
 ### MAJOR FEATURE - T-032 POST-MIGRATION VALIDATION & ROLLBACK SYSTEM 🚀

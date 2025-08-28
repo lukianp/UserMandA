@@ -267,7 +267,9 @@
       "Read(C:\\discoverydata\\ljpops/**)",
       "Read(C:\\discoverydata\\ljpops/**)",
       "Bash(Remove-Item \"Test-T023-*.ps1\" -Force)",
-      "Read(C:\\discoverydata/**)"
+      "Read(C:\\discoverydata/**)",
+      "Read(C:\\discoverydata/**)",
+      "Read(C:\\discoverydata\\ljpops\\Mappings/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",
