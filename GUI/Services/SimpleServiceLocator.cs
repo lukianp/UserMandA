@@ -88,8 +88,20 @@ namespace MandADiscoverySuite.Services
             if (type == typeof(ILogicEngineService) || type == typeof(LogicEngineService))
             {
                 var logger = _loggerFactory.CreateLogger<LogicEngineService>();
+                
+                // T-030: Try to get cache service, but don't require it for backward compatibility
+                MultiTierCacheService cacheService = null;
+                try
+                {
+                    cacheService = GetService<MultiTierCacheService>();
+                }
+                catch
+                {
+                    // Cache service not available - proceed without it
+                }
+                
                 var dataRoot = @"C:\discoverydata\ljpops\RawData\";
-                var logicEngineService = new LogicEngineService(logger, dataRoot);
+                var logicEngineService = new LogicEngineService(logger, cacheService, dataRoot);
                 RegisterService<ILogicEngineService>(logicEngineService);
                 RegisterService<LogicEngineService>(logicEngineService);
                 return (T)(object)logicEngineService;

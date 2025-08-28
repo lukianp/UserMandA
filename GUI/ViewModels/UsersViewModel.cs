@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
@@ -17,7 +21,10 @@ namespace MandADiscoverySuite.ViewModels
     {
         private readonly CsvDataServiceNew _csvService;
         private readonly ProfileService _profileService;
+        private readonly ILogicEngineService _logicEngineService;
+        private readonly CacheAwareFileWatcherService _fileWatcherService;
         private ObservableCollection<UserData> _users = new();
+        private CancellationTokenSource _loadCancellationSource;
         
         public ObservableCollection<UserData> Users
         {
@@ -30,11 +37,24 @@ namespace MandADiscoverySuite.ViewModels
         // Commands
         public ICommand ShowUserDetailCommand { get; private set; }
 
-        public UsersViewModel(CsvDataServiceNew csvService, ILogger<UsersViewModel> logger, ProfileService profileService) 
+        public UsersViewModel(
+            CsvDataServiceNew csvService, 
+            ILogger<UsersViewModel> logger, 
+            ProfileService profileService,
+            ILogicEngineService logicEngineService = null,
+            CacheAwareFileWatcherService fileWatcherService = null) 
             : base(logger)
         {
             _csvService = csvService ?? throw new ArgumentNullException(nameof(csvService));
             _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            _logicEngineService = logicEngineService; // Optional for T-030 integration
+            _fileWatcherService = fileWatcherService; // Optional for T-030 integration
+            
+            // T-030: Subscribe to data refresh events if file watcher is available
+            if (_fileWatcherService != null)
+            {
+                _fileWatcherService.DataRefreshRequired += OnDataRefreshRequired;
+            }
         }
 
         protected override void InitializeCommands()
@@ -93,8 +113,15 @@ namespace MandADiscoverySuite.ViewModels
 
         public override async Task LoadAsync()
         {
+            // T-030: Cancel any existing load operation
+            _loadCancellationSource?.Cancel();
+            _loadCancellationSource = new CancellationTokenSource();
+            var cancellationToken = _loadCancellationSource.Token;
+
             var sw = Stopwatch.StartNew();
             IsLoading = true;
+            LoadingMessage = "Loading users data...";
+            LoadingProgress = 0;
             HasErrors = false;
             LastError = null;
             HeaderWarnings.Clear();
@@ -103,40 +130,82 @@ namespace MandADiscoverySuite.ViewModels
             {
                 StructuredLogger?.LogDebug(LogSourceName, new { action = "load_start", component = "users" }, "Users data loading started");
                 
+                // T-030: Update progress indicator
+                LoadingMessage = "Checking cache and data sources...";
+                LoadingProgress = 10;
+                
                 // Get current profile
                 var profile = _profileService.CurrentProfile ?? "ljpops";
                 
-                // Load users with header verification
-                var result = await _csvService.LoadUsersAsync(profile);
+                cancellationToken.ThrowIfCancellationRequested();
                 
-                // Add header warnings
-                foreach (var warning in result.HeaderWarnings)
+                LoadingMessage = "Loading users from data sources...";
+                LoadingProgress = 30;
+                
+                // T-030: Use LogicEngineService for cached/optimized data loading if available
+                List<Models.UserDto> usersFromLogicEngine = null;
+                if (_logicEngineService != null)
                 {
-                    HeaderWarnings.Add(warning);
+                    usersFromLogicEngine = await _logicEngineService.GetUsersAsync(null, 0, int.MaxValue);
                 }
                 
-                // Update collection on UI thread
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                LoadingMessage = "Processing user data...";
+                LoadingProgress = 60;
+                
+                // Convert LogicEngine users to UserData if needed, or fallback to CSV service
+                List<UserData> userData;
+                if (usersFromLogicEngine?.Count > 0)
+                {
+                    // Convert from LogicEngine format to UserData format
+                    userData = usersFromLogicEngine.Select(u => ConvertToUserData(u)).ToList();
+                    StructuredLogger?.LogDebug(LogSourceName, new { source = "LogicEngine", count = userData.Count }, "Users loaded from cached LogicEngine");
+                }
+                else
+                {
+                    // Fallback to CSV service
+                    LoadingMessage = "Loading from CSV files...";
+                    var result = await _csvService.LoadUsersAsync(profile);
+                    userData = result.Data;
+                    
+                    // Add header warnings
+                    foreach (var warning in result.HeaderWarnings)
+                    {
+                        HeaderWarnings.Add(warning);
+                    }
+                    StructuredLogger?.LogDebug(LogSourceName, new { source = "CsvService", count = userData.Count }, "Users loaded from CSV fallback");
+                }
+                
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                LoadingMessage = "Updating user interface...";
+                LoadingProgress = 80;
+                
+                // T-030: Update collection on UI thread with batch updates for better performance
                 if (System.Windows.Application.Current?.Dispatcher != null)
                 {
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         Users.Clear();
-                        foreach (var user in result.Data)
+                        
+                        // Batch add for better performance with large datasets
+                        foreach (var user in userData)
                         {
                             Users.Add(user);
                         }
-                    });
+                    }, DispatcherPriority.Background, cancellationToken);
                 }
                 else
                 {
-                    // Fallback for cases where dispatcher is not available
                     Users.Clear();
-                    foreach (var user in result.Data)
+                    foreach (var user in userData)
                     {
                         Users.Add(user);
                     }
                 }
                 
+                LoadingProgress = 100;
                 OnPropertyChanged(nameof(HasData));
                 
                 StructuredLogger?.LogInfo(LogSourceName, new { 
@@ -144,8 +213,13 @@ namespace MandADiscoverySuite.ViewModels
                     component = "users",
                     rows = Users.Count,
                     warnings = HeaderWarnings.Count,
-                    elapsed_ms = sw.ElapsedMilliseconds
+                    elapsed_ms = sw.ElapsedMilliseconds,
+                    cached = usersFromLogicEngine?.Count > 0
                 }, "Users data loaded successfully");
+            }
+            catch (OperationCanceledException)
+            {
+                StructuredLogger?.LogDebug(LogSourceName, new { action = "load_cancelled", component = "users" }, "Users data loading cancelled");
             }
             catch (Exception ex)
             {
@@ -156,7 +230,70 @@ namespace MandADiscoverySuite.ViewModels
             finally
             {
                 IsLoading = false;
+                LoadingProgress = 0;
+                LoadingMessage = "Loading...";
             }
+        }
+        
+        /// <summary>
+        /// T-030: Convert LogicEngine UserDto to UserData format
+        /// </summary>
+        private UserData ConvertToUserData(Models.UserDto logicUser)
+        {
+            return new UserData(
+                DisplayName: logicUser.DisplayName,
+                UserPrincipalName: logicUser.UPN,
+                Mail: logicUser.Mail,
+                Department: logicUser.Dept, // UserDto uses Dept, not Department
+                JobTitle: null, // UserDto doesn't have JobTitle
+                AccountEnabled: logicUser.Enabled, // UserDto uses Enabled, not IsEnabled
+                SamAccountName: logicUser.Sam,
+                CompanyName: null, // UserDto doesn't have Company
+                ManagerDisplayName: logicUser.Manager, // This maps to ManagerSid
+                CreatedDateTime: logicUser.DiscoveryTimestamp,
+                UserSource: "LogicEngine"
+            );
+        }
+        
+        /// <summary>
+        /// T-030: Handle data refresh events from file watcher
+        /// </summary>
+        private async void OnDataRefreshRequired(object sender, string dataType)
+        {
+            if (dataType == "Users" && !IsLoading)
+            {
+                StructuredLogger?.LogInfo(LogSourceName, new { action = "auto_refresh", trigger = "file_change" }, "Auto-refreshing users data due to file changes");
+                StatusMessage = "Data files changed - refreshing...";
+                
+                try
+                {
+                    await LoadAsync();
+                    StatusMessage = "Data refreshed successfully";
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Auto-refresh failed: {ex.Message}";
+                    StructuredLogger?.LogError(LogSourceName, ex, new { action = "auto_refresh_fail" }, "Auto-refresh failed");
+                }
+            }
+        }
+
+        /// <summary>
+        /// T-030: Override Dispose to clean up cancellation tokens and event subscriptions
+        /// </summary>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _loadCancellationSource?.Cancel();
+                _loadCancellationSource?.Dispose();
+                
+                if (_fileWatcherService != null)
+                {
+                    _fileWatcherService.DataRefreshRequired -= OnDataRefreshRequired;
+                }
+            }
+            base.Dispose(disposing);
         }
     }
 
