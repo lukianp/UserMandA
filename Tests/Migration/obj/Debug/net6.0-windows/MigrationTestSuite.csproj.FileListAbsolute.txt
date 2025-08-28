@@ -1,6 +1,0 @@
-D:\Scripts\UserMandA\Tests\Migration\bin\Debug\net6.0-windows\CoverletSourceRootsMapping
-D:\Scripts\UserMandA\Tests\Migration\obj\Debug\net6.0-windows\MigrationTestSuite.csproj.AssemblyReference.cache
-D:\Scripts\UserMandA\Tests\Migration\obj\Debug\net6.0-windows\MigrationTestSuite.GeneratedMSBuildEditorConfig.editorconfig
-D:\Scripts\UserMandA\Tests\Migration\obj\Debug\net6.0-windows\MigrationTestSuite.AssemblyInfoInputs.cache
-D:\Scripts\UserMandA\Tests\Migration\obj\Debug\net6.0-windows\MigrationTestSuite.AssemblyInfo.cs
-D:\Scripts\UserMandA\Tests\Migration\obj\Debug\net6.0-windows\MigrationTestSuite.csproj.CoreCompileInputs.cache

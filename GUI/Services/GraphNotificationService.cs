@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
-using Microsoft.Graph.Auth;
 using Microsoft.Identity.Client;
 using MandADiscoverySuite.Models;
 using System.Text.Json;

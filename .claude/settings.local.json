@@ -269,7 +269,11 @@
       "Bash(Remove-Item \"Test-T023-*.ps1\" -Force)",
       "Read(C:\\discoverydata/**)",
       "Read(C:\\discoverydata/**)",
-      "Read(C:\\discoverydata\\ljpops\\Mappings/**)"
+      "Read(C:\\discoverydata\\ljpops\\Mappings/**)",
+      "Bash(if [ -d \"GUI/bin\" ])",
+      "Bash(then rm -rf \"GUI/bin\")",
+      "Bash(if [ -d \"GUI/obj\" ])",
+      "Bash(then rm -rf \"GUI/obj\")"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",
