@@ -336,8 +336,8 @@ function Get-ForestTopology {
                     }
                     
                 } catch {
-                    Write-MultiDomainLog -Level "WARN" -Message "Failed to connect to external forest $forestName: $($_.Exception.Message)"
-                    
+                    Write-MultiDomainLog -Level "WARN" -Message "Failed to connect to external forest ${forestName}: $($_.Exception.Message)"
+
                     # Add placeholder entry for inaccessible forest
                     $forestData += [PSCustomObject]@{
                         ObjectType = "ExternalForest"
@@ -444,7 +444,7 @@ function Get-MultiDomainTopology {
                 }
                 
             } catch {
-                Write-MultiDomainLog -Level "WARN" -Message "Failed to discover domain $domainName: $($_.Exception.Message)"
+                Write-MultiDomainLog -Level "WARN" -Message "Failed to discover domain ${domainName}: $($_.Exception.Message)"
                 
                 # Add placeholder for inaccessible domain
                 $domainData += [PSCustomObject]@{
@@ -480,7 +480,7 @@ function Get-MultiDomainTopology {
                     }
                     
                 } catch {
-                    Write-MultiDomainLog -Level "WARN" -Message "Failed to discover external domain $externalDomain: $($_.Exception.Message)"
+                    Write-MultiDomainLog -Level "WARN" -Message "Failed to discover external domain ${externalDomain}: $($_.Exception.Message)"
                     
                     $domainData += [PSCustomObject]@{
                         ObjectType = "ExternalDomain"
@@ -552,7 +552,7 @@ function Get-TrustRelationships {
                     }
                     
                 } catch {
-                    Write-MultiDomainLog -Level "WARN" -Message "Failed to discover trusts for domain $domainName: $($_.Exception.Message)"
+                    Write-MultiDomainLog -Level "WARN" -Message "Failed to discover trusts for domain ${domainName}: $($_.Exception.Message)"
                 }
             }
         }
@@ -674,7 +674,7 @@ function Get-GlobalCatalogServers {
                     }
                     
                 } catch {
-                    Write-MultiDomainLog -Level "WARN" -Message "Failed to get details for GC $gcName: $($_.Exception.Message)"
+                    Write-MultiDomainLog -Level "WARN" -Message "Failed to get details for GC ${gcName}: $($_.Exception.Message)"
                     
                     # Add basic entry for inaccessible GC
                     $gcData += [PSCustomObject]@{

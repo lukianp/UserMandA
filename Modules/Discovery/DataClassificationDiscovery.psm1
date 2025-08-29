@@ -524,16 +524,17 @@ function Invoke-FileContentClassification {
             $categoryMatches = 0
             
             foreach ($pattern in $category.Patterns) {
-                if ($fileText -match $pattern.Pattern) {
-                    $matches = [regex]::Matches($fileText, $pattern.Pattern)
-                    $categoryMatches += $matches.Count
-                    
+                $patternMatches = [regex]::Matches($fileText, $pattern.Pattern)
+                if ($patternMatches.Count -gt 0) {
+                    $categoryMatches += $patternMatches.Count
+
                     $classification.MatchedPatterns += @{
                         Category = $categoryName
                         Pattern = $pattern.Name
                         Description = $pattern.Description
-                        MatchCount = $matches.Count
+                        MatchCount = $patternMatches.Count
                     }
+
                 }
             }
             
@@ -606,7 +607,29 @@ function Get-DataClassificationSummary {
         
         # Risk level distribution
         $riskDistribution = $ClassifiedData | Group-Object RiskLevel | Select-Object @{Name="RiskLevel";Expression={$_.Name}}, @{Name="Count";Expression={$_.Count}}
-        
+
+        # Get highest risk location data once for efficiency
+        $highestRiskLocationData = if ($ClassifiedData) {
+            $ClassifiedData | Sort-Object RiskScore -Descending | Select-Object -First 1
+        } else { $null }
+
+        # Extract risk level counts with proper null handling
+        $criticalRiskCount = if ($riskDistribution) {
+            ($riskDistribution | Where-Object { $_.RiskLevel -eq "Critical" }).Count
+        } else { 0 }
+
+        $highRiskCount = if ($riskDistribution) {
+            ($riskDistribution | Where-Object { $_.RiskLevel -eq "High" }).Count
+        } else { 0 }
+
+        $mediumRiskCount = if ($riskDistribution) {
+            ($riskDistribution | Where-Object { $_.RiskLevel -eq "Medium" }).Count
+        } else { 0 }
+
+        $lowRiskCount = if ($riskDistribution) {
+            ($riskDistribution | Where-Object { $_.RiskLevel -eq "Low" }).Count
+        } else { 0 }
+
         $summary += [PSCustomObject]@{
             SummaryType = "Overall"
             TotalLocationsScanned = $totalLocations
@@ -614,12 +637,20 @@ function Get-DataClassificationSummary {
             TotalClassifiedFiles = $totalClassifiedFiles
             ClassificationPercentage = if ($totalFiles -gt 0) { [math]::Round(($totalClassifiedFiles / $totalFiles) * 100, 2) } else { 0 }
             AverageRiskScore = $avgRiskScore
-            HighestRiskLocation = if ($ClassifiedData) { ($ClassifiedData | Sort-Object RiskScore -Descending | Select-Object -First 1).ShareName ?? ($ClassifiedData | Sort-Object RiskScore -Descending | Select-Object -First 1).DriveLetter } else { "None" }
-            HighestRiskScore = if ($ClassifiedData) { ($ClassifiedData | Sort-Object RiskScore -Descending | Select-Object -First 1).RiskScore } else { 0 }
-            CriticalRiskLocations = ($riskDistribution | Where-Object { $_.RiskLevel -eq "Critical" }).Count ?? 0
-            HighRiskLocations = ($riskDistribution | Where-Object { $_.RiskLevel -eq "High" }).Count ?? 0
-            MediumRiskLocations = ($riskDistribution | Where-Object { $_.RiskLevel -eq "Medium" }).Count ?? 0
-            LowRiskLocations = ($riskDistribution | Where-Object { $_.RiskLevel -eq "Low" }).Count ?? 0
+            HighestRiskLocation = if ($highestRiskLocationData) {
+                if ($null -ne $highestRiskLocationData.ShareName -and $highestRiskLocationData.ShareName) {
+                    $highestRiskLocationData.ShareName
+                } elseif ($null -ne $highestRiskLocationData.DriveLetter -and $highestRiskLocationData.DriveLetter) {
+                    $highestRiskLocationData.DriveLetter
+                } else {
+                    "Unknown"
+                }
+            } else { "None" }
+            HighestRiskScore = if ($highestRiskLocationData) { $highestRiskLocationData.RiskScore } else { 0 }
+            CriticalRiskLocations = $criticalRiskCount
+            HighRiskLocations = $highRiskCount
+            MediumRiskLocations = $mediumRiskCount
+            LowRiskLocations = $lowRiskCount
             ScanDate = Get-Date
             SessionId = $SessionId
         }

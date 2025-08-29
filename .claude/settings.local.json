@@ -280,7 +280,9 @@
       "Bash(MandADiscoverySuite.exe)",
       "Read(C:\\DiscoveryData\\ljpops\\Logs/**)",
       "Bash(dotnet --info)",
-      "Bash(dotnet:*)"
+      "Bash(dotnet:*)",
+      "Read(c:\\discoverydata\\ljpops\\Logs/**)",
+      "Read(c:\\discoverydata\\ljpops\\Logs/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

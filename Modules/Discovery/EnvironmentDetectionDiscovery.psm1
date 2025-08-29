@@ -118,7 +118,6 @@ function Invoke-EnvironmentDetectionDiscovery {
                 Organization = $osInfo.Organization
                 SerialNumber = $osInfo.SerialNumber
                 SystemDrive = $osInfo.SystemDrive
-                WindowsDirectory = $osInfo.WindowsDirectory
                 PowerShellVersion = $PSVersionTable.PSVersion.ToString()
                 DotNetFrameworkVersion = if ($computerInfo) { $computerInfo.WindowsVersion } else { "Unknown" }
                 _DataType = 'OperatingSystem'

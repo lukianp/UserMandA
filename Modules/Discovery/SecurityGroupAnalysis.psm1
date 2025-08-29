@@ -187,21 +187,21 @@ function Invoke-SecurityGroupAnalysis {
         if ($allDiscoveredData.Count -gt 0) {
             Write-SecurityGroupLog -Level "INFO" -Message "Exporting $($allDiscoveredData.Count) records..." -Context $Context
             
-            $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+            $timestamp = Get-Date -Format 'yyyy-MM-ddTHH:mm:ss'
             $dataGroups = $allDiscoveredData | Group-Object -Property _DataType
-            
+
             foreach ($group in $dataGroups) {
                 $dataType = $group.Name
                 $fileName = "SecurityGroup_$dataType.csv"
                 $filePath = Join-Path $outputPath $fileName
-                
+
                 # Add metadata to each record
                 $group.Group | ForEach-Object {
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "SecurityGroupAnalysis" -Force
                     $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
                 }
-                
+
                 # Export to CSV
                 $group.Group | Export-Csv -Path $filePath -NoTypeInformation -Force -Encoding UTF8
                 Write-SecurityGroupLog -Level "SUCCESS" -Message "Exported $($group.Count) $dataType records to $fileName" -Context $Context
@@ -261,10 +261,10 @@ function Get-SecurityGroupAnalysis {
             try {
                 # Get direct members
                 $directMembers = Get-ADGroupMember -Identity $group.DistinguishedName -ErrorAction SilentlyContinue
-                $memberCount = $directMembers.Count
-                $userMembers = ($directMembers | Where-Object { $_.objectClass -eq 'user' }).Count
-                $groupMembers = ($directMembers | Where-Object { $_.objectClass -eq 'group' }).Count
-                $computerMembers = ($directMembers | Where-Object { $_.objectClass -eq 'computer' }).Count
+                $memberCount = if ($directMembers) { $directMembers.Count } else { 0 }
+                $userMembers = if ($directMembers) { ($directMembers | Where-Object { $_.objectClass -eq 'user' }).Count } else { 0 }
+                $groupMembers = if ($directMembers) { ($directMembers | Where-Object { $_.objectClass -eq 'group' }).Count } else { 0 }
+                $computerMembers = if ($directMembers) { ($directMembers | Where-Object { $_.objectClass -eq 'computer' }).Count } else { 0 }
                 
                 # Calculate risk score
                 $riskScore = 0
@@ -400,7 +400,7 @@ function Get-GroupMembershipAnalysis {
             }
             
             # Service accounts with high privileges
-            if ($user.Name -like "*service*" -or $user.Name -like "*svc*" -and $privilegedGroups.Count -gt 0) {
+            if (($user.Name -like "*service*" -or $user.Name -like "*svc*") -and $privilegedGroups.Count -gt 0) {
                 $riskScore += 5
                 $riskFactors += "Service account with privileged access"
             }
@@ -471,8 +471,8 @@ function Get-PrivilegedGroupAnalysis {
                     $members = Get-ADGroupMember -Identity $group.DistinguishedName -Recursive -ErrorAction SilentlyContinue
                     $directMembers = Get-ADGroupMember -Identity $group.DistinguishedName -ErrorAction SilentlyContinue
                     
-                    $userMembers = $members | Where-Object { $_.objectClass -eq 'user' }
-                    $groupMembers = $members | Where-Object { $_.objectClass -eq 'group' }
+                    $userMembers = if ($members) { $members | Where-Object { $_.objectClass -eq 'user' } } else { @() }
+                    $groupMembers = if ($members) { $members | Where-Object { $_.objectClass -eq 'group' } } else { @() }
                     
                     # Risk assessment for privileged groups
                     $riskScore = 10  # Base risk for privileged group
@@ -491,7 +491,9 @@ function Get-PrivilegedGroupAnalysis {
                     }
                     
                     # Service accounts in privileged groups
-                    $serviceAccounts = $userMembers | Where-Object { $_.Name -like "*service*" -or $_.Name -like "*svc*" }
+                    $serviceAccounts = if ($userMembers -and $userMembers.Count -gt 0) {
+                        $userMembers | Where-Object { $_.Name -like "*service*" -or $_.Name -like "*svc*" }
+                    } else { @() }
                     if ($serviceAccounts.Count -gt 0) {
                         $riskScore += 5
                         $riskFactors += "Contains service accounts ($($serviceAccounts.Count) accounts)"
@@ -531,7 +533,7 @@ function Get-PrivilegedGroupAnalysis {
                     }
                 }
             } catch {
-                Write-SecurityGroupLog -Level "DEBUG" -Message "Failed to analyze privileged group $groupName: $($_.Exception.Message)"
+                Write-SecurityGroupLog -Level "DEBUG" -Message ("Failed to analyze privileged group " + $groupName + ": $($_.Exception.Message)")
             }
         }
         
@@ -640,8 +642,9 @@ function Get-GroupNestingDepth {
         if ($GroupDN -in $VisitedGroups) {
             return 999  # Circular reference detected
         }
-        
-        $VisitedGroups += $GroupDN
+
+        # Create a copy of the visited groups array to avoid modifying the original
+        $localVisitedGroups = $VisitedGroups + $GroupDN
         $group = Get-ADGroup -Identity $GroupDN -Properties MemberOf -ErrorAction SilentlyContinue
         
         if (-not $group -or $group.MemberOf.Count -eq 0) {
@@ -650,7 +653,7 @@ function Get-GroupNestingDepth {
         
         $maxDepth = 0
         foreach ($parentGroupDN in $group.MemberOf) {
-            $depth = Get-GroupNestingDepth -GroupDN $parentGroupDN -VisitedGroups $VisitedGroups
+            $depth = Get-GroupNestingDepth -GroupDN $parentGroupDN -VisitedGroups $localVisitedGroups
             if ($depth -gt $maxDepth) {
                 $maxDepth = $depth
             }

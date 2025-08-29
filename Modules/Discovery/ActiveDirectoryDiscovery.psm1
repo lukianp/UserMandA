@@ -112,8 +112,8 @@ function Invoke-ActiveDirectoryDiscovery {
         }
         $outputPath = $Context.Paths.RawDataOutput
         Write-ActiveDirectoryLog -Level "DEBUG" -Message "Output path: $outputPath" -Context $Context
-        
-        Ensure-Path -Path $outputPath
+
+        Confirm-Path -Path $outputPath
 
         # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
         # AD needs domain controller or global catalog
@@ -363,7 +363,7 @@ function Invoke-ActiveDirectoryDiscovery {
 }
 
 # --- Helper Functions ---
-function Ensure-Path {
+function Confirm-Path {
     param($Path)
     if (-not (Test-Path -Path $Path -PathType Container)) {
         try {
