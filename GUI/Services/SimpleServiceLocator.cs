@@ -116,6 +116,22 @@ namespace MandADiscoverySuite.Services
                 return (T)(object)logManagementService;
             }
             
+            if (type == typeof(IDataService) || type == typeof(DataService))
+            {
+                var logger = _loggerFactory.CreateLogger<DataService>();
+                var dataService = new DataService(logger);
+                RegisterService<IDataService>(dataService);
+                RegisterService<DataService>(dataService);
+                return (T)(object)dataService;
+            }
+            
+            if (type == typeof(TargetProfileService))
+            {
+                var targetProfileService = TargetProfileService.Instance;
+                RegisterService<TargetProfileService>(targetProfileService);
+                return (T)(object)targetProfileService;
+            }
+            
             // Try to create with parameterless constructor
             if (type.GetConstructor(Type.EmptyTypes) != null)
             {

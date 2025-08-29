@@ -17,14 +17,19 @@ namespace MandADiscoverySuite
         {
             try
             {
+                // EMERGENCY SIMPLIFIED CONSTRUCTOR - NO COMPLEX INITIALIZATION
                 InitializeComponent();
                 
-                // Defer complex initialization to prevent BeginInit conflicts
+                // Defer ViewModel initialization to prevent any BeginInit conflicts
                 Loaded += MainWindow_Loaded;
+                
+                // Set window properties directly to avoid binding issues
+                Title = "M&A Discovery Suite - EMERGENCY SIMPLIFIED VERSION";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to initialize MainWindow: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"CRITICAL: Failed to initialize MainWindow: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}", 
+                    "Emergency Simplified Mode - Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 Application.Current?.Shutdown(1);
             }
         }
@@ -33,32 +38,28 @@ namespace MandADiscoverySuite
         {
             try
             {
-                // Initialize ViewModel after the window is fully loaded to prevent BeginInit conflicts
+                // EMERGENCY SIMPLIFIED LOADED EVENT - MINIMAL INITIALIZATION ONLY
+                
+                // Create ViewModel safely after full window load
                 ViewModel = new MainViewModel();
                 DataContext = ViewModel;
                 
-                // For now, skip TabControl initialization to prevent BeginInit crash
-                // ViewModel.InitializeTabControl(MainTabControl);
-                
-                // Add a simple tab for testing
-                var testTab = new TabItem
+                // Set Dashboard tab as default - TabControl is now completely static
+                if (MainTabControl?.Items?.Count > 0)
                 {
-                    Header = "Dashboard",
-                    Content = new TextBlock
-                    {
-                        Text = "M&A Discovery Suite - BeginInit fix successful!",
-                        HorizontalAlignment = HorizontalAlignment.Center,
-                        VerticalAlignment = VerticalAlignment.Center,
-                        FontSize = 16,
-                        Foreground = System.Windows.Media.Brushes.White
-                    }
-                };
-                MainTabControl.Items.Add(testTab);
-                MainTabControl.SelectedItem = testTab;
+                    MainTabControl.SelectedIndex = 0;
+                }
+                
+                // Log successful initialization
+                System.Diagnostics.Debug.WriteLine($"[EMERGENCY MODE] MainWindow loaded successfully at {DateTime.Now}");
+                
+                // Update window title to show success
+                Title = "M&A Discovery Suite - EMERGENCY SIMPLIFIED VERSION ✅ LOADED SUCCESSFULLY";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to initialize MainWindow after loading: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"CRITICAL: Failed to initialize MainWindow after loading: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}", 
+                    "Emergency Simplified Mode - Post-Load Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 Application.Current?.Shutdown(1);
             }
         }

@@ -224,19 +224,20 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         private async Task InvalidateCacheEntriesAsync(IEnumerable<string> keyPrefixes)
         {
+            var prefixes = keyPrefixes?.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray() ?? Array.Empty<string>();
+            if (prefixes.Length == 0)
+                return;
+
             await Task.Run(() =>
             {
-                // Note: This is a simplified implementation
-                // In a real implementation, MultiTierCacheService would need methods to:
-                // 1. Enumerate cached keys
-                // 2. Remove keys by prefix
-                // For now, we'll log the intended invalidations
-                
-                foreach (var prefix in keyPrefixes)
+                try
                 {
-                    _logger.LogDebug("Invalidating cache entries with prefix: {Prefix}", prefix);
-                    // TODO: Implement actual cache key enumeration and removal
-                    // _cacheService.InvalidateByPrefix(prefix);
+                    var removed = _cacheService.InvalidateByPrefix(prefixes);
+                    _logger.LogInformation("Cache invalidation by prefix completed. Removed {Count} entries.", removed);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Cache invalidation by prefix failed");
                 }
             }).ConfigureAwait(false);
         }

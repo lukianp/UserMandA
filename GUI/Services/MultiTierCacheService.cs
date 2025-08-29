@@ -72,6 +72,95 @@ namespace MandADiscoverySuite.Services
         }
 
         /// <summary>
+        /// Removes cache entries whose keys start with any of the provided prefixes across all tiers.
+        /// Returns the total number of removed entries.
+        /// </summary>
+        public int InvalidateByPrefix(params string[] keyPrefixes)
+        {
+            if (keyPrefixes == null || keyPrefixes.Length == 0)
+                return 0;
+
+            int removed = 0;
+            try
+            {
+                // Normalize prefixes for case-insensitive comparison
+                var prefixes = keyPrefixes.Where(p => !string.IsNullOrWhiteSpace(p))
+                                          .Select(p => p.Trim())
+                                          .ToArray();
+                if (prefixes.Length == 0)
+                    return 0;
+
+                bool Matches(string key) => prefixes.Any(p => key.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+
+                // Remove from hot cache
+                foreach (var kvp in _hotCache.Keys.ToList())
+                {
+                    if (Matches(kvp) && _hotCache.TryRemove(kvp, out _))
+                    {
+                        removed++;
+                        ItemEvicted?.Invoke(this, new CacheEvictionEventArgs(kvp, CacheTier.Hot, "InvalidatedByPrefix"));
+                    }
+                }
+
+                // Remove from warm cache
+                foreach (var kvp in _warmCache.Keys.ToList())
+                {
+                    if (Matches(kvp) && _warmCache.TryRemove(kvp, out _))
+                    {
+                        removed++;
+                        ItemEvicted?.Invoke(this, new CacheEvictionEventArgs(kvp, CacheTier.Warm, "InvalidatedByPrefix"));
+                    }
+                }
+
+                // Remove from cold cache
+                foreach (var kvp in _coldCache.Keys.ToList())
+                {
+                    if (Matches(kvp) && _coldCache.TryRemove(kvp, out _))
+                    {
+                        removed++;
+                        ItemEvicted?.Invoke(this, new CacheEvictionEventArgs(kvp, CacheTier.Cold, "InvalidatedByPrefix"));
+                    }
+                }
+
+                // Also clear any archived keys matching prefixes
+                foreach (var key in _archiveKeys.Keys.ToList())
+                {
+                    if (Matches(key))
+                    {
+                        _archiveKeys.TryRemove(key, out _);
+                    }
+                }
+
+                _logger?.LogDebug("Invalidated {Count} cache entries by prefix: {Prefixes}", removed, string.Join(",", prefixes));
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error invalidating cache by prefix");
+            }
+
+            return removed;
+        }
+
+        /// <summary>
+        /// Returns a snapshot of all current cache keys across tiers.
+        /// </summary>
+        public List<string> GetAllKeys()
+        {
+            var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var k in _hotCache.Keys) keys.Add(k);
+                foreach (var k in _warmCache.Keys) keys.Add(k);
+                foreach (var k in _coldCache.Keys) keys.Add(k);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error enumerating cache keys");
+            }
+            return keys.ToList();
+        }
+
+        /// <summary>
         /// Gets or creates a cached item with intelligent tier management
         /// </summary>
         public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, CacheTier? preferredTier = null, TimeSpan? customTTL = null)

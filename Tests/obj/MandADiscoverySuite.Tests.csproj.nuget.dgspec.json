@@ -4,14 +4,14 @@
     "D:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj": {}
   },
   "projects": {
-    "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
+    "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
+        "projectUniqueName": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
         "projectName": "MandADiscoverySuite",
-        "projectPath": "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
+        "projectPath": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
         "packagesPath": "C:\\Users\\lukia\\.nuget\\packages\\",
-        "outputPath": "d:\\Scripts\\UserMandA\\GUI\\obj\\",
+        "outputPath": "D:\\Scripts\\UserMandA\\GUI\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\lukia\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -135,8 +135,8 @@
           "net6.0-windows7.0": {
             "targetAlias": "net6.0-windows7.0",
             "projectReferences": {
-              "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
-                "projectPath": "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj"
+              "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
+                "projectPath": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj"
               }
             }
           }
