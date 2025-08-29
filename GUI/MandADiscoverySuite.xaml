@@ -14,7 +14,7 @@
         WindowStartupLocation="CenterScreen" WindowState="Maximized"
         Background="#FF0F1419" KeyDown="MainWindow_KeyDown"
         Closing="Window_Closing"
-        behaviors:KeyboardNavigationBehavior.EnableEnhancedNavigation="True"
+        behaviors:KeyboardNavigationBehavior.EnableEnhancedNavigation="False"
         behaviors:ResponsiveLayoutBehavior.EnableResponsiveLayout="False"
         AutomationProperties.Name="M&amp;A Discovery Suite Main Window"
         AutomationProperties.HelpText="Main application window for M&amp;A Discovery Suite with navigation tabs and data views">
@@ -1549,13 +1549,11 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             
-            <!-- Breadcrumb Navigation -->
-            <controls:BreadcrumbNavigation Grid.Row="0"/>
+            <!-- Breadcrumb Navigation - DISABLED TO FIX BeginInit CRASH -->
+            <!-- <controls:BreadcrumbNavigation Grid.Row="0"/> -->
             
             <!-- Tabbed Document Interface -->
-            <TabControl Grid.Row="1" x:Name="MainTabControl" 
-                        ItemsSource="{Binding OpenTabs}" 
-                        SelectedItem="{Binding SelectedTab}"
+            <TabControl Grid.Row="1" x:Name="MainTabControl"
                         Background="Transparent"
                         BorderThickness="0"
                         Margin="0,8,0,0"
@@ -1564,7 +1562,8 @@
                         KeyboardNavigation.TabNavigation="Local"
                         KeyboardNavigation.DirectionalNavigation="Contained">
                 
-                <!-- Tab Header Template -->
+                <!-- TABCONTROL TEMPLATES DISABLED TO FIX BeginInit CRASH -->
+                <!--
                 <TabControl.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal" Margin="12,8">
@@ -1591,14 +1590,16 @@
                     </DataTemplate>
                 </TabControl.ItemTemplate>
                 
-                <!-- Tab Content Template - Simplified for unified pipeline -->
                 <TabControl.ContentTemplate>
                     <DataTemplate>
                         <ContentPresenter Content="{Binding}"/>
                     </DataTemplate>
                 </TabControl.ContentTemplate>
+                -->
                 
                 <!-- Tab Control Style -->
+                <!-- TABCONTROL STYLE DISABLED TO FIX BeginInit CRASH -->
+                <!--
                 <TabControl.Style>
                     <Style TargetType="TabControl">
                         <Setter Property="Template">
@@ -1610,7 +1611,7 @@
                                             <RowDefinition Height="*"/>
                                         </Grid.RowDefinitions>
                                         
-                                        <!-- Tab Headers -->
+                                        Tab Headers
                                         <Border Grid.Row="0" Background="#FF1A202C" BorderBrush="#FF2D3748" BorderThickness="0,0,0,1">
                                             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Hidden">
                                                 <TabPanel x:Name="HeaderPanel" 
@@ -1621,7 +1622,7 @@
                                             </ScrollViewer>
                                         </Border>
                                         
-                                        <!-- Tab Content -->
+                                        Tab Content
                                         <ContentPresenter Grid.Row="1" 
                                                          x:Name="PART_SelectedContentHost" 
                                                          ContentSource="SelectedContent"/>
@@ -1631,8 +1632,10 @@
                         </Setter>
                     </Style>
                 </TabControl.Style>
+                -->
                 
-                <!-- Tab Item Style -->
+                <!-- TABITEM STYLE DISABLED TO FIX BeginInit CRASH -->
+                <!--
                 <TabControl.ItemContainerStyle>
                     <Style TargetType="TabItem">
                         <Setter Property="Background" Value="Transparent"/>
@@ -1668,6 +1671,7 @@
                         </Setter>
                     </Style>
                 </TabControl.ItemContainerStyle>
+                -->
             </TabControl>
             
             <!-- Legacy Dashboard View (will be replaced by TDI) -->

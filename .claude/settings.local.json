@@ -282,7 +282,13 @@
       "Bash(dotnet --info)",
       "Bash(dotnet:*)",
       "Read(c:\\discoverydata\\ljpops\\Logs/**)",
-      "Read(c:\\discoverydata\\ljpops\\Logs/**)"
+      "Read(c:\\discoverydata\\ljpops\\Logs/**)",
+      "Read(c:\\discoverydata\\ljpops\\Logs/**)",
+      "Read(c:\\discoverydata\\ljpops\\Logs/**)",
+      "Read(C:\\discoverydata/**)",
+      "Read(C:\\DiscoveryData\\ljpops\\Logs/**)",
+      "Read(C:\\DiscoveryData\\ljpops\\Logs/**)",
+      "Read(C:\\DiscoveryData\\ljpops\\Logs/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",
