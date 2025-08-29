@@ -652,7 +652,7 @@ namespace MandADiscoverySuite.Services.Migration
                             try {{
                                 Connect-MgGraph -TenantId $tenantId -ClientId $clientId -ClientSecret $clientSecret -NoWelcome
                             }} catch {{
-                                Write-Error "Failed to connect to Microsoft Graph: $($_.Exception.Message)"
+                                Write-Error ""Failed to connect to Microsoft Graph: $($_.Exception.Message)""
                                 throw
                             }}
                         }} else {{
@@ -818,11 +818,11 @@ namespace MandADiscoverySuite.Services.Migration
 
                         $groupName = '{groupName}'
                         $userId = '{userSid}'
-                        $group = Get-MgGroup -Filter "displayName eq '$groupName'" -ConsistencyLevel eventual -CountVariable c | Select-Object -First 1
-                        if (-not $group) {{ throw "Group not found: $groupName" }}
-                        $ref = @{ '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$userId" }
+                        $group = Get-MgGroup -Filter ""displayName eq '$groupName'"" -ConsistencyLevel eventual -CountVariable c | Select-Object -First 1
+                        if (-not $group) {{ throw ""Group not found: $groupName"" }}
+                        $ref = @{{ '@odata.id' = ""https://graph.microsoft.com/v1.0/directoryObjects/$userId"" }}
                         New-MgGroupMemberByRef -GroupId $group.Id -BodyParameter $ref | Out-Null
-                        Write-Output "Added user $userId to group $($group.Id)"
+                        Write-Output ""Added user $userId to group $($group.Id)""
                     }} catch {{
                         Write-Error $_.Exception.Message
                     }}
@@ -869,10 +869,10 @@ namespace MandADiscoverySuite.Services.Migration
 
                         $userId = '{userUpn}'
                         $attr = '{attributeName}'
-                        $val = @"{value}"@
+                        $val = '{value}'
                         $body = @{{}}; $body[$attr] = $val
                         Update-MgUser -UserId $userId -BodyParameter $body
-                        Write-Output "Updated $attr on $userId"
+                        Write-Output ""Updated $attr on $userId""
                     }} catch {{
                         Write-Error $_.Exception.Message
                     }}

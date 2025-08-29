@@ -153,80 +153,111 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Auto-imports TargetProfile from App Registration credential outputs in Credentials folder
         /// Supports Windows DPAPI-encrypted credential files written by DiscoveryCreateAppRegistration.ps1
+        /// Primary search: source company's Credentials
+        /// Fallback search: selected target company's Credentials (ConfigurationService.SelectedTargetCompany)
         /// </summary>
         public async Task<bool> AutoImportFromAppRegistrationAsync(string companyName)
         {
             try
             {
-                var companyRoot = ConfigurationService.Instance.GetCompanyDataPath(companyName);
-                var credDir = Path.Combine(companyRoot, "Credentials");
-                if (!Directory.Exists(credDir)) return false;
-
-                // Prefer credential_summary.json, fallback to discoverycredentials.summary.json
-                var summaryPath = Path.Combine(credDir, "credential_summary.json");
-                if (!File.Exists(summaryPath))
+                // Helper local function to try import from a credential folder
+                static async Task<(bool ok, string tenantId, string clientId, string clientSecret)> TryImportAsync(string credDir)
                 {
-                    var legacy = Path.Combine(credDir, "discoverycredentials.summary.json");
-                    if (File.Exists(legacy)) summaryPath = legacy; else return false;
-                }
+                    if (string.IsNullOrWhiteSpace(credDir) || !Directory.Exists(credDir))
+                        return (false, string.Empty, string.Empty, string.Empty);
 
-                var summaryJson = await File.ReadAllTextAsync(summaryPath).ConfigureAwait(false);
-                using var doc = JsonDocument.Parse(summaryJson);
-                var root = doc.RootElement;
-                var tenantId = root.GetProperty("TenantId").GetString() ?? string.Empty;
-                var clientId = root.GetProperty("ClientId").GetString() ?? string.Empty;
-                var credFile = root.TryGetProperty("CredentialFile", out var cf) ? cf.GetString() : Path.Combine(credDir, "discoverycredentials.config");
-
-                string clientSecret = string.Empty;
-                // Attempt to decrypt the encrypted credential file using an embedded PowerShell call (current user)
-                if (!string.IsNullOrWhiteSpace(credFile) && File.Exists(credFile))
-                {
-                    try
+                    var summaryPath = Path.Combine(credDir, "credential_summary.json");
+                    if (!File.Exists(summaryPath))
                     {
-                        var ps = new PowerShellExecutionService();
-                        var script = $@"
-                            $enc = Get-Content -Raw -Path '{credFile.Replace("'","''")}'
-                            $ss = ConvertTo-SecureString -String $enc
-                            $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ss)
-                            $json = [Runtime.InteropServices.Marshal]::PtrToStringUni($bstr)
-                            Write-Output $json
-                        ";
-                        var r = await ps.ExecuteScriptAsync(script).ConfigureAwait(false);
-                        var json = r.Output?.FirstOrDefault();
-                        if (!string.IsNullOrWhiteSpace(json))
+                        var legacy = Path.Combine(credDir, "discoverycredentials.summary.json");
+                        if (File.Exists(legacy)) summaryPath = legacy; else return (false, string.Empty, string.Empty, string.Empty);
+                    }
+
+                    var summaryJson = await File.ReadAllTextAsync(summaryPath).ConfigureAwait(false);
+                    using var doc = JsonDocument.Parse(summaryJson);
+                    var root = doc.RootElement;
+                    var tenantId = root.GetProperty("TenantId").GetString() ?? string.Empty;
+                    var clientId = root.GetProperty("ClientId").GetString() ?? string.Empty;
+                    var credFile = root.TryGetProperty("CredentialFile", out var cf) ? cf.GetString() : Path.Combine(credDir, "discoverycredentials.config");
+
+                    string clientSecret = string.Empty;
+                    if (!string.IsNullOrWhiteSpace(credFile) && File.Exists(credFile))
+                    {
+                        try
                         {
-                            using var credDoc = JsonDocument.Parse(json);
-                            var credRoot = credDoc.RootElement;
-                            if (credRoot.TryGetProperty("ClientSecret", out var s))
-                                clientSecret = s.GetString() ?? string.Empty;
-                            // Prefer tenantId/clientId in decrypted payload if present
-                            if (string.IsNullOrWhiteSpace(clientId) && credRoot.TryGetProperty("ClientId", out var cid))
-                                clientId = cid.GetString() ?? clientId;
-                            if (string.IsNullOrWhiteSpace(tenantId) && credRoot.TryGetProperty("TenantId", out var tid))
-                                tenantId = tid.GetString() ?? tenantId;
+                            var ps = new PowerShellExecutionService();
+                            var script = $@"
+                                $enc = Get-Content -Raw -Path '{credFile.Replace("'","''")}'
+                                $ss = ConvertTo-SecureString -String $enc
+                                $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ss)
+                                $json = [Runtime.InteropServices.Marshal]::PtrToStringUni($bstr)
+                                Write-Output $json
+                            ";
+                            var r = await ps.ExecuteScriptAsync(script).ConfigureAwait(false);
+                            var json = r.Output?.FirstOrDefault();
+                            if (!string.IsNullOrWhiteSpace(json))
+                            {
+                                using var credDoc = JsonDocument.Parse(json);
+                                var credRoot = credDoc.RootElement;
+                                if (credRoot.TryGetProperty("ClientSecret", out var s))
+                                    clientSecret = s.GetString() ?? string.Empty;
+                                if (string.IsNullOrWhiteSpace(clientId) && credRoot.TryGetProperty("ClientId", out var cid))
+                                    clientId = cid.GetString() ?? clientId;
+                                if (string.IsNullOrWhiteSpace(tenantId) && credRoot.TryGetProperty("TenantId", out var tid))
+                                    tenantId = tid.GetString() ?? tenantId;
+                            }
+                        }
+                        catch
+                        {
+                            // ignore decryption errors
                         }
                     }
-                    catch
+
+                    if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(tenantId))
+                        return (false, string.Empty, string.Empty, string.Empty);
+
+                    return (true, tenantId, clientId, clientSecret);
+                }
+
+                // 1) Try import from source company's Credentials
+                var sourceRoot = ConfigurationService.Instance.GetCompanyDataPath(companyName);
+                var credDir = Path.Combine(sourceRoot, "Credentials");
+                var import = await TryImportAsync(credDir).ConfigureAwait(false);
+
+                // 2) If not found, try selected target company's Credentials
+                if (!import.ok)
+                {
+                    var targetCompany = ConfigurationService.Instance.SelectedTargetCompany;
+                    if (!string.IsNullOrWhiteSpace(targetCompany))
                     {
-                        // ignore
+                        var targetRoot = ConfigurationService.Instance.GetCompanyDataPath(targetCompany);
+                        var targetCredDir = Path.Combine(targetRoot, "Credentials");
+                        import = await TryImportAsync(targetCredDir).ConfigureAwait(false);
                     }
                 }
 
-                if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(tenantId)) return false;
+                if (!import.ok)
+                    return false;
 
-                // Check if already exists
+                var (ok2, tenantId2, clientId2, clientSecret2) = import;
+
+                // Merge/Save into target-profiles.json under the SOURCE company context
                 var list = (await GetProfilesAsync(companyName).ConfigureAwait(false)).ToList();
                 var existing = list.FirstOrDefault(p =>
-                    p.ClientId.Equals(clientId, StringComparison.OrdinalIgnoreCase) &&
-                    p.TenantId.Equals(tenantId, StringComparison.OrdinalIgnoreCase));
+                    p.ClientId.Equals(clientId2, StringComparison.OrdinalIgnoreCase) &&
+                    p.TenantId.Equals(tenantId2, StringComparison.OrdinalIgnoreCase));
 
                 if (existing != null)
                 {
-                    // Optionally update secret if provided and missing
-                    if (!string.IsNullOrWhiteSpace(clientSecret) && string.IsNullOrWhiteSpace(existing.ClientSecretEncrypted))
+                    if (!string.IsNullOrWhiteSpace(clientSecret2) && string.IsNullOrWhiteSpace(existing.ClientSecretEncrypted))
                     {
-                        existing.ClientSecretEncrypted = DataProtectionService.ProtectToBase64(clientSecret);
+                        existing.ClientSecretEncrypted = DataProtectionService.ProtectToBase64(clientSecret2);
                         await SaveAllAsync(companyName, list).ConfigureAwait(false);
+                    }
+                    lock (_lock)
+                    {
+                        _cache = list;
+                        _loadedForCompany = companyName;
                     }
                     return true;
                 }
@@ -234,14 +265,14 @@ namespace MandADiscoverySuite.Services
                 var profile = new TargetProfile
                 {
                     Name = "AppRegistration",
-                    TenantId = tenantId,
-                    ClientId = clientId,
+                    TenantId = tenantId2,
+                    ClientId = clientId2,
                     IsActive = !list.Any()
                 };
 
-                if (!string.IsNullOrWhiteSpace(clientSecret))
+                if (!string.IsNullOrWhiteSpace(clientSecret2))
                 {
-                    profile.ClientSecretEncrypted = DataProtectionService.ProtectToBase64(clientSecret);
+                    profile.ClientSecretEncrypted = DataProtectionService.ProtectToBase64(clientSecret2);
                 }
 
                 list.Add(profile);

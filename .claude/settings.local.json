@@ -276,7 +276,11 @@
       "Bash(then rm -rf \"GUI/obj\")",
       "Read(C:\\DiscoveryData\\ljpops\\Logs/**)",
       "Read(C:\\DiscoveryData\\ljpops\\Logs\\Application/**)",
-      "Read(C:\\DiscoveryData\\ljpops\\Logs\\Application/**)"
+      "Read(C:\\DiscoveryData\\ljpops\\Logs\\Application/**)",
+      "Bash(MandADiscoverySuite.exe)",
+      "Read(C:\\DiscoveryData\\ljpops\\Logs/**)",
+      "Bash(dotnet --info)",
+      "Bash(dotnet:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

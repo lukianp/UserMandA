@@ -46,10 +46,10 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Vertical" Margin="4">
-                                <TextBlock>
-                                    <Run Text="{Binding Name}"/>
-                                    <Run Text="  (Active)" Foreground="#38B2AC" FontWeight="SemiBold" Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                </TextBlock>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Name}"/>
+                                    <TextBlock Text="  (Active)" Foreground="#38B2AC" FontWeight="SemiBold" Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                </StackPanel>
                                 <TextBlock Text="{Binding TenantId}" FontSize="11" Foreground="#666"/>
                             </StackPanel>
                         </DataTemplate>

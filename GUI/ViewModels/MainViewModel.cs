@@ -83,6 +83,8 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand RunAppRegistrationCommand { get; }
         public ICommand AppRegistrationCommand { get; }
         public ICommand RunTargetAppRegistrationCommand { get; }
+        public ICommand ImportTargetAppRegistrationCommand { get; }
+        public ICommand ShowTargetProfilesCommand { get; }
         
         // Theme commands
         public ICommand ToggleThemeCommand { get; }
@@ -163,6 +165,8 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _selectedTargetCompany = value;
                 OnPropertyChanged();
+                // Configure watcher for the new selection
+                SetupTargetCredentialWatcher();
             }
         }
 
@@ -292,6 +296,8 @@ namespace MandADiscoverySuite.ViewModels
             RunAppRegistrationCommand = new AsyncRelayCommand(RunAppRegistrationAsync);
             AppRegistrationCommand = new AsyncRelayCommand(RunAppRegistrationAsync);
             RunTargetAppRegistrationCommand = new AsyncRelayCommand(RunTargetAppRegistrationAsync);
+            ImportTargetAppRegistrationCommand = new AsyncRelayCommand(ImportTargetAppRegistrationAsync);
+            ShowTargetProfilesCommand = new AsyncRelayCommand(ShowTargetProfilesAsync);
             
             // Theme commands
             ToggleThemeCommand = new AsyncRelayCommand(ToggleThemeAsync);
@@ -306,10 +312,11 @@ namespace MandADiscoverySuite.ViewModels
             // Load company profiles
             LoadCompanyProfiles();
             LoadTargetCompanyProfiles();
+            SetupTargetCredentialWatcher();
             Task.Run(LoadTargetProfilesAsync);
-            
+
             _logger?.LogInformation($"[MainViewModel] MainViewModel constructor completed. CurrentProfileName='{CurrentProfileName}', CompanyProfiles.Count={CompanyProfiles.Count}");
-            
+
             // Open Overview by default on startup - use NavigationService
             Task.Run(async () =>
             {
@@ -536,6 +543,142 @@ namespace MandADiscoverySuite.ViewModels
                 MessageBox.Show($"Error running Target App Registration:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Import target app registration output (from source or selected target company) and refresh TargetProfiles
+        /// </summary>
+        private async Task ImportTargetAppRegistrationAsync()
+        {
+            try
+            {
+                var sourceCompany = SelectedProfile?.CompanyName ?? CurrentProfileName ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(sourceCompany))
+                {
+                    MessageBox.Show("No source company selected.", "Target App Registration", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var imported = await TargetProfileService.Instance.AutoImportFromAppRegistrationAsync(sourceCompany);
+                await LoadTargetProfilesAsync();
+
+                if (imported)
+                {
+                    MessageBox.Show("Imported target credentials from App Registration output.", "Target App Registration", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show("No credential summary found to import. Ensure the App Registration script has completed.", "Target App Registration", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error importing target app registration output");
+                MessageBox.Show($"Error importing target app registration: {ex.Message}", "Target App Registration", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        // File watcher to auto-import target credentials when the app registration output appears
+        private FileSystemWatcher? _targetCredWatcher;
+        private DateTime _lastImportAttemptUtc;
+        private volatile bool _isAutoImporting;
+
+        private void SetupTargetCredentialWatcher()
+        {
+            try
+            {
+                // Dispose previous watcher
+                if (_targetCredWatcher != null)
+                {
+                    _targetCredWatcher.EnableRaisingEvents = false;
+                    _targetCredWatcher.Created -= OnTargetCredFileChanged;
+                    _targetCredWatcher.Changed -= OnTargetCredFileChanged;
+                    _targetCredWatcher.Dispose();
+                    _targetCredWatcher = null;
+                }
+
+                var targetCompanyName = SelectedTargetCompany?.CompanyName ?? ConfigurationService.Instance.SelectedTargetCompany;
+                if (string.IsNullOrWhiteSpace(targetCompanyName)) return;
+
+                var targetRoot = ConfigurationService.Instance.GetCompanyDataPath(targetCompanyName);
+                var credDir = System.IO.Path.Combine(targetRoot, "Credentials");
+                if (!Directory.Exists(credDir))
+                {
+                    // Create the directory so watcher can attach; script will drop files later
+                    Directory.CreateDirectory(credDir);
+                }
+
+                _targetCredWatcher = new FileSystemWatcher(credDir)
+                {
+                    IncludeSubdirectories = false,
+                    Filter = "*.json",
+                    EnableRaisingEvents = true,
+                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.CreationTime
+                };
+                _targetCredWatcher.Created += OnTargetCredFileChanged;
+                _targetCredWatcher.Changed += OnTargetCredFileChanged;
+
+                _logger?.LogInformation($"[MainViewModel] Watching target credentials in: {credDir}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "[MainViewModel] Unable to setup target credential watcher");
+            }
+        }
+
+        private void OnTargetCredFileChanged(object sender, FileSystemEventArgs e)
+        {
+            try
+            {
+                var name = System.IO.Path.GetFileName(e.FullPath);
+                if (!name.Equals("credential_summary.json", StringComparison.OrdinalIgnoreCase) &&
+                    !name.Equals("discoverycredentials.summary.json", StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                // Debounce
+                var now = DateTime.UtcNow;
+                if ((now - _lastImportAttemptUtc) < TimeSpan.FromSeconds(2)) return;
+                _lastImportAttemptUtc = now;
+                if (_isAutoImporting) return;
+
+                _ = Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                {
+                    try
+                    {
+                        _isAutoImporting = true;
+                        await ImportTargetAppRegistrationAsync();
+                    }
+                    finally
+                    {
+                        _isAutoImporting = false;
+                    }
+                });
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        private async Task ShowTargetProfilesAsync()
+        {
+            try
+            {
+                var win = new MandADiscoverySuite.Windows.TargetProfilesWindow
+                {
+                    Owner = Application.Current.MainWindow,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+                win.ShowDialog();
+                await LoadTargetProfilesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error opening Target Profiles window");
+                MessageBox.Show($"Error opening Target Profiles: {ex.Message}", "Target Profiles", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
         
         /// <summary>

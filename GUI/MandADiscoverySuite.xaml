@@ -953,6 +953,8 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
                             <ComboBox Grid.Column="0"
@@ -995,14 +997,48 @@
                                 </Button.Template>
                             </Button>
 
+                            <Button Grid.Column="5"
+                                    Command="{Binding ImportTargetAppRegistrationCommand}"
+                                    Background="{StaticResource SuccessGradient}"
+                                    BorderThickness="0"
+                                    Width="40" Height="40"
+                                    Margin="4,0,0,0"
+                                    ToolTip="Import Target App Registration credentials">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" CornerRadius="8" x:Name="TargetAppImportBorder">
+                                            <TextBlock Text="I" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+
+                            <Button Grid.Column="6"
+                                    Command="{Binding ShowTargetProfilesCommand}"
+                                    Background="{StaticResource SecondaryGradient}"
+                                    BorderThickness="0"
+                                    Width="40" Height="40"
+                                    Margin="4,0,0,0"
+                                    ToolTip="Manage Target Profiles">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" CornerRadius="8" x:Name="TargetProfilesBorder">
+                                            <TextBlock Text="P" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+
                             <!-- Active Target Profile Picker -->
-                            <ComboBox Grid.Column="3"
-                                      ItemsSource="{Binding TargetProfiles}"
-                                      SelectedItem="{Binding SelectedTargetProfile}"
-                                      DisplayMemberPath="Name"
-                                      Width="260"
-                                      Margin="8,0,8,0"
-                                      ToolTip="Active Target Profile used for Graph authentication" />
+                            <StackPanel Grid.Column="3" Margin="8,0,8,0">
+                                <TextBlock Text="Active Target Profile" Foreground="#FFA0AEC0" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding TargetProfiles}"
+                                          SelectedItem="{Binding SelectedTargetProfile}"
+                                          DisplayMemberPath="Name"
+                                          Width="260"
+                                          Style="{StaticResource ModernComboBoxStyle}"
+                                          ToolTip="Active Target Profile used for Graph authentication" />
+                            </StackPanel>
 
                             <Button Grid.Column="4"
                                     Command="{Binding SetActiveTargetProfileCommand}"
