@@ -28,11 +28,11 @@
                 <!-- Accessibility Styles -->
                 <ResourceDictionary Source="Styles/AccessibilityStyles.xaml"/>
                 
-                <!-- Re-enabled for full UI restoration -->
-                <ResourceDictionary Source="Themes/ThemeStyles.xaml"/>
-                <ResourceDictionary Source="Themes/SpacingSystem.xaml"/>
-                <ResourceDictionary Source="Themes/CustomTooltips.xaml"/>
-                <ResourceDictionary Source="Controls/ChartControls.xaml"/>
+                <!-- Temporarily disabled for debugging stack overflow -->
+                <!-- <ResourceDictionary Source="Themes/ThemeStyles.xaml"/> -->
+                <!-- <ResourceDictionary Source="Themes/SpacingSystem.xaml"/> -->
+                <!-- <ResourceDictionary Source="Themes/CustomTooltips.xaml"/> -->
+                <!-- <ResourceDictionary Source="Controls/ChartControls.xaml"/> -->
             </ResourceDictionary.MergedDictionaries>
             
         <!-- Lightweight Control Templates for Large Lists -->

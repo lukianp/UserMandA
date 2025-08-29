@@ -29,8 +29,50 @@ namespace MandADiscoverySuite.Services
             _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
             _messenger = WeakReferenceMessenger.Default;
             
-            // Register known services
+            // Register basic services immediately
             RegisterService<IMessenger>(_messenger);
+            
+            // Pre-register critical services to prevent widget failures
+            PreRegisterCriticalServices();
+        }
+        
+        /// <summary>
+        /// Pre-registers critical services to prevent initialization failures
+        /// </summary>
+        private static void PreRegisterCriticalServices()
+        {
+            try
+            {
+                // Register IDataService and DataService
+                var dataLogger = _loggerFactory.CreateLogger<DataService>();
+                var dataService = new DataService(dataLogger);
+                RegisterService<IDataService>(dataService);
+                RegisterService<DataService>(dataService);
+                
+                // Register ProfileService if available
+                var profileService = TargetProfileService.Instance;
+                RegisterService<TargetProfileService>(profileService);
+                
+                // Register LogicEngineService
+                var logicLogger = _loggerFactory.CreateLogger<LogicEngineService>();
+                var dataRoot = @"C:\discoverydata\ljpops\RawData\";
+                var logicEngineService = new LogicEngineService(logicLogger, null, dataRoot);
+                RegisterService<ILogicEngineService>(logicEngineService);
+                RegisterService<LogicEngineService>(logicEngineService);
+                
+                // Register LogManagementService
+                var logMgmtLogger = _loggerFactory.CreateLogger<LogManagementService>();
+                var logManagementService = new LogManagementService(logMgmtLogger);
+                RegisterService<ILogManagementService>(logManagementService);
+                RegisterService<LogManagementService>(logManagementService);
+                
+                System.Diagnostics.Debug.WriteLine("SimpleServiceLocator: Critical services pre-registered successfully");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SimpleServiceLocator: Error pre-registering critical services: {ex.Message}");
+                // Continue without failing - services will be created on-demand if needed
+            }
         }
 
         public static void Initialize()

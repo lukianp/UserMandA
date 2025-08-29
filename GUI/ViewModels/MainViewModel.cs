@@ -56,8 +56,13 @@ namespace MandADiscoverySuite.ViewModels
         public event PropertyChangedEventHandler? PropertyChanged;
         
         public ObservableCollection<TabItem> OpenTabs => _tabsService.Tabs;
+        public ObservableCollection<TabItem> Tabs => _tabsService.Tabs; // For TabViewControl binding
         public ICommand OpenTabCommand { get; }
+        public ICommand NewTabCommand { get; }  // For TabViewControl binding
         public ICommand CloseTabCommand { get; }
+        public ICommand ShowAllTabsCommand { get; }  // For TabViewControl binding
+        
+        public bool HasTabs => _tabsService.Tabs.Count > 0;  // For TabViewControl binding
         public bool IsCommandPaletteVisible { get; set; }
         
         // Common commands for main window buttons
@@ -254,6 +259,10 @@ namespace MandADiscoverySuite.ViewModels
             // Initialize services
             _tabsService = new TabsService(tabsLogger);
             CurrentTabsService = _tabsService; // Set static reference for other ViewModels
+            
+            // Subscribe to tabs collection changes to notify HasTabs property
+            _tabsService.Tabs.CollectionChanged += (s, e) => OnPropertyChanged(nameof(HasTabs));
+            
             var navLogger = loggerFactory.CreateLogger<NavigationService>();
             _navigationService = new NavigationService(_tabsService, navLogger);
             
@@ -271,7 +280,9 @@ namespace MandADiscoverySuite.ViewModels
             
             // Initialize commands
             OpenTabCommand = new RelayCommand<string>(async (param) => await OpenTabAsync(param));
+            NewTabCommand = new RelayCommand<object>(async _ => await OpenTabAsync("Dashboard", "Dashboard"));
             CloseTabCommand = new RelayCommand<object>(async (param) => await CloseTabAsync(param));
+            ShowAllTabsCommand = new RelayCommand<object>(_ => ShowAllTabs());
             
             // Initialize common main window commands with real implementations
             RefreshDashboardCommand = new RelayCommand<object>(async _ => await RefreshDashboardAsync());
@@ -336,6 +347,20 @@ namespace MandADiscoverySuite.ViewModels
                     _logger?.LogError(t.Exception, "[MainViewModel] Unhandled exception in dashboard task");
                 }
             }, TaskScheduler.Default);
+            
+            // Open default dashboard tab
+            _ = Task.Run(async () => 
+            {
+                await Task.Delay(1000); // Give services time to initialize
+                try
+                {
+                    await OpenTabAsync("Dashboard", "📊 Overview");
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "[MainViewModel] Failed to open default Dashboard tab");
+                }
+            });
             }
             catch (Exception ex)
             {
@@ -898,6 +923,17 @@ namespace MandADiscoverySuite.ViewModels
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+        
+        private void ShowAllTabs()
+        {
+            // Simple implementation - could show a dialog with all tabs
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] ShowAllTabs: {Tabs.Count} tabs open");
+        }
+        
+        public async Task<bool> OpenTabAsync(string key, string? title = null)
+        {
+            return await _tabsService.OpenTabAsync(key, title);
         }
         
         /// <summary>

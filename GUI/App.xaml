@@ -10,10 +10,20 @@
             <ResourceDictionary.MergedDictionaries>
                 <!-- Core converters resource dictionary -->
                 <ResourceDictionary Source="Resources/Converters.xaml"/>
-                <!-- DISABLED: Include optimized resources to fix stack overflow -->
-                <!-- <ResourceDictionary Source="Themes/OptimizedResources.xaml"/> -->
-                <!-- <ResourceDictionary Source="Themes/OptimizedAnimations.xaml"/> -->
-                <!-- <ResourceDictionary Source="Themes/OptimizedGridLayouts.xaml"/> -->
+                
+                <!-- Theme and styling dictionaries -->
+                <ResourceDictionary Source="Themes/OptimizedResources.xaml"/>
+                <ResourceDictionary Source="Themes/OptimizedAnimations.xaml"/>
+                <ResourceDictionary Source="Themes/OptimizedGridLayouts.xaml"/>
+                <ResourceDictionary Source="Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="Themes/FluentDesign.xaml"/>
+                <ResourceDictionary Source="Themes/RefinedColorPalette.xaml"/>
+                <ResourceDictionary Source="Themes/SpacingSystem.xaml"/>
+                <ResourceDictionary Source="Themes/CustomTooltips.xaml"/>
+                <ResourceDictionary Source="Themes/DashboardWidgets.xaml"/>
+                
+                <!-- Data grid theming -->
+                <ResourceDictionary Source="Resources/DataGridTheme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
             <!-- Standard Converters -->

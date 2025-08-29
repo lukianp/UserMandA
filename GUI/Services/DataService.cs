@@ -97,29 +97,26 @@ namespace MandADiscoverySuite.Services
             try
             {
                 // Load all data types in parallel to generate summary
-                var tasks = new[]
-                {
-                    LoadUsersAsync(profileName, false, cancellationToken),
-                    LoadInfrastructureAsync(profileName, false, cancellationToken),
-                    LoadGroupsAsync(profileName, false, cancellationToken),
-                    LoadApplicationsAsync(profileName, false, cancellationToken)
-                };
+                var userTask = LoadUsersAsync(profileName, false, cancellationToken);
+                var infrastructureTask = LoadInfrastructureAsync(profileName, false, cancellationToken);
+                var groupTask = LoadGroupsAsync(profileName, false, cancellationToken);
+                var appTask = LoadApplicationsAsync(profileName, false, cancellationToken);
 
-                var results = await Task.WhenAll(tasks);
+                await Task.WhenAll(userTask, infrastructureTask, groupTask, appTask);
                 
-                var users = results[0].ToList();
-                var infrastructure = results[1].ToList();
-                var groups = results[2].ToList();
-                var applications = results[3].ToList();
+                var users = userTask.Result.ToList();
+                var infrastructure = infrastructureTask.Result.ToList();
+                var groups = groupTask.Result.ToList();
+                var applications = appTask.Result.ToList();
 
                 return new DataSummary
                 {
                     ProfileName = profileName,
                     LastUpdated = DateTime.UtcNow,
-                    TotalUsers = users.Count,
-                    TotalComputers = infrastructure.Count,
-                    TotalGroups = groups.Count,
-                    TotalApplications = applications.Count,
+                    TotalUsers = users.Count(),
+                    TotalComputers = infrastructure.Count(),
+                    TotalGroups = groups.Count(),
+                    TotalApplications = applications.Count(),
                     UsersByDepartment = users
                         .Where(u => !string.IsNullOrEmpty(u.Department))
                         .GroupBy(u => u.Department)
@@ -246,9 +243,9 @@ namespace MandADiscoverySuite.Services
             if (hasAzureUsers && hasOnPremUsers)
                 return EnvironmentType.Hybrid;
             else if (hasAzureUsers)
-                return EnvironmentType.Cloud;
+                return EnvironmentType.CloudOnly;
             else if (hasOnPremUsers)
-                return EnvironmentType.OnPremises;
+                return EnvironmentType.OnPremisesOnly;
             else
                 return EnvironmentType.Unknown;
         }
