@@ -1265,7 +1265,17 @@ namespace MandADiscoverySuite.ViewModels
         /// </summary>
         private string GetTargetDomainFromProfile()
         {
-            // In a real implementation, this would read from profile configuration
+            // Prefer resolved domain from selected target company in configuration
+            try
+            {
+                var targetCompany = Services.ConfigurationService.Instance.SelectedTargetCompany;
+                if (!string.IsNullOrWhiteSpace(targetCompany))
+                {
+                    return Services.ConfigurationService.Instance.TryResolvePrimaryDomain(targetCompany);
+                }
+            }
+            catch { }
+            // Fallback to inspecting current execution items
             var firstItem = ExecutionItems.FirstOrDefault();
             if (firstItem?.TargetIdentity?.Contains("@") == true)
             {
@@ -1492,17 +1502,20 @@ namespace MandADiscoverySuite.ViewModels
         /// </summary>
         private MigrationContext CreateMigrationContext()
         {
-            return new MigrationContext
+            var ctx = new MigrationContext
             {
                 SessionId = Guid.NewGuid().ToString(),
                 InitiatedBy = Environment.UserName,
                 Source = new SourceEnvironment
                 {
-                    DomainName = GetSourceDomainFromProfile()
+                    DomainName = GetSourceDomainFromProfile(),
+                    Type = "AzureAD"
                 },
                 Target = new TargetEnvironment
                 {
-                    DomainName = GetTargetDomainFromProfile()
+                    DomainName = GetTargetDomainFromProfile(),
+                    Type = "AzureAD",
+                    Configuration = new Dictionary<string, object>()
                 },
                 AuditLogger = new AuditLogger(SimpleServiceLocator.Instance.GetService<ILogger<AuditLogger>>()), // Default audit logger
                 MaxConcurrentOperations = 3,
@@ -1516,6 +1529,29 @@ namespace MandADiscoverySuite.ViewModels
                     ["StartTime"] = DateTime.Now
                 }
             };
+
+            try
+            {
+                // Populate target Graph credentials from TargetProfiles of the current source company
+                var company = SelectedProfile ?? "default";
+                var active = Services.TargetProfileService.Instance.GetActiveProfileAsync(company).GetAwaiter().GetResult();
+                if (active != null)
+                {
+                    var secret = Services.TargetProfileService.Instance.GetClientSecretAsync(company, active.Id).GetAwaiter().GetResult();
+                    if (!string.IsNullOrWhiteSpace(active.TenantId) && !string.IsNullOrWhiteSpace(active.ClientId) && !string.IsNullOrWhiteSpace(secret))
+                    {
+                        ctx.Target.Configuration["GraphTenantId"] = active.TenantId;
+                        ctx.Target.Configuration["GraphClientId"] = active.ClientId;
+                        ctx.Target.Configuration["GraphClientSecret"] = secret;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Unable to load target Graph credentials from TargetProfiles");
+            }
+
+            return ctx;
         }
         
         /// <summary>

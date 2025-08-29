@@ -38,7 +38,11 @@ namespace MandADiscoverySuite.ViewModels
         private readonly LogicEngineService _logicEngineService;
         private TabItem? _selectedTab;
         private ObservableCollection<CompanyProfile> _companyProfiles;
+        private ObservableCollection<CompanyProfile> _targetCompanyProfiles;
+        private ObservableCollection<TargetProfile> _targetProfiles;
         private CompanyProfile _selectedProfile;
+        private CompanyProfile _selectedTargetCompany;
+        private TargetProfile _selectedTargetProfile;
         private string _currentProfileName = "ljpops";
         
         // Data collections
@@ -72,10 +76,13 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand SelectProfileCommand { get; }
         public ICommand DeleteProfileCommand { get; }
         public ICommand SwitchProfileCommand { get; }
+        public ICommand SwitchTargetProfileCommand { get; }
+        public ICommand SetActiveTargetProfileCommand { get; }
         
         // App Registration commands
         public ICommand RunAppRegistrationCommand { get; }
         public ICommand AppRegistrationCommand { get; }
+        public ICommand RunTargetAppRegistrationCommand { get; }
         
         // Theme commands
         public ICommand ToggleThemeCommand { get; }
@@ -114,6 +121,26 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
+        public ObservableCollection<CompanyProfile> TargetCompanyProfiles
+        {
+            get => _targetCompanyProfiles;
+            set
+            {
+                _targetCompanyProfiles = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public ObservableCollection<TargetProfile> TargetProfiles
+        {
+            get => _targetProfiles;
+            set
+            {
+                _targetProfiles = value;
+                OnPropertyChanged();
+            }
+        }
+
         public CompanyProfile SelectedProfile
         {
             get => _selectedProfile;
@@ -126,6 +153,26 @@ namespace MandADiscoverySuite.ViewModels
                 // This was causing the bug where selecting a profile to delete 
                 // would make it the active profile, preventing deletion
                 // Switching should only happen via explicit user action
+            }
+        }
+
+        public CompanyProfile SelectedTargetCompany
+        {
+            get => _selectedTargetCompany;
+            set
+            {
+                _selectedTargetCompany = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public TargetProfile SelectedTargetProfile
+        {
+            get => _selectedTargetProfile;
+            set
+            {
+                _selectedTargetProfile = value;
+                OnPropertyChanged();
             }
         }
         
@@ -215,6 +262,8 @@ namespace MandADiscoverySuite.ViewModels
             
             // Initialize collections
             _companyProfiles = new ObservableCollection<CompanyProfile>();
+            _targetCompanyProfiles = new ObservableCollection<CompanyProfile>();
+            _targetProfiles = new ObservableCollection<TargetProfile>();
             
             // Initialize commands
             OpenTabCommand = new RelayCommand<string>(async (param) => await OpenTabAsync(param));
@@ -236,10 +285,13 @@ namespace MandADiscoverySuite.ViewModels
             SelectProfileCommand = new AsyncRelayCommand(SelectProfileAsync);
             DeleteProfileCommand = new RelayCommand<object>(async param => await DeleteProfileAsync(param));
             SwitchProfileCommand = new AsyncRelayCommand(SwitchToSelectedProfileAsync);
+            SwitchTargetProfileCommand = new AsyncRelayCommand(SwitchToSelectedTargetProfileAsync);
+            SetActiveTargetProfileCommand = new AsyncRelayCommand(SetActiveTargetProfileAsync);
             
             // App Registration commands
             RunAppRegistrationCommand = new AsyncRelayCommand(RunAppRegistrationAsync);
             AppRegistrationCommand = new AsyncRelayCommand(RunAppRegistrationAsync);
+            RunTargetAppRegistrationCommand = new AsyncRelayCommand(RunTargetAppRegistrationAsync);
             
             // Theme commands
             ToggleThemeCommand = new AsyncRelayCommand(ToggleThemeAsync);
@@ -253,6 +305,8 @@ namespace MandADiscoverySuite.ViewModels
             
             // Load company profiles
             LoadCompanyProfiles();
+            LoadTargetCompanyProfiles();
+            Task.Run(LoadTargetProfilesAsync);
             
             _logger?.LogInformation($"[MainViewModel] MainViewModel constructor completed. CurrentProfileName='{CurrentProfileName}', CompanyProfiles.Count={CompanyProfiles.Count}");
             
@@ -364,6 +418,125 @@ namespace MandADiscoverySuite.ViewModels
                 _logger?.LogError(ex, "Error loading company profiles");
             }
         }
+
+        /// <summary>
+        /// Load target company profiles from the discovery data directory (same enumeration, separate selection)
+        /// </summary>
+        private void LoadTargetCompanyProfiles()
+        {
+            try
+            {
+                var discoveryDataPath = ConfigurationService.Instance.DiscoveryDataRootPath;
+                if (!Directory.Exists(discoveryDataPath)) return;
+
+                TargetCompanyProfiles.Clear();
+
+                foreach (var directory in Directory.GetDirectories(discoveryDataPath))
+                {
+                    var companyName = System.IO.Path.GetFileName(directory);
+                    var profile = new CompanyProfile
+                    {
+                        CompanyName = companyName,
+                        Id = Guid.NewGuid().ToString(),
+                        Created = Directory.GetCreationTime(directory),
+                        LastModified = Directory.GetLastWriteTime(directory),
+                        IsActive = false
+                    };
+                    TargetCompanyProfiles.Add(profile);
+                }
+
+                // Try restore from session
+                var saved = ConfigurationService.Instance.SelectedTargetCompany;
+                if (!string.IsNullOrWhiteSpace(saved))
+                {
+                    SelectedTargetCompany = TargetCompanyProfiles.FirstOrDefault(p => p.CompanyName.Equals(saved, StringComparison.OrdinalIgnoreCase));
+                }
+                if (SelectedTargetCompany == null && TargetCompanyProfiles.Count > 0)
+                {
+                    SelectedTargetCompany = TargetCompanyProfiles.First();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error loading target company profiles");
+            }
+        }
+
+        /// <summary>
+        /// Switch to the selected target company for migration mapping
+        /// </summary>
+        private async Task SwitchToSelectedTargetProfileAsync()
+        {
+            try
+            {
+                if (SelectedTargetCompany == null) return;
+                ConfigurationService.Instance.SelectedTargetCompany = SelectedTargetCompany.CompanyName;
+                _logger?.LogInformation($"Selected target company set to: {SelectedTargetCompany.CompanyName}");
+                await Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error setting target company selection");
+            }
+        }
+
+        /// <summary>
+        /// Run Azure App Registration setup targeting the selected target company
+        /// </summary>
+        private async Task RunTargetAppRegistrationAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Running Target App Registration setup");
+
+                var scriptPath = ConfigurationService.Instance.GetAppRegistrationScriptPath();
+                if (!File.Exists(scriptPath))
+                {
+                    scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Scripts", "DiscoveryCreateAppRegistration.ps1");
+                }
+
+                if (File.Exists(scriptPath))
+                {
+                    var targetCompany = SelectedTargetCompany?.CompanyName ?? ConfigurationService.Instance.SelectedTargetCompany;
+                    if (string.IsNullOrWhiteSpace(targetCompany))
+                    {
+                        MessageBox.Show("Select a target company first.", "Target App Registration", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    var startInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" -CompanyName \"{targetCompany}\"",
+                        UseShellExecute = true,
+                        WorkingDirectory = Path.GetDirectoryName(scriptPath)
+                    };
+
+                    System.Diagnostics.Process.Start(startInfo);
+                    _logger?.LogInformation($"[MainViewModel] Started Target App Registration script: {scriptPath} with CompanyName: {targetCompany}");
+
+                    MessageBox.Show(
+                        "Target App Registration script launched. Complete the prompts to register the app in the target tenant.",
+                        "Target App Registration",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                else
+                {
+                    _logger?.LogWarning($"[MainViewModel] App Registration script not found at: {scriptPath}");
+                    MessageBox.Show($"App Registration script not found.\n\nExpected location:\n{scriptPath}",
+                        "Script Not Found",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error running Target App Registration");
+                MessageBox.Show($"Error running Target App Registration:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            await Task.CompletedTask;
+        }
         
         /// <summary>
         /// Switch to the currently selected profile in the dropdown
@@ -416,12 +589,57 @@ namespace MandADiscoverySuite.ViewModels
                 
                 // Reload data for the new profile (if there's a data loading method)
                 await ReloadDataAsync();
+                await LoadTargetProfilesAsync();
                 
                 _logger?.LogInformation($"Successfully switched to profile: {companyName}");
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, $"Error switching to profile: {companyName}");
+            }
+        }
+
+        /// <summary>
+        /// Load target profiles for the current source company
+        /// </summary>
+        private async Task LoadTargetProfilesAsync()
+        {
+            try
+            {
+                var profiles = await TargetProfileService.Instance.GetProfilesAsync(CurrentProfileName);
+                Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    TargetProfiles.Clear();
+                    foreach (var p in profiles.OrderBy(x => x.Name)) TargetProfiles.Add(p);
+                    SelectedTargetProfile = profiles.FirstOrDefault(p => p.IsActive) ?? profiles.FirstOrDefault();
+                });
+                _logger?.LogInformation($"Loaded {TargetProfiles.Count} target profiles for source company '{CurrentProfileName}'");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error loading target profiles");
+            }
+        }
+
+        /// <summary>
+        /// Persist the selected target profile as active
+        /// </summary>
+        private async Task SetActiveTargetProfileAsync()
+        {
+            try
+            {
+                if (SelectedTargetProfile == null)
+                {
+                    MessageBox.Show("Select a target profile first.", "Target Profiles", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                await TargetProfileService.Instance.SetActiveAsync(CurrentProfileName, SelectedTargetProfile.Id);
+                await LoadTargetProfilesAsync();
+                _logger?.LogInformation($"Set active target profile: {SelectedTargetProfile.Name}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error setting active target profile");
             }
         }
         

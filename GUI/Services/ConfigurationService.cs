@@ -162,6 +162,60 @@ namespace MandADiscoverySuite.Services
         }
 
         /// <summary>
+        /// Gets or sets the currently selected target company for migrations (persisted in session state)
+        /// </summary>
+        public string SelectedTargetCompany
+        {
+            get => _sessionState?.TargetCompany ?? string.Empty;
+            set
+            {
+                if (_sessionState == null) return;
+                _sessionState.TargetCompany = value ?? string.Empty;
+                _ = SaveSessionAsync();
+            }
+        }
+
+        /// <summary>
+        /// Attempts to resolve a primary target domain for a given company based on discovery data.
+        /// Falls back to companyName + ".com" if not found.
+        /// </summary>
+        public string TryResolvePrimaryDomain(string companyName)
+        {
+            try
+            {
+                var rawPath = GetCompanyRawDataPath(companyName);
+                if (Directory.Exists(rawPath))
+                {
+                    var tenantFiles = Directory.GetFiles(rawPath, "*Tenant*.csv");
+                    var file = tenantFiles.FirstOrDefault();
+                    if (!string.IsNullOrWhiteSpace(file) && File.Exists(file))
+                    {
+                        var lines = File.ReadAllLines(file);
+                        if (lines.Length >= 2)
+                        {
+                            var headers = lines[0].Split(',');
+                            var values = lines[1].Split(',');
+                            for (int i = 0; i < headers.Length && i < values.Length; i++)
+                            {
+                                if (headers[i].Trim().Equals("Domain", StringComparison.OrdinalIgnoreCase) ||
+                                    headers[i].Trim().Equals("DefaultDomainName", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var v = values[i].Trim();
+                                    if (!string.IsNullOrWhiteSpace(v)) return v;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore and fallback
+            }
+            return $"{companyName}.com";
+        }
+
+        /// <summary>
         /// Gets the full path to the DiscoveryModuleLauncher.ps1 script
         /// </summary>
         public string GetDiscoveryLauncherScriptPath()

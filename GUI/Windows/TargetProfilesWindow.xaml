@@ -6,6 +6,9 @@
         xmlns:viewmodels="clr-namespace:MandADiscoverySuite.ViewModels"
         mc:Ignorable="d"
         Title="Target Profiles" Height="520" Width="820" WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </Window.Resources>
     <Window.DataContext>
         <viewmodels:TargetProfilesViewModel />
     </Window.DataContext>
@@ -35,13 +38,18 @@
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
                     <Button Content="Reload" Margin="0,0,8,8" Command="{Binding LoadCommand}"/>
                     <Button Content="New" Margin="0,0,8,8" Command="{Binding NewCommand}"/>
+                    <Button Content="Set Active" Margin="0,0,8,8" Command="{Binding SetActiveCommand}"/>
+                    <Button Content="Import From App Reg" Margin="0,0,8,8" Command="{Binding ImportFromAppRegCommand}"/>
                     <Button Content="Delete" Margin="0,0,8,8" Command="{Binding DeleteCommand}" IsEnabled="{Binding Path=Selected, Converter={StaticResource NullToBoolConverter}}" Visibility="Collapsed"/>
                 </StackPanel>
                 <ListBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding Selected}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Vertical" Margin="4">
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                <TextBlock>
+                                    <Run Text="{Binding Name}"/>
+                                    <Run Text="  (Active)" Foreground="#38B2AC" FontWeight="SemiBold" Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                </TextBlock>
                                 <TextBlock Text="{Binding TenantId}" FontSize="11" Foreground="#666"/>
                             </StackPanel>
                         </DataTemplate>

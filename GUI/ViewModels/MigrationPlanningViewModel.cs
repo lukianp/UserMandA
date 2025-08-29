@@ -38,6 +38,29 @@ namespace MandADiscoverySuite.ViewModels
         private MigrationGenerationOptions _generationOptions;
         private int _totalGeneratedItems;
         private int _totalSelectedItems;
+
+        // Target company selection for domain mapping
+        public ObservableCollection<string> AvailableTargetCompanies { get; private set; } = new();
+        private string _selectedTargetCompany;
+        public string SelectedTargetCompany
+        {
+            get => _selectedTargetCompany;
+            set
+            {
+                if (SetProperty(ref _selectedTargetCompany, value))
+                {
+                    // Resolve target domain from discovery data when target company changes
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        ConfigurationService.Instance.SelectedTargetCompany = value;
+                        var domain = ConfigurationService.Instance.TryResolvePrimaryDomain(value);
+                        if (GenerationOptions == null) GenerationOptions = new MigrationGenerationOptions();
+                        GenerationOptions.TargetDomain = domain;
+                        OnPropertyChanged(nameof(GenerationOptions));
+                    }
+                }
+            }
+        }
         
         // Wave Composition
         private ObservableCollection<MigrationWave> _migrationWaves;
@@ -338,6 +361,7 @@ namespace MandADiscoverySuite.ViewModels
         private void InitializeCollections()
         {
             AvailableProfiles = new ObservableCollection<string>();
+            AvailableTargetCompanies = new ObservableCollection<string>();
             GeneratedItems = new ObservableCollection<MigrationItem>();
             SelectedItems = new ObservableCollection<MigrationItem>();
             MigrationWaves = new ObservableCollection<MigrationWave>();
@@ -354,6 +378,7 @@ namespace MandADiscoverySuite.ViewModels
             };
             
             LoadAvailableProfiles();
+            LoadAvailableTargetCompanies();
         }
         
         private void InitializeCommands()
@@ -404,6 +429,37 @@ namespace MandADiscoverySuite.ViewModels
                 _logger?.LogError(ex, "Error loading available profiles");
                 HasErrors = true;
                 ErrorMessage = $"Failed to load profiles: {ex.Message}";
+            }
+        }
+
+        private async void LoadAvailableTargetCompanies()
+        {
+            try
+            {
+                var root = ConfigurationService.Instance.DiscoveryDataRootPath;
+                AvailableTargetCompanies.Clear();
+                if (System.IO.Directory.Exists(root))
+                {
+                    foreach (var dir in System.IO.Directory.GetDirectories(root))
+                    {
+                        AvailableTargetCompanies.Add(System.IO.Path.GetFileName(dir));
+                    }
+                }
+
+                // Default selection from session or first available
+                var saved = ConfigurationService.Instance.SelectedTargetCompany;
+                if (!string.IsNullOrWhiteSpace(saved) && AvailableTargetCompanies.Contains(saved))
+                {
+                    SelectedTargetCompany = saved;
+                }
+                else if (AvailableTargetCompanies.Any())
+                {
+                    SelectedTargetCompany = AvailableTargetCompanies.First();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error loading available target companies");
             }
         }
         

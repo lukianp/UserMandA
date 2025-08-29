@@ -631,6 +631,11 @@ namespace MandADiscoverySuite.Services.Migration
 
         private string GenerateCreateUserScript(UserProfileItem item, MigrationContext context)
         {
+            // Extract Graph app credentials from context if provided
+            var graphTenantId = context?.Target?.Configuration?.ContainsKey("GraphTenantId") == true ? context.Target.Configuration["GraphTenantId"]?.ToString() : string.Empty;
+            var graphClientId = context?.Target?.Configuration?.ContainsKey("GraphClientId") == true ? context.Target.Configuration["GraphClientId"]?.ToString() : string.Empty;
+            var graphClientSecret = context?.Target?.Configuration?.ContainsKey("GraphClientSecret") == true ? context.Target.Configuration["GraphClientSecret"]?.ToString() : string.Empty;
+
             return $@"
                 try {{
                     $upn = '{item.UserPrincipalName}'
@@ -639,6 +644,20 @@ namespace MandADiscoverySuite.Services.Migration
                     
                     # Create user based on target environment type
                     if ('{context.Target.Type}' -eq 'AzureAD') {{
+                        # Connect to Microsoft Graph using app-only credentials when available
+                        $tenantId = '{graphTenantId}'
+                        $clientId = '{graphClientId}'
+                        $clientSecret = '{graphClientSecret}'
+                        if ($tenantId -and $clientId -and $clientSecret) {{
+                            try {{
+                                Connect-MgGraph -TenantId $tenantId -ClientId $clientId -ClientSecret $clientSecret -NoWelcome
+                            }} catch {{
+                                Write-Error "Failed to connect to Microsoft Graph: $($_.Exception.Message)"
+                                throw
+                            }}
+                        }} else {{
+                            Write-Warning 'Graph app credentials not found in context; assuming pre-authenticated Graph session.'
+                        }}
                         # Azure AD user creation using Microsoft Graph PowerShell
                         $passwordProfile = @{{
                             Password = 'TempPassword123!'
@@ -778,16 +797,103 @@ namespace MandADiscoverySuite.Services.Migration
 
         private async Task<MigrationResultBase> AddUserToGroupAsync(string userSid, string groupName, MigrationContext context, CancellationToken cancellationToken)
         {
-            // Placeholder for group membership logic
-            await Task.CompletedTask;
-            return new MigrationResultBase { IsSuccess = true };
+            var result = new MigrationResultBase { StartTime = DateTime.Now };
+            try
+            {
+                // Build PowerShell that connects to Graph and adds the user to the group
+                var tenantId = context?.Target?.Configuration?.ContainsKey("GraphTenantId") == true ? context.Target.Configuration["GraphTenantId"].ToString() : string.Empty;
+                var clientId = context?.Target?.Configuration?.ContainsKey("GraphClientId") == true ? context.Target.Configuration["GraphClientId"].ToString() : string.Empty;
+                var clientSecret = context?.Target?.Configuration?.ContainsKey("GraphClientSecret") == true ? context.Target.Configuration["GraphClientSecret"].ToString() : string.Empty;
+
+                var script = $@"
+                    try {{
+                        $tenantId = '{tenantId}'
+                        $clientId = '{clientId}'
+                        $clientSecret = '{clientSecret}'
+                        if ($tenantId -and $clientId -and $clientSecret) {{
+                            Connect-MgGraph -TenantId $tenantId -ClientId $clientId -ClientSecret $clientSecret -NoWelcome
+                        }} else {{
+                            Write-Warning 'Graph app credentials not found in context; assuming pre-authenticated Graph session.'
+                        }}
+
+                        $groupName = '{groupName}'
+                        $userId = '{userSid}'
+                        $group = Get-MgGroup -Filter "displayName eq '$groupName'" -ConsistencyLevel eventual -CountVariable c | Select-Object -First 1
+                        if (-not $group) {{ throw "Group not found: $groupName" }}
+                        $ref = @{ '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$userId" }
+                        New-MgGroupMemberByRef -GroupId $group.Id -BodyParameter $ref | Out-Null
+                        Write-Output "Added user $userId to group $($group.Id)"
+                    }} catch {{
+                        Write-Error $_.Exception.Message
+                    }}
+                ";
+
+                var psOptions = new PowerShellExecutionOptions { WorkingDirectory = context.WorkingDirectory };
+                var exec = await _powerShellService.ExecuteScriptAsync(script, null, psOptions, cancellationToken);
+                result.IsSuccess = exec.State == PowerShellExecutionState.Completed && !(exec.Errors?.Any() == true);
+                if (!result.IsSuccess)
+                {
+                    result.ErrorMessage = string.Join(", ", exec.Errors ?? new List<string>());
+                    result.Errors.AddRange(exec.Errors ?? new List<string>());
+                }
+            }
+            catch (Exception ex)
+            {
+                result.IsSuccess = false;
+                result.ErrorMessage = ex.Message;
+                result.Errors.Add(ex.ToString());
+            }
+            return result;
         }
 
         private async Task<MigrationResultBase> SetUserAttributeAsync(string userUpn, string attributeName, string value, MigrationContext context, CancellationToken cancellationToken)
         {
-            // Placeholder for attribute setting logic
-            await Task.CompletedTask;
-            return new MigrationResultBase { IsSuccess = true };
+            var result = new MigrationResultBase { StartTime = DateTime.Now };
+            try
+            {
+                var tenantId = context?.Target?.Configuration?.ContainsKey("GraphTenantId") == true ? context.Target.Configuration["GraphTenantId"].ToString() : string.Empty;
+                var clientId = context?.Target?.Configuration?.ContainsKey("GraphClientId") == true ? context.Target.Configuration["GraphClientId"].ToString() : string.Empty;
+                var clientSecret = context?.Target?.Configuration?.ContainsKey("GraphClientSecret") == true ? context.Target.Configuration["GraphClientSecret"].ToString() : string.Empty;
+
+                // Graph property update via BodyParameter
+                var script = $@"
+                    try {{
+                        $tenantId = '{tenantId}'
+                        $clientId = '{clientId}'
+                        $clientSecret = '{clientSecret}'
+                        if ($tenantId -and $clientId -and $clientSecret) {{
+                            Connect-MgGraph -TenantId $tenantId -ClientId $clientId -ClientSecret $clientSecret -NoWelcome
+                        }} else {{
+                            Write-Warning 'Graph app credentials not found in context; assuming pre-authenticated Graph session.'
+                        }}
+
+                        $userId = '{userUpn}'
+                        $attr = '{attributeName}'
+                        $val = @"{value}"@
+                        $body = @{{}}; $body[$attr] = $val
+                        Update-MgUser -UserId $userId -BodyParameter $body
+                        Write-Output "Updated $attr on $userId"
+                    }} catch {{
+                        Write-Error $_.Exception.Message
+                    }}
+                ";
+
+                var psOptions = new PowerShellExecutionOptions { WorkingDirectory = context.WorkingDirectory };
+                var exec = await _powerShellService.ExecuteScriptAsync(script, null, psOptions, cancellationToken);
+                result.IsSuccess = exec.State == PowerShellExecutionState.Completed && !(exec.Errors?.Any() == true);
+                if (!result.IsSuccess)
+                {
+                    result.ErrorMessage = string.Join(", ", exec.Errors ?? new List<string>());
+                    result.Errors.AddRange(exec.Errors ?? new List<string>());
+                }
+            }
+            catch (Exception ex)
+            {
+                result.IsSuccess = false;
+                result.ErrorMessage = ex.Message;
+                result.Errors.Add(ex.ToString());
+            }
+            return result;
         }
 
         private async Task FinalizeUserMigrationAsync(string targetUserUpn, MigrationContext context, CancellationToken cancellationToken)

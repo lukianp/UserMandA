@@ -22,6 +22,8 @@ namespace MandADiscoverySuite.Models
 
         public DateTime Created { get; set; } = DateTime.UtcNow;
         public DateTime LastModified { get; set; } = DateTime.UtcNow;
+
+        // Active selection for migration context
+        public bool IsActive { get; set; }
     }
 }
-

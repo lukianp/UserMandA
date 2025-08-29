@@ -392,8 +392,12 @@
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="1">
-                                        <TextBlock Text="Target Domain:" FontWeight="Medium" Margin="0,4"/>
-                                        <TextBox Text="{Binding GenerationOptions.TargetDomain}" Margin="0,4"/>
+                                        <TextBlock Text="Target Company:" FontWeight="Medium" Margin="0,4"/>
+                                        <ComboBox ItemsSource="{Binding AvailableTargetCompanies}"
+                                                  SelectedItem="{Binding SelectedTargetCompany}"
+                                                  Margin="0,4"/>
+                                        <TextBlock Text="Resolved Target Domain:" FontWeight="Medium" Margin="0,8,0,4"/>
+                                        <TextBox Text="{Binding GenerationOptions.TargetDomain}" IsReadOnly="True" Margin="0,4"/>
                                     </StackPanel>
                                 </Grid>
                             </Grid>

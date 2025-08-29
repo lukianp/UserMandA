@@ -36,6 +36,8 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand DeleteCommand { get; }
         public ICommand TestConnectionCommand { get; }
         public ICommand NewCommand { get; }
+        public ICommand SetActiveCommand { get; }
+        public ICommand ImportFromAppRegCommand { get; }
 
         public TargetProfilesViewModel()
         {
@@ -44,6 +46,8 @@ namespace MandADiscoverySuite.ViewModels
             DeleteCommand = new AsyncRelayCommand(DeleteAsync);
             TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync);
             NewCommand = new RelayCommand(NewProfile);
+            SetActiveCommand = new AsyncRelayCommand(SetActiveAsync);
+            ImportFromAppRegCommand = new AsyncRelayCommand(ImportFromAppRegAsync);
         }
 
         private async Task<string> GetCompanyAsync()
@@ -56,6 +60,8 @@ namespace MandADiscoverySuite.ViewModels
         {
             Profiles.Clear();
             var company = await GetCompanyAsync();
+            // Attempt auto-import from App Registration output
+            await TargetProfileService.Instance.AutoImportFromAppRegistrationAsync(company);
             var items = await TargetProfileService.Instance.GetProfilesAsync(company);
             foreach (var p in items.OrderBy(x => x.Name)) Profiles.Add(p);
         }
@@ -110,8 +116,45 @@ namespace MandADiscoverySuite.ViewModels
                 System.Windows.MessageBox.Show("Missing credentials. Please fill Tenant ID, Client ID and Client Secret.");
                 return;
             }
-            // Stubbed: real implementation would attempt token acquisition.
-            System.Windows.MessageBox.Show("Connectivity test succeeded (stub).", "Target Profiles", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            try
+            {
+                // Attempt app-only Graph connection and a simple query
+                var credential = new Azure.Identity.ClientSecretCredential(Selected.TenantId, Selected.ClientId, secret);
+                var graph = new Microsoft.Graph.GraphServiceClient(credential);
+
+                // Probe basic endpoints
+                var org = await graph.Organization.Request().Top(1).GetAsync();
+                var users = await graph.Users.Request().Top(1).GetAsync();
+
+                System.Windows.MessageBox.Show(
+                    $"Connected to tenant. Org: {org?.FirstOrDefault()?.DisplayName ?? "Unknown"}. Users visible: {users?.Count ?? 0}.",
+                    "Target Profiles",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            catch (System.Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Connection failed: {ex.Message}", "Target Profiles", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private async Task SetActiveAsync()
+        {
+            if (Selected == null) return;
+            var company = await GetCompanyAsync();
+            await TargetProfileService.Instance.SetActiveAsync(company, Selected.Id);
+            await LoadAsync();
+        }
+
+        private async Task ImportFromAppRegAsync()
+        {
+            var company = await GetCompanyAsync();
+            var imported = await TargetProfileService.Instance.AutoImportFromAppRegistrationAsync(company);
+            await LoadAsync();
+            if (imported)
+                System.Windows.MessageBox.Show("Imported credentials from App Registration output.", "Target Profiles", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            else
+                System.Windows.MessageBox.Show("No credential summary found to import.", "Target Profiles", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
     }
 }

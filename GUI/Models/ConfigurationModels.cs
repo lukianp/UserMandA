@@ -398,6 +398,7 @@ namespace MandADiscoverySuite.Models
     public class SessionState
     {
         public string CurrentCompany { get; set; } = "";
+        public string TargetCompany { get; set; } = "";
         public List<string> OpenTabs { get; set; } = new List<string>();
         public string ActiveTab { get; set; } = "";
         public Dictionary<string, object> ViewStates { get; set; } = new Dictionary<string, object>();

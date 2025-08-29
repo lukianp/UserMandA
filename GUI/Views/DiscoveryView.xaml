@@ -72,11 +72,50 @@
             <!-- Module Card Style -->
             <Style x:Key="ModuleCardStyle" TargetType="Border">
                 <Setter Property="Background" Value="#FF2D3748"/>
-                <Setter Property="CornerRadius" Value="8"/>
-                <Setter Property="Padding" Value="16"/>
-                <Setter Property="Margin" Value="8"/>
-                <Setter Property="MinWidth" Value="280"/>
-                <Setter Property="MinHeight" Value="160"/>
+                <Setter Property="CornerRadius" Value="12"/>
+                <Setter Property="Padding" Value="20"/>
+                <Setter Property="Margin" Value="12"/>
+                <Setter Property="MinWidth" Value="320"/>
+                <Setter Property="MinHeight" Value="180"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect Color="Black" BlurRadius="12" Opacity="0.15" ShadowDepth="4" Direction="270"/>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#FF374151"/>
+                        <Setter Property="Effect">
+                            <Setter.Value>
+                                <DropShadowEffect Color="Black" BlurRadius="16" Opacity="0.25" ShadowDepth="6" Direction="270"/>
+                            </Setter.Value>
+                        </Setter>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- Modern Progress Bar Style -->
+            <Style x:Key="ModernProgressBarStyle" TargetType="ProgressBar">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ProgressBar">
+                            <Border CornerRadius="8" Background="{TemplateBinding Background}" 
+                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                    BorderThickness="{TemplateBinding BorderThickness}">
+                                <Grid>
+                                    <Border Name="PART_Track" CornerRadius="8" Background="Transparent"/>
+                                    <Border Name="PART_Indicator" CornerRadius="8" 
+                                            HorizontalAlignment="Left" 
+                                            Background="#FF4299E1">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="#FF4299E1" BlurRadius="8" Opacity="0.6" ShadowDepth="0"/>
+                                        </Border.Effect>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -150,39 +189,52 @@
                                         </Grid.RowDefinitions>
 
                                         <!-- Module Header -->
-                                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                                            <TextBlock Text="{Binding Icon}" FontSize="24" Margin="0,0,12,0"/>
-                                            <StackPanel>
+                                        <Grid Grid.Row="0" Margin="0,0,0,16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <!-- Icon with background circle -->
+                                            <Border Grid.Column="0" Background="#FF4A5568" CornerRadius="20" 
+                                                    Width="40" Height="40" Margin="0,0,16,0">
+                                                <TextBlock Text="{Binding Icon}" FontSize="18" 
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            
+                                            <!-- Module info -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding DisplayName}" 
                                                            FontSize="16" FontWeight="SemiBold" 
-                                                           Foreground="#FFE2E8F0"/>
+                                                           Foreground="#FFE2E8F0" Margin="0,0,0,2"/>
                                                 <TextBlock Text="{Binding Category}" 
-                                                           FontSize="12" 
+                                                           FontSize="11" FontWeight="Medium"
                                                            Foreground="#FFA0AEC0"/>
                                             </StackPanel>
-                                        </StackPanel>
-
-                                        <!-- Module Status -->
-                                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                            <Ellipse Width="8" Height="8" Margin="0,0,8,0">
-                                                <Ellipse.Style>
-                                                    <Style TargetType="Ellipse">
-                                                        <Setter Property="Fill" Value="#FF48BB78"/>
+                                            
+                                            <!-- Status indicator with better styling -->
+                                            <Border Grid.Column="2" CornerRadius="10" Padding="8,4" 
+                                                    VerticalAlignment="Top">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#FF48BB78"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding Status}" Value="Running">
-                                                                <Setter Property="Fill" Value="#FFED8936"/>
+                                                                <Setter Property="Background" Value="#FFED8936"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding Status}" Value="Failed">
-                                                                <Setter Property="Fill" Value="#FFF56565"/>
+                                                                <Setter Property="Background" Value="#FFF56565"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </Ellipse.Style>
-                                            </Ellipse>
-                                            <TextBlock Text="{Binding Status}" 
-                                                       FontSize="12" FontWeight="Medium"
-                                                       Foreground="#FFE2E8F0"/>
-                                        </StackPanel>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding Status}" 
+                                                           FontSize="10" FontWeight="Medium"
+                                                           Foreground="White"/>
+                                            </Border>
+                                        </Grid>
+
 
                                         <!-- Module Description -->
                                         <TextBlock Grid.Row="2" 
@@ -193,30 +245,36 @@
                                                    Margin="0,0,0,12"/>
 
                                         <!-- Progress Bar -->
-                                        <ProgressBar Grid.Row="3" 
-                                                     Value="{Binding Progress}" 
-                                                     Maximum="100"
-                                                     Height="4" 
-                                                     Background="#FF1A202C" 
-                                                     Foreground="#FF4299E1" 
-                                                     BorderThickness="0"
-                                                     Margin="0,0,0,12"
-                                                     Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        <Border Grid.Row="3" CornerRadius="8" Background="#FF1A202C" Height="6" 
+                                                Margin="0,0,0,16"
+                                                Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <ProgressBar Value="{Binding Progress}" 
+                                                         Maximum="100"
+                                                         Background="Transparent" 
+                                                         BorderThickness="0"
+                                                         Style="{StaticResource ModernProgressBarStyle}"/>
+                                        </Border>
 
                                         <!-- Module Actions -->
-                                        <StackPanel Grid.Row="3" Orientation="Horizontal">
-                                            <CheckBox Content="Enabled" 
+                                        <Grid Grid.Row="3">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <CheckBox Grid.Column="0" Content="Enabled" 
                                                       IsChecked="{Binding Enabled}"
                                                       Foreground="#FFE2E8F0" 
-                                                      Margin="0,0,12,0"/>
-                                            <Button Content="Run" 
+                                                      FontSize="12" FontWeight="Medium"
+                                                      VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="▶ Run" 
                                                     Command="{Binding RunDiscoveryCommand}"
                                                     Style="{StaticResource ModernButtonStyle}"
                                                     Background="#FF38A169"
-                                                    Padding="12,6"
-                                                    FontSize="12"
+                                                    Padding="12,8"
+                                                    FontSize="11" FontWeight="SemiBold"
                                                     IsEnabled="{Binding IsEnabled}"/>
-                                        </StackPanel>
+                                        </Grid>
                                     </Grid>
                                 </Border>
                             </DataTemplate>

@@ -417,12 +417,16 @@ namespace MandADiscoverySuite.Services
                     return result;
                 }
 
-                // Test 1: Basic authentication
+                // Test 1: Basic authentication (app-only)
                 try
                 {
-                    var me = await _graphServiceClient.Me.Request().GetAsync();
+                    // Organization read works with application permissions
+                    var orgs = await _graphServiceClient.Organization
+                        .Request()
+                        .Top(1)
+                        .GetAsync();
                     result.AuthenticationTest = true;
-                    result.AuthenticatedUser = me?.DisplayName ?? "Unknown";
+                    result.AuthenticatedUser = orgs?.FirstOrDefault()?.DisplayName ?? "App-Only";
                 }
                 catch (Exception ex)
                 {
@@ -448,9 +452,12 @@ namespace MandADiscoverySuite.Services
                 // Test 3: Mail send permissions (dry run)
                 try
                 {
-                    // We can't easily test mail send without actually sending,
-                    // so we'll just check if we can access the /me/sendMail endpoint schema
-                    result.MailSendPermission = true; // Assume it works if we got this far
+                    // Validate permission by probing users collection (Mail.Send requires application permission)
+                    var users = await _graphServiceClient.Users
+                        .Request()
+                        .Top(1)
+                        .GetAsync();
+                    result.MailSendPermission = true;
                 }
                 catch (Exception ex)
                 {
@@ -742,7 +749,14 @@ namespace MandADiscoverySuite.Services
                     }
                 };
 
-                await _graphServiceClient.Me
+                // With application permissions, send as a specific user (senderEmail)
+                var sender = senderEmail ?? _configuration.SenderEmail;
+                if (string.IsNullOrWhiteSpace(sender))
+                {
+                    throw new InvalidOperationException("Sender email must be specified for Graph email sending.");
+                }
+
+                await _graphServiceClient.Users[sender]
                     .SendMail(message, false)
                     .Request()
                     .PostAsync();
