@@ -116,13 +116,50 @@ function Install-NmapIfNeeded {
             New-Item -ItemType Directory -Path $nmapDir -Force | Out-Null
         }
         
-        # Download nmap (using a known working URL - adjust as needed)
-        $nmapUrl = "https://nmap.org/dist/nmap-7.94-win32.zip"
-        Invoke-WebRequest -Uri $nmapUrl -OutFile $nmapZip -UseBasicParsing
+        # Download nmap from multiple fallback sources
+        $nmapUrls = @(
+            "https://nmap.org/dist/nmap-7.95-win32.zip",
+            "https://github.com/nmap/nmap/releases/download/v7.95/nmap-7.95-win32.zip",
+            "https://download.insecure.org/nmap/dist/nmap-7.95-win32.zip"
+        )
+        
+        $downloadSuccess = $false
+        foreach ($nmapUrl in $nmapUrls) {
+            try {
+                Write-InfrastructureLog "📥 Trying nmap download from: $nmapUrl" "INFO"
+                Invoke-WebRequest -Uri $nmapUrl -OutFile $nmapZip -UseBasicParsing -TimeoutSec 30
+                if (Test-Path $nmapZip) {
+                    $downloadSuccess = $true
+                    Write-InfrastructureLog "✅ Successfully downloaded nmap from: $nmapUrl" "SUCCESS"
+                    break
+                }
+            }
+            catch {
+                Write-InfrastructureLog "❌ Failed to download from $nmapUrl : $($_.Exception.Message)" "WARN"
+                continue
+            }
+        }
+        
+        if (-not $downloadSuccess) {
+            Write-InfrastructureLog "⚠️ All nmap download sources failed - continuing with PowerShell alternatives" "WARN"
+            return $false
+        }
         
         # Extract
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-        [System.IO.Compression.ZipFile]::ExtractToDirectory($nmapZip, $nmapDir)
+        try {
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            [System.IO.Compression.ZipFile]::ExtractToDirectory($nmapZip, $nmapDir)
+            Write-InfrastructureLog "✅ Successfully extracted nmap" "SUCCESS"
+            
+            # Clean up the zip file
+            Remove-Item $nmapZip -Force -ErrorAction SilentlyContinue
+        }
+        catch {
+            Write-InfrastructureLog "❌ Failed to extract nmap: $($_.Exception.Message)" "ERROR"
+            # Clean up the zip file even on failure
+            Remove-Item $nmapZip -Force -ErrorAction SilentlyContinue
+            return $false
+        }
         
         # Find the nmap.exe in the extracted folder
         $nmapExe = Get-ChildItem -Path $nmapDir -Name "nmap.exe" -Recurse | Select-Object -First 1

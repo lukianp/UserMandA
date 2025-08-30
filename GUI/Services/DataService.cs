@@ -102,7 +102,8 @@ namespace MandADiscoverySuite.Services
                 var groupTask = LoadGroupsAsync(profileName, false, cancellationToken);
                 var appTask = LoadApplicationsAsync(profileName, false, cancellationToken);
 
-                await Task.WhenAll(userTask, infrastructureTask, groupTask, appTask);
+                Task[] tasks = { userTask, infrastructureTask, groupTask, appTask };
+                await Task.WhenAll(tasks);
                 
                 var users = userTask.Result.ToList();
                 var infrastructure = infrastructureTask.Result.ToList();
