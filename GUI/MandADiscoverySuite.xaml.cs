@@ -81,6 +81,8 @@ namespace MandADiscoverySuite
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // StartupOptimizationService no longer needed - removed during simplification
+            /*
             StartupOptimizationService startupService = null;
             try
             {
@@ -91,9 +93,14 @@ namespace MandADiscoverySuite
             {
                 System.Diagnostics.Debug.WriteLine($"StartupOptimizationService not available: {ex.Message}");
             }
+            */
             
             try
             {
+                // Initialize TabControl reference so TabsService can properly manage tab selection
+                ViewModel.InitializeTabControl(MainTabControl);
+                System.Diagnostics.Debug.WriteLine("TabControl initialized for tab selection management");
+                
                 // Set up lazy loading for each view
                 var dashboardView = FindName("DashboardView") as FrameworkElement;
                 var usersView = FindName("UsersView") as FrameworkElement;
@@ -122,7 +129,6 @@ namespace MandADiscoverySuite
                         {
                             ViewModel.RefreshDashboardCommand.Execute(null);
                         }
-                        return Task.CompletedTask;
                     });
                 }
 
@@ -135,7 +141,6 @@ namespace MandADiscoverySuite
                         {
                             ViewModel.RefreshUsersCommand.Execute(null);
                         }
-                        return Task.CompletedTask;
                     });
                 }
 
@@ -158,7 +163,6 @@ namespace MandADiscoverySuite
                         {
                             ViewModel.RefreshInfrastructureCommand.Execute(null);
                         }
-                        return Task.CompletedTask;
                     });
                 }
 
@@ -171,7 +175,6 @@ namespace MandADiscoverySuite
                         {
                             ViewModel.RefreshGroupsCommand.Execute(null);
                         }
-                        return Task.CompletedTask;
                     });
                 }
 
@@ -241,7 +244,7 @@ namespace MandADiscoverySuite
             }
             finally
             {
-                startupService?.EndPhase("LazyViewSetup");
+                // startupService?.EndPhase("LazyViewSetup"); // Removed with StartupOptimizationService
             }
         }
 
@@ -249,7 +252,7 @@ namespace MandADiscoverySuite
         {
             try
             {
-                var shortcutService = SimpleServiceLocator.GetService<IKeyboardShortcutService>();
+                var shortcutService = SimpleServiceLocator.Instance.GetService<IKeyboardShortcutService>();
                 if (shortcutService != null)
                 {
                     _shortcutManager = new KeyboardShortcutManager(shortcutService);
