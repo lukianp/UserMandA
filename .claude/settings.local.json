@@ -9,7 +9,11 @@
       "Bash(.MandADiscoverySuite.exe)",
       "Bash(grep:*)",
       "Bash(dir:*)",
-      "Read(C:\\/**)"
+      "Read(C:\\/**)",
+      "Bash(start MandADiscoverySuite.exe)",
+      "Bash(dotnet run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": [],
