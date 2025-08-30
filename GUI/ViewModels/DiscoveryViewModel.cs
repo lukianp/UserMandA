@@ -89,7 +89,7 @@ namespace MandADiscoverySuite.ViewModels
                         ModuleId = module.DisplayName ?? "Unknown",
                         DisplayName = module.DisplayName,
                         Description = module.Description,
-                        Icon = GetModuleIcon(module.Category),
+                        Icon = !string.IsNullOrEmpty(module.Icon) ? module.Icon : GetModuleIcon(module.Category),
                         Category = module.Category,
                         Enabled = module.Enabled,
                         Status = "Ready"
@@ -191,14 +191,20 @@ namespace MandADiscoverySuite.ViewModels
         {
             return category?.ToLower() switch
             {
-                "activedirectory" => "👥",
-                "exchange" => "📧",
-                "sharepoint" => "📄",
+                "identity" => "👥",
+                "collaboration" => "📧",
                 "infrastructure" => "🖥️",
                 "security" => "🔒",
-                "database" => "🗄️",
-                "network" => "🌐",
+                "data" => "🗄️",
+                "storage" => "💾",
+                "virtualization" => "💻",
                 "applications" => "📱",
+                "cloud" => "☁️",
+                "operations" => "⚡",
+                "device management" => "📱",
+                "compliance" => "📋",
+                "risk assessment" => "⚖️",
+                "data governance" => "📊",
                 _ => "🔍"
             };
         }

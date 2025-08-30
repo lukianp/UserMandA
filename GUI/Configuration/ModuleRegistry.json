@@ -475,6 +475,66 @@
       "priority": 1,
       "enabled": true,
       "timeout": 300
+    },
+    "OneDriveDiscovery": {
+      "displayName": "OneDrive for Business Discovery",
+      "description": "Discover personal OneDrive files, storage usage, and sharing configurations",
+      "filePath": "Discovery/OneDriveDiscovery.psm1",
+      "category": "Collaboration",
+      "icon": "☁️",
+      "priority": 1,
+      "enabled": true,
+      "timeout": 600
+    },
+    "AWSDiscovery": {
+      "displayName": "AWS Cloud Infrastructure Discovery",
+      "description": "Discover EC2 instances, S3 buckets, RDS databases, Lambda functions, and other AWS resources",
+      "filePath": "Discovery/AWSDiscovery.psm1",
+      "category": "Cloud",
+      "icon": "🔶",
+      "priority": 1,
+      "enabled": true,
+      "timeout": 1200
+    },
+    "GCPDiscovery": {
+      "displayName": "Google Cloud Platform Discovery",
+      "description": "Discover GCP Compute instances, Storage buckets, Cloud SQL, BigQuery, and other GCP resources",
+      "filePath": "Discovery/GCPDiscovery.psm1",
+      "category": "Cloud",
+      "icon": "🔵",
+      "priority": 1,
+      "enabled": true,
+      "timeout": 1200
+    },
+    "ConditionalAccessDiscovery": {
+      "displayName": "Conditional Access Policies Discovery",
+      "description": "Discover Azure AD Conditional Access policies, named locations, and security controls",
+      "filePath": "Discovery/ConditionalAccessDiscovery.psm1",
+      "category": "Security",
+      "icon": "🔒",
+      "priority": 1,
+      "enabled": true,
+      "timeout": 300
+    },
+    "DLPDiscovery": {
+      "displayName": "Data Loss Prevention Discovery",
+      "description": "Discover DLP policies, rules, sensitive information types, and compliance configurations",
+      "filePath": "Discovery/DLPDiscovery.psm1",
+      "category": "Compliance",
+      "icon": "🛡️",
+      "priority": 1,
+      "enabled": true,
+      "timeout": 600
+    },
+    "PowerBIDiscovery": {
+      "displayName": "Power BI Discovery",
+      "description": "Discover Power BI workspaces, reports, datasets, dashboards, and business intelligence assets",
+      "filePath": "Discovery/PowerBIDiscovery.psm1",
+      "category": "Collaboration",
+      "icon": "📊",
+      "priority": 2,
+      "enabled": true,
+      "timeout": 600
     }
   }
 }

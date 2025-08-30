@@ -17,7 +17,8 @@
       "Bash(taskkill:*)",
       "Bash(timeout:*)",
       "Read(C:\\/**)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(start \"\" \"MandADiscoverySuite.exe\")"
     ],
     "deny": [],
     "ask": [],
