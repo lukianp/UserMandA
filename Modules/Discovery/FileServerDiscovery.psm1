@@ -49,7 +49,7 @@ function Invoke-FileServerDiscovery {
         [string]$SessionId
     )
 
-    Write-FileServerLog -Level "HEADER" -Message "Starting Discovery (v4.0 - Clean Session Auth)" -Context $Context
+    Write-FileServerLog -Level "HEADER" -Message "🚀 Starting File Server Discovery (v4.0 - Clean Session Auth)" -Context $Context
     Write-FileServerLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -222,7 +222,7 @@ function Invoke-FileServerDiscovery {
         }
         $stopwatch.Stop()
         $result.Complete()
-        Write-FileServerLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
+        Write-FileServerLog -Level "HEADER" -Message "🎉 File Server Discovery completed in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')) - Found $($result.RecordCount) records!" -Context $Context
     }
 
     return $result

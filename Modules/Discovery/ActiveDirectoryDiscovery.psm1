@@ -86,7 +86,7 @@ function Invoke-ActiveDirectoryDiscovery {
         [string]$SessionId
     )
 
-    Write-ActiveDirectoryLog -Level "HEADER" -Message "Starting Discovery (v3.0 - Session-based)" -Context $Context
+    Write-ActiveDirectoryLog -Level "HEADER" -Message "🚀 Starting Active Directory Discovery (v3.0 - Session-based)" -Context $Context
     Write-ActiveDirectoryLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -150,19 +150,19 @@ function Invoke-ActiveDirectoryDiscovery {
         }
 
         # 5. PERFORM DISCOVERY
-        Write-ActiveDirectoryLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
+        Write-ActiveDirectoryLog -Level "HEADER" -Message "📊 Starting comprehensive data discovery" -Context $Context
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
         # Discover Users
         try {
-            Write-ActiveDirectoryLog -Level "INFO" -Message "Discovering AD Users..." -Context $Context
+            Write-ActiveDirectoryLog -Level "INFO" -Message "👥 Discovering AD Users..." -Context $Context
             $users = Get-ADUsersData -Configuration $Configuration -Context $Context -ServerParams $serverParams
             if ($users.Count -gt 0) {
                 $users | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'User' -Force }
                 $null = $allDiscoveredData.AddRange($users)
                 $result.Metadata["UserCount"] = $users.Count
             }
-            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Discovered $($users.Count) users" -Context $Context
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "✅ Discovered $($users.Count) users" -Context $Context
         } catch {
             $result.AddWarning("Failed to discover users: $($_.Exception.Message)", @{Section="Users"})
         }
@@ -231,18 +231,32 @@ function Invoke-ActiveDirectoryDiscovery {
             $result.AddWarning("Failed to discover trusts: $($_.Exception.Message)", @{Section="Trusts"})
         }
         
-        # Discover AD Sites
+        # Discover AD Sites with Enhanced Topology Data
         try {
-            Write-ActiveDirectoryLog -Level "INFO" -Message "Discovering AD Sites..." -Context $Context
+            Write-ActiveDirectoryLog -Level "INFO" -Message "🏗️ Discovering AD Sites & Topology..." -Context $Context
             $sites = Get-ADSitesData -Configuration $Configuration -Context $Context -ServerParams $serverParams
             if ($sites.Count -gt 0) {
                 $sites | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Site' -Force }
                 $null = $allDiscoveredData.AddRange($sites)
                 $result.Metadata["SiteCount"] = $sites.Count
             }
-            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Discovered $($sites.Count) AD sites" -Context $Context
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "✅ Discovered $($sites.Count) AD sites with topology data" -Context $Context
         } catch {
             $result.AddWarning("Failed to discover sites: $($_.Exception.Message)", @{Section="Sites"})
+        }
+        
+        # Discover Site Links & Replication Topology 
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "🔗 Analyzing replication topology..." -Context $Context
+            $siteLinks = Get-ADSiteLinksData -Configuration $Configuration -Context $Context -ServerParams $serverParams
+            if ($siteLinks.Count -gt 0) {
+                $siteLinks | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'SiteLink' -Force }
+                $null = $allDiscoveredData.AddRange($siteLinks)
+                $result.Metadata["SiteLinkCount"] = $siteLinks.Count
+            }
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "✅ Mapped $($siteLinks.Count) site links for replication analysis" -Context $Context
+        } catch {
+            $result.AddWarning("Failed to discover site links: $($_.Exception.Message)", @{Section="SiteLinks"})
         }
         
         # Discover AD Subnets
@@ -287,9 +301,37 @@ function Invoke-ActiveDirectoryDiscovery {
             $result.AddWarning("Failed to discover domain controllers: $($_.Exception.Message)", @{Section="DomainControllers"})
         }
 
+        # Discover Password Policies & Security Settings
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "🔐 Analyzing password policies & security settings..." -Context $Context
+            $passwordPolicies = Get-ADPasswordPoliciesData -Configuration $Configuration -Context $Context -ServerParams $serverParams
+            if ($passwordPolicies.Count -gt 0) {
+                $passwordPolicies | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'PasswordPolicy' -Force }
+                $null = $allDiscoveredData.AddRange($passwordPolicies)
+                $result.Metadata["PasswordPolicyCount"] = $passwordPolicies.Count
+            }
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "✅ Analyzed $($passwordPolicies.Count) password policies" -Context $Context
+        } catch {
+            $result.AddWarning("Failed to discover password policies: $($_.Exception.Message)", @{Section="PasswordPolicies"})
+        }
+
+        # Discover Service Accounts & Special Accounts
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "👤 Identifying service accounts & privileged users..." -Context $Context
+            $serviceAccounts = Get-ADServiceAccountsData -Configuration $Configuration -Context $Context -ServerParams $serverParams
+            if ($serviceAccounts.Count -gt 0) {
+                $serviceAccounts | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'ServiceAccount' -Force }
+                $null = $allDiscoveredData.AddRange($serviceAccounts)
+                $result.Metadata["ServiceAccountCount"] = $serviceAccounts.Count
+            }
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "✅ Identified $($serviceAccounts.Count) service & special accounts" -Context $Context
+        } catch {
+            $result.AddWarning("Failed to discover service accounts: $($_.Exception.Message)", @{Section="ServiceAccounts"})
+        }
+
         # 6. EXPORT DATA TO CSV
         if ($allDiscoveredData.Count -gt 0) {
-            Write-ActiveDirectoryLog -Level "INFO" -Message "Exporting $($allDiscoveredData.Count) records..." -Context $Context
+            Write-ActiveDirectoryLog -Level "INFO" -Message "📊 Exporting $($allDiscoveredData.Count) records..." -Context $Context
             
             $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
             
@@ -356,7 +398,7 @@ function Invoke-ActiveDirectoryDiscovery {
         
         $stopwatch.Stop()
         $result.Complete()
-        Write-ActiveDirectoryLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
+        Write-ActiveDirectoryLog -Level "HEADER" -Message "🎉 Discovery completed in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')) - Found $($result.RecordCount) records!" -Context $Context
     }
 
     return $result
@@ -1022,4 +1064,168 @@ Export-DiscoveryResultsEnhanced -Data $dataArray -OutputDirectory $OutputDirecto
         }
     }
 }
+# New Enhanced Discovery Functions
+
+function Get-ADSiteLinksData {
+    [CmdletBinding()]
+    param(
+        [hashtable]$Configuration,
+        [hashtable]$Context,
+        [hashtable]$ServerParams
+    )
+    
+    $siteLinks = @()
+    try {
+        Write-ActiveDirectoryLog -Level "DEBUG" -Message "Querying AD site links..." -Context $Context
+        
+        $adSiteLinks = Get-ADReplicationSiteLink -Filter * @ServerParams | Select-Object -Property *
+        
+        foreach ($siteLink in $adSiteLinks) {
+            $obj = [PSCustomObject]@{
+                Name = $siteLink.Name
+                Cost = $siteLink.Cost
+                ReplicationFrequencyInMinutes = $siteLink.ReplicationFrequencyInMinutes
+                SitesIncluded = ($siteLink.SitesIncluded -join ', ')
+                InterSiteTransportProtocol = $siteLink.InterSiteTransportProtocol
+                Description = $siteLink.Description
+                Created = $siteLink.Created
+                Modified = $siteLink.Modified
+                DistinguishedName = $siteLink.DistinguishedName
+            }
+            $siteLinks += $obj
+        }
+        
+        Write-ActiveDirectoryLog -Level "DEBUG" -Message "Retrieved $($siteLinks.Count) site links" -Context $Context
+    }
+    catch {
+        Write-ActiveDirectoryLog -Level "WARN" -Message "Failed to get site links: $($_.Exception.Message)" -Context $Context
+    }
+    
+    return $siteLinks
+}
+
+function Get-ADPasswordPoliciesData {
+    [CmdletBinding()]
+    param(
+        [hashtable]$Configuration,
+        [hashtable]$Context,
+        [hashtable]$ServerParams
+    )
+    
+    $policies = @()
+    try {
+        Write-ActiveDirectoryLog -Level "DEBUG" -Message "Querying password policies..." -Context $Context
+        
+        # Default Domain Policy
+        $defaultPolicy = Get-ADDefaultDomainPasswordPolicy @ServerParams
+        if ($defaultPolicy) {
+            $obj = [PSCustomObject]@{
+                PolicyType = "Default Domain Policy"
+                MinPasswordLength = $defaultPolicy.MinPasswordLength
+                MaxPasswordAge = $defaultPolicy.MaxPasswordAge.Days
+                MinPasswordAge = $defaultPolicy.MinPasswordAge.Days
+                PasswordHistoryCount = $defaultPolicy.PasswordHistoryCount
+                ComplexityEnabled = $defaultPolicy.ComplexityEnabled
+                ReversibleEncryptionEnabled = $defaultPolicy.ReversibleEncryptionEnabled
+                LockoutThreshold = $defaultPolicy.LockoutThreshold
+                LockoutDuration = if ($defaultPolicy.LockoutDuration.TotalMinutes -eq 0) { "Until Admin Unlocks" } else { "$($defaultPolicy.LockoutDuration.TotalMinutes) minutes" }
+                LockoutObservationWindow = "$($defaultPolicy.LockoutObservationWindow.TotalMinutes) minutes"
+                DistinguishedName = (Get-ADDomain @ServerParams).DistinguishedName
+            }
+            $policies += $obj
+        }
+        
+        # Fine-Grained Password Policies
+        try {
+            $fgPolicies = Get-ADFineGrainedPasswordPolicy -Filter * @ServerParams | Select-Object -Property *
+            foreach ($fgPolicy in $fgPolicies) {
+                $obj = [PSCustomObject]@{
+                    PolicyType = "Fine-Grained Policy"
+                    Name = $fgPolicy.Name
+                    MinPasswordLength = $fgPolicy.MinPasswordLength
+                    MaxPasswordAge = $fgPolicy.MaxPasswordAge.Days
+                    MinPasswordAge = $fgPolicy.MinPasswordAge.Days
+                    PasswordHistoryCount = $fgPolicy.PasswordHistoryCount
+                    ComplexityEnabled = $fgPolicy.ComplexityEnabled
+                    ReversibleEncryptionEnabled = $fgPolicy.ReversibleEncryptionEnabled
+                    LockoutThreshold = $fgPolicy.LockoutThreshold
+                    LockoutDuration = if ($fgPolicy.LockoutDuration.TotalMinutes -eq 0) { "Until Admin Unlocks" } else { "$($fgPolicy.LockoutDuration.TotalMinutes) minutes" }
+                    LockoutObservationWindow = "$($fgPolicy.LockoutObservationWindow.TotalMinutes) minutes"
+                    Precedence = $fgPolicy.Precedence
+                    AppliesTo = ($fgPolicy.AppliesTo -join '; ')
+                    DistinguishedName = $fgPolicy.DistinguishedName
+                }
+                $policies += $obj
+            }
+        } catch {
+            Write-ActiveDirectoryLog -Level "DEBUG" -Message "No fine-grained password policies found or insufficient permissions" -Context $Context
+        }
+        
+        Write-ActiveDirectoryLog -Level "DEBUG" -Message "Retrieved $($policies.Count) password policies" -Context $Context
+    }
+    catch {
+        Write-ActiveDirectoryLog -Level "WARN" -Message "Failed to get password policies: $($_.Exception.Message)" -Context $Context
+    }
+    
+    return $policies
+}
+
+function Get-ADServiceAccountsData {
+    [CmdletBinding()]
+    param(
+        [hashtable]$Configuration,
+        [hashtable]$Context,
+        [hashtable]$ServerParams
+    )
+    
+    $serviceAccounts = @()
+    try {
+        Write-ActiveDirectoryLog -Level "DEBUG" -Message "Identifying service accounts and special accounts..." -Context $Context
+        
+        # Get all users with service account indicators
+        $users = Get-ADUser -Filter * -Properties * @ServerParams | Where-Object {
+            $_.ServicePrincipalNames.Count -gt 0 -or 
+            $_.Name -like "*service*" -or 
+            $_.Name -like "*svc*" -or
+            $_.SamAccountName -like "*service*" -or
+            $_.SamAccountName -like "*svc*" -or
+            $_.Description -like "*service*" -or
+            $_.UserPrincipalName -like "*service*" -or
+            $_.PasswordNeverExpires -eq $true -or
+            ($_.MemberOf | Where-Object { $_ -match "service|admin|privileged" })
+        }
+        
+        foreach ($user in $users) {
+            $obj = [PSCustomObject]@{
+                Name = $user.Name
+                SamAccountName = $user.SamAccountName
+                UserPrincipalName = $user.UserPrincipalName
+                AccountType = if ($user.ServicePrincipalNames.Count -gt 0) { "Service Account (SPN)" } else { "Potential Service Account" }
+                Enabled = $user.Enabled
+                PasswordNeverExpires = $user.PasswordNeverExpires
+                PasswordLastSet = $user.PasswordLastSet
+                LastLogonDate = $user.LastLogonDate
+                ServicePrincipalNames = ($user.ServicePrincipalNames -join '; ')
+                MemberOfGroups = (($user.MemberOf | ForEach-Object { (Get-ADGroup $_ @ServerParams).Name }) -join '; ')
+                Description = $user.Description
+                Department = $user.Department
+                Title = $user.Title
+                Manager = if ($user.Manager) { (Get-ADUser $user.Manager @ServerParams).Name } else { "" }
+                Created = $user.Created
+                DistinguishedName = $user.DistinguishedName
+                RiskLevel = if ($user.ServicePrincipalNames.Count -gt 0 -and $user.PasswordNeverExpires) { "HIGH" } 
+                          elseif ($user.ServicePrincipalNames.Count -gt 0) { "MEDIUM" } else { "LOW" }
+            }
+            $serviceAccounts += $obj
+        }
+        
+        Write-ActiveDirectoryLog -Level "DEBUG" -Message "Identified $($serviceAccounts.Count) service/special accounts" -Context $Context
+    }
+    catch {
+        Write-ActiveDirectoryLog -Level "WARN" -Message "Failed to identify service accounts: $($_.Exception.Message)" -Context $Context
+    }
+    
+    return $serviceAccounts
+}
+
 #endregion M&A Enhancements (Non-breaking): Export-DiscoveryResultsEnhanced

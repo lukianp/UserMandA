@@ -13,7 +13,11 @@
       "Bash(start MandADiscoverySuite.exe)",
       "Bash(dotnet run:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout:*)",
+      "Read(C:\\/**)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": [],

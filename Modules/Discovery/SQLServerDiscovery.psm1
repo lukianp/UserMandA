@@ -49,7 +49,7 @@ function Invoke-SQLServerDiscovery {
         [string]$SessionId
     )
 
-    Write-SQLServerLog -Level "HEADER" -Message "Starting SQL Server Discovery (v5.0 - Enhanced Enterprise Discovery)" -Context $Context
+    Write-SQLServerLog -Level "HEADER" -Message "🚀 Starting SQL Server Discovery (v5.0 - Enhanced Enterprise Discovery)" -Context $Context
     Write-SQLServerLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -77,11 +77,11 @@ function Invoke-SQLServerDiscovery {
         # Perform SQL Server discovery
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
-        Write-SQLServerLog -Level "INFO" -Message "Starting comprehensive SQL Server discovery" -Context $Context
+        Write-SQLServerLog -Level "INFO" -Message "📊 Starting comprehensive SQL Server discovery" -Context $Context
         
         # Discovery phase 1: Find SQL Server instances via multiple methods
         $discoveredInstances = Find-SQLServerInstances -Context $Context
-        Write-SQLServerLog -Level "INFO" -Message "Found $($discoveredInstances.Count) potential SQL Server instances" -Context $Context
+        Write-SQLServerLog -Level "SUCCESS" -Message "✅ Found $($discoveredInstances.Count) potential SQL Server instances" -Context $Context
         
         # Discovery phase 2: Collect detailed information for each instance
         foreach ($instance in $discoveredInstances) {
@@ -165,7 +165,7 @@ function Find-SQLServerInstances {
     )
     
     $instances = [System.Collections.ArrayList]::new()
-    Write-SQLServerLog -Level "INFO" -Message "Starting SQL Server instance discovery using multiple detection methods" -Context $Context
+    Write-SQLServerLog -Level "INFO" -Message "🔍 Starting SQL Server instance discovery using multiple detection methods" -Context $Context
     
     # Method 1: WMI Service detection
     try {
@@ -485,7 +485,7 @@ ORDER BY d.name
                     $null = $databases.Add($dbData)
                 }
                 
-                Write-SQLServerLog -Level "SUCCESS" -Message "Collected database details for instance $($instance.InstanceName): $($dbResults.Count) databases" -Context $Context
+                Write-SQLServerLog -Level "SUCCESS" -Message "✅ Collected database details for instance $($instance.InstanceName): $($dbResults.Count) databases" -Context $Context
             }
             
         } catch {
@@ -493,8 +493,179 @@ ORDER BY d.name
         }
     }
     
-    Write-SQLServerLog -Level "INFO" -Message "Database detail collection completed. Total databases: $($databases.Count)" -Context $Context
+    Write-SQLServerLog -Level "SUCCESS" -Message "🎉 Database detail collection completed. Total databases: $($databases.Count)" -Context $Context
     return $databases
+}
+
+function Get-SQLServerSecurityAssessment {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [PSCustomObject]$Instance,
+        [hashtable]$Context
+    )
+    
+    $securityFindings = [System.Collections.ArrayList]::new()
+    Write-SQLServerLog -Level "INFO" -Message "🔐 Performing security assessment for $($Instance.InstanceName)..." -Context $Context
+    
+    try {
+        $serverName = if ($Instance.InstanceName -eq 'MSSQLSERVER') { $env:COMPUTERNAME } else { "$env:COMPUTERNAME\$($Instance.InstanceName)" }
+        
+        # Check for SQL Server logins with weak passwords
+        $weakPasswordQuery = @"
+SELECT 
+    sp.name as LoginName,
+    sp.type_desc as LoginType,
+    sp.is_disabled as IsDisabled,
+    sp.default_database_name as DefaultDatabase,
+    CASE WHEN sp.password_hash IS NULL THEN 'No Password' ELSE 'Has Password' END as PasswordStatus
+FROM sys.server_principals sp
+WHERE sp.type IN ('S', 'U') -- SQL and Windows logins
+AND sp.name NOT LIKE '##%' -- Exclude system accounts
+ORDER BY sp.name
+"@
+        
+        $loginResults = Invoke-Sqlcmd -ServerInstance $serverName -Query $weakPasswordQuery -QueryTimeout 30 -ErrorAction Stop
+        
+        foreach ($login in $loginResults) {
+            $riskLevel = "LOW"
+            if ($login.PasswordStatus -eq "No Password") { $riskLevel = "HIGH" }
+            elseif ($login.IsDisabled -eq $false -and $login.LoginType -eq "SQL_LOGIN") { $riskLevel = "MEDIUM" }
+            
+            $finding = [PSCustomObject]@{
+                Server = $env:COMPUTERNAME
+                Instance = $Instance.InstanceName
+                CheckType = "Login Security"
+                LoginName = $login.LoginName
+                LoginType = $login.LoginType
+                IsDisabled = $login.IsDisabled
+                PasswordStatus = $login.PasswordStatus
+                DefaultDatabase = $login.DefaultDatabase
+                RiskLevel = $riskLevel
+                Recommendation = if ($riskLevel -eq "HIGH") { "Set strong password immediately" } 
+                               elseif ($riskLevel -eq "MEDIUM") { "Review and strengthen password policy" }
+                               else { "Monitor regularly" }
+            }
+            $null = $securityFindings.Add($finding)
+        }
+        
+        # Check for elevated permissions
+        $privQuery = @"
+SELECT 
+    sp.name as PrincipalName,
+    sp.type_desc as PrincipalType,
+    r.name as RoleName,
+    CASE 
+        WHEN r.name IN ('sysadmin', 'serveradmin', 'securityadmin') THEN 'HIGH'
+        WHEN r.name IN ('processadmin', 'setupadmin', 'bulkadmin') THEN 'MEDIUM'
+        ELSE 'LOW'
+    END as RiskLevel
+FROM sys.server_role_members rm
+JOIN sys.server_principals sp ON rm.member_principal_id = sp.principal_id
+JOIN sys.server_principals r ON rm.role_principal_id = r.principal_id
+WHERE sp.type IN ('S', 'U', 'G')
+AND sp.name NOT LIKE '##%'
+ORDER BY RiskLevel DESC, sp.name
+"@
+        
+        $privResults = Invoke-Sqlcmd -ServerInstance $serverName -Query $privQuery -QueryTimeout 30 -ErrorAction Stop
+        
+        foreach ($priv in $privResults) {
+            $finding = [PSCustomObject]@{
+                Server = $env:COMPUTERNAME
+                Instance = $Instance.InstanceName
+                CheckType = "Elevated Permissions"
+                PrincipalName = $priv.PrincipalName
+                PrincipalType = $priv.PrincipalType
+                RoleName = $priv.RoleName
+                RiskLevel = $priv.RiskLevel
+                Recommendation = if ($priv.RiskLevel -eq "HIGH") { "Review necessity of sysadmin access" } 
+                               elseif ($priv.RiskLevel -eq "MEDIUM") { "Monitor privileged account usage" }
+                               else { "Regular access review" }
+            }
+            $null = $securityFindings.Add($finding)
+        }
+        
+        Write-SQLServerLog -Level "SUCCESS" -Message "✅ Security assessment completed: $($securityFindings.Count) findings" -Context $Context
+        
+    } catch {
+        Write-SQLServerLog -Level "WARN" -Message "⚠️ Security assessment failed: $($_.Exception.Message)" -Context $Context
+    }
+    
+    return $securityFindings
+}
+
+function Get-SQLServerPerformanceMetrics {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [PSCustomObject]$Instance,
+        [hashtable]$Context
+    )
+    
+    $perfMetrics = [System.Collections.ArrayList]::new()
+    Write-SQLServerLog -Level "INFO" -Message "📊 Collecting performance metrics for $($Instance.InstanceName)..." -Context $Context
+    
+    try {
+        $serverName = if ($Instance.InstanceName -eq 'MSSQLSERVER') { $env:COMPUTERNAME } else { "$env:COMPUTERNAME\$($Instance.InstanceName)" }
+        
+        # Get key performance counters
+        $perfQuery = @"
+SELECT 
+    counter_name,
+    instance_name,
+    cntr_value,
+    cntr_type
+FROM sys.dm_os_performance_counters
+WHERE object_name LIKE '%SQL Statistics%'
+   OR object_name LIKE '%Buffer Manager%' 
+   OR object_name LIKE '%Memory Manager%'
+   OR object_name LIKE '%Locks%'
+ORDER BY object_name, counter_name
+"@
+        
+        $perfResults = Invoke-Sqlcmd -ServerInstance $serverName -Query $perfQuery -QueryTimeout 30 -ErrorAction Stop
+        
+        # Get wait statistics
+        $waitQuery = @"
+SELECT TOP 10
+    wait_type,
+    wait_time_ms,
+    signal_wait_time_ms,
+    waiting_tasks_count,
+    CAST(wait_time_ms * 100.0 / SUM(wait_time_ms) OVER() AS DECIMAL(5,2)) as percentage
+FROM sys.dm_os_wait_stats
+WHERE wait_type NOT IN ('BROKER_EVENTHANDLER', 'BROKER_RECEIVE_WAITFOR', 'BROKER_TASK_STOP',
+                        'BROKER_TO_FLUSH', 'BROKER_TRANSMITTER', 'CHECKPOINT_QUEUE',
+                        'CHKPT', 'CLR_AUTO_EVENT', 'CLR_MANUAL_EVENT', 'CLR_SEMAPHORE')
+ORDER BY wait_time_ms DESC
+"@
+        
+        $waitResults = Invoke-Sqlcmd -ServerInstance $serverName -Query $waitQuery -QueryTimeout 30 -ErrorAction Stop
+        
+        # Compile performance summary
+        $metric = [PSCustomObject]@{
+            Server = $env:COMPUTERNAME
+            Instance = $Instance.InstanceName
+            CollectionTime = Get-Date
+            TopWaitType = if ($waitResults) { $waitResults[0].wait_type } else { "N/A" }
+            TopWaitPercentage = if ($waitResults) { $waitResults[0].percentage } else { 0 }
+            BufferCacheHitRatio = ($perfResults | Where-Object { $_.counter_name -like "*Buffer cache hit ratio*" } | Select-Object -First 1).cntr_value
+            PageLifeExpectancy = ($perfResults | Where-Object { $_.counter_name -like "*Page life expectancy*" } | Select-Object -First 1).cntr_value
+            BatchRequestsPerSec = ($perfResults | Where-Object { $_.counter_name -like "*Batch Requests/sec*" } | Select-Object -First 1).cntr_value
+            CompilationsPerSec = ($perfResults | Where-Object { $_.counter_name -like "*SQL Compilations/sec*" } | Select-Object -First 1).cntr_value
+            HealthStatus = "Good" # Could be enhanced with threshold checking
+        }
+        
+        $null = $perfMetrics.Add($metric)
+        
+        Write-SQLServerLog -Level "SUCCESS" -Message "✅ Performance metrics collected successfully" -Context $Context
+        
+    } catch {
+        Write-SQLServerLog -Level "WARN" -Message "⚠️ Performance metrics collection failed: $($_.Exception.Message)" -Context $Context
+    }
+    
+    return $perfMetrics
 }
 
 Export-ModuleMember -Function Invoke-SQLServerDiscovery

@@ -212,8 +212,8 @@
       "filePath": "Discovery/PowerPlatformDiscovery.psm1",
       "category": "Collaboration",
       "icon": "⚡",
-      "priority": 3,
-      "enabled": false,
+      "priority": 2,
+      "enabled": true,
       "timeout": 300
     },
     "DatabaseSchemaDiscovery": {
@@ -222,8 +222,8 @@
       "filePath": "Discovery/DatabaseSchemaDiscovery.psm1",
       "category": "Data",
       "icon": "🗂️",
-      "priority": 2,
-      "enabled": false,
+      "priority": 1,
+      "enabled": true,
       "timeout": 300
     },
     "ThreatDetectionEngine": {
@@ -282,18 +282,18 @@
       "filePath": "Discovery/BackupRecoveryDiscovery.psm1",
       "category": "Infrastructure", 
       "icon": "💿",
-      "priority": 3,
-      "enabled": false,
+      "priority": 1,
+      "enabled": true,
       "timeout": 300
     },
     "ContainerOrchestration": {
       "displayName": "Container Discovery",
       "description": "Discover Kubernetes clusters and containerized applications",
-      "filePath": "Discovery/ContainerOrchestration.psm1",
+      "filePath": "Infrastructure/ContainerOrchestration.psm1",
       "category": "Cloud",
       "icon": "📦",
-      "priority": 3,
-      "enabled": false,
+      "priority": 2,
+      "enabled": true,
       "timeout": 300
     },
     "ScheduledTaskDiscovery": {
@@ -302,8 +302,8 @@
       "filePath": "Discovery/ScheduledTaskDiscovery.psm1",
       "category": "Operations",
       "icon": "⏰",
-      "priority": 3,
-      "enabled": false,
+      "priority": 2,
+      "enabled": true,
       "timeout": 300
     },
     "GraphDiscovery": {
@@ -312,8 +312,8 @@
       "filePath": "Discovery/GraphDiscovery.psm1",
       "category": "Identity",
       "icon": "📈",
-      "priority": 3,
-      "enabled": false,
+      "priority": 2,
+      "enabled": true,
       "timeout": 300
     },
     "EntraIDAppDiscovery": {
@@ -382,6 +382,96 @@
       "filePath": "Assessment/EnvironmentRiskScoring.psm1",
       "category": "Risk Assessment",
       "icon": "⚖️",
+      "priority": 1,
+      "enabled": true,
+      "timeout": 300
+    },
+    "InfrastructureDiscovery": {
+      "displayName": "Infrastructure & Network Discovery",
+      "description": "Advanced network scanning with nmap integration for comprehensive infrastructure mapping",
+      "filePath": "Discovery/InfrastructureDiscovery.psm1",
+      "category": "Infrastructure",
+      "icon": "🗺️",
+      "priority": 1,
+      "enabled": true,
+      "timeout": 1800
+    },
+    "DNSDHCPDiscovery": {
+      "displayName": "DNS & DHCP Discovery",
+      "description": "Discover DNS servers, zones, and DHCP configurations",
+      "filePath": "Discovery/DNSDHCPDiscovery.psm1",
+      "category": "Infrastructure",
+      "icon": "🌐",
+      "priority": 1,
+      "enabled": true,
+      "timeout": 300
+    },
+    "CertificateAuthorityDiscovery": {
+      "displayName": "Certificate Authority Discovery",
+      "description": "Discover PKI infrastructure and certificate authorities",
+      "filePath": "Discovery/CertificateAuthorityDiscovery.psm1",
+      "category": "Security",
+      "icon": "📋",
+      "priority": 1,
+      "enabled": true,
+      "timeout": 300
+    },
+    "ConcurrentDiscoveryEngine": {
+      "displayName": "Concurrent Discovery Engine",
+      "description": "High-performance parallel discovery execution engine",
+      "filePath": "Discovery/ConcurrentDiscoveryEngine.psm1",
+      "category": "Operations",
+      "icon": "⚡",
+      "priority": 1,
+      "enabled": true,
+      "timeout": 300
+    },
+    "WebServerConfigDiscovery": {
+      "displayName": "Web Server Configuration Discovery",
+      "description": "Discover web server configurations and virtual hosts",
+      "filePath": "Discovery/WebServerConfigDiscovery.psm1",
+      "category": "Infrastructure",
+      "icon": "🌐",
+      "priority": 2,
+      "enabled": true,
+      "timeout": 300
+    },
+    "PanoramaInterrogation": {
+      "displayName": "Panorama Configuration Discovery",
+      "description": "Discover Palo Alto Panorama configurations and policies",
+      "filePath": "Discovery/PanoramaInterrogation.psm1",
+      "category": "Security",
+      "icon": "🔥",
+      "priority": 3,
+      "enabled": true,
+      "timeout": 300
+    },
+    "RealTimeDiscoveryEngine": {
+      "displayName": "Real-Time Discovery Engine",
+      "description": "Real-time infrastructure and service discovery",
+      "filePath": "Discovery/RealTimeDiscoveryEngine.psm1",
+      "category": "Operations",
+      "icon": "⚡",
+      "priority": 2,
+      "enabled": true,
+      "timeout": 300
+    },
+    "VirtualizationDiscovery": {
+      "displayName": "Virtualization Platform Discovery",
+      "description": "Discover virtualization platforms and virtual machines",
+      "filePath": "Discovery/VirtualizationDiscovery.psm1",
+      "category": "Virtualization",
+      "icon": "💻",
+      "priority": 2,
+      "enabled": true,
+      "timeout": 300
+    },
+    "EnvironmentDetectionDiscovery": {
+      "displayName": "Environment Detection",
+      "description": "Automatic detection and classification of IT environments",
+      "filePath": "Discovery/EnvironmentDetectionDiscovery.psm1",
+      "category": "Operations",
+      "icon": "🔍",
       "priority": 1,
       "enabled": true,
       "timeout": 300
