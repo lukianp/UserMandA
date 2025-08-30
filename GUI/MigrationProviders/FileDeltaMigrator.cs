@@ -50,7 +50,6 @@ namespace MandADiscoverySuite.MigrationProviders
 
                 if (!changes.Any())
                 {
-                    result.Success = true;
                     return result;
                 }
 
@@ -90,7 +89,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 result.MigrationResults = migrationResults;
                 result.ChangesProcessed = migrationResults.Count(r => r.IsSuccess);
                 result.ChangesSkipped = result.ChangesDetected - changesList.Count;
-                result.Success = migrationResults.All(r => r.IsSuccess);
+                // result.Success is computed property - no assignment needed
 
                 progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress 
                 { 
@@ -103,7 +102,7 @@ namespace MandADiscoverySuite.MigrationProviders
             catch (Exception ex)
             {
                 _logger.LogError(ex, "File delta migration failed");
-                result.Success = false;
+                // result.Success is computed property - no assignment needed
                 result.ErrorMessage = ex.Message;
                 return result;
             }
@@ -134,13 +133,19 @@ namespace MandADiscoverySuite.MigrationProviders
 
                     // Detect changes using multiple methods
                     var timestampChanges = await DetectTimestampChangesAsync(sourcePath, lastRunTimestamp, settings);
-                    changes.AddRange(timestampChanges);
+                    foreach (var change in timestampChanges)
+                    {
+                        changes.Add(change);
+                    }
 
                     // Use NTFS change log if available (Windows only)
                     if (OperatingSystem.IsWindows())
                     {
                         var ntfsChanges = await DetectNTFSChangesAsync(sourcePath, lastRunTimestamp, settings);
-                        changes.AddRange(ntfsChanges);
+                        foreach (var change in ntfsChanges)
+                        {
+                            changes.Add(change);
+                        }
                     }
                 }
 
@@ -178,7 +183,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
             try
             {
-                progress?.Report(new MigrationProgress 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress 
                 { 
                     Message = "Starting file system cutover...", 
                     Percentage = 10 
@@ -188,7 +193,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 var finalSyncStep = await PerformFinalFileSyncAsync(migrationResults, target);
                 result.CompletedSteps.Add(finalSyncStep);
 
-                progress?.Report(new MigrationProgress 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress 
                 { 
                     Message = "Updating file share mappings...", 
                     Percentage = 30 
@@ -198,7 +203,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 var shareStep = await UpdateFileShareMappingsAsync(cutoverSettings, target);
                 result.CompletedSteps.Add(shareStep);
 
-                progress?.Report(new MigrationProgress 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress 
                 { 
                     Message = "Updating DFS namespaces...", 
                     Percentage = 50 
@@ -208,7 +213,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 var dfsStep = await UpdateDFSNamespacesAsync(cutoverSettings, target);
                 result.CompletedSteps.Add(dfsStep);
 
-                progress?.Report(new MigrationProgress 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress 
                 { 
                     Message = "Validating file access...", 
                     Percentage = 70 
@@ -218,7 +223,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 var validationStep = await ValidateFileAccessAsync(migrationResults, target);
                 result.CompletedSteps.Add(validationStep);
 
-                progress?.Report(new MigrationProgress 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress 
                 { 
                     Message = "Cleaning up source shares...", 
                     Percentage = 90 
@@ -235,11 +240,14 @@ namespace MandADiscoverySuite.MigrationProviders
                 
                 if (!result.Success)
                 {
-                    result.FailedSteps.AddRange(result.CompletedSteps.Where(s => !s.Success));
+                    foreach (var failedStep in result.CompletedSteps.Where(s => !s.Success))
+                    {
+                        result.FailedSteps.Add(failedStep);
+                    }
                     result.ErrorMessage = $"File cutover failed. {result.FailedSteps.Count} steps failed.";
                 }
 
-                progress?.Report(new MigrationProgress 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress 
                 { 
                     Message = result.Success ? "File cutover completed successfully" : "File cutover completed with errors", 
                     Percentage = 100 

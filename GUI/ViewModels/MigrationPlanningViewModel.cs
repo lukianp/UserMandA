@@ -381,7 +381,7 @@ namespace MandADiscoverySuite.ViewModels
             LoadAvailableTargetCompanies();
         }
         
-        private void InitializeCommands()
+        private new void InitializeCommands()
         {
             LoadDiscoveryDataCommand = new AsyncRelayCommand(LoadDiscoveryDataAsync);
             GenerateMigrationItemsCommand = new AsyncRelayCommand(GenerateMigrationItemsAsync);

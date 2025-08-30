@@ -392,6 +392,31 @@ if (Test-Path $ConfigSourcePath) {
     }
 }
 
+# Copy embedded tools (including nmap for Infrastructure Discovery)
+$ToolsSourcePath = Join-Path (Split-Path $ScriptDir -Parent) "Tools"
+$ToolsDestPath = Join-Path $OutputPath "Tools"
+
+if (Test-Path $ToolsSourcePath) {
+    Write-Host "Copying embedded tools..." -ForegroundColor Yellow
+    
+    if (Test-Path $ToolsDestPath) {
+        Remove-Item -Path $ToolsDestPath -Recurse -Force
+    }
+    
+    Copy-Item -Path $ToolsSourcePath -Destination $ToolsDestPath -Recurse -Force
+    
+    # Verify nmap binary deployment
+    $NmapPath = Join-Path $ToolsDestPath "nmap\nmap.exe"
+    if (Test-Path $NmapPath) {
+        Write-Host "  [OK] nmap binary embedded for Infrastructure Discovery" -ForegroundColor Green
+    } else {
+        Write-Warning "nmap binary not found - Infrastructure Discovery will use fallback methods"
+    }
+    
+    $ToolCount = (Get-ChildItem -Path $ToolsDestPath -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Measure-Object).Count
+    Write-Host "  [OK] $ToolCount tool binaries copied" -ForegroundColor Green
+}
+
 # Copy additional scripts and tools
 $ScriptsSourcePath = Join-Path (Split-Path $ScriptDir -Parent) "Scripts"
 $ScriptsDestPath = Join-Path $OutputPath "Scripts"
@@ -404,7 +429,7 @@ if (Test-Path $ScriptsSourcePath) {
     }
     
     Copy-Item -Path $ScriptsSourcePath -Destination $ScriptsDestPath -Recurse -Force
-    $ScriptCount = (Get-ChildItem -Path $ScriptsDestPath -Filter "*.ps1" -Recurse).Count
+    $ScriptCount = (Get-ChildItem -Path $ScriptsDestPath -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue | Measure-Object).Count
     Write-Host "  [OK] $ScriptCount utility scripts copied" -ForegroundColor Green
 }
 
@@ -436,20 +461,37 @@ if (Test-Path $ExePath) {
     # Verify modules directory structure
     $ModulesPath = Join-Path $OutputPath "Modules"
     if (Test-Path $ModulesPath) {
-        $DiscoveryModules = Get-ChildItem -Path (Join-Path $ModulesPath "Discovery") -Filter "*.psm1" | Measure-Object
-        $CoreModules = Get-ChildItem -Path (Join-Path $ModulesPath "Core") -Filter "*.psm1" | Measure-Object
-        $UtilityModules = Get-ChildItem -Path (Join-Path $ModulesPath "Utilities") -Filter "*.psm1" | Measure-Object
+        $DiscoveryPath = Join-Path $ModulesPath "Discovery"
+        $CorePath = Join-Path $ModulesPath "Core"
+        $UtilityPath = Join-Path $ModulesPath "Utilities"
         
-        Write-Host "  [OK] Discovery Modules: $($DiscoveryModules.Count)" -ForegroundColor Green
-        Write-Host "  [OK] Core Modules: $($CoreModules.Count)" -ForegroundColor Green  
-        Write-Host "  [OK] Utility Modules: $($UtilityModules.Count)" -ForegroundColor Green
+        $DiscoveryModulesCount = if (Test-Path $DiscoveryPath) { (Get-ChildItem -Path $DiscoveryPath -Filter "*.psm1" -ErrorAction SilentlyContinue | Measure-Object).Count } else { 0 }
+        $CoreModulesCount = if (Test-Path $CorePath) { (Get-ChildItem -Path $CorePath -Filter "*.psm1" -ErrorAction SilentlyContinue | Measure-Object).Count } else { 0 }
+        $UtilityModulesCount = if (Test-Path $UtilityPath) { (Get-ChildItem -Path $UtilityPath -Filter "*.psm1" -ErrorAction SilentlyContinue | Measure-Object).Count } else { 0 }
+        
+        Write-Host "  [OK] Discovery Modules: $DiscoveryModulesCount" -ForegroundColor Green
+        Write-Host "  [OK] Core Modules: $CoreModulesCount" -ForegroundColor Green  
+        Write-Host "  [OK] Utility Modules: $UtilityModulesCount" -ForegroundColor Green
     }
     
     # Verify configuration files
     $ConfigPath = Join-Path $OutputPath "Configuration"
     if (Test-Path $ConfigPath) {
-        $ConfigCount = (Get-ChildItem -Path $ConfigPath -Filter "*.json").Count
+        $ConfigCount = if (Test-Path $ConfigPath) { (Get-ChildItem -Path $ConfigPath -Filter "*.json" -ErrorAction SilentlyContinue | Measure-Object).Count } else { 0 }
         Write-Host "  [OK] Configuration Files: $ConfigCount" -ForegroundColor Green
+    }
+    
+    # Verify tools directory
+    $ToolsPath = Join-Path $OutputPath "Tools"
+    if (Test-Path $ToolsPath) {
+        $ToolCount = if (Test-Path $ToolsPath) { (Get-ChildItem -Path $ToolsPath -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Measure-Object).Count } else { 0 }
+        Write-Host "  [OK] Embedded Tools: $ToolCount binaries" -ForegroundColor Green
+        
+        # Specifically verify nmap for Infrastructure Discovery
+        $NmapExe = Join-Path $ToolsPath "nmap\nmap.exe"
+        if (Test-Path $NmapExe) {
+            Write-Host "  [OK] nmap binary embedded for production-safe network scanning" -ForegroundColor Green
+        }
     }
     
     # Verify launcher script
@@ -463,6 +505,8 @@ if (Test-Path $ExePath) {
     Write-Host "  Application: $OutputPath" -ForegroundColor White
     Write-Host "  Modules: $OutputPath\Modules" -ForegroundColor White
     Write-Host "  Config: $OutputPath\Configuration" -ForegroundColor White
+    Write-Host "  Tools: $OutputPath\Tools (including embedded nmap)" -ForegroundColor White
+    Write-Host "  Scripts: $OutputPath\Scripts" -ForegroundColor White
     Write-Host "  Data: c:\discoverydata (or MANDA_DISCOVERY_PATH)" -ForegroundColor White
     Write-Host ""
     

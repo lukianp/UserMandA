@@ -68,7 +68,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Current status message.
         /// </summary>
-        public string StatusMessage
+        public new string StatusMessage
         {
             get => _statusMessage;
             set => SetProperty(ref _statusMessage, value);

@@ -481,8 +481,11 @@ namespace MandADiscoverySuite.ViewModels
             LoadAvailableProfiles();
         }
         
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
+            // Call base implementation first
+            base.InitializeCommands();
+            
             LoadExecutionDataCommand = new AsyncRelayCommand(LoadExecutionDataAsync);
             RunPreFlightValidationCommand = new AsyncRelayCommand(RunPreFlightValidationAsync);
             StartMigrationCommand = new AsyncRelayCommand(StartMigrationAsync);

@@ -78,16 +78,114 @@ function Get-AuthInfoFromConfiguration {
     return $authInfo
 }
 
+function Get-ProductionSafeNmapConfig {
+    [CmdletBinding()]
+    param(
+        [hashtable]$Context = @{}
+    )
+    
+    return @{
+        # Rate limiting for production safety
+        DelayBetweenHosts = 1000        # 1 second minimum delay
+        MaxPacketsPerSecond = 10        # Conservative rate limit
+        TimingTemplate = "T2"           # Polite timing template
+        ConcurrentScans = 1             # Serial scanning only
+        
+        # Scan limitations
+        MaxSubnetSize = 24              # Limit to /24 subnets (254 IPs max)
+        ScanTimeoutSeconds = 300        # 5-minute timeout per subnet
+        
+        # Safety gates
+        RequireProductionApproval = $true
+        
+        # Blacklisted ports (skip potentially disruptive services)
+        BlacklistPorts = @(23, 135, 445, 1433, 1521, 3306, 5432)
+        
+        # Safe port scanning scope
+        SafePortRange = @(21, 22, 25, 53, 80, 110, 143, 443, 993, 995, 3389, 5985, 5986)
+    }
+}
+
+function Test-ProductionEnvironment {
+    [CmdletBinding()]
+    param(
+        [hashtable]$Context = @{}
+    )
+    
+    Write-InfrastructureLog -Level "INFO" -Message "🔍 Detecting environment type..." -Context $Context
+    
+    $productionSignals = @()
+    
+    # Check for domain controllers (port 88 - Kerberos)
+    try {
+        $dcFound = Get-NetTCPConnection -LocalPort 88 -ErrorAction SilentlyContinue
+        if ($dcFound) {
+            $productionSignals += "Domain Controller Detected"
+        }
+    } catch { }
+    
+    # Check for Exchange servers (port 25 SMTP)
+    try {
+        $exchangeFound = Test-NetConnection -ComputerName "localhost" -Port 25 -InformationLevel Quiet -WarningAction SilentlyContinue
+        if ($exchangeFound) {
+            $productionSignals += "Exchange Server Detected"
+        }
+    } catch { }
+    
+    # Check for SQL Server (port 1433)
+    try {
+        $sqlFound = Test-NetConnection -ComputerName "localhost" -Port 1433 -InformationLevel Quiet -WarningAction SilentlyContinue
+        if ($sqlFound) {
+            $productionSignals += "SQL Server Detected"
+        }
+    } catch { }
+    
+    # Check domain membership
+    try {
+        $computerInfo = Get-ComputerInfo -Property CsDomain, CsDomainRole -ErrorAction SilentlyContinue
+        if ($computerInfo.CsDomainRole -in @("DomainController", "Server") -and $computerInfo.CsDomain -ne "WORKGROUP") {
+            $productionSignals += "Domain-joined Server"
+        }
+    } catch { }
+    
+    $isProduction = $productionSignals.Count -gt 0
+    
+    if ($isProduction) {
+        Write-InfrastructureLog -Level "WARN" -Message "⚠️ Production environment detected: $($productionSignals -join ', ')" -Context $Context
+    } else {
+        Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Non-production environment detected" -Context $Context
+    }
+    
+    return @{
+        IsProduction = $isProduction
+        Signals = $productionSignals
+    }
+}
+
 function Install-NmapIfNeeded {
     [CmdletBinding()]
     param(
         [hashtable]$Context = @{}
     )
     
+    # First check for embedded nmap in application directory
+    $appNmapPaths = @(
+        "$PSScriptRoot\..\..\Tools\nmap\nmap.exe",
+        "$PSScriptRoot\..\..\..\Tools\nmap\nmap.exe",
+        "C:\enterprisediscovery\Tools\nmap\nmap.exe"
+    )
+    
+    foreach ($embeddedPath in $appNmapPaths) {
+        if (Test-Path $embeddedPath) {
+            Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Found embedded nmap at: $embeddedPath" -Context $Context
+            return $embeddedPath
+        }
+    }
+    
     # Check if nmap is available in PATH
     $nmapPath = Get-Command nmap -ErrorAction SilentlyContinue
     if ($nmapPath) {
-        Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Found nmap at: $($nmapPath.Source)" -Context $Context
+        Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Found nmap in PATH: $($nmapPath.Source)" -Context $Context
         return $nmapPath.Source
     }
     
@@ -116,7 +214,8 @@ function Install-NmapIfNeeded {
             New-Item -ItemType Directory -Path $nmapDir -Force | Out-Null
         }
         
-        # Download nmap from multiple fallback sources
+        # Download nmap from multiple fallback sources (only if not embedded)
+        Write-InfrastructureLog -Level "WARN" -Message "⚠️ No embedded nmap found - attempting download as fallback" -Context $Context
         $nmapUrls = @(
             "https://nmap.org/dist/nmap-7.95-win32.zip",
             "https://github.com/nmap/nmap/releases/download/v7.95/nmap-7.95-win32.zip",
@@ -267,7 +366,7 @@ function Get-NetworkSubnets {
     return $subnets
 }
 
-function Invoke-NmapScan {
+function Invoke-ProductionSafeNmapScan {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -279,48 +378,165 @@ function Invoke-NmapScan {
     
     if (-not $NmapPath -or -not (Test-Path $NmapPath)) {
         Write-InfrastructureLog -Level "WARN" -Message "⚠️ Nmap not available, using PowerShell alternatives for $Target" -Context $Context
-        return Invoke-PowerShellScan -Target $Target -Context $Context
+        return Invoke-ProductionSafePowerShellScan -Target $Target -Context $Context
+    }
+    
+    # Get production-safe configuration
+    $config = Get-ProductionSafeNmapConfig -Context $Context
+    
+    # Test environment and require approval if production
+    $envTest = Test-ProductionEnvironment -Context $Context
+    if ($envTest.IsProduction -and $config.RequireProductionApproval) {
+        Write-InfrastructureLog -Level "WARN" -Message "🚨 Production environment detected. Administrator approval required." -Context $Context
+        $approval = Read-Host "Continue with production-safe scanning? (type 'YES' to continue)"
+        if ($approval -ne "YES") {
+            Write-InfrastructureLog -Level "INFO" -Message "❌ Scan cancelled by administrator" -Context $Context
+            return @()
+        }
     }
     
     try {
         $results = @()
+        $outputFile = "$env:TEMP\nmap_$([guid]::NewGuid().ToString('N')).xml"
+        
+        # Build production-safe nmap arguments
+        $nmapArgs = @()
         
         switch ($ScanType) {
             "ping" {
-                Write-InfrastructureLog -Level "INFO" -Message "🔍 Running nmap ping scan on $Target..." -Context $Context
-                $nmapArgs = @("-sn", $Target)
+                Write-InfrastructureLog -Level "INFO" -Message "🔍 Running production-safe nmap ping scan on $Target..." -Context $Context
+                $nmapArgs = @(
+                    "-sn",                    # Ping scan only
+                    "-T$($config.TimingTemplate)", # Polite timing
+                    "--max-rate", $config.MaxPacketsPerSecond,
+                    "--max-retries", "1",    # Minimal retries
+                    "--host-timeout", "30s", # Conservative timeout
+                    $Target
+                )
             }
             "port" {
-                Write-InfrastructureLog -Level "INFO" -Message "🔍 Running nmap port scan on $Target..." -Context $Context
-                $nmapArgs = @("-sS", "-O", "--version-intensity", "5", $Target)
+                Write-InfrastructureLog -Level "INFO" -Message "🔍 Running production-safe nmap port scan on $Target..." -Context $Context
+                $safePortList = $config.SafePortRange -join ","
+                $nmapArgs = @(
+                    "-sS",                    # SYN scan
+                    "-T$($config.TimingTemplate)", # Polite timing  
+                    "--max-rate", $config.MaxPacketsPerSecond,
+                    "--max-retries", "1",
+                    "--host-timeout", "60s",
+                    "-p", $safePortList,      # Limited port range
+                    "--exclude-ports", ($config.BlacklistPorts -join ","),
+                    $Target
+                )
             }
             "service" {
-                Write-InfrastructureLog -Level "INFO" -Message "🔍 Running nmap service scan on $Target..." -Context $Context
-                $nmapArgs = @("-sV", "-sC", "-O", $Target)
+                Write-InfrastructureLog -Level "INFO" -Message "🔍 Running production-safe nmap service scan on $Target..." -Context $Context
+                $safePortList = $config.SafePortRange -join ","
+                $nmapArgs = @(
+                    "-sV",                   # Version detection
+                    "--version-intensity", "1", # Minimal probing
+                    "-T$($config.TimingTemplate)",
+                    "--max-rate", $config.MaxPacketsPerSecond,
+                    "--max-retries", "1",
+                    "--host-timeout", "60s",
+                    "-p", $safePortList,
+                    "--exclude-ports", ($config.BlacklistPorts -join ","),
+                    $Target
+                )
             }
         }
         
-        $process = Start-Process -FilePath $NmapPath -ArgumentList $nmapArgs -NoNewWindow -PassThru -RedirectStandardOutput "$env:TEMP\nmap_$([guid]::NewGuid().ToString('N')).xml" -RedirectStandardError "$env:TEMP\nmap_error.log"
-        $process.WaitForExit(300000) # 5 minute timeout
+        # Add XML output
+        $nmapArgs += @("-oX", $outputFile)
         
-        if ($process.ExitCode -eq 0) {
-            $outputFile = $process.StandardOutput.BaseStream.Name
-            if (Test-Path $outputFile) {
-                $nmapOutput = Get-Content $outputFile -Raw
-                $results = Parse-NmapOutput -Output $nmapOutput -Context $Context
-                Remove-Item $outputFile -Force -ErrorAction SilentlyContinue
-            }
+        Write-InfrastructureLog -Level "DEBUG" -Message "🔧 nmap command: $NmapPath $($nmapArgs -join ' ')" -Context $Context
+        
+        $process = Start-Process -FilePath $NmapPath -ArgumentList $nmapArgs -NoNewWindow -PassThru -RedirectStandardError "$env:TEMP\nmap_error.log"
+        
+        # Wait with timeout
+        $timeoutMs = $config.ScanTimeoutSeconds * 1000
+        if (-not $process.WaitForExit($timeoutMs)) {
+            Write-InfrastructureLog -Level "WARN" -Message "⚠️ Nmap scan timeout - terminating process" -Context $Context
+            $process.Kill()
+            return @()
         }
+        
+        if ($process.ExitCode -eq 0 -and (Test-Path $outputFile)) {
+            $nmapOutput = Get-Content $outputFile -Raw
+            $results = Parse-NmapXmlOutput -XmlContent $nmapOutput -Context $Context
+            
+            # Apply rate limiting between scans
+            Start-Sleep -Milliseconds $config.DelayBetweenHosts
+        }
+        
+        # Cleanup
+        Remove-Item $outputFile -Force -ErrorAction SilentlyContinue
+        Remove-Item "$env:TEMP\nmap_error.log" -Force -ErrorAction SilentlyContinue
         
         return $results
         
     } catch {
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ Nmap scan failed: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "❌ Production-safe nmap scan failed: $($_.Exception.Message)" -Context $Context
         return @()
     }
 }
 
-function Invoke-PowerShellScan {
+function Parse-NmapXmlOutput {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$XmlContent,
+        [hashtable]$Context = @{}
+    )
+    
+    $results = @()
+    
+    try {
+        [xml]$nmapXml = $XmlContent
+        
+        foreach ($host in $nmapXml.nmaprun.host) {
+            $hostInfo = [PSCustomObject]@{
+                IPAddress = $host.address | Where-Object { $_.addrtype -eq "ipv4" } | Select-Object -ExpandProperty addr
+                Hostname = if ($host.hostnames.hostname) { $host.hostnames.hostname.name } else { "Unknown" }
+                Status = $host.status.state
+                OS = ""
+                OpenPorts = @()
+                Services = @()
+                MACAddress = ($host.address | Where-Object { $_.addrtype -eq "mac" } | Select-Object -ExpandProperty addr) -join ""
+                LastSeen = Get-Date
+                ScanMethod = "nmap"
+            }
+            
+            # Parse OS information
+            if ($host.os.osmatch) {
+                $hostInfo.OS = $host.os.osmatch[0].name
+            }
+            
+            # Parse ports
+            if ($host.ports.port) {
+                foreach ($port in $host.ports.port) {
+                    if ($port.state.state -eq "open") {
+                        $hostInfo.OpenPorts += [int]$port.portid
+                        
+                        $serviceName = if ($port.service.name) { $port.service.name } else { "unknown" }
+                        $serviceVersion = if ($port.service.version) { $port.service.version } else { "" }
+                        $hostInfo.Services += "$serviceName ($($port.portid))" + $(if ($serviceVersion) { " - $serviceVersion" } else { "" })
+                    }
+                }
+            }
+            
+            if ($hostInfo.IPAddress) {
+                $results += $hostInfo
+            }
+        }
+        
+    } catch {
+        Write-InfrastructureLog -Level "ERROR" -Message "❌ Failed to parse nmap XML output: $($_.Exception.Message)" -Context $Context
+    }
+    
+    return $results
+}
+
+function Invoke-ProductionSafePowerShellScan {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -329,41 +545,85 @@ function Invoke-PowerShellScan {
     )
     
     $results = @()
+    $config = Get-ProductionSafeNmapConfig -Context $Context
     
     try {
-        Write-InfrastructureLog -Level "INFO" -Message "🔍 Running PowerShell network scan on $Target..." -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "🔍 Running production-safe PowerShell scan on $Target..." -Context $Context
+        
+        # Test environment
+        $envTest = Test-ProductionEnvironment -Context $Context
+        if ($envTest.IsProduction -and $config.RequireProductionApproval) {
+            Write-InfrastructureLog -Level "WARN" -Message "🚨 Production environment detected. Using minimal scanning." -Context $Context
+        }
         
         # Parse subnet
         if ($Target -match '^(.+)/(\d+)$') {
             $networkAddr = $matches[1]
             $prefixLength = [int]$matches[2]
             
-            # Calculate IP range
+            # Enforce subnet size limits
+            if ($prefixLength -lt $config.MaxSubnetSize) {
+                Write-InfrastructureLog -Level "WARN" -Message "⚠️ Subnet $Target larger than /$($config.MaxSubnetSize) - limiting scan scope" -Context $Context
+                $prefixLength = $config.MaxSubnetSize
+            }
+            
+            # Calculate IP range with size limit
             $ipRange = Get-IPRange -Network $networkAddr -PrefixLength $prefixLength
+            if ($ipRange.Count -gt 254) {
+                $ipRange = $ipRange[0..253] # Limit to 254 IPs
+            }
             
-            Write-InfrastructureLog -Level "INFO" -Message "📊 Scanning $($ipRange.Count) IPs in subnet $Target..." -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "📊 Production-safe scan of $($ipRange.Count) IPs in subnet $Target..." -Context $Context
             
-            $liveHosts = @()
-            $ipRange | ForEach-Object -Parallel {
-                $ip = $_
-                if (Test-NetConnection -ComputerName $ip -Port 135 -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue) {
-                    $liveHosts += $ip
-                }
-            } -ThrottleLimit 50
+            $liveHosts = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
             
-            Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Found $($liveHosts.Count) live hosts" -Context $Context
+            # Batch processing with rate limiting
+            $batchSize = if ($envTest.IsProduction) { 10 } else { 25 }
+            $batches = @()
+            for ($i = 0; $i -lt $ipRange.Count; $i += $batchSize) {
+                $end = [Math]::Min($i + $batchSize - 1, $ipRange.Count - 1)
+                $batches += ,($ipRange[$i..$end])
+            }
             
-            # Get detailed info for each live host
-            foreach ($ip in $liveHosts) {
-                $hostInfo = Get-HostInformation -IPAddress $ip -Context $Context
+            foreach ($batch in $batches) {
+                Write-InfrastructureLog -Level "DEBUG" -Message "🔍 Processing batch of $($batch.Count) IPs..." -Context $Context
+                
+                $batch | ForEach-Object -Parallel {
+                    $ip = $_
+                    $liveHostsBag = $using:liveHosts
+                    
+                    # Test multiple ports for better detection
+                    $testPorts = @(80, 443, 135, 445, 22, 3389)
+                    foreach ($port in $testPorts) {
+                        if (Test-NetConnection -ComputerName $ip -Port $port -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue) {
+                            $liveHostsBag.Add($ip)
+                            break # Found one open port, host is alive
+                        }
+                    }
+                } -ThrottleLimit $config.ConcurrentScans
+                
+                # Rate limiting between batches
+                Start-Sleep -Milliseconds ($config.DelayBetweenHosts * 2)
+            }
+            
+            $liveHostArray = @($liveHosts.ToArray() | Sort-Object -Unique)
+            Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Found $($liveHostArray.Count) live hosts" -Context $Context
+            
+            # Get detailed info for each live host with rate limiting
+            foreach ($ip in $liveHostArray) {
+                $hostInfo = Get-ComprehensiveHostInformation -IPAddress $ip -Context $Context
                 if ($hostInfo) {
+                    $hostInfo | Add-Member -NotePropertyName 'ScanMethod' -NotePropertyValue 'PowerShell (Production-Safe)' -Force
                     $results += $hostInfo
                 }
+                
+                # Rate limiting between host scans
+                Start-Sleep -Milliseconds $config.DelayBetweenHosts
             }
         }
         
     } catch {
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ PowerShell scan failed: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "❌ Production-safe PowerShell scan failed: $($_.Exception.Message)" -Context $Context
     }
     
     return $results
@@ -398,7 +658,7 @@ function Get-IPRange {
     return $ipRange
 }
 
-function Get-HostInformation {
+function Get-ComprehensiveHostInformation {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -407,6 +667,9 @@ function Get-HostInformation {
     )
     
     try {
+        $config = Get-ProductionSafeNmapConfig -Context $Context
+        $envTest = Test-ProductionEnvironment -Context $Context
+        
         $hostInfo = [PSCustomObject]@{
             IPAddress = $IPAddress
             Hostname = ""
@@ -423,76 +686,113 @@ function Get-HostInformation {
             ResponseTime = 0
             MACAddress = ""
             Status = "Unknown"
+            RiskLevel = "Low"
+            DeviceType = "Unknown"
+            Vulnerabilities = @()
         }
         
-        # Try to resolve hostname
+        # Try to resolve hostname with timeout
         try {
-            $dnsResult = [System.Net.Dns]::GetHostEntry($IPAddress)
-            $hostInfo.Hostname = $dnsResult.HostName
+            $dnsTask = [System.Net.Dns]::GetHostEntryAsync($IPAddress)
+            if ($dnsTask.Wait(5000)) { # 5 second timeout
+                $hostInfo.Hostname = $dnsTask.Result.HostName
+            } else {
+                $hostInfo.Hostname = "Unknown (DNS timeout)"
+            }
         } catch {
             $hostInfo.Hostname = "Unknown"
         }
         
-        # Test common ports
-        $commonPorts = @(21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 993, 995, 3389, 5985, 5986)
+        # Use safe port range in production environments
+        $portRange = if ($envTest.IsProduction) { $config.SafePortRange } else { @(21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 993, 995, 3389, 5985, 5986) }
         $openPorts = @()
         
-        foreach ($port in $commonPorts) {
-            $result = Test-NetConnection -ComputerName $IPAddress -Port $port -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
-            if ($result) {
-                $openPorts += $port
-                
-                # Identify services
-                $service = switch ($port) {
-                    21 { "FTP" }
-                    22 { "SSH" }
-                    23 { "Telnet" }
-                    25 { "SMTP" }
-                    53 { "DNS" }
-                    80 { "HTTP" }
-                    110 { "POP3" }
-                    135 { "RPC" }
-                    139 { "NetBIOS" }
-                    143 { "IMAP" }
-                    443 { "HTTPS" }
-                    445 { "SMB" }
-                    993 { "IMAPS" }
-                    995 { "POP3S" }
-                    3389 { "RDP" }
-                    5985 { "WinRM HTTP" }
-                    5986 { "WinRM HTTPS" }
-                    default { "Unknown" }
+        Write-InfrastructureLog -Level "DEBUG" -Message "🔍 Testing $($portRange.Count) ports on $IPAddress..." -Context $Context
+        
+        foreach ($port in $portRange) {
+            # Skip blacklisted ports in production
+            if ($envTest.IsProduction -and $port -in $config.BlacklistPorts) {
+                continue
+            }
+            
+            try {
+                $result = Test-NetConnection -ComputerName $IPAddress -Port $port -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+                if ($result) {
+                    $openPorts += $port
+                    
+                    # Identify services and assess risk
+                    $serviceInfo = Get-ServiceInformation -Port $port
+                    $hostInfo.Services += "$($serviceInfo.Name) ($port)" + $(if ($serviceInfo.Version) { " - $($serviceInfo.Version)" } else { "" })
+                    
+                    # Risk assessment
+                    if ($serviceInfo.RiskLevel -eq "High") {
+                        $hostInfo.RiskLevel = "High"
+                        $hostInfo.Vulnerabilities += "High-risk service: $($serviceInfo.Name) on port $port"
+                    } elseif ($serviceInfo.RiskLevel -eq "Medium" -and $hostInfo.RiskLevel -eq "Low") {
+                        $hostInfo.RiskLevel = "Medium"
+                    }
                 }
-                
-                $hostInfo.Services += "$service ($port)"
+            } catch {
+                # Port test failed, continue
+            }
+            
+            # Rate limiting between port tests in production
+            if ($envTest.IsProduction) {
+                Start-Sleep -Milliseconds 100
             }
         }
         
         $hostInfo.OpenPorts = $openPorts
         
-        # Try to get additional Windows-specific information if SMB is available
-        if (445 -in $openPorts) {
+        # Device type detection
+        $hostInfo.DeviceType = Get-DeviceTypeFromPorts -OpenPorts $openPorts
+        
+        # Try to get additional Windows-specific information if SMB is available and not in production blacklist
+        if (445 -in $openPorts -and -not ($envTest.IsProduction -and 445 -in $config.BlacklistPorts)) {
             try {
-                $wmiResult = Get-WmiObject -Class Win32_ComputerSystem -ComputerName $IPAddress -ErrorAction SilentlyContinue
-                if ($wmiResult) {
-                    $hostInfo.Manufacturer = $wmiResult.Manufacturer
-                    $hostInfo.Model = $wmiResult.Model
-                    $hostInfo.Domain = $wmiResult.Domain
-                }
+                Write-InfrastructureLog -Level "DEBUG" -Message "🔍 Attempting WMI query to $IPAddress..." -Context $Context
                 
-                $osResult = Get-WmiObject -Class Win32_OperatingSystem -ComputerName $IPAddress -ErrorAction SilentlyContinue
-                if ($osResult) {
-                    $hostInfo.OS = "$($osResult.Caption) $($osResult.Version)"
-                    $hostInfo.Architecture = $osResult.OSArchitecture
-                }
+                # Use timeout for WMI queries
+                $wmiTimeout = if ($envTest.IsProduction) { 10 } else { 30 }
                 
-                $biosResult = Get-WmiObject -Class Win32_BIOS -ComputerName $IPAddress -ErrorAction SilentlyContinue
-                if ($biosResult) {
-                    $hostInfo.SerialNumber = $biosResult.SerialNumber
+                $wmiResult = Get-WmiObject -Class Win32_ComputerSystem -ComputerName $IPAddress -ErrorAction SilentlyContinue -AsJob
+                if (Wait-Job $wmiResult -Timeout $wmiTimeout) {
+                    $computerInfo = Receive-Job $wmiResult
+                    if ($computerInfo) {
+                        $hostInfo.Manufacturer = $computerInfo.Manufacturer
+                        $hostInfo.Model = $computerInfo.Model
+                        $hostInfo.Domain = $computerInfo.Domain
+                    }
                 }
+                Remove-Job $wmiResult -Force -ErrorAction SilentlyContinue
+                
+                $osResult = Get-WmiObject -Class Win32_OperatingSystem -ComputerName $IPAddress -ErrorAction SilentlyContinue -AsJob
+                if (Wait-Job $osResult -Timeout $wmiTimeout) {
+                    $osInfo = Receive-Job $osResult
+                    if ($osInfo) {
+                        $hostInfo.OS = "$($osInfo.Caption) $($osInfo.Version)"
+                        $hostInfo.Architecture = $osInfo.OSArchitecture
+                        
+                        # Check for vulnerable Windows versions
+                        if ($osInfo.Version -match "^6\.[01]" -or $osInfo.Caption -match "Windows (XP|Vista|7|2003|2008)") {
+                            $hostInfo.RiskLevel = "High"
+                            $hostInfo.Vulnerabilities += "Legacy Windows version detected: $($osInfo.Caption)"
+                        }
+                    }
+                }
+                Remove-Job $osResult -Force -ErrorAction SilentlyContinue
+                
+                $biosResult = Get-WmiObject -Class Win32_BIOS -ComputerName $IPAddress -ErrorAction SilentlyContinue -AsJob
+                if (Wait-Job $biosResult -Timeout $wmiTimeout) {
+                    $biosInfo = Receive-Job $biosResult
+                    if ($biosInfo) {
+                        $hostInfo.SerialNumber = $biosInfo.SerialNumber
+                    }
+                }
+                Remove-Job $biosResult -Force -ErrorAction SilentlyContinue
                 
             } catch {
-                # WMI failed, try other methods
+                Write-InfrastructureLog -Level "DEBUG" -Message "WMI query failed for $IPAddress`: $($_.Exception.Message)" -Context $Context
             }
         }
         
@@ -500,9 +800,190 @@ function Get-HostInformation {
         return $hostInfo
         
     } catch {
-        Write-InfrastructureLog -Level "DEBUG" -Message "Failed to get host info for $IPAddress`: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "DEBUG" -Message "Failed to get comprehensive host info for $IPAddress`: $($_.Exception.Message)" -Context $Context
         return $null
     }
+}
+
+function Get-ServiceInformation {
+    [CmdletBinding()]
+    param(
+        [int]$Port
+    )
+    
+    $serviceMap = @{
+        21   = @{ Name = "FTP"; RiskLevel = "Medium"; Description = "File Transfer Protocol" }
+        22   = @{ Name = "SSH"; RiskLevel = "Low"; Description = "Secure Shell" }
+        23   = @{ Name = "Telnet"; RiskLevel = "High"; Description = "Unencrypted remote access" }
+        25   = @{ Name = "SMTP"; RiskLevel = "Low"; Description = "Simple Mail Transfer Protocol" }
+        53   = @{ Name = "DNS"; RiskLevel = "Low"; Description = "Domain Name System" }
+        80   = @{ Name = "HTTP"; RiskLevel = "Low"; Description = "Hypertext Transfer Protocol" }
+        110  = @{ Name = "POP3"; RiskLevel = "Medium"; Description = "Post Office Protocol v3" }
+        135  = @{ Name = "RPC"; RiskLevel = "High"; Description = "Microsoft RPC Endpoint Mapper" }
+        139  = @{ Name = "NetBIOS"; RiskLevel = "High"; Description = "NetBIOS Session Service" }
+        143  = @{ Name = "IMAP"; RiskLevel = "Low"; Description = "Internet Message Access Protocol" }
+        443  = @{ Name = "HTTPS"; RiskLevel = "Low"; Description = "HTTP Secure" }
+        445  = @{ Name = "SMB"; RiskLevel = "High"; Description = "Server Message Block" }
+        993  = @{ Name = "IMAPS"; RiskLevel = "Low"; Description = "IMAP over SSL" }
+        995  = @{ Name = "POP3S"; RiskLevel = "Low"; Description = "POP3 over SSL" }
+        3389 = @{ Name = "RDP"; RiskLevel = "Medium"; Description = "Remote Desktop Protocol" }
+        5985 = @{ Name = "WinRM HTTP"; RiskLevel = "Medium"; Description = "Windows Remote Management HTTP" }
+        5986 = @{ Name = "WinRM HTTPS"; RiskLevel = "Low"; Description = "Windows Remote Management HTTPS" }
+    }
+    
+    if ($serviceMap[$Port]) { 
+        return $serviceMap[$Port] 
+    } else { 
+        return @{ Name = "Unknown"; RiskLevel = "Low"; Description = "Unknown service" } 
+    }
+}
+
+function Get-DeviceTypeFromPorts {
+    [CmdletBinding()]
+    param(
+        [int[]]$OpenPorts
+    )
+    
+    # Device type detection based on port combinations
+    if ($OpenPorts -contains 3389) { return "Windows Server/Workstation" }
+    if ($OpenPorts -contains 22 -and $OpenPorts -notcontains 135) { return "Linux/Unix Server" }
+    if ($OpenPorts -contains 80 -and $OpenPorts -contains 443) { return "Web Server" }
+    if ($OpenPorts -contains 25 -and $OpenPorts -contains 110) { return "Mail Server" }
+    if ($OpenPorts -contains 53) { return "DNS Server" }
+    if ($OpenPorts -contains 135 -and $OpenPorts -contains 445) { return "Windows Server" }
+    if ($OpenPorts -contains 21) { return "FTP Server" }
+    if ($OpenPorts.Count -eq 0) { return "Firewall/Router" }
+    
+    return "Generic Network Device"
+}
+
+function Import-ExistingAssetData {
+    [CmdletBinding()]
+    param(
+        [string]$AssetCsvPath,
+        [hashtable]$Context = @{}
+    )
+    
+    $existingAssets = @()
+    
+    try {
+        if (Test-Path $AssetCsvPath) {
+            Write-InfrastructureLog -Level "INFO" -Message "📥 Importing existing asset data from $AssetCsvPath..." -Context $Context
+            $existingAssets = Import-Csv $AssetCsvPath
+            Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Imported $($existingAssets.Count) existing assets" -Context $Context
+        } else {
+            Write-InfrastructureLog -Level "WARN" -Message "⚠️ Asset CSV not found: $AssetCsvPath" -Context $Context
+        }
+    } catch {
+        Write-InfrastructureLog -Level "ERROR" -Message "❌ Failed to import asset data: $($_.Exception.Message)" -Context $Context
+    }
+    
+    return $existingAssets
+}
+
+function Merge-DiscoveredWithExistingAssets {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [array]$DiscoveredHosts,
+        [array]$ExistingAssets = @(),
+        [hashtable]$Context = @{}
+    )
+    
+    $mergedAssets = @()
+    
+    try {
+        Write-InfrastructureLog -Level "INFO" -Message "🔗 Merging discovered hosts with existing asset inventory..." -Context $Context
+        
+        foreach ($host in $DiscoveredHosts) {
+            # Find matching existing asset by IP address or hostname
+            $existingAsset = $ExistingAssets | Where-Object { 
+                $_.IPAddress -eq $host.IPAddress -or 
+                $_.Hostname -eq $host.Hostname 
+            } | Select-Object -First 1
+            
+            $mergedAsset = [PSCustomObject]@{
+                # Discovery data
+                IPAddress = $host.IPAddress
+                Hostname = $host.Hostname
+                OS = $host.OS
+                Domain = $host.Domain
+                Manufacturer = $host.Manufacturer
+                Model = $host.Model
+                SerialNumber = $host.SerialNumber
+                Architecture = $host.Architecture
+                OpenPorts = if ($host.OpenPorts) { $host.OpenPorts -join "," } else { "" }
+                Services = if ($host.Services) { $host.Services -join ";" } else { "" }
+                LastSeen = $host.LastSeen
+                RiskLevel = $host.RiskLevel
+                DeviceType = $host.DeviceType
+                ScanMethod = $host.ScanMethod
+                
+                # Asset inventory data (if available)
+                AssetTag = if ($existingAsset) { $existingAsset.AssetTag } else { "" }
+                Owner = if ($existingAsset) { $existingAsset.Owner } else { "" }
+                Location = if ($existingAsset) { $existingAsset.Location } else { "" }
+                PurchaseDate = if ($existingAsset) { $existingAsset.PurchaseDate } else { "" }
+                WarrantyExpiry = if ($existingAsset) { $existingAsset.WarrantyExpiry } else { "" }
+                
+                # Data quality indicators
+                DataSource = if ($existingAsset) { "Discovery + Asset DB" } else { "Discovery Only" }
+                Confidence = if ($existingAsset) { "High" } else { "Medium" }
+                RequiresValidation = if ($existingAsset) { $false } else { $true }
+            }
+            
+            $mergedAssets += $mergedAsset
+        }
+        
+        # Add existing assets that weren't discovered (offline devices)
+        foreach ($asset in $ExistingAssets) {
+            $discovered = $DiscoveredHosts | Where-Object { 
+                $_.IPAddress -eq $asset.IPAddress -or 
+                $_.Hostname -eq $asset.Hostname 
+            }
+            
+            if (-not $discovered) {
+                $offlineAsset = [PSCustomObject]@{
+                    # Asset inventory data
+                    IPAddress = if ($asset.IPAddress) { $asset.IPAddress } else { "" }
+                    Hostname = if ($asset.Hostname) { $asset.Hostname } else { "" }
+                    OS = if ($asset.OS) { $asset.OS } else { "" }
+                    Domain = if ($asset.Domain) { $asset.Domain } else { "" }
+                    Manufacturer = if ($asset.Manufacturer) { $asset.Manufacturer } else { "" }
+                    Model = if ($asset.Model) { $asset.Model } else { "" }
+                    SerialNumber = if ($asset.SerialNumber) { $asset.SerialNumber } else { "" }
+                    Architecture = if ($asset.Architecture) { $asset.Architecture } else { "" }
+                    AssetTag = if ($asset.AssetTag) { $asset.AssetTag } else { "" }
+                    Owner = if ($asset.Owner) { $asset.Owner } else { "" }
+                    Location = if ($asset.Location) { $asset.Location } else { "" }
+                    PurchaseDate = if ($asset.PurchaseDate) { $asset.PurchaseDate } else { "" }
+                    WarrantyExpiry = if ($asset.WarrantyExpiry) { $asset.WarrantyExpiry } else { "" }
+                    
+                    # Discovery status
+                    OpenPorts = ""
+                    Services = ""
+                    LastSeen = ""
+                    RiskLevel = "Unknown"
+                    DeviceType = "Offline/Unknown"
+                    ScanMethod = "Not Scanned"
+                    DataSource = "Asset DB Only"
+                    Confidence = "Low"
+                    RequiresValidation = $true
+                }
+                
+                $mergedAssets += $offlineAsset
+            }
+        }
+        
+        Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Merged data: $($mergedAssets.Count) total assets" -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "📊 Stats: $($DiscoveredHosts.Count) discovered, $($ExistingAssets.Count) in inventory" -Context $Context
+        
+    } catch {
+        Write-InfrastructureLog -Level "ERROR" -Message "❌ Failed to merge asset data: $($_.Exception.Message)" -Context $Context
+        return $DiscoveredHosts  # Return original discovery data on failure
+    }
+    
+    return $mergedAssets
 }
 
 function Start-InfrastructureDiscovery {
@@ -561,15 +1042,21 @@ function Start-InfrastructureDiscovery {
             $result.Metadata["SubnetCount"] = $subnets.Count
         }
         
-        # 3. Scan each subnet for live hosts
+        # 3. Production-safe scanning of each subnet for live hosts
+        $config = Get-ProductionSafeNmapConfig -Context $Context
+        $envTest = Test-ProductionEnvironment -Context $Context
+        
+        Write-InfrastructureLog -Level "INFO" -Message "🛡️ Using production-safe scanning configuration" -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "📊 Rate limit: $($config.MaxPacketsPerSecond) pps, Delay: $($config.DelayBetweenHosts)ms" -Context $Context
+        
         foreach ($subnet in $subnets) {
             if ($subnet.NetworkSubnet -and $subnet.NetworkSubnet -ne "127.0.0.0/8") {
-                Write-InfrastructureLog -Level "INFO" -Message "🔍 Scanning subnet: $($subnet.NetworkSubnet)..." -Context $Context
+                Write-InfrastructureLog -Level "INFO" -Message "🔍 Production-safe scanning subnet: $($subnet.NetworkSubnet)..." -Context $Context
                 
                 $hosts = if ($nmapPath) {
-                    Invoke-NmapScan -Target $subnet.NetworkSubnet -NmapPath $nmapPath -ScanType "ping" -Context $Context
+                    Invoke-ProductionSafeNmapScan -Target $subnet.NetworkSubnet -NmapPath $nmapPath -ScanType "ping" -Context $Context
                 } else {
-                    Invoke-PowerShellScan -Target $subnet.NetworkSubnet -Context $Context
+                    Invoke-ProductionSafePowerShellScan -Target $subnet.NetworkSubnet -Context $Context
                 }
                 
                 if ($hosts.Count -gt 0) {
@@ -578,6 +1065,7 @@ function Start-InfrastructureDiscovery {
                     $hosts | ForEach-Object { 
                         $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Host' -Force
                         $_ | Add-Member -NotePropertyName 'SourceSubnet' -NotePropertyValue $subnet.NetworkSubnet -Force
+                        $_ | Add-Member -NotePropertyName 'ProductionSafe' -NotePropertyValue $true -Force
                     }
                     
                     $null = $allDiscoveredData.AddRange($hosts)
@@ -585,12 +1073,41 @@ function Start-InfrastructureDiscovery {
                     Write-InfrastructureLog -Level "INFO" -Message "📭 No live hosts found in $($subnet.NetworkSubnet)" -Context $Context
                 }
                 
-                # Rate limiting to be network-friendly
-                Start-Sleep -Seconds 2
+                # Enhanced rate limiting for production safety
+                $delaySeconds = if ($envTest.IsProduction) { 5 } else { 2 }
+                Write-InfrastructureLog -Level "DEBUG" -Message "⏳ Waiting $delaySeconds seconds between subnets..." -Context $Context
+                Start-Sleep -Seconds $delaySeconds
             }
         }
         
-        # 4. Export data to CSV
+        # 4. Merge with existing asset inventory if available
+        $discoveredHosts = $allDiscoveredData | Where-Object { $_._DataType -eq 'Host' }
+        if ($discoveredHosts.Count -gt 0) {
+            # Look for existing asset CSV
+            $assetCsvPath = Join-Path $Configuration.OutputDirectory "ComputerAssets.csv"
+            $existingAssets = Import-ExistingAssetData -AssetCsvPath $assetCsvPath -Context $Context
+            
+            if ($existingAssets.Count -gt 0) {
+                Write-InfrastructureLog -Level "INFO" -Message "🔗 Integrating with existing asset inventory..." -Context $Context
+                $mergedAssets = Merge-DiscoveredWithExistingAssets -DiscoveredHosts $discoveredHosts -ExistingAssets $existingAssets -Context $Context
+                
+                # Replace discovered hosts with merged data
+                $allDiscoveredData = [System.Collections.ArrayList]::new()
+                $subnets = $result.Data | Where-Object { $_._DataType -eq 'Subnet' }
+                if ($subnets) {
+                    $null = $allDiscoveredData.AddRange($subnets)
+                }
+                
+                $mergedAssets | ForEach-Object { 
+                    $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'EnrichedHost' -Force
+                }
+                $null = $allDiscoveredData.AddRange($mergedAssets)
+                
+                Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Asset integration complete: $($mergedAssets.Count) enriched records" -Context $Context
+            }
+        }
+        
+        # 5. Export data to CSV
         if ($allDiscoveredData.Count -gt 0) {
             Write-InfrastructureLog -Level "INFO" -Message "📊 Exporting $($allDiscoveredData.Count) infrastructure records..." -Context $Context
             
@@ -627,7 +1144,15 @@ function Start-InfrastructureDiscovery {
         $result.Data = $allDiscoveredData.ToArray()
         $result.Metadata["TotalHosts"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'Host' }).Count
         $result.Metadata["TotalSubnets"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'Subnet' }).Count
-        $result.Metadata["ScanMethod"] = if ($nmapPath) { "nmap + PowerShell" } else { "PowerShell Only" }
+        $result.Metadata["ScanMethod"] = if ($nmapPath) { "Production-Safe nmap + PowerShell" } else { "Production-Safe PowerShell Only" }
+        $result.Metadata["ProductionEnvironment"] = $envTest.IsProduction
+        $result.Metadata["ProductionSignals"] = $envTest.Signals -join ", "
+        $result.Metadata["SafetyConfig"] = @{
+            MaxPacketsPerSecond = $config.MaxPacketsPerSecond
+            DelayBetweenHosts = $config.DelayBetweenHosts
+            TimingTemplate = $config.TimingTemplate
+            RequireApproval = $config.RequireProductionApproval
+        }
         
         Write-InfrastructureLog -Level "INFO" -Message "🧹 Cleaning up..." -Context $Context
         
@@ -643,5 +1168,5 @@ function Start-InfrastructureDiscovery {
     return $result
 }
 
-# Export the main function
-Export-ModuleMember -Function Start-InfrastructureDiscovery
+# Export all functions
+Export-ModuleMember -Function Start-InfrastructureDiscovery, Get-ProductionSafeNmapConfig, Test-ProductionEnvironment, Install-NmapIfNeeded, Invoke-ProductionSafeNmapScan, Invoke-ProductionSafePowerShellScan, Get-ComprehensiveHostInformation, Import-ExistingAssetData, Merge-DiscoveredWithExistingAssets, Get-ServiceInformation, Get-DeviceTypeFromPorts

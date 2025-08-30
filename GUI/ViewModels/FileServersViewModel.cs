@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using System.Windows;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
@@ -53,10 +54,13 @@ namespace MandADiscoverySuite.ViewModels
                 foreach (var warning in result.HeaderWarnings) 
                     HeaderWarnings.Add(warning);
                 
-                // Update data collection
-                FileServers.Clear();
-                foreach (var item in result.Data) 
-                    FileServers.Add(item);
+                // Update data collection on UI thread to prevent CollectionView threading violations
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    FileServers.Clear();
+                    foreach (var item in result.Data) 
+                        FileServers.Add(item);
+                });
                 
                 HasData = FileServers.Count > 0;
                 

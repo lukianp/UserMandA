@@ -75,7 +75,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Properties
 
-        public bool IsLoading
+        public new bool IsLoading
         {
             get => _isLoading;
             set => SetProperty(ref _isLoading, value);

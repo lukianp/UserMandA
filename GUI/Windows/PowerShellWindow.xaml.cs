@@ -184,34 +184,56 @@ namespace MandADiscoverySuite.Windows
                 powerShellProcess.BeginOutputReadLine();
                 powerShellProcess.BeginErrorReadLine();
 
-                // Wait for completion or cancellation
-                while (!powerShellProcess.HasExited && !cancellationToken.IsCancellationRequested)
+                // Wait for completion or cancellation with safe process access
+                try
                 {
-                    await Task.Delay(100, cancellationToken);
+                    while (powerShellProcess != null && !powerShellProcess.HasExited && !cancellationToken.IsCancellationRequested)
+                    {
+                        await Task.Delay(100, cancellationToken);
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                    // Process was already disposed/closed
+                    AppendOutput("PowerShell process completed.", Colors.Gray);
+                    return;
                 }
 
-                if (cancellationToken.IsCancellationRequested && !powerShellProcess.HasExited)
+                if (cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
-                        powerShellProcess.Kill();
-                        AppendOutput("PowerShell process terminated.", Colors.Yellow);
+                        if (powerShellProcess != null && !powerShellProcess.HasExited)
+                        {
+                            powerShellProcess.Kill();
+                            AppendOutput("PowerShell process terminated.", Colors.Yellow);
+                        }
                     }
                     catch (Exception ex)
                     {
                         AppendOutput($"Error terminating process: {ex.Message}", Colors.Red);
                     }
                 }
-                else if (powerShellProcess.HasExited)
+                else
                 {
-                    var exitCode = powerShellProcess.ExitCode;
-                    if (exitCode == 0)
+                    try
                     {
-                        AppendOutput("Script completed successfully!", Colors.Green);
+                        if (powerShellProcess != null && powerShellProcess.HasExited)
+                        {
+                            var exitCode = powerShellProcess.ExitCode;
+                            if (exitCode == 0)
+                            {
+                                AppendOutput("Script completed successfully!", Colors.Green);
+                            }
+                            else
+                            {
+                                AppendOutput($"Script completed with exit code: {exitCode}", Colors.Yellow);
+                            }
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        AppendOutput($"Script completed with exit code: {exitCode}", Colors.Yellow);
+                        AppendOutput($"Error reading process exit code: {ex.Message}", Colors.Red);
                     }
                 }
             }

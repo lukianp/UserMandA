@@ -409,20 +409,28 @@ namespace MandADiscoverySuite
             // Catch unhandled Task exceptions
             TaskScheduler.UnobservedTaskException += (sender, e) =>
             {
-                var errorMessage = $"UNHANDLED TASK EXCEPTION: {e.Exception.GetType().Name}: {e.Exception.Message}";
-                var stackTrace = $"Stack Trace:\n{e.Exception.StackTrace}";
-                var fullError = $"{errorMessage}\n{stackTrace}";
-                
-                logAction("=== UNHANDLED TASK EXCEPTION ===");
-                logAction(fullError);
-                logAction("=== END UNHANDLED TASK EXCEPTION ===");
-                
-                System.Diagnostics.Debug.WriteLine(fullError);
-                
-                MessageBox.Show($"{errorMessage}\n\nFull details logged to:\n{logFile}", "Task Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                
-                // Mark as observed to prevent the application from crashing
-                e.SetObserved();
+                try
+                {
+                    var exception = e.Exception?.GetBaseException() ?? e.Exception;
+                    var errorMessage = $"UNHANDLED TASK EXCEPTION: {exception?.GetType().Name ?? "Unknown"}: {exception?.Message ?? "No message available"}";
+                    var stackTrace = exception?.StackTrace ?? "No stack trace available";
+                    var fullError = $"{errorMessage}\nStack Trace:\n{stackTrace}";
+                    
+                    logAction("=== UNHANDLED TASK EXCEPTION ===");
+                    logAction(fullError);
+                    logAction("=== END UNHANDLED TASK EXCEPTION ===");
+                    
+                    System.Diagnostics.Debug.WriteLine(fullError);
+                    
+                    // Mark as observed to prevent application crash - don't show MessageBox for background tasks
+                    e.SetObserved();
+                }
+                catch (Exception handlerEx)
+                {
+                    // Fallback if exception handler itself fails
+                    logAction($"=== EXCEPTION HANDLER ERROR: {handlerEx.Message} ===");
+                    e.SetObserved();
+                }
             };
             
             // Store log action for later use

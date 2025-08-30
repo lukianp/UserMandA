@@ -248,15 +248,18 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand RemoveExcludePatternCommand { get; private set; }
         public ICommand AddExcludedExtensionCommand { get; private set; }
         public ICommand RemoveExcludedExtensionCommand { get; private set; }
-        public ICommand ClearErrorsCommand { get; private set; }
+        public new ICommand ClearErrorsCommand { get; private set; }
         public ICommand ExportResultsCommand { get; private set; }
         public ICommand ValidatePathsCommand { get; private set; }
         public ICommand EstimateMigrationCommand { get; private set; }
         #endregion
 
         #region Private Methods
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
+            // Call base implementation first
+            base.InitializeCommands();
+            
             StartMigrationCommand = new RelayCommand(async () => await StartMigrationAsync(), CanExecuteStartMigration);
             CancelMigrationCommand = new RelayCommand(async () => await CancelMigrationAsync(), () => IsMigrationInProgress);
             PauseMigrationCommand = new RelayCommand(async () => await PauseMigrationAsync(), () => IsMigrationInProgress);

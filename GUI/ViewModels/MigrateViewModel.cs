@@ -109,7 +109,7 @@ namespace MandADiscoverySuite.ViewModels
         public string ReportingTabActive => CurrentTab == "Reporting" ? "Active" : null;
         
         // Loading and Error States
-        public string LoadingMessage
+        public new string LoadingMessage
         {
             get => _loadingMessage;
             private set => SetPropertySafe(ref _loadingMessage, value);

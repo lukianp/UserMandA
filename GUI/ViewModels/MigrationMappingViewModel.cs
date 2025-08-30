@@ -397,7 +397,7 @@ namespace MandADiscoverySuite.ViewModels
             LoadAvailableProfiles();
         }
         
-        private void InitializeCommands()
+        private new void InitializeCommands()
         {
             LoadMappingDataCommand = new AsyncRelayCommand(LoadMappingDataAsync);
             AutoMapUsersCommand = new AsyncRelayCommand(AutoMapUsersAsync);

@@ -79,7 +79,7 @@ namespace MandADiscoverySuite.Services
         public event EventHandler<DataLoadedEventArgs>? DataLoaded;
         public event EventHandler<DataLoadErrorEventArgs>? DataLoadError;
 
-        public LogicEngineService(ILogger<LogicEngineService> logger, MultiTierCacheService cacheService = null, string? dataRoot = null)
+        public LogicEngineService(ILogger<LogicEngineService> logger, MultiTierCacheService? cacheService = null, string? dataRoot = null)
         {
             _logger = logger;
             _cacheService = cacheService; // Optional for T-030 - fallback to no caching

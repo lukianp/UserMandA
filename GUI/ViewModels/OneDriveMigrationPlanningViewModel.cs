@@ -366,7 +366,7 @@ namespace MandADiscoverySuite.ViewModels
             });
         }
         
-        private void InitializeCommands()
+        private new void InitializeCommands()
         {
             DiscoverUsersCommand = new RelayCommand(async () => await DiscoverUsersAsync());
             ScanFileSharesCommand = new RelayCommand(async () => await ScanFileSharesAsync());

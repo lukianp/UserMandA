@@ -71,11 +71,10 @@
 
   <!-- Temporarily exclude problematic Delta Migration files that have compilation errors -->
   <ItemGroup>
+    <!-- IDeltaMigrator.cs and FileDeltaMigrator.cs now working -->
     <Compile Remove="Services\Migration\DeltaMigrationService.cs" />
-    <Compile Remove="MigrationProviders\FileDeltaMigrator.cs" />
     <Compile Remove="MigrationProviders\MailDeltaMigrator.cs" />
     <Compile Remove="MigrationProviders\IdentityDeltaMigrator.cs" />
-    <Compile Remove="Migration\IDeltaMigrator.cs" />
     <Compile Remove="MigrationProviders\SharePointMigrator.cs" />
     <Compile Remove="Services\SharePointMigrationService.cs" />
     <Compile Remove="Services\Migration\GroupPolicyMigrator.cs" />

@@ -1,14 +1,24 @@
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.Migration
 {
     /// <summary>
+    /// Base interface for migration results to provide common properties.
+    /// </summary>
+    public interface IMigrationResult
+    {
+        bool Success { get; }
+    }
+
+    /// <summary>
     /// Core interface for delta migration operations - capturing and migrating only changes since the last run.
     /// Supports zero-downtime M&A scenarios with cutover finalization.
     /// </summary>
-    public interface IDeltaMigrator<TItem, TResult> where TResult : class
+    public interface IDeltaMigrator<TItem, TResult> where TResult : class, IMigrationResult
     {
         /// <summary>
         /// Performs delta migration for items changed since the specified timestamp.
@@ -145,7 +155,7 @@ namespace MandADiscoverySuite.Migration
     /// <summary>
     /// Result of delta migration operation with change statistics.
     /// </summary>
-    public class DeltaMigrationResult<TResult> where TResult : class
+    public class DeltaMigrationResult<TResult> where TResult : class, IMigrationResult
     {
         public IList<TResult> MigrationResults { get; set; } = new List<TResult>();
         public int ChangesDetected { get; set; }
@@ -374,4 +384,11 @@ namespace MandADiscoverySuite.Migration
         Slack,
         Webhook
     }
+
+    // Service-specific delta migrator interfaces
+    public interface IIdentityDeltaMigrator : IDeltaMigrator<UserDto, MigrationResultBase> { }
+    public interface IMailDeltaMigrator : IDeltaMigrator<MailboxDto, MigrationResultBase> { }  
+    public interface IFileDeltaMigrator : IDeltaMigrator<FileItemDto, MigrationResultBase> { }
+    public interface ISqlDeltaMigrator : IDeltaMigrator<DatabaseDto, MigrationResultBase> { }
+    public interface ISharePointDeltaMigrator : IDeltaMigrator<object, MigrationResultBase> { }
 }

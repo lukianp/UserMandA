@@ -20,7 +20,15 @@
       "Bash(find:*)",
       "Bash(start \"\" \"MandADiscoverySuite.exe\")",
       "Bash(echo:*)",
-      "Read(C:\\/**)"
+      "Read(C:\\/**)",
+      "Bash(.build-gui.ps1)",
+      "Bash(start /B MandADiscoverySuite.exe)",
+      "Read(C:\\discoverydata/**)",
+      "Read(C:\\discoverydata/**)",
+      "Bash(cd:*)",
+      "Bash(pwsh:*)",
+      "Bash(curl:*)",
+      "Bash(./MandADiscoverySuite.exe)"
     ],
     "deny": [],
     "ask": [],

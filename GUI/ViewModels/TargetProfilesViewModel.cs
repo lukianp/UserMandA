@@ -56,7 +56,7 @@ namespace MandADiscoverySuite.ViewModels
             return p?.CompanyName ?? "default";
         }
 
-        private async Task LoadAsync()
+        private new async Task LoadAsync()
         {
             Profiles.Clear();
             var company = await GetCompanyAsync();

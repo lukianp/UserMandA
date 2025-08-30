@@ -109,7 +109,7 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _validationProgress, value);
         }
 
-        public string StatusMessage
+        public new string StatusMessage
         {
             get => _statusMessage;
             set => SetProperty(ref _statusMessage, value);
@@ -333,7 +333,7 @@ namespace MandADiscoverySuite.ViewModels
             });
         }
 
-        private void InitializeCommands()
+        private new void InitializeCommands()
         {
             ImportMailboxesCommand = new RelayCommand(async () => await ImportMailboxes(), () => !IsValidationRunning);
             ExportPlanCommand = new RelayCommand(async () => await ExportPlan());

@@ -86,7 +86,7 @@ namespace MandADiscoverySuite.Services
         public event EventHandler<DataLoadedEventArgs>? DataLoaded;
         public event EventHandler<DataLoadErrorEventArgs>? DataLoadError;
 
-        public LogicEngineServiceOptimized(ILogger<LogicEngineServiceOptimized> logger, ILoggerFactory loggerFactory = null, string? dataRoot = null)
+        public LogicEngineServiceOptimized(ILogger<LogicEngineServiceOptimized> logger, ILoggerFactory? loggerFactory = null, string? dataRoot = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _loggerFactory = loggerFactory ?? Microsoft.Extensions.Logging.LoggerFactory.Create(builder => { });

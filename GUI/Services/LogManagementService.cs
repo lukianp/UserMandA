@@ -28,6 +28,9 @@ namespace MandADiscoverySuite.Services
         private readonly FileSystemWatcher _profileWatcher;
         private readonly ObservableCollection<LogAuditEntry> _allLogs;
         private readonly object _logsLock = new object();
+        private volatile bool _isRefreshing = false;
+        private DateTime _lastRefresh = DateTime.MinValue;
+        private readonly TimeSpan _refreshThrottle = TimeSpan.FromSeconds(2);
 
         public event EventHandler<LogsUpdatedEventArgs> LogsUpdated;
 
@@ -85,8 +88,25 @@ namespace MandADiscoverySuite.Services
 
         public async Task RefreshLogsAsync()
         {
-            _logger.LogInformation("Refreshing logs from all sources");
-            await LoadAllLogsAsync();
+            // Prevent recursive calls and throttle refresh
+            if (_isRefreshing || DateTime.Now - _lastRefresh < _refreshThrottle)
+            {
+                return;
+            }
+
+            _isRefreshing = true;
+            _lastRefresh = DateTime.Now;
+
+            try
+            {
+                // Only log once per refresh to prevent infinite loop
+                _logger.LogInformation("Refreshing logs from all sources");
+                await LoadAllLogsAsync();
+            }
+            finally
+            {
+                _isRefreshing = false;
+            }
         }
 
         private async Task LoadAllLogsAsync()
@@ -190,6 +210,17 @@ namespace MandADiscoverySuite.Services
                    fileName.Contains("discovery");
         }
 
+        private bool IsCurrentApplicationLogFile(string filePath)
+        {
+            // Prevent monitoring of the current application's log file to avoid infinite recursion
+            var fileName = Path.GetFileName(filePath).ToLowerInvariant();
+            var currentDate = DateTime.Now.ToString("yyyyMMdd");
+            
+            return fileName.StartsWith($"mandadiscovery_{currentDate}") ||
+                   fileName.StartsWith("mandadiscovery.log") ||
+                   fileName.Contains("mandadiscovery") && fileName.Contains(currentDate);
+        }
+
         private async Task<List<LogAuditEntry>> ParseLogFileAsync(string filePath, LogCategory defaultCategory)
         {
             var logs = new List<LogAuditEntry>();
@@ -211,14 +242,14 @@ namespace MandADiscoverySuite.Services
                 }
                 catch (Exception ex)
                 {
-                    // If parsing fails, create a basic entry
+                    // If parsing fails, create a basic entry with error info
                     logs.Add(new LogAuditEntry
                     {
                         Timestamp = File.GetLastWriteTime(filePath),
-                        Level = Microsoft.Extensions.Logging.LogLevel.Information,
+                        Level = Microsoft.Extensions.Logging.LogLevel.Error,
                         Category = defaultCategory,
                         Source = fileName,
-                        Message = line.Length > 500 ? line.Substring(0, 500) + "..." : line,
+                        Message = $"Parse error: {ex.Message}. Original line: {(line.Length > 200 ? line.Substring(0, 200) + "..." : line)}",
                         RawContent = line
                     });
                 }
@@ -465,7 +496,7 @@ namespace MandADiscoverySuite.Services
 
             watcher.Changed += async (s, e) =>
             {
-                if (IsLogFile(e.FullPath))
+                if (IsLogFile(e.FullPath) && !IsCurrentApplicationLogFile(e.FullPath))
                 {
                     await Task.Delay(100); // Brief delay to ensure file is written
                     await RefreshLogsAsync();
@@ -474,7 +505,7 @@ namespace MandADiscoverySuite.Services
 
             watcher.Created += async (s, e) =>
             {
-                if (IsLogFile(e.FullPath))
+                if (IsLogFile(e.FullPath) && !IsCurrentApplicationLogFile(e.FullPath))
                 {
                     await Task.Delay(100);
                     await RefreshLogsAsync();

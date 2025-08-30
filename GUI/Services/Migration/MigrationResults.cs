@@ -2,15 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Migration;
 
 namespace MandADiscoverySuite.Services.Migration
 {
     /// <summary>
     /// Base migration result with common properties
     /// </summary>
-    public class MigrationResultBase
+    public class MigrationResultBase : IMigrationResult
     {
         public bool IsSuccess { get; set; }
+        
+        /// <summary>
+        /// Implements IMigrationResult.Success property for compatibility with generic interfaces
+        /// </summary>
+        public bool Success => IsSuccess;
+        
         public string ErrorMessage { get; set; }
         public List<string> Warnings { get; set; } = new List<string>();
         public List<string> Errors { get; set; } = new List<string>();
@@ -109,7 +116,7 @@ namespace MandADiscoverySuite.Services.Migration
     {
         public bool IsValid => IsSuccess && !Errors.Any();
         public string ValidationType { get; set; }
-        public List<ValidationIssue> Issues { get; set; } = new List<ValidationIssue>();
+        public List<Models.ValidationIssue> Issues { get; set; } = new List<Models.ValidationIssue>();
         public Dictionary<string, object> ValidationData { get; set; } = new Dictionary<string, object>();
         public List<string> ValidationMessages { get; set; } = new List<string>();
     }
