@@ -109,8 +109,8 @@ function Invoke-ExchangeDiscovery {
         try {
             Write-ModuleLog -ModuleName "Exchange" -Message "Discovering mailboxes with enhanced metadata..." -Level "INFO"
             
-            # Enhanced mailbox discovery with better filtering
-            $mailboxUri = "https://graph.microsoft.com/v1.0/users?`$select=$($userSelectFields -join ',')&`$top=$batchSize"
+            # Enhanced mailbox discovery with better filtering - using beta endpoint for beta properties
+            $mailboxUri = "https://graph.microsoft.com/beta/users?`$select=$($userSelectFields -join ',')&`$top=$batchSize"
             if (-not $Configuration.discovery.excludeDisabledUsers) {
                 # Include all users with mailboxes (including disabled ones for shared mailboxes)
                 $mailboxUri += "&`$filter=mail ne null and userType eq 'Member'"
@@ -459,8 +459,8 @@ function Invoke-ExchangeDiscovery {
             try {
                 Write-ModuleLog -ModuleName "Exchange" -Message "Discovering shared mailboxes..." -Level "INFO"
                 
-                # Note: Shared mailboxes are typically disabled users with mail
-                $sharedMailboxUri = "https://graph.microsoft.com/v1.0/users?`$filter=accountEnabled eq false and mail ne null&`$select=$($userSelectFields -join ',')&`$top=$batchSize"
+                # Note: Shared mailboxes are typically disabled users with mail - using beta endpoint for consistency
+                $sharedMailboxUri = "https://graph.microsoft.com/beta/users?`$filter=accountEnabled eq false and mail ne null&`$select=$($userSelectFields -join ',')&`$top=$batchSize"
                 
                 $nextLink = $sharedMailboxUri
                 while ($nextLink) {

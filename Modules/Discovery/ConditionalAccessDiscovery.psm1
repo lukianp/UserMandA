@@ -1,24 +1,43 @@
 ﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
 # Created: 2025-08-30
-# Last Modified: 2025-08-30
+# Last Modified: 2025-08-31
 
 <#
 .SYNOPSIS
     Conditional Access Discovery Module for M&A Discovery Suite
 .DESCRIPTION
-    Discovers Azure AD Conditional Access policies, security policies, and access controls using Microsoft Graph API. 
-    This module provides comprehensive security policy discovery including CA policies, named locations, 
+    Discovers Azure AD Conditional Access policies, security policies, and access controls using Microsoft Graph API.
+    This module provides comprehensive security policy discovery including CA policies, named locations,
     authentication methods, risk policies, and compliance settings essential for M&A security assessment.
 .NOTES
     Version: 1.0.0
     Author: Lukian Poleschtschuk
     Created: 2025-08-30
-    Requires: PowerShell 5.1+, Microsoft.Graph modules, DiscoveryBase module
+    Updated: 2025-08-31 - Integrated with session-based authentication system
+    Requires: PowerShell 5.1+, Microsoft.Graph modules, DiscoveryBase module, AuthenticationService module
 #>
+
+# Import authentication modules for session-based authentication
+try {
+    $authModules = @(
+        (Join-Path $PSScriptRoot "..\Authentication\AuthenticationService.psm1"),
+        (Join-Path $PSScriptRoot "..\Authentication\SessionManager.psm1"),
+        (Join-Path $PSScriptRoot "..\Authentication\AuthSession.psm1")
+    )
+
+    foreach ($module in $authModules) {
+        if (Test-Path $module) {
+            Import-Module $module -Force -ErrorAction SilentlyContinue
+        }
+    }
+} catch {
+    # Authentication modules will be imported by orchestrator if needed
+}
 
 # Fallback logging function if Write-MandALog is not available
 if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
@@ -62,12 +81,20 @@ function Write-ConditionalAccessLog {
 function Invoke-ConditionalAccessDiscovery {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$DiscoveryContext
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [AllowNull()]
+        [string]$SessionId
     )
     
     # START: Enhanced discovery context validation and initialization
-    Write-ConditionalAccessLog -Level "HEADER" -Message "=== M&A Conditional Access Discovery Module Starting ===" -Context $DiscoveryContext
+    Write-ConditionalAccessLog -Level "HEADER" -Message "=== M&A Conditional Access Discovery Module Starting ===" -Context $Context
     
     $result = [PSCustomObject]@{
         Success = $true
@@ -75,7 +102,7 @@ function Invoke-ConditionalAccessDiscovery {
         Data = @{}
         Errors = @()
         Warnings = @()
-        Context = $DiscoveryContext
+        Context = $Context
     }
     
     # Helper to add errors with proper context
@@ -102,10 +129,6 @@ function Invoke-ConditionalAccessDiscovery {
     }
     
     try {
-        # Extract context components with comprehensive validation
-        $Configuration = $DiscoveryContext.Configuration
-        $Context = $DiscoveryContext.Context
-        
         # 2. VALIDATE PREREQUISITES & CONTEXT
         Write-ConditionalAccessLog -Level "INFO" -Message "Validating prerequisites..." -Context $Context
         
@@ -118,19 +141,60 @@ function Invoke-ConditionalAccessDiscovery {
         
         Ensure-Path -Path $outputPath
 
-        # 3. INITIALIZE GRAPH CONNECTION
-        Write-ConditionalAccessLog -Level "INFO" -Message "Checking Microsoft Graph connection..." -Context $Context
+        # 3. ESTABLISH GRAPH CONNECTION (FLEXIBLE APPROACH)
+        Write-ConditionalAccessLog -Level "INFO" -Message "Checking available connection methods..." -Context $Context
+
+        $useGraph = $false
+        $useExistingGraph = $false
+        $useSessionGraph = $false
+
+        # First, check for existing Microsoft Graph connection (preferred method)
         try {
-            $mgContext = Get-MgContext
-            if (-not $mgContext -or $mgContext.Account -eq $null) {
-                $result.AddError("Microsoft Graph not connected. Please connect using Connect-MgGraph before running this module.", $null, "Graph Connection")
+            $mgContext = Get-MgContext -ErrorAction SilentlyContinue
+            if ($mgContext -and $mgContext.Account) {
+                $useGraph = $true
+                $useExistingGraph = $true
+                Write-ConditionalAccessLog -Level "SUCCESS" -Message "Existing Microsoft Graph connection available. Account: $($mgContext.Account)" -Context $Context
+            } else {
+                Write-ConditionalAccessLog -Level "DEBUG" -Message "No existing Microsoft Graph connection found" -Context $Context
+            }
+        } catch {
+            Write-ConditionalAccessLog -Level "DEBUG" -Message "Error checking existing Microsoft Graph connection: $($_.Exception.Message)" -Context $Context
+        }
+
+        # If no existing connection, try session-based authentication as fallback
+        if (-not $useExistingGraph -and $SessionId) {
+            try {
+                Write-ConditionalAccessLog -Level "INFO" -Message "Attempting to establish Microsoft Graph connection via Authentication Service..." -Context $Context
+                Write-ConditionalAccessLog -Level "DEBUG" -Message "Using SessionId: $SessionId" -Context $Context
+
+                # Get Microsoft Graph authentication via the unified service
+                $graphConnection = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+
+                if ($graphConnection -and $graphConnection.Connected) {
+                    Write-ConditionalAccessLog -Level "SUCCESS" -Message "Microsoft Graph connection established successfully via Authentication Service" -Context $Context
+                    $useGraph = $true
+                    $useSessionGraph = $true
+                } else {
+                    Write-ConditionalAccessLog -Level "WARNING" -Message "Failed to establish Microsoft Graph connection via Authentication Service" -Context $Context
+                }
+            } catch {
+                Write-ConditionalAccessLog -Level "WARNING" -Message "Session-based authentication failed: $($_.Exception.Message)" -Context $Context
+            }
+        }
+
+        # If still no Graph connection and SessionId was provided, this is an error
+        if (-not $useGraph) {
+            if ($SessionId) {
+                $result.AddError("Unable to establish Microsoft Graph connection. Please ensure you have a valid authentication session and try again.", $null, "Graph Connection")
+                return $result
+            } else {
+                $result.AddError("No Microsoft Graph connection available. Please either connect using Connect-MgGraph, provide a valid SessionId, or run this through the M&A Orchestrator for proper authentication.", $null, "Graph Connection")
                 return $result
             }
-            Write-ConditionalAccessLog -Level "SUCCESS" -Message "Microsoft Graph connection verified. Account: $($mgContext.Account)" -Context $Context
-        } catch {
-            $result.AddError("Failed to verify Microsoft Graph connection: $($_.Exception.Message)", $_.Exception, "Graph Connection")
-            return $result
         }
+
+        Write-ConditionalAccessLog -Level "SUCCESS" -Message "Authentication method established: $(if ($useExistingGraph) { 'Existing Connection' } else { 'Session Authentication' })" -Context $Context
 
         # 4. DISCOVERY EXECUTION
         Write-ConditionalAccessLog -Level "HEADER" -Message "Starting Conditional Access Discovery Process" -Context $Context

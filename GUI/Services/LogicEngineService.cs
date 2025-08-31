@@ -82,7 +82,7 @@ namespace MandADiscoverySuite.Services
         public LogicEngineService(ILogger<LogicEngineService> logger, MultiTierCacheService? cacheService = null, string? dataRoot = null)
         {
             _logger = logger;
-            _cacheService = cacheService; // Optional for T-030 - fallback to no caching
+            _cacheService = cacheService!; // Suppress nullability warning - handled by conditional logic elsewhere
             _dataRoot = dataRoot ?? @"C:\discoverydata\ljpops\RawData\";
             _fuzzyConfig = new FuzzyMatchingConfig();
         }

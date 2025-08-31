@@ -20,6 +20,7 @@ $ErrorActionPreference = 'Stop'
 
 # Import required modules
 Import-Module (Join-Path $PSScriptRoot "DiscoveryBase.psm1") -Force
+Import-Module (Join-Path $PSScriptRoot "DiscoveryModuleBase.psm1") -Force
 
 # Global variables for caching
 $script:ApplicationCache = @{}

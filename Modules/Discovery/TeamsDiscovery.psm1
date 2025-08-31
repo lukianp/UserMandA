@@ -386,43 +386,45 @@ function Invoke-TeamsDiscovery {
             }
         }
 
-        # 6. EXPORT DATA TO CSV
+        # 6. PREPARE DATA GROUPS FOR ORCHESTRATOR EXPORT
         if ($allDiscoveredData.Count -gt 0) {
-            Write-TeamsLog -Level "INFO" -Message "Exporting $($allDiscoveredData.Count) records..." -Context $Context
+            Write-TeamsLog -Level "INFO" -Message "Preparing $($allDiscoveredData.Count) records for export" -Context $Context
             
-            $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-            
-            # Group by data type and export
+            # Group by data type
             $dataGroups = $allDiscoveredData | Group-Object -Property _DataType
+            $resultGroups = @()
             
             foreach ($group in $dataGroups) {
                 $dataType = $group.Name
                 $data = $group.Group
                 
-                # Add metadata
-                $data | ForEach-Object {
-                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
-                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Teams" -Force
+                # Determine group name (launcher appends .csv)
+                $name = switch ($dataType) {
+                    'Team' { 'TeamsTeams' }
+                    'Channel' { 'TeamsChannels' }
+                    'ChannelTab' { 'TeamsChannelTabs' }
+                    'TeamMember' { 'TeamsMembers' }
+                    'TeamApp' { 'TeamsInstalledApps' }
+                    'OrgWideTeamsApp' { 'TeamsOrgWideApps' }
+                    default { "Teams_$dataType" }
                 }
                 
-                # Determine filename - MUST match orchestrator expectations
-                $fileName = switch ($dataType) {
-                    'Team' { 'TeamsTeams.csv' }
-                    'Channel' { 'TeamsChannels.csv' }
-                    'ChannelTab' { 'TeamsChannelTabs.csv' }
-                    'TeamMember' { 'TeamsMembers.csv' }
-                    'TeamApp' { 'TeamsInstalledApps.csv' }
-                    'OrgWideTeamsApp' { 'TeamsOrgWideApps.csv' }
-                    default { "Teams_$dataType.csv" }
+                if ($data -and $data.Count -gt 0) {
+                    $resultGroups += [PSCustomObject]@{
+                        Name = $name
+                        Group = $data
+                    }
+                    Write-TeamsLog -Level "SUCCESS" -Message "Prepared $($data.Count) $dataType records as group '$name'" -Context $Context
                 }
-                
-                $filePath = Join-Path $outputPath $fileName
-                $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
-                
-                Write-TeamsLog -Level "SUCCESS" -Message "Exported $($data.Count) $dataType records to $fileName" -Context $Context
+            }
+            
+            if ($resultGroups.Count -gt 0) {
+                $result.Data = $resultGroups
+            } else {
+                Write-TeamsLog -Level "WARN" -Message "No non-empty data groups to export" -Context $Context
             }
         } else {
-            Write-TeamsLog -Level "WARN" -Message "No data discovered to export" -Context $Context
+            Write-TeamsLog -Level "WARN" -Message "No data discovered to prepare for export" -Context $Context
         }
 
         # 7. FINALIZE METADATA

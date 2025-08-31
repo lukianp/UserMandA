@@ -109,12 +109,18 @@ function Invoke-GCloudCommand {
 function Invoke-GCPDiscovery {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$DiscoveryContext
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context,
+
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
     )
     
     # START: Enhanced discovery context validation and initialization
-    Write-GCPLog -Level "HEADER" -Message "=== M&A GCP Discovery Module Starting ===" -Context $DiscoveryContext
+    Write-GCPLog -Level "HEADER" -Message "=== M&A GCP Discovery Module Starting ===" -Context $Context
     
     $result = [PSCustomObject]@{
         Success = $true
@@ -122,7 +128,7 @@ function Invoke-GCPDiscovery {
         Data = @{}
         Errors = @()
         Warnings = @()
-        Context = $DiscoveryContext
+        Context = $Context
     }
     
     # Helper to add errors with proper context
@@ -150,8 +156,6 @@ function Invoke-GCPDiscovery {
     
     try {
         # Extract context components with comprehensive validation
-        $Configuration = $DiscoveryContext.Configuration
-        $Context = $DiscoveryContext.Context
         
         # 2. VALIDATE PREREQUISITES & CONTEXT
         Write-GCPLog -Level "INFO" -Message "Validating prerequisites..." -Context $Context

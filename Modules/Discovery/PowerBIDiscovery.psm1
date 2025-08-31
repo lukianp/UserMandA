@@ -75,12 +75,18 @@ function Test-PowerBIModule {
 function Invoke-PowerBIDiscovery {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$DiscoveryContext
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context,
+
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
     )
     
     # START: Enhanced discovery context validation and initialization
-    Write-PowerBILog -Level "HEADER" -Message "=== M&A Power BI Discovery Module Starting ===" -Context $DiscoveryContext
+    Write-PowerBILog -Level "HEADER" -Message "=== M&A Power BI Discovery Module Starting ===" -Context $Context
     
     $result = [PSCustomObject]@{
         Success = $true
@@ -88,7 +94,7 @@ function Invoke-PowerBIDiscovery {
         Data = @{}
         Errors = @()
         Warnings = @()
-        Context = $DiscoveryContext
+        Context = $Context
     }
     
     # Helper to add errors with proper context
@@ -115,10 +121,6 @@ function Invoke-PowerBIDiscovery {
     }
     
     try {
-        # Extract context components with comprehensive validation
-        $Configuration = $DiscoveryContext.Configuration
-        $Context = $DiscoveryContext.Context
-        
         # 2. VALIDATE PREREQUISITES & CONTEXT
         Write-PowerBILog -Level "INFO" -Message "Validating prerequisites..." -Context $Context
         

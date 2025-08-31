@@ -1469,55 +1469,6 @@ namespace MandADiscoverySuite.ViewModels
                 }
                 
                 return;
-                
-                // Original complex dialog code - disabled for now
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    _logger?.LogInformation("[MainViewModel] Creating CreateProfileDialog instance");
-                    var dialog = new MandADiscoverySuite.Dialogs.CreateProfileDialog();
-                    
-                    _logger?.LogInformation("[MainViewModel] Setting dialog owner to main window");
-                    dialog.Owner = Application.Current.MainWindow;
-                    dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-                    
-                    _logger?.LogInformation("[MainViewModel] Showing dialog");
-                    var result = dialog.ShowDialog();
-                    
-                    _logger?.LogInformation($"[MainViewModel] Dialog result: {result}");
-                    
-                    if (result == true && dialog.CreatedProfile != null && !string.IsNullOrEmpty(dialog.ProfileName))
-                    {
-                        _logger?.LogInformation($"[MainViewModel] Creating profile for: {dialog.ProfileName}");
-                        
-                        // Create the profile directory structure in C:\DiscoveryData\{ProfileName}
-                        var profilePath = System.IO.Path.Combine(@"C:\DiscoveryData", dialog.ProfileName);
-                        
-                        if (!System.IO.Directory.Exists(profilePath))
-                        {
-                            System.IO.Directory.CreateDirectory(profilePath);
-                            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(profilePath, "Raw"));
-                            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(profilePath, "Logs"));
-                            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(profilePath, "Credentials"));
-                            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(profilePath, "Configuration"));
-                            
-                            _logger?.LogInformation($"[MainViewModel] Created profile directory structure at: {profilePath}");
-                        }
-                        else
-                        {
-                            _logger?.LogWarning($"[MainViewModel] Profile directory already exists: {profilePath}");
-                        }
-                        
-                        // Reload profiles and select the new one
-                        LoadCompanyProfiles();
-                        SelectedProfile = CompanyProfiles.FirstOrDefault(p => p.CompanyName == dialog.ProfileName);
-                        
-                        _logger?.LogInformation($"[MainViewModel] Profile created and selected: {dialog.ProfileName}");
-                    }
-                    else
-                    {
-                        _logger?.LogInformation("[MainViewModel] Dialog cancelled or no profile created");
-                    }
-                });
             }
             catch (Exception ex)
             {

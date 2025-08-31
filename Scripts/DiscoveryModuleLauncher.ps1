@@ -131,13 +131,26 @@ try {
     
     try {
         $authResult = Initialize-AuthenticationService -Configuration $configuration
-        if (-not $authResult.Success) {
-            throw "Authentication initialization failed: $($authResult.Error)"
+        # Access hashtable keys safely to avoid StrictMode property issues
+        $authSuccess = $null
+        $authSessionId = $null
+        if ($authResult -is [hashtable]) {
+            $authSuccess = $authResult['Success']
+            $authSessionId = $authResult['SessionId']
+        } else {
+            # Fallback to property access if not a hashtable
+            $authSuccess = try { $authResult.Success } catch { $null }
+            $authSessionId = try { $authResult.SessionId } catch { $null }
+        }
+
+        if (-not $authSuccess) {
+            $authError = if ($authResult -is [hashtable]) { $authResult['Error'] } else { try { $authResult.Error } catch { $null } }
+            throw "Authentication initialization failed: $authError"
         }
         Write-Host "Authentication initialized successfully" -ForegroundColor Green
         
         # Update context with authenticated session ID
-        $context.DiscoverySession = $authResult.SessionId
+        $context.DiscoverySession = $authSessionId
     } catch {
         Write-Host "Authentication failed: $($_.Exception.Message)" -ForegroundColor Red
         throw
@@ -151,9 +164,27 @@ try {
     
     # Call the discovery function
     $discoveryResult = & $functionName -Configuration $configuration -Context $context -SessionId $context.DiscoverySession
+
+    # Normalize/guard discovery result shape to avoid property access errors under StrictMode
+    # - Some modules may accidentally emit extra pipeline items (arrays)
+    # - Some modules may return PSCustomObject without expected properties
+    if ($null -ne $discoveryResult -and ($discoveryResult -is [System.Collections.IEnumerable]) -and -not ($discoveryResult -is [string])) {
+        # Convert enumerable to array and try to pick the most relevant object
+        $drArray = @($discoveryResult)
+        # Prefer the first object that looks like a DiscoveryResult (by type or by presence of 'Success')
+        $drCandidate = $drArray | Where-Object { $_ -is [DiscoveryResult] } | Select-Object -First 1
+        if (-not $drCandidate) {
+            $drCandidate = $drArray | Where-Object { $_.PSObject -and $_.PSObject.Properties['Success'] } | Select-Object -First 1
+        }
+        if ($drCandidate) { $discoveryResult = $drCandidate }
+    }
     
-    # Process and save discovery data
-    if ($discoveryResult -and $discoveryResult.Success -and $discoveryResult.Data) {
+    # Process and save discovery data (safe property access under StrictMode)
+    $drPsObj = if ($null -ne $discoveryResult) { $discoveryResult.PSObject } else { $null }
+    $propSuccess = if ($drPsObj) { $drPsObj.Properties['Success'] } else { $null }
+    $propData = if ($drPsObj) { $drPsObj.Properties['Data'] } else { $null }
+
+    if ($propSuccess -and $propSuccess.Value -and $propData -and $propData.Value) {
         Write-Host "Processing and saving discovery data..." -ForegroundColor Yellow
         
         # Import the Export-DiscoveryResults function
@@ -161,7 +192,7 @@ try {
         
         # Process each data group and save as CSV
         $totalExported = 0
-        foreach ($dataGroup in $discoveryResult.Data) {
+        foreach ($dataGroup in $propData.Value) {
             if ($dataGroup.Group -and $dataGroup.Group.Count -gt 0) {
                 $fileName = "$($dataGroup.Name).csv"
                 $exported = Export-DiscoveryResults -Data $dataGroup.Group -FileName $fileName -OutputPath $context.Paths.RawDataOutput -ModuleName $ModuleName -SessionId $context.DiscoverySession
@@ -182,18 +213,24 @@ try {
     Write-Host ""
     Write-Host "=== Discovery Results ===" -ForegroundColor Cyan
     
-    if ($discoveryResult -and $discoveryResult.Success) {
+    # Display results (safe property access)
+    $propRecordCount = if ($drPsObj) { $drPsObj.Properties['RecordCount'] } else { $null }
+    $propErrors = if ($drPsObj) { $drPsObj.Properties['Errors'] } else { $null }
+    $propWarnings = if ($drPsObj) { $drPsObj.Properties['Warnings'] } else { $null }
+
+    if ($propSuccess -and $propSuccess.Value) {
         Write-Host "Status: SUCCESS" -ForegroundColor Green
-        if ($discoveryResult.RecordCount) {
-            Write-Host "Total Records: $($discoveryResult.RecordCount)" -ForegroundColor White
+        if ($propRecordCount -and $propRecordCount.Value) {
+            Write-Host "Total Records: $($propRecordCount.Value)" -ForegroundColor White
         }
-    } elseif ($discoveryResult -and $discoveryResult.Errors -and $discoveryResult.Errors.Count -gt 0) {
+    } elseif ($propErrors -and $propErrors.Value -and $propErrors.Value.Count -gt 0) {
         Write-Host "Status: FAILED" -ForegroundColor Red
-        Write-Host "Error Count: $($discoveryResult.Errors.Count)" -ForegroundColor Red
-        Write-Host "Warning Count: $($discoveryResult.Warnings.Count)" -ForegroundColor Yellow
+        Write-Host "Error Count: $($propErrors.Value.Count)" -ForegroundColor Red
+        $warningCount = if ($propWarnings -and $propWarnings.Value) { $propWarnings.Value.Count } else { 0 }
+        Write-Host "Warning Count: $warningCount" -ForegroundColor Yellow
         Write-Host ""
         Write-Host "Errors:" -ForegroundColor Red
-        foreach ($errorItem in $discoveryResult.Errors) {
+        foreach ($errorItem in $propErrors.Value) {
             Write-Host "  $($errorItem.Message)" -ForegroundColor Red
         }
     } else {
@@ -204,11 +241,17 @@ try {
     Write-Host "=== Discovery Complete ===" -ForegroundColor Cyan
     Write-Host "You can now refresh the GUI to see the discovered data." -ForegroundColor White
     Write-Host "Script completed successfully!" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Press any key to close this window..." -ForegroundColor White
+    Read-Host
 
 } catch {
     Write-Host ""
     Write-Host "=== Discovery Failed ===" -ForegroundColor Red
     Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "Script completed with errors!" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Press any key to close this window..." -ForegroundColor White
+    Read-Host
     exit 1
 }

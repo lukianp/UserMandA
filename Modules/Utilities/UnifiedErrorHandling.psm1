@@ -120,6 +120,8 @@ class UnifiedError {
             'InvalidOperationException' { return [ErrorCategory]::Configuration }
             default { return [ErrorCategory]::Unknown }
         }
+        # Fallback to satisfy PowerShell class return analysis
+        return [ErrorCategory]::Unknown
     }
     
     [ErrorSeverity]DetermineSeverity([System.Exception]$Exception) {
@@ -132,6 +134,8 @@ class UnifiedError {
             'HttpRequestException' { return [ErrorSeverity]::Medium }
             default { return [ErrorSeverity]::Low }
         }
+        # Fallback to satisfy PowerShell class return analysis
+        return [ErrorSeverity]::Low
     }
     
     [bool]DetermineRecoverability() {
@@ -147,6 +151,8 @@ class UnifiedError {
             ([ErrorCategory]::Resource) { return $false }
             default { return $true }
         }
+        # Fallback to satisfy PowerShell class return analysis
+        return $true
     }
     
     [string]GenerateCorrelationId() {
@@ -212,6 +218,8 @@ class CircuitBreaker {
             ([CircuitBreakerState]::HalfOpen) { return $true }
             default { return $false }
         }
+        # Fallback to satisfy PowerShell class return analysis
+        return $false
     }
     
     [void]RecordSuccess() {
@@ -285,7 +293,13 @@ class RetryPolicy {
         }
         
         $delayTimespan = [timespan]::FromMilliseconds($delay)
-        return if ($delayTimespan -gt $this.MaxDelay) { $this.MaxDelay } else { $delayTimespan }
+        if ($delayTimespan -gt $this.MaxDelay) {
+            return $this.MaxDelay
+        } else {
+            return $delayTimespan
+        }
+        # Fallback to satisfy PowerShell class return analysis
+        return $this.MaxDelay
     }
     
     [bool]ShouldRetryError([UnifiedError]$Error) {
@@ -407,6 +421,8 @@ class UnifiedErrorHandler {
                 }
             }
         }
+        # Fallback to satisfy PowerShell class return analysis
+        return $null
     }
     
     [void]RecordError([UnifiedError]$Error) {

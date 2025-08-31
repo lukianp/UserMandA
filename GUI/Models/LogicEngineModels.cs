@@ -275,10 +275,10 @@ namespace MandADiscoverySuite.Models
     )
     {
         // T-027 Migration Engine required properties (computed)
-        public List<string> MemberOfGroups => Groups?.Select(g => g.Name ?? g.Dn).Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new List<string>();
-        public List<string> ManagedGroups => Groups?.Where(g => g.ManagedBy == User.Dn).Select(g => g.Name ?? g.Dn).Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new List<string>();
+        public List<string> MemberOfGroups => Groups?.Select(g => g.Name ?? g.Dn ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new List<string>();
+        public List<string> ManagedGroups => Groups?.Where(g => g.ManagedBy == User.Dn).Select(g => g.Name ?? g.Dn ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new List<string>();
         public string ManagerUpn => User.Manager ?? string.Empty;
-        public List<string> OwnedGroups => Groups?.Where(g => g.ManagedBy == User.Dn).Select(g => g.Name ?? g.Dn).Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new List<string>();
+        public List<string> OwnedGroups => Groups?.Where(g => g.ManagedBy == User.Dn).Select(g => g.Name ?? g.Dn ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new List<string>();
     };
 
     public record AssetDetailProjection(

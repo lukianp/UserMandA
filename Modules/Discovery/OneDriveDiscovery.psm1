@@ -62,12 +62,18 @@ function Write-OneDriveLog {
 function Invoke-OneDriveDiscovery {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$DiscoveryContext
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context,
+
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
     )
     
     # START: Enhanced discovery context validation and initialization
-    Write-OneDriveLog -Level "HEADER" -Message "=== M&A OneDrive Discovery Module Starting ===" -Context $DiscoveryContext
+    Write-OneDriveLog -Level "HEADER" -Message "=== M&A OneDrive Discovery Module Starting ===" -Context $Context
     
     $result = [PSCustomObject]@{
         Success = $true
@@ -75,7 +81,7 @@ function Invoke-OneDriveDiscovery {
         Data = @{}
         Errors = @()
         Warnings = @()
-        Context = $DiscoveryContext
+        Context = $Context
     }
     
     # Helper to add errors with proper context
@@ -88,7 +94,7 @@ function Invoke-OneDriveDiscovery {
             Location = $location
             Timestamp = Get-Date
         }
-        Write-OneDriveLog -Level "ERROR" -Message $message -Context $this.Context
+        Write-OneDriveLog -Level "ERROR" -Message $message -Context $Context
     }
     
     # Helper to add warnings
@@ -102,10 +108,6 @@ function Invoke-OneDriveDiscovery {
     }
     
     try {
-        # Extract context components with comprehensive validation
-        $Configuration = $DiscoveryContext.Configuration
-        $Context = $DiscoveryContext.Context
-        
         # 2. VALIDATE PREREQUISITES & CONTEXT
         Write-OneDriveLog -Level "INFO" -Message "Validating prerequisites..." -Context $Context
         

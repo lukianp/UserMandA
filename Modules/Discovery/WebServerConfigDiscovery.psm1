@@ -94,15 +94,15 @@ function Invoke-WebServerConfigDiscovery {
         StartTime = Get-Date
         EndTime = $null
         ExecutionId = [guid]::NewGuid().ToString()
-        AddError = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
-        AddWarning = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-        Complete = { $this.EndTime = Get-Date }.GetNewClosure()
+        AddError = { param($m, $e, $c, $ht) $ht.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $ht.Success = $false }.GetNewClosure()
+        AddWarning = { param($m, $c, $ht) $ht.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
+        Complete = { param($ht) $ht.EndTime = Get-Date }.GetNewClosure()
     }
 
     try {
         # Validate context
         if (-not $Context.Paths.RawDataOutput) {
-            $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
+            & $result.AddError "Context is missing required 'Paths.RawDataOutput' property." $null $null $result
             return $result
         }
         $outputPath = $Context.Paths.RawDataOutput
@@ -124,7 +124,7 @@ function Invoke-WebServerConfigDiscovery {
             }
             Write-WebServerLog -Level "SUCCESS" -Message "Discovered $($iisData.Count) IIS configuration objects" -Context $Context
         } catch {
-            $result.AddWarning("Failed to discover IIS configuration: $($_.Exception.Message)", @{Section="IIS"})
+            & $result.AddWarning "Failed to discover IIS configuration: $($_.Exception.Message)" @{Section="IIS"} $result
         }
         
         # Discover Apache Configuration
@@ -138,7 +138,7 @@ function Invoke-WebServerConfigDiscovery {
             }
             Write-WebServerLog -Level "SUCCESS" -Message "Discovered $($apacheData.Count) Apache configuration objects" -Context $Context
         } catch {
-            $result.AddWarning("Failed to discover Apache configuration: $($_.Exception.Message)", @{Section="Apache"})
+            & $result.AddWarning "Failed to discover Apache configuration: $($_.Exception.Message)" @{Section="Apache"} $result
         }
         
         # Discover Nginx Configuration
@@ -152,7 +152,7 @@ function Invoke-WebServerConfigDiscovery {
             }
             Write-WebServerLog -Level "SUCCESS" -Message "Discovered $($nginxData.Count) Nginx configuration objects" -Context $Context
         } catch {
-            $result.AddWarning("Failed to discover Nginx configuration: $($_.Exception.Message)", @{Section="Nginx"})
+            & $result.AddWarning "Failed to discover Nginx configuration: $($_.Exception.Message)" @{Section="Nginx"} $result
         }
         
         # Discover Web Application Frameworks
@@ -166,7 +166,7 @@ function Invoke-WebServerConfigDiscovery {
             }
             Write-WebServerLog -Level "SUCCESS" -Message "Discovered $($frameworkData.Count) web framework objects" -Context $Context
         } catch {
-            $result.AddWarning("Failed to discover web frameworks: $($_.Exception.Message)", @{Section="WebFrameworks"})
+            & $result.AddWarning "Failed to discover web frameworks: $($_.Exception.Message)" @{Section="WebFrameworks"} $result
         }
 
         # Export data to CSV files
@@ -202,10 +202,10 @@ function Invoke-WebServerConfigDiscovery {
 
     } catch {
         Write-WebServerLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
-        $result.AddError("A critical error occurred during web server discovery: $($_.Exception.Message)", $_.Exception, $null)
+        & $result.AddError "A critical error occurred during web server discovery: $($_.Exception.Message)" $_.Exception $null $result
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        & $result.Complete $result
         Write-WebServerLog -Level "HEADER" -Message "Web server discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 
@@ -224,10 +224,36 @@ function Get-IISConfiguration {
     
     try {
         # Check if IIS is installed
-        $iisFeature = Get-WindowsFeature -Name Web-Server -ErrorAction SilentlyContinue
-        if (-not $iisFeature -or $iisFeature.InstallState -ne "Installed") {
-            Write-WebServerLog -Level "INFO" -Message "IIS not installed on this system"
-            return $iisData
+        try {
+            $iisFeature = Get-WindowsFeature -Name Web-Server -ErrorAction Stop
+            if (-not $iisFeature -or $iisFeature.InstallState -ne "Installed") {
+                Write-WebServerLog -Level "INFO" -Message "IIS not installed on this system"
+                return $iisData
+            }
+        } catch {
+            # Get-WindowsFeature not available - try alternative detection methods
+            Write-WebServerLog -Level "WARN" -Message "Get-WindowsFeature cmdlet not available, attempting alternative IIS detection"
+
+            # Try to detect IIS via registry or other methods
+            $iisInstalled = $false
+            try {
+                # Check for IIS in Windows Features via DISM (works on client OS)
+                $dismResult = dism.exe /online /get-featureinfo /featurename:IIS-WebServerRole 2>$null
+                if ($LASTEXITCODE -eq 0) {
+                    $iisInstalled = $dismResult | Select-String "State.*Enabled" -Quiet
+                }
+            } catch {
+                # Fallback: check for IIS-related services or registry
+                $iisServices = Get-Service | Where-Object { $_.Name -like "W3SVC" -or $_.Name -like "WAS" }
+                if ($iisServices) {
+                    $iisInstalled = $true
+                }
+            }
+
+            if (-not $iisInstalled) {
+                Write-WebServerLog -Level "INFO" -Message "IIS not installed on this system"
+                return $iisData
+            }
         }
         
         # Check for IIS Administration module

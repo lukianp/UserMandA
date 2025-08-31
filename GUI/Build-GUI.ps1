@@ -392,7 +392,32 @@ if (Test-Path $ConfigSourcePath) {
     }
 }
 
-# Copy embedded tools (including nmap for Infrastructure Discovery)
+# Optional: Attempt silent nmap installation for better performance
+$SilentInstallerPath = Join-Path (Split-Path $ScriptDir -Parent) "Tools\Install-NmapSilent.ps1"
+if (Test-Path $SilentInstallerPath) {
+    Write-Host "Checking for system nmap installation..." -ForegroundColor Yellow
+    
+    # Check if nmap is already installed system-wide
+    $SystemNmap = Get-Command nmap -ErrorAction SilentlyContinue
+    if (-not $SystemNmap) {
+        # Check common installation paths
+        $CommonPaths = @(
+            "${env:ProgramFiles}\Nmap\nmap.exe",
+            "${env:ProgramFiles(x86)}\Nmap\nmap.exe"
+        )
+        
+        $SystemNmap = $CommonPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+    }
+    
+    if ($SystemNmap) {
+        Write-Host "  [OK] System nmap found - Infrastructure Discovery will use system installation for optimal performance" -ForegroundColor Green
+    } else {
+        Write-Host "  [INFO] System nmap not detected - Infrastructure Discovery will use embedded version" -ForegroundColor Cyan
+        Write-Host "  [HINT] For best performance, consider running: Tools\Install-NmapSilent.ps1" -ForegroundColor Gray
+    }
+}
+
+# Copy embedded tools (including nmap for Infrastructure Discovery)  
 $ToolsSourcePath = Join-Path (Split-Path $ScriptDir -Parent) "Tools"
 $ToolsDestPath = Join-Path $OutputPath "Tools"
 
