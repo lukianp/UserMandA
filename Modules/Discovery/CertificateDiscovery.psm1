@@ -95,15 +95,15 @@ function Invoke-CertificateDiscovery {
         StartTime = Get-Date
         EndTime = $null
         ExecutionId = [guid]::NewGuid().ToString()
-        AddError = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
-        AddWarning = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-        Complete = { $this.EndTime = Get-Date }.GetNewClosure()
+        AddError = { param($m, $e, $c, $ht) $ht.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $ht.Success = $false }.GetNewClosure()
+        AddWarning = { param($m, $c, $ht) $ht.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
+        Complete = { param($ht) $ht.EndTime = Get-Date }
     }
 
     try {
         # Validate context
         if (-not $Context.Paths.RawDataOutput) {
-            $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
+            & $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null, $result)
             return $result
         }
         $outputPath = $Context.Paths.RawDataOutput
@@ -125,7 +125,7 @@ function Invoke-CertificateDiscovery {
             }
             Write-CertificateLog -Level "SUCCESS" -Message "Discovered $($localCerts.Count) local certificates" -Context $Context
         } catch {
-            $result.AddWarning("Failed to discover local certificates: $($_.Exception.Message)", @{Section="LocalCertificates"})
+            & $result.AddWarning("Failed to discover local certificates: $($_.Exception.Message)", @{Section="LocalCertificates"}, $result)
         }
         
         # Discover Web Server Certificates
@@ -139,7 +139,7 @@ function Invoke-CertificateDiscovery {
             }
             Write-CertificateLog -Level "SUCCESS" -Message "Discovered $($webCerts.Count) web server certificates" -Context $Context
         } catch {
-            $result.AddWarning("Failed to discover web server certificates: $($_.Exception.Message)", @{Section="WebServerCertificates"})
+            & $result.AddWarning("Failed to discover web server certificates: $($_.Exception.Message)", @{Section="WebServerCertificates"}, $result)
         }
         
         # Discover Certificate Authority Information
@@ -153,7 +153,7 @@ function Invoke-CertificateDiscovery {
             }
             Write-CertificateLog -Level "SUCCESS" -Message "Discovered $($caInfo.Count) certificate authorities" -Context $Context
         } catch {
-            $result.AddWarning("Failed to discover certificate authorities: $($_.Exception.Message)", @{Section="CertificateAuthorities"})
+            & $result.AddWarning("Failed to discover certificate authorities: $($_.Exception.Message)", @{Section="CertificateAuthorities"}, $result)
         }
         
         # Discover Certificate Templates (if available)
@@ -167,7 +167,7 @@ function Invoke-CertificateDiscovery {
             }
             Write-CertificateLog -Level "SUCCESS" -Message "Discovered $($templates.Count) certificate templates" -Context $Context
         } catch {
-            $result.AddWarning("Failed to discover certificate templates: $($_.Exception.Message)", @{Section="CertificateTemplates"})
+            & $result.AddWarning("Failed to discover certificate templates: $($_.Exception.Message)", @{Section="CertificateTemplates"}, $result)
         }
 
         # Export data to CSV files
@@ -203,10 +203,10 @@ function Invoke-CertificateDiscovery {
 
     } catch {
         Write-CertificateLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
-        $result.AddError("A critical error occurred during certificate discovery: $($_.Exception.Message)", $_.Exception, $null)
+        & $result.AddError("A critical error occurred during certificate discovery: $($_.Exception.Message)", $_.Exception, $null, $result)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        ($result.Complete).Invoke($result)
         Write-CertificateLog -Level "HEADER" -Message "Certificate discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

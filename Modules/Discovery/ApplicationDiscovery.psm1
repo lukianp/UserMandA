@@ -1609,72 +1609,219 @@ function Invoke-ApplicationDiscovery {
 
         [Parameter(Mandatory=$true)]
         [hashtable]$Context,
-        
+
         [Parameter(Mandatory=$true)]
         [string]$SessionId
     )
 
-    # Define discovery script
-    $discoveryScript = {
-        param($Configuration, $Context, $SessionId, $Connections, $Result)
-        
-        $allDiscoveredData = [System.Collections.ArrayList]::new()
-        
-        try {
-            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Starting comprehensive application discovery..." -Level "INFO"
-            
-            # Get Intune applications
-            if ($Configuration.ContainsKey('IncludeIntuneApps') -and $Configuration.IncludeIntuneApps) {
-                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovering Intune applications..." -Level "INFO"
-                $intuneApps = Get-IntuneApplications -Configuration $Configuration -IncludeAssignments -IncludeUsageStats
-                $allDiscoveredData.AddRange($intuneApps)
-            }
-            
-            # Get DNS-based applications
-            if ($Configuration.ContainsKey('IncludeDNSApps') -and $Configuration.IncludeDNSApps) {
-                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovering DNS-based applications..." -Level "INFO"
-                $dnsApps = Get-DNSApplications -Configuration $Configuration
-                $allDiscoveredData.AddRange($dnsApps)
-            }
-            
-            # Create application catalog
-            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Creating application catalog..." -Level "INFO"
-            $applicationCatalog = New-ApplicationCatalog -Applications $allDiscoveredData -Configuration $Configuration
-            
-            # Test connectivity for critical applications
-            if ($Configuration.ContainsKey('TestConnectivity') -and $Configuration.TestConnectivity) {
-                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Testing application connectivity..." -Level "INFO"
-                $applicationCatalog | ForEach-Object {
-                    $connectivity = Test-ApplicationConnectivity -Application $_ -DetailedCheck
-                    $_.ConnectivityStatus = $connectivity
-                }
-            }
-            
-            # Export results
-            $outputPath = $Context.OutputPath
-            if ($outputPath) {
-                Export-ApplicationCatalog -Applications $applicationCatalog -OutputPath $outputPath -Format "CSV"
-                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Application catalog exported to: $outputPath" -Level "INFO"
-            }
-            
-            $Result.ItemCount = $applicationCatalog.Count
-            $Result.Status = "Completed"
-            $Result.Summary = "Discovered $($applicationCatalog.Count) applications from multiple sources"
-            $Result.Data = $applicationCatalog
-            
-            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Application discovery completed successfully. Found $($applicationCatalog.Count) applications." -Level "INFO"
-            
-        } catch {
-            $errorMessage = "Application discovery failed: $($_.Exception.Message)"
-            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message $errorMessage -Level "ERROR"
-            $Result.Status = "Failed"
-            $Result.ErrorMessage = $errorMessage
-            $Result.ItemCount = 0
+    Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Starting Application discovery (v4.0)" -Level "HEADER"
+    Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Using authentication session: $SessionId" -Level "INFO"
+
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+    # 1. INITIALIZE RESULT OBJECT
+    try {
+        if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+            Import-Module -Name "$PSScriptRoot\..\Core\ClassDefinitions.psm1" -Force -ErrorAction Stop
         }
+        $result = [DiscoveryResult]::new('Application')
+    } catch {
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Failed to load DiscoveryResult class: $($_.Exception.Message)" -Level "ERROR"
+        throw "Critical error: Cannot load required DiscoveryResult class. Discovery cannot proceed."
     }
 
-    # Execute discovery using the base framework
-    return Invoke-DiscoveryWithRetry -ModuleName "ApplicationDiscovery" -DiscoveryScript $discoveryScript -Configuration $Configuration -Context $Context -SessionId $SessionId
+    try {
+        # 2. VALIDATE PREREQUISITES & CONTEXT
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Validating prerequisites..." -Level "INFO"
+
+        if (-not $Context.Paths.RawDataOutput) {
+            $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
+            return $result
+        }
+        $outputPath = $Context.Paths.RawDataOutput
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Output path: $outputPath" -Level "DEBUG"
+
+        # Ensure output path exists
+        if (-not (Test-Path -Path $outputPath -PathType Container)) {
+            try {
+                New-Item -Path $outputPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
+            } catch {
+                throw "Failed to create output directory: $outputPath. Error: $($_.Exception.Message)"
+            }
+        }
+
+        # 3. AUTHENTICATE & CONNECT (Use client credentials from company configuration)
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Getting authentication for Graph service..." -Level "INFO"
+
+        try {
+            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+
+            # Validate Graph connection
+            $testUri = "https://graph.microsoft.com/v1.0/organization"
+            $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
+
+            if (-not $testResponse) {
+                throw "Graph connection test failed - no response"
+            }
+
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Graph connection validated" -Level "SUCCESS"
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Connected to Microsoft Graph via session authentication" -Level "SUCCESS"
+        } catch {
+            $result.AddError("Graph authentication validation failed: $($_.Exception.Message)", $_.Exception, $null)
+            return $result
+        }
+
+        # 4. PERFORM DISCOVERY
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Starting data discovery" -Level "HEADER"
+
+        $allDiscoveredData = [System.Collections.ArrayList]::new()
+
+        # Get Intune applications if enabled
+        if ($Configuration.ContainsKey('IncludeIntuneApps') -and $Configuration.IncludeIntuneApps) {
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovering Intune applications..." -Level "INFO"
+            try {
+                $intuneApps = Get-IntuneApplications -Configuration $Configuration -IncludeAssignments -IncludeUsageStats
+                if ($intuneApps) {
+                    $allDiscoveredData.AddRange($intuneApps)
+                    Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Found $($intuneApps.Count) Intune applications" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "No Intune applications found" -Level "WARN"
+                }
+            } catch {
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Intune discovery failed: $($_.Exception.Message)" -Level "ERROR"
+                $result.AddError("Intune discovery failed: $($_.Exception.Message)", $_.Exception, @{Section="Intune"})
+            }
+        }
+
+        # Get DNS-based applications if enabled
+        if ($Configuration.ContainsKey('IncludeDNSApps') -and $Configuration.IncludeDNSApps) {
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovering DNS-based applications..." -Level "INFO"
+            try {
+                # Get domains from configuration or use standard patterns
+                $domainNames = @()
+                if ($Configuration.ContainsKey('DiscoveryDomains')) {
+                    $domainNames = $Configuration.DiscoveryDomains
+                } else {
+                    # Default domains based on common enterprise patterns
+                    $domainNames = @('contoso.com', 'fabrikam.com', 'company.local', 'corporate.com')
+                }
+
+                $dnsApps = Get-DNSApplications -DomainNames $domainNames
+                if ($dnsApps) {
+                    $allDiscoveredData.AddRange($dnsApps)
+                    Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Found $($dnsApps.Count) DNS applications" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "No DNS-based applications found" -Level "WARN"
+                }
+            } catch {
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "DNS discovery failed: $($_.Exception.Message)" -Level "ERROR"
+                $result.AddError("DNS discovery failed: $($_.Exception.Message)", $_.Exception, @{Section="DNS"})
+            }
+        }
+
+        # Add local software inventory if enabled
+        if ($Configuration.ContainsKey('IncludeLocalSoftware') -and $Configuration.IncludeLocalSoftware) {
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovering local software inventory..." -Level "INFO"
+            try {
+                $localSoftware = Get-SoftwareLicenseInventory -SessionId $SessionId
+                if ($localSoftware) {
+                    # Convert software objects to application format
+                    foreach ($software in $localSoftware) {
+                        $appData = [PSCustomObject]@{
+                            Name = $software.DisplayName
+                            Vendor = $software.Publisher
+                            Version = $software.Version
+                            Platform = Get-AppPlatform -ODataType "" # Default to Windows for local software
+                            Category = "Client Application"
+                            DiscoverySource = "Local Software Inventory"
+                            DiscoveredAt = Get-Date
+                            LicenseType = $software.LicenseType
+                            ComplianceStatus = $software.ComplianceStatus
+                            _ObjectType = "LocalApplication"
+                        }
+                        $allDiscoveredData.Add($appData) | Out-Null
+                    }
+                    Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Found $($localSoftware.Count) local software applications" -Level "SUCCESS"
+                }
+            } catch {
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Local software discovery failed: $($_.Exception.Message)" -Level "ERROR"
+                $result.AddError("Local software discovery failed: $($_.Exception.Message)", $_.Exception, @{Section="Local"})
+            }
+        }
+
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Total applications discovered: $($allDiscoveredData.Count)" -Level "SUCCESS"
+
+        # Create application catalog
+        if ($allDiscoveredData.Count -gt 0) {
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Creating application catalog..." -Level "INFO"
+
+            $catalogResult = New-ApplicationCatalog -Applications $allDiscoveredData
+            $applicationCatalog = $catalogResult.Applications
+            $statistics = $catalogResult.Statistics
+
+            # Test connectivity for select applications
+            if ($Configuration.ContainsKey('TestConnectivity') -and $Configuration.TestConnectivity -and $applicationCatalog.Applications.Count -gt 0) {
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Testing application connectivity for top applications..." -Level "INFO"
+                $topApplications = $applicationCatalog.Applications | Where-Object { $_.URL -and $_.URL -like "https://*" } | Select-Object -First 10
+                foreach ($app in $topApplications) {
+                    try {
+                        $connectivity = Test-ApplicationConnectivity -Application $app
+                        $app | Add-Member -MemberType NoteProperty -Name "ConnectivityTested" -Value $true -Force
+                        $app | Add-Member -MemberType NoteProperty -Name "IsAccessible" -Value $connectivity.IsAccessible -Force
+                        $app | Add-Member -MemberType NoteProperty -Name "ResponseTime" -Value $connectivity.ResponseTime -Force
+                    } catch {
+                        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Connectivity test failed for $($app.Name): $($_.Exception.Message)" -Level "WARN"
+                    }
+                }
+            }
+
+            # Export results
+            Export-ApplicationCatalog -ApplicationCatalog $applicationCatalog.Applications -Statistics $statistics -OutputPath $outputPath
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Application catalog exported to: $outputPath" -Level "SUCCESS"
+
+            $result.Data = $applicationCatalog.Applications
+            $result.RecordCount = $applicationCatalog.Applications.Count
+        } else {
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "No applications discovered" -Level "WARN"
+            $result.Data = @()
+            $result.RecordCount = 0
+        }
+
+        # 5. FINALIZE METADATA
+        $result.Metadata["TotalRecords"] = $result.RecordCount
+        $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
+        $result.Metadata["SessionId"] = $SessionId
+        $result.Metadata["ConfigurationApplied"] = $Configuration
+
+    } catch [System.UnauthorizedAccessException] {
+        $result.AddError("Access denied: $($_.Exception.Message)", $_.Exception, @{ErrorType="Authorization"})
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Authorization error: $($_.Exception.Message)" -Level "ERROR"
+    } catch [System.Net.WebException] {
+        $result.AddError("Network error: $($_.Exception.Message)", $_.Exception, @{ErrorType="Network"})
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Network error: $($_.Exception.Message)" -Level "ERROR"
+    } catch {
+        $result.AddError("Unexpected error: $($_.Exception.Message)", $_.Exception, @{ErrorType="General"})
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Critical error: $($_.Exception.Message)" -Level "ERROR"
+    } finally {
+        # Ensure RecordCount is properly set before cleanup
+        $result.RecordCount = if ($result.Data) { $result.Data.Count } else { 0 }
+
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovery completed with $($result.RecordCount) records" -Level $(if($result.Success){"SUCCESS"}else{"ERROR"})
+
+        # Disconnect Graph API
+        try {
+            Disconnect-MgGraph -ErrorAction SilentlyContinue
+        } catch {
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Error disconnecting Graph API: $($_.Exception.Message)" -Level "WARN"
+        }
+
+        $stopwatch.Stop()
+        $result.Complete()
+
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Level "HEADER"
+    }
+
+    return $result
 }
 
 #endregion

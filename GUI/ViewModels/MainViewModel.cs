@@ -736,10 +736,17 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _logger?.LogInformation("[MainViewModel] Running Target App Registration setup");
 
-                var scriptPath = ConfigurationService.Instance.GetAppRegistrationScriptPath();
+                // Use the target-specific script path
+                var scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Scripts", "DiscoveryCreateTargetAppRegistration.ps1");
+                
+                // Fallback to source script if target script doesn't exist (backward compatibility)
                 if (!File.Exists(scriptPath))
                 {
-                    scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Scripts", "DiscoveryCreateAppRegistration.ps1");
+                    scriptPath = ConfigurationService.Instance.GetAppRegistrationScriptPath();
+                    if (!File.Exists(scriptPath))
+                    {
+                        scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Scripts", "DiscoveryCreateAppRegistration.ps1");
+                    }
                 }
 
                 if (File.Exists(scriptPath))
@@ -754,7 +761,7 @@ namespace MandADiscoverySuite.ViewModels
                     var startInfo = new System.Diagnostics.ProcessStartInfo
                     {
                         FileName = "powershell.exe",
-                        Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" -CompanyName \"{targetCompany}\"",
+                        Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" -CompanyName \"{targetCompany}\" -AutoInstallModules",
                         UseShellExecute = true,
                         WorkingDirectory = Path.GetDirectoryName(scriptPath)
                     };

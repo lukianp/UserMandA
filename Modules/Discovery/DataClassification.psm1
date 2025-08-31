@@ -260,11 +260,104 @@ function Get-DataClassificationPatterns {
             Patterns = @(
                 @{Name = "Patent"; Pattern = "\b(Patent|Pat\.)\s*No\.?\s*\d{1,3}[,.]?\d{3}[,.]?\d{3}\b"; Description = "Patent Number"},
                 @{Name = "Copyright"; Pattern = "\b©|\bCopyright\b|\b\(c\)\b"; Description = "Copyright Notice"},
-                @{Name = "Trademark"; Pattern = "\b™|\b®|\bTrademark\b"; Description = "Trademark"},
+                @{Name = "Trademark"; Pattern = "\b\u{2122}|\b\u{00AE}|\bTrademark\b"; Description = "Trademark"},
                 @{Name = "Confidential"; Pattern = "\b(Confidential|Proprietary|Trade Secret|Internal Use Only)\b"; Description = "Confidential Marking"}
             )
             RiskLevel = "Medium"
         }
+    }
+
+    APIKeys = @{
+        Name = "API Keys & Authentication Tokens"
+        Patterns = @(
+            @{Name = "AWS Access Key"; Pattern = "\bAKIA[A-Z0-9]{16}\b"; Description = "AWS Access Key ID"},
+            @{Name = "Azure Storage Key"; Pattern = "\b[A-Za-z0-9+/]{88}==\b"; Description = "Azure Storage Account Key"},
+            @{Name = "Google Cloud API Key"; Pattern = "\bAIza[0-9A-Za-z-_]{35}\b"; Description = "Google API Key"},
+            @{Name = "GitHub Token"; Pattern = "\bghp_[0-9a-zA-Z]{36}\b|\bgithub_pat_[0-9a-zA-Z]{22}_[0-9a-zA-Z]{59}\b"; Description = "GitHub Personal Access Token"},
+            @{Name = "Slack Token"; Pattern = "\bxox[pboar]-[0-9]{12}-[0-9]{12}-[0-9a-zA-Z]{24}\b"; Description = "Slack API Token"},
+            @{Name = "Discord Bot Token"; Pattern = "\b[MN][A-Za-z\d]{23}\.[\w-]{6}\.[\w-]{27}\b"; Description = "Discord Bot Token"},
+            @{Name = "Stripe Secret Key"; Pattern = "\bsk_(test|live)_[0-9a-zA-Z]{24}\b"; Description = "Stripe API Secret Key"},
+            @{Name = "Twilio API Key"; Pattern = "\bSK[0-9a-f]{32}\b"; Description = "Twilio API Key"},
+            @{Name = "SendGrid API Key"; Pattern = "\bSG\.[0-9A-Za-z-_]{22}\.[0-9A-Za-z-_]{43}\b"; Description = "SendGrid API Key"},
+            @{Name = "Mailchimp API Key"; Pattern = "\b[0-9a-f]{32}-us[0-9]{1,2}\b"; Description = "Mailchimp API Key"},
+            @{Name = "JWT Bearer Token"; Pattern = "\beyJ[A-Za-z0-9-_]*\.[A-Za-z0-9-_]*\.[A-Za-z0-9-_]*\b"; Description = "JSON Web Token"},
+            @{Name = "Bearer Token"; Pattern = "\bbearer\s+[A-Za-z0-9-_.]+={0,2}\b"; Description = "Generic Bearer Token"},
+            @{Name = "OAuth Access Token"; Pattern = "\b[A-Za-z0-9]{25,150}\b"; Description = "OAuth Access Token"},
+            @{Name = "Session Token"; Pattern = "\bsession[_-]?token[_-]?[A-Za-z0-9]{32,}\b"; Description = "Session Token"},
+            @{Name = "API Secret"; Pattern = "\bapi[_-]?secret[_-]?[A-Za-z0-9]{20,}\b"; Description = "API Secret Key"}
+        )
+        RiskLevel = "Critical"
+    }
+
+    Crypto = @{
+        Name = "Cryptocurrency & Blockchain"
+        Patterns = @(
+            @{Name = "Bitcoin Address"; Pattern = "\b(bc1|[13])[a-km-zA-HJ-NP-Z1-9]{25,34}\b"; Description = "Bitcoin Wallet Address"},
+            @{Name = "Ethereum Address"; Pattern = "\b0x[a-fA-F0-9]{40}\b"; Description = "Ethereum Wallet Address"},
+            @{Name = "Litecoin Address"; Pattern = "\b[LML][a-km-zA-HJ-NP-Z1-9]{26,33}\b"; Description = "Litecoin Address"},
+            @{Name = "Monero Address"; Pattern = "\b[48][0-9AB][1-9A-HJ-NP-Za-km-z]{93}\b"; Description = "Monero Wallet Address"},
+            @{Name = "BNB Address"; Pattern = "\bbnb1[0-9a-z]{38}\b"; Description = "BNB Beacon Chain Address"},
+            @{Name = "TRON Address"; Pattern = "\bT[1-9A-HJ-NP-Za-km-z]{33}\b"; Description = "TRON Wallet Address"},
+            @{Name = "Smart Contract Address"; Pattern = "\b0x[a-fA-F0-9]{40}\b"; Description = "Ethereum Smart Contract"},
+            @{Name = "Private Key"; Pattern = "\b[0-9a-fA-F]{64}\b"; Description = "Cryptocurrency Private Key"},
+            @{Name = "Wallet Seed"; Pattern = "\b[a-z\s]{100,500}\b"; Description = "Crypto Wallet Seed Phrase"},
+            @{Name = "Transaction Hash"; Pattern = "\b0x[a-fA-F0-9]{64}\b"; Description = "Blockchain Transaction Hash"}
+        )
+        RiskLevel = "High"
+    }
+
+    Database = @{
+        Name = "Database Connection Strings"
+        Patterns = @(
+            @{Name = "SQL Server Connection"; Pattern = '\b(?:Server|Data Source)=[^\s;]+;(?:User ID|Username)=[^\s;]+;Password=[^\s;]+\b'; Description = "SQL Server Connection String"},
+            @{Name = "MySQL Connection"; Pattern = '\b(?:Server|Host)=[^\s;]+;(?:User|Username)=[^\s;]+;Password=[^\s;]+\b'; Description = "MySQL Connection String"},
+            @{Name = "PostgreSQL Connection"; Pattern = '\bHost=[^\s;]+;Username=[^\s;]+;Password=[^\s;]+\b'; Description = "PostgreSQL Connection String"},
+            @{Name = "MongoDB Connection"; Pattern = '\bmongodb://[^\s;]+:[^\s;]+@[^\s;]+\b'; Description = "MongoDB Connection String"},
+            @{Name = "Oracle Connection"; Pattern = '\b(?:User Id|Username)=[^\s;]+;Password=[^\s;]+;Data Source=[^\s;]+\b'; Description = "Oracle Connection String"},
+            @{Name = "Redis Connection"; Pattern = '\bredis://[^\s:@]+:[^\s@]+@[^\s:]+\b'; Description = "Redis Connection String"}
+        )
+        RiskLevel = "High"
+    }
+
+    CloudStorage = @{
+        Name = "Cloud Storage Keys"
+        Patterns = @(
+            @{Name = "AWS S3 Access Key"; Pattern = '\bAKIA[0-9A-Z]{16}\b'; Description = "AWS S3 Access Key"},
+            @{Name = "AWS Secret Key"; Pattern = '\b[a-zA-Z0-9+/]{40}\b'; Description = "AWS Secret Access Key"},
+            @{Name = "Azure SAS Token"; Pattern = '\bsv=\d{4}-\d{2}-\d{2}&[^\s&]+\b'; Description = "Azure Shared Access Signature"},
+            @{Name = "GCP Service Account Key"; Pattern = '\bAIza[0-9A-Za-z-_]{35}\b'; Description = "Google Cloud Service Account Key"},
+            @{Name = "DigitalOcean API Key"; Pattern = '\bdoo_v1_[a-f0-9]{64}\b'; Description = "DigitalOcean API Key"},
+            @{Name = "Dropbox Access Token"; Pattern = '\bsl\.[A-Za-z0-9_-]{135}\b'; Description = "Dropbox Access Token"}
+        )
+        RiskLevel = "Critical"
+    }
+
+    GDPR = @{
+        Name = "GDPR Data Protection"
+        Patterns = @(
+            @{Name = "EU National ID"; Pattern = "\b\d{8,12}[A-Za-z]?\b"; Description = "European National Identification Number"},
+            @{Name = "Passport Number EU"; Pattern = "\b[A-Z]{1,3}\d{6,9}[A-Z]?\b"; Description = "European Passport Number"},
+            @{Name = "EU Health Insurance"; Pattern = "\b\d{9,12}[A-Z]?\b"; Description = "European Health Insurance Number"},
+            @{Name = "EU Tax ID"; Pattern = "\b\d{8,12}[A-Z]?\b"; Description = "European Tax Identification Number"},
+            @{Name = "Data Subject Rights"; Pattern = "\b(RIGHTS?|CONSENT|PROCESSING|DATA CONTROLLER|DATA PROCESSOR|DATA PROTECTION OFFICER)\b"; Description = "GDPR Compliance Terms"},
+            @{Name = "Data Breach Notice"; Pattern = "\b(DATA BREACH|BREACH NOTIFICATION|NOTIFICATION PERIOD)\b"; Description = "GDPR Breach Terms"},
+            @{Name = "Processing Basis"; Pattern = "\b(LEGITIMATE INTERESTS?|LEGAL OBLIGATION|CONSENT|VITAL INTERESTS?|PUBLIC TASK|CONTRACT)\b"; Description = "Legal Basis for Processing"},
+            @{Name = "Sensitive Data"; Pattern = "\b(SENSITIVE|SPECIAL CATEGORY|RACIAL|ETHNIC|POLITICAL|RELIGIOUS|PHILOSOPHICAL|GENETIC|BIOMETRIC|HEALTH|SEXUAL)\b"; Description = "Special Category Data (Article 9)"}
+        )
+        RiskLevel = "High"
+    }
+
+    CloudInfrastructure = @{
+        Name = "Cloud Infrastructure Secrets"
+        Patterns = @(
+            @{Name = "Kubernetes Token"; Pattern = "\beyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IiJ9\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\b"; Description = "Kubernetes Service Account Token"},
+            @{Name = "Docker Registry Token"; Pattern = "\b[A-Za-z0-9+/]{100,200}={0,2}\b"; Description = "Docker Registry Authentication Token"},
+            @{Name = "Service Principal Secret"; Pattern = "\b[a-f0-9]{36}:[a-f0-9-]{36}\b"; Description = "Azure Service Principal Secret"},
+            @{Name = "Terraform Cloud Token"; Pattern = "\b[A-Za-z0-9-_]{40}\b"; Description = "Terraform Cloud API Token"},
+            @{Name = "Ansible Vault Password"; Pattern = "\b[A-Za-z0-9!@#$%^&*()_+-=]{20,}\b"; Description = "Ansible Vault Secret"},
+            @{Name = "Jenkins API Token"; Pattern = "\b[0-9a-f]{32,}\b"; Description = "Jenkins API Token"}
+        )
+        RiskLevel = "Critical"
     }
 }
 
@@ -496,6 +589,12 @@ function Invoke-FileContentClassification {
         HIPAA = $false
         Financial = $false
         Intellectual = $false
+        APIKeys = $false
+        Crypto = $false
+        Database = $false
+        CloudStorage = $false
+        GDPR = $false
+        CloudInfrastructure = $false
         RiskScore = 0
         MatchedPatterns = @()
     }
@@ -614,12 +713,12 @@ function Get-DataClassificationSummary {
             TotalClassifiedFiles = $totalClassifiedFiles
             ClassificationPercentage = if ($totalFiles -gt 0) { [math]::Round(($totalClassifiedFiles / $totalFiles) * 100, 2) } else { 0 }
             AverageRiskScore = $avgRiskScore
-            HighestRiskLocation = if ($ClassifiedData) { ($ClassifiedData | Sort-Object RiskScore -Descending | Select-Object -First 1).ShareName ?? ($ClassifiedData | Sort-Object RiskScore -Descending | Select-Object -First 1).DriveLetter } else { "None" }
+            HighestRiskLocation = if ($ClassifiedData) { ($ClassifiedData | Sort-Object RiskScore -Descending | Select-Object -First 1).ShareName -or ($ClassifiedData | Sort-Object RiskScore -Descending | Select-Object -First 1).DriveLetter } else { "None" }
             HighestRiskScore = if ($ClassifiedData) { ($ClassifiedData | Sort-Object RiskScore -Descending | Select-Object -First 1).RiskScore } else { 0 }
-            CriticalRiskLocations = ($riskDistribution | Where-Object { $_.RiskLevel -eq "Critical" }).Count ?? 0
-            HighRiskLocations = ($riskDistribution | Where-Object { $_.RiskLevel -eq "High" }).Count ?? 0
-            MediumRiskLocations = ($riskDistribution | Where-Object { $_.RiskLevel -eq "Medium" }).Count ?? 0
-            LowRiskLocations = ($riskDistribution | Where-Object { $_.RiskLevel -eq "Low" }).Count ?? 0
+            CriticalRiskLocations = if (($riskDistribution | Where-Object { $_.RiskLevel -eq "Critical" }).Count) { ($riskDistribution | Where-Object { $_.RiskLevel -eq "Critical" }).Count } else { 0 }
+            HighRiskLocations = if (($riskDistribution | Where-Object { $_.RiskLevel -eq "High" }).Count) { ($riskDistribution | Where-Object { $_.RiskLevel -eq "High" }).Count } else { 0 }
+            MediumRiskLocations = if (($riskDistribution | Where-Object { $_.RiskLevel -eq "Medium" }).Count) { ($riskDistribution | Where-Object { $_.RiskLevel -eq "Medium" }).Count } else { 0 }
+            LowRiskLocations = if (($riskDistribution | Where-Object { $_.RiskLevel -eq "Low" }).Count) { ($riskDistribution | Where-Object { $_.RiskLevel -eq "Low" }).Count } else { 0 }
             ScanDate = Get-Date
             SessionId = $SessionId
         }

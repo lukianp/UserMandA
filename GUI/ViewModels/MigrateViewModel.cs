@@ -57,6 +57,12 @@ namespace MandADiscoverySuite.ViewModels
         private string _sourceConnectionString;
         private string _targetConnectionString;
         
+        // Profile Integration Properties
+        private ObservableCollection<CompanyProfile> _sourceProfiles;
+        private ObservableCollection<TargetProfile> _targetProfiles;
+        private CompanyProfile _selectedSourceProfile;
+        private TargetProfile _selectedTargetProfile;
+        
         // Configuration Properties
         private MigrationSettings _migrationSettings;
         private bool _isExchangeMigrationEnabled;
@@ -169,6 +175,31 @@ namespace MandADiscoverySuite.ViewModels
         {
             get => _selectedTargetEnvironment;
             set => SetPropertySafe(ref _selectedTargetEnvironment, value);
+        }
+        
+        // Profile Integration Properties
+        public ObservableCollection<CompanyProfile> SourceProfiles
+        {
+            get => _sourceProfiles ?? new ObservableCollection<CompanyProfile>();
+            private set => SetPropertySafe(ref _sourceProfiles, value);
+        }
+        
+        public ObservableCollection<TargetProfile> TargetProfiles
+        {
+            get => _targetProfiles ?? new ObservableCollection<TargetProfile>();
+            private set => SetPropertySafe(ref _targetProfiles, value);
+        }
+        
+        public CompanyProfile SelectedSourceProfile
+        {
+            get => _selectedSourceProfile;
+            set => SetPropertySafe(ref _selectedSourceProfile, value);
+        }
+        
+        public TargetProfile SelectedTargetProfile
+        {
+            get => _selectedTargetProfile;
+            set => SetPropertySafe(ref _selectedTargetProfile, value);
         }
         
         public string SourceConnectionString
@@ -508,6 +539,9 @@ namespace MandADiscoverySuite.ViewModels
                 // Load real data using generators
                 await LoadRealTimeDataAsync();
                 
+                // Load profile data for source/target selection
+                await LoadProfileDataAsync();
+                
                 StructuredLogger?.LogInfo(LogSourceName, new { action = "load_complete", component = "migrate", hasData = HasData }, "Migration dashboard loaded successfully");
             }
             catch (Exception ex)
@@ -518,6 +552,47 @@ namespace MandADiscoverySuite.ViewModels
             finally
             {
                 SetLoadingState(false);
+            }
+        }
+
+        /// <summary>
+        /// Load source and target profile data for migration source/target selection
+        /// </summary>
+        private async Task LoadProfileDataAsync()
+        {
+            try
+            {
+                StructuredLogger?.LogDebug(LogSourceName, new { action = "load_profiles_start" }, "Loading source and target profiles");
+
+                // Load source profiles
+                var sourceProfiles = await ProfileService.Instance.GetProfilesAsync();
+                if (sourceProfiles?.Any() == true)
+                {
+                    SourceProfiles = new ObservableCollection<CompanyProfile>(sourceProfiles.OrderBy(p => p.CompanyName));
+                    SelectedSourceProfile = SourceProfiles.FirstOrDefault(p => p.IsActive) ?? SourceProfiles.FirstOrDefault();
+                }
+
+                // Load target profiles  
+                var currentProfile = await ProfileService.Instance.GetCurrentProfileAsync();
+                if (currentProfile != null)
+                {
+                    var targetProfiles = await TargetProfileService.Instance.GetProfilesAsync(currentProfile.CompanyName);
+                    if (targetProfiles?.Any() == true)
+                    {
+                        TargetProfiles = new ObservableCollection<TargetProfile>(targetProfiles.OrderBy(p => p.Name));
+                        SelectedTargetProfile = TargetProfiles.FirstOrDefault(p => p.IsActive) ?? TargetProfiles.FirstOrDefault();
+                    }
+                }
+
+                var sourceCount = SourceProfiles?.Count ?? 0;
+                var targetCount = TargetProfiles?.Count ?? 0;
+                StructuredLogger?.LogInfo(LogSourceName, 
+                    new { action = "load_profiles_complete", sourceProfiles = sourceCount, targetProfiles = targetCount }, 
+                    "Profile data loaded successfully");
+            }
+            catch (Exception ex)
+            {
+                StructuredLogger?.LogError(LogSourceName, ex, new { action = "load_profiles_fail" }, "Failed to load profile data");
             }
         }
 

@@ -562,8 +562,95 @@
                            FontWeight="SemiBold" 
                            Foreground="#FFE2E8F0" 
                            Margin="0,0,0,16"/>
-                
+
+                <!-- Source and Target Environment Selection -->
                 <Border Style="{StaticResource MigrationCard}">
+                    <StackPanel>
+                        <TextBlock Text="🌐 Source and Target Environment Selection" 
+                                   FontSize="18" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="#FFE2E8F0" 
+                                   Margin="0,0,0,16"/>
+                        
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Source Environment -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Source Environment" 
+                                           FontSize="14" 
+                                           FontWeight="Medium" 
+                                           Foreground="#FFE2E8F0" 
+                                           Margin="0,0,0,8"/>
+                                <ComboBox ItemsSource="{Binding SourceProfiles}"
+                                          SelectedItem="{Binding SelectedSourceProfile}"
+                                          DisplayMemberPath="CompanyName"
+                                          Background="#FF2D3748" 
+                                          Foreground="#FFE2E8F0" 
+                                          BorderBrush="#FF4A5568"
+                                          Height="32"
+                                          Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding SelectedSourceProfile.CompanyName, StringFormat='Source: {0}'}" 
+                                           FontSize="12" 
+                                           Foreground="#FFA0AEC0" 
+                                           Margin="0,0,0,0"/>
+                            </StackPanel>
+                            
+                            <!-- Arrow -->
+                            <TextBlock Grid.Column="1" 
+                                       Text="→" 
+                                       FontSize="24" 
+                                       FontWeight="Bold" 
+                                       Foreground="#FF60A5FA" 
+                                       HorizontalAlignment="Center" 
+                                       VerticalAlignment="Center"/>
+                            
+                            <!-- Target Environment -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Target Environment" 
+                                           FontSize="14" 
+                                           FontWeight="Medium" 
+                                           Foreground="#FFE2E8F0" 
+                                           Margin="0,0,0,8"/>
+                                <ComboBox ItemsSource="{Binding TargetProfiles}"
+                                          SelectedItem="{Binding SelectedTargetProfile}"
+                                          DisplayMemberPath="Name"
+                                          Background="#FF2D3748" 
+                                          Foreground="#FFE2E8F0" 
+                                          BorderBrush="#FF4A5568"
+                                          Height="32"
+                                          Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding SelectedTargetProfile.Name, StringFormat='Target: {0}'}" 
+                                           FontSize="12" 
+                                           Foreground="#FFA0AEC0" 
+                                           Margin="0,0,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                        
+                        <!-- Environment Status -->
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Border Grid.Column="0" Background="#FF1E3A8A" CornerRadius="4" Padding="8,4">
+                                <TextBlock Text="Source Ready" FontSize="12" Foreground="White" HorizontalAlignment="Center"/>
+                            </Border>
+                            
+                            <Border Grid.Column="2" Background="#FF059669" CornerRadius="4" Padding="8,4">
+                                <TextBlock Text="Target Ready" FontSize="12" Foreground="White" HorizontalAlignment="Center"/>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                
+                <Border Style="{StaticResource MigrationCard}" Margin="0,16,0,0">
                     <StackPanel>
                         <TextBlock Text="📋 Migration Type Selection" 
                                    FontSize="18" 
