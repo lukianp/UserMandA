@@ -79,6 +79,8 @@ try {
         CompanyName = $CompanyName
         DiscoverySession = [guid]::NewGuid().ToString()
     }
+    # Hint to modules to avoid doing their own CSV export
+    $context.DisableInternalExport = $true
     
     Write-Host "Discovery context created:" -ForegroundColor Green
     Write-Host "Path: $($context.Paths.RawDataOutput)" -ForegroundColor Gray
@@ -220,8 +222,15 @@ try {
 
     if ($propSuccess -and $propSuccess.Value) {
         Write-Host "Status: SUCCESS" -ForegroundColor Green
-        if ($propRecordCount -and $propRecordCount.Value) {
-            Write-Host "Total Records: $($propRecordCount.Value)" -ForegroundColor White
+        $totalRecordsDisplay = $null
+        $propMetadata = if ($drPsObj) { $drPsObj.Properties['Metadata'] } else { $null }
+        if ($propMetadata -and $propMetadata.Value -and ($propMetadata.Value.ContainsKey('TotalRecords'))) {
+            $totalRecordsDisplay = $propMetadata.Value['TotalRecords']
+        } elseif ($propRecordCount -and $propRecordCount.Value) {
+            $totalRecordsDisplay = $propRecordCount.Value
+        }
+        if ($null -ne $totalRecordsDisplay) {
+            Write-Host "Total Records: $totalRecordsDisplay" -ForegroundColor White
         }
     } elseif ($propErrors -and $propErrors.Value -and $propErrors.Value.Count -gt 0) {
         Write-Host "Status: FAILED" -ForegroundColor Red

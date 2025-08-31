@@ -129,27 +129,42 @@ function Invoke-LicensingDiscovery {
             $result.AddWarning("Failed to discover subscriptions: $($_.Exception.Message)", @{Section="Subscriptions"})
         }
 
-        # Export data
+        # Stage data for generic export and optionally export directly
         if ($allDiscoveredData.Count -gt 0) {
             $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-            $dataGroups = $allDiscoveredData | Group-Object -Property _DataType
-            
-            foreach ($group in $dataGroups) {
-                $data = $group.Group
+            $grouped = $allDiscoveredData | Group-Object -Property _DataType
+
+            # Build standardized Data groups for launcher export
+            $result.Data = @()
+            foreach ($g in $grouped) {
+                $data = $g.Group
                 $data | ForEach-Object {
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Licensing" -Force
                     $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
                 }
-                
-                $fileName = switch ($group.Name) {
-                    'Subscription' { 'LicensingSubscriptions.csv' }
-                    default { "Licensing_$($group.Name).csv" }
+
+                $exportBaseName = switch ($g.Name) {
+                    'Subscription' { 'LicensingSubscriptions' }
+                    default { "Licensing_$($g.Name)" }
                 }
-                
-                $filePath = Join-Path $outputPath $fileName
-                $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
-                Write-LicensingLog -Level "SUCCESS" -Message "Exported $($data.Count) $($group.Name) records to $fileName" -Context $Context
+
+                # Add to standardized result for the launcher
+                $result.Data += ,([PSCustomObject]@{
+                    Name = $exportBaseName
+                    Group = $data
+                })
+
+                # Optional direct export (skip if launcher will handle it)
+                $disableInternal = ($Context -is [hashtable]) -and $Context.ContainsKey('DisableInternalExport') -and $Context.DisableInternalExport
+                if (-not $disableInternal) {
+                    $fileName = "$exportBaseName.csv"
+                    $filePath = Join-Path $outputPath $fileName
+                    $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+                    Write-LicensingLog -Level "SUCCESS" -Message "Exported $($data.Count) $($g.Name) records to $fileName" -Context $Context
+                } else {
+                    Write-LicensingLog -Level "INFO" -Message "Internal export disabled; launcher will export $exportBaseName" -Context $Context
+                }
             }
         }
 
