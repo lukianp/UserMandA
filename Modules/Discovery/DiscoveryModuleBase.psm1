@@ -363,4 +363,4 @@ function Get-DiscoveryInfo {
     }
 }
 
-Export-ModuleMember -Function Invoke-Discovery, Get-DiscoveryInfo
+Export-ModuleMember -Function Invoke-Discovery, Get-DiscoveryInfo, Invoke-DiscoveryWithRetry, Test-RetryableError, Calculate-BackoffDelay, Invoke-SafeModuleExecution, Get-ModuleContext

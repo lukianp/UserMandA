@@ -81,8 +81,43 @@ function Invoke-LicensingDiscovery {
         }
         $result = [DiscoveryResult]::new('Licensing')
     } catch {
-        Write-LicensingLog -Level "ERROR" -Message "Failed to load DiscoveryResult class: $($_.Exception.Message)" -Context $Context
-        throw "Critical error: Cannot load required DiscoveryResult class. Discovery cannot proceed."
+        Write-LicensingLog -Level "ERROR" -Message "Failed to load DiscoveryResult class: $($_.Exception.Message). Using fallback PSCustomObject" -Context $Context
+
+        $result = [PSCustomObject]@{
+            PSTypeName = 'DiscoveryResult'
+            Success = $true
+            ModuleName = 'Licensing'
+            Data = $null
+            RecordCount = 0
+            Errors = [System.Collections.ArrayList]::new()
+            Warnings = [System.Collections.ArrayList]::new()
+            Metadata = [System.Collections.Hashtable]::new()
+            StartTime = Get-Date
+            EndTime = $null
+            ExecutionId = [guid]::NewGuid().ToString()
+        }
+
+        # Add methods to the PSObject
+        $result | Add-Member -MemberType ScriptMethod -Name AddError -Value {
+            param([string]$message, $exception, $context)
+            $this.Success = $false
+            $this.Errors.Add(@{ Message = $message; Exception = $exception; Context = $context })
+        }
+
+        $result | Add-Member -MemberType ScriptMethod -Name AddWarning -Value {
+            param([string]$message, $context)
+            $this.Warnings.Add(@{ Message = $message; Context = $context })
+        }
+
+        $result | Add-Member -MemberType ScriptMethod -Name Complete -Value {
+            $this.EndTime = Get-Date
+            $duration = $this.EndTime - $this.StartTime
+            $this.Metadata["Duration"] = $duration
+            $this.Metadata["DurationSeconds"] = $duration.TotalSeconds
+            if ($this.Errors.Count -gt 0) {
+                $this.Success = $false
+            }
+        }
     }
 
     try {

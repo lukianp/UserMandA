@@ -27,8 +27,15 @@ if (-not $global:MandAClassesLoaded) {
     if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
         Add-Type -TypeDefinition @'
 public class DiscoveryResult {
-    public bool Success { get; set; }
+    public bool Success {
+
+        get { return _success; }
+
+        set { _success = value; }
+
+    }
     public string ModuleName { get; set; }
+    private bool _success = true;
     public object Data { get; set; }
     public int RecordCount { get; set; }
     public System.Collections.ArrayList Errors { get; set; }
@@ -46,7 +53,7 @@ public class DiscoveryResult {
         this.Metadata = new System.Collections.Hashtable();
         this.StartTime = System.DateTime.Now;
         this.ExecutionId = System.Guid.NewGuid().ToString();
-        this.Success = true;
+        _success = true;
     }
     
     public void AddError(string message, System.Exception exception) {
@@ -71,7 +78,7 @@ public class DiscoveryResult {
         
         errorEntry["Context"] = context ?? new System.Collections.Hashtable();
         this.Errors.Add(errorEntry);
-        this.Success = false;
+        _success = false;
     }
     
     public void AddWarning(string message) {
@@ -80,10 +87,14 @@ public class DiscoveryResult {
     
     public void AddWarning(string message, System.Collections.Hashtable context) {
         var warningEntry = new System.Collections.Hashtable();
-        warningEntry["Timestamp"] = System.DateTime.Now;
-        warningEntry["Message"] = message;
-        warningEntry["Context"] = context ?? new System.Collections.Hashtable();
-        this.Warnings.Add(warningEntry);
+        try {
+            warningEntry["Timestamp"] = System.DateTime.Now;
+            warningEntry["Message"] = message;
+            warningEntry["Context"] = context ?? new System.Collections.Hashtable();
+            this.Warnings.Add(warningEntry);
+        } catch {
+            // Handle warning addition error if needed
+        }
     }
     
     public void Complete() {
@@ -96,11 +107,15 @@ public class DiscoveryResult {
         
         // Auto-calculate record count if Data is collection
         if (this.Data != null) {
-            var dataType = this.Data.GetType();
-            if (dataType.IsArray) {
-                this.RecordCount = ((System.Array)this.Data).Length;
-            } else if (this.Data is System.Collections.ICollection) {
-                this.RecordCount = ((System.Collections.ICollection)this.Data).Count;
+            try {
+                var dataType = this.Data.GetType();
+                if (dataType.IsArray) {
+                    this.RecordCount = ((System.Array)this.Data).Length;
+                } else if (this.Data is System.Collections.ICollection) {
+                    this.RecordCount = ((System.Collections.ICollection)this.Data).Count;
+                }
+            } catch {
+                _success = false;
             }
         }
         

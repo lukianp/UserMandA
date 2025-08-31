@@ -97,7 +97,7 @@ function Invoke-NetworkInfrastructureDiscovery {
         Write-NetworkInfrastructureLog -Level "INFO" -Message "Discovering network adapters..." -Context $Context
         $networkAdapters = Get-NetworkAdapterInfo
         foreach ($adapter in $networkAdapters) {
-            $adapter._DataType = 'NetworkAdapter'
+            $adapter | Add-Member -MemberType NoteProperty -Name "_DataType" -Value 'NetworkAdapter' -Force
             $null = $allDiscoveredData.Add($adapter)
         }
         
@@ -105,7 +105,7 @@ function Invoke-NetworkInfrastructureDiscovery {
         Write-NetworkInfrastructureLog -Level "INFO" -Message "Discovering routing table..." -Context $Context
         $routes = Get-NetworkRoutes
         foreach ($route in $routes) {
-            $route._DataType = 'NetworkRoute'
+            $route | Add-Member -MemberType NoteProperty -Name "_DataType" -Value 'NetworkRoute' -Force
             $null = $allDiscoveredData.Add($route)
         }
         
@@ -113,7 +113,7 @@ function Invoke-NetworkInfrastructureDiscovery {
         Write-NetworkInfrastructureLog -Level "INFO" -Message "Discovering ARP table..." -Context $Context
         $arpEntries = Get-ARPTable
         foreach ($arp in $arpEntries) {
-            $arp._DataType = 'ARPEntry'
+            $arp | Add-Member -MemberType NoteProperty -Name "_DataType" -Value 'ARPEntry' -Force
             $null = $allDiscoveredData.Add($arp)
         }
         
@@ -121,7 +121,7 @@ function Invoke-NetworkInfrastructureDiscovery {
         Write-NetworkInfrastructureLog -Level "INFO" -Message "Discovering DHCP servers..." -Context $Context
         $dhcpServers = Get-DHCPServers
         foreach ($dhcp in $dhcpServers) {
-            $dhcp._DataType = 'DHCPServer'
+            $dhcp | Add-Member -MemberType NoteProperty -Name "_DataType" -Value 'DHCPServer' -Force
             $null = $allDiscoveredData.Add($dhcp)
         }
         
@@ -129,7 +129,7 @@ function Invoke-NetworkInfrastructureDiscovery {
         Write-NetworkInfrastructureLog -Level "INFO" -Message "Discovering DNS infrastructure..." -Context $Context
         $dnsInfo = Get-DNSInfrastructure
         foreach ($dns in $dnsInfo) {
-            $dns._DataType = 'DNSInfrastructure'
+            $dns | Add-Member -MemberType NoteProperty -Name "_DataType" -Value 'DNSInfrastructure' -Force
             $null = $allDiscoveredData.Add($dns)
         }
         
@@ -138,7 +138,7 @@ function Invoke-NetworkInfrastructureDiscovery {
             Write-NetworkInfrastructureLog -Level "INFO" -Message "Discovering SNMP devices..." -Context $Context
             $snmpDevices = Get-SNMPDevices -Configuration $Configuration
             foreach ($device in $snmpDevices) {
-                $device._DataType = 'SNMPDevice'
+                $device | Add-Member -MemberType NoteProperty -Name "_DataType" -Value 'SNMPDevice' -Force
                 $null = $allDiscoveredData.Add($device)
             }
         }
@@ -147,7 +147,7 @@ function Invoke-NetworkInfrastructureDiscovery {
         Write-NetworkInfrastructureLog -Level "INFO" -Message "Discovering network shares..." -Context $Context
         $networkShares = Get-NetworkShares
         foreach ($share in $networkShares) {
-            $share._DataType = 'NetworkShare'
+            $share | Add-Member -MemberType NoteProperty -Name "_DataType" -Value 'NetworkShare' -Force
             $null = $allDiscoveredData.Add($share)
         }
         
@@ -155,7 +155,7 @@ function Invoke-NetworkInfrastructureDiscovery {
         Write-NetworkInfrastructureLog -Level "INFO" -Message "Discovering firewall rules..." -Context $Context
         $firewallRules = Get-FirewallConfiguration
         foreach ($rule in $firewallRules) {
-            $rule._DataType = 'FirewallRule'
+            $rule | Add-Member -MemberType NoteProperty -Name "_DataType" -Value 'FirewallRule' -Force
             $null = $allDiscoveredData.Add($rule)
         }
 

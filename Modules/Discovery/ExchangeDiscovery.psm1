@@ -92,17 +92,17 @@ function Invoke-ExchangeDiscovery {
         $userSelectFields = @(
             'id', 'userPrincipalName', 'displayName', 'mail', 'mailNickname',
             'givenName', 'surname', 'jobTitle', 'department', 'companyName',
-            'officeLocation', 'businessPhones', 'mobilePhone', 'faxNumber',
+            'officeLocation', 'businessPhones', 'mobilePhone',
             'streetAddress', 'city', 'state', 'postalCode', 'country',
             'employeeId', 'employeeType', 'costCenter', 'division',
             'accountEnabled', 'createdDateTime', 'deletedDateTime',
             'lastPasswordChangeDateTime', 'proxyAddresses',
-            'onPremisesDistinguishedName', 'onPremisesDomainName',
+            'onPremisesDistinguishedName',
             'onPremisesImmutableId', 'onPremisesLastSyncDateTime',
             'onPremisesSamAccountName', 'onPremisesSecurityIdentifier',
             'onPremisesSyncEnabled', 'onPremisesUserPrincipalName',
             'preferredDataLocation', 'usageLocation', 'assignedLicenses',
-            'assignedPlans', 'provisionedPlans', 'manager'
+            'assignedPlans', 'provisionedPlans'
         )
         
         # Discover Mailboxes with comprehensive metadata
@@ -110,7 +110,8 @@ function Invoke-ExchangeDiscovery {
             Write-ModuleLog -ModuleName "Exchange" -Message "Discovering mailboxes with enhanced metadata..." -Level "INFO"
             
             # Enhanced mailbox discovery with better filtering - using beta endpoint for beta properties
-            $mailboxUri = "https://graph.microsoft.com/beta/users?`$select=$($userSelectFields -join ',')&`$top=$batchSize"
+            # Use $count=true with ConsistencyLevel:eventual for advanced query support
+            $mailboxUri = "https://graph.microsoft.com/beta/users?`$count=true&`$select=$($userSelectFields -join ',')&`$top=$batchSize"
             if (-not $Configuration.discovery.excludeDisabledUsers) {
                 # Include all users with mailboxes (including disabled ones for shared mailboxes)
                 $mailboxUri += "&`$filter=mail ne null and userType eq 'Member'"
@@ -214,6 +215,25 @@ function Invoke-ExchangeDiscovery {
                         }
                     }
                     
+                    # Resolve manager id (cannot be selected directly; fetch via navigation)
+                    $managerId = $null
+                    try {
+                        $mgrUri = "https://graph.microsoft.com/v1.0/users/$($user.id)/manager?`$select=id"
+                        $mgr = Invoke-GraphWithRetry -Uri $mgrUri -Method "GET"
+                        if ($mgr -and ($mgr.PSObject.Properties.Name -contains 'id')) {
+                            $managerId = $mgr.id
+                        }
+                    } catch {
+                        $mgrErr = $_.Exception.Message
+                        if ($mgrErr -match "404" -or $mgrErr -match "Not Found") {
+                            # No manager assigned — ignore
+                        } elseif ($mgrErr -match "Forbidden" -or $mgrErr -match "403") {
+                            Write-ModuleLog -ModuleName "Exchange" -Message "Insufficient permissions to read manager for $($user.userPrincipalName): $mgrErr" -Level "DEBUG"
+                        } else {
+                            Write-ModuleLog -ModuleName "Exchange" -Message "Could not resolve manager for $($user.userPrincipalName): $mgrErr" -Level "DEBUG"
+                        }
+                    }
+
                     # Build comprehensive mailbox object
                     $mailboxObj = [PSCustomObject]@{
                         # Identity
@@ -243,7 +263,7 @@ function Invoke-ExchangeDiscovery {
                         Country = $user.country
                         BusinessPhones = ($user.businessPhones -join ';')
                         MobilePhone = $user.mobilePhone
-                        FaxNumber = $user.faxNumber
+                        FaxNumber = $null # Not available on Graph user; placeholder for schema consistency
                         
                         # Account Status
                         AccountEnabled = $user.accountEnabled
@@ -284,7 +304,7 @@ function Invoke-ExchangeDiscovery {
                         
                         # Hybrid Information
                         OnPremisesDistinguishedName = $user.onPremisesDistinguishedName
-                        OnPremisesDomainName = $user.onPremisesDomainName
+                        OnPremisesDomainName = $null # Not directly exposed on Graph user; placeholder
                         OnPremisesImmutableId = $user.onPremisesImmutableId
                         OnPremisesLastSyncDateTime = $user.onPremisesLastSyncDateTime
                         OnPremisesSamAccountName = $user.onPremisesSamAccountName
@@ -299,7 +319,7 @@ function Invoke-ExchangeDiscovery {
                         AssignedPlans = ($user.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' } | ForEach-Object { $_.service }) -join ';'
                         
                         # Management
-                        ManagerId = if ($user.manager) { $user.manager.id } else { $null }
+                        ManagerId = $managerId
                         
                         # Classification
                         RecipientType = "UserMailbox"

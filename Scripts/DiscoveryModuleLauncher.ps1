@@ -188,25 +188,53 @@ try {
 
     if ($propSuccess -and $propSuccess.Value -and $propData -and $propData.Value) {
         Write-Host "Processing and saving discovery data..." -ForegroundColor Yellow
-        
+
         # Import the Export-DiscoveryResults function
         Import-Module (Join-Path $ModulesPath "Discovery\DiscoveryBase.psm1") -Force
-        
-        # Process each data group and save as CSV
+
+        # Process data: group by _ObjectType if raw data, otherwise use as groups
+        $rawData = $propData.Value
         $totalExported = 0
-        foreach ($dataGroup in $propData.Value) {
-            if ($dataGroup.Group -and $dataGroup.Group.Count -gt 0) {
-                $fileName = "$($dataGroup.Name).csv"
-                $exported = Export-DiscoveryResults -Data $dataGroup.Group -FileName $fileName -OutputPath $context.Paths.RawDataOutput -ModuleName $ModuleName -SessionId $context.DiscoverySession
-                if ($exported) {
-                    Write-Host "[OK] Saved $($dataGroup.Group.Count) $($dataGroup.Name) records to $fileName" -ForegroundColor Green
-                    $totalExported += $dataGroup.Group.Count
-                } else {
-                    Write-Host "[ERROR] Failed to save $($dataGroup.Name) data" -ForegroundColor Red
+
+        if ($rawData -and $rawData.Count -gt 0) {
+            # Check if data is already grouped or raw
+            $isGrouped = $false
+            if ($rawData.Count -gt 0 -and $rawData[0].PSObject.Properties['Name'] -and $rawData[0].PSObject.Properties['Group']) {
+                $isGrouped = $true
+            }
+
+            $groupedData = if ($isGrouped) { $rawData } else { $rawData | Group-Object -Property _ObjectType }
+
+            foreach ($dataGroup in $groupedData) {
+                if ($dataGroup.Group -and $dataGroup.Group.Count -gt 0) {
+                    # Map object types to file names (Intune-specific mapping)
+                    $baseName = switch ($dataGroup.Name) {
+                        'ManagedDevice' { 'ManagedDevices' }
+                        'DeviceConfiguration' { 'DeviceConfigurations' }
+                        'CompliancePolicy' { 'CompliancePolicies' }
+                        'AppProtectionPolicy' { 'AppProtectionPolicies' }
+                        'ManagedApp' { 'ManagedApps' }
+                        'AutopilotDevice' { 'AutopilotDevices' }
+                        'GroupPolicyConfiguration' { 'GroupPolicyConfigurations' }
+                        'EnrollmentConfiguration' { 'EnrollmentConfigurations' }
+                        'PowerShellScript' { 'PowerShellScripts' }
+                        'DeviceCategory' { 'DeviceCategories' }
+                        'IntuneRole' { 'RoleDefinitions' }
+                        default { $dataGroup.Name }
+                    }
+                    $fileName = "$ModuleName$baseName.csv"
+
+                    $exported = Export-DiscoveryResults -Data $dataGroup.Group -FileName $fileName -OutputPath $context.Paths.RawDataOutput -ModuleName $ModuleName -SessionId $context.DiscoverySession
+                    if ($exported) {
+                        Write-Host "[OK] Saved $($dataGroup.Group.Count) $($dataGroup.Name) records to $fileName" -ForegroundColor Green
+                        $totalExported += $dataGroup.Group.Count
+                    } else {
+                        Write-Host "[ERROR] Failed to save $($dataGroup.Name) data" -ForegroundColor Red
+                    }
                 }
             }
         }
-        
+
         Write-Host "Successfully exported $totalExported total records to CSV files" -ForegroundColor Green
         Write-Host ""
     }

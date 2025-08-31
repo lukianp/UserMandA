@@ -404,35 +404,38 @@ function Invoke-IntuneDiscovery {
         # Export data
         if ($allDiscoveredData.Count -gt 0) {
             Write-ModuleLog -ModuleName "Intune" -Message "Exporting $($allDiscoveredData.Count) records..." -Level "INFO"
-            
-            # Group by object type and export to separate files
-            $objectGroups = $allDiscoveredData | Group-Object -Property _ObjectType
-            
-            foreach ($group in $objectGroups) {
-                $objectType = $group.Name
-                $data = $group.Group
-                
-                # Map object types to file names
-                $fileName = switch ($objectType) {
-                    'ManagedDevice' { 'IntuneManagedDevices.csv' }
-                    'DeviceConfiguration' { 'IntuneDeviceConfigurations.csv' }
-                    'CompliancePolicy' { 'IntuneCompliancePolicies.csv' }
-                    'AppProtectionPolicy' { 'IntuneAppProtectionPolicies.csv' }
-                    'ManagedApp' { 'IntuneManagedApps.csv' }
-                    'AutopilotDevice' { 'IntuneAutopilotDevices.csv' }
-                    'GroupPolicyConfiguration' { 'IntuneGroupPolicyConfigurations.csv' }
-                    'EnrollmentConfiguration' { 'IntuneEnrollmentConfigurations.csv' }
-                    'PowerShellScript' { 'IntunePowerShellScripts.csv' }
-                    'DeviceCategory' { 'IntuneDeviceCategories.csv' }
-                    'IntuneRole' { 'IntuneRoleDefinitions.csv' }
-                    default { "Intune_$objectType.csv" }
+
+            # Check if internal export is disabled
+            if (-not $Context.ContainsKey('DisableInternalExport') -or -not $Context.DisableInternalExport) {
+                # Group by object type and export to separate files
+                $objectGroups = $allDiscoveredData | Group-Object -Property _ObjectType
+
+                foreach ($group in $objectGroups) {
+                    $objectType = $group.Name
+                    $data = $group.Group
+
+                    # Map object types to file names
+                    $fileName = switch ($objectType) {
+                        'ManagedDevice' { 'IntuneManagedDevices.csv' }
+                        'DeviceConfiguration' { 'IntuneDeviceConfigurations.csv' }
+                        'CompliancePolicy' { 'IntuneCompliancePolicies.csv' }
+                        'AppProtectionPolicy' { 'IntuneAppProtectionPolicies.csv' }
+                        'ManagedApp' { 'IntuneManagedApps.csv' }
+                        'AutopilotDevice' { 'IntuneAutopilotDevices.csv' }
+                        'GroupPolicyConfiguration' { 'IntuneGroupPolicyConfigurations.csv' }
+                        'EnrollmentConfiguration' { 'IntuneEnrollmentConfigurations.csv' }
+                        'PowerShellScript' { 'IntunePowerShellScripts.csv' }
+                        'DeviceCategory' { 'IntuneDeviceCategories.csv' }
+                        'IntuneRole' { 'IntuneRoleDefinitions.csv' }
+                        default { "Intune_$objectType.csv" }
+                    }
+
+                    Export-DiscoveryResults -Data $data `
+                        -FileName $fileName `
+                        -OutputPath $Context.Paths.RawDataOutput `
+                        -ModuleName "Intune" `
+                        -SessionId $SessionId
                 }
-                
-                Export-DiscoveryResults -Data $data `
-                    -FileName $fileName `
-                    -OutputPath $Context.Paths.RawDataOutput `
-                    -ModuleName "Intune" `
-                    -SessionId $SessionId
             }
         } else {
             Write-ModuleLog -ModuleName "Intune" -Message "No data discovered to export" -Level "WARN"
