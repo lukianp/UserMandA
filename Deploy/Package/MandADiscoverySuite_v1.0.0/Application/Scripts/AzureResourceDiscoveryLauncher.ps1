@@ -103,13 +103,13 @@ try {
         }
     }
     
-    # Import the enhanced Azure resource discovery module
-    $azureResourceModulePath = Join-Path $ModulesPath "Discovery\AzureResourceDiscovery.psm1"
-    if (Test-Path $azureResourceModulePath) {
-        Import-Module $azureResourceModulePath -Force
-        Write-Host "[AzureResourceDiscovery] Enhanced Azure resource discovery module loaded" -ForegroundColor Green
+    # Import the unified Azure discovery module
+    $azureUnifiedModulePath = Join-Path $ModulesPath "Discovery\AzureDiscovery.psm1"
+    if (Test-Path $azureUnifiedModulePath) {
+        Import-Module $azureUnifiedModulePath -Force
+        Write-Host "[AzureDiscovery] Unified Azure discovery module loaded" -ForegroundColor Green
     } else {
-        throw "Azure Resource Discovery module not found at: $azureResourceModulePath"
+        throw "Unified Azure Discovery module not found at: $azureUnifiedModulePath"
     }
     
 } catch {
@@ -204,7 +204,7 @@ try {
     # Start Azure Resource Discovery
     Write-Host "Starting enhanced Azure Resource discovery..." -ForegroundColor Cyan
     
-    $discoveryResult = Invoke-AzureResourceDiscovery -Configuration $configuration -Context $discoveryContext -SessionId $sessionId
+    $discoveryResult = Invoke-AzureDiscovery -Configuration $configuration -Context $discoveryContext -SessionId $sessionId
     
     if ($discoveryResult) {
         Write-Host "" 

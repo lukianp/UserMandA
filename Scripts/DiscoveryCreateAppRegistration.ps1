@@ -267,6 +267,20 @@ $script:AppConfig = @{
         "Member.Read.Hidden" = "Read hidden group members"
         "LicenseAssignment.Read.All" = "Read license assignments and usage"
     }
+
+    # AZURE RESOURCE MANAGER (ARM) API PERMISSIONS - CRITICAL FOR AZURE INFRASTRUCTURE DISCOVERY
+    RequiredAzurePermissions = @{
+        # Azure Resource Manager permissions for infrastructure discovery
+        "https://management.azure.com/user_impersonation" = "Azure Resource Manager access for infrastructure discovery"
+        "https://management.azure.com/.default" = "Default Azure Resource Manager scope for full infrastructure access"
+
+        # Key Vault permissions
+        "https://vault.azure.net/.default" = "Key Vault data plane access"
+
+        # Storage permissions
+        "https://storage.azure.com/.default" = "Azure Storage resource management"
+    }
+
     AzureADRoles = @(
         "Cloud Application Administrator"
     )
@@ -568,41 +582,74 @@ function Test-Prerequisites {
         Write-EnhancedLog "Checking and installing PowerShell modules..." -Level PROGRESS
         $moduleInstallationFailed = $false
         foreach ($module in $script:ScriptInfo.Dependencies) {
-            $installedModule = Get-Module -ListAvailable -Name $module -ErrorAction SilentlyContinue | 
+            $installedModule = Get-Module -ListAvailable -Name $module -ErrorAction SilentlyContinue |
                 Sort-Object Version -Descending | Select-Object -First 1
-            
+
             if ($installedModule) {
                 Write-EnhancedLog "Module available: $module v$($installedModule.Version)" -Level SUCCESS
             } else {
-                if ($AutoInstallModules) {
-                    Write-EnhancedLog "Module '$module' not found. Installing..." -Level WARN
-                    try {
-                        # Set TLS 1.2 for secure downloads
-                        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-                        
-                        # Install NuGet provider if needed (silently)
-                        $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -ErrorAction SilentlyContinue
-                        
-                        # Install the module
-                        Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
-                        
-                        # Verify installation
-                        $verifyModule = Get-Module -ListAvailable -Name $module -ErrorAction SilentlyContinue | 
-                            Sort-Object Version -Descending | Select-Object -First 1
-                        
-                        if ($verifyModule) {
-                            Write-EnhancedLog "Successfully installed $module v$($verifyModule.Version)" -Level SUCCESS
-                        } else {
-                            throw "Module installation verification failed"
+                # Automatically install missing modules as dependencies
+                Write-EnhancedLog "Module '$module' not found. Installing automatically..." -Level PROGRESS
+                try {
+                    # Unload any currently loaded modules before installing to prevent "currently in use" errors
+                    Write-EnhancedLog "Checking for loaded modules to unload: $module" -Level DEBUG
+
+                    $loadedModules = Get-Module -Name $module -ErrorAction SilentlyContinue
+                    if ($loadedModules) {
+                        Write-EnhancedLog "Found $($loadedModules.Count) loaded instance(s) of $module, attempting to unload..." -Level INFO
+
+                        $unloadAttempt = 0
+                        $maxUnloadAttempts = 3
+
+                        while ($unloadAttempt -lt $maxUnloadAttempts) {
+                            try {
+                                Remove-Module -Name $module -Force -ErrorAction Stop
+                                Write-EnhancedLog "Successfully unloaded $module" -Level SUCCESS
+                                break
+                            }
+                            catch {
+                                $unloadAttempt++
+                                if ($unloadAttempt -lt $maxUnloadAttempts) {
+                                    Write-EnhancedLog "Failed to unload $module (attempt $unloadAttempt), retrying in 2 seconds..." -Level WARN
+                                    Start-Sleep -Seconds 2
+                                }
+                                else {
+                                    Write-EnhancedLog "Failed to unload $module after $maxUnloadAttempts attempts: $($_.Exception.Message)" -Level ERROR
+                                    Write-EnhancedLog "Installing anyway, may encounter 'currently in use' errors" -Level WARN
+                                }
+                            }
                         }
-                    } catch {
-                        Write-EnhancedLog "Failed to install module '$module': $($_.Exception.Message)" -Level ERROR
-                        $issues += "Failed to install required module '$module'. Please install manually: Install-Module $module -Scope CurrentUser"
-                        $moduleInstallationFailed = $true
                     }
-                } else {
-                    Write-EnhancedLog "Module '$module' not found" -Level WARN
-                    $issues += "Required module '$module' not found. Install with: Install-Module $module -Scope CurrentUser"
+                    else {
+                        Write-EnhancedLog "$module is not currently loaded" -Level DEBUG
+                    }
+
+                    # Set TLS 1.2 for secure downloads
+                    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+                    # Install NuGet provider if needed (silently)
+                    if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
+                        Write-EnhancedLog "Installing NuGet package provider..." -Level DEBUG
+                        $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -ErrorAction Stop
+                    }
+
+                    # Install the module
+                    Write-EnhancedLog "Installing module: $module" -Level PROGRESS
+                    Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop -SkipPublisherCheck
+
+                    # Verify installation
+                    $verifyModule = Get-Module -ListAvailable -Name $module -ErrorAction SilentlyContinue |
+                        Sort-Object Version -Descending | Select-Object -First 1
+
+                    if ($verifyModule) {
+                        Write-EnhancedLog "Successfully installed $module v$($verifyModule.Version)" -Level SUCCESS
+                    } else {
+                        throw "Module installation verification failed"
+                    }
+                } catch {
+                    Write-EnhancedLog "Failed to install module '$module': $($_.Exception.Message)" -Level ERROR
+                    $issues += "Failed to install required module '$module'. Please check network connectivity or install manually: Install-Module $module -Scope CurrentUser -Force"
+                    $moduleInstallationFailed = $true
                 }
             }
         }
@@ -678,16 +725,49 @@ function Ensure-RequiredModules {
                 } else {
                     $installedVersion = $installedModule.Version.ToString()
                     Write-EnhancedLog "Found $moduleName v$installedVersion" -Level INFO
-                    
+
                     # Check for updates (optional, non-blocking)
                     try {
+                        # Unload any currently loaded modules before updating to prevent "currently in use" errors
+                        Write-EnhancedLog "Checking for loaded modules before update: $moduleName" -Level DEBUG
+
+                        $loadedModulesUpdate = Get-Module -Name $moduleName -ErrorAction SilentlyContinue
+                        if ($loadedModulesUpdate) {
+                            Write-EnhancedLog "Found $($loadedModulesUpdate.Count) loaded instance(s) of $moduleName for update, attempting to unload..." -Level DEBUG
+
+                            $unloadAttemptUpdate = 0
+                            $maxUnloadAttemptsUpdate = 3
+
+                            while ($unloadAttemptUpdate -lt $maxUnloadAttemptsUpdate) {
+                                try {
+                                    Remove-Module -Name $moduleName -Force -ErrorAction Stop
+                                    Write-EnhancedLog "Successfully unloaded $moduleName for update" -Level SUCCESS
+                                    break
+                                }
+                                catch {
+                                    $unloadAttemptUpdate++
+                                    if ($unloadAttemptUpdate -lt $maxUnloadAttemptsUpdate) {
+                                        Write-EnhancedLog "Failed to unload $moduleName for update (attempt $unloadAttemptUpdate), retrying in 2 seconds..." -Level WARN
+                                        Start-Sleep -Seconds 2
+                                    }
+                                    else {
+                                        Write-EnhancedLog "Failed to unload $moduleName for update after $maxUnloadAttemptsUpdate attempts: $($_.Exception.Message)" -Level WARN
+                                        Write-EnhancedLog "Update installation may encounter 'currently in use' errors" -Level WARN
+                                    }
+                                }
+                            }
+                        }
+                        else {
+                            Write-EnhancedLog "$moduleName is not currently loaded, update should not encounter conflicts" -Level DEBUG
+                        }
+
                         $latestModule = Find-Module -Name $moduleName -Repository PSGallery -ErrorAction Stop
                         $latestVersion = $latestModule.Version.ToString()
-                        
+
                         if ([version]$installedVersion -lt [version]$latestVersion) {
-                            Write-EnhancedLog "Update available for $moduleName v$installedVersion ? v$latestVersion" -Level INFO
+                            Write-EnhancedLog "Update available for $moduleName v$installedVersion → v$latestVersion" -Level INFO
                             Write-EnhancedLog "Installing latest version..." -Level PROGRESS
-                            Install-Module -Name $moduleName -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
+                            Install-Module -Name $moduleName -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop -SkipPublisherCheck
                             Write-EnhancedLog "Successfully updated $moduleName to v$latestVersion" -Level SUCCESS
                         } else {
                             Write-EnhancedLog "$moduleName is up to date (v$installedVersion)" -Level SUCCESS

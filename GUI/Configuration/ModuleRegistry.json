@@ -1,6 +1,6 @@
 {
-  "version": "1.0",
-  "lastUpdated": "2025-01-04T00:00:00Z",
+  "version": "2.0",
+  "lastUpdated": "2025-08-31T23:21:45Z",
   "basePaths": {
     "modulesRoot": "Modules",
     "scriptsRoot": "Scripts"
@@ -17,22 +17,12 @@
       "timeout": 600
     },
     "AzureDiscovery": {
-      "displayName": "Azure AD Discovery", 
-      "description": "Discover Azure AD users, groups, and applications",
+      "displayName": "Azure Infrastructure Discovery",
+      "description": "Complete Azure discovery including Azure AD users/groups/applications, certificate/secret expiry analysis, Intune device management, Azure resources (VMs, storage, networks), conditional access policies, and M365 workloads",
       "filePath": "Discovery/AzureDiscovery.psm1",
-      "category": "Identity",
+      "category": "Cloud",
       "icon": "☁️",
       "priority": 1,
-      "enabled": true,
-      "timeout": 300
-    },
-    "AzureResourceDiscovery": {
-      "displayName": "Azure Resource Discovery",
-      "description": "Discover Azure infrastructure, resources, and configurations", 
-      "filePath": "Discovery/AzureResourceDiscovery.psm1",
-      "category": "Cloud",
-      "icon": "🔷",
-      "priority": 2,
       "enabled": true,
       "timeout": 1200
     },
@@ -65,16 +55,6 @@
       "priority": 3,
       "enabled": true,
       "timeout": 1200
-    },
-    "IntuneDiscovery": {
-      "displayName": "Intune Discovery",
-      "description": "Discover managed devices and policies",
-      "filePath": "Discovery/IntuneDiscovery.psm1",
-      "category": "Device Management",
-      "icon": "📱",
-      "priority": 2,
-      "enabled": true,
-      "timeout": 300
     },
     "NetworkInfrastructureDiscovery": {
       "displayName": "Network Infrastructure",
@@ -303,26 +283,6 @@
       "category": "Operations",
       "icon": "⏰",
       "priority": 2,
-      "enabled": true,
-      "timeout": 300
-    },
-    "GraphDiscovery": {
-      "displayName": "Enhanced Graph Discovery",
-      "description": "Advanced Microsoft Graph API discovery and analysis",
-      "filePath": "Discovery/GraphDiscovery.psm1",
-      "category": "Identity",
-      "icon": "📈",
-      "priority": 2,
-      "enabled": true,
-      "timeout": 300
-    },
-    "EntraIDAppDiscovery": {
-      "displayName": "Enhanced Entra ID Apps",
-      "description": "Advanced Entra ID application and service principal discovery",
-      "filePath": "Discovery/EntraIDAppDiscovery.psm1",
-      "category": "Identity",
-      "icon": "🔷",
-      "priority": 1,
       "enabled": true,
       "timeout": 300
     },

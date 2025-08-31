@@ -31,6 +31,133 @@
 # Import base module
 Import-Module (Join-Path $PSScriptRoot "DiscoveryBase.psm1") -Force
 
+function Test-AzureModules {
+    [CmdletBinding()]
+    param()
+
+    # Modern approach: Use comprehensive Az module instead of individual modules
+    $requiredModules = @(
+        'Az'
+    )
+
+    $missingModules = @()
+    foreach ($module in $requiredModules) {
+        if (-not (Get-Module -ListAvailable -Name $module)) {
+            $missingModules += $module
+        }
+    }
+
+    if ($missingModules.Count -gt 0) {
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Missing required Azure module: $($missingModules -join ', ')" -Level "WARN"
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Installing Azure module. This includes all necessary Az sub-modules..." -Level "INFO"
+
+        foreach ($module in $missingModules) {
+            try {
+                # Use the comprehensive Az module and specify minimum version for stability
+                if ($module -eq 'Az') {
+                    Install-Module -Name $module -MinimumVersion 10.0.0 -Force -AllowClobber -Scope CurrentUser -Repository PSGallery -ErrorAction Stop
+                } else {
+                    Install-Module -Name $module -Force -AllowClobber -Scope CurrentUser -Repository PSGallery -ErrorAction Stop
+                }
+
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Successfully installed Azure Az module" -Level "SUCCESS"
+            } catch {
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Failed to install module $module`: $($_.Exception.Message)" -Level "ERROR"
+                return $false
+            }
+        }
+    }
+
+    return $true
+}
+
+function Connect-AzureWithMultipleStrategies {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [object]$Result
+    )
+
+    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Azure authentication with multiple strategies..." -Level "INFO"
+
+    # Strategy 1: Service Principal with Client Secret
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
+        try {
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Service Principal authentication..." -Level "INFO"
+
+            $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
+
+            $context = Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $Configuration.TenantId -WarningAction SilentlyContinue -ErrorAction Stop
+
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Service Principal authentication successful" -Level "SUCCESS"
+            return $context
+
+        } catch {
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Service Principal authentication failed: $($_.Exception.Message)" -Level "WARN"
+            $Result.AddWarning("Service Principal authentication failed", @{Error=$_.Exception.Message})
+        }
+    }
+
+    # Strategy 2: Azure CLI Token
+    try {
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Azure CLI token authentication..." -Level "INFO"
+
+        # Check if Azure CLI is logged in
+        $cliAccount = az account show 2>$null | ConvertFrom-Json
+        if ($cliAccount) {
+            # Get CLI token and use it
+            $token = az account get-access-token --resource https://management.azure.com/ 2>$null | ConvertFrom-Json
+            if ($token) {
+                $accessToken = ConvertTo-SecureString $token.accessToken -AsPlainText -Force
+                $context = Connect-AzAccount -AccessToken $accessToken -AccountId $cliAccount.user.name -TenantId $cliAccount.tenantId -WarningAction SilentlyContinue -ErrorAction Stop
+
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure CLI token authentication successful" -Level "SUCCESS"
+                return $context
+            }
+        }
+
+    } catch {
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure CLI token authentication failed: $($_.Exception.Message)" -Level "WARN"
+    }
+
+    # Strategy 3: Managed Identity (if running on Azure VM/Function/etc.)
+    try {
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Managed Identity authentication..." -Level "INFO"
+
+        $context = Connect-AzAccount -Identity -WarningAction SilentlyContinue -ErrorAction Stop
+
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Managed Identity authentication successful" -Level "SUCCESS"
+        return $context
+
+    } catch {
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Managed Identity authentication failed: $($_.Exception.Message)" -Level "WARN"
+    }
+
+    # Strategy 4: Interactive Authentication (last resort)
+    try {
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting interactive authentication..." -Level "INFO"
+
+        if ($Configuration.TenantId) {
+            $context = Connect-AzAccount -Tenant $Configuration.TenantId -WarningAction SilentlyContinue -ErrorAction Stop
+        } else {
+            $context = Connect-AzAccount -WarningAction SilentlyContinue -ErrorAction Stop
+        }
+
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Interactive authentication successful" -Level "SUCCESS"
+        return $context
+
+    } catch {
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Interactive authentication failed: $($_.Exception.Message)" -Level "ERROR"
+        $Result.AddError("All authentication strategies failed", $_.Exception, @{Section="Authentication"})
+    }
+
+    return $null
+}
+
 function Invoke-AzureDiscovery {
     [CmdletBinding()]
     param(
@@ -54,59 +181,49 @@ function Invoke-AzureDiscovery {
         $graphConnection = $Connections["Graph"]
         $azureConnection = $null
         
-        try {
-            # Try to get Azure connection
-            if ($Connections.ContainsKey("Azure")) {
-                $azureConnection = $Connections["Azure"]
-            } else {
-                # Try to connect to Azure using available credentials
-                if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
-                    try {
-                        # Check if Az module is available
-                        if (Get-Module -ListAvailable -Name "Az.Accounts") {
-                            $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
-                            $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
-                            $azureConnection = Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $Configuration.TenantId -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
-                        }
-                    } catch {
-                        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure connection failed, continuing with Graph API only: $($_.Exception.Message)" -Level "WARN"
-                    }
-                }
-            }
-        } catch {
-            $Result.AddWarning("Could not establish Azure connection, will use Graph API where possible", @{Error=$_.Exception.Message})
+        # Test and install required Azure modules
+        if (-not (Test-AzureModules)) {
+            $Result.AddWarning("Azure module installation failed, some Azure resources may not be discovered")
+        }
+
+        # Establish Azure connection using multiple authentication strategies
+        $azureConnection = Connect-AzureWithMultipleStrategies -Configuration $Configuration -Result $Result
+        if ($azureConnection) {
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure authentication successful" -Level "SUCCESS"
+        } else {
+            $Result.AddWarning("Could not establish Azure connection, will use Graph API where possible", @{Error="All authentication strategies failed"})
         }
         
-        #region User Discovery - Foundation for Migration Planning
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure AD Users - Extracting comprehensive user data..." -Level "INFO"
-        
+        #region Enhanced User Discovery - Foundation for Migration Planning
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure AD Users - Extracting comprehensive user data with enhanced fields..." -Level "INFO"
+
         try {
-            # Get all users with basic properties first, then expand as needed
+            # Get all users with comprehensive enhanced fields from Graph API beta
             $users = @()
-            $userUri = "https://graph.microsoft.com/v1.0/users?`$select=id,userPrincipalName,displayName,givenName,surname,mail,otherMails,proxyAddresses,accountEnabled,userType,creationType,createdDateTime,jobTitle,department,companyName,officeLocation,streetAddress,city,state,country,postalCode,mobilePhone,businessPhones,employeeId,employeeType,onPremisesSamAccountName,onPremisesDistinguishedName,onPremisesUserPrincipalName,onPremisesSyncEnabled,onPremisesLastSyncDateTime,preferredLanguage,usageLocation,assignedLicenses"
-            
+            $userUri = "https://graph.microsoft.com/beta/users?`$select=id,userPrincipalName,displayName,mail,mailNickname,givenName,surname,jobTitle,department,companyName,officeLocation,mobilePhone,businessPhones,employeeId,employeeType,createdDateTime,accountEnabled,userType,usageLocation,assignedLicenses,assignedPlans,onPremisesSyncEnabled,onPremisesImmutableId,onPremisesSamAccountName,onPremisesUserPrincipalName,lastPasswordChangeDateTime,passwordPolicies,&`$expand=manager(`$select=id,displayName,userPrincipalName)&`$top=999"
+
             do {
                 $response = Invoke-MgGraphRequest -Uri $userUri -Method GET
                 $users += $response.value
                 $userUri = $response.'@odata.nextLink'
             } while ($userUri)
-            
+
             foreach ($user in $users) {
                 # Get additional user details with error handling
                 $userId = $user.id
-                
-                # Get user's group memberships (simplified)
+
+                # Get user's group memberships with enhanced details
                 $groupMemberships = @()
                 $groupMembershipCount = 0
                 try {
-                    $groupsUri = "https://graph.microsoft.com/v1.0/users/$userId/memberOf?`$select=id,displayName"
+                    $groupsUri = "https://graph.microsoft.com/beta/users/$userId/memberOf?`$select=id,displayName,groupTypes,mailEnabled,securityEnabled"
                     $groupsResponse = Invoke-MgGraphRequest -Uri $groupsUri -Method GET
                     $groupMemberships = $groupsResponse.value | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' }
                     $groupMembershipCount = $groupMemberships.Count
                 } catch {
                     $groupMembershipCount = 0
                 }
-                
+
                 # Get user's app role assignments count only to avoid complex queries
                 $appRoleAssignmentCount = 0
                 try {
@@ -116,63 +233,76 @@ function Invoke-AzureDiscovery {
                 } catch {
                     $appRoleAssignmentCount = 0
                 }
-                
-                # Skip authentication methods for now to avoid permission issues
-                $authMethodCount = 0
-                
-                # Create comprehensive user object
+
+                # Enhanced sign-in activity information
+                $signInActivity = if ($user.signInActivity) { $user.signInActivity } else { $null }
+
+                # Create enhanced comprehensive user object
                 $userData = [PSCustomObject]@{
                     ObjectType = "AzureADUser"
                     Id = $user.id
                     UserPrincipalName = $user.userPrincipalName
                     DisplayName = $user.displayName
+                    Mail = $user.mail
+                    MailNickname = $user.mailNickname
+
+                    # Personal Info
                     GivenName = $user.givenName
                     Surname = $user.surname
-                    Mail = $user.mail
-                    OtherMails = ($user.otherMails -join '; ')
-                    ProxyAddresses = ($user.proxyAddresses -join '; ')
-                    AccountEnabled = $user.accountEnabled
-                    UserType = $user.userType
-                    CreationType = $user.creationType
-                    CreatedDateTime = $user.createdDateTime
-                    LastSignInDateTime = $user.signInActivity.lastSignInDateTime
                     JobTitle = $user.jobTitle
                     Department = $user.department
                     CompanyName = $user.companyName
+
+                    # Contact Info
                     OfficeLocation = $user.officeLocation
-                    StreetAddress = $user.streetAddress
-                    City = $user.city
-                    State = $user.state
-                    Country = $user.country
-                    PostalCode = $user.postalCode
                     MobilePhone = $user.mobilePhone
-                    BusinessPhones = ($user.businessPhones -join '; ')
+                    BusinessPhones = ($user.businessPhones -join ';')
+
+                    # Employee Info
                     EmployeeId = $user.employeeId
                     EmployeeType = $user.employeeType
-                    OnPremisesSamAccountName = $user.onPremisesSamAccountName
-                    OnPremisesDistinguishedName = $user.onPremisesDistinguishedName
-                    OnPremisesUserPrincipalName = $user.onPremisesUserPrincipalName
-                    OnPremisesSyncEnabled = $user.onPremisesSyncEnabled
-                    OnPremisesLastSyncDateTime = $user.onPremisesLastSyncDateTime
-                    PreferredLanguage = $user.preferredLanguage
+
+                    # Account Status
+                    AccountEnabled = $user.accountEnabled
+                    UserType = $user.userType
                     UsageLocation = $user.usageLocation
-                    ManagerId = $null
-                    ManagerDisplayName = $null
+                    CreatedDateTime = $user.createdDateTime
+
+                    # Licensing - Enhanced
+                    AssignedLicenses = ($user.assignedLicenses | ForEach-Object { $_.skuId }) -join '; '
+                    AssignedPlans = ($user.assignedPlans | ForEach-Object { $_.servicePlanId }) -join '; '
+                    LicenseCount = @($user.assignedLicenses).Count
+
+                    # Sync Status - Enhanced
+                    OnPremisesSyncEnabled = $user.onPremisesSyncEnabled
+                    OnPremisesImmutableId = $user.onPremisesImmutableId
+                    OnPremisesSamAccountName = $user.onPremisesSamAccountName
+                    OnPremisesUserPrincipalName = $user.onPremisesUserPrincipalName
+
+                    # Security - Enhanced
+                    LastPasswordChangeDateTime = $user.lastPasswordChangeDateTime
+                    PasswordPolicies = $user.passwordPolicies
+                    LastSignInDateTime = if ($signInActivity) { $signInActivity.lastSignInDateTime } else { $null }
+
+                    # Manager - Enhanced
+                    ManagerUPN = if ($user.manager) { $user.manager.userPrincipalName } else { $null }
+                    ManagerId = if ($user.manager) { $user.manager.id } else { $null }
+                    ManagerDisplayName = if ($user.manager) { $user.manager.displayName } else { $null }
+
+                    # Relationships
                     GroupMembershipCount = $groupMembershipCount
                     GroupMemberships = ($groupMemberships | ForEach-Object { $_.displayName }) -join '; '
                     AppRoleAssignmentCount = $appRoleAssignmentCount
-                    AuthenticationMethodCount = $authMethodCount
-                    AuthenticationMethods = $null
-                    AssignedLicenses = ($user.assignedLicenses | ForEach-Object { $_.skuId }) -join '; '
+
                     _DataType = 'Users'
                     SessionId = $SessionId
                 }
                 $null = $allDiscoveredData.Add($userData)
             }
-            
+
             $Result.Metadata["UserCount"] = $users.Count
-            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "User Discovery - Discovered $($users.Count) users" -Level "SUCCESS"
-            
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Enhanced User Discovery - Discovered $($users.Count) users with comprehensive fields" -Level "SUCCESS"
+
         } catch {
             $Result.AddError("Failed to discover users: $($_.Exception.Message)", $_.Exception, @{Section="Users"})
         }
@@ -180,17 +310,17 @@ function Invoke-AzureDiscovery {
         
         #region Azure Applications Discovery via Graph API
         Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure Applications..." -Level "INFO"
-        
+
         try {
             $applications = @()
             $appUri = "https://graph.microsoft.com/v1.0/applications?`$select=id,appId,displayName,createdDateTime,publisherDomain,signInAudience,tags,web,spa,publicClient,requiredResourceAccess"
-            
+
             do {
                 $response = Invoke-MgGraphRequest -Uri $appUri -Method GET
                 $applications += $response.value
                 $appUri = $response.'@odata.nextLink'
             } while ($appUri)
-            
+
             foreach ($app in $applications) {
                 # Get Application Owners
                 $owners = @()
@@ -203,12 +333,57 @@ function Invoke-AzureDiscovery {
                 } catch {
                     $ownerCount = 0
                 }
-                
+
+                # Get Application Owners with detailed info
+                $ownerDetails = @()
+                try {
+                    foreach ($owner in $owners) {
+                        $ownerObj = [PSCustomObject]@{
+                            Type = $owner.'@odata.type'
+                            Id = $owner.id
+                            DisplayName = if ($owner.displayName) { $owner.displayName } else { $null }
+                            UserPrincipalName = if ($owner.userPrincipalName) { $owner.userPrincipalName } else { $null }
+                        }
+                        $ownerDetails += $ownerObj
+                    }
+                } catch {
+                    # Continue without detailed owner info
+                }
+
+                # Analyze High Privilege Permissions
+                $highPrivilegePermissionCount = 0
+                $hasHighPrivilegePermissions = $false
+                $highPrivilegePermissions = @(
+                    'Application.ReadWrite.All', 'AppRoleAssignment.ReadWrite.All', 'Directory.ReadWrite.All',
+                    'RoleManagement.ReadWrite.Directory', 'User.ReadWrite.All', 'Group.ReadWrite.All',
+                    'GroupMember.ReadWrite.All', 'Mail.ReadWrite', 'Mail.Send', 'Files.ReadWrite.All',
+                    'Sites.ReadWrite.All', 'Exchange.ManageAsApp', 'Full_Access_As_App', 'full_access_as_app'
+                )
+
+                if ($app.requiredResourceAccess) {
+                    foreach ($resource in $app.requiredResourceAccess) {
+                        foreach ($permission in $resource.resourceAccess) {
+                            $hasHighPrivilege = $false
+                            foreach ($privilegePattern in $highPrivilegePermissions) {
+                                if ($permission.id -match $privilegePattern -or $permission.type -eq 'Role') {
+                                    $hasHighPrivilege = $true
+                                    break
+                                }
+                            }
+                            if ($hasHighPrivilege) {
+                                $highPrivilegePermissionCount++
+                                $hasHighPrivilegePermissions = $true
+                            }
+                        }
+                    }
+                }
+
                 $appData = [PSCustomObject]@{
                     ObjectType = "AzureApplication"
                     Id = $app.id
                     AppId = $app.appId
                     DisplayName = $app.displayName
+                    Description = $app.description
                     CreatedDateTime = $app.createdDateTime
                     PublisherDomain = $app.publisherDomain
                     SignInAudience = $app.signInAudience
@@ -218,17 +393,132 @@ function Invoke-AzureDiscovery {
                     OwnerCount = $ownerCount
                     Owners = ($owners.id -join '; ')
                     OwnerTypes = ($owners.'@odata.type' -join '; ')
+                    DetailedOwners = ($ownerDetails | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                    HighPrivilegePermissionCount = $highPrivilegePermissionCount
+                    HasHighPrivilegePermissions = $hasHighPrivilegePermissions
+                    AppRoleCount = if ($app.appRoles) { $app.appRoles.Count } else { 0 }
+                    OAuth2PermissionScopeCount = if ($app.api -and $app.api.oauth2PermissionScopes) { $app.api.oauth2PermissionScopes.Count } else { 0 }
                     _DataType = 'Applications'
                     SessionId = $SessionId
                 }
                 $null = $allDiscoveredData.Add($appData)
             }
-            
+
             $Result.Metadata["ApplicationCount"] = $applications.Count
             Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Application Discovery - Discovered $($applications.Count) applications" -Level "SUCCESS"
-            
+
         } catch {
             $Result.AddError("Failed to discover applications: $($_.Exception.Message)", $_.Exception, @{Section="Applications"})
+        }
+        #endregion
+
+        #region Azure Application Certificates and Secrets Analysis
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Analyzing Application Certificates and Secrets..." -Level "INFO"
+
+        try {
+            $certificateCount = 0
+            $secretCount = 0
+            $expiredCount = 0
+            $expiringSoonCount = 0
+
+            # Re-fetch applications with credentials details for certificate and secret analysis
+            $appsWithCreds = @()
+            $appsWithCredsUri = "https://graph.microsoft.com/v1.0/applications?`$select=id,appId,displayName,keyCredentials,passwordCredentials&`$top=999"
+
+            do {
+                $credsResponse = Invoke-MgGraphRequest -Uri $appsWithCredsUri -Method GET
+                $appsWithCreds += $credsResponse.value
+                $appsWithCredsUri = $credsResponse.'@odata.nextLink'
+            } while ($appsWithCredsUri)
+
+            $appsWithCreds = $appsWithCreds | Where-Object { $_.keyCredentials -or $_.passwordCredentials }
+
+            foreach ($app in $appsWithCreds) {
+                # Process certificates
+                if ($app.keyCredentials) {
+                    foreach ($keyCred in $app.keyCredentials) {
+                        $certificateCount++
+                        $daysUntilExpiry = if ($keyCred.endDateTime) {
+                            (New-TimeSpan -Start (Get-Date) -End ([datetime]$keyCred.endDateTime)).Days
+                        } else { -1 }
+
+                        $status = if ($daysUntilExpiry -lt 0) { 'Expired' }
+                                elseif ($daysUntilExpiry -lt 30) { 'ExpiringSoon' }
+                                elseif ($daysUntilExpiry -lt 90) { 'ExpiringInQuarter' }
+                                else { 'Valid' }
+
+                        if ($status -eq 'Expired') { $expiredCount++ }
+                        elseif ($status -eq 'ExpiringSoon') { $expiringSoonCount++ }
+
+                        $certObj = [PSCustomObject]@{
+                            ObjectType = 'ApplicationCertificate'
+                            AppId = $app.appId
+                            AppDisplayName = $app.displayName
+                            CredentialType = 'Certificate'
+                            KeyId = $keyCred.keyId
+                            DisplayName = $keyCred.displayName
+                            StartDateTime = $keyCred.startDateTime
+                            EndDateTime = $keyCred.endDateTime
+                            DaysUntilExpiry = $daysUntilExpiry
+                            Usage = $keyCred.usage
+                            Status = $status
+                            CustomKeyIdentifier = if ($keyCred.customKeyIdentifier) {
+                                [System.Convert]::ToBase64String([System.Convert]::FromBase64String($keyCred.customKeyIdentifier))
+                            } else { $null }
+                            _DataType = 'ApplicationCertificates'
+                            SessionId = $SessionId
+                        }
+
+                        $null = $allDiscoveredData.Add($certObj)
+                    }
+                }
+
+                # Process secrets
+                if ($app.passwordCredentials) {
+                    foreach ($passwordCred in $app.passwordCredentials) {
+                        $secretCount++
+                        $daysUntilExpiry = if ($passwordCred.endDateTime) {
+                            (New-TimeSpan -Start (Get-Date) -End ([datetime]$passwordCred.endDateTime)).Days
+                        } else { -1 }
+
+                        $status = if (-not $passwordCred.endDateTime) { 'NeverExpires' }
+                                elseif ($daysUntilExpiry -lt 0) { 'Expired' }
+                                elseif ($daysUntilExpiry -lt 30) { 'ExpiringSoon' }
+                                elseif ($daysUntilExpiry -lt 90) { 'ExpiringInQuarter' }
+                                else { 'Valid' }
+
+                        if ($status -eq 'Expired') { $expiredCount++ }
+                        elseif ($status -eq 'ExpiringSoon') { $expiringSoonCount++ }
+
+                        $secretObj = [PSCustomObject]@{
+                            ObjectType = 'ApplicationSecret'
+                            AppId = $app.appId
+                            AppDisplayName = $app.displayName
+                            CredentialType = 'Secret'
+                            KeyId = $passwordCred.keyId
+                            DisplayName = $passwordCred.displayName
+                            Hint = $passwordCred.hint
+                            StartDateTime = $passwordCred.startDateTime
+                            EndDateTime = $passwordCred.endDateTime
+                            DaysUntilExpiry = $daysUntilExpiry
+                            Status = $status
+                            _DataType = 'ApplicationSecrets'
+                            SessionId = $SessionId
+                        }
+
+                        $null = $allDiscoveredData.Add($secretObj)
+                    }
+                }
+            }
+
+            $Result.Metadata["CertificateCount"] = $certificateCount
+            $Result.Metadata["SecretCount"] = $secretCount
+            $Result.Metadata["ExpiredCredentialCount"] = $expiredCount
+            $Result.Metadata["ExpiringSoonCredentialCount"] = $expiringSoonCount
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Credential Analysis - Found $certificateCount certificates, $secretCount secrets ($expiredCount expired, $expiringSoonCount expiring soon)" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddWarning("Failed to analyze application credentials: $($_.Exception.Message)", @{Operation = "GetApplicationCredentials"})
         }
         #endregion
         
@@ -286,41 +576,41 @@ function Invoke-AzureDiscovery {
         }
         #endregion
         
-        #region Azure Groups Discovery via Graph API
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure Groups..." -Level "INFO"
-        
+        #region Enhanced Azure Groups Discovery via Graph API
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure Groups with enhanced analysis..." -Level "INFO"
+
         try {
             $groups = @()
-            $groupUri = "https://graph.microsoft.com/v1.0/groups?`$select=id,displayName,description,groupTypes,createdDateTime,mail,mailEnabled,securityEnabled,visibility,onPremisesSyncEnabled"
-            
+            $groupUri = "https://graph.microsoft.com/beta/groups?`$select=id,displayName,mailEnabled,mailNickname,mail,securityEnabled,groupTypes,description,visibility,createdDateTime,membershipRule,membershipRuleProcessingState,onPremisesSyncEnabled,proxyAddresses,classification,isAssignableToRole,resourceProvisioningOptions"
+
             do {
                 $response = Invoke-MgGraphRequest -Uri $groupUri -Method GET
                 $groups += $response.value
                 $groupUri = $response.'@odata.nextLink'
             } while ($groupUri)
-            
+
             foreach ($group in $groups) {
-                # Get Group Owners
+                # Get Group Owners with enhanced details
                 $owners = @()
                 $ownerCount = 0
                 try {
-                    $ownersUri = "https://graph.microsoft.com/v1.0/groups/$($group.id)/owners"
+                    $ownersUri = "https://graph.microsoft.com/beta/groups/$($group.id)/owners"
                     $ownersResponse = Invoke-MgGraphRequest -Uri $ownersUri -Method GET
                     $owners = $ownersResponse.value
                     $ownerCount = $owners.Count
                 } catch {
                     $ownerCount = 0
                 }
-                
+
                 # Get Group Members (sample for performance - full member list can be huge)
                 $members = @()
                 $memberCount = 0
                 try {
-                    $membersUri = "https://graph.microsoft.com/v1.0/groups/$($group.id)/members?`$top=100"
+                    $membersUri = "https://graph.microsoft.com/beta/groups/$($group.id)/members?`$top=100"
                     $membersResponse = Invoke-MgGraphRequest -Uri $membersUri -Method GET
                     $members = $membersResponse.value
                     $memberCount = $members.Count
-                    
+
                     # Get full member count if available
                     if ($membersResponse.'@odata.count') {
                         $memberCount = $membersResponse.'@odata.count'
@@ -328,34 +618,60 @@ function Invoke-AzureDiscovery {
                 } catch {
                     $memberCount = 0
                 }
-                
+
+                # Enhanced Group Type Analysis
+                $groupType = 'SecurityGroup'
+                if ($group.groupTypes -contains 'Unified') { $groupType = 'Microsoft365Group' }
+                if ($group.mailEnabled -and -not $group.securityEnabled) { $groupType = 'DistributionList' }
+
+                # Determine if dynamic group
+                $isDynamic = ($null -ne $group.membershipRule)
+
                 $groupData = [PSCustomObject]@{
                     ObjectType = "AzureGroup"
                     Id = $group.id
                     DisplayName = $group.displayName
-                    Description = $group.description
-                    GroupTypes = ($group.groupTypes -join '; ')
-                    CreatedDateTime = $group.createdDateTime
                     Mail = $group.mail
+                    MailNickname = $group.mailNickname
                     MailEnabled = $group.mailEnabled
                     SecurityEnabled = $group.securityEnabled
+                    GroupType = $groupType
+                    GroupTypes = ($group.groupTypes -join ';')
+                    Description = $group.description
                     Visibility = $group.visibility
+                    Classification = $group.classification
+                    CreatedDateTime = $group.createdDateTime
+                    MembershipRule = $group.membershipRule
+                    MembershipRuleProcessingState = $group.membershipRuleProcessingState
+                    IsDynamic = $isDynamic
                     OnPremisesSyncEnabled = $group.onPremisesSyncEnabled
+                    ProxyAddresses = if ($group.proxyAddresses) { ($group.proxyAddresses -join ';') } else { $null }
+                    IsAssignableToRole = $group.isAssignableToRole
+
                     OwnerCount = $ownerCount
                     MemberCount = $memberCount
-                    Owners = ($owners.id -join '; ')
-                    OwnerTypes = ($owners.'@odata.type' -join '; ')
-                    SampleMembers = ($members.id -join '; ')
+                    Owners = ($owners | ForEach-Object {
+                        if ($_.displayName) { $_.displayName }
+                        elseif ($_.userPrincipalName) { $_.userPrincipalName }
+                        else { $_.id }
+                    }) -join '; '
+
+                    SampleMembers = ($members | ForEach-Object {
+                        if ($_.displayName) { $_.displayName }
+                        elseif ($_.userPrincipalName) { $_.userPrincipalName }
+                        else { $_.id }
+                    }) -join '; '
+
                     SampleMemberTypes = ($members.'@odata.type' -join '; ')
                     _DataType = 'Groups'
                     SessionId = $SessionId
                 }
                 $null = $allDiscoveredData.Add($groupData)
             }
-            
+
             $Result.Metadata["GroupCount"] = $groups.Count
-            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Group Discovery - Discovered $($groups.Count) groups" -Level "SUCCESS"
-            
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Enhanced Group Discovery - Discovered $($groups.Count) groups with comprehensive analysis" -Level "SUCCESS"
+
         } catch {
             $Result.AddError("Failed to discover groups: $($_.Exception.Message)", $_.Exception, @{Section="Groups"})
         }
@@ -406,20 +722,21 @@ function Invoke-AzureDiscovery {
         }
         #endregion
         
-        #region Azure Devices Discovery via Graph API
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure Devices..." -Level "INFO"
-        
+        #region Azure Devices/Intune Managed Devices Discovery via Graph API
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure Devices and Intune Managed Devices..." -Level "INFO"
+
         try {
-            $devices = @()
-            $deviceUri = "https://graph.microsoft.com/v1.0/devices?`$select=id,displayName,deviceId,operatingSystem,operatingSystemVersion,createdDateTime,lastSignInDateTime,accountEnabled,isCompliant,isManaged,deviceVersion,deviceMetadata,deviceOwnership,enrollmentType"
-            
+            # Discover regular Azure AD devices
+            $aadDevices = @()
+            $aadDeviceUri = "https://graph.microsoft.com/v1.0/devices?`$select=id,displayName,deviceId,operatingSystem,operatingSystemVersion,createdDateTime,lastSignInDateTime,accountEnabled,isCompliant,isManaged,deviceVersion,deviceMetadata,deviceOwnership,enrollmentType"
+
             do {
-                $response = Invoke-MgGraphRequest -Uri $deviceUri -Method GET
-                $devices += $response.value
-                $deviceUri = $response.'@odata.nextLink'
-            } while ($deviceUri)
-            
-            foreach ($device in $devices) {
+                $response = Invoke-MgGraphRequest -Uri $aadDeviceUri -Method GET
+                $aadDevices += $response.value
+                $aadDeviceUri = $response.'@odata.nextLink'
+            } while ($aadDeviceUri)
+
+            foreach ($device in $aadDevices) {
                 $deviceData = [PSCustomObject]@{
                     ObjectType = "AzureDevice"
                     Id = $device.id
@@ -440,12 +757,128 @@ function Invoke-AzureDiscovery {
                 }
                 $null = $allDiscoveredData.Add($deviceData)
             }
-            
-            $Result.Metadata["DeviceCount"] = $devices.Count
-            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Device Discovery - Discovered $($devices.Count) devices" -Level "SUCCESS"
-            
+
+            $Result.Metadata["AzureADDeviceCount"] = $aadDevices.Count
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure AD Device Discovery - Discovered $($aadDevices.Count) devices" -Level "SUCCESS"
+
         } catch {
-            $Result.AddError("Failed to discover devices: $($_.Exception.Message)", $_.Exception, @{Section="Devices"})
+            $Result.AddError("Failed to discover Azure AD devices: $($_.Exception.Message)", $_.Exception, @{Section="AzureDevices"})
+        }
+
+        # Enhanced Intune Managed Devices Discovery with comprehensive fields
+        try {
+            $managedDevices = @()
+            $managedDeviceUri = "https://graph.microsoft.com/beta/deviceManagement/managedDevices?`$top=999"
+
+            do {
+                $response = Invoke-MgGraphRequest -Uri $managedDeviceUri -Method GET
+                $managedDevices += $response.value
+                $managedDeviceUri = $response.'@odata.nextLink'
+            } while ($managedDeviceUri)
+
+            foreach ($device in $managedDevices) {
+                # Calculate derived fields
+                $totalStorageGB = if ($device.totalStorageSpaceInBytes) {
+                    [math]::Round($device.totalStorageSpaceInBytes / 1GB, 2)
+                } else { $null }
+
+                $freeStorageGB = if ($device.freeStorageSpaceInBytes) {
+                    [math]::Round($device.freeStorageSpaceInBytes / 1GB, 2)
+                } else { $null }
+
+                $deviceData = [PSCustomObject]@{
+                    ObjectType = "ManagedDevice"
+                    DeviceId = $device.id
+                    DeviceName = $device.deviceName
+                    ManagedDeviceName = $device.managedDeviceName
+                    SerialNumber = $device.serialNumber
+
+                    # User mapping
+                    UserPrincipalName = $device.userPrincipalName
+                    UserDisplayName = $device.userDisplayName
+                    UserId = $device.userId
+                    EmailAddress = $device.emailAddress
+
+                    # Device specifications
+                    OperatingSystem = $device.operatingSystem
+                    OSVersion = $device.osVersion
+                    Model = $device.model
+                    Manufacturer = $device.manufacturer
+                    DeviceType = $device.deviceType
+                    HardwareInformation = if ($device.hardwareInformation) {
+                        "$($device.hardwareInformation.model)|$($device.hardwareInformation.manufacturer)|$($device.hardwareInformation.serialNumber)"
+                    } else { $null }
+
+                    # Network identifiers
+                    IMEI = $device.imei
+                    MEID = $device.meid
+                    WiFiMacAddress = $device.wiFiMacAddress
+                    EthernetMacAddress = $device.ethernetMacAddress
+                    PhoneNumber = $device.phoneNumber
+                    SubscriberCarrier = $device.subscriberCarrier
+                    ICCID = $device.iccid
+                    UDID = $device.udid
+
+                    # Management details
+                    ManagementAgent = $device.managementAgent
+                    ManagedDeviceOwnerType = $device.managedDeviceOwnerType
+                    DeviceEnrollmentType = $device.deviceEnrollmentType
+                    DeviceRegistrationState = $device.deviceRegistrationState
+                    ManagementState = $device.managementState
+
+                    # Compliance and security
+                    ComplianceState = $device.complianceState
+                    ComplianceGracePeriodExpirationDateTime = $device.complianceGracePeriodExpirationDateTime
+                    IsEncrypted = $device.isEncrypted
+                    IsSupervised = $device.isSupervised
+                    JailBroken = $device.jailBroken
+                    AndroidSecurityPatchLevel = $device.androidSecurityPatchLevel
+                    PartnerReportedThreatState = $device.partnerReportedThreatState
+
+                    # Dates and sync info
+                    EnrolledDateTime = $device.enrolledDateTime
+                    LastSyncDateTime = $device.lastSyncDateTime
+                    ManagementCertificateExpirationDate = $device.managementCertificateExpirationDate
+
+                    # Azure AD integration
+                    AzureADDeviceId = $device.azureADDeviceId
+                    AzureADRegistered = $device.azureADRegistered
+                    AzureActiveDirectoryDeviceId = $device.azureActiveDirectoryDeviceId
+
+                    # Storage information
+                    TotalStorageSpaceInGB = $totalStorageGB
+                    FreeStorageSpaceInGB = $freeStorageGB
+
+                    # Exchange/ActiveSync status
+                    ExchangeAccessState = $device.exchangeAccessState
+                    ExchangeAccessStateReason = $device.exchangeAccessStateReason
+                    ExchangeLastSuccessfulSyncDateTime = $device.exchangeLastSuccessfulSyncDateTime
+                    EASActivated = $device.easActivated
+                    EASDeviceId = $device.easDeviceId
+                    EASActivationDateTime = $device.easActivationDateTime
+
+                    # Configuration and apps
+                    DeviceCategory = $device.deviceCategoryDisplayName
+
+                    # Additional status
+                    ActivationLockBypassCode = $device.activationLockBypassCode
+                    RemoteAssistanceSessionUrl = $device.remoteAssistanceSessionUrl
+                    RemoteAssistanceSessionErrorDetails = $device.remoteAssistanceSessionErrorDetails
+                    IsEASManaged = $device.isEASManaged
+                    AutopilotEnrolled = $device.autopilotEnrolled
+                    RequireUserEnrollmentApproval = $device.requireUserEnrollmentApproval
+
+                    _DataType = 'ManagedDevices'
+                    SessionId = $SessionId
+                }
+                $null = $allDiscoveredData.Add($deviceData)
+            }
+
+            $Result.Metadata["ManagedDeviceCount"] = $managedDevices.Count
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Intune Managed Device Discovery - Discovered $($managedDevices.Count) managed devices" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddWarning("Failed to discover Intune managed devices: $($_.Exception.Message)", @{Operation = "GetManagedDevices"})
         }
         #endregion
         
@@ -683,53 +1116,54 @@ function Invoke-AzureDiscovery {
         }
         #endregion
         
-        #region Azure Resources Discovery via Graph API Beta
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure Resources via Graph API Beta..." -Level "INFO"
-        
-        try {
-            # Try to discover Azure resources via Graph API beta endpoints
-            $resourceTypes = @(
-                @{Name = "Virtual Machines"; Endpoint = "solutions/virtualMachines"; Type = "AzureVM"}
-                @{Name = "Storage Accounts"; Endpoint = "solutions/storageAccounts"; Type = "AzureStorage"}
-                @{Name = "Key Vaults"; Endpoint = "solutions/keyVaults"; Type = "AzureKeyVault"}
-                @{Name = "Network Interfaces"; Endpoint = "solutions/networkInterfaces"; Type = "AzureNetworkInterface"}
-                @{Name = "Public IP Addresses"; Endpoint = "solutions/publicIpAddresses"; Type = "AzurePublicIP"}
-                @{Name = "Virtual Networks"; Endpoint = "solutions/virtualNetworks"; Type = "AzureVirtualNetwork"}
-            )
-            
-            foreach ($resourceType in $resourceTypes) {
+        #region Azure Resource Groups Discovery via Graph API Beta (as fallback)
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure Resource Groups..." -Level "INFO"
+
+        if (-not $azureConnection) {
+            # If no Azure connection, try Graph API as fallback for resource groups only
+            try {
+                $resourceGroups = @()
+                $rgUri = "https://graph.microsoft.com/beta/solutions/resourceGroups"
+
                 try {
-                    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting to discover $($resourceType.Name)..." -Level "DEBUG"
-                    $resourceUri = "https://graph.microsoft.com/beta/$($resourceType.Endpoint)"
-                    
-                    $response = Invoke-MgGraphRequest -Uri $resourceUri -Method GET -ErrorAction SilentlyContinue
-                    if ($response.value -and $response.value.Count -gt 0) {
-                        foreach ($resource in $response.value) {
-                            $resourceData = [PSCustomObject]@{
-                                ObjectType = $resourceType.Type
-                                Id = $resource.id
-                                Name = $resource.name
-                                DisplayName = $resource.displayName
-                                Location = $resource.location
-                                ResourceGroup = $resource.resourceGroup
-                                SubscriptionId = $resource.subscriptionId
-                                Properties = ($resource.properties | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
-                                _DataType = $resourceType.Name.Replace(' ', '')
+                    $response = Invoke-MgGraphRequest -Uri $rgUri -Method GET
+                    if ($response.value) {
+                        $resourceGroups = $response.value
+
+                        foreach ($rg in $resourceGroups) {
+                            $rgData = [PSCustomObject]@{
+                                ObjectType = "AzureResourceGroup"
+                                Id = $rg.id
+                                Name = $rg.name
+                                Location = $rg.location
+                                SubscriptionId = $rg.subscriptionId
+                                Properties = ($rg.properties | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                                Tags = ($rg.tags | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                                _DataType = 'ResourceGroups'
                                 SessionId = $SessionId
                             }
-                            $null = $allDiscoveredData.Add($resourceData)
+                            $null = $allDiscoveredData.Add($rgData)
                         }
-                        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "$($resourceType.Name) Discovery - Discovered $($response.value.Count) resources" -Level "SUCCESS"
+
+                        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Resource Group Discovery - Discovered $($resourceGroups.Count) resource groups" -Level "SUCCESS"
                     }
                 } catch {
-                    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "$($resourceType.Name) discovery not available via Graph Beta" -Level "DEBUG"
+                    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Resource group discovery via Graph Beta not available" -Level "WARN"
                 }
+
+            } catch {
+                $Result.AddWarning("Failed to discover resource groups via Graph Beta: $($_.Exception.Message)", @{Section="ResourceGroups"})
             }
-            
-        } catch {
-            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure resource discovery via Graph Beta not fully available" -Level "INFO"
         }
         #endregion
+
+        #region Enhanced Azure Infrastructure Discovery - Azure PowerShell Primary Method
+        if ($azureConnection) {
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure connection detected - Using Azure PowerShell for infrastructure discovery..." -Level "SUCCESS"
+
+            # Process subscriptions for infrastructure resources
+            try {
+                $subscriptions = Get-AzSubscription -ErrorAction Stop | Where-Object { $_.State -eq 'Enabled' }
         
         #region Azure Resource Groups Discovery via Graph API Beta
         Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure Resource Groups..." -Level "INFO"

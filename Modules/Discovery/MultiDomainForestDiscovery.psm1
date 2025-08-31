@@ -22,6 +22,7 @@
 #>
 
 Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\ComprehensiveErrorHandling.psm1") -Force -ErrorAction SilentlyContinue
+Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Core\ClassDefinitions.psm1") -Force
 
 function Write-MultiDomainLog {
     <#
@@ -84,21 +85,8 @@ function Invoke-MultiDomainForestDiscovery {
     Write-MultiDomainLog -Level "HEADER" -Message "Starting Multi-Domain Forest Discovery (v1.0)" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-    # Initialize result object
-    $result = @{
-        Success = $true
-        ModuleName = 'MultiDomainForestDiscovery'
-        RecordCount = 0
-        Errors = [System.Collections.ArrayList]::new()
-        Warnings = [System.Collections.ArrayList]::new()
-        Metadata = @{}
-        StartTime = Get-Date
-        EndTime = $null
-        ExecutionId = [guid]::NewGuid().ToString()
-        AddError = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
-        AddWarning = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-        Complete = { $this.EndTime = Get-Date }.GetNewClosure()
-    }
+    # Initialize result object using standardized DiscoveryResult class
+    $result = [DiscoveryResult]::new('MultiDomainForestDiscovery')
 
     try {
         # Validate context
@@ -131,6 +119,7 @@ function Invoke-MultiDomainForestDiscovery {
                 $forestData | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Forest' -Force }
                 $null = $allDiscoveredData.AddRange($forestData)
                 $result.Metadata["ForestCount"] = ($forestData | Group-Object ForestName).Count
+                $result.Metadata["RecordCount"] = $result.Metadata["RecordCount"] + ($forestData | Group-Object ForestName).Count
             }
             Write-MultiDomainLog -Level "SUCCESS" -Message "Discovered $($forestData.Count) forest objects" -Context $Context
         } catch {
@@ -145,6 +134,8 @@ function Invoke-MultiDomainForestDiscovery {
                 $domainData | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Domain' -Force }
                 $null = $allDiscoveredData.AddRange($domainData)
                 $result.Metadata["DomainCount"] = ($domainData | Group-Object DomainName).Count
+                $currentCount = if ($result.Metadata.ContainsKey("RecordCount")) { $result.Metadata["RecordCount"] } else { 0 }
+                $result.Metadata["RecordCount"] = $currentCount + ($domainData | Group-Object DomainName).Count
             }
             Write-MultiDomainLog -Level "SUCCESS" -Message "Discovered $($domainData.Count) domain objects" -Context $Context
         } catch {
@@ -251,17 +242,18 @@ function Invoke-MultiDomainForestDiscovery {
             Write-MultiDomainLog -Level "WARN" -Message "No multi-domain data discovered to export" -Context $Context
         }
 
-        $result.RecordCount = $allDiscoveredData.Count
-        $result.Metadata["TotalRecords"] = $result.RecordCount
+        $result.Data = $allDiscoveredData
+        $result.Metadata["RecordCount"] = $allDiscoveredData.Count
+        $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
         $result.Metadata["SessionId"] = $SessionId
 
-    } catch {
+     } catch {
         Write-MultiDomainLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
         $result.AddError("A critical error occurred during multi-domain discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
         $result.Complete()
-        Write-MultiDomainLog -Level "HEADER" -Message "Multi-domain discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
+        Write-MultiDomainLog -Level "HEADER" -Message "Multi-domain discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.Metadata['RecordCount'])." -Context $Context
     }
 
     return $result

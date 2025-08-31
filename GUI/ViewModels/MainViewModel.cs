@@ -935,6 +935,21 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
+                // Validate that a source profile is selected first
+                if (string.IsNullOrWhiteSpace(CurrentProfileName))
+                {
+                    _logger?.LogWarning("Cannot create target profile: No source profile selected");
+                    MessageBox.Show(
+                        "Please select a source profile first before creating target profiles.\n\n" +
+                        "Target profiles are organized under source profiles for migration planning.",
+                        "Source Profile Required",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return;
+                }
+
+                _logger?.LogInformation($"Creating target profile for source profile: {CurrentProfileName}");
+
                 var viewModel = new AddTargetProfileViewModel();
                 var dialog = new MandADiscoverySuite.Views.AddTargetProfileDialog(viewModel)
                 {

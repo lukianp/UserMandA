@@ -1,0 +1,4 @@
+"DisplayName,UserPrincipalName,Mail,Department,JobTitle,AccountEnabled,SamAccountName,CompanyName,ManagerDisplayName,CreatedDateTime" 
+"Alice Johnson,alice.johnson@contoso.com,alice.johnson@contoso.com,Marketing,Marketing Manager,True,,Contoso,John Smith,2023-01-15T08:00:00Z"  
+"Bob Wilson,bob.wilson@contoso.com,bob.wilson@contoso.com,IT,Systems Administrator,True,,Contoso,Mary Davis,2023-03-22T14:30:00Z"  
+"Charlie Brown,charlie.brown@contoso.com,charlie.brown@contoso.com,Finance,Financial Analyst,False,,Contoso,Sarah Johnson,2022-11-08T10:15:00Z" 

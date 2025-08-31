@@ -7,10 +7,11 @@
 
 <#
 .SYNOPSIS
-    Enhanced Azure Resource Discovery Launcher
+    Unified Azure Infrastructure Discovery Launcher
 .DESCRIPTION
-    Launches comprehensive Azure resource discovery using multiple authentication methods.
-    This script is designed to gather critical Azure infrastructure data for M&A migration planning.
+    Launches comprehensive unified Azure discovery including dual Azure AD/Intune discovery,
+    advanced authentication methods, certificate/secret expiry analysis, and complete infrastructure
+    mapping. Designed for M&A migration planning with enhanced security analysis and device management.
 .PARAMETER CompanyName  
     The company name for organizing discovery data
 .PARAMETER TenantId
@@ -103,11 +104,11 @@ try {
         }
     }
     
-    # Import the enhanced Azure resource discovery module
+    # Import the working Azure Resource Discovery module
     $azureResourceModulePath = Join-Path $ModulesPath "Discovery\AzureResourceDiscovery.psm1"
     if (Test-Path $azureResourceModulePath) {
         Import-Module $azureResourceModulePath -Force
-        Write-Host "[AzureResourceDiscovery] Enhanced Azure resource discovery module loaded" -ForegroundColor Green
+        Write-Host "[AzureResourceDiscovery] Azure Resource Discovery module loaded" -ForegroundColor Green
     } else {
         throw "Azure Resource Discovery module not found at: $azureResourceModulePath"
     }
@@ -203,7 +204,7 @@ try {
     
     # Start Azure Resource Discovery
     Write-Host "Starting enhanced Azure Resource discovery..." -ForegroundColor Cyan
-    
+
     $discoveryResult = Invoke-AzureResourceDiscovery -Configuration $configuration -Context $discoveryContext -SessionId $sessionId
     
     if ($discoveryResult) {

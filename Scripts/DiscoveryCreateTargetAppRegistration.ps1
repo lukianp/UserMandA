@@ -393,13 +393,9 @@ function Test-RequiredModules {
     }
     
     if ($missingModules.Count -gt 0 -or $outdatedModules.Count -gt 0) {
-        if ($AutoInstallModules) {
-            Write-EnhancedLog "Auto-installing/updating missing modules..." -Level PROGRESS
-            Install-RequiredModules -MissingModules $missingModules -OutdatedModules $outdatedModules
-        } else {
-            Write-EnhancedLog "Missing or outdated modules detected. Use -AutoInstallModules to install automatically." -Level WARNING
-            return $false
-        }
+        # Automatically install missing/outdated modules for critical dependencies
+        Write-EnhancedLog "Auto-installing/updating missing modules..." -Level PROGRESS
+        Install-RequiredModules -MissingModules $missingModules -OutdatedModules $outdatedModules
     }
     
     Write-EnhancedLog "All required modules are available" -Level SUCCESS
@@ -411,13 +407,51 @@ function Install-RequiredModules {
         [array]$MissingModules,
         [array]$OutdatedModules
     )
-    
+
     $allModules = $MissingModules + $OutdatedModules | Select-Object -Unique
-    
+
     foreach ($module in $allModules) {
         try {
+            # Unload any currently loaded modules before installing to prevent "currently in use" errors
+            Write-EnhancedLog "Checking for loaded modules to unload: $($module.Name)" -Level DEBUG
+
+            $loadedModules = Get-Module -Name $module.Name -ErrorAction SilentlyContinue
+            if ($loadedModules) {
+                Write-EnhancedLog "Found $($loadedModules.Count) loaded instance(s) of $($module.Name), attempting to unload..." -Level INFO
+
+                $unloadAttempt = 0
+                $maxUnloadAttempts = 3
+
+                while ($unloadAttempt -lt $maxUnloadAttempts) {
+                    try {
+                        Remove-Module -Name $module.Name -Force -ErrorAction Stop
+                        Write-EnhancedLog "Successfully unloaded $($module.Name)" -Level SUCCESS
+                        break
+                    }
+                    catch {
+                        $unloadAttempt++
+                        if ($unloadAttempt -lt $maxUnloadAttempts) {
+                            Write-EnhancedLog "Failed to unload $($module.Name) (attempt $unloadAttempt), retrying in 2 seconds..." -Level WARN
+                            Start-Sleep -Seconds 2
+                        }
+                        else {
+                            Write-EnhancedLog "Failed to unload $($module.Name) after $maxUnloadAttempts attempts: $($_.Exception.Message)" -Level ERROR
+                            Write-EnhancedLog "Installing anyway, may encounter 'currently in use' errors" -Level WARN
+                        }
+                    }
+                }
+            }
+            else {
+                Write-EnhancedLog "$($module.Name) is not currently loaded" -Level DEBUG
+            }
+
             Write-EnhancedLog "Installing/updating module: $($module.Name)" -Level PROGRESS
-            Install-Module -Name $module.Name -MinimumVersion $module.MinVersion -Force -AllowClobber -Scope CurrentUser -ErrorAction Stop
+            Install-Module -Name $module.Name -MinimumVersion $module.MinVersion -Force -AllowClobber -Scope CurrentUser -ErrorAction Stop -SkipPublisherCheck
+
+            # Additional cleanup after installation (handle any newly loaded modules that might conflict with imports)
+            Write-EnhancedLog "Cleaning up any newly loaded modules after installation: $($module.Name)" -Level DEBUG
+            Start-Sleep -Milliseconds 500  # Brief pause to let module settle
+
             Write-EnhancedLog "Successfully installed: $($module.Name)" -Level SUCCESS
         }
         catch {
