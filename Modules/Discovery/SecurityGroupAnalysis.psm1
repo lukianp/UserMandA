@@ -21,6 +21,8 @@
 #>
 
 Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\ComprehensiveErrorHandling.psm1") -Force -ErrorAction SilentlyContinue
+# Ensure DiscoveryResult class is available
+Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\ErrorHandling.psm1") -Force -ErrorAction SilentlyContinue
 
 function Write-SecurityGroupLog {
     <#
@@ -83,21 +85,45 @@ function Invoke-SecurityGroupAnalysis {
     Write-SecurityGroupLog -Level "HEADER" -Message "Starting Security Group Analysis (v1.0)" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-    # Initialize result object
-    $result = @{
-        Success = $true
-        ModuleName = 'SecurityGroupAnalysis'
-        RecordCount = 0
-        Errors = [System.Collections.ArrayList]::new()
-        Warnings = [System.Collections.ArrayList]::new()
-        Metadata = @{}
-        StartTime = Get-Date
-        EndTime = $null
-        ExecutionId = [guid]::NewGuid().ToString()
-        AddError = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
-        AddWarning = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-        Complete = { $this.EndTime = Get-Date }.GetNewClosure()
+    # Initialize result object using standardized DiscoveryResult class (with safe fallback)
+    try {
+        if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+            # Attempt to import again with Stop to surface errors if truly missing
+            Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\ErrorHandling.psm1") -Force -ErrorAction Stop
+        }
+        $result = [DiscoveryResult]::new('SecurityGroupAnalysis')
+    } catch {
+        # Fallback to simple hashtable to avoid hard failure; no script methods
+        $result = @{
+            Success = $true
+            ModuleName = 'SecurityGroupAnalysis'
+            Errors = [System.Collections.ArrayList]::new()
+            Warnings = [System.Collections.ArrayList]::new()
+            Metadata = @{}
+            StartTime = Get-Date
+            EndTime = $null
+            ExecutionId = [guid]::NewGuid().ToString()
+        }
     }
+
+    # Local helpers to add errors/warnings regardless of result type
+    $addResError = {
+        param([string]$Message, [Exception]$Exception, [hashtable]$Context)
+        if ($result -is [hashtable]) {
+            [void]$result.Errors.Add(@{ Timestamp = Get-Date; Message = $Message; Exception = $Exception; Context = $Context })
+            $result.Success = $false
+        } else {
+            $result.AddError($Message, $Exception, $Context)
+        }
+    }.GetNewClosure()
+    $addResWarning = {
+        param([string]$Message, [hashtable]$Context)
+        if ($result -is [hashtable]) {
+            [void]$result.Warnings.Add(@{ Timestamp = Get-Date; Message = $Message; Context = $Context })
+        } else {
+            $result.AddWarning($Message, $Context)
+        }
+    }.GetNewClosure()
 
     try {
         # Validate context
@@ -117,70 +143,75 @@ function Invoke-SecurityGroupAnalysis {
         try {
             Write-SecurityGroupLog -Level "INFO" -Message "Analyzing security groups..." -Context $Context
             $groupData = Get-SecurityGroupAnalysis -Configuration $Configuration -SessionId $SessionId
-            if ($groupData.Count -gt 0) {
+            $groupCount = if ($null -ne $groupData) { $groupData.Count } else { 0 }
+            if ($groupCount -gt 0) {
                 $groupData | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'SecurityGroup' -Force }
                 $null = $allDiscoveredData.AddRange($groupData)
-                $result.Metadata["SecurityGroupCount"] = $groupData.Count
+                $result.Metadata["SecurityGroupCount"] = $groupCount
             }
-            Write-SecurityGroupLog -Level "SUCCESS" -Message "Analyzed $($groupData.Count) security groups" -Context $Context
+            Write-SecurityGroupLog -Level "SUCCESS" -Message "Analyzed $groupCount security groups" -Context $Context
         } catch {
-            $result.AddWarning("Failed to analyze security groups: $($_.Exception.Message)", @{Section="SecurityGroups"})
+            & $addResWarning "Failed to analyze security groups: $($_.Exception.Message)" @{Section="SecurityGroups"}
         }
         
         # Analyze Group Memberships
         try {
             Write-SecurityGroupLog -Level "INFO" -Message "Analyzing group memberships..." -Context $Context
             $membershipData = Get-GroupMembershipAnalysis -Configuration $Configuration -SessionId $SessionId
-            if ($membershipData.Count -gt 0) {
+            $membershipCount = if ($null -ne $membershipData) { $membershipData.Count } else { 0 }
+            if ($membershipCount -gt 0) {
                 $membershipData | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'GroupMembership' -Force }
                 $null = $allDiscoveredData.AddRange($membershipData)
-                $result.Metadata["GroupMembershipCount"] = $membershipData.Count
+                $result.Metadata["GroupMembershipCount"] = $membershipCount
             }
-            Write-SecurityGroupLog -Level "SUCCESS" -Message "Analyzed $($membershipData.Count) group memberships" -Context $Context
+            Write-SecurityGroupLog -Level "SUCCESS" -Message "Analyzed $membershipCount group memberships" -Context $Context
         } catch {
-            $result.AddWarning("Failed to analyze group memberships: $($_.Exception.Message)", @{Section="GroupMemberships"})
+            & $addResWarning "Failed to analyze group memberships: $($_.Exception.Message)" @{Section="GroupMemberships"}
         }
         
         # Analyze Privileged Groups
         try {
             Write-SecurityGroupLog -Level "INFO" -Message "Analyzing privileged groups..." -Context $Context
             $privilegedData = Get-PrivilegedGroupAnalysis -Configuration $Configuration -SessionId $SessionId
-            if ($privilegedData.Count -gt 0) {
+            $privilegedCount = if ($null -ne $privilegedData) { $privilegedData.Count } else { 0 }
+            if ($privilegedCount -gt 0) {
                 $privilegedData | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'PrivilegedGroup' -Force }
                 $null = $allDiscoveredData.AddRange($privilegedData)
-                $result.Metadata["PrivilegedGroupCount"] = $privilegedData.Count
+                $result.Metadata["PrivilegedGroupCount"] = $privilegedCount
             }
-            Write-SecurityGroupLog -Level "SUCCESS" -Message "Analyzed $($privilegedData.Count) privileged groups" -Context $Context
+            Write-SecurityGroupLog -Level "SUCCESS" -Message "Analyzed $privilegedCount privileged groups" -Context $Context
         } catch {
-            $result.AddWarning("Failed to analyze privileged groups: $($_.Exception.Message)", @{Section="PrivilegedGroups"})
+            & $addResWarning "Failed to analyze privileged groups: $($_.Exception.Message)" @{Section="PrivilegedGroups"}
         }
         
         # Analyze Nested Groups
         try {
             Write-SecurityGroupLog -Level "INFO" -Message "Analyzing nested groups..." -Context $Context
             $nestedData = Get-NestedGroupAnalysis -Configuration $Configuration -SessionId $SessionId
-            if ($nestedData.Count -gt 0) {
+            $nestedCount = if ($null -ne $nestedData) { $nestedData.Count } else { 0 }
+            if ($nestedCount -gt 0) {
                 $nestedData | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'NestedGroup' -Force }
                 $null = $allDiscoveredData.AddRange($nestedData)
-                $result.Metadata["NestedGroupCount"] = $nestedData.Count
+                $result.Metadata["NestedGroupCount"] = $nestedCount
             }
-            Write-SecurityGroupLog -Level "SUCCESS" -Message "Analyzed $($nestedData.Count) nested group relationships" -Context $Context
+            Write-SecurityGroupLog -Level "SUCCESS" -Message "Analyzed $nestedCount nested group relationships" -Context $Context
         } catch {
-            $result.AddWarning("Failed to analyze nested groups: $($_.Exception.Message)", @{Section="NestedGroups"})
+            & $addResWarning "Failed to analyze nested groups: $($_.Exception.Message)" @{Section="NestedGroups"}
         }
         
         # Generate Security Analysis Summary
         try {
             Write-SecurityGroupLog -Level "INFO" -Message "Generating security analysis summary..." -Context $Context
             $summary = Get-SecurityAnalysisSummary -SecurityData ($allDiscoveredData | Where-Object { $_._DataType -eq 'SecurityGroup' }) -SessionId $SessionId
-            if ($summary.Count -gt 0) {
+            $summaryCount = if ($null -ne $summary) { $summary.Count } else { 0 }
+            if ($summaryCount -gt 0) {
                 $summary | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'SecuritySummary' -Force }
                 $null = $allDiscoveredData.AddRange($summary)
-                $result.Metadata["SecuritySummaryCount"] = $summary.Count
+                $result.Metadata["SecuritySummaryCount"] = $summaryCount
             }
             Write-SecurityGroupLog -Level "SUCCESS" -Message "Generated security analysis summary" -Context $Context
         } catch {
-            $result.AddWarning("Failed to generate security summary: $($_.Exception.Message)", @{Section="SecuritySummary"})
+            & $addResWarning "Failed to generate security summary: $($_.Exception.Message)" @{Section="SecuritySummary"}
         }
 
         # Export data to CSV files
@@ -210,17 +241,16 @@ function Invoke-SecurityGroupAnalysis {
             Write-SecurityGroupLog -Level "WARN" -Message "No security group data discovered to export" -Context $Context
         }
 
-        $result.RecordCount = $allDiscoveredData.Count
-        $result.Metadata["TotalRecords"] = $result.RecordCount
+        $result.Metadata["TotalRecords"] = $allDiscoveredData.Count
         $result.Metadata["SessionId"] = $SessionId
 
     } catch {
         Write-SecurityGroupLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
-        $result.AddError("A critical error occurred during security group analysis: $($_.Exception.Message)", $_.Exception, $null)
+        & $addResError "A critical error occurred during security group analysis: $($_.Exception.Message)" $_.Exception $null
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
-        Write-SecurityGroupLog -Level "HEADER" -Message "Security group analysis finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
+        if ($result -is [hashtable]) { $result['EndTime'] = Get-Date } else { $result.Complete() }
+        Write-SecurityGroupLog -Level "HEADER" -Message "Security group analysis finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($allDiscoveredData.Count)." -Context $Context
     }
 
     return $result

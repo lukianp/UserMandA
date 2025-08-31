@@ -20,6 +20,7 @@
     Requires: PowerShell 5.1+, Administrative privileges, backup system access
 #>
 
+Import-Module (Join-Path $PSScriptRoot "DiscoveryBase.psm1") -Force
 Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\ComprehensiveErrorHandling.psm1") -Force -ErrorAction SilentlyContinue
 
 function Write-BackupLog {
@@ -83,21 +84,8 @@ function Invoke-BackupRecoveryDiscovery {
     Write-BackupLog -Level "HEADER" -Message "Starting Backup and Recovery Discovery (v1.0)" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-    # Initialize result object
-    $result = @{
-        Success = $true
-        ModuleName = 'BackupRecoveryDiscovery'
-        RecordCount = 0
-        Errors = [System.Collections.ArrayList]::new()
-        Warnings = [System.Collections.ArrayList]::new()
-        Metadata = @{}
-        StartTime = Get-Date
-        EndTime = $null
-        ExecutionId = [guid]::NewGuid().ToString()
-        AddError = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
-        AddWarning = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-        Complete = { $this.EndTime = Get-Date }.GetNewClosure()
-    }
+    # Initialize result object using standardized DiscoveryResult class
+    $result = [DiscoveryResult]::new('BackupRecoveryDiscovery')
 
     try {
         # Validate context
@@ -227,6 +215,7 @@ function Invoke-BackupRecoveryDiscovery {
         $result.RecordCount = $allDiscoveredData.Count
         $result.Metadata["TotalRecords"] = $result.RecordCount
         $result.Metadata["SessionId"] = $SessionId
+        $result.Data = $allDiscoveredData
 
     } catch {
         Write-BackupLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
@@ -583,9 +572,9 @@ function Get-BackupStorageConfiguration {
                                 SessionId = $SessionId
                             }
                         }
-                        
+
                     } catch {
-                        Write-BackupLog -Level "DEBUG" -Message "Failed to analyze backup path $path: $($_.Exception.Message)"
+                        Write-BackupLog -Level "DEBUG" -Message "Failed to analyze backup path $($path): '$($_.Exception.Message)'"
                     }
                 }
             }

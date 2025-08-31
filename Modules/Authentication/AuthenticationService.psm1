@@ -259,34 +259,49 @@ function Connect-ToMicrosoftGraphService {
     param(
         [Parameter(Mandatory=$true)]
         [PSCredential]$Credential,
-        
+
         [Parameter(Mandatory=$true)]
         [string]$TenantId
     )
-    
+
     try {
         # Import required modules
         $graphModules = @(
             'Microsoft.Graph.Authentication',
             'Microsoft.Graph.Users',
-            'Microsoft.Graph.Groups'
+            'Microsoft.Graph.Groups',
+            'Microsoft.Graph.Files',
+            'Microsoft.Graph.Sites',
+            'Microsoft.Graph.DirectoryObjects'
         )
-        
+
+        $importedModules = @()
         foreach ($module in $graphModules) {
             if (Get-Module -Name $module -ListAvailable -ErrorAction SilentlyContinue) {
-                Import-Module $module -Force -ErrorAction SilentlyContinue
+                Write-Verbose "[AuthService] Importing Microsoft Graph module: $module"
+                Import-Module $module -Force -ErrorAction Stop
+                $importedModules += $module
+            } else {
+                Write-Warning "[AuthService] Microsoft Graph module not available: $module"
             }
         }
-        
+
+        if ($importedModules.Count -eq 0) {
+            throw "No Microsoft Graph modules found. Please install Microsoft.Graph modules using: Install-Module Microsoft.Graph"
+        }
+
+        Write-Verbose "[AuthService] Successfully imported modules: $($importedModules -join ', ')"
+
         # Connect to Microsoft Graph
+        Write-Verbose "[AuthService] Connecting to Microsoft Graph with TenantId: $TenantId"
         Connect-MgGraph -ClientSecretCredential $Credential -TenantId $TenantId -NoWelcome -ErrorAction Stop
-        
+
         # Verify connection
         $context = Get-MgContext -ErrorAction Stop
         if (-not $context) {
             throw "Failed to establish Graph context"
         }
-        
+
         Write-Verbose "[AuthService] Connected to Microsoft Graph successfully"
         return @{
             Service = "Graph"
@@ -294,7 +309,7 @@ function Connect-ToMicrosoftGraphService {
             Connected = $true
             Timestamp = Get-Date
         }
-        
+
     } catch {
         Write-Error "Failed to connect to Microsoft Graph: $($_.Exception.Message)"
         throw

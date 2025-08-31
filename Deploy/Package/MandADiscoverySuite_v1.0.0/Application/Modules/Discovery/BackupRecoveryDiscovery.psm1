@@ -585,7 +585,8 @@ function Get-BackupStorageConfiguration {
                         }
                         
                     } catch {
-                        Write-BackupLog -Level "DEBUG" -Message "Failed to analyze backup path $path: $($_.Exception.Message)"
+                        $exceptionMessage = $_.Exception.Message
+                        Write-BackupLog -Level "DEBUG" -Message ("Failed to analyze backup path {0}: {1}" -f $path, $exceptionMessage)
                     }
                 }
             }

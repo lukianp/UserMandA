@@ -4,7 +4,7 @@
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
 # Created: 2025-08-30
-# Last Modified: 2025-08-30
+# Last Modified: 2025-08-31
 
 <#
 .SYNOPSIS
@@ -48,15 +48,32 @@ function Write-OneDriveLog {
     param(
         [Parameter(Mandatory=$true)]
         [string]$Message,
-        
+
         [Parameter()]
         [string]$Level = "INFO",
-        
+
         [Parameter()]
         [hashtable]$Context = @{}
     )
-    
+
     Write-MandALog -Message $Message -Level $Level -Component "OneDriveDiscovery" -Context $Context
+}
+
+# Import required Microsoft Graph modules
+$graphModules = @(
+    'Microsoft.Graph.Authentication',
+    'Microsoft.Graph.Users',
+    'Microsoft.Graph.Files',
+    'Microsoft.Graph.Sites'
+)
+
+foreach ($module in $graphModules) {
+    if (Get-Module -Name $module -ListAvailable -ErrorAction SilentlyContinue) {
+        Import-Module $module -Force -DisableNameChecking -ErrorAction Continue
+        Write-OneDriveLog -Level "DEBUG" -Message "Imported Microsoft Graph module: $module"
+    } else {
+        Write-OneDriveLog -Level "WARN" -Message "Microsoft Graph module not available: $module"
+    }
 }
 
 function Invoke-OneDriveDiscovery {
@@ -120,19 +137,33 @@ function Invoke-OneDriveDiscovery {
         
         Ensure-Path -Path $outputPath
 
-        # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
-        # OneDrive MUST have tenant name or auto-detect
-        if (-not $Configuration.discovery -or
-            -not $Configuration.discovery.onedrive -or
-            -not $Configuration.discovery.onedrive.tenantName) {
-            
-            # Enhanced tenant auto-detection using multiple methods
-            try {
-                Write-OneDriveLog -Level "INFO" -Message "Tenant name not configured, attempting enhanced auto-detection..." -Context $Context
-                
-                $tenantDetected = $false
-                $detectionMethods = @()
-                
+        # Initialize Microsoft Graph authentication before any Graph calls
+        Write-OneDriveLog -Level "DEBUG" -Message "Ensuring Microsoft Graph authentication is established..." -Context $Context
+        try {
+            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+            Write-OneDriveLog -Level "DEBUG" -Message "Graph authentication result: $($graphAuth | ConvertTo-Json)" -Context $Context
+            if (-not $graphAuth) {
+                throw "Failed to establish Graph authentication - returned null"
+            }
+            Write-OneDriveLog -Level "DEBUG" -Message "Microsoft Graph authentication established successfully" -Context $Context
+        } catch {
+            $result.AddError("Failed to establish Microsoft Graph authentication: $($_.Exception.Message)", $_.Exception, "Graph Authentication")
+            return $result
+        }
+
+# 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
+# OneDrive MUST have tenant name or auto-detect
+if (-not $Configuration.discovery -or
+    -not $Configuration.discovery.onedrive -or
+    -not $Configuration.discovery.onedrive.tenantName) {
+    # Enhanced tenant auto-detection using multiple methods
+    try {
+        Write-OneDriveLog -Level "INFO" -Message "Tenant name not configured, attempting enhanced auto-detection..." -Context $Context
+
+        $tenantDetected = $false
+        $detectionMethods = @()
+
+
                 # Method 1: Get organization information
                 try {
                     Write-OneDriveLog -Level "DEBUG" -Message "Attempting detection via organization data..." -Context $Context
@@ -173,6 +204,9 @@ function Invoke-OneDriveDiscovery {
                 }
                 
                 # Update configuration with detected tenant
+                if (-not $Configuration.discovery) {
+                    $Configuration.discovery = @{}
+                }
                 if (-not $Configuration.discovery.onedrive) {
                     $Configuration.discovery.onedrive = @{}
                 }
@@ -188,17 +222,24 @@ function Invoke-OneDriveDiscovery {
             Write-OneDriveLog -Level "INFO" -Message "Using configured tenant name: $tenantName" -Context $Context
         }
 
-        # 4. INITIALIZE GRAPH CONNECTION
-        Write-OneDriveLog -Level "INFO" -Message "Checking Microsoft Graph connection..." -Context $Context
+        # 4. VERIFY GRAPH CONNECTION
+        Write-OneDriveLog -Level "INFO" -Message "Verifying Microsoft Graph connection..." -Context $Context
         try {
             $mgContext = Get-MgContext
-            if (-not $mgContext -or $mgContext.Account -eq $null) {
-                $result.AddError("Microsoft Graph not connected. Please connect using Connect-MgGraph before running this module.", $null, "Graph Connection")
+            Write-OneDriveLog -Level "DEBUG" -Message "MgContext: $($mgContext | ConvertTo-Json -Depth 3)" -Context $Context
+            if (-not $mgContext) {
+                $result.AddError("Microsoft Graph context is null. Connection may have failed.", $null, "Graph Context")
                 return $result
             }
-            Write-OneDriveLog -Level "SUCCESS" -Message "Microsoft Graph connection verified. Account: $($mgContext.Account)" -Context $Context
+            if (-not $mgContext.TenantId -or -not $mgContext.ClientId) {
+                $result.AddError("Microsoft Graph context is missing required TenantId or ClientId.", $null, "Graph Context")
+                return $result
+            }
+            # For service principal authentication, Account will be null but connection is still valid
+            $accountDisplay = if ($mgContext.Account) { "Account: $($mgContext.Account)" } else { "App Authentication: $($mgContext.AppName)" }
+            Write-OneDriveLog -Level "SUCCESS" -Message "Microsoft Graph connection verified. $accountDisplay" -Context $Context
         } catch {
-            $result.AddError("Failed to verify Microsoft Graph connection: $($_.Exception.Message)", $_.Exception, "Graph Connection")
+            $result.AddError("Failed to verify Microsoft Graph connection: $($_.Exception.Message)", $_.Exception, "Graph Context")
             return $result
         }
 
