@@ -393,12 +393,22 @@ namespace MandADiscoverySuite.Models
     }
 
     /// <summary>
-    /// Session state information
+    /// Session state information - Enhanced for T-000 dual-profile support
     /// </summary>
     public class SessionState
     {
         public string CurrentCompany { get; set; } = "";
         public string TargetCompany { get; set; } = "";
+        
+        // T-000 Enhanced profile persistence
+        public string SelectedSourceProfileId { get; set; } = "";
+        public string SelectedTargetProfileId { get; set; } = "";
+        public string LastSourceEnvironmentStatus { get; set; } = "Unknown";
+        public string LastTargetEnvironmentStatus { get; set; } = "Unknown";
+        public string LastSourceConnectionStatus { get; set; } = "Not Tested";
+        public string LastTargetConnectionStatus { get; set; } = "Not Tested";
+        public DateTime LastEnvironmentRefresh { get; set; } = DateTime.MinValue;
+        
         public List<string> OpenTabs { get; set; } = new List<string>();
         public string ActiveTab { get; set; } = "";
         public Dictionary<string, object> ViewStates { get; set; } = new Dictionary<string, object>();

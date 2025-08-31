@@ -292,9 +292,31 @@ function Connect-ToMicrosoftGraphService {
 
         Write-Verbose "[AuthService] Successfully imported modules: $($importedModules -join ', ')"
 
-        # Connect to Microsoft Graph
-        Write-Verbose "[AuthService] Connecting to Microsoft Graph with TenantId: $TenantId"
-        Connect-MgGraph -ClientSecretCredential $Credential -TenantId $TenantId -NoWelcome -ErrorAction Stop
+        # Enhanced connection approach for tenant discovery
+        # If TenantId is not provided or fails, try with "common" endpoint for multi-tenant apps
+        $connectionTenantId = $TenantId
+        $isCommonEndpoint = $false
+
+        if (-not $TenantId -or $TenantId -eq "common") {
+            Write-Verbose "[AuthService] Using common endpoint for tenant discovery"
+            $connectionTenantId = "common"
+            $isCommonEndpoint = $true
+        }
+
+        Write-Verbose "[AuthService] Connecting to Microsoft Graph with TenantId: $connectionTenantId"
+
+        # Try the connection
+        try {
+            Connect-MgGraph -ClientSecretCredential $Credential -TenantId $connectionTenantId -NoWelcome -ErrorAction Stop
+        } catch {
+            # If common endpoint fails and we have a specific tenant, try again once more
+            if ($TenantId -and $TenantId -ne "common" -and $connectionTenantId -ne $TenantId) {
+                Write-Verbose "[AuthService] Retrying connection with original TenantId: $TenantId"
+                Connect-MgGraph -ClientSecretCredential $Credential -TenantId $TenantId -NoWelcome -ErrorAction Stop
+            } else {
+                throw
+            }
+        }
 
         # Verify connection
         $context = Get-MgContext -ErrorAction Stop
@@ -303,12 +325,21 @@ function Connect-ToMicrosoftGraphService {
         }
 
         Write-Verbose "[AuthService] Connected to Microsoft Graph successfully"
-        return @{
+
+        # If we used common endpoint, provide additional info for tenant detection
+        $connectionInfo = @{
             Service = "Graph"
             Context = $context
             Connected = $true
             Timestamp = Get-Date
+            UsedCommonEndpoint = $isCommonEndpoint
         }
+
+        if ($isCommonEndpoint -and $context.TenantId) {
+            $connectionInfo.DetectedTenantId = $context.TenantId
+        }
+
+        return $connectionInfo
 
     } catch {
         Write-Error "Failed to connect to Microsoft Graph: $($_.Exception.Message)"

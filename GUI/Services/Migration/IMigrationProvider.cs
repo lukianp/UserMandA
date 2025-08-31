@@ -55,7 +55,7 @@ namespace MandADiscoverySuite.Services.Migration
         /// <summary>
         /// Migrate user attributes and properties
         /// </summary>
-        Task<AttributeMappingResult> MigrateUserAttributesAsync(Dictionary<string, string> sourceAttributes, string targetUserUpn, MigrationContext context, CancellationToken cancellationToken = default);
+        Task<SimpleAttributeMappingResult> MigrateUserAttributesAsync(Dictionary<string, string> sourceAttributes, string targetUserUpn, MigrationContext context, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Validate user dependencies (managers, reports, group ownership)

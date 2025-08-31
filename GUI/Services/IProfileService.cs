@@ -116,16 +116,6 @@ namespace MandADiscoverySuite.Services
         public Dictionary<string, string> AdditionalCredentials { get; set; } = new Dictionary<string, string>();
     }
 
-    /// <summary>
-    /// Environment types
-    /// </summary>
-    public enum EnvironmentType
-    {
-        Unknown,
-        OnPremisesOnly,
-        CloudOnly,
-        Hybrid
-    }
 
     /// <summary>
     /// Profile validation result

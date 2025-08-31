@@ -99,19 +99,39 @@ function Invoke-SharePointDiscovery {
         
         Ensure-Path -Path $outputPath
 
-        # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
+        # 4. AUTHENTICATE & CONNECT (MOVED UP - NEW SESSION-BASED)
+        Write-SharePointLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
+        try {
+            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+
+            # Validate the connection
+            $testUri = "https://graph.microsoft.com/v1.0/organization"
+            $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
+
+            if (-not $testResponse) {
+                throw "Graph connection test failed - no response"
+            }
+
+            Write-SharePointLog -Level "SUCCESS" -Message "Graph connection validated" -Context $Context
+            Write-SharePointLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
+        } catch {
+            $result.AddError("Graph authentication validation failed: $($_.Exception.Message)", $_.Exception, $null)
+            return $result
+        }
+
+        # 5. VALIDATE MODULE-SPECIFIC CONFIGURATION & TENANT DETECTION
         # SharePoint MUST have tenant name
         if (-not $Configuration.discovery -or
             -not $Configuration.discovery.sharepoint -or
             -not $Configuration.discovery.sharepoint.tenantName) {
-            
+
             # Enhanced tenant auto-detection using multiple methods (inspired by AzureHound approach)
             try {
                 Write-SharePointLog -Level "INFO" -Message "Tenant name not configured, attempting enhanced auto-detection..." -Context $Context
-                
+
                 $tenantDetected = $false
                 $detectionMethods = @()
-                
+
                 # Method 1: Get organization information
                 try {
                     Write-SharePointLog -Level "DEBUG" -Message "Attempting detection via organization data..." -Context $Context
@@ -126,7 +146,7 @@ function Invoke-SharePointDiscovery {
                 } catch {
                     Write-SharePointLog -Level "DEBUG" -Message "Organization method failed: $($_.Exception.Message)" -Context $Context
                 }
-                
+
                 # Method 2: Try to get domains list (fallback)
                 if (-not $tenantDetected) {
                     try {
@@ -145,7 +165,7 @@ function Invoke-SharePointDiscovery {
                         Write-SharePointLog -Level "DEBUG" -Message "Domains API method failed: $($_.Exception.Message)" -Context $Context
                     }
                 }
-                
+
                 # Method 3: Try SharePoint root site discovery (advanced method)
                 if (-not $tenantDetected) {
                     try {
@@ -164,7 +184,7 @@ function Invoke-SharePointDiscovery {
                         Write-SharePointLog -Level "DEBUG" -Message "SharePoint sites method failed: $($_.Exception.Message)" -Context $Context
                     }
                 }
-                
+
                 # Method 4: Try via user profile (last resort)
                 if (-not $tenantDetected) {
                     try {
@@ -180,14 +200,14 @@ function Invoke-SharePointDiscovery {
                         Write-SharePointLog -Level "DEBUG" -Message "User profile method failed: $($_.Exception.Message)" -Context $Context
                     }
                 }
-                
+
                 if (-not $tenantDetected) {
                     $result.AddError("SharePoint tenant name not configured and enhanced auto-detection failed using all methods", $null, $null)
                     return $result
                 } else {
                     Write-SharePointLog -Level "SUCCESS" -Message "Successfully auto-detected tenant '$tenantName' using methods: $($detectionMethods -join ', ')" -Context $Context
                 }
-                
+
             } catch {
                 $result.AddError("SharePoint tenant auto-detection failed with error: $($_.Exception.Message)", $null, $null)
                 return $result
@@ -195,7 +215,7 @@ function Invoke-SharePointDiscovery {
         } else {
             $tenantName = $Configuration.discovery.sharepoint.tenantName
         }
-        
+
         # Configuration options
         $includeLists = $true
         $includeLibraries = $true
@@ -203,7 +223,7 @@ function Invoke-SharePointDiscovery {
         $includeHubSites = $true
         $includeSiteCollectionAdmins = $true
         $maxListsPerSite = 100
-        
+
         if ($Configuration.discovery.sharepoint) {
             $spConfig = $Configuration.discovery.sharepoint
             if ($null -ne $spConfig.includeLists) { $includeLists = $spConfig.includeLists }
@@ -214,27 +234,7 @@ function Invoke-SharePointDiscovery {
             if ($null -ne $spConfig.maxListsPerSite) { $maxListsPerSite = $spConfig.maxListsPerSite }
         }
 
-        # 4. AUTHENTICATE & CONNECT (NEW SESSION-BASED)
-        Write-SharePointLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
-        try {
-            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
-            
-            # Validate the connection
-            $testUri = "https://graph.microsoft.com/v1.0/organization"
-            $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
-            
-            if (-not $testResponse) {
-                throw "Graph connection test failed - no response"
-            }
-            
-            Write-SharePointLog -Level "SUCCESS" -Message "Graph connection validated" -Context $Context
-            Write-SharePointLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
-        } catch {
-            $result.AddError("Graph authentication validation failed: $($_.Exception.Message)", $_.Exception, $null)
-            return $result
-        }
-
-        # 5. PERFORM DISCOVERY
+        # 6. PERFORM DISCOVERY
         Write-SharePointLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
@@ -379,7 +379,7 @@ function Invoke-SharePointDiscovery {
             Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalLists lists/libraries across $processedSites sites" -Context $Context
         }
 
-        # 6. EXPORT DATA TO CSV
+        # 7. EXPORT DATA TO CSV
         if ($allDiscoveredData.Count -gt 0) {
             Write-SharePointLog -Level "INFO" -Message "Exporting $($allDiscoveredData.Count) records..." -Context $Context
             
@@ -418,7 +418,7 @@ function Invoke-SharePointDiscovery {
             Write-SharePointLog -Level "WARN" -Message "No data discovered to export" -Context $Context
         }
 
-        # 7. FINALIZE METADATA
+        # 8. FINALIZE METADATA
         $result.RecordCount = $allDiscoveredData.Count
         $result.Metadata["TotalRecords"] = $result.RecordCount
         $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds

@@ -36,6 +36,8 @@ namespace MandADiscoverySuite.ViewModels
         private readonly DataExportService _dataExportService;
         private readonly ModuleRegistryService _moduleRegistryService;
         private readonly LogicEngineService _logicEngineService;
+        private readonly IEnvironmentDetectionService _environmentDetectionService;
+        private readonly IConnectionTestService _connectionTestService;
         private TabItem? _selectedTab;
         private ObservableCollection<CompanyProfile> _companyProfiles;
         private ObservableCollection<CompanyProfile> _targetCompanyProfiles;
@@ -46,6 +48,12 @@ namespace MandADiscoverySuite.ViewModels
         private string _currentProfileName = "ljpops";
         private bool _isDarkTheme = false;
         private string _currentView = "Dashboard";
+        
+        // Environment and connection status
+        private string _sourceEnvironmentStatus = "Unknown";
+        private string _targetEnvironmentStatus = "Unknown";
+        private string _sourceConnectionStatus = "Not Tested";
+        private string _targetConnectionStatus = "Not Tested";
         
         // Data collections
         private ObservableCollection<object> _users = new ObservableCollection<object>();
@@ -92,6 +100,7 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand RunTargetAppRegistrationCommand { get; }
         public ICommand ImportTargetAppRegistrationCommand { get; }
         public ICommand ShowTargetProfilesCommand { get; }
+        public ICommand AddTargetProfileCommand { get; }
         
         // Theme commands
         public ICommand ToggleThemeCommand { get; }
@@ -107,6 +116,11 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ChangeDataPathCommand { get; }
         public ICommand ConfigureCredentialsCommand { get; }
         public ICommand TestConnectionCommand { get; }
+        
+        // Connection test commands for T-000
+        public ICommand TestSourceConnectionCommand { get; }
+        public ICommand TestTargetConnectionCommand { get; }
+        public ICommand RefreshEnvironmentStatusCommand { get; }
         
         // Additional commands referenced by XAML (stubs for now)
         public ICommand RefreshUsersCommand { get; }
@@ -239,6 +253,9 @@ namespace MandADiscoverySuite.ViewModels
                 // This was causing the bug where selecting a profile to delete 
                 // would make it the active profile, preventing deletion
                 // Switching should only happen via explicit user action
+                
+                // Refresh environment status when source profile changes (T-000)
+                Task.Run(RefreshEnvironmentStatusAsync);
             }
         }
 
@@ -260,6 +277,50 @@ namespace MandADiscoverySuite.ViewModels
             set
             {
                 _selectedTargetProfile = value;
+                OnPropertyChanged();
+                
+                // Refresh environment status when target profile changes (T-000)
+                Task.Run(RefreshEnvironmentStatusAsync);
+            }
+        }
+        
+        // Environment and connection status properties for T-000
+        public string SourceEnvironmentStatus
+        {
+            get => _sourceEnvironmentStatus;
+            set
+            {
+                _sourceEnvironmentStatus = value;
+                OnPropertyChanged();
+            }
+        }
+        
+        public string TargetEnvironmentStatus
+        {
+            get => _targetEnvironmentStatus;
+            set
+            {
+                _targetEnvironmentStatus = value;
+                OnPropertyChanged();
+            }
+        }
+        
+        public string SourceConnectionStatus
+        {
+            get => _sourceConnectionStatus;
+            set
+            {
+                _sourceConnectionStatus = value;
+                OnPropertyChanged();
+            }
+        }
+        
+        public string TargetConnectionStatus
+        {
+            get => _targetConnectionStatus;
+            set
+            {
+                _targetConnectionStatus = value;
                 OnPropertyChanged();
             }
         }
@@ -352,6 +413,12 @@ namespace MandADiscoverySuite.ViewModels
             var logicEngineLogger = loggerFactory.CreateLogger<LogicEngineService>();
             _logicEngineService = new LogicEngineService(logicEngineLogger);
             
+            // Initialize T-000 services  
+            var envDetectionLogger = loggerFactory.CreateLogger<EnvironmentDetectionService>();
+            _environmentDetectionService = new EnvironmentDetectionService(envDetectionLogger);
+            var connectionTestLogger = loggerFactory.CreateLogger<ConnectionTestService>();
+            _connectionTestService = new ConnectionTestService(connectionTestLogger);
+            
             // Initialize collections
             _companyProfiles = new ObservableCollection<CompanyProfile>();
             _targetCompanyProfiles = new ObservableCollection<CompanyProfile>();
@@ -388,6 +455,7 @@ namespace MandADiscoverySuite.ViewModels
             RunTargetAppRegistrationCommand = new AsyncRelayCommand(RunTargetAppRegistrationAsync);
             ImportTargetAppRegistrationCommand = new AsyncRelayCommand(ImportTargetAppRegistrationAsync);
             ShowTargetProfilesCommand = new AsyncRelayCommand(ShowTargetProfilesAsync);
+            AddTargetProfileCommand = new AsyncRelayCommand(AddTargetProfileAsync);
             
             // Theme commands
             ToggleThemeCommand = new AsyncRelayCommand(ToggleThemeAsync);
@@ -403,6 +471,11 @@ namespace MandADiscoverySuite.ViewModels
             ChangeDataPathCommand = new AsyncRelayCommand(ChangeDataPathAsync);
             ConfigureCredentialsCommand = new AsyncRelayCommand(ConfigureCredentialsAsync);
             TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync);
+            
+            // T-000 Connection test commands
+            TestSourceConnectionCommand = new AsyncRelayCommand(TestSourceConnectionAsync);
+            TestTargetConnectionCommand = new AsyncRelayCommand(TestTargetConnectionAsync);
+            RefreshEnvironmentStatusCommand = new AsyncRelayCommand(RefreshEnvironmentStatusAsync);
             
             // Initialize stub commands to prevent binding errors
             RefreshUsersCommand = new AsyncRelayCommand(RefreshUsersAsync);
@@ -461,6 +534,12 @@ namespace MandADiscoverySuite.ViewModels
             LoadTargetCompanyProfiles();
             SetupTargetCredentialWatcher();
             Task.Run(LoadTargetProfilesAsync);
+            
+            // Initialize environment status for T-000 and restore persisted selections
+            Task.Run(async () => {
+                await LoadPersistedProfileSelectionsAsync();
+                await RefreshEnvironmentStatusAsync();
+            });
 
             _logger?.LogInformation($"[MainViewModel] MainViewModel constructor completed. CurrentProfileName='{CurrentProfileName}', CompanyProfiles.Count={CompanyProfiles.Count}");
 
@@ -839,6 +918,66 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _logger?.LogError(ex, "[MainViewModel] Error opening Target Profiles window");
                 MessageBox.Show($"Error opening Target Profiles: {ex.Message}", "Target Profiles", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        
+        /// <summary>
+        /// Add a new target profile through app registration
+        /// </summary>
+        private async Task AddTargetProfileAsync()
+        {
+            try
+            {
+                var viewModel = new AddTargetProfileViewModel();
+                var dialog = new MandADiscoverySuite.Views.AddTargetProfileDialog(viewModel)
+                {
+                    Owner = Application.Current.MainWindow,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                dialog.ShowDialog();
+
+                if (viewModel.DialogResult && viewModel.CreatedProfile != null)
+                {
+                    _logger?.LogInformation($"Created target profile: {viewModel.CreatedProfile.Name}");
+
+                    // Save the new profile to the target profile service
+                    await TargetProfileService.Instance.CreateOrUpdateAsync(
+                        CurrentProfileName, 
+                        viewModel.CreatedProfile, 
+                        viewModel.CreatedProfile.GetClientSecret());
+
+                    // Refresh the target profiles list
+                    await LoadTargetProfilesAsync();
+
+                    // Set the new profile as active if it's the first one
+                    if (TargetProfiles?.Count == 1)
+                    {
+                        SelectedTargetProfile = TargetProfiles.FirstOrDefault();
+                        if (SelectedTargetProfile != null)
+                        {
+                            await TargetProfileService.Instance.SetActiveAsync(CurrentProfileName, SelectedTargetProfile.Id);
+                        }
+                    }
+                    else if (viewModel.CreatedProfile != null)
+                    {
+                        // Select the newly created profile
+                        var newProfile = TargetProfiles?.FirstOrDefault(p => p.Id == viewModel.CreatedProfile.Id);
+                        if (newProfile != null)
+                        {
+                            SelectedTargetProfile = newProfile;
+                        }
+                    }
+
+                    MessageBox.Show($"Target profile '{viewModel.CreatedProfile.Name}' created successfully!", 
+                        "Target Profile Created", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error creating target profile");
+                MessageBox.Show($"Error creating target profile: {ex.Message}", 
+                    "Add Target Profile", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         
@@ -2133,6 +2272,225 @@ namespace MandADiscoverySuite.ViewModels
                 MessageBox.Show($"Error testing connection: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+        
+        #region T-000 Connection Test Implementations
+        
+        /// <summary>
+        /// Tests connection to the currently selected source company profile
+        /// </summary>
+        private async Task TestSourceConnectionAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Testing source connection");
+                
+                if (SelectedProfile == null)
+                {
+                    MessageBox.Show("Please select a source company profile first.", "No Profile Selected", 
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                
+                SourceConnectionStatus = "Testing...";
+                
+                var result = await _connectionTestService.TestSourceConnectionAsync(SelectedProfile);
+                
+                SourceConnectionStatus = result.Success ? "Connected" : "Failed";
+                
+                var statusIcon = result.Success ? "✓" : "✗";
+                var statusColor = result.Success ? "Success" : "Error";
+                
+                MessageBox.Show($"{statusIcon} Source Connection Test\n\nResult: {(result.Success ? "SUCCESS" : "FAILED")}\n\n{result.Message}", 
+                    $"Source Connection Test - {statusColor}", 
+                    MessageBoxButton.OK, 
+                    result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                    
+                _logger?.LogInformation($"Source connection test completed: {result.Success}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error testing source connection");
+                SourceConnectionStatus = "Error";
+                MessageBox.Show($"Error testing source connection: {ex.Message}", "Connection Test Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        
+        /// <summary>
+        /// Tests connection to the currently selected target profile
+        /// </summary>
+        private async Task TestTargetConnectionAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Testing target connection");
+                
+                if (SelectedTargetProfile == null)
+                {
+                    MessageBox.Show("Please select a target profile first.", "No Profile Selected", 
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                
+                TargetConnectionStatus = "Testing...";
+                
+                var result = await _connectionTestService.TestTargetConnectionAsync(SelectedTargetProfile);
+                
+                TargetConnectionStatus = result.Success ? "Connected" : "Failed";
+                
+                var statusIcon = result.Success ? "✓" : "✗";
+                var statusColor = result.Success ? "Success" : "Error";
+                
+                MessageBox.Show($"{statusIcon} Target Connection Test\n\nProfile: {SelectedTargetProfile.Name}\nResult: {(result.Success ? "SUCCESS" : "FAILED")}\n\n{result.Message}", 
+                    $"Target Connection Test - {statusColor}", 
+                    MessageBoxButton.OK, 
+                    result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                    
+                _logger?.LogInformation($"Target connection test completed: {result.Success}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error testing target connection");
+                TargetConnectionStatus = "Error";
+                MessageBox.Show($"Error testing target connection: {ex.Message}", "Connection Test Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        
+        /// <summary>
+        /// Refreshes environment status for both source and target profiles
+        /// </summary>
+        private async Task RefreshEnvironmentStatusAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Refreshing environment status");
+                
+                var configService = ConfigurationService.Instance;
+                
+                // Refresh source environment status
+                if (SelectedProfile != null)
+                {
+                    var sourceStatus = await _environmentDetectionService.GetEnvironmentStatusAsync(SelectedProfile);
+                    SourceEnvironmentStatus = sourceStatus;
+                    
+                    // Also refresh connection status
+                    var hasData = await _environmentDetectionService.HasDetectionDataAsync(SelectedProfile);
+                    SourceConnectionStatus = hasData ? "Data Available" : "No Data";
+                    
+                    // Persist selected source profile ID
+                    configService.SelectedSourceProfileId = SelectedProfile.Id ?? SelectedProfile.CompanyName;
+                }
+                else
+                {
+                    SourceEnvironmentStatus = "No Profile Selected";
+                    SourceConnectionStatus = "No Profile Selected";
+                    configService.SelectedSourceProfileId = "";
+                }
+                
+                // Refresh target environment status
+                if (SelectedTargetProfile != null)
+                {
+                    var targetEnvResult = await _environmentDetectionService.DetectEnvironmentAsync(SelectedTargetProfile);
+                    TargetEnvironmentStatus = targetEnvResult.DisplayStatus;
+                    
+                    // Get connection status
+                    var connectionStatus = await _connectionTestService.GetConnectionStatusAsync(SelectedTargetProfile);
+                    TargetConnectionStatus = connectionStatus;
+                    
+                    // Persist selected target profile ID
+                    configService.SelectedTargetProfileId = SelectedTargetProfile.Id;
+                }
+                else
+                {
+                    TargetEnvironmentStatus = "No Profile Selected";
+                    TargetConnectionStatus = "No Profile Selected";
+                    configService.SelectedTargetProfileId = "";
+                }
+                
+                // Persist the environment and connection status to configuration
+                configService.UpdateEnvironmentStatus(
+                    SourceEnvironmentStatus,
+                    TargetEnvironmentStatus,
+                    SourceConnectionStatus,
+                    TargetConnectionStatus);
+                
+                _logger?.LogInformation("[MainViewModel] Environment status refresh completed and persisted");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error refreshing environment status");
+                SourceEnvironmentStatus = "Refresh Failed";
+                TargetEnvironmentStatus = "Refresh Failed";
+            }
+        }
+        
+        /// <summary>
+        /// Loads persisted profile selections and status from configuration (T-000)
+        /// </summary>
+        private async Task LoadPersistedProfileSelectionsAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Loading persisted profile selections");
+                
+                var configService = ConfigurationService.Instance;
+                
+                // Restore last environment and connection status if not too old
+                if (!configService.ShouldRefreshEnvironmentStatus())
+                {
+                    SourceEnvironmentStatus = configService.LastSourceEnvironmentStatus;
+                    TargetEnvironmentStatus = configService.LastTargetEnvironmentStatus;
+                    SourceConnectionStatus = configService.LastSourceConnectionStatus;
+                    TargetConnectionStatus = configService.LastTargetConnectionStatus;
+                    
+                    _logger?.LogInformation("[MainViewModel] Restored cached environment status");
+                }
+                
+                // Try to restore source profile selection
+                var sourceProfileId = configService.SelectedSourceProfileId;
+                if (!string.IsNullOrEmpty(sourceProfileId))
+                {
+                    var sourceProfile = CompanyProfiles?.FirstOrDefault(p => 
+                        (p.Id == sourceProfileId) || (p.CompanyName == sourceProfileId));
+                        
+                    if (sourceProfile != null)
+                    {
+                        SelectedProfile = sourceProfile;
+                        _logger?.LogInformation($"[MainViewModel] Restored source profile: {sourceProfile.CompanyName}");
+                    }
+                }
+                
+                // Try to restore target profile selection  
+                var targetProfileId = configService.SelectedTargetProfileId;
+                if (!string.IsNullOrEmpty(targetProfileId))
+                {
+                    // Wait a bit for target profiles to load
+                    var maxWait = TimeSpan.FromSeconds(5);
+                    var startTime = DateTime.UtcNow;
+                    
+                    while ((TargetProfiles?.Count ?? 0) == 0 && DateTime.UtcNow - startTime < maxWait)
+                    {
+                        await Task.Delay(100);
+                    }
+                    
+                    var targetProfile = TargetProfiles?.FirstOrDefault(p => p.Id == targetProfileId);
+                    if (targetProfile != null)
+                    {
+                        SelectedTargetProfile = targetProfile;
+                        _logger?.LogInformation($"[MainViewModel] Restored target profile: {targetProfile.Name}");
+                    }
+                }
+                
+                _logger?.LogInformation("[MainViewModel] Persisted profile selection loading completed");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error loading persisted profile selections");
+            }
+        }
+        
+        #endregion
         
         // Stub method implementations for missing commands
         private async Task RefreshUsersAsync() => await Task.CompletedTask;

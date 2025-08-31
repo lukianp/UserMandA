@@ -210,7 +210,7 @@ $script:ScriptInfo = @{
     Version = "4.0.0"
     Author = "M`&A Discovery Team"
     RequiredPSVersion = "5.1"
-    Dependencies = @("Az.Accounts", "Az.Resources", "Microsoft.Graph.Applications", "Microsoft.Graph.Authentication", "Microsoft.Graph.Identity.DirectoryManagement")
+    Dependencies = @("Az", "Microsoft.Graph.Applications", "Microsoft.Graph.Authentication", "Microsoft.Graph.Identity.DirectoryManagement", "Microsoft.Graph.Groups", "Microsoft.Graph.DirectoryObjects")
 }
 
 # Enhanced application configuration

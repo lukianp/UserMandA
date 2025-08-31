@@ -157,9 +157,9 @@ namespace MandADiscoverySuite.Services.Migration
     }
 
     /// <summary>
-    /// Attribute mapping result for user properties
+    /// Simple attribute mapping result for user properties (legacy)
     /// </summary>
-    public class AttributeMappingResult : MigrationResultBase
+    public class SimpleAttributeMappingResult : MigrationResultBase
     {
         public string UserUpn { get; set; }
         public Dictionary<string, string> SourceAttributes { get; set; } = new Dictionary<string, string>();

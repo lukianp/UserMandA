@@ -38,44 +38,59 @@ Import-Module (Join-Path $PSScriptRoot "DiscoveryBase.psm1") -Force
 function Test-AzureModules {
     [CmdletBinding()]
     param()
-    
+
+    # Modern approach: Use comprehensive Az module instead of individual modules
     $requiredModules = @(
-        'Az.Accounts',
-        'Az.Profile', 
-        'Az.Resources',
-        'Az.Compute',
-        'Az.Storage',
-        'Az.KeyVault',
-        'Az.Network',
-        'Az.Sql',
-        'Az.MySql',
-        'Az.CosmosDB',
-        'Az.Websites',
-        'Az.ContainerInstance',
-        'Az.Aks'
+        'Az'
     )
-    
+
     $missingModules = @()
     foreach ($module in $requiredModules) {
         if (-not (Get-Module -ListAvailable -Name $module)) {
             $missingModules += $module
         }
     }
-    
+
     if ($missingModules.Count -gt 0) {
-        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Missing required modules: $($missingModules -join ', ')" -Level "WARN"
-        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Installing missing modules..." -Level "INFO"
-        
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Missing required Azure module: $($missingModules -join ', ')" -Level "WARN"
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Installing Azure module. This includes all necessary Az sub-modules..." -Level "INFO"
+
         foreach ($module in $missingModules) {
             try {
-                Install-Module -Name $module -Force -AllowClobber -Scope CurrentUser
-                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Installed module: $module" -Level "SUCCESS"
+                # Use the comprehensive Az module and specify minimum version for stability
+                if ($module -eq 'Az') {
+                    Install-Module -Name $module -MinimumVersion 10.0.0 -Force -AllowClobber -Scope CurrentUser -Repository PSGallery -ErrorAction Stop
+                    Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Successfully installed Azure Az module (includes Az.Accounts, Az.Profile, Az.Resources, etc.)" -Level "SUCCESS"
+                } else {
+                    Install-Module -Name $module -Force -AllowClobber -Scope CurrentUser -Repository PSGallery -ErrorAction Stop
+                    Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Installed module: $module" -Level "SUCCESS"
+                }
             } catch {
                 Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Failed to install module $module`: $($_.Exception.Message)" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Ensure PowerShell Gallery is accessible and you have internet connectivity" -Level "ERROR"
+                return $false
             }
         }
     }
-    
+
+    # Verify that key Az sub-modules are available after Az installation
+    if ($missingModules -contains 'Az' -or (Test-Path -PathType Leaf -Path 'Modules/Discovery/AzureResourceDiscovery.psm1')) {
+        $criticalSubModules = @('Az.Accounts', 'Az.Resources', 'Az.Profile')
+        $missingSubModules = @()
+        foreach ($subModule in $criticalSubModules) {
+            if (-not (Get-Module -ListAvailable -Name $subModule)) {
+                $missingSubModules += $subModule
+            }
+        }
+
+        if ($missingSubModules.Count -gt 0) {
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Warning: Missing some Az sub-modules even after Az installation: $($missingSubModules -join ', ')" -Level "WARN"
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "These will be automatically available when the Az module is imported" -Level "INFO"
+        } else {
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "All critical Az sub-modules are available" -Level "SUCCESS"
+        }
+    }
+
     return $missingModules.Count -eq 0
 }
 

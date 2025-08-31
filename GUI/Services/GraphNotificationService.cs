@@ -107,7 +107,7 @@ namespace MandADiscoverySuite.Services
                 var connectionTest = await TestConnectionAsync();
                 if (!connectionTest.Success)
                 {
-                    _logger?.LogError("Graph API connection test failed: {Error}", connectionTest.ErrorMessage);
+                    _logger?.LogError("Graph API connection test failed: {Error}", connectionTest.Message);
                     return false;
                 }
 
@@ -413,7 +413,7 @@ namespace MandADiscoverySuite.Services
                 if (_graphServiceClient == null)
                 {
                     result.Success = false;
-                    result.ErrorMessage = "Graph service client is not initialized";
+                    result.Message = "Graph service client is not initialized";
                     return result;
                 }
 
@@ -425,13 +425,13 @@ namespace MandADiscoverySuite.Services
                         .Request()
                         .Top(1)
                         .GetAsync();
-                    result.AuthenticationTest = true;
-                    result.AuthenticatedUser = orgs?.FirstOrDefault()?.DisplayName ?? "App-Only";
+                    result.Details["AuthenticationTest"] = true;
+                    result.Details["AuthenticatedUser"] = orgs?.FirstOrDefault()?.DisplayName ?? "App-Only";
                 }
                 catch (Exception ex)
                 {
-                    result.AuthenticationTest = false;
-                    result.TestResults.Add($"Authentication failed: {ex.Message}");
+                    result.Details["AuthenticationTest"] = false;
+                    result.Details["AuthenticationError"] = ex.Message;
                 }
 
                 // Test 2: User read permissions
@@ -441,12 +441,12 @@ namespace MandADiscoverySuite.Services
                         .Request()
                         .Top(1)
                         .GetAsync();
-                    result.UserReadPermission = true;
+                    result.Details["UserReadPermission"] = true;
                 }
                 catch (Exception ex)
                 {
-                    result.UserReadPermission = false;
-                    result.TestResults.Add($"User read permission failed: {ex.Message}");
+                    result.Details["UserReadPermission"] = false;
+                    result.Details["UserReadPermissionError"] = ex.Message;
                 }
 
                 // Test 3: Mail send permissions (dry run)
@@ -457,26 +457,32 @@ namespace MandADiscoverySuite.Services
                         .Request()
                         .Top(1)
                         .GetAsync();
-                    result.MailSendPermission = true;
+                    result.Details["MailSendPermission"] = true;
                 }
                 catch (Exception ex)
                 {
-                    result.MailSendPermission = false;
-                    result.TestResults.Add($"Mail send permission test failed: {ex.Message}");
+                    result.Details["MailSendPermission"] = false;
+                    result.Details["MailSendPermissionError"] = ex.Message;
                 }
 
-                result.Success = result.AuthenticationTest && result.UserReadPermission && result.MailSendPermission;
+                result.Success = (bool)result.Details.GetValueOrDefault("AuthenticationTest", false) && 
+                                (bool)result.Details.GetValueOrDefault("UserReadPermission", false) && 
+                                (bool)result.Details.GetValueOrDefault("MailSendPermission", false);
                 result.TestedAt = DateTime.Now;
 
                 if (result.Success)
                 {
-                    result.TestResults.Add("All connection tests passed");
+                    result.Message = "All connection tests passed";
                     _logger?.LogInformation("Graph API connection test passed");
                 }
                 else
                 {
-                    _logger?.LogWarning("Graph API connection test failed: {Results}", 
-                        string.Join("; ", result.TestResults));
+                    var errors = new List<string>();
+                    if (result.Details.ContainsKey("AuthenticationError")) errors.Add(result.Details["AuthenticationError"].ToString());
+                    if (result.Details.ContainsKey("UserReadPermissionError")) errors.Add(result.Details["UserReadPermissionError"].ToString());
+                    if (result.Details.ContainsKey("MailSendPermissionError")) errors.Add(result.Details["MailSendPermissionError"].ToString());
+                    result.Message = string.Join("; ", errors);
+                    _logger?.LogWarning("Graph API connection test failed: {Results}", result.Message);
                 }
 
                 return result;
@@ -484,7 +490,7 @@ namespace MandADiscoverySuite.Services
             catch (Exception ex)
             {
                 result.Success = false;
-                result.ErrorMessage = ex.Message;
+                result.Message = ex.Message;
                 _logger?.LogError(ex, "Error testing Graph API connection");
                 return result;
             }
@@ -870,17 +876,6 @@ namespace MandADiscoverySuite.Services
         public string ErrorMessage { get; set; }
     }
 
-    public class ConnectionTestResult
-    {
-        public bool Success { get; set; }
-        public string ErrorMessage { get; set; }
-        public DateTime TestedAt { get; set; }
-        public string AuthenticatedUser { get; set; }
-        public bool AuthenticationTest { get; set; }
-        public bool UserReadPermission { get; set; }
-        public bool MailSendPermission { get; set; }
-        public List<string> TestResults { get; set; } = new List<string>();
-    }
 
     public class EmailSendResult
     {

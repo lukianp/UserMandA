@@ -111,7 +111,7 @@ try {
         }
     }
     
-    # Create configuration and add tenant information for OneDrive discovery
+    # Create configuration and add tenant information for OneDrive/SharePoint discovery
     $configuration = @{
         TenantId = $credentials.TenantId
         ClientId = $credentials.ClientId
@@ -119,14 +119,17 @@ try {
         CompanyName = $CompanyName
     }
 
-    # Add OneDrive tenant configuration to avoid auto-detection failures
-    if ($ModuleName -eq "OneDriveDiscovery" -and $credentials.TenantId) {
+    # Add discovery configuration if needed for OneDrive or SharePoint
+    if (($ModuleName -eq "OneDriveDiscovery" -or $ModuleName -eq "SharePointDiscovery") -and $credentials.TenantId) {
         $configuration.discovery = @{
             onedrive = @{
-                tenantName = $credentials.TenantId  # Use tenant ID directly
+                tenantName = $credentials.TenantId  # Use tenant ID directly for OneDrive
+            }
+            sharepoint = @{
+                tenantName = $credentials.TenantId  # Use tenant ID directly for SharePoint
             }
         }
-        Write-Host "Added OneDrive tenant configuration: $($credentials.TenantId)" -ForegroundColor Yellow
+        Write-Host "Added tenant configuration for discovery services: $($credentials.TenantId)" -ForegroundColor Yellow
     }
     
     # Display configuration (without secrets)

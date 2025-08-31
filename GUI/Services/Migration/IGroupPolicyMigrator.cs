@@ -40,7 +40,7 @@ namespace MandADiscoverySuite.Services.Migration
         /// <summary>
         /// Handle GPO conflicts and provide resolution options
         /// </summary>
-        Task<ConflictResolutionResult> ResolveGpoConflictsAsync(List<GpoConflict> conflicts, ConflictResolutionStrategy strategy, MigrationContext context, CancellationToken cancellationToken = default);
+        Task<GroupPolicyConflictResolutionResult> ResolveGpoConflictsAsync(List<GpoConflict> conflicts, ConflictResolutionStrategy strategy, MigrationContext context, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Bulk migrate multiple GPOs with dependency management
@@ -77,7 +77,7 @@ namespace MandADiscoverySuite.Services.Migration
         /// <summary>
         /// Handle group name conflicts with resolution strategies
         /// </summary>
-        Task<ConflictResolutionResult> ResolveGroupConflictsAsync(List<GroupConflict> conflicts, ConflictResolutionStrategy strategy, MigrationContext context, CancellationToken cancellationToken = default);
+        Task<GroupPolicyConflictResolutionResult> ResolveGroupConflictsAsync(List<GroupConflict> conflicts, ConflictResolutionStrategy strategy, MigrationContext context, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Validate group dependencies and circular references
@@ -129,7 +129,7 @@ namespace MandADiscoverySuite.Services.Migration
         /// <summary>
         /// Handle ACL conflicts and provide resolution options
         /// </summary>
-        Task<ConflictResolutionResult> ResolveAclConflictsAsync(List<AclConflict> conflicts, ConflictResolutionStrategy strategy, MigrationContext context, CancellationToken cancellationToken = default);
+        Task<GroupPolicyConflictResolutionResult> ResolveAclConflictsAsync(List<AclConflict> conflicts, ConflictResolutionStrategy strategy, MigrationContext context, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Bulk apply ACLs to multiple paths efficiently
@@ -317,7 +317,7 @@ namespace MandADiscoverySuite.Services.Migration
     /// <summary>
     /// Conflict resolution result for all migration types
     /// </summary>
-    public class ConflictResolutionResult
+    public class GroupPolicyConflictResolutionResult
     {
         public string ConflictType { get; set; }
         public int TotalConflicts { get; set; }

@@ -244,9 +244,9 @@ namespace MandADiscoverySuite.Services
             if (hasAzureUsers && hasOnPremUsers)
                 return EnvironmentType.Hybrid;
             else if (hasAzureUsers)
-                return EnvironmentType.CloudOnly;
+                return EnvironmentType.Azure;
             else if (hasOnPremUsers)
-                return EnvironmentType.OnPremisesOnly;
+                return EnvironmentType.OnPremises;
             else
                 return EnvironmentType.Unknown;
         }

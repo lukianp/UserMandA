@@ -174,6 +174,137 @@ namespace MandADiscoverySuite.Services
                 _ = SaveSessionAsync();
             }
         }
+        
+        #region T-000 Enhanced Profile Configuration
+        
+        /// <summary>
+        /// Gets or sets the selected source profile ID (T-000)
+        /// </summary>
+        public string SelectedSourceProfileId
+        {
+            get => _sessionState?.SelectedSourceProfileId ?? string.Empty;
+            set
+            {
+                if (_sessionState == null) return;
+                _sessionState.SelectedSourceProfileId = value ?? string.Empty;
+                _ = SaveSessionAsync();
+            }
+        }
+        
+        /// <summary>
+        /// Gets or sets the selected target profile ID (T-000)
+        /// </summary>
+        public string SelectedTargetProfileId
+        {
+            get => _sessionState?.SelectedTargetProfileId ?? string.Empty;
+            set
+            {
+                if (_sessionState == null) return;
+                _sessionState.SelectedTargetProfileId = value ?? string.Empty;
+                _ = SaveSessionAsync();
+            }
+        }
+        
+        /// <summary>
+        /// Gets or sets the last source environment status (T-000)
+        /// </summary>
+        public string LastSourceEnvironmentStatus
+        {
+            get => _sessionState?.LastSourceEnvironmentStatus ?? "Unknown";
+            set
+            {
+                if (_sessionState == null) return;
+                _sessionState.LastSourceEnvironmentStatus = value ?? "Unknown";
+                _ = SaveSessionAsync();
+            }
+        }
+        
+        /// <summary>
+        /// Gets or sets the last target environment status (T-000)
+        /// </summary>
+        public string LastTargetEnvironmentStatus
+        {
+            get => _sessionState?.LastTargetEnvironmentStatus ?? "Unknown";
+            set
+            {
+                if (_sessionState == null) return;
+                _sessionState.LastTargetEnvironmentStatus = value ?? "Unknown";
+                _ = SaveSessionAsync();
+            }
+        }
+        
+        /// <summary>
+        /// Gets or sets the last source connection status (T-000)
+        /// </summary>
+        public string LastSourceConnectionStatus
+        {
+            get => _sessionState?.LastSourceConnectionStatus ?? "Not Tested";
+            set
+            {
+                if (_sessionState == null) return;
+                _sessionState.LastSourceConnectionStatus = value ?? "Not Tested";
+                _ = SaveSessionAsync();
+            }
+        }
+        
+        /// <summary>
+        /// Gets or sets the last target connection status (T-000)
+        /// </summary>
+        public string LastTargetConnectionStatus
+        {
+            get => _sessionState?.LastTargetConnectionStatus ?? "Not Tested";
+            set
+            {
+                if (_sessionState == null) return;
+                _sessionState.LastTargetConnectionStatus = value ?? "Not Tested";
+                _ = SaveSessionAsync();
+            }
+        }
+        
+        /// <summary>
+        /// Gets or sets the last environment refresh timestamp (T-000)
+        /// </summary>
+        public DateTime LastEnvironmentRefresh
+        {
+            get => _sessionState?.LastEnvironmentRefresh ?? DateTime.MinValue;
+            set
+            {
+                if (_sessionState == null) return;
+                _sessionState.LastEnvironmentRefresh = value;
+                _ = SaveSessionAsync();
+            }
+        }
+        
+        /// <summary>
+        /// Updates all environment and connection status values (T-000)
+        /// </summary>
+        public void UpdateEnvironmentStatus(string sourceEnvStatus, string targetEnvStatus, 
+            string sourceConnStatus, string targetConnStatus)
+        {
+            if (_sessionState == null) return;
+            
+            _sessionState.LastSourceEnvironmentStatus = sourceEnvStatus ?? "Unknown";
+            _sessionState.LastTargetEnvironmentStatus = targetEnvStatus ?? "Unknown";
+            _sessionState.LastSourceConnectionStatus = sourceConnStatus ?? "Not Tested";
+            _sessionState.LastTargetConnectionStatus = targetConnStatus ?? "Not Tested";
+            _sessionState.LastEnvironmentRefresh = DateTime.UtcNow;
+            
+            _ = SaveSessionAsync();
+        }
+        
+        /// <summary>
+        /// Checks if environment status should be refreshed based on age (T-000)
+        /// </summary>
+        public bool ShouldRefreshEnvironmentStatus(TimeSpan maxAge = default)
+        {
+            if (maxAge == default)
+                maxAge = TimeSpan.FromMinutes(30); // Default to 30 minute refresh
+                
+            var lastRefresh = LastEnvironmentRefresh;
+            return lastRefresh == DateTime.MinValue || DateTime.UtcNow - lastRefresh > maxAge;
+        }
+        
+        #endregion
 
         /// <summary>
         /// Attempts to resolve a primary target domain for a given company based on discovery data.

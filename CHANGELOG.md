@@ -1,5 +1,123 @@
 # M&A Discovery Suite - Change Log
 
+## [1.2.5] - 2025-08-31 - SOURCE AND TARGET COMPANY PROFILES & ENVIRONMENT DETECTION ✅
+
+### MAJOR FEATURE - T-000 DUAL-PROFILE SYSTEM & ENVIRONMENT DETECTION 🚀
+**STATUS**: T-000 has been successfully implemented! The M&A Discovery Suite now features a comprehensive dual-profile architecture that separates source company discovery from target migration environments, with intelligent environment detection and real-time connectivity testing.
+
+### Added - DUAL-PROFILE ARCHITECTURE SYSTEM ⚡
+- **Source Company Profile Management** - Discovery data profile system
+  - **Profile Discovery**: Automatic enumeration from `C:\discoverydata\` directory structure
+  - **Profile Selection**: Dropdown selector with persistent configuration across sessions
+  - **Data Validation**: Real-time validation of discovery data availability and integrity
+  - **Connection Testing**: Comprehensive validation of data directory access and permissions
+  - **Profile Actions**: Create, switch, and delete source profiles with full validation
+
+- **Target Company Profile Management** - Migration destination tenant system
+  - **Target Profile Creation**: Multi-tenant migration destination management
+  - **Azure AD Integration**: Native Azure tenant configuration and validation
+  - **App Registration Automation**: Automated Azure AD application setup with required permissions
+  - **Credential Management**: DPAPI-encrypted secure credential storage with Windows integration
+  - **Profile Persistence**: Target profile selections saved in `target-profiles.json` with encryption
+
+### Added - ENVIRONMENT DETECTION & CONNECTIVITY TESTING 🔍
+- **EnvironmentDetectionService** - Intelligent environment identification system
+  - **Multi-Signal Detection**: Evaluates domain membership, Azure AD join, and service presence
+  - **Environment Types**: On-Premises, Azure, Hybrid, and Unknown with confidence scoring
+  - **Real-Time Detection**: Automatic environment refresh on profile changes
+  - **Module Optimization**: Dynamic discovery module availability based on detected environment
+  - **Detection Caching**: 60-minute cache with manual refresh capability
+
+- **ConnectionTestService** - Comprehensive connectivity validation system
+  - **Source Connection Testing**: Discovery data directory validation and file access verification
+  - **Target Connection Testing**: Multi-service connectivity validation for migration destinations
+  - **Azure AD Graph API**: Microsoft Graph connectivity with permission validation
+  - **Exchange Online**: Mailbox access and migration capability validation
+  - **SharePoint Online**: Site collection and document library access testing
+  - **Real-Time Results**: Immediate connection status feedback with detailed error reporting
+
+### Added - APP REGISTRATION AUTOMATION SYSTEM 🔧
+- **Automated Azure AD Application Setup** - One-click migration app configuration
+  - **Application Creation**: Automatic creation of "MandA-Discovery-Suite-Migration" application
+  - **Permission Configuration**: Required API permissions with admin consent automation
+    - `User.ReadWrite.All` - User account migration
+    - `Group.ReadWrite.All` - Security group replication  
+    - `Directory.ReadWrite.All` - Directory object management
+    - `Mail.ReadWrite` - Mailbox migration operations
+    - `Sites.FullControl.All` - SharePoint and OneDrive migration
+    - `Application.ReadWrite.All` - Application configuration management
+  - **Client Secret Generation**: Secure secret generation with encrypted storage
+  - **Validation Testing**: Immediate connectivity and permission validation
+
+- **Manual App Registration Support** - Alternative setup for restricted environments
+  - **Configuration Import**: Import existing application registrations
+  - **Manual Entry Interface**: Step-by-step manual configuration with validation
+  - **Permission Verification**: Real-time permission grant status checking
+
+### Enhanced - USER INTERFACE INTEGRATION 🎨
+- **Main Window Profile Selectors** - Integrated dual-profile interface
+  - **Source Profile Section**: Dropdown selector with create/switch/delete actions
+  - **Target Profile Section**: Dropdown selector with management and test connection buttons
+  - **Environment Status Display**: Real-time environment type and connection status indicators
+  - **Visual Feedback**: Success/warning/error indicators for connection states
+  - **Persistent UI State**: Profile selections and status preserved across application restarts
+
+- **Target Profile Management Window** - Comprehensive target profile administration
+  - **Profile Grid**: List view of all target profiles with status indicators
+  - **Management Actions**: Create, edit, delete, and test target profiles
+  - **App Registration Integration**: Direct access to app registration automation
+  - **Connection Validation**: Integrated connection testing with detailed results
+  - **Import/Export**: Target profile configuration backup and restore
+
+### Technical Implementation Details 🔧
+- **New Services**:
+  - `GUI/Services/IConnectionTestService.cs` - Connection testing contract (87 lines)
+  - `GUI/Services/ConnectionTestService.cs` - Connection testing implementation (445 lines)
+  - `GUI/Services/IEnvironmentDetectionService.cs` - Environment detection contract (156 lines)
+  - `GUI/Services/EnvironmentDetectionService.cs` - Environment detection implementation (623 lines)
+
+- **Enhanced Models**:
+  - `GUI/Models/TargetProfile.cs` - Enhanced target profile model with environment integration
+  - `GUI/Models/ConfigurationModels.cs` - Extended configuration models for dual-profile system
+
+- **Updated ViewModels**:
+  - `GUI/ViewModels/MainViewModel.cs` - Full dual-profile integration with connection testing
+  - Environment status properties and command implementations
+  - Profile selection persistence and automatic environment refresh
+
+- **User Interface Updates**:
+  - `GUI/MandADiscoverySuite.xaml` - Dual-profile UI with connection testing integration
+  - Source and Target profile dropdowns with management buttons
+  - Environment status indicators and connection test buttons
+
+### Configuration and Data Management 📊
+- **Profile Configuration Structure**:
+  ```
+  Source Profiles: C:\discoverydata\<company>\Profiles\
+  Target Profiles: C:\discoverydata\<source>\Configuration\target-profiles.json
+  App Registrations: C:\discoverydata\<source>\Configuration\app-registrations\
+  Connection Cache: %TEMP%\MandADiscoverySuite\environment-cache.json
+  ```
+
+- **Secure Credential Storage**:
+  - DPAPI encryption for all sensitive data (client secrets, passwords)
+  - User-scoped encryption tied to Windows user account
+  - Automatic credential expiration and rotation reminders
+  - SecureString usage for in-memory credential handling
+
+### Security and Compliance Features 🔒
+- **Audit Logging**: Complete audit trail for all profile operations and connection attempts
+- **Credential Protection**: DPAPI encryption with user-scoped access control
+- **Permission Validation**: Real-time API permission verification and grant status
+- **Connection Security**: TLS-secured connections with certificate validation
+- **Error Handling**: Comprehensive error reporting without credential exposure
+
+### Success Criteria Achieved ✅
+- **Dual-profile system displays separate Source and Target dropdowns**: ✅ Complete UI implementation with persistent selections
+- **Target profile configuration updates are reflected in migration views**: ✅ Real-time profile change integration with migration workflows  
+- **Test Connection actions verify connectivity using stored credentials**: ✅ Comprehensive connection testing for both source and target profiles
+- **Environment detection influences discovery module availability**: ✅ Dynamic module filtering based on detected environment type
+
 ## [1.2.4] - 2025-08-28 - MIGRATION SCHEDULING AND NOTIFICATION SYSTEM ✅
 
 ### MAJOR FEATURE - T-033 MIGRATION SCHEDULING & NOTIFICATION PLATFORM 🚀

@@ -1,0 +1,173 @@
+<Window x:Class="MandADiscoverySuite.Views.AddTargetProfileDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Add Target Profile"
+        Width="500"
+        Height="350"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="#FF1A202C"
+        Foreground="#FFE2E8F0">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        
+        <Style x:Key="DialogButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF4A5568"/>
+            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="20,8"/>
+            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FF5A6C7D"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#FF2D3748"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource DialogButtonStyle}">
+            <Setter Property="Background" Value="#FF3182CE"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FF4299E1"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#FF2B6CB0"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="TextBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="#FF2D3748"/>
+            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ScrollViewer x:Name="PART_ContentHost" 
+                                        Margin="{TemplateBinding Padding}"
+                                        VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter Property="BorderBrush" Value="#FF3182CE"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,24">
+            <TextBlock Text="Create Target Profile"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       Foreground="#FFE2E8F0"/>
+            <TextBlock Text="Enter the target company name to create app registration and target profile"
+                       FontSize="14"
+                       Foreground="#FFA0AEC0"
+                       Margin="0,8,0,0"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- Company Name Input -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,24">
+            <TextBlock Text="Target Company Name"
+                       FontSize="14"
+                       FontWeight="Medium"
+                       Foreground="#FFE2E8F0"
+                       Margin="0,0,0,8"/>
+            <TextBox x:Name="CompanyNameTextBox"
+                     Style="{StaticResource TextBoxStyle}"
+                     Text="{Binding CompanyName, UpdateSourceTrigger=PropertyChanged}"
+                     IsEnabled="{Binding IsNotBusy}"/>
+            <TextBlock Text="{Binding ValidationMessage}"
+                       FontSize="12"
+                       Foreground="#FFF56565"
+                       Margin="0,4,0,0"
+                       Visibility="{Binding HasValidationMessage, Converter={StaticResource BoolToVisibilityConverter}}"/>
+        </StackPanel>
+
+        <!-- Status Section -->
+        <Border Grid.Row="2"
+                Background="#FF2D3748"
+                CornerRadius="4"
+                Padding="16"
+                Margin="0,0,0,16"
+                Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel>
+                <TextBlock Text="{Binding StatusMessage}"
+                           FontSize="14"
+                           Foreground="#FFE2E8F0"
+                           Margin="0,0,0,8"/>
+                <ProgressBar IsIndeterminate="{Binding IsBusy}"
+                             Height="4"
+                             Background="#FF4A5568"
+                             Foreground="#FF3182CE"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Progress Details -->
+        <ScrollViewer Grid.Row="3"
+                      VerticalScrollBarVisibility="Auto"
+                      Visibility="{Binding ShowProgressDetails, Converter={StaticResource BoolToVisibilityConverter}}">
+            <TextBlock Text="{Binding ProgressDetails}"
+                       FontFamily="Consolas"
+                       FontSize="12"
+                       Foreground="#FFA0AEC0"
+                       Background="#FF1A1A1A"
+                       Padding="12"
+                       TextWrapping="Wrap"/>
+        </ScrollViewer>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="4"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,16,0,0">
+            <Button Content="Cancel"
+                    Style="{StaticResource DialogButtonStyle}"
+                    Command="{Binding CancelCommand}"
+                    IsCancel="True"/>
+            <Button Content="Create Profile"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Command="{Binding CreateProfileCommand}"
+                    IsDefault="True"
+                    IsEnabled="{Binding CanCreateProfile}"/>
+        </StackPanel>
+    </Grid>
+</Window>

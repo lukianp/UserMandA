@@ -37,7 +37,7 @@
 #
 # DEPENDENCIES
 #     - PowerShell 5.1+ (PowerShell 7+ recommended for enhanced performance)
-#     - Az.Accounts, Az.Resources modules
+#     - Az module (comprehensive Azure module)
 #     - Microsoft.Graph.* modules (Applications, Authentication, Identity.DirectoryManagement)
 #     - Global Administrator or Application Administrator privileges
 #     - Network connectivity to Microsoft Graph and Azure endpoints
@@ -210,7 +210,7 @@ $script:ScriptInfo = @{
     Version = "4.0.0"
     Author = "M`&A Discovery Team"
     RequiredPSVersion = "5.1"
-    Dependencies = @("Az.Accounts", "Az.Resources", "Microsoft.Graph.Applications", "Microsoft.Graph.Authentication", "Microsoft.Graph.Identity.DirectoryManagement")
+    Dependencies = @("Az", "Microsoft.Graph.Applications", "Microsoft.Graph.Authentication", "Microsoft.Graph.Identity.DirectoryManagement", "Microsoft.Graph.Groups", "Microsoft.Graph.DirectoryObjects")
 }
 
 # Enhanced application configuration
@@ -732,9 +732,23 @@ function Ensure-RequiredModules {
                     
                     # Enhanced import with multiple fallback methods
                     $importMethods = @()
-                    
-                    if ($moduleName -eq "Az.Resources" -or $moduleName -like "Az.*") {
-                        # Az modules have known loading issues, try multiple methods
+
+                    if ($moduleName -eq "Az") {
+                        # Comprehensive Az module - use explicit minimum version
+                        $importMethods += @{
+                            Method = "Force Import with Version"
+                            Action = { Import-Module -Name $moduleName -MinimumVersion 10.0.0 -Force -ErrorAction Stop }
+                        }
+                        $importMethods += @{
+                            Method = "Force Import"
+                            Action = { Import-Module -Name $moduleName -Force -ErrorAction Stop }
+                        }
+                        $importMethods += @{
+                            Method = "Explicit Path"
+                            Action = { Import-Module -Name $latestInstalled.ModuleBase -Force -ErrorAction Stop }
+                        }
+                    } elseif ($moduleName -like "Az.*") {
+                        # Individual Az modules
                         $importMethods += @{
                             Method = "Force Import"
                             Action = { Import-Module -Name $moduleName -Force -ErrorAction Stop }

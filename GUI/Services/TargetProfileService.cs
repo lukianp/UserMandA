@@ -151,6 +151,34 @@ namespace MandADiscoverySuite.Services
         }
 
         /// <summary>
+        /// Creates a new target profile from app registration and automatically imports credentials
+        /// </summary>
+        public async Task<TargetProfile?> CreateTargetProfileFromAppRegistrationAsync(string sourceCompanyName, string targetCompanyName)
+        {
+            try
+            {
+                // Look for credentials in the target company's credentials folder
+                var targetCredentialsPath = Path.Combine($"C:\\discoverydata\\{targetCompanyName}\\Credentials");
+                
+                // Try to create profile from app registration
+                var profile = await TargetProfile.FromAppRegistrationAsync(targetCompanyName, targetCredentialsPath);
+                
+                if (profile != null)
+                {
+                    // Save the profile to the source company's target profiles
+                    await CreateOrUpdateAsync(sourceCompanyName, profile, profile.GetClientSecret());
+                    return profile;
+                }
+                
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Auto-imports TargetProfile from App Registration credential outputs in Credentials folder
         /// Supports Windows DPAPI-encrypted credential files written by DiscoveryCreateAppRegistration.ps1
         /// Primary search: source company's Credentials

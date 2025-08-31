@@ -473,13 +473,13 @@ namespace MandADiscoverySuite.Services.Migration
         /// <summary>
         /// Migrate user attributes
         /// </summary>
-        public async Task<AttributeMappingResult> MigrateUserAttributesAsync(
+        public async Task<SimpleAttributeMappingResult> MigrateUserAttributesAsync(
             Dictionary<string, string> sourceAttributes, 
             string targetUserUpn, 
             MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
-            var result = new AttributeMappingResult
+            var result = new SimpleAttributeMappingResult
             {
                 UserUpn = targetUserUpn,
                 SourceAttributes = sourceAttributes ?? new Dictionary<string, string>(),

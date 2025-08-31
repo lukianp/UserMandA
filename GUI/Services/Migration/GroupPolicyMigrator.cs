@@ -510,9 +510,9 @@ namespace MandADiscoverySuite.Services.Migration
             }
         }
 
-        public async Task<ConflictResolutionResult> ResolveGpoConflictsAsync(List<GpoConflict> conflicts, ConflictResolutionStrategy strategy, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<GroupPolicyConflictResolutionResult> ResolveGpoConflictsAsync(List<GpoConflict> conflicts, ConflictResolutionStrategy strategy, MigrationContext context, CancellationToken cancellationToken = default)
         {
-            var result = new ConflictResolutionResult
+            var result = new GroupPolicyConflictResolutionResult
             {
                 ConflictType = "GPO",
                 TotalConflicts = conflicts.Count,

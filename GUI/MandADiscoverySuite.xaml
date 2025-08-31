@@ -945,10 +945,12 @@
                 <!-- Company Selector with Status -->
                 <Border Grid.Row="1" Padding="24,0,24,24">
                     <StackPanel>
-                        <TextBlock Text="Active Company Profile" Foreground="#FFA0AEC0" FontSize="12" FontWeight="Medium" Margin="0,0,0,8"/>
-                        <Grid>
+                        <TextBlock Text="Source Company Profile" Foreground="#FFA0AEC0" FontSize="12" FontWeight="Medium" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -956,224 +958,178 @@
                             
                             <ComboBox Grid.Column="0" x:Name="CompanySelector" 
                                       Style="{StaticResource ModernComboBoxStyle}"
-                                      Height="40"
-                                      FontSize="14"
+                                      Height="36"
+                                      FontSize="13"
                                       Margin="0,0,8,0"
                                       ItemsSource="{Binding CompanyProfiles}"
                                       SelectedItem="{Binding SelectedProfile}"
                                       DisplayMemberPath="CompanyName">
                             </ComboBox>
                             
-                            <Button Grid.Column="1" x:Name="SwitchProfileButton"
+                            <Button Grid.Column="1" x:Name="TestSourceConnectionButton"
+                                    Command="{Binding TestSourceConnectionCommand}"
+                                    Background="#FF4FC3F7"
+                                    BorderThickness="0"
+                                    Width="32" Height="36"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Test Source Connection">
+                                <TextBlock Text="🔗" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                            
+                            <Button Grid.Column="2" x:Name="SwitchProfileButton"
                                     Command="{Binding SwitchProfileCommand}"
                                     Background="{StaticResource SuccessGradient}"
                                     BorderThickness="0"
-                                    Width="40" Height="40"
+                                    Width="32" Height="36"
                                     Margin="0,0,4,0"
-                                    ToolTip="Switch to Selected Company Profile">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" 
-                                                CornerRadius="8"
-                                                x:Name="SwitchButtonBorder">
-                                            <TextBlock Text="→" FontSize="20" FontWeight="Bold"
-                                                      Foreground="White" 
-                                                      HorizontalAlignment="Center" 
-                                                      VerticalAlignment="Center"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="SwitchButtonBorder" Property="Background">
-                                                    <Setter.Value>
-                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                            <GradientStop Color="#FF66BB6A" Offset="0"/>
-                                                            <GradientStop Color="#FF4CAF50" Offset="1"/>
-                                                        </LinearGradientBrush>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Button.Template>
+                                    ToolTip="Switch to Selected Source Profile">
+                                <TextBlock Text="→" FontSize="16" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             
-                            <Button Grid.Column="2" x:Name="CreateProfileButton"
+                            <Button Grid.Column="3" x:Name="CreateProfileButton"
                                     Command="{Binding CreateProfileCommand}"
                                     Background="{StaticResource AccentGradient}"
                                     BorderThickness="0"
-                                    Width="40" Height="40"
+                                    Width="32" Height="36"
                                     Margin="0,0,4,0"
-                                    ToolTip="Create New Company Profile">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" 
-                                                CornerRadius="8"
-                                                x:Name="CreateButtonBorder">
-                                            <TextBlock Text="+" FontSize="24" FontWeight="Bold"
-                                                      Foreground="White" 
-                                                      HorizontalAlignment="Center" 
-                                                      VerticalAlignment="Center"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="CreateButtonBorder" Property="Background">
-                                                    <Setter.Value>
-                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                            <GradientStop Color="#FF5A9FD4" Offset="0"/>
-                                                            <GradientStop Color="#FF4A8BC2" Offset="1"/>
-                                                        </LinearGradientBrush>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Button.Template>
+                                    ToolTip="Create New Source Profile">
+                                <TextBlock Text="+" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             
-                            <Button Grid.Column="3" x:Name="DeleteProfileButton"
+                            <Button Grid.Column="4" x:Name="DeleteProfileButton"
                                     Command="{Binding DeleteProfileCommand}"
                                     Background="{StaticResource DangerGradient}"
                                     BorderThickness="0"
-                                    Width="40" Height="40"
-                                    ToolTip="Delete Selected Company Profile">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" 
-                                                CornerRadius="8"
-                                                x:Name="DeleteButtonBorder">
-                                            <TextBlock Text="×" FontSize="24" FontWeight="Bold"
-                                                      Foreground="White" 
-                                                      HorizontalAlignment="Center" 
-                                                      VerticalAlignment="Center"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="DeleteButtonBorder" Property="Background">
-                                                    <Setter.Value>
-                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                            <GradientStop Color="#FFE57373" Offset="0"/>
-                                                            <GradientStop Color="#FFD32F2F" Offset="1"/>
-                                                        </LinearGradientBrush>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Button.Template>
+                                    Width="32" Height="36"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Delete Selected Source Profile">
+                                <TextBlock Text="×" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                            
+                            <Button Grid.Column="5" x:Name="SourceAppRegistrationButton"
+                                    Command="{Binding RunAppRegistrationCommand}"
+                                    Background="#FF10B981"
+                                    BorderThickness="0"
+                                    Width="32" Height="36"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Setup Source App Registration">
+                                <TextBlock Text="🔐" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                         </Grid>
                         
-                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                            <Ellipse Width="8" Height="8" Fill="#FF48BB78" Margin="0,0,8,0"/>
-                            <TextBlock Text="Profile Active" Foreground="#FF9AE6B4" FontSize="11"/>
+                        <!-- Source Status Indicators -->
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,16">
+                            <Border Background="#FF2D3748" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Environment: " Foreground="#FFA0AEC0" FontSize="10"/>
+                                    <TextBlock Text="{Binding SourceEnvironmentStatus}" Foreground="#FF9AE6B4" FontSize="10" FontWeight="Medium"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="#FF2D3748" CornerRadius="4" Padding="8,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Connection: " Foreground="#FFA0AEC0" FontSize="10"/>
+                                    <TextBlock Text="{Binding SourceConnectionStatus}" Foreground="#FF9AE6B4" FontSize="10" FontWeight="Medium"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                        
+                        <!-- Separator -->
+                        <Border Height="1" Background="#FF4A5568" Margin="0,12,0,12" Opacity="0.3"/>
+                        
+                        <!-- Target Company Profile Section -->
+                        <TextBlock Text="Target Company Profile" Foreground="#FFA0AEC0" FontSize="12" FontWeight="Medium" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <ComboBox Grid.Column="0" x:Name="TargetProfileSelector" 
+                                      Style="{StaticResource ModernComboBoxStyle}"
+                                      Height="36"
+                                      FontSize="13"
+                                      Margin="0,0,8,0"
+                                      ItemsSource="{Binding TargetProfiles}"
+                                      SelectedItem="{Binding SelectedTargetProfile}"
+                                      DisplayMemberPath="Name">
+                            </ComboBox>
+                            
+                            <Button Grid.Column="1" x:Name="TestTargetConnectionButton"
+                                    Command="{Binding TestTargetConnectionCommand}"
+                                    Background="#FF4FC3F7"
+                                    BorderThickness="0"
+                                    Width="32" Height="36"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Test Target Connection">
+                                <TextBlock Text="🔗" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                            
+                            <Button Grid.Column="2" x:Name="SwitchTargetProfileButton"
+                                    Command="{Binding SetActiveTargetProfileCommand}"
+                                    Background="{StaticResource SuccessGradient}"
+                                    BorderThickness="0"
+                                    Width="32" Height="36"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Switch to Selected Target Profile">
+                                <TextBlock Text="→" FontSize="16" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                            
+                            <Button Grid.Column="3" x:Name="AddTargetProfileButton"
+                                    Command="{Binding AddTargetProfileCommand}"
+                                    Background="{StaticResource AccentGradient}"
+                                    BorderThickness="0"
+                                    Width="32" Height="36"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Add New Target Profile">
+                                <TextBlock Text="+" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                            
+                            <Button Grid.Column="4" x:Name="ManageTargetProfilesButton"
+                                    Command="{Binding ShowTargetProfilesCommand}"
+                                    Background="{StaticResource DangerGradient}"
+                                    BorderThickness="0"
+                                    Width="32" Height="36"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Manage Target Profiles">
+                                <TextBlock Text="×" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                            
+                            <Button Grid.Column="5" x:Name="TargetAppRegistrationButton"
+                                    Command="{Binding RunTargetAppRegistrationCommand}"
+                                    Background="#FF10B981"
+                                    BorderThickness="0"
+                                    Width="32" Height="36"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Setup Target App Registration">
+                                <TextBlock Text="🔐" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                        </Grid>
+                        
+                        <!-- Target Status Indicators -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                            <Border Background="#FF2D3748" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Environment: " Foreground="#FFA0AEC0" FontSize="10"/>
+                                    <TextBlock Text="{Binding TargetEnvironmentStatus}" Foreground="#FFFF9800" FontSize="10" FontWeight="Medium"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="#FF2D3748" CornerRadius="4" Padding="8,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Connection: " Foreground="#FFA0AEC0" FontSize="10"/>
+                                    <TextBlock Text="{Binding TargetConnectionStatus}" Foreground="#FFFF9800" FontSize="10" FontWeight="Medium"/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </StackPanel>
                 </Border>
                 
-                <!-- Quick Actions Panel -->
-                <Border Grid.Row="2" Margin="16,0,16,8" Background="Transparent">
-                    <StackPanel>
-                        <TextBlock Text="🚀 Quick Actions" Foreground="#FFE2E8F0" FontSize="13" FontWeight="Medium" Margin="0,0,0,12"/>
-                        
-                        <Button x:Name="QuickAppRegistrationButton" 
-                                Command="{Binding RunAppRegistrationCommand}"
-                                Background="{StaticResource AccentGradient}"
-                                BorderThickness="0"
-                                Height="36"
-                                Margin="0,0,0,8"
-                                ToolTip="Setup Azure App Registration">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="8"
-                                            x:Name="ActionButtonBorder">
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <TextBlock Text="🔐" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                            <TextBlock Text="Setup App Registration" FontSize="12" FontWeight="Medium"
-                                                      Foreground="White" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="ActionButtonBorder" Property="Background">
-                                                <Setter.Value>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                        <GradientStop Color="#FF5A9FD4" Offset="0"/>
-                                                        <GradientStop Color="#FF4A8BC2" Offset="1"/>
-                                                    </LinearGradientBrush>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
-                        
-                        <Button x:Name="QuickFullDiscoveryButton" 
-                                Command="{Binding StartDiscoveryCommand}"
-                                Background="{StaticResource SuccessGradient}"
-                                BorderThickness="0"
-                                Height="36"
-                                Margin="0,0,0,8"
-                                ToolTip="Run Full Discovery">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="8"
-                                            x:Name="DiscoveryButtonBorder">
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <TextBlock Text="🔍" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                            <TextBlock Text="Run Full Discovery" FontSize="12" FontWeight="Medium"
-                                                      Foreground="White" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="DiscoveryButtonBorder" Property="Background">
-                                                <Setter.Value>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                        <GradientStop Color="#FF5CBB5C" Offset="0"/>
-                                                        <GradientStop Color="#FF4A9F4A" Offset="1"/>
-                                                    </LinearGradientBrush>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
-                        
-                        <Button x:Name="QuickReportsButton" 
-                                Command="{Binding OpenTabCommand}"
-                                CommandParameter="reports"
-                                Background="#FF6B46C1"
-                                BorderThickness="0"
-                                Height="36"
-                                ToolTip="Generate Reports">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="8"
-                                            x:Name="ReportsButtonBorder">
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <TextBlock Text="📊" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                            <TextBlock Text="Generate Reports" FontSize="12" FontWeight="Medium"
-                                                      Foreground="White" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="ReportsButtonBorder" Property="Background" Value="#FF7C5BDC"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
-                    </StackPanel>
-                </Border>
                 
                 <!-- Navigation Buttons with Scroll Support -->
-                <ScrollViewer Grid.Row="4" Margin="0,8,0,0" 
+                <ScrollViewer Grid.Row="2" Margin="0,8,0,0" 
                               VerticalScrollBarVisibility="Auto" 
                               HorizontalScrollBarVisibility="Disabled"
                               PanningMode="VerticalOnly">
@@ -1367,7 +1323,7 @@
                 
                 <!-- Spacer -->
                 <!-- Theme Toggle and Settings -->
-                <Border Grid.Row="5" Padding="24,16">
+                <Border Grid.Row="3" Padding="24,16">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,16">
                             <TextBlock Text="Theme" FontSize="13" FontWeight="Medium" Foreground="#FFA0AEC0" VerticalAlignment="Center" Margin="0,0,16,0"/>
@@ -1402,7 +1358,7 @@
                 </Border>
                 
                 <!-- Enhanced Status Bar -->
-                <Border Grid.Row="6" Background="{StaticResource PrimaryGradient}" Padding="24,16">
+                <Border Grid.Row="4" Background="{StaticResource PrimaryGradient}" Padding="24,16">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                             <Ellipse Width="8" Height="8" Fill="#FF48BB78" Margin="0,0,8,0"/>
@@ -1735,95 +1691,6 @@
                                                 HorizontalAlignment="Left"
                                                 Padding="0,8,0,0"
                                                 FontSize="11"/>
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-                    
-                    <!-- Quick Actions Panel -->
-                    <Border Grid.Row="3" Style="{StaticResource ModernCardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Quick Actions" Style="{StaticResource SectionHeaderStyle}"/>
-                                <Button x:Name="RunFullDiscoveryButton" Command="{Binding StartDiscoveryCommand}" Style="{StaticResource ModernButtonStyle}" Margin="0,0,0,12">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="🔍" FontSize="16" Margin="0,0,8,0"/>
-                                        <TextBlock Text="Run Full Discovery"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button x:Name="ImportDataButton" Command="{Binding ImportDataCommand}" Style="{StaticResource ModernButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,0,12">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="📂" FontSize="16" Margin="0,0,8,0"/>
-                                        <TextBlock Text="Import Existing Data"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Style="{StaticResource ModernButtonStyle}" Background="#FF2D3748">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="📊" FontSize="16" Margin="0,0,8,0"/>
-                                        <TextBlock Text="Generate Report"/>
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Column="1" Margin="32,0">
-                                <TextBlock Text="Data Quality" Style="{StaticResource SectionHeaderStyle}"/>
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                        <TextBlock Text="User Data" Foreground="#FFE2E8F0" FontSize="13" Width="100"/>
-                                        <ProgressBar Value="95" Maximum="100" Height="6" Width="120" Background="#FF2D3748" Foreground="#FF48BB78" BorderThickness="0"/>
-                                        <TextBlock Text="95%" Foreground="#FF48BB78" FontSize="12" Margin="8,0,0,0"/>
-                                    </StackPanel>
-                                    
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                        <TextBlock Text="Computer Data" Foreground="#FFE2E8F0" FontSize="13" Width="100"/>
-                                        <ProgressBar Value="87" Maximum="100" Height="6" Width="120" Background="#FF2D3748" Foreground="#FF4299E1" BorderThickness="0"/>
-                                        <TextBlock Text="87%" Foreground="#FF4299E1" FontSize="12" Margin="8,0,0,0"/>
-                                    </StackPanel>
-                                    
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                        <TextBlock Text="Infrastructure" Foreground="#FFE2E8F0" FontSize="13" Width="100"/>
-                                        <ProgressBar Value="73" Maximum="100" Height="6" Width="120" Background="#FF2D3748" Foreground="#FFED8936" BorderThickness="0"/>
-                                        <TextBlock Text="73%" Foreground="#FFED8936" FontSize="12" Margin="8,0,0,0"/>
-                                    </StackPanel>
-                                    
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Applications" Foreground="#FFE2E8F0" FontSize="13" Width="100"/>
-                                        <ProgressBar Value="91" Maximum="100" Height="6" Width="120" Background="#FF2D3748" Foreground="#FF9F7AEA" BorderThickness="0"/>
-                                        <TextBlock Text="91%" Foreground="#FF9F7AEA" FontSize="12" Margin="8,0,0,0"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="System Health" Style="{StaticResource SectionHeaderStyle}"/>
-                                <Border Background="#FF2D3748" CornerRadius="6" Padding="16">
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                            <Ellipse Width="8" Height="8" Fill="#FF48BB78" Margin="0,0,8,0"/>
-                                            <TextBlock Text="PowerShell Modules" Foreground="#FFE2E8F0" FontSize="12"/>
-                                        </StackPanel>
-                                        
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                            <Ellipse Width="8" Height="8" Fill="#FF48BB78" Margin="0,0,8,0"/>
-                                            <TextBlock Text="Network Connectivity" Foreground="#FFE2E8F0" FontSize="12"/>
-                                        </StackPanel>
-                                        
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                            <Ellipse Width="8" Height="8" Fill="#FFED8936" Margin="0,0,8,0"/>
-                                            <TextBlock Text="API Credentials" Foreground="#FFE2E8F0" FontSize="12"/>
-                                        </StackPanel>
-                                        
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="8" Height="8" Fill="#FF48BB78" Margin="0,0,8,0"/>
-                                            <TextBlock Text="Data Storage" Foreground="#FFE2E8F0" FontSize="12"/>
-                                        </StackPanel>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
@@ -3606,76 +3473,6 @@
                             </StackPanel>
                         </Border>
                         
-                        <!-- App Registration Setup -->
-                        <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,16">
-                            <StackPanel>
-                                <TextBlock Text="Azure App Registration Setup" Style="{StaticResource SectionHeaderStyle}"/>
-                                <TextBlock Text="Configure Azure AD app registration for discovery modules" 
-                                           Foreground="#FFA0AEC0" FontSize="13" Margin="0,0,0,16"/>
-                                
-                                <WrapPanel>
-                                    <Button Content="Run App Registration Script" 
-                                            Command="{Binding RunAppRegistrationCommand}"
-                                            Style="{StaticResource ModernButtonStyle}" 
-                                            Background="{StaticResource AccentGradient}"
-                                            Margin="0,0,12,8">
-                                        <Button.ToolTip>
-                                            <ToolTip>
-                                                <TextBlock Text="Creates Azure AD app registration with required permissions for discovery"/>
-                                            </ToolTip>
-                                        </Button.ToolTip>
-                                    </Button>
-                                    
-                                    <Button Content="🔐 App Registration" 
-                                            Command="{Binding AppRegistrationCommand}"
-                                            Style="{StaticResource ModernButtonStyle}" 
-                                            Background="#FF6B46C1"
-                                            Margin="0,0,12,8">
-                                        <Button.ToolTip>
-                                            <ToolTip>
-                                                <TextBlock Text="Create Azure AD App Registration with required permissions for M&amp;A Discovery" 
-                                                           MaxWidth="300" TextWrapping="Wrap"/>
-                                            </ToolTip>
-                                        </Button.ToolTip>
-                                    </Button>
-                                    
-                                    <Button Content="Configure Credentials" 
-                                            Command="{Binding ConfigureCredentialsCommand}"
-                                            Style="{StaticResource ModernButtonStyle}" 
-                                            Background="#FF2D3748"
-                                            Margin="0,0,12,8">
-                                        <Button.ToolTip>
-                                            <ToolTip>
-                                                <TextBlock Text="Configure credentials for the selected company profile"/>
-                                            </ToolTip>
-                                        </Button.ToolTip>
-                                    </Button>
-                                    
-                                    <Button Content="Test Connection" 
-                                            Command="{Binding TestConnectionCommand}"
-                                            Style="{StaticResource ModernButtonStyle}" 
-                                            Background="#FF2D3748">
-                                        <Button.ToolTip>
-                                            <ToolTip>
-                                                <TextBlock Text="Test Azure AD connection with current credentials"/>
-                                            </ToolTip>
-                                        </Button.ToolTip>
-                                    </Button>
-                                </WrapPanel>
-                                
-                                <Border Background="#FF2D3748" CornerRadius="6" Padding="16" Margin="0,16,0,0">
-                                    <StackPanel>
-                                        <TextBlock Text="Required Permissions:" Foreground="#FFE2E8F0" FontSize="13" FontWeight="Medium" Margin="0,0,0,8"/>
-                                        <TextBlock Text="• Directory.Read.All - Read directory data" Foreground="#FFA0AEC0" FontSize="12"/>
-                                        <TextBlock Text="• User.Read.All - Read all users' profiles" Foreground="#FFA0AEC0" FontSize="12"/>
-                                        <TextBlock Text="• Group.Read.All - Read all groups" Foreground="#FFA0AEC0" FontSize="12"/>
-                                        <TextBlock Text="• Application.Read.All - Read all applications" Foreground="#FFA0AEC0" FontSize="12"/>
-                                        <TextBlock Text="• Policy.Read.All - Read organization policies" Foreground="#FFA0AEC0" FontSize="12"/>
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-                        </Border>
-                        
                         <!-- Module Settings -->
                         <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,16">
                             <StackPanel>
@@ -4669,14 +4466,6 @@
                 </ScrollViewer>
             </Grid>
             
-            <!-- Notification Area -->
-            <Border Grid.Row="2" Background="#FF2D3748" BorderBrush="#FF4A5568" BorderThickness="0,1,0,0" Height="24"
-                    Visibility="{Binding HasNotification, Converter={StaticResource BoolToVisibilityConverter}}">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="ℹ️" FontSize="12" Margin="0,0,8,0"/>
-                    <TextBlock Text="{Binding NotificationMessage}" Foreground="#FFE2E8F0" FontSize="11" FontWeight="Medium"/>
-                </StackPanel>
-            </Border>
             
             
             <!-- Command Palette Overlay -->
