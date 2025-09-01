@@ -4,7 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="900" d:DesignWidth="1400">
+             d:DesignHeight="900" d:DesignWidth="1400"
+             Background="#FF0F1419">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -132,7 +133,7 @@
         </Grid>
 
         <!-- Loading Indicator -->
-        <Border Grid.Row="3" Background="White" Opacity="0.9"
+        <Border Grid.Row="3" Background="#FF1E1E1E" Opacity="0.9"
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
                 Panel.ZIndex="100">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -165,7 +166,7 @@
                   GridLinesVisibility="Horizontal"
                   HeadersVisibility="Column"
                   AlternatingRowBackground="#FFF8FAFC"
-                  Background="White"
+                  Background="#FF1E1E1E"
                   BorderBrush="#FFE2E8F0"
                   BorderThickness="1"
                   RowHeight="40">

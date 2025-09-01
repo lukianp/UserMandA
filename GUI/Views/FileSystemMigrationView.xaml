@@ -5,16 +5,17 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:controls="clr-namespace:MandADiscoverySuite.Controls"
              mc:Ignorable="d" 
-             d:DesignHeight="800" d:DesignWidth="1200">
+             d:DesignHeight="800" d:DesignWidth="1200"
+             Background="#FF0F1419">
 
-    <Grid Background="#F8F9FA">
+    <Grid Background="#FF0F1419">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Page Header -->
-        <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="24,20">
+        <Border Grid.Row="0" Background="#FF1E1E1E" BorderBrush="#FF4A5568" BorderThickness="0,0,0,1" Padding="24,20">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -85,7 +86,7 @@
 
                 <!-- Planning Tab -->
                 <TabItem Header="📋 Planning">
-                    <Grid Background="#FFFFFF" Margin="0,12,0,0">
+                    <Grid Background="#FF1E1E1E" Margin="0,12,0,0">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
                             <StackPanel>
                                 <TextBlock Text="Migration Planning" FontSize="20" FontWeight="SemiBold" Foreground="#111827" Margin="0,0,0,16"/>
@@ -143,7 +144,7 @@
                                     </StackPanel>
 
                                     <!-- Planning Checklist -->
-                                    <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#E5E7EB" BorderThickness="1" 
+                                    <Border Grid.Column="1" Background="#FF1E1E1E" BorderBrush="#FF4A5568" BorderThickness="1" 
                                             CornerRadius="8" Padding="20">
                                         <StackPanel>
                                             <TextBlock Text="Migration Checklist" FontSize="16" FontWeight="Medium" Margin="0,0,0,16"/>
@@ -170,7 +171,7 @@
 
                 <!-- Monitoring Tab -->
                 <TabItem Header="📊 Monitoring">
-                    <Grid Background="#FFFFFF" Margin="0,12,0,0">
+                    <Grid Background="#FF1E1E1E" Margin="0,12,0,0">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
                             <StackPanel>
                                 <TextBlock Text="Migration Monitoring" FontSize="20" FontWeight="SemiBold" Foreground="#111827" Margin="0,0,0,16"/>
@@ -225,7 +226,7 @@
 
                 <!-- Help Tab -->
                 <TabItem Header="❓ Help">
-                    <Grid Background="#FFFFFF" Margin="0,12,0,0">
+                    <Grid Background="#FF1E1E1E" Margin="0,12,0,0">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
                             <StackPanel>
                                 <TextBlock Text="File System Migration Help" FontSize="20" FontWeight="SemiBold" Foreground="#111827" Margin="0,0,0,16"/>

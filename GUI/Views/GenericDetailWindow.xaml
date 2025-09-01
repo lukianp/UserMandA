@@ -6,7 +6,8 @@
         mc:Ignorable="d"
         Title="Detail Window" Height="600" Width="800"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Icon="pack://application:,,,/Resources/Icons/detail_window.ico">
+        Icon="pack://application:,,,/Resources/Icons/detail_window.ico"
+        Background="#FF0F1419">
 
     <Window.Resources>
         <Style x:Key="HeaderStyle" TargetType="TextBlock">
@@ -88,7 +89,7 @@
         </Border>
 
         <!-- Content -->
-        <TabControl Grid.Row="1" Margin="0" Background="White">
+        <TabControl Grid.Row="1" Margin="0" Background="#FF1E1E1E">
             
             <!-- General Tab -->
             <TabItem Header="General" IsSelected="True">

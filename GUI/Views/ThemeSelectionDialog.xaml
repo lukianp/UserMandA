@@ -5,7 +5,8 @@
         Width="500" 
         Height="400"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        Background="#FF0F1419">
     
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -28,7 +29,7 @@
                 
                 <!-- Light Theme -->
                 <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="8" Margin="0,0,0,15" 
-                        Background="White">
+                        Background="#FF1E1E1E">
                     <Grid Margin="15">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -50,7 +51,7 @@
                         
                         <!-- Light Theme Preview -->
                         <Border Grid.Column="2" Width="80" Height="50" CornerRadius="4" BorderBrush="LightGray" BorderThickness="1">
-                            <Grid Background="White">
+                            <Grid Background="#FF1E1E1E">
                                 <Rectangle Fill="#F8FAFC" Margin="2"/>
                                 <Rectangle Fill="#4299E1" Width="30" Height="8" HorizontalAlignment="Left" 
                                           VerticalAlignment="Top" Margin="8,8,0,0"/>

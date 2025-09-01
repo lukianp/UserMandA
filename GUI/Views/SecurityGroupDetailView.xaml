@@ -4,7 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="900" d:DesignWidth="1400">
+             d:DesignHeight="900" d:DesignWidth="1400"
+             Background="#FF0F1419">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -361,7 +362,7 @@
                     <ItemsControl Grid.Row="1" ItemsSource="{Binding MigrationNotes}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="White" BorderBrush="#FFE2E8F0" BorderThickness="1" 
+                                <Border Background="#FF1E1E1E" BorderBrush="#FFE2E8F0" BorderThickness="1" 
                                         Padding="12" Margin="0,0,0,8" CornerRadius="4">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -400,7 +401,7 @@
         </TabControl>
 
         <!-- Loading Overlay -->
-        <Border Grid.Row="0" Grid.RowSpan="4" Background="White" Opacity="0.9"
+        <Border Grid.Row="0" Grid.RowSpan="4" Background="#FF1E1E1E" Opacity="0.9"
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,0,0,16"/>

@@ -4,7 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" 
-             d:DesignHeight="800" d:DesignWidth="1400">
+             d:DesignHeight="800" d:DesignWidth="1400"
+             Background="#FF0F1419">
     
     <UserControl.Resources>
         <!-- Risk Level to Color Converter -->
@@ -413,7 +414,7 @@
         <!-- Risk Editor Modal -->
         <Border Grid.RowSpan="3" Background="#80000000" 
                Visibility="{Binding ShowRiskEditor, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border Background="White" Width="500" Height="450" CornerRadius="8" 
+            <Border Background="#FF1E1E1E" Width="500" Height="450" CornerRadius="8" 
                    HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Grid Margin="20">
                     <Grid.RowDefinitions>
@@ -497,7 +498,7 @@
         <!-- Action Editor Modal -->
         <Border Grid.RowSpan="3" Background="#80000000" 
                Visibility="{Binding ShowActionEditor, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border Background="White" Width="450" Height="350" CornerRadius="8" 
+            <Border Background="#FF1E1E1E" Width="450" Height="350" CornerRadius="8" 
                    HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Grid Margin="20">
                     <Grid.RowDefinitions>
@@ -550,7 +551,7 @@
         <!-- Indicator Editor Modal -->
         <Border Grid.RowSpan="3" Background="#80000000" 
                Visibility="{Binding ShowIndicatorEditor, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border Background="White" Width="400" Height="280" CornerRadius="8" 
+            <Border Background="#FF1E1E1E" Width="400" Height="280" CornerRadius="8" 
                    HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Grid Margin="20">
                     <Grid.RowDefinitions>

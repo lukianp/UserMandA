@@ -1358,7 +1358,7 @@
                 </Border>
                 
                 <!-- Enhanced Status Bar -->
-                <Border Grid.Row="4" Background="{StaticResource PrimaryGradient}" Padding="24,16">
+                <Border Grid.Row="1" Background="{StaticResource PrimaryGradient}" Padding="24,16">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                             <Ellipse Width="8" Height="8" Fill="#FF48BB78" Margin="0,0,8,0"/>
@@ -1378,16 +1378,12 @@
         <!-- Main Content Area -->
         <Grid Grid.Column="1" Background="#FF0F1419">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             
-            <!-- Breadcrumb Navigation -->
-            <controls:BreadcrumbNavigation Grid.Row="0"/>
-            
             <!-- Tabbed Document Interface -->
-            <TabControl Grid.Row="1" x:Name="MainTabControl" 
+            <TabControl Grid.Row="0" x:Name="MainTabControl" 
                         ItemsSource="{Binding OpenTabs}" 
                         SelectedItem="{Binding SelectedTab}"
                         Background="Transparent"
@@ -1404,7 +1400,7 @@
                         <StackPanel Orientation="Horizontal" Margin="12,8">
                             <TextBlock Text="{Binding TabTitle}" 
                                        Foreground="#FFE2E8F0" 
-                                       FontSize="14" 
+                                       FontSize="16" 
                                        FontWeight="Medium"
                                        VerticalAlignment="Center"/>
                             <Button Content="✕" 

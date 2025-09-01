@@ -929,7 +929,7 @@ namespace MandADiscoverySuite.ViewModels
         }
         
         /// <summary>
-        /// Add a new target profile through app registration
+        /// Add a new target profile - simplified to work like source profile creation
         /// </summary>
         private async Task AddTargetProfileAsync()
         {
@@ -950,24 +950,135 @@ namespace MandADiscoverySuite.ViewModels
 
                 _logger?.LogInformation($"Creating target profile for source profile: {CurrentProfileName}");
 
-                var viewModel = new AddTargetProfileViewModel();
-                var dialog = new MandADiscoverySuite.Views.AddTargetProfileDialog(viewModel)
+                string companyName = null;
+                
+                // Create a styled input dialog that matches the application theme - EXACT SAME AS SOURCE PROFILE
+                var inputDialog = new System.Windows.Window
                 {
+                    Title = "Create New Target Profile",
+                    Width = 450,
+                    Height = 250,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
                     Owner = Application.Current.MainWindow,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                    Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF0F1419")),
+                    ResizeMode = ResizeMode.NoResize,
+                    WindowStyle = WindowStyle.SingleBorderWindow
                 };
-
-                dialog.ShowDialog();
-
-                if (viewModel.DialogResult && viewModel.CreatedProfile != null)
+                
+                var mainBorder = new Border
                 {
-                    _logger?.LogInformation($"Created target profile: {viewModel.CreatedProfile.Name}");
+                    Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF2D3748")),
+                    CornerRadius = new CornerRadius(8),
+                    Margin = new Thickness(15),
+                    Padding = new Thickness(25)
+                };
+                
+                var stackPanel = new System.Windows.Controls.StackPanel();
+                
+                // Title
+                var titleBlock = new System.Windows.Controls.TextBlock 
+                { 
+                    Text = "Create New Target Profile", 
+                    FontSize = 16, 
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFE2E8F0")),
+                    Margin = new Thickness(0, 0, 0, 15),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                };
+                stackPanel.Children.Add(titleBlock);
+                
+                // Instructions
+                var instructionBlock = new System.Windows.Controls.TextBlock 
+                { 
+                    Text = "Enter target company name:", 
+                    FontSize = 13,
+                    Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFA0AEC0")),
+                    Margin = new Thickness(0, 0, 0, 8) 
+                };
+                stackPanel.Children.Add(instructionBlock);
+                
+                // Text input
+                var textBox = new System.Windows.Controls.TextBox 
+                { 
+                    FontSize = 13,
+                    Padding = new Thickness(10, 8, 10, 8),
+                    Margin = new Thickness(0, 0, 0, 20),
+                    Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF1A202C")),
+                    Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFE2E8F0")),
+                    BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF4A5568")),
+                    BorderThickness = new Thickness(1)
+                };
+                stackPanel.Children.Add(textBox);
+                
+                // Button panel
+                var buttonPanel = new System.Windows.Controls.StackPanel 
+                { 
+                    Orientation = System.Windows.Controls.Orientation.Horizontal, 
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Margin = new Thickness(0, 10, 0, 0)
+                };
+                
+                var cancelButton = new System.Windows.Controls.Button 
+                { 
+                    Content = "Cancel", 
+                    Width = 80, 
+                    Height = 35,
+                    Margin = new Thickness(0, 0, 10, 0),
+                    Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF4A5568")),
+                    Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFE2E8F0")),
+                    BorderThickness = new Thickness(0),
+                    FontSize = 12
+                };
+                
+                var okButton = new System.Windows.Controls.Button 
+                { 
+                    Content = "Create", 
+                    Width = 80, 
+                    Height = 35,
+                    Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF38B2AC")),
+                    Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFFFFFFF")),
+                    BorderThickness = new Thickness(0),
+                    FontSize = 12,
+                    FontWeight = FontWeights.Medium
+                };
+                
+                okButton.Click += (s, e) => { companyName = textBox.Text; inputDialog.DialogResult = true; };
+                cancelButton.Click += (s, e) => { inputDialog.DialogResult = false; };
+                
+                buttonPanel.Children.Add(cancelButton);
+                buttonPanel.Children.Add(okButton);
+                stackPanel.Children.Add(buttonPanel);
+                
+                mainBorder.Child = stackPanel;
+                inputDialog.Content = mainBorder;
+                
+                // Focus the text box when dialog opens
+                inputDialog.Loaded += (s, e) => textBox.Focus();
+                
+                var result = inputDialog.ShowDialog();
+                if (result != true) return;
+                
+                if (!string.IsNullOrWhiteSpace(companyName))
+                {
+                    // Create a simple target profile - no complex PowerShell scripts or app registration
+                    var targetProfile = new TargetProfile
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        Name = companyName.Trim(),
+                        TenantId = "manual-entry-required",
+                        ClientId = "manual-entry-required",
+                        IsActive = true,
+                        Created = DateTime.UtcNow,
+                        LastModified = DateTime.UtcNow
+                    };
+                    
+                    _logger?.LogInformation($"Created simple target profile: {companyName}");
 
                     // Save the new profile to the target profile service
                     await TargetProfileService.Instance.CreateOrUpdateAsync(
                         CurrentProfileName, 
-                        viewModel.CreatedProfile, 
-                        viewModel.CreatedProfile.GetClientSecret());
+                        targetProfile, 
+                        "manual-entry-required"); // Simple placeholder secret
 
                     // Refresh the target profiles list
                     await LoadTargetProfilesAsync();
@@ -981,19 +1092,22 @@ namespace MandADiscoverySuite.ViewModels
                             await TargetProfileService.Instance.SetActiveAsync(CurrentProfileName, SelectedTargetProfile.Id);
                         }
                     }
-                    else if (viewModel.CreatedProfile != null)
+                    else if (targetProfile != null)
                     {
                         // Select the newly created profile
-                        var newProfile = TargetProfiles?.FirstOrDefault(p => p.Id == viewModel.CreatedProfile.Id);
+                        var newProfile = TargetProfiles?.FirstOrDefault(p => p.Id == targetProfile.Id);
                         if (newProfile != null)
                         {
                             SelectedTargetProfile = newProfile;
                         }
                     }
 
-                    MessageBox.Show($"Target profile '{viewModel.CreatedProfile.Name}' created successfully!", 
+                    MessageBox.Show($"Target profile '{companyName}' created successfully!\n\n" +
+                        "Note: You can configure credentials later through the profile settings.", 
                         "Target Profile Created", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
+                
+                return;
             }
             catch (Exception ex)
             {

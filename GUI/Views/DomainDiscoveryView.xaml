@@ -6,12 +6,12 @@
              xmlns:vm="clr-namespace:MandADiscoverySuite.ViewModels"
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="1200"
-             Background="#F8F9FA">
+             Background="#FF0F1419">
 
     <UserControl.Resources>
         <!-- KPI Card Style -->
         <Style x:Key="KpiCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="#FF1E1E1E"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="20"/>
             <Setter Property="Margin" Value="10"/>
@@ -25,7 +25,7 @@
 
         <!-- Module Tile Style -->
         <Style x:Key="ModuleTileStyle" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="#FF1E1E1E"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="16"/>
             <Setter Property="Margin" Value="8"/>
@@ -90,7 +90,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header Section -->
-        <Border Grid.Row="0" Background="White" Padding="20,16" BorderBrush="#E1E1E1" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="#FF1E1E1E" Padding="20,16" BorderBrush="#FF4A5568" BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -193,7 +193,7 @@
             </Grid.RowDefinitions>
 
             <!-- Filter and Status Bar -->
-            <Border Grid.Row="0" Background="White" Padding="20,12" BorderBrush="#E1E1E1" BorderThickness="0,1,0,1">
+            <Border Grid.Row="0" Background="#FF1E1E1E" Padding="20,12" BorderBrush="#FF4A5568" BorderThickness="0,1,0,1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -216,7 +216,7 @@
             </Border>
 
             <!-- Loading Overlay -->
-            <Border Grid.Row="1" Background="White" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Grid.Row="1" Background="#FF1E1E1E" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <ProgressBar IsIndeterminate="True" Width="200" Height="4" Margin="0,0,0,16"/>
                     <TextBlock Text="{Binding LoadingMessage}" FontSize="14" Foreground="#605E5C" HorizontalAlignment="Center"/>
