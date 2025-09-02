@@ -240,12 +240,12 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<ValidationResult> ValidateAsync(
+        public async Task<MandADiscoverySuite.Migration.ValidationResult> ValidateAsync(
             GroupPolicyItem item, 
             MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
-            var validationResult = new ValidationResult
+            var validationResult = new MandADiscoverySuite.Migration.ValidationResult
             {
                 ValidationType = "GroupPolicyMigration",
                 StartTime = DateTime.UtcNow,
@@ -349,12 +349,12 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<RollbackResult> RollbackAsync(
+        public async Task<MandADiscoverySuite.Migration.RollbackResult> RollbackAsync(
             GpoMigrationResult result, 
             MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
-            var rollbackResult = new RollbackResult
+            var rollbackResult = new MandADiscoverySuite.Migration.RollbackResult
             {
                 RollbackAction = "DeleteGpo",
                 StartTime = DateTime.UtcNow,
@@ -420,7 +420,7 @@ namespace MandADiscoverySuite.MigrationProviders
             MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
-            return type == MigrationType.GroupPolicy;
+            return type == MandADiscoverySuite.Models.MigrationType.GroupPolicy;
         }
 
         public async Task<TimeSpan> EstimateDurationAsync(
