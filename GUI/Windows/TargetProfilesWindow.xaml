@@ -66,6 +66,10 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="160"/>
@@ -84,8 +88,26 @@
                     <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,8,8" Text="Client Secret:"/>
                     <PasswordBox Grid.Row="3" Grid.Column="1" x:Name="SecretBox" PasswordChanged="SecretBox_PasswordChanged"/>
 
-                    <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,8,8" Text="Scopes (CSV):"/>
-                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ScopesCsv, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,8,8" Text="Tenant Name:"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Selected.TenantName, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,8,8" Text="SharePoint URL:"/>
+                    <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Selected.SharePointUrl, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,8,8" Text="SQL Connection:"/>
+                    <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding Selected.SqlConnectionString, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,8,8" Text="Scopes (CSV):"/>
+                    <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding ScopesCsv, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <!-- Connection Status Display -->
+                    <TextBlock Grid.Row="8" Grid.Column="0" Margin="0,8,8,8" Text="Last Test:" FontSize="11" Foreground="#666"/>
+                    <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding Selected.LastConnectionTest, StringFormat='{}{0:MM/dd HH:mm}'}" FontSize="11" Foreground="#666"/>
+                        <TextBlock Text=" - " FontSize="11" Foreground="#666" Visibility="{Binding Selected.LastConnectionTest, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        <TextBlock Text="{Binding Selected.LastConnectionTestMessage}" FontSize="11" Foreground="#666"
+                                   Visibility="{Binding Selected.LastConnectionTest, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    </StackPanel>
                 </Grid>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

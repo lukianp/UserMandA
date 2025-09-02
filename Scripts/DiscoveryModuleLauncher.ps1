@@ -64,8 +64,63 @@ try {
     Import-Module (Join-Path $ModulesPath "Core\CredentialLoader.psm1") -Force -ErrorAction SilentlyContinue
     Import-Module (Join-Path $ModulesPath "Authentication\SessionManager.psm1") -Force -ErrorAction SilentlyContinue
     Import-Module (Join-Path $ModulesPath "Authentication\AuthenticationService.psm1") -Force -ErrorAction SilentlyContinue
+
+    # Check prerequisites before loading discovery module
+    Write-Host "Checking prerequisites..." -ForegroundColor Yellow
+    try {
+        $prerequisitesPath = Join-Path $ScriptRoot "Prerequisites\PrerequisitesManager.psm1"
+        if (Test-Path $prerequisitesPath) {
+            Import-Module $prerequisitesPath -Force -ErrorAction Stop
+
+            $prereqCheck = Invoke-PrerequisitesCheck -ModuleName $ModuleName -Install -Interactive:$false
+
+            if (-not $prereqCheck.OverallSuccess) {
+                Write-Host ""
+                Write-Host "=== Prerequisites Check Failed ===" -ForegroundColor Red
+                Write-Host "Some prerequisites are missing or not properly installed." -ForegroundColor Red
+                Write-Host "Prerequisites that need attention:" -ForegroundColor Yellow
+
+                foreach ($prereqError in $prereqCheck.Errors) {
+                    if ($prereqError -is [string]) {
+                        Write-Host "  ✗ $prereqError" -ForegroundColor Red
+                    } else {
+                        Write-Host "  ✗ $($prereqError.Name): $($prereqError.Description)" -ForegroundColor Red
+                    }
+                }
+
+                foreach ($prereqWarning in $prereqCheck.Warnings) {
+                    Write-Host "  ! $($prereqWarning.Name): $($prereqWarning.Description)" -ForegroundColor Yellow
+                }
+
+                Write-Host ""
+                Write-Host "Discovery cannot proceed without required prerequisites." -ForegroundColor Red
+                Write-Host "Please resolve the missing prerequisites and try again." -ForegroundColor Yellow
+                Write-Host ""
+
+                # Don't exit - let the user see the error first
+                Write-Host "Press any key to continue (discovery will likely fail)..." -ForegroundColor Gray
+                Read-Host
+
+            } else {
+                if ($prereqCheck.Installed.Count -gt 0) {
+                    Write-Host "Prerequisites check passed!" -ForegroundColor Green
+                }
+                if ($prereqCheck.Warnings.Count -gt 0) {
+                    Write-Host "Prerequisites check completed with some warnings." -ForegroundColor Yellow
+                }
+            }
+        } else {
+            Write-Host "Prerequisites manager not found, skipping automated check" -ForegroundColor Gray
+        }
+    } catch {
+        Write-Host "Prerequisites check failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "Continuing without automated prerequisites verification" -ForegroundColor Gray
+    }
+
+    # Import discovery module after prerequisites check
+    Write-Host "Loading discovery module..." -ForegroundColor Yellow
     Import-Module (Join-Path $ModulesPath "Discovery\$ModuleName.psm1") -Force
-    
+
     # Initialize company profile
     Write-Host "Initializing company profile..." -ForegroundColor Yellow
     $profileManager = Get-CompanyProfileManager -CompanyName $CompanyName

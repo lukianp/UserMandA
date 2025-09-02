@@ -109,32 +109,95 @@ namespace MandADiscoverySuite.ViewModels
                 System.Windows.MessageBox.Show("Select a profile first.");
                 return;
             }
+            
             var company = await GetCompanyAsync();
             var secret = await TargetProfileService.Instance.GetClientSecretAsync(company, Selected.Id);
+            
             if (string.IsNullOrWhiteSpace(Selected.TenantId) || string.IsNullOrWhiteSpace(Selected.ClientId) || string.IsNullOrWhiteSpace(secret))
             {
                 System.Windows.MessageBox.Show("Missing credentials. Please fill Tenant ID, Client ID and Client Secret.");
                 return;
             }
+
+            // Create a temporary profile for testing with the current secret
+            var testProfile = new TargetProfile
+            {
+                Name = Selected.Name,
+                TenantId = Selected.TenantId,
+                ClientId = Selected.ClientId,
+                TenantName = Selected.TenantName,
+                SharePointUrl = Selected.SharePointUrl,
+                SqlConnectionString = Selected.SqlConnectionString,
+                Environment = Selected.Environment,
+                Domain = Selected.Domain
+            };
+            testProfile.SetClientSecret(secret);
+
             try
             {
-                // Attempt app-only Graph connection and a simple query
-                var credential = new Azure.Identity.ClientSecretCredential(Selected.TenantId, Selected.ClientId, secret);
-                var graph = new Microsoft.Graph.GraphServiceClient(credential);
+                // Use the enhanced connectivity service for comprehensive health check
+                var connectionService = new ConnectionTestService();
+                var healthCheck = await connectionService.PerformHealthCheckAsync(testProfile);
 
-                // Probe basic endpoints
-                var org = await graph.Organization.Request().Top(1).GetAsync();
-                var users = await graph.Users.Request().Top(1).GetAsync();
+                // Build results message
+                var message = $"Connection Test Results ({healthCheck.TotalDuration.TotalSeconds:F1}s):\n\n";
+                message += $"Overall Health: {(healthCheck.OverallHealth ? "✅ HEALTHY" : "❌ UNHEALTHY")}\n\n";
 
-                System.Windows.MessageBox.Show(
-                    $"Connected to tenant. Org: {org?.FirstOrDefault()?.DisplayName ?? "Unknown"}. Users visible: {users?.Count ?? 0}.",
-                    "Target Profiles",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Information);
+                // Show results for each service
+                foreach (var service in healthCheck.ServiceResults)
+                {
+                    var status = service.Value.Success ? "✅" : "❌";
+                    message += $"{status} {service.Key}: {service.Value.Message}\n";
+                    
+                    if (!service.Value.Success && service.Value.Details.ContainsKey("Guidance"))
+                    {
+                        message += $"   💡 {service.Value.Details["Guidance"]}\n";
+                    }
+                }
+
+                // Show blocking issues
+                if (healthCheck.BlockingIssues.Any())
+                {
+                    message += "\n🚨 Blocking Issues:\n";
+                    foreach (var issue in healthCheck.BlockingIssues)
+                    {
+                        message += $"• {issue}\n";
+                    }
+                }
+
+                // Show warnings
+                if (healthCheck.Warnings.Any())
+                {
+                    message += "\n⚠️ Warnings:\n";
+                    foreach (var warning in healthCheck.Warnings)
+                    {
+                        message += $"• {warning}\n";
+                    }
+                }
+
+                var messageBoxImage = healthCheck.OverallHealth 
+                    ? System.Windows.MessageBoxImage.Information 
+                    : System.Windows.MessageBoxImage.Warning;
+
+                System.Windows.MessageBox.Show(message, "Connectivity Health Check", System.Windows.MessageBoxButton.OK, messageBoxImage);
+
+                // Update the profile with test results
+                Selected.LastConnectionTest = DateTime.UtcNow;
+                Selected.LastConnectionTestResult = healthCheck.OverallHealth;
+                Selected.LastConnectionTestMessage = healthCheck.OverallHealth ? "All critical services connected" : "Some services failed";
+                
+                // Save the updated profile
+                await TargetProfileService.Instance.CreateOrUpdateAsync(company, Selected, null);
             }
             catch (System.Exception ex)
             {
-                System.Windows.MessageBox.Show($"Connection failed: {ex.Message}", "Target Profiles", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Connection test failed: {ex.Message}", "Target Profiles", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                
+                // Update profile with failed test result
+                Selected.LastConnectionTest = DateTime.UtcNow;
+                Selected.LastConnectionTestResult = false;
+                Selected.LastConnectionTestMessage = $"Test failed: {ex.Message}";
+                await TargetProfileService.Instance.CreateOrUpdateAsync(company, Selected, null);
             }
         }
 

@@ -84,6 +84,9 @@ function Invoke-PowerBIDiscovery {
         [Parameter(Mandatory=$true)]
         [string]$SessionId
     )
+
+    # START: Initialize session-based authentication (match other discovery modules)
+    Write-PowerBILog -Level "HEADER" -Message "=== M&A Power BI Discovery Module Starting ===" -Context $Context
     
     # START: Enhanced discovery context validation and initialization
     Write-PowerBILog -Level "HEADER" -Message "=== M&A Power BI Discovery Module Starting ===" -Context $Context
@@ -144,35 +147,49 @@ function Invoke-PowerBIDiscovery {
             Write-PowerBILog -Level "WARN" -Message "Power BI Management module not available, some features may be limited" -Context $Context
         }
         
-        # Check Power BI connection
-        $usePowerBI = $false
-        $useGraph = $false
-        
+        # 4. AUTHENTICATE & CONNECT - Use session-based authentication like other discovery modules
+        Write-PowerBILog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
         try {
-            # Try to connect to Power BI service
-            $powerBIProfile = Get-PowerBIAccessToken -AsString -ErrorAction SilentlyContinue
-            if ($powerBIProfile) {
-                $usePowerBI = $true
-                Write-PowerBILog -Level "SUCCESS" -Message "Power BI service connection available" -Context $Context
+            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+
+            # Validate the connection by making a test Graph API call
+            $testUri = "https://graph.microsoft.com/v1.0/organization"
+            $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
+
+            if (-not $testResponse) {
+                throw "Graph connection test failed - no response"
             }
+
+            Write-PowerBILog -Level "SUCCESS" -Message "Graph connection validated via session authentication" -Context $Context
         } catch {
-            Write-PowerBILog -Level "DEBUG" -Message "Power BI service connection not available: $($_.Exception.Message)" -Context $Context
-        }
-        
-        # Check Graph connection as fallback
-        try {
-            $mgContext = Get-MgContext -ErrorAction SilentlyContinue
-            if ($mgContext -and $mgContext.Account) {
-                $useGraph = $true
-                Write-PowerBILog -Level "SUCCESS" -Message "Microsoft Graph connection available. Account: $($mgContext.Account)" -Context $Context
-            }
-        } catch {
-            Write-PowerBILog -Level "DEBUG" -Message "Microsoft Graph not available: $($_.Exception.Message)" -Context $Context
-        }
-        
-        if (-not $usePowerBI -and -not $useGraph) {
-            $result.AddError("Neither Power BI service nor Microsoft Graph connection is available. Please connect using Connect-PowerBIServiceAccount or Connect-MgGraph.", $null, "Connection Validation")
+            $result.AddError("Graph authentication validation failed: $($_.Exception.Message)", $_.Exception, "Connection Validation")
             return $result
+        }
+
+        # 5. CHECK POWER BI MANAGEMENT MODULE AND CONNECTION
+        $usePowerBI = $false
+        $useGraph = $true  # We now have Graph connection via session
+
+        try {
+            # First check if MicrosoftPowerBIMgmt module is available
+            if (Get-Module -Name MicrosoftPowerBIMgmt -ListAvailable -ErrorAction SilentlyContinue) {
+                Write-PowerBILog -Level "INFO" -Message "MicrosoftPowerBIMgmt module found, attempting Power BI service connection..." -Context $Context
+
+                # Try to get Power BI access token
+                $powerBIToken = Get-PowerBIAccessToken -AsString -ErrorAction SilentlyContinue
+                if ($powerBIToken) {
+                    $usePowerBI = $true
+                    Write-PowerBILog -Level "SUCCESS" -Message "Power BI service connection available via management module" -Context $Context
+                } else {
+                    Write-PowerBILog -Level "WARN" -Message "Power BI Management module found but no active connection, will use Graph fallback" -Context $Context
+                }
+            } else {
+                Write-PowerBILog -Level "INFO" -Message "MicrosoftPowerBIMgmt module not available, using Graph-only discovery mode" -Context $Context
+                $result.AddWarning("Power BI Management module not available, using Graph-only Power BI discovery which may have limited functionality. Consider installing MicrosoftPowerBIMgmt module for full discovery capabilities.")
+            }
+        } catch {
+            Write-PowerBILog -Level "WARN" -Message "Power BI Management module connection failed, falling back to Graph: $($_.Exception.Message)" -Context $Context
+            $result.AddWarning("Power BI Management module connection failed, falling back to Graph-only discovery.")
         }
 
         # 4. DISCOVERY EXECUTION
@@ -438,38 +455,107 @@ function Invoke-PowerBIDiscovery {
             }
         }
 
-        # 4g. Additional Graph API discoveries (if available and Power BI service not available)
+        # 4g. Enhanced Graph API Power BI discoveries (fallback when PowerBI service not available)
         if ($useGraph -and -not $usePowerBI) {
-            Write-PowerBILog -Level "INFO" -Message "Attempting Power BI discovery via Graph API..." -Context $Context
+            Write-PowerBILog -Level "INFO" -Message "Starting Graph API Power BI discovery fallback..." -Context $Context
+
+            # Discover Power BI Workspaces (Groups with PowerBI resource provisioning)
             try {
-                # Try to get Power BI groups/workspaces via Graph
-                $graphGroups = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/groups?`$filter=groupTypes/any(c:c eq 'Unified') and resourceProvisioningOptions/any(c:c eq 'PowerBI')" -Method GET -ErrorAction SilentlyContinue
-                
+                Write-PowerBILog -Level "DEBUG" -Message "Discovering Power BI workspaces via Graph API..." -Context $Context
+                $graphGroups = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/groups?`$filter=groupTypes/any(c:c eq 'Unified') and resourceProvisioningOptions/any(c:c eq 'PowerBI')&`$top=1000" -Method GET -ErrorAction Stop
+
                 if ($graphGroups -and $graphGroups.value) {
                     foreach ($group in $graphGroups.value) {
                         $discoveryData.Statistics.TotalWorkspaces++
-                        
+                        $discoveryData.Statistics.GroupWorkspaces++
+
                         $workspaceInfo = @{
                             WorkspaceId = $group.id
                             Name = $group.displayName
                             Description = $group.description
-                            Type = 'Group'
+                            Type = 'Graph-Fallback'
                             CreatedDateTime = $group.createdDateTime
                             Mail = $group.mail
                             MailEnabled = $group.mailEnabled
                             SecurityEnabled = $group.securityEnabled
                             Visibility = $group.visibility
+                            GraphSource = $true
                         }
-                        
+
                         $discoveryData.Workspaces += $workspaceInfo
+                        Write-PowerBILog -Level "DEBUG" -Message "Discovered workspace via Graph: $($workspaceInfo.Name)" -Context $Context
                     }
-                    
+
                     Write-PowerBILog -Level "SUCCESS" -Message "Discovered $($discoveryData.Statistics.TotalWorkspaces) workspaces via Graph API" -Context $Context
+
+                    # Try to get additional metadata for each workspace
+                    foreach ($workspace in $discoveryData.Workspaces.Where({$_.GraphSource})) {
+                        try {
+                            # Get group members (basic user information)
+                            $members = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/groups/$($workspace.WorkspaceId)/members?`$top=50" -Method GET -ErrorAction SilentlyContinue
+                            if ($members -and $members.value) {
+                                $memberList = $members.value | ForEach-Object {
+                                    switch ($_.PSObject.TypeNames[0]) {
+                                        "Microsoft.Graph.PowerShell.Models.MicrosoftGraphUser" { "$($_.displayName) (User):$($_.userPrincipalName)" }
+                                        "Microsoft.Graph.PowerShell.Models.MicrosoftGraphGroup" { "$($_.displayName) (Group)" }
+                                        default { "$($_.displayName) ($($_.PSObject.TypeNames[0]))" }
+                                    }
+                                }
+                                $workspace.Users = ($memberList -join ';').Substring(0, [Math]::Min($memberList.Length, 1000))
+                            }
+                        } catch {
+                            Write-PowerBILog -Level "DEBUG" -Message "Could not get members for workspace $($workspace.Name): $($_.Exception.Message)" -Context $Context
+                        }
+                    }
                 }
-                
+
             } catch {
-                Write-PowerBILog -Level "DEBUG" -Message "Graph API Power BI discovery not available: $($_.Exception.Message)" -Context $Context
+                Write-PowerBILog -Level "WARN" -Message "Graph API Power BI workspace discovery failed: $($_.Exception.Message)" -Context $Context
+                $result.AddWarning("Graph API workspace discovery failed, limited workspace information available.")
             }
+
+            # Discover Power BI administrator information via organization API
+            try {
+                Write-PowerBILog -Level "DEBUG" -Message "Discovering Power BI tenant settings via Graph API..." -Context $Context
+                $organization = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/organization" -Method GET -ErrorAction Stop
+
+                if ($organization -and $organization.value -and $organization.value.Count -gt 0) {
+                    $tenantInfo = $organization.value[0]
+
+                    # Try to get settings (Power BI root directory info)
+                    try {
+                        $settings = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/groups/$($tenantInfo.id)/settings" -Method GET -ErrorAction SilentlyContinue
+                        if ($settings -and $settings.value) {
+                            # Look for Power BI-related settings
+                            $tenantSettings = $settings.value | Where-Object { $_.displayName -like "*Power*" -or $_.templateId -like "*Power*" } | Select-Object -First 5
+
+                            if ($tenantSettings) {
+                                foreach ($setting in $tenantSettings) {
+                                    $settingInfo = @{
+                                        SettingName = $setting.displayName
+                                        SettingId = $setting.id
+                                        TemplateId = $setting.templateId
+                                        TenantId = $tenantInfo.id
+                                        TenantDisplayName = $tenantInfo.displayName
+                                        GraphSource = $true
+                                    }
+                                    $discoveryData.TenantSettings += $settingInfo
+                                }
+                                Write-PowerBILog -Level "SUCCESS" -Message "Discovered $($discoveryData.TenantSettings.Count) tenant settings via Graph API" -Context $Context
+                            }
+                        }
+                    } catch {
+                        Write-PowerBILog -Level "DEBUG" -Message "Could not get Power BI tenant settings: $($_.Exception.Message)" -Context $Context
+                    }
+                }
+
+            } catch {
+                Write-PowerBILog -Level "DEBUG" -Message "Graph API tenant settings discovery failed: $($_.Exception.Message)" -Context $Context
+            }
+
+            # Add fallback statistics and summary
+            Write-PowerBILog -Level "INFO" -Message "Graph API Power BI discovery completed. Statistics: $($discoveryData.Statistics.TotalWorkspaces) workspaces ($($discoveryData.Statistics.GroupWorkspaces) via Graph), $($discoveryData.TenantSettings.Count) settings" -Context $Context
+            Write-PowerBILog -Level "WARN" -Message "Graph-only discovery provides limited information. Install MicrosoftPowerBIMgmt module for comprehensive discovery." -Context $Context
         }
 
         Write-PowerBILog -Level "SUCCESS" -Message "Completed Power BI discovery" -Context $Context

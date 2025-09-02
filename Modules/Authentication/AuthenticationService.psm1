@@ -272,7 +272,9 @@ function Connect-ToMicrosoftGraphService {
             'Microsoft.Graph.Groups',
             'Microsoft.Graph.Files',
             'Microsoft.Graph.Sites',
-            'Microsoft.Graph.DirectoryObjects'
+            'Microsoft.Graph.DirectoryObjects',
+            'Microsoft.Graph.Identity.DirectoryManagement',
+            'Microsoft.Graph.Identity.SignIns'
         )
 
         $importedModules = @()

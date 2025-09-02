@@ -1,185 +1,206 @@
-# ✅ Azure/Active Directory Unified User Data Integration - COMPLETED
+# Prerequisites Manager - RSAT ActiveDirectory Module Setup Guide
 
-## 📊 Project Status Summary
+## Overview
+This document describes the automated prerequisite system implemented to resolve the "ActiveDirectory PowerShell module is not available" error in M&A Discovery Suite discovery modules.
 
-**Status**: ✅ **COMPLETED**
-**Date**: January 2025
-**Infrastructure Readiness**: 100%
+## Problem Solved
+- **Issue**: MultiDomainForestDiscovery and other AD-dependent modules failed with hard-stop errors when RSAT tools weren't installed
+- **Root Cause**: Windows 11 systems often don't have Remote Server Administration Tools (RSAT) installed by default
+- **Solution**: Automated prerequisites checking and installation system
 
----
+## Automated Solution Components
 
-## 🔧 Completed Implementation
+### 1. PrerequisitesManager.psm1
+**Location**: `Scripts/Prerequisites/PrerequisitesManager.psm1`
 
-### ✅ **UI Infrastructure (UsersView.xaml)**
-- **Source Column**: Automatically displays "Azure AD" or "Active Directory" for each user
-- **Color Coding**: Azure AD users appear in BLUE (#FF3182CE), Active Directory users in GREEN (#FF38A169)
-- **Data Binding**: Binds to `UserSource` property in `UserData` model
-- **Fully Functional**: No UI code changes required - ready for immediate use
+**Features**:
+- ✅ Windows version detection and compatibility checking
+- ✅ Administrator privilege verification
+- ✅ PowerShell module availability testing
+- ✅ Automatic RSAT Active Directory module installation
+- ✅ Comprehensive error handling and fallback mechanisms
+- ✅ Windows 10/11 RSAT installation using both DISM and Add-WindowsCapability methods
+- ✅ Manual installation instructions when automatic installation fails
 
-### ✅ **Data Service Infrastructure (CsvDataServiceNew.cs)**
-- **Auto-Detection**: Automatically identifies user sources based on CSV filename patterns:
-  - `*Users*.csv` - Generic pattern
-  - `AzureUsers.csv` - Specifically Azure AD users
-  - `ActiveDirectoryUsers.csv` - Specifically Active Directory users
-- **Smart Categorization**: Sets `UserSource` property based on filename analysis
-- **Header Mapping**: Flexible header mapping handles variations in Azure AD vs AD schemas
+### 2. Enhanced Discovery Launcher
+**Location**: `Scripts/DiscoveryModuleLauncher.ps1`
 
-### ✅ **Data Model Infrastructure (UserData.cs)**
-- **UserSource Property**: Added `string? UserSource` parameter to record constructor
-- **Backward Compatibility**: Maintains compatibility with existing code while enabling new features
-- **Immutability**: Preserves record immutability design principles
+**Improvements**:
+- ✅ Prerequisites check runs before module loading
+- ✅ Automatic installation attempts for missing components
+- ✅ Clear progress indicators and user feedback
+- ✅ Graceful error handling with actionable guidance
+- ✅ Continues execution with warnings for non-critical issues
 
-### ✅ **Discovery Module Infrastructure (AzureDiscovery.psm1)**
-- **Enhanced Features**: Comprehensive user discovery with enhanced fields
-- **Multi-Source Support**: Handles both Azure AD and Active Directory data
-- **CSV Output**: Generates properly formatted CSV files with source identification
-- **Robust Error Handling**: Comprehensive error handling and logging
+### 3. Improved Module Error Handling
+**Location**: `Modules/Discovery/MultiDomainForestDiscovery.psm1`
 
-### ✅ **Module Consolidation**
-- **5 → 1**: Successfully consolidated 5 overlapping Azure discovery modules into 1 unified module
-- **Module Registry**: Updated to v2.0 with consolidated "Azure Infrastructure Discovery" tile
-- **Deployment Scripts**: All scripts updated to use unified module
-- **Documentation**: Complete documentation created for unified capabilities
+**Enhancements**:
+- ✅ Detailed installation instructions in error messages
+- ✅ Multiple installation method guidance (GUI and command-line)
+- ✅ Platform-specific instructions for Windows 10 and Windows 11
+- ✅ Separate error handling for module availability vs. import failures
 
-### ✅ **Test Data Generation**
-- **AzureUsers.csv**: 3 sample users with Azure AD patterns (@contoso.com domains)
-- **ActiveDirectoryUsers.csv**: 3 sample users with Active Directory patterns (@contoso.local domains)
-- **Verified Format**: Both files use proper CSV headers and data structure
+## Usage
 
----
+### Automatic Prerequisite Check
+When running any discovery module through the launcher, prerequisites are automatically checked:
 
-## 🎯 How Unified Integration Works
-
-### Automatic Detection Flow
-```mermaid
-graph LR
-    A[CSV Files] --> B[CsvDataServiceNew.LoadUsersAsync]
-    B --> C[File Pattern Detection]
-    C --> D{Is Azure?}
-    D -->|Yes| E[UserSource = "Azure AD"]
-    D -->|No| F{Is ActiveDirectory?}
-    F -->|Yes| G[UserSource = "Active Directory"]
-    F -->|No| H[UserSource = "Unknown"]
-    E --> I[Display in UI]
-    G --> I
-    H --> I
+```powershell
+.\Scripts\DiscoveryModuleLauncher.ps1 -ModuleName "MultiDomainForestDiscovery" -CompanyName "YourCompany"
 ```
 
-### UI Color Coding Logic
-- **Azure AD** → BLUE text (#FF3182CE)
-- **Active Directory** → GREEN text (#FF38A169)
-- Enhanced visual distinction in the Source column
+### Manual Prerequisites Check
+You can also run prerequisites check manually:
 
-### File Pattern Recognition
-| Pattern | Source | Color |
-|---------|---------|-------|
-| `AzureUsers.csv` | Azure AD | Blue |
-| `Azure*Users*.csv` | Azure AD | Blue |
-| `*Azure*Users*.csv` | Azure AD | Blue |
-| `ActiveDirectoryUsers.csv` | Active Directory | Green |
-| `*ActiveDirectory*Users*.csv` | Active Directory | Green |
+```powershell
+Import-Module .\Scripts\Prerequisites\PrerequisitesManager.psm1
+$prereqCheck = Invoke-PrerequisitesCheck -ModuleName "MultiDomainForestDiscovery" -Install -Interactive:$false
+```
+
+## Installation Methods Supported
+
+### 1. Automatic Installation (Recommended)
+The system automatically attempts these methods in order:
+1. **Add-WindowsCapability** (Windows 10/11 modern method)
+2. **DISM.exe** (Command-line deployment method)
+3. **Fallback manual instructions**
+
+### 2. Manual Installation Instructions
+
+#### Windows 11
+1. Press `Win + I` to open Settings
+2. Go to `Apps` > `Optional features`
+3. Click `View features`
+4. Search for `RSAT: Active Directory Domain Services Tools`
+5. Check the checkbox and click `Install`
+6. Wait for completion and restart PowerShell
+
+#### Windows 10
+1. Press `Win + I` to open Settings
+2. Go to `Apps` > `Apps & features` > `Optional features`
+3. Click `Add a feature`
+4. Search for `RSAT: Active Directory Domain Services and Lightweight Directory Services Tools`
+5. Click `Install`
+6. Wait for completion and restart PowerShell
+
+#### Command Line (Windows 10/11)
+```powershell
+# Run PowerShell as Administrator
+dism /online /Add-Capability /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0
+```
+
+## Error Messages and Solutions
+
+### "ActiveDirectory module is not available"
+- **Cause**: RSAT tools not installed
+- **Solution**: Follow installation instructions above
+- **Automatic Resolution**: System will attempt installation if `-Install` parameter is used
+
+### "Failed to import ActiveDirectory module"
+- **Cause**: RSAT installed but import failed
+- **Solution**: Check permissions, restart PowerShell, verify installation
+- **Common Fix**: Restart PowerShell session after RSAT installation
+
+### "Administrator privileges required"
+- **Cause**: RSAT installation requires elevated privileges
+- **Solution**: Run PowerShell as Administrator
+- **Prevention**: Launch discovery with admin privileges
+
+## Compatibility
+
+### Supported Operating Systems
+- ✅ Windows 10 (1809+)
+- ✅ Windows 11 (all versions)
+- ✅ Windows Server 2016+
+- ✅ Windows Server 2019+
+- ✅ Windows Server 2022+
+
+### Unsupported Scenarios
+- ❌ Windows 7/8/8.1 (RSAT installation methods differ)
+- ❌ Non-Windows operating systems
+- ❌ Windows builds without RSAT capabilities
+
+## Troubleshooting
+
+### Prerequisites Check Shows Red Warnings
+- Run PowerShell as Administrator
+- Check Windows version compatibility
+- Verify internet connectivity for online installation
+
+### Installation Fails Silently
+- Check Windows Event Logs for errors
+- Try manual installation method
+- Consider downloading and installing RSAT MSU package manually
+
+### Module Import Still Fails After Installation
+- Restart PowerShell session completely
+- Check environment path variables
+- Verify module files are present in `C:\Windows\System32\WindowsPowerShell\v1.0\Modules\ActiveDirectory`
+
+## Future Improvements
+
+### Planned Enhancements
+- [ ] Support for Windows Server Core installations
+- [ ] Offline RSAT package detection and installation
+- [ ] Proxy server compatibility for online installations
+- [ ] Enhanced error reporting with diagnostic information
+- [ ] Integration with other discovery modules (Azure, Exchange, etc.)
+
+### Additional Module Support
+The PrerequisitesManager framework is extensible and can be enhanced to support:
+- Azure PowerShell modules (`Az` or `AzureRM`)
+- Exchange Online Management module
+- SharePoint Online Management Shell
+- Teams PowerShell module
+
+## Technical Notes
+
+### PrerequisitesManager Architecture
+- **Class-based design**: Uses PowerShell classes for type safety and organization
+- **Modular validation**: Separate functions for different validation types
+- **Fallback mechanisms**: Multiple installation methods with graceful degradation
+- **Logging integration**: Compatible with existing ComprehensiveErrorHandling system
+
+### Security Considerations
+- Installation requires administrator privileges
+- Changes Windows Optional Features (requires restart)
+- No third-party dependencies required
+- All operations use built-in Windows APIs
+
+## Version History
+
+### v1.0.0 (2025-09-02)
+- ✅ Initial implementation
+- ✅ Windows 10/11 RSAT automatic installation
+- ✅ Enhanced discovery launcher integration
+- ✅ Comprehensive error messages and guidance
+- ✅ Manual installation fallback instructions
 
 ---
 
-## 📋 UI Testing Instructions
+## Quick Reference
 
-### Immediate Test (No UI Changes Required)
+### Quick Commands
+```powershell
+# Check prerequisites
+.\Scripts\Prerequisites\PrerequisitesManager.psm1
+Invoke-PrerequisitesCheck -ModuleName "MultiDomainForestDiscovery"
 
-1. **Create Test Data**: Place the generated CSV files in your data directory
-2. **Launch GUI Application**: Start the application normally
-3. **Navigate to Users View**: Click on the Users tab/panel
-4. **Verify Display**:
-   - Should show **6 total users** (3 Azure, 3 Active Directory)
-   - **Source column** should display user sources
-   - **Color coding** should be automatically applied
-   - **Azure AD** users in BLUE, **Active Directory** users in GREEN
+# Install RSAT manually (Admin required)
+dism /online /Add-Capability /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0
 
-### Expected Initial Load Behavior
+# Run discovery with automatic prerequisites
+.\Scripts\DiscoveryModuleLauncher.ps1 -ModuleName "MultiDomainForestDiscovery" -CompanyName "YourCompany"
 ```
-🎯 Expected Results:
-├── 🔵 Alice Johnson (Azure AD) - BLUE text
-├── 🔵 Bob Wilson (Azure AD) - BLUE text
-├── 🔵 Charlie Brown (Azure AD) - BLUE text
-├── 🟢 David Lee (Active Directory) - GREEN text
-├── 🟢 Emma Davis (Active Directory) - GREEN text
-└── 🟢 Frank Miller (Active Directory) - GREEN text
-```
+
+### Emergency Manual Steps
+1. Open PowerShell as Administrator
+2. Run: `Get-WindowsCapability -Name "Rsat.ActiveDirectory*" -Online`
+3. Run: `Add-WindowsCapability -Online -Name "Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0"`
+4. Restart PowerShell
+5. Test: `Import-Module ActiveDirectory`
 
 ---
 
-## 🔮 Ready for Production
-
-### Infrastructure Status
-- ✅ **UI Ready**: Color-coded display automatically active
-- ✅ **Data Import Ready**: Auto-detection working immediately
-- ✅ **Discovery Module Ready**: Enhanced AzureDiscovery.psm1 deployed
-- ✅ **Backward Compatibility**: No breaking changes to existing code
-
-### Next Steps (Optional Enhancements)
-- [ ] **Source Filtering**: Add dropdown filters (Azure AD Only / Active Directory Only / All)
-- [ ] **Enhanced Search**: Filter by source within search functionality
-- [ ] **Source Statistics**: Show counts by source in dashboard widgets
-- [ ] **Advanced Grouping**: Group users by source in data grids
-
-### Testing with Real Data
-The enhanced AzureDiscovery.psm1 will automatically generate CSV files with proper naming conventions when run against real Azure AD and Active Directory environments.
-
----
-
-## 📝 Technical Implementation Details
-
-### UI Implementation (UsersView.xaml lines 156-172)
-```xaml
-<DataGridTextColumn Header="Source" Binding="{Binding UserSource}" Width="120">
-    <DataGridTextColumn.ElementStyle>
-        <Style TargetType="TextBlock">
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding UserSource}" Value="Azure AD">
-                    <Setter Property="Foreground" Value="#FF3182CE"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding UserSource}" Value="Active Directory">
-                    <Setter Property="Foreground" Value="#FF38A169"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-    </DataGridTextColumn.ElementStyle>
-</DataGridTextColumn>
-```
-
-### Service Implementation (CsvDataServiceNew.cs)
-```csharp
-// Automatic source detection logic
-var fileName = Path.GetFileName(filePath).ToLowerInvariant();
-var userSource = fileName.Contains("azure") ? "Azure AD" :
-               fileName.Contains("activedirectory") ? "Active Directory" :
-               "Unknown";
-```
-
-### Model Implementation (UserData.cs)
-```csharp
-public record UserData(
-    // ... other properties ...
-    string? UserSource = null
-) {
-    // Compatibility properties maintained
-}
-```
-
----
-
-## 🎉 Conclusion
-
-The unified Azure/Active Directory user data integration has been **successfully completed** with **100% infrastructure readiness**. The system automatically:
-
-1. **Detects** user sources from CSV file names
-2. **Categorizes** users as Azure AD or Active Directory
-3. **Displays** sources with appropriate color coding
-4. **Maintains** full backward compatibility
-
-The feature is **immediately functional** upon deploying the enhanced AzureDiscovery.psm1 module and can handle mixed user environments seamlessly.
-
----
-*Generated: 2025-01-01*
-*Testing Data Created: AzureUsers.csv (3 users), ActiveDirectoryUsers.csv (3 users)*
+*This solution ensures smooth deployment and operation of Active Directory-dependent discovery modules across Windows 10 and Windows 11 environments.*

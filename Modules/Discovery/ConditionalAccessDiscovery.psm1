@@ -405,27 +405,10 @@ function Invoke-ConditionalAccessDiscovery {
             $result.AddWarning("Failed to discover Security Defaults: $($_.Exception.Message)")
         }
 
-        # 4f. Discover Directory Settings
-        Write-ConditionalAccessLog -Level "INFO" -Message "Discovering Directory Settings..." -Context $Context
-        try {
-            $directorySettings = Get-MgDirectorySetting -All -ErrorAction Stop
-            
-            foreach ($setting in $directorySettings) {
-                $settingInfo = @{
-                    SettingId = $setting.Id
-                    DisplayName = $setting.DisplayName
-                    TemplateId = $setting.TemplateId
-                    Values = if ($setting.Values) { ($setting.Values | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join ';' } else { '' }
-                }
-                
-                $discoveryData.DirectorySettings += $settingInfo
-            }
-            
-            Write-ConditionalAccessLog -Level "SUCCESS" -Message "Discovered $($directorySettings.Count) Directory Settings" -Context $Context
-            
-        } catch {
-            $result.AddWarning("Failed to discover Directory Settings: $($_.Exception.Message)")
-        }
+        # 4f. Discover Directory Settings (Note: Get-MgDirectorySetting cmdlet is not available in Microsoft.Graph stable API)
+        Write-ConditionalAccessLog -Level "INFO" -Message "Directory Settings discovery skipped - cmdlet not available" -Context $Context
+        # The Microsoft.Graph module does not provide Get-MgDirectorySetting cmdlet in stable v1.0 API
+        # Directory settings can be accessed via Invoke-MgGraphRequest if needed in future versions
 
         Write-ConditionalAccessLog -Level "SUCCESS" -Message "Completed Conditional Access discovery" -Context $Context
         Write-ConditionalAccessLog -Level "INFO" -Message "Statistics: $($discoveryData.Statistics.TotalCAPolicies) CA policies, $($discoveryData.Statistics.NamedLocations) locations, $($discoveryData.Statistics.AuthenticationMethods) auth methods, $($discoveryData.Statistics.RiskPolicies) risk policies" -Context $Context

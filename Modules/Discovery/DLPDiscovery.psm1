@@ -21,6 +21,16 @@
     Requires: PowerShell 5.1+, Microsoft.Graph modules, Exchange Online Management
 #>
 
+# Import required modules if available
+try {
+    # Import Authentication Service for connection management
+    if (Get-Module -Name AuthenticationService -ListAvailable -ErrorAction SilentlyContinue) {
+        Import-Module AuthenticationService -ErrorAction SilentlyContinue
+    }
+} catch {
+    Write-Debug "AuthenticationService module not available: $($_.Exception.Message)"
+}
+
 # Fallback logging function if Write-MandALog is not available
 if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
     function Write-MandALog {
@@ -121,38 +131,109 @@ function Invoke-DLPDiscovery {
         
         Ensure-Path -Path $outputPath
 
-        # 3. VALIDATE CONNECTION METHODS
-        Write-DLPLog -Level "INFO" -Message "Checking available connection methods..." -Context $Context
-        
+        # 3. ESTABLISH AND VALIDATE CONNECTION METHODS
+        Write-DLPLog -Level "INFO" -Message "Establishing and validating connection methods..." -Context $Context
+
         $useGraph = $false
         $useExchangeOnline = $false
-        
-        # Check Microsoft Graph connection
+
+        # Try to establish Microsoft Graph connection using Authentication Service
         try {
-            $mgContext = Get-MgContext -ErrorAction SilentlyContinue
-            if ($mgContext -and $mgContext.Account) {
-                $useGraph = $true
-                Write-DLPLog -Level "SUCCESS" -Message "Microsoft Graph connection available. Account: $($mgContext.Account)" -Context $Context
+            Write-DLPLog -Level "INFO" -Message "Attempting to connect to Microsoft Graph..." -Context $Context
+
+            # Import Authentication Service if available
+            if (Get-Module -Name AuthenticationService -ErrorAction SilentlyContinue) {
+                try {
+                    $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId -ErrorAction Stop
+                    if ($graphAuth -and $graphAuth.Connected) {
+                        $useGraph = $true
+                        Write-DLPLog -Level "SUCCESS" -Message "Microsoft Graph connection established successfully" -Context $Context
+                    }
+                } catch {
+                    Write-DLPLog -Level "DEBUG" -Message "AuthenticationService Graph connection failed: $($_.Exception.Message)" -Context $Context
+                }
+            }
+
+            # Fallback: Check for existing Microsoft Graph connection
+            if (-not $useGraph) {
+                $mgContext = Get-MgContext -ErrorAction SilentlyContinue
+                if ($mgContext -and $mgContext.Account) {
+                    $useGraph = $true
+                    Write-DLPLog -Level "SUCCESS" -Message "Microsoft Graph connection already available. Account: $($mgContext.Account)" -Context $Context
+                } else {
+                    Write-DLPLog -Level "DEBUG" -Message "No existing Microsoft Graph connection found" -Context $Context
+                }
             }
         } catch {
-            Write-DLPLog -Level "DEBUG" -Message "Microsoft Graph not available: $($_.Exception.Message)" -Context $Context
+            Write-DLPLog -Level "DEBUG" -Message "Microsoft Graph connection establishment failed: $($_.Exception.Message)" -Context $Context
         }
-        
-        # Check Exchange Online connection
+
+        # Try to establish Exchange Online connection
         try {
-            $exoSession = Get-ConnectionInformation -ErrorAction SilentlyContinue
-            if ($exoSession -and $exoSession.State -eq 'Connected') {
-                $useExchangeOnline = $true
-                Write-DLPLog -Level "SUCCESS" -Message "Exchange Online connection available" -Context $Context
+            Write-DLPLog -Level "INFO" -Message "Attempting to connect to Exchange Online..." -Context $Context
+
+            # Check for existing Exchange Online connection first
+            try {
+                $exoSession = Get-ConnectionInformation -ErrorAction SilentlyContinue
+                if ($exoSession -and $exoSession.State -eq 'Connected') {
+                    $useExchangeOnline = $true
+                    Write-DLPLog -Level "SUCCESS" -Message "Exchange Online connection already available" -Context $Context
+                }
+            } catch {
+                Write-DLPLog -Level "DEBUG" -Message "Checking existing Exchange Online connection failed: $($_.Exception.Message)" -Context $Context
+            }
+
+            # If no existing connection, try to establish one
+            if (-not $useExchangeOnline) {
+                # Try using Connect-ExchangeOnline if available and credentials exist
+                if ((Get-Command Connect-ExchangeOnline -ErrorAction SilentlyContinue) -and
+                    $Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
+
+                    try {
+                        Write-DLPLog -Level "INFO" -Message "Attempting to connect to Exchange Online using provided credentials..." -Context $Context
+
+                        # Convert client secret to secure string
+                        $secureSecret = if ($Configuration.ClientSecret -is [SecureString]) {
+                            $Configuration.ClientSecret
+                        } else {
+                            ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
+                        }
+
+                        # Import required modules
+                        if (Get-Module -Name ExchangeOnlineManagement -ListAvailable -ErrorAction SilentlyContinue) {
+                            Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
+                        }
+
+                        # Establish connection
+                        Connect-ExchangeOnline -AppId $Configuration.ClientId -CertificateThumbprint $null -Organization $Configuration.TenantId -ShowBanner:$false
+
+                        # Verify connection
+                        $verifySession = Get-ConnectionInformation -ErrorAction SilentlyContinue
+                        if ($verifySession -and $verifySession.State -eq 'Connected') {
+                            $useExchangeOnline = $true
+                            Write-DLPLog -Level "SUCCESS" -Message "Exchange Online connection established successfully" -Context $Context
+                        }
+                    } catch {
+                        Write-DLPLog -Level "DEBUG" -Message "Exchange Online connection attempt failed: $($_.Exception.Message)" -Context $Context
+                    }
+                } else {
+                    Write-DLPLog -Level "DEBUG" -Message "Exchange Online Management module not available or credentials incomplete" -Context $Context
+                }
             }
         } catch {
-            Write-DLPLog -Level "DEBUG" -Message "Exchange Online not available: $($_.Exception.Message)" -Context $Context
+            Write-DLPLog -Level "DEBUG" -Message "Exchange Online connection establishment failed: $($_.Exception.Message)" -Context $Context
         }
-        
+
         if (-not $useGraph -and -not $useExchangeOnline) {
-            $result.AddError("Neither Microsoft Graph nor Exchange Online connection is available. Please connect using Connect-MgGraph or Connect-ExchangeOnline.", $null, "Connection Validation")
+            $result.AddError("Could not establish connection to either Microsoft Graph or Exchange Online. Please ensure credentials are properly configured and required modules are installed.", $null, "Connection Validation")
             return $result
         }
+
+        # Log available connections
+        $availableServices = @()
+        if ($useGraph) { $availableServices += "Microsoft Graph" }
+        if ($useExchangeOnline) { $availableServices += "Exchange Online" }
+        Write-DLPLog -Level "INFO" -Message "Connected to services: $($availableServices -join ', ')" -Context $Context
 
         # 4. DISCOVERY EXECUTION
         Write-DLPLog -Level "HEADER" -Message "Starting DLP Discovery Process" -Context $Context

@@ -27,6 +27,9 @@ namespace MandADiscoverySuite.Models
         public string Environment { get; set; } = string.Empty; // OnPremises, Azure, Hybrid
         public string Domain { get; set; } = string.Empty;
         public string Region { get; set; } = string.Empty;
+        public string TenantName { get; set; } = string.Empty; // For SharePoint URL construction
+        public string SharePointUrl { get; set; } = string.Empty; // Custom SharePoint URL if not standard
+        public string SqlConnectionString { get; set; } = string.Empty; // Azure SQL connection string
         
         // Connection credentials - all encrypted
         public string UsernameEncrypted { get; set; } = string.Empty;

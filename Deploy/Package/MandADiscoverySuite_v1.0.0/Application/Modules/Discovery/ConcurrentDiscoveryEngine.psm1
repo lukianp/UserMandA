@@ -243,9 +243,9 @@ class ConcurrentDiscoveryEngine {
     }
     
     [string]GetJobScript([string]$JobType) {
-        switch ($JobType) {
+        $scriptBlock = switch ($JobType) {
             'UserBatch' {
-                return @'
+                @'
 param($Users, $BatchSize, $SessionId, $Configuration)
 
 $results = @()
@@ -254,10 +254,9 @@ $processed = 0
 
 for ($i = 0; $i -lt $totalUsers; $i += $BatchSize) {
     $batch = $Users[$i..([Math]::Min($i + $BatchSize - 1, $totalUsers - 1))]
-    
+
     foreach ($user in $batch) {
         try {
-            # Enhanced user processing with additional API calls
             $userResult = @{
                 Id = $user.id
                 UserPrincipalName = $user.userPrincipalName
@@ -266,17 +265,12 @@ for ($i = 0; $i -lt $totalUsers; $i += $BatchSize) {
                 BatchId = $i / $BatchSize
                 SessionId = $SessionId
             }
-            
+
             $results += $userResult
             $processed++
-            
-            # Progress indication
-            if ($processed % 10 -eq 0) {
-                Write-Progress -Activity "Processing Users" -Status "$processed of $totalUsers" -PercentComplete (($processed / $totalUsers) * 100)
-            }
-            
+
         } catch {
-            Write-Error "Failed to process user $($user.userPrincipalName): $($_.Exception.Message)"
+            Write-Error "Failed to process user: $($_.Exception.Message)"
         }
     }
 }
@@ -285,7 +279,7 @@ return $results
 '@
             }
             'GroupBatch' {
-                return @'
+                @'
 param($Groups, $BatchSize, $SessionId, $Configuration)
 
 $results = @()
@@ -294,10 +288,9 @@ $processed = 0
 
 for ($i = 0; $i -lt $totalGroups; $i += $BatchSize) {
     $batch = $Groups[$i..([Math]::Min($i + $BatchSize - 1, $totalGroups - 1))]
-    
+
     foreach ($group in $batch) {
         try {
-            # Enhanced group processing
             $groupResult = @{
                 Id = $group.id
                 DisplayName = $group.displayName
@@ -306,16 +299,12 @@ for ($i = 0; $i -lt $totalGroups; $i += $BatchSize) {
                 BatchId = $i / $BatchSize
                 SessionId = $SessionId
             }
-            
+
             $results += $groupResult
             $processed++
-            
-            if ($processed % 5 -eq 0) {
-                Write-Progress -Activity "Processing Groups" -Status "$processed of $totalGroups" -PercentComplete (($processed / $totalGroups) * 100)
-            }
-            
+
         } catch {
-            Write-Error "Failed to process group $($group.displayName): $($_.Exception.Message)"
+            Write-Error "Failed to process group: $($_.Exception.Message)"
         }
     }
 }
@@ -324,12 +313,14 @@ return $results
 '@
             }
             default {
-                return @'
+                @'
 param($Data, $BatchSize, $SessionId, $Configuration)
 return @{ Status = "Unknown job type"; Data = $Data }
 '@
             }
         }
+
+        return $scriptBlock
     }
     
     [hashtable]CompileResults() {
@@ -376,7 +367,7 @@ return @{ Status = "Unknown job type"; Data = $Data }
         
         # Create the runspace pool
         $this.RunspacePool = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspacePool(
-            1, $this.MaxConcurrentJobs, $initialSessionState, $Host
+            1, $this.MaxConcurrentJobs, $initialSessionState, $null
         )
         $this.RunspacePool.Open()
         
@@ -415,7 +406,7 @@ return @{ Status = "Unknown job type"; Data = $Data }
             MemoryUsageGB = $memoryUsage
             ActiveJobs = $this.ActiveJobs.Count
             QueuedJobs = $this.JobQueue.Count
-            ResourceSemaphoreCount = $this.ResourceSemaphore.Release(); $this.ResourceSemaphore.WaitOne(0); $this.ResourceSemaphore.Release()
+            ResourceSemaphoreCount = $this.MaxConcurrentJobs - $this.ActiveJobs.Count
         }
     }
     
@@ -563,8 +554,73 @@ function Stop-ConcurrentDiscovery {
     $Engine.Stop()
 }
 
+function Invoke-ConcurrentDiscoveryEngine {
+    <#
+    .SYNOPSIS
+        Wrapper function for Start-ConcurrentDiscovery to maintain compatibility with launcher script
+    .DESCRIPTION
+        Provides a standardized interface for the discovery launcher while delegating to Start-ConcurrentDiscovery
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context,
+
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId,
+
+        [Parameter(Mandatory=$false)]
+        [int]$MaxConcurrentJobs = 4,
+
+        [Parameter(Mandatory=$false)]
+        [int]$BatchSize = 100,
+
+        [Parameter(Mandatory=$false)]
+        [hashtable]$DiscoveryTasks  # Made optional for launcher compatibility
+    )
+
+    try {
+        Write-Host "Invoking Concurrent Discovery Engine..." -ForegroundColor Cyan
+
+        # If no DiscoveryTasks provided, create a default structure for compatibility
+        if (-not $DiscoveryTasks -or $DiscoveryTasks.Count -eq 0) {
+            Write-Host "No DiscoveryTasks provided, using default concurrent discovery strategy" -ForegroundColor Yellow
+
+            # Create default discovery tasks for common concurrent workloads
+            $DiscoveryTasks = @{
+                'UserDiscovery' = @{
+                    JobType = 'UserBatch'
+                    Data = @() # Will be populated by individual discovery modules
+                }
+                'GroupDiscovery' = @{
+                    JobType = 'GroupBatch'
+                    Data = @() # Will be populated by individual discovery modules
+                }
+                'Default' = @{
+                    JobType = 'Default'
+                    Data = @()
+                }
+            }
+        }
+
+        # Call the main discovery function
+        $results = Start-ConcurrentDiscovery -Configuration $Configuration -Context $Context -SessionId $SessionId -DiscoveryTasks $DiscoveryTasks -MaxConcurrentJobs $MaxConcurrentJobs -BatchSize $BatchSize
+
+        Write-Host "Concurrent Discovery Engine completed successfully" -ForegroundColor Green
+        return $results
+
+    } catch {
+        Write-Error "Invoke-ConcurrentDiscoveryEngine failed: $($_.Exception.Message)"
+        throw
+    }
+}
+
 # Export functions
 Export-ModuleMember -Function @(
     'Start-ConcurrentDiscovery',
-    'Stop-ConcurrentDiscovery'
+    'Stop-ConcurrentDiscovery',
+    'Invoke-ConcurrentDiscoveryEngine'
 )

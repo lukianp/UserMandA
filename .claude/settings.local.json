@@ -70,7 +70,8 @@
       "Bash(./Build-GUI.ps1)",
       "Read(c:\\discoverydata\\ljpops\\Logs/**)",
       "Bash(Test-Path \"MandADiscoverySuite.exe\")",
-      "Read(C:\\discoverydata\\ljpops/**)"
+      "Read(C:\\discoverydata\\ljpops/**)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": [],

@@ -95,19 +95,57 @@ function Invoke-MultiDomainForestDiscovery {
             return $result
         }
         $outputPath = $Context.Paths.RawDataOutput
-        
+        Write-MultiDomainLog -Level "DEBUG" -Message "Output path: $outputPath" -Context $Context
+
         if (-not (Test-Path $outputPath)) {
             New-Item -Path $outputPath -ItemType Directory -Force | Out-Null
         }
 
-        # Check for ActiveDirectory module
+        # Enhanced ActiveDirectory module check with installation guidance
         if (-not (Get-Module -Name ActiveDirectory -ListAvailable)) {
-            $result.AddError("ActiveDirectory PowerShell module is not available", $null, $null)
+            Write-MultiDomainLog -Level "ERROR" -Message "ActiveDirectory PowerShell module is not available" -Context $Context
+
+            # Provide helpful installation guidance
+            $errorMessage = @"
+ActiveDirectory PowerShell module is required but not available.
+To install the required RSAT tools:
+
+For Windows 10:
+1. Go to Settings > Apps > Optional Features > Add a feature
+2. Search for "RSAT: Active Directory Domain Services and Lightweight Directory Services Tools"
+3. Install the feature
+4. Restart PowerShell and try again
+
+For Windows 11:
+1. Go to Settings > Apps > Optional Features > View features
+2. Search for "RSAT: Active Directory Domain Services Tools"
+3. Check the box and click Install
+4. Wait for installation to complete
+5. Restart PowerShell and try again
+
+Alternative (Command Line):
+- Run PowerShell as Administrator
+- Execute: dism /online /Get-CapabilityInfo /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0
+- Execute: dism /online /Add-Capability /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0
+
+If RSAT is not available in this Windows build, consider using a domain-joined machine or manual discovery methods.
+"@
+
+            $result.AddError($errorMessage, $null, $null)
+            Write-MultiDomainLog -Level "WARN" -Message "Discovery cannot proceed without ActiveDirectory module. See error details above." -Context $Context
             return $result
         }
 
-        Import-Module ActiveDirectory -ErrorAction Stop
-        Write-MultiDomainLog -Level "SUCCESS" -Message "ActiveDirectory module loaded" -Context $Context
+        # Try to import ActiveDirectory module
+        try {
+            Import-Module ActiveDirectory -ErrorAction Stop
+            Write-MultiDomainLog -Level "SUCCESS" -Message "ActiveDirectory module loaded successfully" -Context $Context
+        } catch {
+            $importErrorMessage = "Failed to import ActiveDirectory module: $($_.Exception.Message). Ensure you have appropriate permissions and the RSAT tools are properly installed."
+            $result.AddError($importErrorMessage, $_.Exception, $null)
+            Write-MultiDomainLog -Level "ERROR" -Message $importErrorMessage -Context $Context
+            return $result
+        }
 
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
