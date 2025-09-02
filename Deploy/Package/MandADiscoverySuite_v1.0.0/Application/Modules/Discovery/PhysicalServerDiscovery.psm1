@@ -218,7 +218,7 @@ function Invoke-PhysicalServerDiscovery {
         $result.AddError("A critical error occurred during physical server discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-PhysicalServerLog -Level "HEADER" -Message "Physical server discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

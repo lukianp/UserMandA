@@ -207,7 +207,7 @@ function Invoke-EnvironmentRiskAssessment {
         $result.AddError("A critical error occurred during risk assessment: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-RiskLog -Level "HEADER" -Message "Risk assessment finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Overall Risk Level: $($result.OverallRisk.Level)." -Context $Context
     }
 

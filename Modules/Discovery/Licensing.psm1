@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
@@ -163,7 +163,7 @@ function Invoke-LicensingDiscovery {
     } finally {
         Disconnect-MgGraph -ErrorAction SilentlyContinue
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-LicensingLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 
@@ -182,3 +182,4 @@ function Ensure-Path {
 }
 
 Export-ModuleMember -Function Invoke-LicensingDiscovery
+

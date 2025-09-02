@@ -95,7 +95,6 @@ function Invoke-PhysicalServer {
         ExecutionId = [guid]::NewGuid().ToString()
         AddError = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
         AddWarning = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-        Complete = { $this.EndTime = Get-Date }.GetNewClosure()
     }
 
     try {
@@ -218,7 +217,7 @@ function Invoke-PhysicalServer {
         $result.AddError("A critical error occurred during physical server discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-PhysicalServerLog -Level "HEADER" -Message "Physical server discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

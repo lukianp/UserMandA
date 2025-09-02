@@ -155,4 +155,5 @@ namespace MandADiscoverySuite.Services.Migration
         /// </summary>
         Task<SqlAgentJobResult> MigrateSqlAgentJobsAsync(List<string> jobIds, string targetInstanceId, MigrationContext context, CancellationToken cancellationToken = default);
     }
+
 }

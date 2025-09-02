@@ -205,7 +205,7 @@ function Invoke-ScheduledTaskDiscovery {
         $result.AddError("A critical error occurred during scheduled task discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-ScheduledTaskLog -Level "HEADER" -Message "Scheduled task discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

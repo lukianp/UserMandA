@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 
@@ -49,7 +49,7 @@ function Invoke-SQLServerDiscovery {
         [string]$SessionId
     )
 
-    Write-SQLServerLog -Level "HEADER" -Message "🚀 Starting SQL Server Discovery (v5.0 - Enhanced Enterprise Discovery)" -Context $Context
+    Write-SQLServerLog -Level "HEADER" -Message "?? Starting SQL Server Discovery (v5.0 - Enhanced Enterprise Discovery)" -Context $Context
     Write-SQLServerLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -77,11 +77,11 @@ function Invoke-SQLServerDiscovery {
         # Perform SQL Server discovery
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
-        Write-SQLServerLog -Level "INFO" -Message "📊 Starting comprehensive SQL Server discovery" -Context $Context
+        Write-SQLServerLog -Level "INFO" -Message "?? Starting comprehensive SQL Server discovery" -Context $Context
         
         # Discovery phase 1: Find SQL Server instances via multiple methods
         $discoveredInstances = Find-SQLServerInstances -Context $Context
-        Write-SQLServerLog -Level "SUCCESS" -Message "✅ Found $($discoveredInstances.Count) potential SQL Server instances" -Context $Context
+        Write-SQLServerLog -Level "SUCCESS" -Message "? Found $($discoveredInstances.Count) potential SQL Server instances" -Context $Context
         
         # Discovery phase 2: Collect detailed information for each instance
         foreach ($instance in $discoveredInstances) {
@@ -140,7 +140,7 @@ function Invoke-SQLServerDiscovery {
         $result.AddError("A critical error occurred during SQL Server discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-SQLServerLog -Level "HEADER" -Message "SQL Server discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 
@@ -165,7 +165,7 @@ function Find-SQLServerInstances {
     )
     
     $instances = [System.Collections.ArrayList]::new()
-    Write-SQLServerLog -Level "INFO" -Message "🔍 Starting SQL Server instance discovery using multiple detection methods" -Context $Context
+    Write-SQLServerLog -Level "INFO" -Message "?? Starting SQL Server instance discovery using multiple detection methods" -Context $Context
     
     # Method 1: WMI Service detection
     try {
@@ -485,7 +485,7 @@ ORDER BY d.name
                     $null = $databases.Add($dbData)
                 }
                 
-                Write-SQLServerLog -Level "SUCCESS" -Message "✅ Collected database details for instance $($instance.InstanceName): $($dbResults.Count) databases" -Context $Context
+                Write-SQLServerLog -Level "SUCCESS" -Message "? Collected database details for instance $($instance.InstanceName): $($dbResults.Count) databases" -Context $Context
             }
             
         } catch {
@@ -493,7 +493,7 @@ ORDER BY d.name
         }
     }
     
-    Write-SQLServerLog -Level "SUCCESS" -Message "🎉 Database detail collection completed. Total databases: $($databases.Count)" -Context $Context
+    Write-SQLServerLog -Level "SUCCESS" -Message "?? Database detail collection completed. Total databases: $($databases.Count)" -Context $Context
     return $databases
 }
 
@@ -506,7 +506,7 @@ function Get-SQLServerSecurityAssessment {
     )
     
     $securityFindings = [System.Collections.ArrayList]::new()
-    Write-SQLServerLog -Level "INFO" -Message "🔐 Performing security assessment for $($Instance.InstanceName)..." -Context $Context
+    Write-SQLServerLog -Level "INFO" -Message "?? Performing security assessment for $($Instance.InstanceName)..." -Context $Context
     
     try {
         $serverName = if ($Instance.InstanceName -eq 'MSSQLSERVER') { $env:COMPUTERNAME } else { "$env:COMPUTERNAME\$($Instance.InstanceName)" }
@@ -586,10 +586,10 @@ ORDER BY RiskLevel DESC, sp.name
             $null = $securityFindings.Add($finding)
         }
         
-        Write-SQLServerLog -Level "SUCCESS" -Message "✅ Security assessment completed: $($securityFindings.Count) findings" -Context $Context
+        Write-SQLServerLog -Level "SUCCESS" -Message "? Security assessment completed: $($securityFindings.Count) findings" -Context $Context
         
     } catch {
-        Write-SQLServerLog -Level "WARN" -Message "⚠️ Security assessment failed: $($_.Exception.Message)" -Context $Context
+        Write-SQLServerLog -Level "WARN" -Message "?? Security assessment failed: $($_.Exception.Message)" -Context $Context
     }
     
     return $securityFindings
@@ -604,7 +604,7 @@ function Get-SQLServerPerformanceMetrics {
     )
     
     $perfMetrics = [System.Collections.ArrayList]::new()
-    Write-SQLServerLog -Level "INFO" -Message "📊 Collecting performance metrics for $($Instance.InstanceName)..." -Context $Context
+    Write-SQLServerLog -Level "INFO" -Message "?? Collecting performance metrics for $($Instance.InstanceName)..." -Context $Context
     
     try {
         $serverName = if ($Instance.InstanceName -eq 'MSSQLSERVER') { $env:COMPUTERNAME } else { "$env:COMPUTERNAME\$($Instance.InstanceName)" }
@@ -659,13 +659,14 @@ ORDER BY wait_time_ms DESC
         
         $null = $perfMetrics.Add($metric)
         
-        Write-SQLServerLog -Level "SUCCESS" -Message "✅ Performance metrics collected successfully" -Context $Context
+        Write-SQLServerLog -Level "SUCCESS" -Message "? Performance metrics collected successfully" -Context $Context
         
     } catch {
-        Write-SQLServerLog -Level "WARN" -Message "⚠️ Performance metrics collection failed: $($_.Exception.Message)" -Context $Context
+        Write-SQLServerLog -Level "WARN" -Message "?? Performance metrics collection failed: $($_.Exception.Message)" -Context $Context
     }
     
     return $perfMetrics
 }
 
 Export-ModuleMember -Function Invoke-SQLServerDiscovery
+

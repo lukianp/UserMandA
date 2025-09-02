@@ -102,8 +102,13 @@ function Invoke-VMwareDiscovery {
             $adResults = $adSearcher.FindAll()
             
             foreach ($result in $adResults) {
-                $computerName = $result.Properties["name"][0]
-                $dnsHostName = $result.Properties["dnshostname"][0]
+                if ($result -and $result.Properties -and $result.Properties["name"]) {
+                    $computerName = $result.Properties["name"][0]
+                    $dnsHostName = if ($result.Properties["dnshostname"]) { $result.Properties["dnshostname"][0] } else { $computerName }
+                } else {
+                    Write-ModuleLog -ModuleName "VMware" -Message "AD result missing required properties, skipping" -Level "DEBUG"
+                    continue
+                }
                 
                 if ($dnsHostName) {
                     $vCenterServers += @{

@@ -1816,7 +1816,7 @@ function Invoke-ApplicationDiscovery {
         }
 
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
 
         Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Level "HEADER"
     }

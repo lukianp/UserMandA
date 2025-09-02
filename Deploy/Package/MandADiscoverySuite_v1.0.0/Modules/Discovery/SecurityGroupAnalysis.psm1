@@ -219,7 +219,7 @@ function Invoke-SecurityGroupAnalysis {
         $result.AddError("A critical error occurred during security group analysis: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-SecurityGroupLog -Level "HEADER" -Message "Security group analysis finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

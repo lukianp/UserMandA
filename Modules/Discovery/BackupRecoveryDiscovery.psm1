@@ -222,7 +222,7 @@ function Invoke-BackupRecoveryDiscovery {
         $result.AddError("A critical error occurred during backup discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-BackupLog -Level "HEADER" -Message "Backup discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

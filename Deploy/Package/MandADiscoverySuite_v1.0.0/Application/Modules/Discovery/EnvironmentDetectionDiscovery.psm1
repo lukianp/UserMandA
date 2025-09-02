@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 
@@ -304,7 +304,7 @@ function Invoke-EnvironmentDetectionDiscovery {
             Disconnect-MgGraph -ErrorAction SilentlyContinue
         }
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-EnvironmentDetectionLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 
@@ -627,3 +627,4 @@ function Get-SoftwareEnvironment {
 }
 
 Export-ModuleMember -Function Invoke-EnvironmentDetectionDiscovery
+

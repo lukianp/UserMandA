@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 # Author: Master Orchestrator
@@ -112,7 +112,7 @@ function Test-ProductionEnvironment {
         [hashtable]$Context = @{}
     )
     
-    Write-InfrastructureLog -Level "INFO" -Message "🔍 Detecting environment type..." -Context $Context
+    Write-InfrastructureLog -Level "INFO" -Message "?? Detecting environment type..." -Context $Context
     
     $productionSignals = @()
     
@@ -151,9 +151,9 @@ function Test-ProductionEnvironment {
     $isProduction = $productionSignals.Count -gt 0
     
     if ($isProduction) {
-        Write-InfrastructureLog -Level "WARN" -Message "⚠️ Production environment detected: $($productionSignals -join ', ')" -Context $Context
+        Write-InfrastructureLog -Level "WARN" -Message "?? Production environment detected: $($productionSignals -join ', ')" -Context $Context
     } else {
-        Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Non-production environment detected" -Context $Context
+        Write-InfrastructureLog -Level "SUCCESS" -Message "? Non-production environment detected" -Context $Context
     }
     
     return @{
@@ -168,7 +168,7 @@ function Find-SystemNmap {
         [hashtable]$Context = @{}
     )
     
-    Write-InfrastructureLog -Level "INFO" -Message "🔍 Searching for system nmap installation..." -Context $Context
+    Write-InfrastructureLog -Level "INFO" -Message "?? Searching for system nmap installation..." -Context $Context
     
     # PRIORITY 1: Check if system-installed nmap is available in PATH (preferred for performance)
     $nmapPath = Get-Command nmap -ErrorAction SilentlyContinue
@@ -177,7 +177,7 @@ function Find-SystemNmap {
             # Verify it's functional by checking version - simplified test
             $versionOutput = & $nmapPath.Source --version 2>$null
             if ($versionOutput -and ($versionOutput[0] -match "Nmap version (\d+\.\d+)")) {
-                Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Found system nmap in PATH: $($nmapPath.Source) (v$($matches[1]))" -Context $Context
+                Write-InfrastructureLog -Level "SUCCESS" -Message "? Found system nmap in PATH: $($nmapPath.Source) (v$($matches[1]))" -Context $Context
                 return @{
                     Path = $nmapPath.Source
                     Version = $matches[1]
@@ -206,7 +206,7 @@ function Find-SystemNmap {
                 # Verify functionality with simplified test
                 $versionOutput = & $path --version 2>$null
                 if ($versionOutput -and ($versionOutput[0] -match "Nmap version (\d+\.\d+)")) {
-                    Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Found system nmap at: $path (v$($matches[1]))" -Context $Context
+                    Write-InfrastructureLog -Level "SUCCESS" -Message "? Found system nmap at: $path (v$($matches[1]))" -Context $Context
                     return @{
                         Path = $path
                         Version = $matches[1]
@@ -220,7 +220,7 @@ function Find-SystemNmap {
         }
     }
     
-    Write-InfrastructureLog -Level "WARN" -Message "⚠️ No functional system nmap installation found" -Context $Context
+    Write-InfrastructureLog -Level "WARN" -Message "?? No functional system nmap installation found" -Context $Context
     return $null
 }
 
@@ -283,7 +283,7 @@ function Install-NmapSilent {
         [hashtable]$Context = @{}
     )
     
-    Write-InfrastructureLog -Level "INFO" -Message "🔧 Attempting silent nmap installation..." -Context $Context
+    Write-InfrastructureLog -Level "INFO" -Message "?? Attempting silent nmap installation..." -Context $Context
     
     try {
         # Check if we have admin rights for silent installation
@@ -291,7 +291,7 @@ function Install-NmapSilent {
         $isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
         
         if (-not $isAdmin) {
-            Write-InfrastructureLog -Level "WARN" -Message "⚠️ Silent installation requires administrator privileges" -Context $Context
+            Write-InfrastructureLog -Level "WARN" -Message "?? Silent installation requires administrator privileges" -Context $Context
             return $null
         }
         
@@ -312,13 +312,13 @@ function Install-NmapSilent {
         
         foreach ($url in $installerUrls) {
             try {
-                Write-InfrastructureLog -Level "INFO" -Message "📥 Downloading nmap installer from: $url" -Context $Context
+                Write-InfrastructureLog -Level "INFO" -Message "?? Downloading nmap installer from: $url" -Context $Context
                 Invoke-WebRequest -Uri $url -OutFile $installerPath -UseBasicParsing -TimeoutSec 60
                 
                 # Verify download
                 if ((Test-Path $installerPath) -and ((Get-Item $installerPath).Length -gt 1MB)) {
                     $downloadSuccess = $true
-                    Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Downloaded nmap installer successfully" -Context $Context
+                    Write-InfrastructureLog -Level "SUCCESS" -Message "? Downloaded nmap installer successfully" -Context $Context
                     break
                 }
             } catch {
@@ -328,7 +328,7 @@ function Install-NmapSilent {
         }
         
         if (-not $downloadSuccess) {
-            Write-InfrastructureLog -Level "ERROR" -Message "❌ Failed to download nmap installer from all sources" -Context $Context
+            Write-InfrastructureLog -Level "ERROR" -Message "? Failed to download nmap installer from all sources" -Context $Context
             return $null
         }
         
@@ -337,50 +337,50 @@ function Install-NmapSilent {
         $npcapPath = "$tempDir\npcap-setup.exe"
         
         try {
-            Write-InfrastructureLog -Level "INFO" -Message "📥 Downloading npcap (packet capture library)..." -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "?? Downloading npcap (packet capture library)..." -Context $Context
             Invoke-WebRequest -Uri $npcapUrl -OutFile $npcapPath -UseBasicParsing -TimeoutSec 60
         } catch {
-            Write-InfrastructureLog -Level "WARN" -Message "⚠️ Failed to download npcap - nmap functionality may be limited" -Context $Context
+            Write-InfrastructureLog -Level "WARN" -Message "?? Failed to download npcap - nmap functionality may be limited" -Context $Context
         }
         
         # Install npcap first (if available) with silent parameters
         if (Test-Path $npcapPath) {
-            Write-InfrastructureLog -Level "INFO" -Message "🔧 Installing npcap silently..." -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "?? Installing npcap silently..." -Context $Context
             $npcapProcess = Start-Process -FilePath $npcapPath -ArgumentList "/S /winpcap_mode=yes" -Wait -PassThru -WindowStyle Hidden
             
             if ($npcapProcess.ExitCode -eq 0) {
-                Write-InfrastructureLog -Level "SUCCESS" -Message "✅ npcap installed successfully" -Context $Context
+                Write-InfrastructureLog -Level "SUCCESS" -Message "? npcap installed successfully" -Context $Context
             } else {
-                Write-InfrastructureLog -Level "WARN" -Message "⚠️ npcap installation may have failed (exit code: $($npcapProcess.ExitCode))" -Context $Context
+                Write-InfrastructureLog -Level "WARN" -Message "?? npcap installation may have failed (exit code: $($npcapProcess.ExitCode))" -Context $Context
             }
         }
         
         # Install nmap with silent parameters
-        Write-InfrastructureLog -Level "INFO" -Message "🔧 Installing nmap silently..." -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Installing nmap silently..." -Context $Context
         $nmapProcess = Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait -PassThru -WindowStyle Hidden
         
         if ($nmapProcess.ExitCode -eq 0) {
-            Write-InfrastructureLog -Level "SUCCESS" -Message "✅ nmap installed successfully" -Context $Context
+            Write-InfrastructureLog -Level "SUCCESS" -Message "? nmap installed successfully" -Context $Context
             
             # Verify installation
             Start-Sleep -Seconds 5  # Allow installation to complete
             $installedNmap = Find-SystemNmap -Context $Context
             
             if ($installedNmap) {
-                Write-InfrastructureLog -Level "SUCCESS" -Message "🎉 Silent nmap installation completed and verified" -Context $Context
+                Write-InfrastructureLog -Level "SUCCESS" -Message "?? Silent nmap installation completed and verified" -Context $Context
                 return $installedNmap
             } else {
-                Write-InfrastructureLog -Level "WARN" -Message "⚠️ nmap installation completed but verification failed" -Context $Context
+                Write-InfrastructureLog -Level "WARN" -Message "?? nmap installation completed but verification failed" -Context $Context
             }
         } else {
-            Write-InfrastructureLog -Level "ERROR" -Message "❌ nmap installation failed (exit code: $($nmapProcess.ExitCode))" -Context $Context
+            Write-InfrastructureLog -Level "ERROR" -Message "? nmap installation failed (exit code: $($nmapProcess.ExitCode))" -Context $Context
         }
         
         # Cleanup
         Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
         
     } catch {
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ Silent installation failed: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "? Silent installation failed: $($_.Exception.Message)" -Context $Context
     }
     
     return $null
@@ -392,28 +392,28 @@ function Install-NmapIfNeeded {
         [hashtable]$Context = @{}
     )
     
-    Write-InfrastructureLog -Level "HEADER" -Message "🔧 Intelligent nmap Management System" -Context $Context
+    Write-InfrastructureLog -Level "HEADER" -Message "?? Intelligent nmap Management System" -Context $Context
     
     # PHASE 1: Check for existing system nmap installation - PRIORITIZE THIS
     $systemNmap = Find-SystemNmap -Context $Context
     if ($systemNmap -and $systemNmap.IsFullyFunctional) {
-        Write-InfrastructureLog -Level "SUCCESS" -Message "🎯 Using system nmap: $($systemNmap.Path) (v$($systemNmap.Version)) - No installation needed!" -Context $Context
+        Write-InfrastructureLog -Level "SUCCESS" -Message "?? Using system nmap: $($systemNmap.Path) (v$($systemNmap.Version)) - No installation needed!" -Context $Context
         return $systemNmap.Path
     } elseif ($systemNmap) {
-        Write-InfrastructureLog -Level "WARN" -Message "⚠️ Found system nmap at $($systemNmap.Path) but functionality test failed" -Context $Context
-        Write-InfrastructureLog -Level "INFO" -Message "🎯 Attempting to use system nmap anyway - may work for basic scans" -Context $Context
+        Write-InfrastructureLog -Level "WARN" -Message "?? Found system nmap at $($systemNmap.Path) but functionality test failed" -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Attempting to use system nmap anyway - may work for basic scans" -Context $Context
         return $systemNmap.Path
     }
     
     # PHASE 2: Only attempt installation if no system nmap found
-    Write-InfrastructureLog -Level "WARN" -Message "⚠️ No system nmap installation found - attempting fallback installation methods..." -Context $Context
+    Write-InfrastructureLog -Level "WARN" -Message "?? No system nmap installation found - attempting fallback installation methods..." -Context $Context
     $silentInstall = Install-NmapSilent -Context $Context
     if ($silentInstall) {
         return $silentInstall.Path
     }
     
     # PHASE 3: Check for embedded nmap in application directory
-    Write-InfrastructureLog -Level "INFO" -Message "🔍 Checking for embedded nmap installations..." -Context $Context
+    Write-InfrastructureLog -Level "INFO" -Message "?? Checking for embedded nmap installations..." -Context $Context
     $embeddedPaths = @(
         "$PSScriptRoot\..\..\Tools\nmap\nmap.exe",
         "$PSScriptRoot\..\..\..\Tools\nmap\nmap.exe", 
@@ -428,8 +428,8 @@ function Install-NmapIfNeeded {
                 $versionOutput = & $embeddedPath --version 2>$null
                 if ($versionOutput -and ($versionOutput[0] -match "Nmap version (\d+\.\d+)")) {
                     $capabilities = Test-NmapCapabilities -NmapPath $embeddedPath -Context $Context
-                    Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Using embedded nmap: $embeddedPath (v$($matches[1])) - $($capabilities.Summary)" -Context $Context
-                    Write-InfrastructureLog -Level "INFO" -Message "💡 Consider installing system nmap for better performance and full capabilities" -Context $Context
+                    Write-InfrastructureLog -Level "SUCCESS" -Message "? Using embedded nmap: $embeddedPath (v$($matches[1])) - $($capabilities.Summary)" -Context $Context
+                    Write-InfrastructureLog -Level "INFO" -Message "?? Consider installing system nmap for better performance and full capabilities" -Context $Context
                     return $embeddedPath
                 }
             } catch {
@@ -440,7 +440,7 @@ function Install-NmapIfNeeded {
     
     # Try to download and install nmap portable
     try {
-        Write-InfrastructureLog -Level "INFO" -Message "📥 Downloading nmap portable..." -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Downloading nmap portable..." -Context $Context
         
         $nmapDir = "C:\Tools\nmap"
         $nmapZip = "$env:TEMP\nmap-portable.zip"
@@ -450,7 +450,7 @@ function Install-NmapIfNeeded {
         }
         
         # Download nmap from multiple fallback sources (only if not embedded)
-        Write-InfrastructureLog -Level "WARN" -Message "⚠️ No embedded nmap found - attempting download as fallback" -Context $Context
+        Write-InfrastructureLog -Level "WARN" -Message "?? No embedded nmap found - attempting download as fallback" -Context $Context
         $nmapUrls = @(
             "https://nmap.org/dist/nmap-7.94-win32.zip",
             "https://github.com/nmap/nmap/releases/download/v7.94/nmap-7.94-win32.zip",
@@ -460,22 +460,22 @@ function Install-NmapIfNeeded {
         $downloadSuccess = $false
         foreach ($nmapUrl in $nmapUrls) {
             try {
-                Write-InfrastructureLog "📥 Trying nmap download from: $nmapUrl" "INFO"
+                Write-InfrastructureLog "?? Trying nmap download from: $nmapUrl" "INFO"
                 Invoke-WebRequest -Uri $nmapUrl -OutFile $nmapZip -UseBasicParsing -TimeoutSec 30
                 if (Test-Path $nmapZip) {
                     $downloadSuccess = $true
-                    Write-InfrastructureLog "✅ Successfully downloaded nmap from: $nmapUrl" "SUCCESS"
+                    Write-InfrastructureLog "? Successfully downloaded nmap from: $nmapUrl" "SUCCESS"
                     break
                 }
             }
             catch {
-                Write-InfrastructureLog "❌ Failed to download from $nmapUrl : $($_.Exception.Message)" "WARN"
+                Write-InfrastructureLog "? Failed to download from $nmapUrl : $($_.Exception.Message)" "WARN"
                 continue
             }
         }
         
         if (-not $downloadSuccess) {
-            Write-InfrastructureLog "⚠️ All nmap download sources failed - continuing with PowerShell alternatives" "WARN"
+            Write-InfrastructureLog "?? All nmap download sources failed - continuing with PowerShell alternatives" "WARN"
             return $false
         }
         
@@ -483,13 +483,13 @@ function Install-NmapIfNeeded {
         try {
             Add-Type -AssemblyName System.IO.Compression.FileSystem
             [System.IO.Compression.ZipFile]::ExtractToDirectory($nmapZip, $nmapDir)
-            Write-InfrastructureLog "✅ Successfully extracted nmap" "SUCCESS"
+            Write-InfrastructureLog "? Successfully extracted nmap" "SUCCESS"
             
             # Clean up the zip file
             Remove-Item $nmapZip -Force -ErrorAction SilentlyContinue
         }
         catch {
-            Write-InfrastructureLog "❌ Failed to extract nmap: $($_.Exception.Message)" "ERROR"
+            Write-InfrastructureLog "? Failed to extract nmap: $($_.Exception.Message)" "ERROR"
             # Clean up the zip file even on failure
             Remove-Item $nmapZip -Force -ErrorAction SilentlyContinue
             return $false
@@ -499,16 +499,16 @@ function Install-NmapIfNeeded {
         $nmapExe = Get-ChildItem -Path $nmapDir -Name "nmap.exe" -Recurse | Select-Object -First 1
         if ($nmapExe) {
             $finalPath = Join-Path $nmapDir $nmapExe.DirectoryName "nmap.exe"
-            Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Successfully installed nmap at: $finalPath" -Context $Context
+            Write-InfrastructureLog -Level "SUCCESS" -Message "? Successfully installed nmap at: $finalPath" -Context $Context
             return $finalPath
         }
         
-        Write-InfrastructureLog -Level "WARN" -Message "⚠️ Downloaded nmap but couldn't find executable" -Context $Context
+        Write-InfrastructureLog -Level "WARN" -Message "?? Downloaded nmap but couldn't find executable" -Context $Context
         return $null
         
     } catch {
-        Write-InfrastructureLog -Level "WARN" -Message "⚠️ Failed to download nmap: $($_.Exception.Message)" -Context $Context
-        Write-InfrastructureLog -Level "INFO" -Message "💡 Continuing without nmap - will use PowerShell alternatives" -Context $Context
+        Write-InfrastructureLog -Level "WARN" -Message "?? Failed to download nmap: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Continuing without nmap - will use PowerShell alternatives" -Context $Context
         return $null
     }
 }
@@ -523,12 +523,12 @@ function Get-ADSitesAndSubnets {
     $adSubnets = @()
     
     try {
-        Write-InfrastructureLog -Level "INFO" -Message "🏢 Discovering AD Sites and Services subnets..." -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Discovering AD Sites and Services subnets..." -Context $Context
         
         # Check if we're in a domain environment
         $computerInfo = Get-ComputerInfo -Property CsDomain, CsDomainRole -ErrorAction SilentlyContinue
         if (-not $computerInfo -or $computerInfo.CsDomain -eq "WORKGROUP") {
-            Write-InfrastructureLog -Level "INFO" -Message "📝 Not in domain environment - skipping AD Sites discovery" -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "?? Not in domain environment - skipping AD Sites discovery" -Context $Context
             return $adSubnets
         }
         
@@ -537,7 +537,7 @@ function Get-ADSitesAndSubnets {
             Import-Module ActiveDirectory -Force -ErrorAction SilentlyContinue
             
             if (Get-Command Get-ADReplicationSubnet -ErrorAction SilentlyContinue) {
-                Write-InfrastructureLog -Level "INFO" -Message "🔍 Querying AD replication subnets..." -Context $Context
+                Write-InfrastructureLog -Level "INFO" -Message "?? Querying AD replication subnets..." -Context $Context
                 
                 $replicationSubnets = Get-ADReplicationSubnet -Filter * -Properties Name, Site, Location, Description -ErrorAction SilentlyContinue
                 
@@ -556,13 +556,13 @@ function Get-ADSitesAndSubnets {
                     $adSubnets += $adSubnetInfo
                 }
                 
-                Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Found $($adSubnets.Count) AD-defined subnets" -Context $Context
+                Write-InfrastructureLog -Level "SUCCESS" -Message "? Found $($adSubnets.Count) AD-defined subnets" -Context $Context
             }
         }
         
         # Fallback: Query AD Sites using LDAP if ActiveDirectory module not available
         if ($adSubnets.Count -eq 0) {
-            Write-InfrastructureLog -Level "INFO" -Message "🔍 Attempting LDAP query for AD Sites..." -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "?? Attempting LDAP query for AD Sites..." -Context $Context
             
             try {
                 $domain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
@@ -575,28 +575,39 @@ function Get-ADSitesAndSubnets {
                 $results = $searcher.FindAll()
                 
                 foreach ($result in $results) {
-                    $subnetDN = $result.Properties["cn"][0]
-                    $siteDN = if ($result.Properties["siteObject"].Count -gt 0) { $result.Properties["siteObject"][0] } else { "" }
-                    
+                    # Defensive property access with null checks
+                    if (-not $result -or -not $result.Properties) {
+                        Write-InfrastructureLog -Level "WARN" -Message "?? Skipping AD subnet result with null/missing Properties" -Context $Context
+                        continue
+                    }
+
+                    $subnetDN = if ($result.Properties["cn"] -and $result.Properties["cn"].Count -gt 0) {
+                        $result.Properties["cn"][0]
+                    } else { "Unknown" }
+
+                    $siteDN = if ($result.Properties["siteObject"] -and $result.Properties["siteObject"].Count -gt 0) {
+                        $result.Properties["siteObject"][0]
+                    } else { "" }
+
                     $siteName = if ($siteDN) {
                         $siteDN -replace "^CN=([^,]+),.*", '$1'
                     } else { "Unknown" }
-                    
+
                     $adSubnetInfo = [PSCustomObject]@{
                         SubnetName = $subnetDN
                         SiteName = $siteName
-                        Location = if ($result.Properties["location"].Count -gt 0) { $result.Properties["location"][0] } else { "" }
-                        Description = if ($result.Properties["description"].Count -gt 0) { $result.Properties["description"][0] } else { "" }
+                        Location = if ($result.Properties["location"] -and $result.Properties["location"].Count -gt 0) { $result.Properties["location"][0] } else { "" }
+                        Description = if ($result.Properties["description"] -and $result.Properties["description"].Count -gt 0) { $result.Properties["description"][0] } else { "" }
                         Source = "AD Sites (LDAP)"
                         Priority = 85  # High priority for AD-defined subnets
                         SubnetType = "AD Infrastructure"
                         BusinessContext = "Domain Infrastructure"
                     }
-                    
+
                     $adSubnets += $adSubnetInfo
                 }
                 
-                Write-InfrastructureLog -Level "SUCCESS" -Message "✅ LDAP query found $($adSubnets.Count) AD subnets" -Context $Context
+                Write-InfrastructureLog -Level "SUCCESS" -Message "? LDAP query found $($adSubnets.Count) AD subnets" -Context $Context
                 
             } catch {
                 Write-InfrastructureLog -Level "DEBUG" -Message "LDAP query failed: $($_.Exception.Message)" -Context $Context
@@ -604,7 +615,7 @@ function Get-ADSitesAndSubnets {
         }
         
     } catch {
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ AD Sites discovery failed: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "? AD Sites discovery failed: $($_.Exception.Message)" -Context $Context
     }
     
     return $adSubnets
@@ -620,7 +631,7 @@ function Get-SubnetsFromDNSZones {
     $dnsSubnets = @()
     
     try {
-        Write-InfrastructureLog -Level "INFO" -Message "🌐 Analyzing DNS zones for subnet discovery..." -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Analyzing DNS zones for subnet discovery..." -Context $Context
         
         # Get DNS server information
         $dnsServers = @()
@@ -636,16 +647,16 @@ function Get-SubnetsFromDNSZones {
         $dnsServers = $dnsServers | Sort-Object -Unique | Where-Object { $_ -and $_ -ne "::1" -and $_ -ne "127.0.0.1" }
         
         if ($dnsServers.Count -eq 0) {
-            Write-InfrastructureLog -Level "INFO" -Message "📝 No DNS servers found for zone analysis" -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "?? No DNS servers found for zone analysis" -Context $Context
             return $dnsSubnets
         }
         
-        Write-InfrastructureLog -Level "INFO" -Message "🔍 Found $($dnsServers.Count) DNS servers for zone analysis" -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Found $($dnsServers.Count) DNS servers for zone analysis" -Context $Context
         
         # Try to get reverse DNS zones (which indicate subnet ranges)
         foreach ($dnsServer in $dnsServers) {
             try {
-                Write-InfrastructureLog -Level "DEBUG" -Message "🔍 Querying DNS server: $dnsServer" -Context $Context
+                Write-InfrastructureLog -Level "DEBUG" -Message "?? Querying DNS server: $dnsServer" -Context $Context
                 
                 # Alternative: Try to resolve common gateway addresses to infer subnets
                 $commonGateways = @("1", "254", "100", "200")
@@ -686,10 +697,10 @@ function Get-SubnetsFromDNSZones {
         # Remove duplicates
         $dnsSubnets = $dnsSubnets | Sort-Object SubnetName -Unique
         
-        Write-InfrastructureLog -Level "SUCCESS" -Message "✅ DNS analysis found $($dnsSubnets.Count) potential subnets" -Context $Context
+        Write-InfrastructureLog -Level "SUCCESS" -Message "? DNS analysis found $($dnsSubnets.Count) potential subnets" -Context $Context
         
     } catch {
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ DNS zone analysis failed: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "? DNS zone analysis failed: $($_.Exception.Message)" -Context $Context
     }
     
     return $dnsSubnets
@@ -707,7 +718,7 @@ function Classify-NetworkSegments {
     $classifiedSegments = @()
     
     try {
-        Write-InfrastructureLog -Level "INFO" -Message "🏗️ Classifying network segments with business context..." -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "??? Classifying network segments with business context..." -Context $Context
         
         foreach ($subnet in $AllSubnets) {
             $segment = $subnet.PSObject.Copy()
@@ -805,10 +816,10 @@ function Classify-NetworkSegments {
         $userCount = ($classifiedSegments | Where-Object { $_.SegmentType -match "User" }).Count
         $mgmtCount = ($classifiedSegments | Where-Object { $_.SegmentType -match "Management" }).Count
         
-        Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Classified $($classifiedSegments.Count) segments: $infraCount infrastructure, $userCount user, $mgmtCount management" -Context $Context
+        Write-InfrastructureLog -Level "SUCCESS" -Message "? Classified $($classifiedSegments.Count) segments: $infraCount infrastructure, $userCount user, $mgmtCount management" -Context $Context
         
     } catch {
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ Network segment classification failed: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "? Network segment classification failed: $($_.Exception.Message)" -Context $Context
     }
     
     return $classifiedSegments
@@ -824,7 +835,7 @@ function Get-NetworkSubnets {
     $subnets = @()
     
     try {
-        Write-InfrastructureLog -Level "INFO" -Message "🌐 Discovering network subnets..." -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Discovering network subnets..." -Context $Context
         
         # Get all network adapters with IP addresses
         $adapters = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
@@ -869,7 +880,7 @@ function Get-NetworkSubnets {
         }
         
         # Enhance with enterprise subnet discovery
-        Write-InfrastructureLog -Level "INFO" -Message "🏢 Enhancing with enterprise subnet discovery..." -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Enhancing with enterprise subnet discovery..." -Context $Context
         
         # Get AD Sites and Services subnets
         $adSubnets = Get-ADSitesAndSubnets -Configuration $Configuration -Context $Context
@@ -948,14 +959,14 @@ function Get-NetworkSubnets {
         
         # Classify all discovered subnets with business intelligence
         if ($subnets.Count -gt 0) {
-            Write-InfrastructureLog -Level "INFO" -Message "🧠 Applying intelligent subnet classification..." -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "?? Applying intelligent subnet classification..." -Context $Context
             $subnets = Classify-NetworkSegments -AllSubnets $subnets -Configuration $Configuration -Context $Context
         }
         
-        Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Discovered $($subnets.Count) network subnets with intelligent classification" -Context $Context
+        Write-InfrastructureLog -Level "SUCCESS" -Message "? Discovered $($subnets.Count) network subnets with intelligent classification" -Context $Context
         
     } catch {
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ Failed to discover subnets: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "? Failed to discover subnets: $($_.Exception.Message)" -Context $Context
     }
     
     return $subnets
@@ -1032,7 +1043,7 @@ function Get-AdaptiveScanParameters {
         $scanParams.BatchSize = [Math]::Min($scanParams.BatchSize, 20)
     }
     
-    Write-InfrastructureLog -Level "DEBUG" -Message "🎯 Adaptive scan params for $($Subnet.SegmentType): $($scanParams.TimingTemplate), max-rate=$($scanParams.MaxRate), ports=$($scanParams.PortRange.Count)" -Context $Context
+    Write-InfrastructureLog -Level "DEBUG" -Message "?? Adaptive scan params for $($Subnet.SegmentType): $($scanParams.TimingTemplate), max-rate=$($scanParams.MaxRate), ports=$($scanParams.PortRange.Count)" -Context $Context
     
     return $scanParams
 }
@@ -1049,7 +1060,7 @@ function Invoke-ProductionSafeNmapScan {
     )
     
     if (-not $NmapPath -or -not (Test-Path $NmapPath)) {
-        Write-InfrastructureLog -Level "WARN" -Message "⚠️ Nmap not available, using PowerShell alternatives for $Target" -Context $Context
+        Write-InfrastructureLog -Level "WARN" -Message "?? Nmap not available, using PowerShell alternatives for $Target" -Context $Context
         return Invoke-ProductionSafePowerShellScan -Target $Target -SubnetInfo $SubnetInfo -Context $Context
     }
     
@@ -1071,10 +1082,10 @@ function Invoke-ProductionSafeNmapScan {
     # Test environment and require approval if production
     $envTest = Test-ProductionEnvironment -Context $Context
     if ($envTest.IsProduction -and $config.RequireProductionApproval) {
-        Write-InfrastructureLog -Level "WARN" -Message "🚨 Production environment detected. Administrator approval required." -Context $Context
+        Write-InfrastructureLog -Level "WARN" -Message "?? Production environment detected. Administrator approval required." -Context $Context
         $approval = Read-Host "Continue with production-safe scanning? (type 'YES' to continue)"
         if ($approval -ne "YES") {
-            Write-InfrastructureLog -Level "INFO" -Message "❌ Scan cancelled by administrator" -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "? Scan cancelled by administrator" -Context $Context
             return @()
         }
     }
@@ -1088,7 +1099,7 @@ function Invoke-ProductionSafeNmapScan {
         
         switch ($ScanType) {
             "ping" {
-                Write-InfrastructureLog -Level "INFO" -Message "🔍 Running production-safe nmap ping scan on $Target..." -Context $Context
+                Write-InfrastructureLog -Level "INFO" -Message "?? Running production-safe nmap ping scan on $Target..." -Context $Context
                 $nmapArgs = @(
                     "-sn",                    # Ping scan only
                     "-T$($config.TimingTemplate)", # Adaptive timing
@@ -1099,7 +1110,7 @@ function Invoke-ProductionSafeNmapScan {
                 )
             }
             "port" {
-                Write-InfrastructureLog -Level "INFO" -Message "🔍 Running adaptive nmap port scan on $Target..." -Context $Context
+                Write-InfrastructureLog -Level "INFO" -Message "?? Running adaptive nmap port scan on $Target..." -Context $Context
                 $safePortList = $config.PortRange -join ","
                 $nmapArgs = @(
                     "-sS",                    # SYN scan
@@ -1112,7 +1123,7 @@ function Invoke-ProductionSafeNmapScan {
                 )
             }
             "service" {
-                Write-InfrastructureLog -Level "INFO" -Message "🔍 Running adaptive nmap service scan on $Target..." -Context $Context
+                Write-InfrastructureLog -Level "INFO" -Message "?? Running adaptive nmap service scan on $Target..." -Context $Context
                 $safePortList = $config.PortRange -join ","
                 $nmapArgs = @(
                     "-sV",                   # Version detection
@@ -1130,14 +1141,14 @@ function Invoke-ProductionSafeNmapScan {
         # Add XML output
         $nmapArgs += @("-oX", $outputFile)
         
-        Write-InfrastructureLog -Level "DEBUG" -Message "🔧 nmap command: $NmapPath $($nmapArgs -join ' ')" -Context $Context
+        Write-InfrastructureLog -Level "DEBUG" -Message "?? nmap command: $NmapPath $($nmapArgs -join ' ')" -Context $Context
         
         $process = Start-Process -FilePath $NmapPath -ArgumentList $nmapArgs -NoNewWindow -PassThru -RedirectStandardError "$env:TEMP\nmap_error.log"
         
         # Wait with timeout - adaptive based on scan parameters
         $timeoutMs = if ($config.Timeout -match "(\d+)s") { [int]$matches[1] * 1000 } else { 60000 }
         if (-not $process.WaitForExit($timeoutMs)) {
-            Write-InfrastructureLog -Level "WARN" -Message "⚠️ Nmap scan timeout - terminating process" -Context $Context
+            Write-InfrastructureLog -Level "WARN" -Message "?? Nmap scan timeout - terminating process" -Context $Context
             $process.Kill()
             return @()
         }
@@ -1157,7 +1168,7 @@ function Invoke-ProductionSafeNmapScan {
         return $results
         
     } catch {
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ Production-safe nmap scan failed: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "? Production-safe nmap scan failed: $($_.Exception.Message)" -Context $Context
         return @()
     }
 }
@@ -1212,7 +1223,7 @@ function Parse-NmapXmlOutput {
         }
         
     } catch {
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ Failed to parse nmap XML output: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "? Failed to parse nmap XML output: $($_.Exception.Message)" -Context $Context
     }
     
     return $results
@@ -1244,13 +1255,13 @@ function Invoke-ProductionSafePowerShellScan {
     }
     
     try {
-        Write-InfrastructureLog -Level "INFO" -Message "🔍 Running adaptive PowerShell scan on $Target..." -Context $Context
-        Write-InfrastructureLog -Level "DEBUG" -Message "🎯 Using adaptive parameters: batch=$($config.BatchSize), delay=$($config.DelayBetween)ms, ports=$($config.PortRange.Count)" -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Running adaptive PowerShell scan on $Target..." -Context $Context
+        Write-InfrastructureLog -Level "DEBUG" -Message "?? Using adaptive parameters: batch=$($config.BatchSize), delay=$($config.DelayBetween)ms, ports=$($config.PortRange.Count)" -Context $Context
         
         # Test environment
         $envTest = Test-ProductionEnvironment -Context $Context
         if ($envTest.IsProduction) {
-            Write-InfrastructureLog -Level "INFO" -Message "⚙️ Production environment - using conservative adaptive settings" -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "?? Production environment - using conservative adaptive settings" -Context $Context
         }
         
         # Parse subnet
@@ -1261,7 +1272,7 @@ function Invoke-ProductionSafePowerShellScan {
             # Enforce intelligent subnet size limits based on classification
             $maxSubnetSize = if ($SubnetInfo -and $SubnetInfo.BusinessPriority -ge 90) { 26 } else { 24 }
             if ($prefixLength -lt $maxSubnetSize) {
-                Write-InfrastructureLog -Level "WARN" -Message "⚠️ Subnet $Target larger than /$maxSubnetSize - limiting scan scope for safety" -Context $Context
+                Write-InfrastructureLog -Level "WARN" -Message "?? Subnet $Target larger than /$maxSubnetSize - limiting scan scope for safety" -Context $Context
                 $prefixLength = $maxSubnetSize
             }
             
@@ -1271,7 +1282,7 @@ function Invoke-ProductionSafePowerShellScan {
                 $ipRange = $ipRange[0..253] # Limit to 254 IPs
             }
             
-            Write-InfrastructureLog -Level "INFO" -Message "📊 Production-safe scan of $($ipRange.Count) IPs in subnet $Target..." -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "?? Production-safe scan of $($ipRange.Count) IPs in subnet $Target..." -Context $Context
             
             $liveHosts = [System.Collections.Concurrent.ConcurrentBag[string]]::new()
             
@@ -1284,7 +1295,7 @@ function Invoke-ProductionSafePowerShellScan {
             }
             
             foreach ($batch in $batches) {
-                Write-InfrastructureLog -Level "DEBUG" -Message "🔍 Processing batch of $($batch.Count) IPs..." -Context $Context
+                Write-InfrastructureLog -Level "DEBUG" -Message "?? Processing batch of $($batch.Count) IPs..." -Context $Context
                 
                 # Adaptive PowerShell scanning with intelligent port selection
                 foreach ($ip in $batch) {
@@ -1314,7 +1325,7 @@ function Invoke-ProductionSafePowerShellScan {
             }
             
             $liveHostArray = @($liveHosts.ToArray() | Sort-Object -Unique)
-            Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Found $($liveHostArray.Count) live hosts" -Context $Context
+            Write-InfrastructureLog -Level "SUCCESS" -Message "? Found $($liveHostArray.Count) live hosts" -Context $Context
             
             # Get detailed info for each live host with rate limiting
             foreach ($ip in $liveHostArray) {
@@ -1330,7 +1341,7 @@ function Invoke-ProductionSafePowerShellScan {
         }
         
     } catch {
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ Production-safe PowerShell scan failed: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "? Production-safe PowerShell scan failed: $($_.Exception.Message)" -Context $Context
     }
     
     return $results
@@ -1414,7 +1425,7 @@ function Get-ComprehensiveHostInformation {
         $portRange = if ($envTest.IsProduction) { $config.SafePortRange } else { @(21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 993, 995, 3389, 5985, 5986) }
         $openPorts = @()
         
-        Write-InfrastructureLog -Level "DEBUG" -Message "🔍 Testing $($portRange.Count) ports on $IPAddress..." -Context $Context
+        Write-InfrastructureLog -Level "DEBUG" -Message "?? Testing $($portRange.Count) ports on $IPAddress..." -Context $Context
         
         foreach ($port in $portRange) {
             # Skip blacklisted ports in production
@@ -1457,7 +1468,7 @@ function Get-ComprehensiveHostInformation {
         # Try to get additional Windows-specific information if SMB is available and not in production blacklist
         if (445 -in $openPorts -and -not ($envTest.IsProduction -and 445 -in $config.BlacklistPorts)) {
             try {
-                Write-InfrastructureLog -Level "DEBUG" -Message "🔍 Attempting WMI query to $IPAddress..." -Context $Context
+                Write-InfrastructureLog -Level "DEBUG" -Message "?? Attempting WMI query to $IPAddress..." -Context $Context
                 
                 # Use timeout for WMI queries
                 $wmiTimeout = if ($envTest.IsProduction) { 10 } else { 30 }
@@ -1575,14 +1586,14 @@ function Import-ExistingAssetData {
     
     try {
         if (Test-Path $AssetCsvPath) {
-            Write-InfrastructureLog -Level "INFO" -Message "📥 Importing existing asset data from $AssetCsvPath..." -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "?? Importing existing asset data from $AssetCsvPath..." -Context $Context
             $existingAssets = Import-Csv $AssetCsvPath
-            Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Imported $($existingAssets.Count) existing assets" -Context $Context
+            Write-InfrastructureLog -Level "SUCCESS" -Message "? Imported $($existingAssets.Count) existing assets" -Context $Context
         } else {
-            Write-InfrastructureLog -Level "WARN" -Message "⚠️ Asset CSV not found: $AssetCsvPath" -Context $Context
+            Write-InfrastructureLog -Level "WARN" -Message "?? Asset CSV not found: $AssetCsvPath" -Context $Context
         }
     } catch {
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ Failed to import asset data: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "? Failed to import asset data: $($_.Exception.Message)" -Context $Context
     }
     
     return $existingAssets
@@ -1600,7 +1611,7 @@ function Merge-DiscoveredWithExistingAssets {
     $mergedAssets = @()
     
     try {
-        Write-InfrastructureLog -Level "INFO" -Message "🔗 Merging discovered hosts with existing asset inventory..." -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Merging discovered hosts with existing asset inventory..." -Context $Context
         
         foreach ($host in $DiscoveredHosts) {
             # Find matching existing asset by IP address or hostname
@@ -1682,11 +1693,11 @@ function Merge-DiscoveredWithExistingAssets {
             }
         }
         
-        Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Merged data: $($mergedAssets.Count) total assets" -Context $Context
-        Write-InfrastructureLog -Level "INFO" -Message "📊 Stats: $($DiscoveredHosts.Count) discovered, $($ExistingAssets.Count) in inventory" -Context $Context
+        Write-InfrastructureLog -Level "SUCCESS" -Message "? Merged data: $($mergedAssets.Count) total assets" -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Stats: $($DiscoveredHosts.Count) discovered, $($ExistingAssets.Count) in inventory" -Context $Context
         
     } catch {
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ Failed to merge asset data: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "? Failed to merge asset data: $($_.Exception.Message)" -Context $Context
         return $DiscoveredHosts  # Return original discovery data on failure
     }
     
@@ -1703,8 +1714,8 @@ function Invoke-InfrastructureDiscovery {
         [string]$SessionId
     )
 
-    Write-InfrastructureLog -Level "HEADER" -Message "🚀 Starting Infrastructure Discovery (v1.0 - Network Scanning)" -Context $Context
-    Write-InfrastructureLog -Level "INFO" -Message "📡 Session: $SessionId | Company: $($Configuration.CompanyName)" -Context $Context
+    Write-InfrastructureLog -Level "HEADER" -Message "?? Starting Infrastructure Discovery (v1.0 - Network Scanning)" -Context $Context
+    Write-InfrastructureLog -Level "INFO" -Message "?? Session: $SessionId | Company: $($Configuration.CompanyName)" -Context $Context
     
     # Set up configuration with proper output directory
     if (-not $Configuration.ContainsKey('OutputDirectory')) {
@@ -1741,18 +1752,18 @@ function Invoke-InfrastructureDiscovery {
     }))
     
     try {
-        Write-InfrastructureLog -Level "HEADER" -Message "🔧 Preparing infrastructure discovery tools..." -Context $Context
+        Write-InfrastructureLog -Level "HEADER" -Message "?? Preparing infrastructure discovery tools..." -Context $Context
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
         # 1. Check for nmap (but expect PowerShell fallback for placeholder environments)
         $nmapPath = Install-NmapIfNeeded -Context $Context
         if ($nmapPath -and (Get-Item $nmapPath).Length -lt 1024) {
-            Write-InfrastructureLog -Level "INFO" -Message "🔄 Detected placeholder nmap - using PowerShell-only mode" -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "?? Detected placeholder nmap - using PowerShell-only mode" -Context $Context
             $nmapPath = $null  # Force PowerShell-only mode
         }
         
         # 2. Discover network subnets
-        Write-InfrastructureLog -Level "INFO" -Message "🌐 Discovering network topology..." -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Discovering network topology..." -Context $Context
         $subnets = Get-NetworkSubnets -Configuration $Configuration -Context $Context
         
         if ($subnets.Count -gt 0) {
@@ -1765,8 +1776,8 @@ function Invoke-InfrastructureDiscovery {
         $config = Get-ProductionSafeNmapConfig -Context $Context
         $envTest = Test-ProductionEnvironment -Context $Context
         
-        Write-InfrastructureLog -Level "HEADER" -Message "🧮 Intelligent Adaptive Scanning Engine" -Context $Context
-        Write-InfrastructureLog -Level "INFO" -Message "🎯 Scanning $($subnets.Count) classified network segments by priority..." -Context $Context
+        Write-InfrastructureLog -Level "HEADER" -Message "?? Intelligent Adaptive Scanning Engine" -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Scanning $($subnets.Count) classified network segments by priority..." -Context $Context
         
         # Sort subnets by business priority for intelligent scanning order
         $sortedSubnets = $subnets | Sort-Object BusinessPriority -Descending
@@ -1777,7 +1788,7 @@ function Invoke-InfrastructureDiscovery {
                 $businessPriority = if ($subnet.BusinessPriority) { $subnet.BusinessPriority } else { 50 }
                 $scanTiming = if ($subnet.ScanTiming) { $subnet.ScanTiming } else { "T2" }
                 
-                Write-InfrastructureLog -Level "INFO" -Message "🎯 Adaptive scan: $($subnet.NetworkSubnet) [$segmentType, Priority:$businessPriority, $scanTiming]" -Context $Context
+                Write-InfrastructureLog -Level "INFO" -Message "?? Adaptive scan: $($subnet.NetworkSubnet) [$segmentType, Priority:$businessPriority, $scanTiming]" -Context $Context
                 
                 $hosts = if ($nmapPath) {
                     Invoke-ProductionSafeNmapScan -Target $subnet.NetworkSubnet -NmapPath $nmapPath -ScanType "ping" -SubnetInfo $subnet -Context $Context
@@ -1786,7 +1797,7 @@ function Invoke-InfrastructureDiscovery {
                 }
                 
                 if ($hosts.Count -gt 0) {
-                    Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Found $($hosts.Count) hosts in $($subnet.NetworkSubnet) [$segmentType]" -Context $Context
+                    Write-InfrastructureLog -Level "SUCCESS" -Message "? Found $($hosts.Count) hosts in $($subnet.NetworkSubnet) [$segmentType]" -Context $Context
                     
                     $hosts | ForEach-Object { 
                         $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Host' -Force
@@ -1796,12 +1807,12 @@ function Invoke-InfrastructureDiscovery {
                     
                     $null = $allDiscoveredData.AddRange($hosts)
                 } else {
-                    Write-InfrastructureLog -Level "INFO" -Message "📭 No live hosts found in $($subnet.NetworkSubnet)" -Context $Context
+                    Write-InfrastructureLog -Level "INFO" -Message "?? No live hosts found in $($subnet.NetworkSubnet)" -Context $Context
                 }
                 
                 # Enhanced rate limiting for production safety
                 $delaySeconds = if ($envTest.IsProduction) { 5 } else { 2 }
-                Write-InfrastructureLog -Level "DEBUG" -Message "⏳ Waiting $delaySeconds seconds between subnets..." -Context $Context
+                Write-InfrastructureLog -Level "DEBUG" -Message "? Waiting $delaySeconds seconds between subnets..." -Context $Context
                 Start-Sleep -Seconds $delaySeconds
             }
         }
@@ -1814,7 +1825,7 @@ function Invoke-InfrastructureDiscovery {
             $existingAssets = Import-ExistingAssetData -AssetCsvPath $assetCsvPath -Context $Context
             
             if ($existingAssets.Count -gt 0) {
-                Write-InfrastructureLog -Level "INFO" -Message "🔗 Integrating with existing asset inventory..." -Context $Context
+                Write-InfrastructureLog -Level "INFO" -Message "?? Integrating with existing asset inventory..." -Context $Context
                 $mergedAssets = Merge-DiscoveredWithExistingAssets -DiscoveredHosts $discoveredHosts -ExistingAssets $existingAssets -Context $Context
                 
                 # Replace discovered hosts with merged data
@@ -1829,13 +1840,13 @@ function Invoke-InfrastructureDiscovery {
                 }
                 $null = $allDiscoveredData.AddRange($mergedAssets)
                 
-                Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Asset integration complete: $($mergedAssets.Count) enriched records" -Context $Context
+                Write-InfrastructureLog -Level "SUCCESS" -Message "? Asset integration complete: $($mergedAssets.Count) enriched records" -Context $Context
             }
         }
         
         # 5. Export data to CSV
         if ($allDiscoveredData.Count -gt 0) {
-            Write-InfrastructureLog -Level "INFO" -Message "📊 Exporting $($allDiscoveredData.Count) infrastructure records..." -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "?? Exporting $($allDiscoveredData.Count) infrastructure records..." -Context $Context
             
             $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
             
@@ -1857,10 +1868,10 @@ function Invoke-InfrastructureDiscovery {
                     }
                     
                     $exportData | Export-Csv -NoTypeInformation -Encoding UTF8 -Path $outputPath
-                    Write-InfrastructureLog -Level "SUCCESS" -Message "✅ Exported $($group.Count) $dataType records to $fileName" -Context $Context
+                    Write-InfrastructureLog -Level "SUCCESS" -Message "? Exported $($group.Count) $dataType records to $fileName" -Context $Context
                     
                 } catch {
-                    Write-InfrastructureLog -Level "ERROR" -Message "❌ Failed to export $dataType data: $($_.Exception.Message)" -Context $Context
+                    Write-InfrastructureLog -Level "ERROR" -Message "? Failed to export $dataType data: $($_.Exception.Message)" -Context $Context
                     $result.AddError("Export failed for $dataType", @{FileName=$fileName})
                 }
             }
@@ -1896,15 +1907,15 @@ function Invoke-InfrastructureDiscovery {
         }
         $result.Metadata["InfrastructureDiscoveryVersion"] = "2.0 - Enterprise Intelligent"
         
-        Write-InfrastructureLog -Level "INFO" -Message "🧹 Cleaning up..." -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "?? Cleaning up..." -Context $Context
         
         $stopwatch.Stop()
-        $result.Complete()
-        Write-InfrastructureLog -Level "HEADER" -Message "🎉 Infrastructure Discovery completed in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')) - Found $($result.RecordCount) records!" -Context $Context
+        $result.EndTime = Get-Date
+        Write-InfrastructureLog -Level "HEADER" -Message "?? Infrastructure Discovery completed in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')) - Found $($result.RecordCount) records!" -Context $Context
     }
     catch {
         $result.AddError("Infrastructure discovery failed: $($_.Exception.Message)", @{})
-        Write-InfrastructureLog -Level "ERROR" -Message "❌ Infrastructure discovery failed: $($_.Exception.Message)" -Context $Context
+        Write-InfrastructureLog -Level "ERROR" -Message "? Infrastructure discovery failed: $($_.Exception.Message)" -Context $Context
     }
 
     return $result

@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 
@@ -221,7 +221,7 @@ function Invoke-FileServer {
             Disconnect-MgGraph -ErrorAction SilentlyContinue
         }
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-FileServerLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 
@@ -538,3 +538,4 @@ function Get-PermissionRiskScore {
 }
 
 Export-ModuleMember -Function Invoke-FileServer
+

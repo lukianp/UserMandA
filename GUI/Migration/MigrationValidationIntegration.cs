@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using MandADiscoverySuite.ViewModels;
+using CommunityToolkit.Mvvm.Input;
 
 namespace MandADiscoverySuite.Migration
 {
@@ -95,9 +96,9 @@ namespace MandADiscoverySuite.Migration
             _parentViewModel = parentViewModel;
 
             // Initialize commands
-            ShowValidationCommand = new RelayCommand(ShowValidation);
-            HideValidationCommand = new RelayCommand(HideValidation);
-            ValidateNowCommand = new AsyncRelayCommand(ValidateNowAsync);
+            ShowValidationCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(ShowValidation);
+            HideValidationCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(HideValidation);
+            ValidateNowCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(ValidateNowAsync);
         }
 
         #endregion
@@ -186,17 +187,13 @@ namespace MandADiscoverySuite.Migration
 
         /// <summary>
         /// Creates a validation-enabled migration service wrapper.
+        /// TODO: Update this method to work with the new MigrationService constructor after T-034 integration
         /// </summary>
         public MigrationService CreateValidationEnabledMigrationService(MigrationService originalService)
         {
-            // Create a new service that includes validation
-            return new MigrationService(
-                originalService.GetType().GetField("_identityMigrator", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(originalService) as IIdentityMigrator,
-                originalService.GetType().GetField("_mailMigrator", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(originalService) as IMailMigrator,
-                originalService.GetType().GetField("_fileMigrator", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(originalService) as IFileMigrator,
-                originalService.GetType().GetField("_sqlMigrator", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(originalService) as ISqlMigrator,
-                _validationService
-            );
+            // Temporarily disabled due to T-034 MigrationService constructor changes
+            // This will be updated in a future iteration to work with the new audit-enabled constructor
+            throw new NotImplementedException("This method needs to be updated for T-034 audit integration");
         }
 
         #endregion

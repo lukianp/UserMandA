@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 
@@ -49,7 +49,7 @@ function Invoke-FileServerDiscovery {
         [string]$SessionId
     )
 
-    Write-FileServerLog -Level "HEADER" -Message "🚀 Starting File Server Discovery (v4.0 - Clean Session Auth)" -Context $Context
+    Write-FileServerLog -Level "HEADER" -Message "?? Starting File Server Discovery (v4.0 - Clean Session Auth)" -Context $Context
     Write-FileServerLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -221,8 +221,8 @@ function Invoke-FileServerDiscovery {
             Disconnect-MgGraph -ErrorAction SilentlyContinue
         }
         $stopwatch.Stop()
-        $result.Complete()
-        Write-FileServerLog -Level "HEADER" -Message "🎉 File Server Discovery completed in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')) - Found $($result.RecordCount) records!" -Context $Context
+        $result.EndTime = Get-Date
+        Write-FileServerLog -Level "HEADER" -Message "?? File Server Discovery completed in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')) - Found $($result.RecordCount) records!" -Context $Context
     }
 
     return $result
@@ -538,3 +538,4 @@ function Get-PermissionRiskScore {
 }
 
 Export-ModuleMember -Function Invoke-FileServerDiscovery
+

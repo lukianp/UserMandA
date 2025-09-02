@@ -174,7 +174,7 @@ function Invoke-ExternalIdentityDiscovery {
     } finally {
         try { Disconnect-MgGraph -ErrorAction SilentlyContinue } catch {}
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-ExternalIdentityLog -Level "HEADER" -Message "External identity discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
     return $result

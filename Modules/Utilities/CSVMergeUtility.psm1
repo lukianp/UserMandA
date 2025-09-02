@@ -162,7 +162,7 @@ function Invoke-CSVMerge {
         $result.AddError("A critical error occurred during CSV merge: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-CSVMergeLog -Level "HEADER" -Message "CSV merge completed in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Files: $($result.FilesProcessed), Records: $($result.RecordsProcessed) → $($result.RecordsOutput)."
     }
 

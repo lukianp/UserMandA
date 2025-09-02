@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
@@ -86,7 +86,7 @@ function Invoke-ActiveDirectoryDiscovery {
         [string]$SessionId
     )
 
-    Write-ActiveDirectoryLog -Level "HEADER" -Message "🚀 Starting Active Directory Discovery (v3.0 - Session-based)" -Context $Context
+    Write-ActiveDirectoryLog -Level "HEADER" -Message "?? Starting Active Directory Discovery (v3.0 - Session-based)" -Context $Context
     Write-ActiveDirectoryLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -150,19 +150,19 @@ function Invoke-ActiveDirectoryDiscovery {
         }
 
         # 5. PERFORM DISCOVERY
-        Write-ActiveDirectoryLog -Level "HEADER" -Message "📊 Starting comprehensive data discovery" -Context $Context
+        Write-ActiveDirectoryLog -Level "HEADER" -Message "?? Starting comprehensive data discovery" -Context $Context
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
         # Discover Users
         try {
-            Write-ActiveDirectoryLog -Level "INFO" -Message "👥 Discovering AD Users..." -Context $Context
+            Write-ActiveDirectoryLog -Level "INFO" -Message "?? Discovering AD Users..." -Context $Context
             $users = Get-ADUsersData -Configuration $Configuration -Context $Context -ServerParams $serverParams
             if ($users.Count -gt 0) {
                 $users | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'User' -Force }
                 $null = $allDiscoveredData.AddRange($users)
                 $result.Metadata["UserCount"] = $users.Count
             }
-            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "✅ Discovered $($users.Count) users" -Context $Context
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "? Discovered $($users.Count) users" -Context $Context
         } catch {
             $result.AddWarning("Failed to discover users: $($_.Exception.Message)", @{Section="Users"})
         }
@@ -233,28 +233,28 @@ function Invoke-ActiveDirectoryDiscovery {
         
         # Discover AD Sites with Enhanced Topology Data
         try {
-            Write-ActiveDirectoryLog -Level "INFO" -Message "🏗️ Discovering AD Sites & Topology..." -Context $Context
+            Write-ActiveDirectoryLog -Level "INFO" -Message "??? Discovering AD Sites & Topology..." -Context $Context
             $sites = Get-ADSitesData -Configuration $Configuration -Context $Context -ServerParams $serverParams
             if ($sites.Count -gt 0) {
                 $sites | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Site' -Force }
                 $null = $allDiscoveredData.AddRange($sites)
                 $result.Metadata["SiteCount"] = $sites.Count
             }
-            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "✅ Discovered $($sites.Count) AD sites with topology data" -Context $Context
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "? Discovered $($sites.Count) AD sites with topology data" -Context $Context
         } catch {
             $result.AddWarning("Failed to discover sites: $($_.Exception.Message)", @{Section="Sites"})
         }
         
         # Discover Site Links & Replication Topology 
         try {
-            Write-ActiveDirectoryLog -Level "INFO" -Message "🔗 Analyzing replication topology..." -Context $Context
+            Write-ActiveDirectoryLog -Level "INFO" -Message "?? Analyzing replication topology..." -Context $Context
             $siteLinks = Get-ADSiteLinksData -Configuration $Configuration -Context $Context -ServerParams $serverParams
             if ($siteLinks.Count -gt 0) {
                 $siteLinks | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'SiteLink' -Force }
                 $null = $allDiscoveredData.AddRange($siteLinks)
                 $result.Metadata["SiteLinkCount"] = $siteLinks.Count
             }
-            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "✅ Mapped $($siteLinks.Count) site links for replication analysis" -Context $Context
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "? Mapped $($siteLinks.Count) site links for replication analysis" -Context $Context
         } catch {
             $result.AddWarning("Failed to discover site links: $($_.Exception.Message)", @{Section="SiteLinks"})
         }
@@ -303,35 +303,35 @@ function Invoke-ActiveDirectoryDiscovery {
 
         # Discover Password Policies & Security Settings
         try {
-            Write-ActiveDirectoryLog -Level "INFO" -Message "🔐 Analyzing password policies & security settings..." -Context $Context
+            Write-ActiveDirectoryLog -Level "INFO" -Message "?? Analyzing password policies & security settings..." -Context $Context
             $passwordPolicies = Get-ADPasswordPoliciesData -Configuration $Configuration -Context $Context -ServerParams $serverParams
             if ($passwordPolicies.Count -gt 0) {
                 $passwordPolicies | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'PasswordPolicy' -Force }
                 $null = $allDiscoveredData.AddRange($passwordPolicies)
                 $result.Metadata["PasswordPolicyCount"] = $passwordPolicies.Count
             }
-            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "✅ Analyzed $($passwordPolicies.Count) password policies" -Context $Context
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "? Analyzed $($passwordPolicies.Count) password policies" -Context $Context
         } catch {
             $result.AddWarning("Failed to discover password policies: $($_.Exception.Message)", @{Section="PasswordPolicies"})
         }
 
         # Discover Service Accounts & Special Accounts
         try {
-            Write-ActiveDirectoryLog -Level "INFO" -Message "👤 Identifying service accounts & privileged users..." -Context $Context
+            Write-ActiveDirectoryLog -Level "INFO" -Message "?? Identifying service accounts & privileged users..." -Context $Context
             $serviceAccounts = Get-ADServiceAccountsData -Configuration $Configuration -Context $Context -ServerParams $serverParams
             if ($serviceAccounts.Count -gt 0) {
                 $serviceAccounts | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'ServiceAccount' -Force }
                 $null = $allDiscoveredData.AddRange($serviceAccounts)
                 $result.Metadata["ServiceAccountCount"] = $serviceAccounts.Count
             }
-            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "✅ Identified $($serviceAccounts.Count) service & special accounts" -Context $Context
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "? Identified $($serviceAccounts.Count) service & special accounts" -Context $Context
         } catch {
             $result.AddWarning("Failed to discover service accounts: $($_.Exception.Message)", @{Section="ServiceAccounts"})
         }
 
         # 6. EXPORT DATA TO CSV
         if ($allDiscoveredData.Count -gt 0) {
-            Write-ActiveDirectoryLog -Level "INFO" -Message "📊 Exporting $($allDiscoveredData.Count) records..." -Context $Context
+            Write-ActiveDirectoryLog -Level "INFO" -Message "?? Exporting $($allDiscoveredData.Count) records..." -Context $Context
             
             $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
             
@@ -397,8 +397,8 @@ function Invoke-ActiveDirectoryDiscovery {
         Write-ActiveDirectoryLog -Level "INFO" -Message "Cleaning up..." -Context $Context
         
         $stopwatch.Stop()
-        $result.Complete()
-        Write-ActiveDirectoryLog -Level "HEADER" -Message "🎉 Discovery completed in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')) - Found $($result.RecordCount) records!" -Context $Context
+        $result.EndTime = Get-Date
+        Write-ActiveDirectoryLog -Level "HEADER" -Message "?? Discovery completed in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')) - Found $($result.RecordCount) records!" -Context $Context
     }
 
     return $result
@@ -1229,3 +1229,4 @@ function Get-ADServiceAccountsData {
 }
 
 #endregion M&A Enhancements (Non-breaking): Export-DiscoveryResultsEnhanced
+

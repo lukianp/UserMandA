@@ -193,7 +193,7 @@ function Invoke-DataClassification {
         $result.AddError("A critical error occurred during data classification discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-DataClassificationLog -Level "HEADER" -Message "Data classification discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

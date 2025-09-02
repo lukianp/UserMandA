@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
@@ -300,11 +300,11 @@ function Invoke-BaseDiscovery {
         $discoveryData = & $DiscoveryScript
         $result.Data = $discoveryData
         $result.Success = $true
-        $result.Complete()
+        $result.EndTime = Get-Date
         return $result
     } catch {
         $result.AddError("Error: $($_.Exception.Message)", $_.Exception)
-        $result.Complete()
+        $result.EndTime = Get-Date
         return $result
     }
 }

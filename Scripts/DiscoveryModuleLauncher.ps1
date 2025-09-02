@@ -244,15 +244,27 @@ try {
         # Prefer the first object that looks like a DiscoveryResult (by type or by presence of 'Success')
         $drCandidate = $drArray | Where-Object { $_ -is [DiscoveryResult] } | Select-Object -First 1
         if (-not $drCandidate) {
-            $drCandidate = $drArray | Where-Object { $_.PSObject -and $_.PSObject.Properties['Success'] } | Select-Object -First 1
+            $drCandidate = $drArray | Where-Object {
+                try {
+                    $_.PSObject -and $_.PSObject.Properties['Success']
+                } catch {
+                    $false
+                }
+            } | Select-Object -First 1
         }
         if ($drCandidate) { $discoveryResult = $drCandidate }
     }
     
     # Process and save discovery data (safe property access under StrictMode)
-    $drPsObj = if ($null -ne $discoveryResult) { $discoveryResult.PSObject } else { $null }
-    $propSuccess = if ($drPsObj) { $drPsObj.Properties['Success'] } else { $null }
-    $propData = if ($drPsObj) { $drPsObj.Properties['Data'] } else { $null }
+    $drPsObj = if ($null -ne $discoveryResult) {
+        try { $discoveryResult.PSObject } catch { $null }
+    } else { $null }
+    $propSuccess = if ($drPsObj) {
+        try { $drPsObj.Properties['Success'] } catch { $null }
+    } else { $null }
+    $propData = if ($drPsObj) {
+        try { $drPsObj.Properties['Data'] } catch { $null }
+    } else { $null }
 
     if ($propSuccess -and $propSuccess.Value -and $propData -and $propData.Value) {
         Write-Host "Processing and saving discovery data..." -ForegroundColor Yellow
@@ -267,8 +279,15 @@ try {
         if ($rawData -and $rawData.Count -gt 0) {
             # Check if data is already grouped or raw
             $isGrouped = $false
-            if ($rawData.Count -gt 0 -and $rawData[0].PSObject.Properties['Name'] -and $rawData[0].PSObject.Properties['Group']) {
-                $isGrouped = $true
+            if ($rawData.Count -gt 0) {
+                try {
+                    $firstItemPsObj = $rawData[0].PSObject
+                    if ($firstItemPsObj -and $firstItemPsObj.Properties['Name'] -and $firstItemPsObj.Properties['Group']) {
+                        $isGrouped = $true
+                    }
+                } catch {
+                    $isGrouped = $false
+                }
             }
 
             $groupedData = if ($isGrouped) { $rawData } else { $rawData | Group-Object -Property _ObjectType }
@@ -312,14 +331,22 @@ try {
     Write-Host "=== Discovery Results ===" -ForegroundColor Cyan
     
     # Display results (safe property access)
-    $propRecordCount = if ($drPsObj) { $drPsObj.Properties['RecordCount'] } else { $null }
-    $propErrors = if ($drPsObj) { $drPsObj.Properties['Errors'] } else { $null }
-    $propWarnings = if ($drPsObj) { $drPsObj.Properties['Warnings'] } else { $null }
+    $propRecordCount = if ($drPsObj) {
+        try { $drPsObj.Properties['RecordCount'] } catch { $null }
+    } else { $null }
+    $propErrors = if ($drPsObj) {
+        try { $drPsObj.Properties['Errors'] } catch { $null }
+    } else { $null }
+    $propWarnings = if ($drPsObj) {
+        try { $drPsObj.Properties['Warnings'] } catch { $null }
+    } else { $null }
 
     if ($propSuccess -and $propSuccess.Value) {
         Write-Host "Status: SUCCESS" -ForegroundColor Green
         $totalRecordsDisplay = $null
-        $propMetadata = if ($drPsObj) { $drPsObj.Properties['Metadata'] } else { $null }
+        $propMetadata = if ($drPsObj) {
+            try { $drPsObj.Properties['Metadata'] } catch { $null }
+        } else { $null }
         if ($propMetadata -and $propMetadata.Value -and ($propMetadata.Value.ContainsKey('TotalRecords'))) {
             $totalRecordsDisplay = $propMetadata.Value['TotalRecords']
         } elseif ($propRecordCount -and $propRecordCount.Value) {

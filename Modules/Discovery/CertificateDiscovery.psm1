@@ -97,7 +97,6 @@ function Invoke-CertificateDiscovery {
         ExecutionId = [guid]::NewGuid().ToString()
         AddError = { param($m, $e, $c, $ht) $ht.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $ht.Success = $false }.GetNewClosure()
         AddWarning = { param($m, $c, $ht) $ht.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-        Complete = { param($ht) $ht.EndTime = Get-Date }
     }
 
     try {
@@ -206,7 +205,7 @@ function Invoke-CertificateDiscovery {
         & $result.AddError("A critical error occurred during certificate discovery: $($_.Exception.Message)", $_.Exception, $null, $result)
     } finally {
         $stopwatch.Stop()
-        ($result.Complete).Invoke($result)
+        $result.EndTime = Get-Date
         Write-CertificateLog -Level "HEADER" -Message "Certificate discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

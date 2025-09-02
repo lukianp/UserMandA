@@ -365,9 +365,9 @@ return @{ Status = "Unknown job type"; Data = $Data }
             }
         }
         
-        # Create the runspace pool
+        # Create the runspace pool (use global host)
         $this.RunspacePool = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspacePool(
-            1, $this.MaxConcurrentJobs, $initialSessionState, $null
+            1, $this.MaxConcurrentJobs, $initialSessionState, $global:Host
         )
         $this.RunspacePool.Open()
         

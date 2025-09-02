@@ -24,6 +24,7 @@ namespace MandADiscoverySuite.ViewModels
         private readonly ProfileService _profileService;
         private readonly ModuleRegistryService _moduleRegistryService;
         private readonly ILogger<MigrationPlanningViewModel> _logger;
+        private readonly ILicenseAssignmentService _licenseService;
         
         // Discovery Data Analysis
         private ComprehensiveDataLoadResult _discoveryData;
@@ -89,12 +90,23 @@ namespace MandADiscoverySuite.ViewModels
         private ICollectionView _generatedItemsView;
         private ICollectionView _selectedItemsView;
         private ICollectionView _wavesView;
+        
+        // License Management
+        private ObservableCollection<LicenseSku> _availableLicenseSkus;
+        private ObservableCollection<string> _selectedDefaultSkuIds;
+        private ObservableCollection<LicenseMappingRule> _licenseMappingRules;
+        private WaveLicenseSettings _waveLicenseSettings;
+        private bool _isLoadingLicenses;
+        private string _licenseStatus = "No target tenant selected";
+        private bool _autoAssignLicenses;
+        private LicenseComplianceReport _complianceReport;
         #endregion
         
         #region Constructor
-        public MigrationPlanningViewModel(ILogger<MigrationPlanningViewModel> logger = null) : base(logger)
+        public MigrationPlanningViewModel(ILogger<MigrationPlanningViewModel> logger = null, ILicenseAssignmentService licenseService = null) : base(logger)
         {
             _logger = logger;
+            _licenseService = licenseService ?? new LicenseAssignmentService(logger);
             _migrationDataService = new MigrationDataService();
             _discoveryService = new DiscoveryService();
             _profileService = new ProfileService();
@@ -334,6 +346,61 @@ namespace MandADiscoverySuite.ViewModels
             private set => SetProperty(ref _wavesView, value);
         }
         
+        // License Management Properties
+        public ObservableCollection<LicenseSku> AvailableLicenseSkus
+        {
+            get => _availableLicenseSkus;
+            set => SetProperty(ref _availableLicenseSkus, value);
+        }
+        
+        public ObservableCollection<string> SelectedDefaultSkuIds
+        {
+            get => _selectedDefaultSkuIds;
+            set => SetProperty(ref _selectedDefaultSkuIds, value);
+        }
+        
+        public ObservableCollection<LicenseMappingRule> LicenseMappingRules
+        {
+            get => _licenseMappingRules;
+            set => SetProperty(ref _licenseMappingRules, value);
+        }
+        
+        public WaveLicenseSettings WaveLicenseSettings
+        {
+            get => _waveLicenseSettings;
+            set => SetProperty(ref _waveLicenseSettings, value);
+        }
+        
+        public bool IsLoadingLicenses
+        {
+            get => _isLoadingLicenses;
+            set => SetProperty(ref _isLoadingLicenses, value);
+        }
+        
+        public string LicenseStatus
+        {
+            get => _licenseStatus;
+            set => SetProperty(ref _licenseStatus, value);
+        }
+        
+        public bool AutoAssignLicenses
+        {
+            get => _autoAssignLicenses;
+            set
+            {
+                if (SetProperty(ref _autoAssignLicenses, value))
+                {
+                    UpdateWaveLicenseSettings();
+                }
+            }
+        }
+        
+        public LicenseComplianceReport ComplianceReport
+        {
+            get => _complianceReport;
+            set => SetProperty(ref _complianceReport, value);
+        }
+        
         // Enumerations for UI Binding
         public Array MigrationTypes => Enum.GetValues(typeof(MigrationType));
         public Array MigrationPriorities => Enum.GetValues(typeof(MigrationPriority));
@@ -355,6 +422,14 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ClearFiltersCommand { get; private set; }
         public ICommand ExportPlanCommand { get; private set; }
         public ICommand ImportPlanCommand { get; private set; }
+        
+        // License Management Commands
+        public ICommand LoadLicenseSkusCommand { get; private set; }
+        public ICommand AddLicenseMappingRuleCommand { get; private set; }
+        public ICommand DeleteLicenseMappingRuleCommand { get; private set; }
+        public ICommand ValidateWaveLicensesCommand { get; private set; }
+        public ICommand GenerateComplianceReportCommand { get; private set; }
+        public ICommand TestLicenseConnectivityCommand { get; private set; }
         #endregion
         
         #region Private Methods
@@ -396,6 +471,14 @@ namespace MandADiscoverySuite.ViewModels
             ClearFiltersCommand = new RelayCommand(ClearFilters);
             ExportPlanCommand = new AsyncRelayCommand(ExportPlanAsync);
             ImportPlanCommand = new AsyncRelayCommand(ImportPlanAsync);
+            
+            // License management commands
+            LoadLicenseSkusCommand = new AsyncRelayCommand(LoadLicenseSkusAsync);
+            AddLicenseMappingRuleCommand = new RelayCommand(AddLicenseMappingRule, CanAddLicenseMappingRule);
+            DeleteLicenseMappingRuleCommand = new RelayCommand<LicenseMappingRule>(DeleteLicenseMappingRule);
+            ValidateWaveLicensesCommand = new AsyncRelayCommand<MigrationWave>(ValidateWaveLicensesAsync);
+            GenerateComplianceReportCommand = new AsyncRelayCommand(GenerateComplianceReportAsync);
+            TestLicenseConnectivityCommand = new AsyncRelayCommand(TestLicenseConnectivityAsync);
         }
         
         private void InitializeCollectionViews()
@@ -405,6 +488,20 @@ namespace MandADiscoverySuite.ViewModels
             
             SelectedItemsView = CollectionViewSource.GetDefaultView(SelectedItems);
             WavesView = CollectionViewSource.GetDefaultView(MigrationWaves);
+            
+            // Initialize license collections
+            AvailableLicenseSkus = new ObservableCollection<LicenseSku>();
+            SelectedDefaultSkuIds = new ObservableCollection<string>();
+            LicenseMappingRules = new ObservableCollection<LicenseMappingRule>();
+            
+            WaveLicenseSettings = new WaveLicenseSettings
+            {
+                WaveId = Guid.NewGuid().ToString(),
+                WaveName = "Default Wave",
+                AutoAssignLicenses = false,
+                DefaultSkuIds = new List<string>(),
+                CustomMappingRules = new List<LicenseMappingRule>()
+            };
         }
         
         private async void LoadAvailableProfiles()
@@ -1253,6 +1350,299 @@ namespace MandADiscoverySuite.ViewModels
             
         private MigrationComplexity DetermineGroupComplexity(GroupData group) =>
             group.MemberCount > 5 ? MigrationComplexity.Moderate : MigrationComplexity.Simple;
+            
+        #region License Management Methods
+        
+        /// <summary>
+        /// Load available license SKUs for the selected target tenant
+        /// </summary>
+        private async Task LoadLicenseSkusAsync()
+        {
+            if (string.IsNullOrWhiteSpace(SelectedTargetCompany))
+            {
+                LicenseStatus = "No target company selected";
+                return;
+            }
+
+            try
+            {
+                IsLoadingLicenses = true;
+                LicenseStatus = "Loading available licenses...";
+
+                // Get target tenant ID from configuration
+                var targetTenantId = ConfigurationService.Instance.TryResolveTenantId(SelectedTargetCompany);
+                if (string.IsNullOrWhiteSpace(targetTenantId))
+                {
+                    LicenseStatus = "Target tenant not configured";
+                    return;
+                }
+
+                // Load available SKUs
+                var skus = await _licenseService.GetAvailableLicenseSkusAsync(targetTenantId);
+                
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    AvailableLicenseSkus.Clear();
+                    foreach (var sku in skus)
+                    {
+                        AvailableLicenseSkus.Add(sku);
+                    }
+                });
+
+                LicenseStatus = $"Loaded {skus.Count} available license SKUs";
+                _logger?.LogInformation($"Loaded {skus.Count} license SKUs for tenant {targetTenantId}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to load license SKUs");
+                LicenseStatus = $"Failed to load licenses: {ex.Message}";
+                HasErrors = true;
+                ErrorMessage = $"License loading failed: {ex.Message}";
+            }
+            finally
+            {
+                IsLoadingLicenses = false;
+            }
+        }
+        
+        /// <summary>
+        /// Add a new license mapping rule
+        /// </summary>
+        private void AddLicenseMappingRule()
+        {
+            var rule = new LicenseMappingRule
+            {
+                Id = Guid.NewGuid().ToString(),
+                Name = $"Rule {LicenseMappingRules.Count + 1}",
+                IsEnabled = true,
+                Priority = LicenseMappingRules.Count + 1,
+                Conditions = new List<LicenseRuleCondition>(),
+                AssignSkuIds = new List<string>(),
+                RemoveSkuIds = new List<string>(),
+                CreatedAt = DateTime.Now,
+                LastModified = DateTime.Now
+            };
+
+            LicenseMappingRules.Add(rule);
+        }
+        
+        /// <summary>
+        /// Check if a license mapping rule can be added
+        /// </summary>
+        private bool CanAddLicenseMappingRule()
+        {
+            return AvailableLicenseSkus?.Any() == true;
+        }
+        
+        /// <summary>
+        /// Delete a license mapping rule
+        /// </summary>
+        private void DeleteLicenseMappingRule(LicenseMappingRule rule)
+        {
+            if (rule != null && LicenseMappingRules.Contains(rule))
+            {
+                LicenseMappingRules.Remove(rule);
+            }
+        }
+        
+        /// <summary>
+        /// Validate license requirements for a migration wave
+        /// </summary>
+        private async Task ValidateWaveLicensesAsync(MigrationWave wave)
+        {
+            if (wave == null || string.IsNullOrWhiteSpace(SelectedTargetCompany))
+            {
+                MessageBox.Show("Please select a target company and wave to validate.", 
+                    "Validation Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                IsLoading = true;
+                LoadingMessage = "Validating license requirements...";
+
+                // Get target tenant ID
+                var targetTenantId = ConfigurationService.Instance.TryResolveTenantId(SelectedTargetCompany);
+                if (string.IsNullOrWhiteSpace(targetTenantId))
+                {
+                    MessageBox.Show("Target tenant not configured for selected company.", 
+                        "Configuration Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // Get users from wave
+                var waveUsers = GeneratedItems
+                    .Where(i => i.WaveId == wave.Id && i.Type == MigrationType.User)
+                    .Select(i => new UserData { UserPrincipalName = i.SourceIdentity, DisplayName = i.DisplayName })
+                    .ToList();
+
+                if (!waveUsers.Any())
+                {
+                    MessageBox.Show("No users found in the selected wave.", 
+                        "No Users", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // Validate license requirements
+                var validationResult = await _licenseService.ValidateWaveLicenseRequirementsAsync(
+                    targetTenantId, waveUsers, WaveLicenseSettings);
+
+                // Display validation results
+                var message = $"License Validation Results:\\n\\n" +
+                             $"Users requiring licenses: {validationResult.UsersRequiringLicenses}\\n" +
+                             $"Total estimated monthly cost: ${validationResult.EstimatedMonthlyCost:F2}\\n" +
+                             $"Validation status: {(validationResult.IsValid ? "PASSED" : "FAILED")}\\n\\n";
+
+                if (validationResult.ValidationErrors.Any())
+                {
+                    message += "Errors:\\n" + string.Join("\\n", validationResult.ValidationErrors) + "\\n\\n";
+                }
+
+                if (validationResult.ValidationWarnings.Any())
+                {
+                    message += "Warnings:\\n" + string.Join("\\n", validationResult.ValidationWarnings);
+                }
+
+                MessageBox.Show(message, "License Validation Results", 
+                    MessageBoxButton.OK, validationResult.IsValid ? MessageBoxImage.Information : MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to validate wave license requirements");
+                MessageBox.Show($"License validation failed: {ex.Message}", 
+                    "Validation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+        
+        /// <summary>
+        /// Generate a license compliance report
+        /// </summary>
+        private async Task GenerateComplianceReportAsync()
+        {
+            if (string.IsNullOrWhiteSpace(SelectedTargetCompany))
+            {
+                MessageBox.Show("Please select a target company to generate compliance report.", 
+                    "Target Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                IsLoading = true;
+                LoadingMessage = "Generating license compliance report...";
+
+                var targetTenantId = ConfigurationService.Instance.TryResolveTenantId(SelectedTargetCompany);
+                if (string.IsNullOrWhiteSpace(targetTenantId))
+                {
+                    MessageBox.Show("Target tenant not configured for selected company.", 
+                        "Configuration Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                ComplianceReport = await _licenseService.GenerateComplianceReportAsync(
+                    targetTenantId, includeUsers: true, includeIssues: true);
+
+                MessageBox.Show($"Compliance report generated successfully.\\n\\n" +
+                               $"Total users: {ComplianceReport.TotalUsers}\\n" +
+                               $"Compliant users: {ComplianceReport.CompliantUsers}\\n" +
+                               $"Non-compliant users: {ComplianceReport.NonCompliantUsers}\\n" +
+                               $"Unlicensed users: {ComplianceReport.UnlicensedUsers}\\n" +
+                               $"Total compliance issues: {ComplianceReport.TotalComplianceIssues}", 
+                    "Compliance Report Generated", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to generate compliance report");
+                MessageBox.Show($"Failed to generate compliance report: {ex.Message}", 
+                    "Report Generation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+        
+        /// <summary>
+        /// Test connectivity to license management services
+        /// </summary>
+        private async Task TestLicenseConnectivityAsync()
+        {
+            if (string.IsNullOrWhiteSpace(SelectedTargetCompany))
+            {
+                MessageBox.Show("Please select a target company to test connectivity.", 
+                    "Target Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                IsLoading = true;
+                LoadingMessage = "Testing license service connectivity...";
+
+                var targetTenantId = ConfigurationService.Instance.TryResolveTenantId(SelectedTargetCompany);
+                if (string.IsNullOrWhiteSpace(targetTenantId))
+                {
+                    MessageBox.Show("Target tenant not configured for selected company.", 
+                        "Configuration Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                var connectivityResult = await _licenseService.TestGraphConnectivityAsync(targetTenantId);
+                var permissionResult = await _licenseService.ValidateGraphPermissionsAsync(targetTenantId);
+
+                var message = $"License Service Connectivity Test\\n\\n" +
+                             $"Connection Status: {(connectivityResult.IsConnected ? "CONNECTED" : "FAILED")}\\n" +
+                             $"Tenant: {connectivityResult.TenantDisplayName ?? "Unknown"}\\n" +
+                             $"Response Time: {connectivityResult.ResponseTime.TotalMilliseconds:F0} ms\\n" +
+                             $"Authentication: {connectivityResult.AuthenticationMethod}\\n\\n" +
+                             $"Permissions Status: {(permissionResult.HasRequiredPermissions ? "VALID" : "MISSING")}\\n" +
+                             $"Granted Permissions: {permissionResult.GrantedPermissions.Count}/{permissionResult.RequiredPermissions.Count}\\n";
+
+                if (permissionResult.MissingPermissions.Any())
+                {
+                    message += $"\\nMissing Permissions:\\n• {string.Join("\\n• ", permissionResult.MissingPermissions)}";
+                }
+
+                if (connectivityResult.FailedEndpoints.Any())
+                {
+                    message += $"\\n\\nFailed Endpoints:\\n• {string.Join("\\n• ", connectivityResult.FailedEndpoints)}";
+                }
+
+                MessageBox.Show(message, "License Connectivity Test Results", 
+                    MessageBoxButton.OK, 
+                    connectivityResult.IsConnected && permissionResult.HasRequiredPermissions ? MessageBoxImage.Information : MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to test license connectivity");
+                MessageBox.Show($"Connectivity test failed: {ex.Message}", 
+                    "Connectivity Test Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+        
+        /// <summary>
+        /// Update wave license settings when auto-assign changes
+        /// </summary>
+        private void UpdateWaveLicenseSettings()
+        {
+            if (WaveLicenseSettings != null)
+            {
+                WaveLicenseSettings.AutoAssignLicenses = AutoAssignLicenses;
+                WaveLicenseSettings.DefaultSkuIds = SelectedDefaultSkuIds?.ToList() ?? new List<string>();
+                WaveLicenseSettings.CustomMappingRules = LicenseMappingRules?.ToList() ?? new List<LicenseMappingRule>();
+            }
+        }
+        
+        #endregion
         #endregion
     }
     

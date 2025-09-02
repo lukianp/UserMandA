@@ -217,7 +217,7 @@ function Invoke-VirtualizationDiscovery {
         $result.AddError("A critical error occurred during virtualization discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-VirtualizationLog -Level "HEADER" -Message "Virtualization discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

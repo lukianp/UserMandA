@@ -96,7 +96,6 @@ function Invoke-DatabaseSchemaDiscovery {
         ExecutionId = [guid]::NewGuid().ToString()
         AddError = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
         AddWarning = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-        Complete = { $this.EndTime = Get-Date }.GetNewClosure()
     }
 
     try {
@@ -219,7 +218,7 @@ function Invoke-DatabaseSchemaDiscovery {
         $result.AddError("A critical error occurred during database schema discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-DatabaseLog -Level "HEADER" -Message "Database schema discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

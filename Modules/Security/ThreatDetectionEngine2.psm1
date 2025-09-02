@@ -191,7 +191,7 @@ function Invoke-ThreatDetectionEngine {
         $result.AddError("A critical error occurred during threat detection: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-ThreatLog -Level "HEADER" -Message "Threat detection finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
     return $result

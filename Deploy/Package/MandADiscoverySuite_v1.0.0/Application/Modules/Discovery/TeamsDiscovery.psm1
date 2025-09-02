@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
@@ -454,7 +454,7 @@ function Invoke-TeamsDiscovery {
         Disconnect-MgGraph -ErrorAction SilentlyContinue
         
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         
         # Ensure RecordCount is properly set
         $result.RecordCount = $allDiscoveredData.Count
@@ -480,3 +480,4 @@ function Ensure-Path {
 
 # --- Module Export ---
 Export-ModuleMember -Function Invoke-TeamsDiscovery
+

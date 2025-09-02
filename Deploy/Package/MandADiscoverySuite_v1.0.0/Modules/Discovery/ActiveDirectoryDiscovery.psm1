@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
@@ -355,7 +355,7 @@ function Invoke-ActiveDirectoryDiscovery {
         Write-ActiveDirectoryLog -Level "INFO" -Message "Cleaning up..." -Context $Context
         
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-ActiveDirectoryLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 
@@ -1023,3 +1023,4 @@ Export-DiscoveryResultsEnhanced -Data $dataArray -OutputDirectory $OutputDirecto
     }
 }
 #endregion M&A Enhancements (Non-breaking): Export-DiscoveryResultsEnhanced
+

@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 
@@ -191,7 +191,7 @@ function Invoke-NetworkInfrastructureDiscovery {
             Disconnect-MgGraph -ErrorAction SilentlyContinue
         }
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-NetworkInfrastructureLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 
@@ -462,3 +462,4 @@ function Ensure-Path {
 }
 
 Export-ModuleMember -Function Invoke-NetworkInfrastructureDiscovery, Get-NetworkAdapterInfo, Get-NetworkRoutes, Get-ARPTable, Get-DHCPServers, Get-DNSInfrastructure, Get-SNMPDevices, Get-NetworkShares, Get-FirewallConfiguration
+

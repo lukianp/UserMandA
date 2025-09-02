@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8-bom -*-
+# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 
@@ -140,7 +140,7 @@ function Invoke-SQLServerDiscovery {
         $result.AddError("A critical error occurred during SQL Server discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-SQLServerLog -Level "HEADER" -Message "SQL Server discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 
@@ -498,3 +498,4 @@ ORDER BY d.name
 }
 
 Export-ModuleMember -Function Invoke-SQLServerDiscovery
+

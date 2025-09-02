@@ -100,7 +100,7 @@ function Start-DiscoveryModule {
             SessionId = $SessionId
         })
     } finally {
-        $result.Complete()
+        $result.EndTime = Get-Date
     }
     
     return $result

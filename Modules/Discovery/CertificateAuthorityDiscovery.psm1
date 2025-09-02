@@ -67,8 +67,13 @@ function Invoke-CertificateAuthorityDiscovery {
                 $adResults = $adSearcher.FindAll()
                 
                 foreach ($result in $adResults) {
-                    $computerName = $result.Properties["name"][0]
-                    $dnsHostName = $result.Properties["dnshostname"][0]
+                    if ($result -and $result.Properties -and $result.Properties["name"]) {
+                        $computerName = $result.Properties["name"][0]
+                        $dnsHostName = if ($result.Properties["dnshostname"]) { $result.Properties["dnshostname"][0] } else { $computerName }
+                    } else {
+                        Write-ModuleLog -ModuleName "CertificateAuthority" -Message "AD result missing required properties, skipping" -Level "DEBUG"
+                        continue
+                    }
                     
                     $certificateAuthorities += @{
                         Name = $dnsHostName
@@ -194,31 +199,36 @@ function Invoke-CertificateAuthorityDiscovery {
                 $templates = $templatesContainer.Children | Where-Object { $_.Class -eq "pKICertificateTemplate" }
                 
                 foreach ($template in $templates) {
-                    $templateObj = [PSCustomObject]@{
-                        # Identity
-                        Name = $template.Properties["name"][0]
-                        DisplayName = $template.Properties["displayName"][0]
-                        CN = $template.Properties["cn"][0]
-                        
-                        # Configuration
-                        TemplateOID = $template.Properties["msPKI-Cert-Template-OID"][0]
-                        Version = $template.Properties["revision"][0]
-                        ValidityPeriod = $template.Properties["pKIDefaultKeySpec"][0]
-                        
-                        # Security
-                        EnrollmentFlags = $template.Properties["msPKI-Enrollment-Flag"][0]
-                        PrivateKeyFlags = $template.Properties["msPKI-Private-Key-Flag"][0]
-                        KeySpec = $template.Properties["pKIDefaultKeySpec"][0]
-                        
-                        # Usage
-                        KeyUsage = $template.Properties["pKIKeyUsage"][0]
-                        ApplicationPolicies = ($template.Properties["msPKI-Certificate-Application-Policy"] -join ';')
-                        
-                        # Lifecycle
-                        WhenCreated = $template.Properties["whenCreated"][0]
-                        WhenChanged = $template.Properties["whenChanged"][0]
-                        
-                        _DataType = "CertificateTemplate"
+                    if ($template -and $template.Properties) {
+                        $templateObj = [PSCustomObject]@{
+                            # Identity
+                            Name = if ($template.Properties["name"]) { $template.Properties["name"][0] } else { "Unknown" }
+                            DisplayName = if ($template.Properties["displayName"]) { $template.Properties["displayName"][0] } else { "Unknown" }
+                            CN = if ($template.Properties["cn"]) { $template.Properties["cn"][0] } else { "Unknown" }
+
+                            # Configuration
+                            TemplateOID = if ($template.Properties["msPKI-Cert-Template-OID"]) { $template.Properties["msPKI-Cert-Template-OID"][0] } else { "" }
+                            Version = if ($template.Properties["revision"]) { $template.Properties["revision"][0] } else { "" }
+                            ValidityPeriod = if ($template.Properties["pKIDefaultKeySpec"]) { $template.Properties["pKIDefaultKeySpec"][0] } else { "" }
+
+                            # Security
+                            EnrollmentFlags = if ($template.Properties["msPKI-Enrollment-Flag"]) { $template.Properties["msPKI-Enrollment-Flag"][0] } else { "" }
+                            PrivateKeyFlags = if ($template.Properties["msPKI-Private-Key-Flag"]) { $template.Properties["msPKI-Private-Key-Flag"][0] } else { "" }
+                            KeySpec = if ($template.Properties["pKIDefaultKeySpec"]) { $template.Properties["pKIDefaultKeySpec"][0] } else { "" }
+
+                            # Usage
+                            KeyUsage = if ($template.Properties["pKIKeyUsage"]) { $template.Properties["pKIKeyUsage"][0] } else { "" }
+                            ApplicationPolicies = if ($template.Properties["msPKI-Certificate-Application-Policy"]) { ($template.Properties["msPKI-Certificate-Application-Policy"] -join ';') } else { "" }
+
+                            # Lifecycle
+                            WhenCreated = if ($template.Properties["whenCreated"]) { $template.Properties["whenCreated"][0] } else { [DateTime]::MinValue }
+                            WhenChanged = if ($template.Properties["whenChanged"]) { $template.Properties["whenChanged"][0] } else { [DateTime]::MinValue }
+
+                            _DataType = "CertificateTemplate"
+                        }
+                    } else {
+                        Write-ModuleLog -ModuleName "CertificateAuthority" -Message "Template missing Properties, skipping" -Level "DEBUG"
+                        continue
                     }
                     
                     $null = $allDiscoveredData.Add($templateObj)

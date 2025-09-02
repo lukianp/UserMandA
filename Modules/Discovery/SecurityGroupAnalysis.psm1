@@ -249,7 +249,7 @@ function Invoke-SecurityGroupAnalysis {
         & $addResError "A critical error occurred during security group analysis: $($_.Exception.Message)" $_.Exception $null
     } finally {
         $stopwatch.Stop()
-        if ($result -is [hashtable]) { $result['EndTime'] = Get-Date } else { $result.Complete() }
+        if ($result -is [hashtable]) { $result['EndTime'] = Get-Date } else { $result.EndTime = Get-Date }
         Write-SecurityGroupLog -Level "HEADER" -Message "Security group analysis finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($allDiscoveredData.Count)." -Context $Context
     }
 
@@ -761,3 +761,4 @@ function Get-SecurityAnalysisSummary {
 
 # Export functions
 Export-ModuleMember -Function Invoke-SecurityGroupAnalysis
+

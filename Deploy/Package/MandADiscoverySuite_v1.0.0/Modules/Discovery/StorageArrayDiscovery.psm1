@@ -219,7 +219,7 @@ function Invoke-StorageArrayDiscovery {
         $result.AddError("A critical error occurred during storage array discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-StorageLog -Level "HEADER" -Message "Storage array discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

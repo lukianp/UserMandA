@@ -219,7 +219,7 @@ function Invoke-ApplicationDependencyMapping {
         $result.AddError("A critical error occurred during dependency mapping: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-DependencyLog -Level "HEADER" -Message "Dependency mapping finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
 

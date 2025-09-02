@@ -190,7 +190,7 @@ function Invoke-DataLineageDependencyEngine {
         $result.AddError("A critical error occurred during data lineage discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-LineageLog -Level "HEADER" -Message "Data lineage discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
     return $result

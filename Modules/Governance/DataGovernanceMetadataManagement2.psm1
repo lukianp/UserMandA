@@ -189,7 +189,7 @@ function Invoke-DataGovernanceMetadataManagement {
         $result.AddError("A critical error occurred during data governance discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-DataGovernanceLog -Level "HEADER" -Message "Data governance discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
     }
     return $result

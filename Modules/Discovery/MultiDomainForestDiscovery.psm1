@@ -290,7 +290,7 @@ If RSAT is not available in this Windows build, consider using a domain-joined m
         $result.AddError("A critical error occurred during multi-domain discovery: $($_.Exception.Message)", $_.Exception, $null)
     } finally {
         $stopwatch.Stop()
-        $result.Complete()
+        $result.EndTime = Get-Date
         Write-MultiDomainLog -Level "HEADER" -Message "Multi-domain discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.Metadata['RecordCount'])." -Context $Context
     }
 
