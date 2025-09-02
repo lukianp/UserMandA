@@ -9,6 +9,7 @@
         xmlns:collections="clr-namespace:MandADiscoverySuite.Collections"
         xmlns:helpers="clr-namespace:MandADiscoverySuite.Helpers"
         xmlns:views="clr-namespace:MandADiscoverySuite.Views"
+        xmlns:system="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
         Title="M&amp;A Discovery Suite - SUPER AGGRESSIVE BUILD FIX 2025" Height="1000" Width="1600"
         WindowStartupLocation="CenterScreen" WindowState="Maximized"
@@ -414,99 +415,35 @@
         </Style>
         
         <!-- ComboBox Modern Style -->
+        <!-- Enhanced Modern ComboBox Style -->
         <Style x:Key="ModernComboBoxStyle" TargetType="ComboBox">
             <Setter Property="Background" Value="#FF2D3748"/>
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="BorderBrush" Value="#FF4A5568"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBox">
-                        <Grid>
-                            <ToggleButton Name="ToggleButton" 
-                                        Background="{TemplateBinding Background}" 
-                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                        Focusable="false"
-                                        IsChecked="{Binding Path=IsDropDownOpen,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}"
-                                        ClickMode="Press">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition/>
-                                        <ColumnDefinition Width="20"/>
-                                    </Grid.ColumnDefinitions>
-                                    <ContentPresenter Grid.Column="0" Name="ContentSite" 
-                                                    IsHitTestVisible="False" 
-                                                    Content="{TemplateBinding SelectionBoxItem}"
-                                                    ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                                    ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
-                                                    Margin="3,3,23,3"
-                                                    VerticalAlignment="Center"
-                                                    HorizontalAlignment="Left" 
-                                                    TextBlock.Foreground="#FFE2E8F0"/>
-                                    <Path Grid.Column="1" x:Name="Arrow" 
-                                        Fill="#FFE2E8F0" 
-                                        HorizontalAlignment="Center" 
-                                        VerticalAlignment="Center" 
-                                        Data="M 0 0 L 4 4 L 8 0 Z"/>
-                                </Grid>
-                            </ToggleButton>
-                            <ContentPresenter Name="ContentPresenter" 
-                                            Content="{TemplateBinding SelectionBoxItem}"
-                                            ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                            ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
-                                            Margin="3,3,23,3"
-                                            IsHitTestVisible="False"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Left"
-                                            TextBlock.Foreground="#FFE2E8F0"/>
-                            <TextBox x:Name="PART_EditableTextBox"
-                                   Style="{x:Null}" 
-                                   Template="{DynamicResource ComboBoxTextBox}" 
-                                   HorizontalAlignment="Left" 
-                                   VerticalAlignment="Center" 
-                                   Margin="3,3,23,3"
-                                   Focusable="True" 
-                                   Background="#FF2D3748"
-                                   Foreground="#FFE2E8F0"
-                                   Visibility="Hidden"
-                                   IsReadOnly="{TemplateBinding IsReadOnly}"/>
-                            <Popup Name="Popup"
-                                   Placement="Bottom"
-                                   IsOpen="{TemplateBinding IsDropDownOpen}"
-                                   AllowsTransparency="True" 
-                                   Focusable="False"
-                                   PopupAnimation="Slide">
-                                <Grid Name="DropDown"
-                                      SnapsToDevicePixels="True"                
-                                      MinWidth="{TemplateBinding ActualWidth}"
-                                      MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                    <Border x:Name="DropDownBorder"
-                                            Background="#FF2D3748" 
-                                            BorderThickness="1"
-                                            BorderBrush="#FF4A5568"/>
-                                    <ScrollViewer Margin="4,6,4,6" SnapsToDevicePixels="True">
-                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" 
-                                                   TextBlock.Foreground="#FFE2E8F0"/>
-                                    </ScrollViewer>
-                                </Grid>
-                            </Popup>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="8,4"/>
             <Style.Resources>
                 <Style TargetType="ComboBoxItem">
-                    <Setter Property="Background" Value="#FF2D3748"/>
-                    <Setter Property="Foreground" Value="#FFE2E8F0"/>
-                    <Setter Property="Padding" Value="8,4"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                    <Setter Property="Padding" Value="8,6"/>
+                    <Setter Property="FontWeight" Value="Medium"/>
                     <Style.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter Property="Background" Value="#FF4A5568"/>
-                            <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                            <Setter Property="Background" Value="#FF4A90E2"/>
+                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#FF2B6CB0"/>
+                            <Setter Property="Foreground" Value="#FFFFFF"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FF4A90E2"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFF"/>
             </Style.Resources>
         </Style>
 
@@ -943,7 +880,7 @@
                 </Border>
                 
                 <!-- Company Selector with Status -->
-                <Border Grid.Row="1" Padding="24,0,24,24">
+                <Border Grid.Row="1" Padding="24,0,24,24" Visibility="Visible" MinHeight="150">
                     <StackPanel>
                         <TextBlock Text="Source Company Profile" Foreground="#FFA0AEC0" FontSize="12" FontWeight="Medium" Margin="0,0,0,8"/>
                         <Grid Margin="0,0,0,8">
@@ -956,19 +893,22 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             
-                            <ComboBox Grid.Column="0" x:Name="CompanySelector" 
-                                      Style="{StaticResource ModernComboBoxStyle}"
-                                      Height="36"
-                                      FontSize="13"
-                                      Margin="0,0,8,0"
+                            <!-- Source Company Profile ComboBox -->
+                            <ComboBox Grid.Column="0" 
                                       ItemsSource="{Binding CompanyProfiles}"
-                                      SelectedItem="{Binding SelectedProfile}"
-                                      DisplayMemberPath="CompanyName">
+                                      SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                                      DisplayMemberPath="CompanyName"
+                                      Style="{StaticResource ModernComboBoxStyle}"
+                                      Margin="0,0,8,0"
+                                      VerticalAlignment="Center">
+                                <ComboBox.ToolTip>
+                                    <TextBlock Text="Select the source company profile for discovery operations" />
+                                </ComboBox.ToolTip>
                             </ComboBox>
                             
                             <Button Grid.Column="1" x:Name="TestSourceConnectionButton"
                                     Command="{Binding TestSourceConnectionCommand}"
-                                    Background="#FF4FC3F7"
+                                    Background="#FF4A5568"
                                     BorderThickness="0"
                                     Width="32" Height="36"
                                     Margin="0,0,4,0"
@@ -1035,32 +975,35 @@
                         
                         <!-- Separator -->
                         <Border Height="1" Background="#FF4A5568" Margin="0,12,0,12" Opacity="0.3"/>
-                        
+
                         <!-- Target Company Profile Section -->
-                        <TextBlock Text="Target Company Profile" Foreground="#FFA0AEC0" FontSize="12" FontWeight="Medium" Margin="0,0,0,8"/>
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <ComboBox Grid.Column="0" x:Name="TargetProfileSelector" 
-                                      Style="{StaticResource ModernComboBoxStyle}"
-                                      Height="36"
-                                      FontSize="13"
-                                      Margin="0,0,8,0"
-                                      ItemsSource="{Binding TargetProfiles}"
-                                      SelectedItem="{Binding SelectedTargetProfile}"
-                                      DisplayMemberPath="Name">
-                            </ComboBox>
+                            <TextBlock Text="Target Company Profile" Foreground="#FFA0AEC0" FontSize="12" FontWeight="Medium" Margin="0,0,0,8"/>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <!-- Target Company Profile ComboBox -->
+                                <ComboBox Grid.Column="0" 
+                                          ItemsSource="{Binding TargetCompanyProfiles}"
+                                          SelectedItem="{Binding SelectedTargetCompany, Mode=TwoWay}"
+                                          DisplayMemberPath="CompanyName"
+                                          Style="{StaticResource ModernComboBoxStyle}"
+                                          Margin="0,0,8,0"
+                                          VerticalAlignment="Center">
+                                    <ComboBox.ToolTip>
+                                        <TextBlock Text="Select the target company profile for migration operations" />
+                                    </ComboBox.ToolTip>
+                                </ComboBox>
                             
                             <Button Grid.Column="1" x:Name="TestTargetConnectionButton"
                                     Command="{Binding TestTargetConnectionCommand}"
-                                    Background="#FF4FC3F7"
+                                    Background="#FF4A5568"
                                     BorderThickness="0"
                                     Width="32" Height="36"
                                     Margin="0,0,4,0"
@@ -1108,7 +1051,7 @@
                                 <TextBlock Text="🔐" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                         </Grid>
-                        
+
                         <!-- Target Status Indicators -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
                             <Border Background="#FF2D3748" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
@@ -1127,10 +1070,9 @@
                     </StackPanel>
                 </Border>
                 
-                
                 <!-- Navigation Buttons with Scroll Support -->
-                <ScrollViewer Grid.Row="2" Margin="0,8,0,0" 
-                              VerticalScrollBarVisibility="Auto" 
+                <ScrollViewer Grid.Row="2" Margin="0,8,0,0"
+                              VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
                               PanningMode="VerticalOnly">
                     <StackPanel>
@@ -1323,7 +1265,7 @@
                 
                 <!-- Spacer -->
                 <!-- Theme Toggle and Settings -->
-                <Border Grid.Row="3" Padding="24,16">
+                <Border Grid.Row="3" Padding="24,16" Visibility="Visible" MinHeight="60">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,16">
                             <TextBlock Text="Theme" FontSize="13" FontWeight="Medium" Foreground="#FFA0AEC0" VerticalAlignment="Center" Margin="0,0,16,0"/>
@@ -1357,8 +1299,8 @@
                     </StackPanel>
                 </Border>
                 
-                <!-- Enhanced Status Bar -->
-                <Border Grid.Row="1" Background="{StaticResource PrimaryGradient}" Padding="24,16">
+                <!-- System Ready Status in Sidebar -->
+                <Border Grid.Row="5" Background="{StaticResource PrimaryGradient}" Padding="24,16">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                             <Ellipse Width="8" Height="8" Fill="#FF48BB78" Margin="0,0,8,0"/>
@@ -1371,6 +1313,24 @@
                         </StackPanel>
                         <ProgressBar x:Name="DashboardProgressBar" Style="{StaticResource ProgressRingStyle}" Value="{Binding OverallProgress}" Margin="0,8,0,0" Visibility="{Binding IsDiscoveryRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     </StackPanel>
+                </Border>
+                
+                <!-- Exit Button -->
+                <Border Grid.Row="6" Padding="24,16">
+                    <Button x:Name="ExitButton" 
+                            Command="{Binding ExitCommand}"
+                            Background="#FF4A5568"
+                            Foreground="#FFE2E8F0"
+                            BorderBrush="#FF718096"
+                            BorderThickness="1"
+                            Padding="12,8"
+                            HorizontalAlignment="Stretch"
+                            ToolTip="Exit Application (Alt+F4)">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock Text="🚪" FontSize="14" Margin="0,0,8,0"/>
+                            <TextBlock Text="Exit" FontSize="13" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
                 </Border>
             </Grid>
         </Border>

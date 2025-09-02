@@ -68,7 +68,9 @@
       "Read(c:\\discoverydata\\ljpops\\Logs/**)",
       "Read(c:\\discoverydata\\ljpops\\Logs/**)",
       "Bash(./Build-GUI.ps1)",
-      "Read(c:\\discoverydata\\ljpops\\Logs/**)"
+      "Read(c:\\discoverydata\\ljpops\\Logs/**)",
+      "Bash(Test-Path \"MandADiscoverySuite.exe\")",
+      "Read(C:\\discoverydata\\ljpops/**)"
     ],
     "deny": [],
     "ask": [],

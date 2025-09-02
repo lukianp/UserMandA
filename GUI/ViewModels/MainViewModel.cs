@@ -63,6 +63,9 @@ namespace MandADiscoverySuite.ViewModels
         private ObservableCollection<object> _databases = new ObservableCollection<object>();
         private ObservableCollection<object> _mailboxes = new ObservableCollection<object>();
         
+        // Discovery module collection
+        private ObservableCollection<ModuleInfo> _discoveryModules = new ObservableCollection<ModuleInfo>();
+        
         public event PropertyChangedEventHandler? PropertyChanged;
         
         public ObservableCollection<TabItem> OpenTabs => _tabsService.Tabs;
@@ -385,6 +388,16 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
         
+        public ObservableCollection<ModuleInfo> DiscoveryModules
+        {
+            get => _discoveryModules;
+            set
+            {
+                _discoveryModules = value;
+                OnPropertyChanged();
+            }
+        }
+        
         public MainViewModel()
         {
             try
@@ -530,8 +543,18 @@ namespace MandADiscoverySuite.ViewModels
             _logger?.LogInformation($"CreateProfileCommand initialized: {CreateProfileCommand != null}");
             
             // Load company profiles
+            System.Diagnostics.Debug.WriteLine("MainViewModel: About to call LoadCompanyProfiles");
             LoadCompanyProfiles();
+            System.Diagnostics.Debug.WriteLine($"MainViewModel: LoadCompanyProfiles completed, CompanyProfiles.Count = {CompanyProfiles.Count}");
+            
+            System.Diagnostics.Debug.WriteLine("MainViewModel: About to call LoadTargetCompanyProfiles");
             LoadTargetCompanyProfiles();
+            System.Diagnostics.Debug.WriteLine($"MainViewModel: LoadTargetCompanyProfiles completed, TargetCompanyProfiles.Count = {TargetCompanyProfiles.Count}");
+            
+            System.Diagnostics.Debug.WriteLine("MainViewModel: About to call LoadDiscoveryModules");
+            LoadDiscoveryModules();
+            System.Diagnostics.Debug.WriteLine("MainViewModel: LoadDiscoveryModules called");
+            
             SetupTargetCredentialWatcher();
             Task.Run(LoadTargetProfilesAsync);
             
@@ -583,6 +606,10 @@ namespace MandADiscoverySuite.ViewModels
                 // Don't throw - just log the error and continue with minimal functionality
                 try
                 {
+                    // Write detailed error to file for debugging
+                    var errorFile = @"C:\enterprisediscovery\mainviewmodel_error.log";
+                    System.IO.File.WriteAllText(errorFile, $"[{DateTime.Now}] MainViewModel Constructor Exception:\n{ex}\n\nInner Exception: {ex.InnerException}\n\nStack Trace:\n{ex.StackTrace}");
+                    
                     var loggerFactory = LoggerFactory.Create(builder => builder.AddDebug());
                     var logger = loggerFactory.CreateLogger<MainViewModel>();
                     logger.LogError(ex, "[MainViewModel] Constructor failed, continuing with minimal functionality");
@@ -706,6 +733,54 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error loading target company profiles");
+            }
+        }
+
+        /// <summary>
+        /// Load discovery modules from the module registry service
+        /// </summary>
+        private void LoadDiscoveryModules()
+        {
+            try
+            {
+                DiscoveryModules.Clear();
+                _logger?.LogInformation("LoadDiscoveryModules called - clearing collection");
+                
+                // Load modules asynchronously and update the collection
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        _logger?.LogInformation("LoadDiscoveryModules: Getting enabled modules...");
+                        var modules = await _moduleRegistryService.GetEnabledModulesAsync();
+                        _logger?.LogInformation($"LoadDiscoveryModules: Found {modules.Count} enabled modules");
+                        
+                        // Update UI on main thread
+                        if (App.Current?.Dispatcher != null)
+                        {
+                            App.Current.Dispatcher.Invoke(() =>
+                            {
+                                foreach (var module in modules)
+                                {
+                                    DiscoveryModules.Add(module);
+                                }
+                                _logger?.LogInformation($"LoadDiscoveryModules: Added {DiscoveryModules.Count} modules to UI collection");
+                            });
+                        }
+                        else
+                        {
+                            _logger?.LogWarning("LoadDiscoveryModules: App.Current.Dispatcher is null, cannot update UI");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogError(ex, "LoadDiscoveryModules: Error in async task");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "LoadDiscoveryModules: Error in main method");
             }
         }
 
@@ -1060,51 +1135,67 @@ namespace MandADiscoverySuite.ViewModels
                 
                 if (!string.IsNullOrWhiteSpace(companyName))
                 {
-                    // Create a simple target profile - no complex PowerShell scripts or app registration
-                    var targetProfile = new TargetProfile
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        Name = companyName.Trim(),
-                        TenantId = "manual-entry-required",
-                        ClientId = "manual-entry-required",
-                        IsActive = true,
-                        Created = DateTime.UtcNow,
-                        LastModified = DateTime.UtcNow
-                    };
+                    // Create directory structure EXACTLY like source profile does it
+                    var targetProfilePath = System.IO.Path.Combine(ConfigurationService.Instance.DiscoveryDataRootPath, companyName.Trim());
                     
-                    _logger?.LogInformation($"Created simple target profile: {companyName}");
-
-                    // Save the new profile to the target profile service
-                    await TargetProfileService.Instance.CreateOrUpdateAsync(
-                        CurrentProfileName, 
-                        targetProfile, 
-                        "manual-entry-required"); // Simple placeholder secret
-
-                    // Refresh the target profiles list
-                    await LoadTargetProfilesAsync();
-
-                    // Set the new profile as active if it's the first one
-                    if (TargetProfiles?.Count == 1)
+                    if (!System.IO.Directory.Exists(targetProfilePath))
                     {
-                        SelectedTargetProfile = TargetProfiles.FirstOrDefault();
-                        if (SelectedTargetProfile != null)
+                        System.IO.Directory.CreateDirectory(targetProfilePath);
+                        System.IO.Directory.CreateDirectory(System.IO.Path.Combine(targetProfilePath, "Raw"));
+                        System.IO.Directory.CreateDirectory(System.IO.Path.Combine(targetProfilePath, "Logs"));
+                        System.IO.Directory.CreateDirectory(System.IO.Path.Combine(targetProfilePath, "Credentials"));
+                        System.IO.Directory.CreateDirectory(System.IO.Path.Combine(targetProfilePath, "Configuration"));
+                        
+                        _logger?.LogInformation($"[MainViewModel] Created target profile directory structure: {companyName}");
+                        
+                        // Create a simple target profile object
+                        var targetProfile = new TargetProfile
                         {
-                            await TargetProfileService.Instance.SetActiveAsync(CurrentProfileName, SelectedTargetProfile.Id);
-                        }
-                    }
-                    else if (targetProfile != null)
-                    {
-                        // Select the newly created profile
-                        var newProfile = TargetProfiles?.FirstOrDefault(p => p.Id == targetProfile.Id);
-                        if (newProfile != null)
-                        {
-                            SelectedTargetProfile = newProfile;
-                        }
-                    }
+                            Id = Guid.NewGuid().ToString(),
+                            Name = companyName.Trim(),
+                            TenantId = "manual-entry-required",
+                            ClientId = "manual-entry-required",
+                            IsActive = true,
+                            Created = DateTime.UtcNow,
+                            LastModified = DateTime.UtcNow
+                        };
+                        
+                        _logger?.LogInformation($"Created simple target profile: {companyName}");
 
-                    MessageBox.Show($"Target profile '{companyName}' created successfully!\n\n" +
-                        "Note: You can configure credentials later through the profile settings.", 
-                        "Target Profile Created", MessageBoxButton.OK, MessageBoxImage.Information);
+                        // Save the new profile to the target profile service - only AFTER directories exist
+                        await TargetProfileService.Instance.CreateOrUpdateAsync(
+                            CurrentProfileName, 
+                            targetProfile, 
+                            "manual-entry-required"); // Simple placeholder secret
+
+                        // Refresh the target profiles list
+                        await LoadTargetProfilesAsync();
+                        
+                        // Set the new profile as active if it's the first one
+                        if (TargetProfiles?.Count == 1)
+                        {
+                            SelectedTargetProfile = TargetProfiles.FirstOrDefault();
+                            if (SelectedTargetProfile != null)
+                            {
+                                await TargetProfileService.Instance.SetActiveAsync(CurrentProfileName, SelectedTargetProfile.Id);
+                            }
+                        }
+                        else
+                        {
+                            // Select the newly created profile
+                            var newProfile = TargetProfiles?.FirstOrDefault(p => p.Id == targetProfile.Id);
+                            if (newProfile != null)
+                            {
+                                SelectedTargetProfile = newProfile;
+                            }
+                        }
+                        
+                        MessageBox.Show($"Target profile '{companyName}' created successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Target profile '{companyName}' already exists!", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
                 }
                 
                 return;
