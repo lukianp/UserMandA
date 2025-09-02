@@ -4,9 +4,9 @@ using System.Collections.Generic;
 namespace MandADiscoverySuite.Models.Migration
 {
     /// <summary>
-    /// Group item for migration operations (T-037)
+    /// Active Directory group item for migration operations (T-037)
     /// </summary>
-    public class GroupItem
+    public class AdGroupItem
     {   
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string Name { get; set; } = string.Empty;
@@ -123,31 +123,6 @@ namespace MandADiscoverySuite.Models.Migration
         public string PropagationFlags { get; set; } = string.Empty;
     }
 
-    /// <summary>
-    /// Security group item for T-037 migration
-    /// </summary>
-    public class SecurityGroupItem
-    {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string GroupSid { get; set; } = string.Empty;
-        public string GroupName { get; set; } = string.Empty;
-        public string DisplayName { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public string Domain { get; set; } = string.Empty;
-        public string DistinguishedName { get; set; } = string.Empty;
-        public string GroupType { get; set; } = "Security";
-        public string GroupScope { get; set; } = "Global";
-        public List<string> Members { get; set; } = new List<string>();
-        public List<string> MemberOf { get; set; } = new List<string>();
-        public List<string> ManagedBy { get; set; } = new List<string>();
-        public DateTime CreatedDate { get; set; } = DateTime.Now;
-        public DateTime ModifiedDate { get; set; } = DateTime.Now;
-        public string CreatedBy { get; set; } = string.Empty;
-        public string ModifiedBy { get; set; } = string.Empty;
-        public Dictionary<string, object> Attributes { get; set; } = new Dictionary<string, object>();
-        public bool IsBuiltIn { get; set; }
-        public Dictionary<string, object> CustomProperties { get; set; } = new Dictionary<string, object>();
-    }
 
     /// <summary>
     /// WMI filter for GPO targeting (T-037)

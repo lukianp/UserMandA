@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Services.Migration;
+using MandADiscoverySuite.Models.Migration;
 
 namespace MandADiscoverySuite.MigrationProviders
 {

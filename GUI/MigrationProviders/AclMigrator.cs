@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Services.Migration;
 using MandADiscoverySuite.Models.Migration;
 using MandADiscoverySuite.Models;
-using MandADiscoverySuite.Migration;
+using MigrationCore = MandADiscoverySuite.Migration;
 
 namespace MandADiscoverySuite.MigrationProviders
 {
@@ -84,7 +84,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<MigrationResult<AclMigrationResult>> MigrateAsync(
             AclItem item, 
-            MigrationContext context, 
+            Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var result = new MigrationResult<AclMigrationResult>
@@ -178,7 +178,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<ValidationResult> ValidateAsync(
             AclItem item, 
-            MigrationContext context, 
+            Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var validationResult = new ValidationResult
@@ -322,7 +322,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<RollbackResult> RollbackAsync(
             AclMigrationResult result, 
-            MigrationContext context, 
+            Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var rollbackResult = new RollbackResult
@@ -365,7 +365,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<bool> SupportsAsync(
             MigrationType type, 
-            MigrationContext context, 
+            Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             return type == MigrationType.ACL || 
@@ -375,7 +375,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<TimeSpan> EstimateDurationAsync(
             AclItem item, 
-            MigrationContext context, 
+            Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             // Base time for ACL migration
@@ -406,7 +406,7 @@ namespace MandADiscoverySuite.MigrationProviders
             string targetPath, 
             List<AclEntry> sourceAcls, 
             Dictionary<string, string> sidMapping, 
-            MigrationContext context, 
+            Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var result = new NtfsPermissionResult
@@ -551,7 +551,7 @@ namespace MandADiscoverySuite.MigrationProviders
             string sharePath, 
             List<ShareAclEntry> shareAcls, 
             Dictionary<string, string> sidMapping, 
-            MigrationContext context, 
+            Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var result = new SharePermissionResult
@@ -664,7 +664,7 @@ namespace MandADiscoverySuite.MigrationProviders
         public async Task<SidHistoryResult> CreateAclSidHistoryAsync(
             List<string> sourceSids, 
             List<string> targetSids, 
-            MigrationContext context, 
+            Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var result = new SidHistoryResult
@@ -739,7 +739,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<AclInheritanceValidationResult> ValidateAclInheritanceAsync(
             string rootPath, 
-            MigrationContext context, 
+            Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var result = new AclInheritanceValidationResult
@@ -823,7 +823,7 @@ namespace MandADiscoverySuite.MigrationProviders
             string registryPath, 
             List<RegistryAclEntry> registryAcls, 
             Dictionary<string, string> sidMapping, 
-            MigrationContext context, 
+            Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var result = new RegistryPermissionResult

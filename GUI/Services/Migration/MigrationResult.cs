@@ -21,12 +21,13 @@ namespace MandADiscoverySuite.Services.Migration
     /// <summary>
     /// Base class for all migration results
     /// </summary>
-    public abstract class MigrationResultBase
+    public abstract class MigrationResultBase : MandADiscoverySuite.Migration.IMigrationResult
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string Operation { get; set; } = string.Empty;
         public bool IsSuccess { get; set; }
+        public bool Success => IsSuccess; // Implementing IMigrationResult
         public string Message { get; set; } = string.Empty;
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
     }

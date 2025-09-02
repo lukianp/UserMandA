@@ -65,22 +65,7 @@ namespace MandADiscoverySuite.Services.Migration
         public bool InheritancePreserved { get; set; }
     }
 
-    // Validation and support result classes
-
-    public class ValidationResult : MigrationResultBase
-    {
-        public bool IsValid { get; set; }
-        public List<string> ValidationErrors { get; set; } = new List<string>();
-        public List<string> ValidationWarnings { get; set; } = new List<string>();
-    }
-
-    public class RollbackResult : MigrationResultBase
-    {
-        public bool CanRollback { get; set; }
-        public bool RollbackCompleted { get; set; }
-        public string RollbackMethod { get; set; }
-        public List<string> RemainingArtifacts { get; set; } = new List<string>();
-    }
+    // Validation and support result classes are now in Services.Migration namespace
 
     // Specific migration result classes for detailed operations
 
@@ -285,5 +270,229 @@ namespace MandADiscoverySuite.Services.Migration
         public TimeSpan ElapsedTime { get; set; }
         public TimeSpan EstimatedTimeRemaining { get; set; }
         public List<string> RecentMessages { get; set; } = new List<string>();
+    }
+
+    // T-037 specific result types
+    public class OuLinkingResult : MigrationResultBase
+    {
+        public string GpoGuid { get; set; }
+        public List<string> LinkedOus { get; set; } = new List<string>();
+        public List<string> FailedLinks { get; set; } = new List<string>();
+    }
+
+    public class SecurityFilteringResult : MigrationResultBase
+    {
+        public string GpoGuid { get; set; }
+        public List<string> AppliedFilters { get; set; } = new List<string>();
+        public List<string> FailedFilters { get; set; } = new List<string>();
+    }
+
+    public class WmiFilterResult : MigrationResultBase
+    {
+        public List<string> MigratedFilters { get; set; } = new List<string>();
+        public List<string> FailedFilters { get; set; } = new List<string>();
+    }
+
+    public class GpoCompatibilityResult : MigrationResultBase
+    {
+        public string GpoGuid { get; set; }
+        public bool IsCompatible { get; set; }
+        public List<string> CompatibilityIssues { get; set; } = new List<string>();
+        public List<string> UnsupportedSettings { get; set; } = new List<string>();
+        public List<string> Recommendations { get; set; } = new List<string>();
+    }
+
+    public class GroupPolicyConflictResolutionResult : MigrationResultBase
+    {
+        public string ConflictType { get; set; }
+        public int TotalConflicts { get; set; }
+        public int ResolvedConflicts { get; set; }
+        public int UnresolvedConflicts { get; set; }
+        public ConflictResolutionStrategy StrategyUsed { get; set; }
+        public List<string> ResolutionActions { get; set; } = new List<string>();
+    }
+
+    public class BulkGpoMigrationResult : MigrationResultBase
+    {
+        public string OperationId { get; set; } = Guid.NewGuid().ToString();
+        public int TotalGpos { get; set; }
+        public int SuccessfulMigrations { get; set; }
+        public int FailedMigrations { get; set; }
+        public double SuccessRate => TotalGpos > 0 ? (double)SuccessfulMigrations / TotalGpos * 100 : 0;
+        public List<GpoMigrationResult> Results { get; set; } = new List<GpoMigrationResult>();
+        public TimeSpan TotalDuration { get; set; }
+    }
+
+    public class GpoMigrationReport : MigrationResultBase
+    {
+        public string ReportId { get; set; } = Guid.NewGuid().ToString();
+        public int TotalGposMigrated { get; set; }
+        public int SuccessfulMigrations { get; set; }
+        public int FailedMigrations { get; set; }
+        public double SuccessRate => TotalGposMigrated > 0 ? (double)SuccessfulMigrations / TotalGposMigrated * 100 : 0;
+        public Dictionary<string, int> SettingsMigrationSummary { get; set; } = new Dictionary<string, int>();
+        public List<string> UnsupportedSettings { get; set; } = new List<string>();
+        public List<string> MigrationWarnings { get; set; } = new List<string>();
+    }
+
+    // Group migration results
+    public class GroupHierarchyResult : MigrationResultBase
+    {
+        public int TotalGroups { get; set; }
+        public int ReplicatedGroups { get; set; }
+        public int FailedGroups { get; set; }
+        public List<string> CircularDependencies { get; set; } = new List<string>();
+        public Dictionary<string, List<string>> HierarchyMap { get; set; } = new Dictionary<string, List<string>>();
+    }
+
+    public class MembershipResult : MigrationResultBase
+    {
+        public string GroupId { get; set; }
+        public int AddedMembers { get; set; }
+        public int FailedMembers { get; set; }
+        public List<string> UnresolvedMembers { get; set; } = new List<string>();
+    }
+
+    public class GroupDependencyResult : MigrationResultBase
+    {
+        public bool HasCircularDependencies { get; set; }
+        public List<string> CircularChains { get; set; } = new List<string>();
+        public Dictionary<string, List<string>> DependencyMap { get; set; } = new Dictionary<string, List<string>>();
+        public List<string> OptimalMigrationOrder { get; set; } = new List<string>();
+        public bool IsValid { get; set; }
+        public List<string> ValidationErrors { get; set; } = new List<string>();
+    }
+
+    public class GroupOwnershipResult : MigrationResultBase
+    {
+        public string GroupId { get; set; }
+        public List<string> AssignedOwners { get; set; } = new List<string>();
+        public List<string> AssignedManagers { get; set; } = new List<string>();
+        public List<string> FailedAssignments { get; set; } = new List<string>();
+    }
+
+    public class BulkGroupMigrationResult : MigrationResultBase
+    {
+        public string OperationId { get; set; } = Guid.NewGuid().ToString();
+        public int TotalGroups { get; set; }
+        public int SuccessfulMigrations { get; set; }
+        public int FailedMigrations { get; set; }
+        public double SuccessRate => TotalGroups > 0 ? (double)SuccessfulMigrations / TotalGroups * 100 : 0;
+        public List<GroupMigrationResult> Results { get; set; } = new List<GroupMigrationResult>();
+        public TimeSpan TotalDuration { get; set; }
+    }
+
+    // ACL migration results
+    public class NtfsPermissionResult : MigrationResultBase
+    {
+        public string Path { get; set; }
+        public int AppliedPermissions { get; set; }
+        public int FailedPermissions { get; set; }
+    }
+
+    public class SharePermissionResult : MigrationResultBase
+    {
+        public string ShareName { get; set; }
+        public int AppliedPermissions { get; set; }
+        public int FailedPermissions { get; set; }
+    }
+
+    public class GpoSidTranslationResult : MigrationResultBase
+    {
+        public Dictionary<string, string> TranslatedSids { get; set; } = new Dictionary<string, string>();
+        public List<string> UnresolvedSids { get; set; } = new List<string>();
+        public DateTime TranslationDate { get; set; } = DateTime.Now;
+    }
+
+    public class AclValidationResult : MigrationResultBase
+    {
+        public List<string> ValidAcls { get; set; } = new List<string>();
+        public List<string> InvalidAcls { get; set; } = new List<string>();
+        public List<string> UnsupportedRights { get; set; } = new List<string>();
+        public bool IsValid { get; set; }
+        public List<string> ValidationErrors { get; set; } = new List<string>();
+    }
+
+    public class BulkAclMigrationResult : MigrationResultBase
+    {
+        public string OperationId { get; set; } = Guid.NewGuid().ToString();
+        public int TotalPaths { get; set; }
+        public int SuccessfulMigrations { get; set; }
+        public int FailedMigrations { get; set; }
+        public double SuccessRate => TotalPaths > 0 ? (double)SuccessfulMigrations / TotalPaths * 100 : 0;
+        public List<AclMigrationResult> Results { get; set; } = new List<AclMigrationResult>();
+        public TimeSpan TotalDuration { get; set; }
+    }
+
+    // Support classes
+    public class GpoConflict
+    {
+        public string ConflictType { get; set; }
+        public string SourceGpoGuid { get; set; }
+        public string ConflictingGpoGuid { get; set; }
+        public string ConflictDescription { get; set; }
+        public string RecommendedAction { get; set; }
+        public Dictionary<string, object> ConflictDetails { get; set; } = new Dictionary<string, object>();
+    }
+
+    public class GroupConflict
+    {
+        public string ConflictType { get; set; }
+        public string SourceGroupSid { get; set; }
+        public string ConflictingGroupSid { get; set; }
+        public string ConflictDescription { get; set; }
+        public string RecommendedAction { get; set; }
+        public Dictionary<string, object> ConflictDetails { get; set; } = new Dictionary<string, object>();
+    }
+
+    public class AclConflict
+    {
+        public string ConflictType { get; set; }
+        public string Path { get; set; }
+        public string ConflictingTrustee { get; set; }
+        public string ConflictDescription { get; set; }
+        public string RecommendedAction { get; set; }
+        public Dictionary<string, object> ConflictDetails { get; set; } = new Dictionary<string, object>();
+    }
+
+    public class NtfsPermission
+    {
+        public string Trustee { get; set; }
+        public string TrusteeSid { get; set; }
+        public string AccessType { get; set; }
+        public string Rights { get; set; }
+        public string Inheritance { get; set; }
+        public string Propagation { get; set; }
+    }
+
+    public class SharePermission
+    {
+        public string Trustee { get; set; }
+        public string TrusteeSid { get; set; }
+        public string AccessMask { get; set; }
+        public string AccessType { get; set; }
+    }
+
+    public enum ConflictResolutionStrategy
+    {
+        Skip,
+        Rename,
+        Merge,
+        Overwrite,
+        Prompt
+    }
+
+    // Missing result types for ACL Migrator
+    public class AclInheritanceValidationResult : MigrationResultBase
+    {
+        public bool InheritanceSupported { get; set; }
+        public List<string> InheritanceIssues { get; set; } = new List<string>();
+    }
+
+    public class RegistryPermissionResult : MigrationResultBase
+    {
+        public string RegistryPath { get; set; }
+        public int AppliedPermissions { get; set; }
+        public int FailedPermissions { get; set; }
     }
 }

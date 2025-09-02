@@ -46,7 +46,7 @@ namespace MandADiscoverySuite.Migration
         /// <returns>Detailed migration result with success status and metadata</returns>
         Task<MigrationResult> MigrateUserAsync(
             UserData user,
-            MigrationSettings settings,
+            Models.Migration.MigrationSettings settings,
             TargetContext target,
             IProgress<MigrationProgress>? progress = null);
 
