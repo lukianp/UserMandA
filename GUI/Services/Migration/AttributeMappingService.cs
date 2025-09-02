@@ -304,7 +304,7 @@ namespace MandADiscoverySuite.Services.Migration
         /// <summary>
         /// Map individual attribute to User object properties
         /// </summary>
-        private void MapAttributeToUserObject(Microsoft.Graph.User userUpdate, Dictionary<string, object> extensionAttributes, string attributeName, string attributeValue)
+        private void MapAttributeToUserObject(Microsoft.Graph.Models.User userUpdate, Dictionary<string, object> extensionAttributes, string attributeName, string attributeValue)
         {
             switch (attributeName.ToLowerInvariant())
             {

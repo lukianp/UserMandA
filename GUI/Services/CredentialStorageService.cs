@@ -16,7 +16,7 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Enterprise-grade secure credential storage and management service
     /// </summary>
-    public class CredentialStorageService : IDisposable
+    public class CredentialStorageService : ICredentialStorageService, IDisposable
     {
         private readonly ILogger<CredentialStorageService> _logger;
         private readonly string _credentialStorePath;

@@ -336,11 +336,11 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         public async Task<bool> SupportsAsync(
-            MigrationType type, 
-            MigrationContext context, 
+            Services.Migration.MigrationType type, 
+            Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
-            return type == MigrationType.Group || type == MigrationType.SecurityGroup;
+            return type == Services.Migration.MigrationType.Group;
         }
 
         public async Task<TimeSpan> EstimateDurationAsync(

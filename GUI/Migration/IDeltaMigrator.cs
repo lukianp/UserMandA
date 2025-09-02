@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using MandADiscoverySuite.Services.Migration;
+using MandADiscoverySuite.Models.Migration;
 
 namespace MandADiscoverySuite.Migration
 {

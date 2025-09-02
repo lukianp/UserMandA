@@ -96,7 +96,6 @@ function Invoke-ApplicationDependencyMapping {
         ExecutionId = [guid]::NewGuid().ToString()
         AddError = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
         AddWarning = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-        Complete = { $this.EndTime = Get-Date }.GetNewClosure()
     }
 
     try {

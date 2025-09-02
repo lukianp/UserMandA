@@ -664,14 +664,15 @@ function Invoke-PrerequisitesCheck {
     Write-PrerequisitesLog "=== Prerequisites Check Started ===" -Level "HEADER"
     Write-PrerequisitesLog "Module: $ModuleName" -Level "INFO"
 
+    $results = @{
+        OverallSuccess = $true
+        Prerequisites = @()
+        Warnings = @()
+        Errors = @()
+        Installed = @()
+    }
+
     try {
-        $results = @{
-            OverallSuccess = $true
-            Prerequisites = @()
-            Warnings = @()
-            Errors = @()
-            Installed = @()
-        }
         # Create prerequisites checker based on module
         $prereqChecker = $null
 
@@ -737,7 +738,7 @@ function Invoke-PrerequisitesCheck {
                                 if ($prereq.InstallCommand) {
                                     try {
                                         $installResult = Invoke-Expression $prereq.InstallCommand
-    
+
                                         if ($installResult.Success) {
                                             $prereq.IsInstalled = $true
                                             $prereq.Status = "Installed"
@@ -748,6 +749,8 @@ function Invoke-PrerequisitesCheck {
                                     } catch {
                                         Write-PrerequisitesLog "✗ Installation failed: $($_.Exception.Message)" -Level "ERROR"
                                     }
+                                } else {
+                                    Write-PrerequisitesLog "No installation command defined for $($prereq.Name)" -Level "WARN"
                                 }
                             }
                         } else {

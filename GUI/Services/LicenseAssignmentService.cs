@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
-using Microsoft.Graph.Auth;
 using Microsoft.Identity.Client;
 using MandADiscoverySuite.Models;
 using System.Collections.Concurrent;
@@ -78,8 +77,7 @@ namespace MandADiscoverySuite.Services
                     .WithAuthority($"https://login.microsoftonline.com/{tenantId}")
                     .Build();
 
-                var authProvider = new ClientCredentialProvider(app);
-                var graphClient = new GraphServiceClient(authProvider);
+                var graphClient = new GraphServiceClient(app);
 
                 // Test the connection
                 try

@@ -793,11 +793,252 @@ class PanoramaInterrogation {
     }
 }
 
+function Invoke-PanoramaInterrogation {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context,
+
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
+    )
+
+    # Define discovery script
+    $discoveryScript = {
+        param($Configuration, $Context, $SessionId, $Connections, $Result)
+
+        $allDiscoveredData = [System.Collections.ArrayList]::new()
+
+        try {
+            # Create PanoramaInterrogation instance
+            $panoramaDiscovery = [PanoramaInterrogation]::new()
+
+            # Set parameters from configuration
+            $params = @{}
+            if ($Configuration.ContainsKey('PanoramaHost')) {
+                $params.PanoramaHost = $Configuration.PanoramaHost
+            }
+            if ($Configuration.ContainsKey('ApiKey')) {
+                $params.ApiKey = $Configuration.ApiKey
+            }
+            if ($Configuration.ContainsKey('Credential')) {
+                $params.Credential = $Configuration.Credential
+            }
+
+            if ($params.Count -gt 0) {
+                $panoramaDiscovery.SetParameters($params)
+            }
+
+            # Execute discovery
+            $summary = $panoramaDiscovery.ExecuteDiscovery()
+
+            if ($summary) {
+                # Convert the exported data to normalized format for output
+                $exData = $summary.ExportedData
+
+                # Process devices
+                if ($exData.Devices -and $exData.Devices.Count -gt 0) {
+                    foreach ($device in $exData.Devices) {
+                        $deviceData = [PSCustomObject]@{
+                            ObjectType = "PanoramaDevice"
+                            Name = $device.Name
+                            Serial = $device.Serial
+                            Model = $device.Model
+                            SoftwareVersion = $device.SoftwareVersion
+                            IPAddress = $device.IPAddress
+                            Hostname = $device.Hostname
+                            State = $device.State
+                            HAState = $device.HAState
+                            VirtualSystems = $device.VirtualSystems
+                            DeviceGroup = $device.DeviceGroup
+                            Template = $device.Template
+                            LastCommit = $device.LastCommit
+                            _DataType = 'PanoramaDevices'
+                            SessionId = $SessionId
+                        }
+                        $null = $allDiscoveredData.Add($deviceData)
+                    }
+                }
+
+                # Process device groups
+                if ($exData.DeviceGroups -and $exData.DeviceGroups.Count -gt 0) {
+                    foreach ($dg in $exData.DeviceGroups) {
+                        $dgData = [PSCustomObject]@{
+                            ObjectType = "PanoramaDeviceGroup"
+                            Name = $dg.Name
+                            Description = $dg.Description
+                            Devices = $dg.Devices
+                            ParentDeviceGroup = $dg.ParentDeviceGroup
+                            _DataType = 'PanoramaDeviceGroups'
+                            SessionId = $SessionId
+                        }
+                        $null = $allDiscoveredData.Add($dgData)
+                    }
+                }
+
+                # Process templates
+                if ($exData.Templates -and $exData.Templates.Count -gt 0) {
+                    foreach ($template in $exData.Templates) {
+                        $templateData = [PSCustomObject]@{
+                            ObjectType = "PanoramaTemplate"
+                            Name = $template.Name
+                            Description = $template.Description
+                            Devices = $template.Devices
+                            _DataType = 'PanoramaTemplates'
+                            SessionId = $SessionId
+                        }
+                        $null = $allDiscoveredData.Add($templateData)
+                    }
+                }
+
+                # Process security policies
+                if ($exData.Policies.Security -and $exData.Policies.Security.Count -gt 0) {
+                    foreach ($policy in $exData.Policies.Security) {
+                        $policyData = [PSCustomObject]@{
+                            ObjectType = "PanoramaSecurityPolicy"
+                            Name = $policy.Name
+                            DeviceGroup = $policy.DeviceGroup
+                            Type = $policy.Type
+                            Description = $policy.Description
+                            SourceZones = $policy.SourceZones
+                            DestinationZones = $policy.DestinationZones
+                            SourceAddresses = $policy.SourceAddresses
+                            DestinationAddresses = $policy.DestinationAddresses
+                            Applications = $policy.Applications
+                            Services = $policy.Services
+                            Action = $policy.Action
+                            LogSetting = $policy.LogSetting
+                            ProfileSetting = $policy.ProfileSetting
+                            Disabled = $policy.Disabled
+                            Tags = $policy.Tags
+                            _DataType = 'PanoramaSecurityPolicies'
+                            SessionId = $SessionId
+                        }
+                        $null = $allDiscoveredData.Add($policyData)
+                    }
+                }
+
+                # Process NAT policies
+                if ($exData.Policies.NAT -and $exData.Policies.NAT.Count -gt 0) {
+                    foreach ($policy in $exData.Policies.NAT) {
+                        $policyData = [PSCustomObject]@{
+                            ObjectType = "PanoramaNATPolicy"
+                            Name = $policy.Name
+                            DeviceGroup = $policy.DeviceGroup
+                            Type = $policy.Type
+                            Description = $policy.Description
+                            SourceZones = $policy.SourceZones
+                            DestinationZones = $policy.DestinationZones
+                            SourceAddresses = $policy.SourceAddresses
+                            DestinationAddresses = $policy.DestinationAddresses
+                            Service = $policy.Service
+                            SourceTranslation = $policy.SourceTranslation
+                            DestinationTranslation = $policy.DestinationTranslation
+                            Disabled = $policy.Disabled
+                            Tags = $policy.Tags
+                            _DataType = 'PanoramaNATPolicies'
+                            SessionId = $SessionId
+                        }
+                        $null = $allDiscoveredData.Add($policyData)
+                    }
+                }
+
+                # Process addresses
+                if ($exData.Objects.Addresses -and $exData.Objects.Addresses.Count -gt 0) {
+                    foreach ($addr in $exData.Objects.Addresses) {
+                        $addrData = [PSCustomObject]@{
+                            ObjectType = "PanoramaAddress"
+                            Name = $addr.Name
+                            Type = $addr.Type
+                            Value = $addr.Value
+                            Description = $addr.Description
+                            Tags = $addr.Tags
+                            _DataType = 'PanoramaAddresses'
+                            SessionId = $SessionId
+                        }
+                        $null = $allDiscoveredData.Add($addrData)
+                    }
+                }
+
+                # Process services
+                if ($exData.Objects.Services -and $exData.Objects.Services.Count -gt 0) {
+                    foreach ($svc in $exData.Objects.Services) {
+                        $svcData = [PSCustomObject]@{
+                            ObjectType = "PanoramaService"
+                            Name = $svc.Name
+                            Protocol = $svc.Protocol
+                            Port = $svc.Port
+                            Description = $svc.Description
+                            Tags = $svc.Tags
+                            _DataType = 'PanoramaServices'
+                            SessionId = $SessionId
+                        }
+                        $null = $allDiscoveredData.Add($svcData)
+                    }
+                }
+
+                # Process GlobalProtect portals
+                if ($exData.GlobalProtect.Portals -and $exData.GlobalProtect.Portals.Count -gt 0) {
+                    foreach ($portal in $exData.GlobalProtect.Portals) {
+                        $portalData = [PSCustomObject]@{
+                            ObjectType = "PanoramaGlobalProtectPortal"
+                            Name = $portal.Name
+                            Description = $portal.Description
+                            ClientConfig = $portal.ClientConfig
+                            Authentication = $portal.Authentication
+                            _DataType = 'PanoramaGlobalProtect'
+                            SessionId = $SessionId
+                        }
+                        $null = $allDiscoveredData.Add($portalData)
+                    }
+                }
+
+                # Set success and metadata
+                $Result.Success = $true
+                $Result.Metadata = @{
+                    DiscoveryTime = Get-Date
+                    PanoramaHost = $summary.PanoramaHost
+                    TotalDevices = $summary.DeviceCount
+                    TotalDeviceGroups = $summary.DeviceGroupCount
+                    TotalTemplates = $summary.TemplateCount
+                    TotalSecurityPolicies = $summary.SecurityPolicyCount
+                    TotalAddresses = $summary.AddressObjectCount
+                    TotalServices = $summary.ServiceObjectCount
+                }
+
+                Write-ModuleLog -ModuleName "PanoramaInterrogation" -Message "Panorama discovery completed successfully" -Level "SUCCESS"
+            } else {
+                $Result.AddError("Panorama discovery execution failed - no summary returned", $null, @{Section="Discovery"})
+            }
+
+        } catch {
+            $Result.AddError("Panorama interrogation failed: $($_.Exception.Message)", $_.Exception, @{Section="Discovery"})
+        }
+
+        # Return data grouped by type
+        return $allDiscoveredData | Group-Object -Property _DataType
+    }
+
+    # Execute discovery using the base module
+    Import-Module (Join-Path $PSScriptRoot "DiscoveryBase.psm1") -Force
+    Start-DiscoveryModule `
+        -ModuleName "PanoramaInterrogation" `
+        -DiscoveryScript $discoveryScript `
+        -Configuration $Configuration `
+        -Context $Context `
+        -SessionId $SessionId `
+        -RequiredServices @()
+}
+
 function Get-PanoramaInterrogation {
     [CmdletBinding()]
     param()
-    
+
     return [PanoramaInterrogation]::new()
 }
 
 Export-ModuleMember -Function Get-PanoramaInterrogation
+Export-ModuleMember -Function Invoke-PanoramaInterrogation

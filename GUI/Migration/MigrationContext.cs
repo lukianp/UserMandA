@@ -21,6 +21,22 @@ namespace MandADiscoverySuite.Migration
     }
 
     /// <summary>
+    /// Source environment context for migrations
+    /// </summary>
+    public class SourceContext
+    {
+        public string DomainName { get; set; } = string.Empty;
+        public string Environment { get; set; } = string.Empty; // OnPremises, Azure, Hybrid
+        public string ConnectionString { get; set; } = string.Empty;
+        public Dictionary<string, string> Credentials { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, object> Configuration { get; set; } = new Dictionary<string, object>();
+        public bool IsConnected { get; set; }
+        public DateTime LastHealthCheck { get; set; } = DateTime.Now;
+        public List<string> Capabilities { get; set; } = new List<string>();
+        public string CompanyProfilePath { get; set; } = string.Empty;
+    }
+
+    /// <summary>
     /// Target environment context for migrations
     /// </summary>
     public class TargetContext

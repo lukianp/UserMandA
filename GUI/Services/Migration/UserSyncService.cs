@@ -549,7 +549,7 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 // Create user update with single attribute
-                var userUpdate = new Microsoft.Graph.User();
+                var userUpdate = new Microsoft.Graph.Models.User();
                 var extensionAttributes = new Dictionary<string, object>();
                 
                 // Use the existing attribute mapping service to map the attribute correctly
@@ -574,7 +574,7 @@ namespace MandADiscoverySuite.Services.Migration
         /// <summary>
         /// Map single attribute to User object (simplified version of AttributeMappingService method)
         /// </summary>
-        private void MapSingleAttributeToUserObject(Microsoft.Graph.User userUpdate, Dictionary<string, object> extensionAttributes, string attributeName, string attributeValue)
+        private void MapSingleAttributeToUserObject(Microsoft.Graph.Models.User userUpdate, Dictionary<string, object> extensionAttributes, string attributeName, string attributeValue)
         {
             switch (attributeName.ToLowerInvariant())
             {

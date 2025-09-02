@@ -1186,37 +1186,37 @@ function Parse-NmapXmlOutput {
     try {
         [xml]$nmapXml = $XmlContent
         
-        foreach ($host in $nmapXml.nmaprun.host) {
+        foreach ($xmlHost in $nmapXml.nmaprun.host) {
             $hostInfo = [PSCustomObject]@{
-                IPAddress = $host.address | Where-Object { $_.addrtype -eq "ipv4" } | Select-Object -ExpandProperty addr
-                Hostname = if ($host.hostnames.hostname) { $host.hostnames.hostname.name } else { "Unknown" }
-                Status = $host.status.state
+                IPAddress = $xmlHost.address | Where-Object { $_.addrtype -eq "ipv4" } | Select-Object -ExpandProperty addr
+                Hostname = if ($xmlHost.hostnames.hostname) { $xmlHost.hostnames.hostname.name } else { "Unknown" }
+                Status = $xmlHost.status.state
                 OS = ""
                 OpenPorts = @()
                 Services = @()
-                MACAddress = ($host.address | Where-Object { $_.addrtype -eq "mac" } | Select-Object -ExpandProperty addr) -join ""
+                MACAddress = ($xmlHost.address | Where-Object { $_.addrtype -eq "mac" } | Select-Object -ExpandProperty addr) -join ""
                 LastSeen = Get-Date
                 ScanMethod = "nmap"
             }
-            
+
             # Parse OS information
-            if ($host.os.osmatch) {
-                $hostInfo.OS = $host.os.osmatch[0].name
+            if ($xmlHost.os.osmatch) {
+                $hostInfo.OS = $xmlHost.os.osmatch[0].name
             }
-            
+
             # Parse ports
-            if ($host.ports.port) {
-                foreach ($port in $host.ports.port) {
+            if ($xmlHost.ports.port) {
+                foreach ($port in $xmlHost.ports.port) {
                     if ($port.state.state -eq "open") {
                         $hostInfo.OpenPorts += [int]$port.portid
-                        
+
                         $serviceName = if ($port.service.name) { $port.service.name } else { "unknown" }
                         $serviceVersion = if ($port.service.version) { $port.service.version } else { "" }
                         $hostInfo.Services += "$serviceName ($($port.portid))" + $(if ($serviceVersion) { " - $serviceVersion" } else { "" })
                     }
                 }
             }
-            
+
             if ($hostInfo.IPAddress) {
                 $results += $hostInfo
             }
@@ -1613,29 +1613,29 @@ function Merge-DiscoveredWithExistingAssets {
     try {
         Write-InfrastructureLog -Level "INFO" -Message "?? Merging discovered hosts with existing asset inventory..." -Context $Context
         
-        foreach ($host in $DiscoveredHosts) {
+        foreach ($discoveredHost in $DiscoveredHosts) {
             # Find matching existing asset by IP address or hostname
-            $existingAsset = $ExistingAssets | Where-Object { 
-                $_.IPAddress -eq $host.IPAddress -or 
-                $_.Hostname -eq $host.Hostname 
+            $existingAsset = $ExistingAssets | Where-Object {
+                $_.IPAddress -eq $discoveredHost.IPAddress -or
+                $_.Hostname -eq $discoveredHost.Hostname
             } | Select-Object -First 1
-            
+
             $mergedAsset = [PSCustomObject]@{
                 # Discovery data
-                IPAddress = $host.IPAddress
-                Hostname = $host.Hostname
-                OS = $host.OS
-                Domain = $host.Domain
-                Manufacturer = $host.Manufacturer
-                Model = $host.Model
-                SerialNumber = $host.SerialNumber
-                Architecture = $host.Architecture
-                OpenPorts = if ($host.OpenPorts) { $host.OpenPorts -join "," } else { "" }
-                Services = if ($host.Services) { $host.Services -join ";" } else { "" }
-                LastSeen = $host.LastSeen
-                RiskLevel = $host.RiskLevel
-                DeviceType = $host.DeviceType
-                ScanMethod = $host.ScanMethod
+                IPAddress = $discoveredHost.IPAddress
+                Hostname = $discoveredHost.Hostname
+                OS = $discoveredHost.OS
+                Domain = $discoveredHost.Domain
+                Manufacturer = $discoveredHost.Manufacturer
+                Model = $discoveredHost.Model
+                SerialNumber = $discoveredHost.SerialNumber
+                Architecture = $discoveredHost.Architecture
+                OpenPorts = if ($discoveredHost.OpenPorts) { $discoveredHost.OpenPorts -join "," } else { "" }
+                Services = if ($discoveredHost.Services) { $discoveredHost.Services -join ";" } else { "" }
+                LastSeen = $discoveredHost.LastSeen
+                RiskLevel = $discoveredHost.RiskLevel
+                DeviceType = $discoveredHost.DeviceType
+                ScanMethod = $discoveredHost.ScanMethod
                 
                 # Asset inventory data (if available)
                 AssetTag = if ($existingAsset) { $existingAsset.AssetTag } else { "" }

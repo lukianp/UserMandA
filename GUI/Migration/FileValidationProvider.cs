@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using MandADiscoverySuite.Models.Migration;
 
 namespace MandADiscoverySuite.Migration
 {
