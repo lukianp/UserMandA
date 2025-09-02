@@ -113,11 +113,11 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<IEnumerable<ChangeDetectionResult<FileItemDto>>> DetectChangesAsync(
+        public async Task<IEnumerable<MandADiscoverySuite.Migration.MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto>>> DetectChangesAsync(
             DateTime lastRunTimestamp, 
             DeltaMigrationSettings settings)
         {
-            var changes = new List<ChangeDetectionResult<FileItemDto>>();
+            var changes = new List<MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto>>();
 
             try
             {
@@ -167,7 +167,7 @@ namespace MandADiscoverySuite.MigrationProviders
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to detect file changes");
-                return Enumerable.Empty<ChangeDetectionResult<FileItemDto>>();
+                return Enumerable.Empty<MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto>>();
             }
         }
 
@@ -383,12 +383,12 @@ namespace MandADiscoverySuite.MigrationProviders
             };
         }
 
-        private async Task<IEnumerable<ChangeDetectionResult<FileItemDto>>> DetectTimestampChangesAsync(
+        private async Task<IEnumerable<MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto>>> DetectTimestampChangesAsync(
             string sourcePath, 
             DateTime lastRunTimestamp, 
             DeltaMigrationSettings settings)
         {
-            var changes = new List<ChangeDetectionResult<FileItemDto>>();
+            var changes = new List<MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto>>();
 
             try
             {
@@ -425,7 +425,7 @@ namespace MandADiscoverySuite.MigrationProviders
                             
                             var targetPath = GenerateTargetPath(filePath, sourcePath);
                             
-                            changes.Add(new ChangeDetectionResult<FileItemDto>
+                            changes.Add(new MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto>
                             {
                                 Item = new FileItemDto
                                 {
@@ -457,16 +457,16 @@ namespace MandADiscoverySuite.MigrationProviders
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to detect timestamp changes in {Path}", sourcePath);
-                return Enumerable.Empty<ChangeDetectionResult<FileItemDto>>();
+                return Enumerable.Empty<MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto>>();
             }
         }
 
-        private async Task<IEnumerable<ChangeDetectionResult<FileItemDto>>> DetectNTFSChangesAsync(
+        private async Task<IEnumerable<MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto>>> DetectNTFSChangesAsync(
             string sourcePath, 
             DateTime lastRunTimestamp, 
             DeltaMigrationSettings settings)
         {
-            var changes = new List<ChangeDetectionResult<FileItemDto>>();
+            var changes = new List<MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto>>();
 
             try
             {
@@ -479,12 +479,12 @@ namespace MandADiscoverySuite.MigrationProviders
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to detect NTFS changes in {Path}", sourcePath);
-                return Enumerable.Empty<ChangeDetectionResult<FileItemDto>>();
+                return Enumerable.Empty<MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto>>();
             }
         }
 
         private async Task<MigrationResultBase> ProcessFileChangeAsync(
-            ChangeDetectionResult<FileItemDto> change, 
+            MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto> change, 
             DeltaMigrationSettings settings, 
             TargetContext target)
         {

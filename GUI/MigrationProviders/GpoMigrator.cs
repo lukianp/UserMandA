@@ -69,7 +69,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<MigrationResult<GpoMigrationResult>> MigrateAsync(
             GroupPolicyItem item, 
-            MigrationContext context, 
+            MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var result = new MigrationResult<GpoMigrationResult>
@@ -242,7 +242,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<ValidationResult> ValidateAsync(
             GroupPolicyItem item, 
-            MigrationContext context, 
+            MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var validationResult = new ValidationResult
@@ -351,7 +351,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<RollbackResult> RollbackAsync(
             GpoMigrationResult result, 
-            MigrationContext context, 
+            MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var rollbackResult = new RollbackResult
@@ -417,7 +417,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<bool> SupportsAsync(
             MigrationType type, 
-            MigrationContext context, 
+            MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             return type == MigrationType.GroupPolicy;
@@ -425,7 +425,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<TimeSpan> EstimateDurationAsync(
             GroupPolicyItem item, 
-            MigrationContext context, 
+            MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             // Base time for GPO creation
@@ -449,7 +449,7 @@ namespace MandADiscoverySuite.MigrationProviders
         public async Task<GpoReplicationResult> ReplicateGpoSettingsAsync(
             string sourceGpoId, 
             string targetOuPath, 
-            MigrationContext context, 
+            MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var result = new GpoReplicationResult
@@ -522,7 +522,7 @@ namespace MandADiscoverySuite.MigrationProviders
         public async Task<WmiFilterMigrationResult> MigrateWmiFiltersAsync(
             List<string> wmiFilterIds, 
             Dictionary<string, string> sidMapping, 
-            MigrationContext context, 
+            MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var result = new WmiFilterMigrationResult
@@ -608,7 +608,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<GpoCompatibilityResult> ValidateGpoCompatibilityAsync(
             List<GroupPolicyItem> groupPolicies, 
-            MigrationContext context, 
+            MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var result = new GpoCompatibilityResult
@@ -694,7 +694,7 @@ namespace MandADiscoverySuite.MigrationProviders
             string gpoId, 
             List<string> securityPrincipals, 
             Dictionary<string, string> sidMapping, 
-            MigrationContext context, 
+            MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var result = new GpoSecurityFilterResult
@@ -792,7 +792,7 @@ namespace MandADiscoverySuite.MigrationProviders
         public async Task<GpoBackupResult> CreateGpoBackupAsync(
             List<string> gpoIds, 
             string backupLocation, 
-            MigrationContext context, 
+            MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
             var result = new GpoBackupResult
@@ -909,7 +909,7 @@ namespace MandADiscoverySuite.MigrationProviders
             return !unsupportedSettings.Contains(settingKey);
         }
 
-        private object ConvertSettingForTarget(string settingKey, object settingValue, MigrationContext context)
+        private object ConvertSettingForTarget(string settingKey, object settingValue, MandADiscoverySuite.Migration.MigrationContext context)
         {
             // Implement setting conversion logic for target environment
             // For now, return the value as-is

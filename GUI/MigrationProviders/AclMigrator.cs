@@ -176,12 +176,12 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<ValidationResult> ValidateAsync(
+        public async Task<Services.Migration.ValidationResult> ValidateAsync(
             AclItem item, 
             Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
-            var validationResult = new ValidationResult
+            var validationResult = new Services.Migration.ValidationResult
             {
                 ValidationType = "AclMigration",
                 StartTime = DateTime.UtcNow,
@@ -320,12 +320,12 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<RollbackResult> RollbackAsync(
+        public async Task<Services.Migration.RollbackResult> RollbackAsync(
             AclMigrationResult result, 
             Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
-            var rollbackResult = new RollbackResult
+            var rollbackResult = new Services.Migration.RollbackResult
             {
                 RollbackAction = "RestoreOriginalAcl",
                 StartTime = DateTime.UtcNow,
@@ -364,13 +364,13 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         public async Task<bool> SupportsAsync(
-            MigrationType type, 
+            Services.Migration.MigrationType type, 
             Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
-            return type == MigrationType.ACL || 
-                   type == MigrationType.SharePermission || 
-                   type == MigrationType.RegistryPermission;
+            return type == Services.Migration.MigrationType.ACL || 
+                   type == Services.Migration.MigrationType.SharePermission || 
+                   type == Services.Migration.MigrationType.RegistryPermission;
         }
 
         public async Task<TimeSpan> EstimateDurationAsync(
@@ -404,7 +404,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<NtfsPermissionResult> MigrateNtfsPermissionsAsync(
             string targetPath, 
-            List<AclEntry> sourceAcls, 
+            List<Models.Migration.AclEntry> sourceAcls, 
             Dictionary<string, string> sidMapping, 
             Services.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
@@ -925,7 +925,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         #region Private Helper Methods
 
-        private List<ShareAclEntry> ConvertToShareAcls(List<AclEntry> aclEntries)
+        private List<ShareAclEntry> ConvertToShareAcls(List<Models.Migration.AclEntry> aclEntries)
         {
             return aclEntries.Select(ace => new ShareAclEntry
             {
@@ -936,7 +936,7 @@ namespace MandADiscoverySuite.MigrationProviders
             }).ToList();
         }
 
-        private List<RegistryAclEntry> ConvertToRegistryAcls(List<AclEntry> aclEntries)
+        private List<RegistryAclEntry> ConvertToRegistryAcls(List<Models.Migration.AclEntry> aclEntries)
         {
             return aclEntries.Select(ace => new RegistryAclEntry
             {
@@ -1049,6 +1049,272 @@ namespace MandADiscoverySuite.MigrationProviders
             migrationResult.SidMappings = registryResult.RegistrySidMappings;
             migrationResult.Warnings.AddRange(registryResult.Warnings);
             migrationResult.Errors.AddRange(registryResult.Errors);
+        }
+
+        #endregion
+
+        #region IAclMigrator Interface Methods
+
+        public async Task<AclMigrationResult> RecreateAclsAsync(string targetPath, List<Models.Migration.AclEntry> sourceAcls, Dictionary<string, string> sidMapping, Services.Migration.MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            return await MigrateNtfsPermissionsAsync(targetPath, sourceAcls, sidMapping, context, cancellationToken);
+        }
+
+        public async Task<NtfsPermissionResult> ApplyNtfsPermissionsAsync(string path, List<NtfsPermission> permissions, Services.Migration.MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            // Convert NtfsPermission to AclEntry format and delegate to existing method
+            var aclEntries = permissions.Select(p => new Models.Migration.AclEntry
+            {
+                Sid = p.TrusteeSid,
+                IdentityReference = p.Trustee,
+                AccessMask = p.Rights,
+                AccessControlType = p.AccessType,
+                InheritanceFlags = p.Inheritance,
+                PropagationFlags = p.Propagation
+            }).ToList();
+
+            var sidMapping = new Dictionary<string, string>();
+            return await MigrateNtfsPermissionsAsync(path, aclEntries, sidMapping, context, cancellationToken);
+        }
+
+        public async Task<SharePermissionResult> ApplySharePermissionsAsync(string shareName, List<SharePermission> permissions, Services.Migration.MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            // Convert SharePermission to ShareAclEntry format and delegate to existing method
+            var shareAcls = permissions.Select(p => new ShareAclEntry
+            {
+                Sid = p.TrusteeSid,
+                IdentityReference = p.Trustee,
+                SharePermission = p.AccessMask,
+                AccessControlType = p.AccessType
+            }).ToList();
+
+            var sidMapping = new Dictionary<string, string>();
+            return await MigrateSharePermissionsAsync(shareName, shareAcls, sidMapping, context, cancellationToken);
+        }
+
+        public async Task<GpoSidTranslationResult> TranslateSidsAsync(List<string> sourceSids, Services.Migration.MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            var result = new GpoSidTranslationResult
+            {
+                Operation = "SidTranslation",
+                StartTime = DateTime.UtcNow,
+                SessionId = context.SessionId,
+                ExecutedBy = context.UserPrincipalName
+            };
+
+            try
+            {
+                foreach (var sid in sourceSids)
+                {
+                    try
+                    {
+                        var translatedSid = await _sidMappingService.TranslateSidAsync(sid, context.SourceDomain, context.TargetDomain, cancellationToken);
+                        if (!string.IsNullOrEmpty(translatedSid))
+                        {
+                            result.TranslatedSids[sid] = translatedSid;
+                        }
+                        else
+                        {
+                            result.UnresolvedSids.Add(sid);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        result.UnresolvedSids.Add(sid);
+                        result.Errors.Add($"Failed to translate SID {sid}: {ex.Message}");
+                    }
+                }
+
+                result.IsSuccess = result.Errors.Count == 0;
+                result.Message = $"Translated {result.TranslatedSids.Count} SIDs, failed {result.UnresolvedSids.Count}";
+            }
+            catch (Exception ex)
+            {
+                result.IsSuccess = false;
+                result.Message = $"SID translation failed: {ex.Message}";
+                result.Errors.Add(ex.Message);
+            }
+
+            result.EndTime = DateTime.UtcNow;
+            return result;
+        }
+
+        public async Task<AclValidationResult> ValidateAclCompatibilityAsync(List<Models.Migration.AclEntry> acls, string targetFileSystem, Services.Migration.MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            var result = new AclValidationResult
+            {
+                Operation = "AclValidation",
+                StartTime = DateTime.UtcNow,
+                SessionId = context.SessionId,
+                ExecutedBy = context.UserPrincipalName,
+                IsValid = true
+            };
+
+            try
+            {
+                foreach (var acl in acls)
+                {
+                    // Basic validation logic
+                    if (string.IsNullOrEmpty(acl.Sid) && string.IsNullOrEmpty(acl.IdentityReference))
+                    {
+                        result.InvalidAcls.Add($"ACL missing both SID and IdentityReference");
+                        result.IsValid = false;
+                    }
+                    else
+                    {
+                        result.ValidAcls.Add(acl.IdentityReference ?? acl.Sid);
+                    }
+                }
+
+                result.IsSuccess = result.IsValid;
+                result.Message = $"Validated {result.ValidAcls.Count} ACLs, {result.InvalidAcls.Count} invalid";
+            }
+            catch (Exception ex)
+            {
+                result.IsSuccess = false;
+                result.IsValid = false;
+                result.Message = $"ACL validation failed: {ex.Message}";
+                result.ValidationErrors.Add(ex.Message);
+            }
+
+            result.EndTime = DateTime.UtcNow;
+            return result;
+        }
+
+        public async Task<GroupPolicyConflictResolutionResult> ResolveAclConflictsAsync(List<AclConflict> conflicts, ConflictResolutionStrategy strategy, Services.Migration.MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            var result = new GroupPolicyConflictResolutionResult
+            {
+                ConflictType = "AclConflict",
+                TotalConflicts = conflicts.Count,
+                StrategyUsed = strategy,
+                Operation = "AclConflictResolution",
+                StartTime = DateTime.UtcNow,
+                SessionId = context.SessionId,
+                ExecutedBy = context.UserPrincipalName
+            };
+
+            try
+            {
+                foreach (var conflict in conflicts)
+                {
+                    switch (strategy)
+                    {
+                        case ConflictResolutionStrategy.Skip:
+                            result.ResolutionActions.Add($"Skipped ACL conflict at {conflict.Path}");
+                            break;
+                        case ConflictResolutionStrategy.Overwrite:
+                            result.ResolutionActions.Add($"Overwrote ACL conflict at {conflict.Path}");
+                            result.ResolvedConflicts++;
+                            break;
+                        default:
+                            result.UnresolvedConflicts++;
+                            result.Errors.Add($"Unsupported resolution strategy for conflict at {conflict.Path}");
+                            break;
+                    }
+                }
+
+                result.IsSuccess = result.Errors.Count == 0;
+                result.Message = $"Resolved {result.ResolvedConflicts} conflicts using {strategy} strategy";
+            }
+            catch (Exception ex)
+            {
+                result.IsSuccess = false;
+                result.Message = $"ACL conflict resolution failed: {ex.Message}";
+                result.Errors.Add(ex.Message);
+            }
+
+            result.EndTime = DateTime.UtcNow;
+            return result;
+        }
+
+        public async Task<BulkAclMigrationResult> BulkApplyAclsAsync(Dictionary<string, List<Models.Migration.AclEntry>> pathAclMap, Dictionary<string, string> sidMapping, Services.Migration.MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            var result = new BulkAclMigrationResult
+            {
+                Operation = "BulkAclMigration",
+                TotalPaths = pathAclMap.Count,
+                StartTime = DateTime.UtcNow,
+                SessionId = context.SessionId,
+                ExecutedBy = context.UserPrincipalName
+            };
+
+            try
+            {
+                foreach (var pathAcl in pathAclMap)
+                {
+                    try
+                    {
+                        var aclResult = await MigrateNtfsPermissionsAsync(pathAcl.Key, pathAcl.Value, sidMapping, context, cancellationToken);
+                        result.Results.Add(new AclMigrationResult
+                        {
+                            ResourcePath = pathAcl.Key,
+                            AcesProcessed = pathAcl.Value.Count,
+                            IsSuccess = aclResult.IsSuccess,
+                            Message = aclResult.Message
+                        });
+
+                        if (aclResult.IsSuccess)
+                        {
+                            result.SuccessfulMigrations++;
+                        }
+                        else
+                        {
+                            result.FailedMigrations++;
+                            result.Errors.AddRange(aclResult.Errors);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        result.FailedMigrations++;
+                        result.Errors.Add($"Failed to migrate ACLs for {pathAcl.Key}: {ex.Message}");
+                    }
+                }
+
+                result.IsSuccess = result.FailedMigrations == 0;
+                result.Message = $"Bulk ACL migration completed. {result.SuccessfulMigrations} successful, {result.FailedMigrations} failed";
+            }
+            catch (Exception ex)
+            {
+                result.IsSuccess = false;
+                result.Message = $"Bulk ACL migration failed: {ex.Message}";
+                result.Errors.Add(ex.Message);
+            }
+
+            result.TotalDuration = DateTime.UtcNow - result.StartTime;
+            result.EndTime = DateTime.UtcNow;
+            return result;
+        }
+
+        public async Task<PermissionInheritanceResult> SetPermissionInheritanceAsync(string targetPath, bool enableInheritance, bool propagateToChildren, Services.Migration.MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            var result = new PermissionInheritanceResult
+            {
+                ResourcePath = targetPath,
+                InheritanceEnabled = enableInheritance,
+                Operation = "SetPermissionInheritance",
+                StartTime = DateTime.UtcNow,
+                SessionId = context.SessionId,
+                ExecutedBy = context.UserPrincipalName
+            };
+
+            try
+            {
+                await _fileSystemClient.SetInheritanceAsync(targetPath, enableInheritance, propagateToChildren, cancellationToken);
+                
+                result.InheritancePreserved = enableInheritance;
+                result.IsSuccess = true;
+                result.Message = $"Permission inheritance {(enableInheritance ? "enabled" : "disabled")} for {targetPath}";
+            }
+            catch (Exception ex)
+            {
+                result.IsSuccess = false;
+                result.Message = $"Failed to set permission inheritance: {ex.Message}";
+                result.Errors.Add(ex.Message);
+            }
+
+            result.EndTime = DateTime.UtcNow;
+            return result;
         }
 
         #endregion

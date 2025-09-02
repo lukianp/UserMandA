@@ -95,16 +95,4 @@ namespace MandADiscoverySuite.Models.Migration
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
     }
 
-    /// <summary>
-    /// Generic change detection result for migration operations
-    /// </summary>
-    public class ChangeDetectionResult<T>
-    {
-        public T Item { get; set; }
-        public string ChangeType { get; set; } // Added, Modified, Deleted
-        public DateTime DetectedAt { get; set; } = DateTime.Now;
-        public Dictionary<string, object> Changes { get; set; } = new Dictionary<string, object>();
-        public string Source { get; set; }
-        public string Target { get; set; }
-    }
 }
