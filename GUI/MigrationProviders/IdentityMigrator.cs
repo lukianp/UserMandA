@@ -728,7 +728,18 @@ namespace MandADiscoverySuite.MigrationProviders
 
             foreach (var conflict in conflicts)
             {
-                var resolution = DetermineAutomaticResolution(conflict, settings.ConflictResolution);
+                var conflictStrategy = new Models.Identity.ConflictResolutionStrategy
+                {
+                    UpnConflictResolution = settings.ConflictResolution == "Rename" ? Models.Identity.ConflictResolutionMode.Rename :
+                                           settings.ConflictResolution == "Merge" ? Models.Identity.ConflictResolutionMode.Rename : // Use Rename for Merge
+                                           Models.Identity.ConflictResolutionMode.Skip,
+                    EmailConflictResolution = Models.Identity.ConflictResolutionMode.Skip,
+                    DisplayNameConflictResolution = Models.Identity.ConflictResolutionMode.Skip,
+                    EnableAutomaticResolution = true,
+                    RenamingPattern = "{original}_{increment}",
+                    AppendPattern = "{original} (Migrated)"
+                };
+                var resolution = DetermineAutomaticResolution(conflict, conflictStrategy);
                 var resolvedValue = await ApplyConflictResolutionAsync(conflict, resolution, target);
 
                 switch (conflict.ConflictType.ToLower())
@@ -929,13 +940,22 @@ namespace MandADiscoverySuite.MigrationProviders
             MandADiscoverySuite.Models.Migration.MigrationSettings settings,
             TargetContext target)
         {
-            switch (settings.MigrationStrategy)
+            switch (settings.MigrationStrategy.ToString())
             {
-                case MigrationStrategy.DirectCreation:
+                case "DirectCreation":
                     var creationSettings = new UserAccountCreationSettings
                     {
                         GeneratePassword = settings.EnablePasswordProvisioning,
-                        PasswordRequirements = settings.PasswordRequirements,
+                        PasswordRequirements = new Models.Identity.PasswordRequirements
+                        {
+                            RequireUppercase = true,
+                            RequireLowercase = true,
+                            RequireNumbers = true,
+                            RequireSpecialCharacters = true,
+                            ForceChangeOnFirstLogin = true,
+                            MinimumLength = 12,
+                            ExpirationPeriod = TimeSpan.FromDays(90)
+                        },
                         EnableAccount = true
                     };
                     var createResult = await CreateUserAccountAsync(user, creationSettings, target);
@@ -949,7 +969,7 @@ namespace MandADiscoverySuite.MigrationProviders
                         ErrorMessage = createResult.ErrorMessage
                     };
 
-                case MigrationStrategy.B2BInvitation:
+                case "B2BInvitation":
                     var invitationSettings = new UserInvitationSettings();
                     var inviteResult = await InviteUserAsync(user, invitationSettings, target);
                     return new UserAccountCreationResult
@@ -1194,7 +1214,7 @@ namespace MandADiscoverySuite.MigrationProviders
             {
                 await _auditService.LogAsync(new AuditEvent
                 {
-                    Action = AuditAction.UserMigration,
+                    Action = AuditAction.UserSync,
                     ObjectType = ObjectType.User,
                     Status = result.IsSuccess ? AuditStatus.Success : AuditStatus.Failed,
                     StatusMessage = result.IsSuccess ? "User migration completed successfully" : result.ErrorMessage,

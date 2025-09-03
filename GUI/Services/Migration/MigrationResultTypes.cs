@@ -98,7 +98,7 @@ namespace MandADiscoverySuite.Services.Migration
         public string TargetGpoGuid { get; set; } = string.Empty;
         public List<string> MigratedSettings { get; set; } = new List<string>();
         public List<string> SkippedSettings { get; set; } = new List<string>();
-        public List<string> Warnings { get; set; } = new List<string>();
+        public new List<string> Warnings { get; set; } = new List<string>();
         public DateTime MigrationDate { get; set; } = DateTime.Now;
         public string ExecutedBy { get; set; } = string.Empty;
         public bool GpoCreated { get; set; }
@@ -129,7 +129,7 @@ namespace MandADiscoverySuite.Services.Migration
         // Additional properties required by build errors
         public List<string> UnrestoredItems { get; set; } = new List<string>();
         public string RollbackAction { get; set; } = string.Empty;
-        public List<string> Warnings { get; set; } = new List<string>();
+        public new List<string> Warnings { get; set; } = new List<string>();
         public List<string> RestoredItems { get; set; } = new List<string>();
         public bool DataRestored { get; set; }
         public string ExecutedBy { get; set; } = string.Empty;
@@ -244,7 +244,7 @@ namespace MandADiscoverySuite.Services.Migration
         
         // Additional properties required by build errors
         public string SessionId { get; set; } = string.Empty;
-        public List<string> Warnings { get; set; } = new List<string>();
+        public new List<string> Warnings { get; set; } = new List<string>();
         public bool HistoryCreated { get; set; }
     }
 
@@ -261,7 +261,7 @@ namespace MandADiscoverySuite.Services.Migration
         public List<string> MigratedGroups { get; set; } = new List<string>();
         public List<string> UnmappedGroups { get; set; } = new List<string>();
         public Dictionary<string, string> GroupMappings { get; set; } = new Dictionary<string, string>();
-        public List<string> Warnings { get; set; } = new List<string>();
+        public new List<string> Warnings { get; set; } = new List<string>();
     }
 
     public class SimpleAttributeMappingResult : MigrationResultBase
