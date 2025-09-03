@@ -1430,7 +1430,7 @@ namespace MandADiscoverySuite.MigrationProviders
         /// </summary>
         public async Task<GroupPolicyConflictResolutionResult> ResolveAclConflictsAsync(
             List<AclConflict> conflicts, 
-            ConflictResolutionStrategy strategy, 
+            Services.Migration.ConflictResolutionStrategy strategy, 
             MigrationCore.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
