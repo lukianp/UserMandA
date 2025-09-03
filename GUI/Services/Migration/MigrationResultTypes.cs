@@ -29,6 +29,12 @@ namespace MandADiscoverySuite.Services.Migration
         // Additional properties required by build errors
         public string TargetUserUpn { get; set; } = string.Empty;
         public string SourceUserSid { get; set; } = string.Empty;
+        public string TargetUserSid { get; set; } = string.Empty;
+        public Dictionary<string, string> AttributeMappings { get; set; } = new Dictionary<string, string>();
+        public List<string> MigratedGroups { get; set; } = new List<string>();
+        public List<string> UnmappedGroups { get; set; } = new List<string>();
+        public bool SidHistoryCreated { get; set; }
+        public Dictionary<string, object> CustomProperties { get; set; } = new Dictionary<string, object>();
         public List<string> UnrestoredItems { get; set; } = new List<string>();
     }
 
@@ -97,6 +103,7 @@ namespace MandADiscoverySuite.Services.Migration
         public string RollbackReason { get; set; } = string.Empty;
         public DateTime RollbackStarted { get; set; } = DateTime.Now;
         public DateTime RollbackCompleted { get; set; }
+        public DateTime RolledBackAt { get; set; } = DateTime.Now;
         
         // Additional properties required by build errors  
         public List<string> UnrestoredItems { get; set; } = new List<string>();
@@ -482,7 +489,7 @@ namespace MandADiscoverySuite.Services.Migration
         public double SuccessRate => TotalGpos > 0 ? (double)SuccessfulMigrations / TotalGpos * 100 : 0;
         public List<GpoMigrationResult> Results { get; set; } = new List<GpoMigrationResult>();
         public TimeSpan TotalDuration { get; set; }
-        public string OperationDetails { get; set; } = string.Empty;
+        public Dictionary<string, object> OperationDetails { get; set; } = new Dictionary<string, object>();
     }
 
     public class GpoMigrationReport : MigrationResultBase
@@ -495,7 +502,7 @@ namespace MandADiscoverySuite.Services.Migration
         public Dictionary<string, int> SettingsMigrationSummary { get; set; } = new Dictionary<string, int>();
         public List<string> UnsupportedSettings { get; set; } = new List<string>();
         public List<string> MigrationWarnings { get; set; } = new List<string>();
-        public string ReportDetails { get; set; } = string.Empty;
+        public Dictionary<string, object> ReportDetails { get; set; } = new Dictionary<string, object>();
         public DateTime GeneratedDate { get; set; } = DateTime.Now;
     }
 

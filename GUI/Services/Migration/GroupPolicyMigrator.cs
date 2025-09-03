@@ -662,7 +662,7 @@ namespace MandADiscoverySuite.Services.Migration
                     // Report progress
                     var completedGpos = result.SuccessfulMigrations + result.FailedMigrations;
                     var progressPercentage = (double)completedGpos / result.TotalGpos * 100;
-                    context.ReportProgressUpdate("Bulk GPO Migration", progressPercentage,
+                    context.ReportProgressUpdate("Bulk GPO Migration", (int)progressPercentage,
                         $"Processed {completedGpos}/{result.TotalGpos} GPOs");
                 }
 

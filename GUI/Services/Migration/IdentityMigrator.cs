@@ -52,11 +52,11 @@ namespace MandADiscoverySuite.Services.Migration
             try
             {
                 _logger.LogInformation($"Starting identity migration for user: {item.UserPrincipalName}");
-                context.ReportProgress("Identity Migration", 0, $"Starting migration for {item.UserPrincipalName}");
+                context.ReportProgressUpdate("Identity Migration", 0, $"Starting migration for {item.UserPrincipalName}");
                 context.AuditLogger?.LogMigrationStart(context.SessionId, "User", item.UserPrincipalName, context.InitiatedBy);
 
                 // Step 1: Validate user readiness
-                context.ReportProgress("Identity Migration", 10, "Validating user prerequisites");
+                context.ReportProgressUpdate("Identity Migration", 10, "Validating user prerequisites");
                 var validationResult = await ValidateAsync(item, context, cancellationToken);
                 if (!validationResult.IsValid)
                 {
@@ -67,7 +67,7 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 // Step 2: Create target user account
-                context.ReportProgress("Identity Migration", 25, "Creating target user account");
+                context.ReportProgressUpdate("Identity Migration", 25, "Creating target user account");
                 var createUserResult = await CreateTargetUserAsync(item, context, cancellationToken);
                 if (!createUserResult.IsSuccess)
                 {
@@ -77,14 +77,14 @@ namespace MandADiscoverySuite.Services.Migration
                     return result;
                 }
 
-                var targetUserUpn = createUserResult.Metadata["TargetUserUpn"].ToString();
-                var targetUserSid = createUserResult.Metadata.ContainsKey("TargetUserSid") ? 
-                    createUserResult.Metadata["TargetUserSid"].ToString() : null;
+                var targetUserUpn = createUserResult.Properties["TargetUserUpn"].ToString();
+                var targetUserSid = createUserResult.Properties.ContainsKey("TargetUserSid") ? 
+                    createUserResult.Properties["TargetUserSid"].ToString() : null;
 
-                context.ReportProgress("Identity Migration", 40, "Target user created successfully");
+                context.ReportProgressUpdate("Identity Migration", 40, "Target user created successfully");
 
                 // Step 3: Migrate user attributes
-                context.ReportProgress("Identity Migration", 50, "Migrating user attributes");
+                context.ReportProgressUpdate("Identity Migration", 50, "Migrating user attributes");
                 var attributeResult = await MigrateUserAttributesAsync(
                     item.Attributes, 
                     targetUserUpn, 
@@ -95,7 +95,7 @@ namespace MandADiscoverySuite.Services.Migration
                 SidMappingResult sidResult = null;
                 if (context.GetConfiguration("EnableSidHistory", true) && !string.IsNullOrEmpty(targetUserSid))
                 {
-                    context.ReportProgress("Identity Migration", 65, "Creating SID history");
+                    context.ReportProgressUpdate("Identity Migration", 65, "Creating SID history");
                     sidResult = await CreateSidHistoryAsync(
                         GetUserSid(item), 
                         targetUserSid, 
@@ -104,7 +104,7 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 // Step 5: Migrate group memberships
-                context.ReportProgress("Identity Migration", 80, "Migrating group memberships");
+                context.ReportProgressUpdate("Identity Migration", 80, "Migrating group memberships");
                 var groupResult = await MigrateGroupMembershipsAsync(
                     item.SecurityGroups, 
                     targetUserSid ?? targetUserUpn, 
@@ -112,8 +112,204 @@ namespace MandADiscoverySuite.Services.Migration
                     cancellationToken);
 
                 // Step 6: Finalize and validate migration
-                context.ReportProgress("Identity Migration", 95, "Finalizing migration");
-                await FinalizeUserMigrationAsync(targetUserUpn, context, cancellationToken);
+                context.ReportProgressUpdate("Identity Migration", 95, "Finalizing migration");
+✅ Task T‑052: Model & DTO Harmonization
+
+Purpose: Resolve dozens of CS0108, CS0117, CS1061, and CS0029 errors caused by missing or mismatched fields and methods in your migration and identity models.
+
+architecture‑lead:
+
+Audit all classes under GUI/Models/Identity and GUI/Services/Migration. Identify properties present in base classes (e.g., MigrationResultBase) but missing in derived classes (GroupMigrationResult, GroupMembershipResult, IdentityMigrationResult, etc.).
+
+Define which properties should be inherited and which must be re-declared with the new keyword to avoid CS0108 warnings (e.g., Warnings, SourceUserPrincipalName, StrategyUsed, AttributeMapping, SessionId, etc.).
+
+Enumerate all missing DTO properties referenced in the code (e.g., TargetGroupSid, GroupCreated, GroupAttributes, MemberSids, CustomAttributes, GroupScope, NestedGroupsProcessed, MigratedMembers, UnmappedMembers, CompatibilityMetadata, etc.) and update the corresponding classes to include them.
+
+gui-module-executor:
+
+Implement or adjust DTO classes to match the new definitions (e.g., GroupItem should include MemberSids, MemberOfSids, CustomAttributes; GroupDto should provide Sid, GroupScope; GroupMigrationResult should include all referenced fields).
+
+Update code in GroupMigrator.cs, GpoMigrator.cs, IdentityMigrator.cs and related services to use the harmonized properties and avoid direct dictionary-to-list mismatches (CS0029 errors).
+
+Replace usages of generic List<string> where a Dictionary<string, object> or a custom result type is expected, or vice versa.
+
+build-verifier-integrator:
+Build the solution after these changes; confirm that the number of missing-property and implicit-conversion errors drops to zero.
+
+log-monitor-analyzer:
+Watch for any remaining model‑related compile or runtime errors and report them to the team.
+
+test-data-validator:
+Add tests to verify that new properties are populated correctly when migration results are generated.
+
+documentation-qa-guardian:
+Update the model documentation in /GUI/Documentation/ to reflect the new DTO structures and any renamed properties.
+
+Success criteria:
+
+“Missing definition” and “no accessible extension method” errors disappear when compiling.
+
+All derived result classes expose properties expected by the migrators.
+
+Code no longer attempts to implicitly convert dictionaries to lists or vice versa.
+
+✅ Task T‑053: Service and Helper Implementation Completion
+
+Purpose: Address missing methods and classes in services, especially CredentialStorageService, ConfigurationService, and auditing helpers.
+
+architecture‑lead:
+
+Examine the code for calls to methods such as GetCredentials, StoreCredentials, DeleteCredentials, CredentialExists, GetAllCredentialKeys, ClearAll, TryResolveTenantId, etc. Document the expected behaviors and parameters of each method.
+
+Define new interfaces or extend existing ones (e.g., ICredentialStorageService, IConfigurationService) to include these methods.
+
+gui-module-executor:
+
+Implement the missing functions in CredentialStorageService.cs, using secure storage (DPAPI or Key Vault as appropriate) and file-level encryption for storing credentials.
+
+Add TryResolveTenantId to ConfigurationService. This should look up tenant IDs from saved profiles or configuration files.
+
+Ensure that IAuditService.LogAsync exists and is accessible wherever used (fix ambiguous references to AuditEvent, AuditAction, and AuditStatus). Consider namespacing conflicts (e.g., between your Audit namespace and Microsoft.Graph.Models.AuditEvent).
+
+build-verifier-integrator:
+After implementing these methods, rebuild the solution. Confirm that CS0103 (name does not exist) and CS1061 (method not found) errors related to credential and configuration services no longer occur.
+
+test-data-validator:
+
+Write tests to verify that credentials can be saved, retrieved, deleted, and enumerated via the new methods.
+
+Test that TryResolveTenantId returns the correct tenant ID for various profile configurations.
+
+documentation-qa-guardian:
+Document the new credential-storage API and environment-resolution logic in /GUI/Documentation/credentials.md and /GUI/Documentation/configuration.md.
+
+Success criteria:
+
+All “name does not exist” and “method not found” errors in CredentialStorageService.cs and ConfigurationService.cs are resolved.
+
+Credentials can be saved, retrieved, and removed using the new methods.
+
+Tenant IDs can be resolved from configuration profiles.
+
+✅ Task T‑054: Graph & Identity API Harmonization
+
+Purpose: Fix dozens of missing Graph types and methods (e.g., MailFoldersRequestBuilder.Inbox, OrganizationCollectionResponse.FirstOrDefault, MailFolderCollectionResponse.Select, etc.) and unify usage of Microsoft Graph SDK.
+
+architecture‑lead:
+
+Review all service classes (e.g., GraphNotificationService.cs, LicenseAssignmentService.cs, AttributeMappingService.cs) for Graph SDK usage. Identify which packages (Microsoft.Graph, Microsoft.Graph.Beta) are imported, and determine if the correct version is referenced.
+
+Specify a consistent Graph SDK version and update all using directives accordingly.
+
+gui-module-executor:
+
+Add missing using Microsoft.Graph; or using Microsoft.Graph.Beta; references to files where Graph types (e.g., UserCollectionResponse, MailFoldersRequestBuilder, OrganizationCollectionResponse) are used.
+
+Replace missing methods (e.g., FirstOrDefault, Any, Select, Inbox, SentItems) with appropriate alternatives from the SDK. For example, use .Value.FirstOrDefault() on collections, and graphServiceClient.Me.MailFolders["Inbox"].Messages rather than nonexistent Inbox properties.
+
+Fix ambiguous references between your own AuditEvent types and Graph’s audit event classes by qualifying namespaces or using alias directives.
+
+build-verifier-integrator:
+Restore NuGet packages (if necessary) and rebuild. Confirm that Graph type and method errors disappear.
+
+test-data-validator:
+
+Mock Graph API calls in tests to ensure that corrected methods (e.g., retrieving inbox messages, assigning licenses) work without compile errors.
+
+Write integration tests for license assignment to confirm Graph API interactions succeed.
+
+documentation-qa-guardian:
+Update the project’s technical documentation to reflect the SDK version used and note any major changes in Graph API usage.
+
+Success criteria:
+
+Compilation errors referencing missing Graph types or methods (e.g., OrganizationCollectionResponse.FirstOrDefault, MailFoldersRequestBuilder.Inbox) are resolved.
+
+The application uses a consistent version of the Graph SDK and the correct namespaces.
+
+Ambiguities between your custom AuditEvent and Graph’s AuditEvent are eliminated.
+
+✅ Task T‑055: Group & GPO Migration Provider Finalization
+
+Purpose: Fix the many errors in GroupMigrator.cs, GpoMigrator.cs, and related result classes (e.g., GpoReplicationResult, GroupHierarchyResult, GroupDependencyValidationResult, etc.).
+
+architecture‑lead:
+
+Review the interfaces and expected result classes for group/GPO migration (e.g., GroupMigrationResult, GroupDependencyValidationResult, GpoReplicationResult, GroupPolicyConflictResolutionResult). Document the expected fields and methods.
+
+Ensure each result class extends MigrationResultBase where appropriate and includes all referenced fields (e.g., TargetGroupSid, GroupSidMappings, MfaConfiguration, ConflictsResolved, SkippedGroupSids, ResolutionDetails, etc.).
+
+Define the delegate signatures for progress reporting. Replace usages of Action<MigrationProgress> that require three parameters with a proper delegate (e.g., Action<MigrationProgress, TSource, TTarget>).
+
+gui-module-executor:
+
+Implement missing result classes and fields.
+
+Fix calls in GroupMigrator.cs and GpoMigrator.cs where lists are being treated as dictionaries or vice versa (e.g., avoid using ContainsKey on List<string>).
+
+Provide GetMappedSid and other helper methods referenced in migrator classes.
+
+build-verifier-integrator:
+Build and run tests for group and GPO migrations. Confirm that compile errors for undefined properties/methods disappear.
+
+log-monitor-analyzer:
+During migration testing, monitor logs for any runtime errors due to result-class mismatches or incorrect progress delegates.
+
+test-data-validator:
+Create unit tests verifying that group and GPO migration results populate all expected fields and that progress events fire with the correct signature.
+
+documentation-qa-guardian:
+Update the GPO/group migration documentation (/GUI/Documentation/migration-gpo-groups-acl.md) to reflect the updated result structures and delegates.
+
+Success criteria:
+
+All missing-field errors in GroupMigrator and GpoMigrator are resolved.
+
+Progress reporting uses a consistent delegate signature.
+
+Result objects include all expected fields and inherit from MigrationResultBase.
+
+✅ Task T‑056: License, Notification, and Sync Provider Corrections
+
+Purpose: Address the numerous errors in LicenseAssignmentService, GraphNotificationService, AttributeMappingService, UserSyncService, and view models (e.g., LicenseComplianceViewModel, MigrationPlanningViewModel) related to license assignment, notifications and user sync.
+
+architecture‑lead:
+
+Define correct API calls for license assignment: use GraphServiceClient.Users[userId].AssignLicense with AssignedLicense objects (import from Microsoft.Graph.Models). Document fields like SkuId, DisabledPlans, etc.
+
+Specify correct types for notification messages (Message, ItemBody, Recipient, EmailAddress from Graph).
+
+For sync, define UserSyncStatus and ensure it includes properties like SyncedAttributes and the expected methods.
+
+gui-module-executor:
+
+Fix ILicenseAssignmentService to return proper types (AssignLicensePostRequestBody instead of Dictionary<string, object>, etc.).
+
+Update GraphNotificationService to use Microsoft.Graph message objects instead of nonexistent types.
+
+Remove uses of TryResolveTenantId in view models or implement it in ConfigurationService.
+
+Fix property assignments in LicenseComplianceViewModel and MigrationPlanningViewModel, ensuring they use the correct logger generic type (e.g., ILogger<LicenseComplianceViewModel> instead of ILogger<LicenseAssignmentService>).
+
+build-verifier-integrator:
+Build after these changes; confirm that AssignedLicense, Message, ItemBody, etc., compile.
+
+log-monitor-analyzer:
+Monitor logs for Graph API call failures and ensure errors are correctly logged.
+
+test-data-validator:
+Write tests that assign licenses to a set of users and confirm the API returns expected results. Mock Graph API calls for notifications and ensure messages are formatted and sent correctly.
+
+documentation-qa-guardian:
+Update /GUI/Documentation/migration-licenses.md and notification docs with the corrected API usage.
+
+Success criteria:
+
+Licensing, notifications, and user-sync errors (missing types, incorrect API calls, read-only properties) are resolved.
+
+License assignment results and notifications function properly in tests.
+
+The UI no longer references nonexistent methods or properties in these services.
 
                 // Build successful result
                 result.Result = new IdentityMigrationResult
@@ -194,9 +390,9 @@ namespace MandADiscoverySuite.Services.Migration
 
                 if (!item.IsEnabled)
                 {
-                    result.Warnings.Add(new ValidationIssue 
+                    result.Warnings.Add(new MandADiscoverySuite.Migration.ValidationIssue 
                     { 
-                        Severity = ValidationSeverity.Warning,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Warning,
                         Category = "Account Status",
                         Description = "User account is disabled in source domain"
                     });
