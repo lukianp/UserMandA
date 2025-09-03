@@ -529,7 +529,7 @@ namespace MandADiscoverySuite.Migration
 
                 var result = new RollbackResult
                 {
-                    Success = true,
+                    IsSuccess = true,
                     Message = message
                 };
                 result.Warnings.AddRange(warnings);
@@ -538,17 +538,17 @@ namespace MandADiscoverySuite.Migration
             catch (UnauthorizedAccessException ex)
             {
                 errors.Add($"Access denied during rollback: {ex.Message}");
-                return RollbackResult.Failed("Rollback failed due to insufficient permissions", errors);
+                return RollbackResult.Failed("Rollback failed due to insufficient permissions", string.Join("; ", errors));
             }
             catch (IOException ex)
             {
                 errors.Add($"IO error during rollback: {ex.Message}");
-                return RollbackResult.Failed("Rollback failed due to file system error", errors);
+                return RollbackResult.Failed("Rollback failed due to file system error", string.Join("; ", errors));
             }
             catch (Exception ex)
             {
                 errors.Add($"Unexpected error during rollback: {ex.Message}");
-                return RollbackResult.Failed($"File rollback failed: {ex.Message}", errors);
+                return RollbackResult.Failed($"File rollback failed: {ex.Message}", string.Join("; ", errors));
             }
         }
     }

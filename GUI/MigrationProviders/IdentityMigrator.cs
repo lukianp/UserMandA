@@ -13,6 +13,7 @@ using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Models.Migration;
 using MandADiscoverySuite.Models.Identity;
+using MandADiscoverySuite.Services.Migration;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Services.Audit;
 
@@ -23,12 +24,12 @@ namespace MandADiscoverySuite.MigrationProviders
     /// Provides comprehensive user migration capabilities with Graph API integration, conflict resolution,
     /// attribute mapping, password provisioning, MFA configuration, and ongoing synchronization.
     /// </summary>
-    public class IdentityMigrator : IIdentityMigrator
+    public class IdentityMigrator : Migration.IIdentityMigrator
     {
         #region Fields and Properties
 
         private readonly ILogger<IdentityMigrator> _logger;
-        private readonly ILicenseAssignmentService _licenseService;
+        private readonly Services.ILicenseAssignmentService _licenseService;
         private readonly IAuditService _auditService;
         private readonly ICredentialStorageService _credentialService;
         private readonly ConcurrentDictionary<string, GraphServiceClient> _graphClients;
@@ -53,7 +54,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public IdentityMigrator(
             ILogger<IdentityMigrator> logger = null,
-            ILicenseAssignmentService licenseService = null,
+            Services.ILicenseAssignmentService licenseService = null,
             IAuditService auditService = null,
             ICredentialStorageService credentialService = null)
         {
@@ -104,12 +105,14 @@ namespace MandADiscoverySuite.MigrationProviders
                     .WithAuthority($"https://login.microsoftonline.com/{tenantId}")
                     .Build();
 
-                var graphClient = new GraphServiceClient(app);
+                // Use ClientSecretCredential for authentication
+                var tokenCredential = new Azure.Identity.ClientSecretCredential(tenantId, credentials.ClientId, credentials.ClientSecret);
+                var graphClient = new GraphServiceClient(tokenCredential);
 
                 // Test the connection
                 try
                 {
-                    var organization = await graphClient.Organization.Request().GetAsync();
+                    var organization = await graphClient.Organization.GetAsync();
                     _logger.LogInformation($"Successfully connected to tenant {tenantId} for identity operations");
                 }
                 catch (Exception ex)
@@ -174,7 +177,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 });
 
                 // Step 1: Conflict Detection
-                progress?.Report(new MigrationProgress { Message = "Detecting conflicts...", Percentage = 10 });
+                progress?.Report(new Migration.MigrationProgress { Message = "Detecting conflicts...", Percentage = 10 });
                 var conflicts = await DetectConflictsAsync(new[] { user }, target);
                 
                 if (conflicts.Any(c => c.IsBlocking))
@@ -198,48 +201,52 @@ namespace MandADiscoverySuite.MigrationProviders
                 }
 
                 // Step 2: Resolve Conflicts
-                progress?.Report(new MigrationProgress { Message = "Resolving conflicts...", Percentage = 20 });
-                var resolvedUser = await ResolveUserConflictsAsync(user, conflicts, userSettings, target);
+                progress?.Report(new Migration.MigrationProgress { Message = "Resolving conflicts...", Percentage = 20 });
+                // Create a base MigrationSettings from UserMigrationSettings properties
+                var baseSettings = new MandADiscoverySuite.Models.Migration.MigrationSettings();
+                var resolvedUser = await ResolveUserConflictsAsync(user, conflicts, baseSettings, target);
 
                 // Step 3: Attribute Mapping
-                progress?.Report(new MigrationProgress { Message = "Mapping attributes...", Percentage = 30 });
+                progress?.Report(new Migration.MigrationProgress { Message = "Mapping attributes...", Percentage = 30 });
                 var mappingResult = await MapUserAttributesAsync(resolvedUser, userSettings.AttributeMapping, target);
-                result.AttributeMapping = mappingResult;
+                result.AttributeMapping = mappingResult.ToString();
 
                 // Step 4: Create/Invite User Account
-                progress?.Report(new MigrationProgress { Message = "Creating user account...", Percentage = 50 });
-                var accountResult = await CreateOrInviteUserAsync(resolvedUser, mappingResult, userSettings, target);
+                progress?.Report(new Migration.MigrationProgress { Message = "Creating user account...", Percentage = 50 });
+                var accountResult = await CreateOrInviteUserAsync(resolvedUser, mappingResult, baseSettings, target);
                 
                 result.TargetUserId = accountResult.TargetUserId;
                 result.TargetUserPrincipalName = accountResult.TargetUserPrincipalName;
-                result.StrategyUsed = userSettings.MigrationStrategy;
+                result.StrategyUsed = userSettings.MigrationStrategy.ToString();
 
                 // Step 5: Password Provisioning
                 if (userSettings.EnablePasswordProvisioning && userSettings.MigrationStrategy == MigrationStrategy.DirectCreation)
                 {
-                    progress?.Report(new MigrationProgress { Message = "Provisioning password...", Percentage = 60 });
-                    result.PasswordProvisioning = await ProvisionPasswordAsync(accountResult.TargetUserId, userSettings.PasswordRequirements, target);
+                    progress?.Report(new Migration.MigrationProgress { Message = "Provisioning password...", Percentage = 60 });
+                    var passwordResult = await ProvisionPasswordAsync(accountResult.TargetUserId, userSettings.PasswordRequirements, target);
+                    result.PasswordProvisioning = passwordResult.Success ? "Password provisioned successfully" : $"Password provisioning failed: {passwordResult.ErrorMessage}";
                 }
 
                 // Step 6: License Assignment
                 if (userSettings.EnableLicenseAssignment && !string.IsNullOrEmpty(result.TargetUserId))
                 {
-                    progress?.Report(new MigrationProgress { Message = "Assigning licenses...", Percentage = 70 });
-                    result.LicenseAssignment = await AssignLicensesAsync(result.TargetUserId, user, userSettings.DefaultLicenseSkus, target);
+                    progress?.Report(new Migration.MigrationProgress { Message = "Assigning licenses...", Percentage = 70 });
+                    var licenseResult = await AssignLicensesAsync(result.TargetUserId, user, userSettings.DefaultLicenseSkus, target);
+                    result.LicenseAssignment = licenseResult.ToString();
                 }
 
                 // Step 7: MFA Configuration
                 if (userSettings.EnableMfaConfiguration && userSettings.MfaSettings.EnableMfa)
                 {
-                    progress?.Report(new MigrationProgress { Message = "Configuring MFA...", Percentage = 80 });
+                    progress?.Report(new Migration.MigrationProgress { Message = "Configuring MFA...", Percentage = 80 });
                     var mfaResults = await ConfigureMfaAsync(new[] { result.TargetUserId }, userSettings.MfaSettings, target);
-                    result.MfaConfiguration = mfaResults.ToList();
+                    result.MfaConfiguration = string.Join(", ", mfaResults.Select(m => m.ToString()));
                 }
 
                 // Step 8: Group Migration (if enabled)
                 if (userSettings.EnableGroupMigration)
                 {
-                    progress?.Report(new MigrationProgress { Message = "Migrating group memberships...", Percentage = 90 });
+                    progress?.Report(new Migration.MigrationProgress { Message = "Migrating group memberships...", Percentage = 90 });
                     result.CreatedGroups = await MigrateUserGroupsAsync(user, result.TargetUserId, target);
                 }
 
@@ -254,7 +261,7 @@ namespace MandADiscoverySuite.MigrationProviders
                     StatusMessage = result.IsSuccess ? "User migration successful" : "User migration completed with errors"
                 });
 
-                progress?.Report(new MigrationProgress { Message = "Migration completed", Percentage = 100 });
+                progress?.Report(new Migration.MigrationProgress { Message = "Migration completed", Percentage = 100 });
 
                 _logger.LogInformation($"User migration completed for {user.UserPrincipalName}: {(result.IsSuccess ? "Success" : "Failure")}");
             }
@@ -294,13 +301,11 @@ namespace MandADiscoverySuite.MigrationProviders
                 var graphClient = await GetGraphClientAsync(target.TenantId);
                 
                 // Find the target user
-                progress?.Report(new MigrationProgress { Message = "Finding target user...", Percentage = 20 });
+                progress?.Report(new Migration.MigrationProgress { Message = "Finding target user...", Percentage = 20 });
                 var targetUsers = await graphClient.Users
-                    .Request()
-                    .Filter($"mail eq '{user.Mail}' or userPrincipalName eq '{user.UserPrincipalName}'")
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => requestConfiguration.QueryParameters.Filter = $"mail eq '{user.Mail}' or userPrincipalName eq '{user.UserPrincipalName}'");
 
-                var targetUser = targetUsers.FirstOrDefault();
+                var targetUser = targetUsers.Value?.FirstOrDefault();
                 if (targetUser == null)
                 {
                     result.ErrorMessage = "Target user not found for rollback";
@@ -308,12 +313,12 @@ namespace MandADiscoverySuite.MigrationProviders
                 }
 
                 // Disable the account
-                progress?.Report(new MigrationProgress { Message = "Disabling target account...", Percentage = 50 });
+                progress?.Report(new Migration.MigrationProgress { Message = "Disabling target account...", Percentage = 50 });
                 targetUser.AccountEnabled = false;
-                await graphClient.Users[targetUser.Id].Request().UpdateAsync(targetUser);
+                await graphClient.Users[targetUser.Id].PatchAsync(targetUser);
 
                 // Remove licenses
-                progress?.Report(new MigrationProgress { Message = "Removing licenses...", Percentage = 70 });
+                progress?.Report(new Migration.MigrationProgress { Message = "Removing licenses...", Percentage = 70 });
                 if (targetUser.AssignedLicenses?.Any() == true)
                 {
                     var removeLicenses = targetUser.AssignedLicenses.Select(l => l.SkuId).ToList();
@@ -321,12 +326,12 @@ namespace MandADiscoverySuite.MigrationProviders
                 }
 
                 // Optionally delete the account (configurable)
-                progress?.Report(new MigrationProgress { Message = "Completing rollback...", Percentage = 90 });
+                progress?.Report(new Migration.MigrationProgress { Message = "Completing rollback...", Percentage = 90 });
                 // Note: Account deletion would be done here if configured
 
                 result.IsSuccess = true;
                 result.EndTime = DateTime.UtcNow;
-                progress?.Report(new MigrationProgress { Message = "Rollback completed", Percentage = 100 });
+                progress?.Report(new Migration.MigrationProgress { Message = "Rollback completed", Percentage = 100 });
 
                 _logger.LogInformation($"User rollback completed successfully for {user.UserPrincipalName}");
             }
@@ -372,13 +377,23 @@ namespace MandADiscoverySuite.MigrationProviders
                     await semaphore.WaitAsync(cancellationToken);
                     try
                     {
-                        var migrationSettings = new MigrationSettings(); // Convert UserMigrationSettings if needed
-                        var result = await MigrateUserAsync(user, migrationSettings, target) as MandADiscoverySuite.Migration.MigrationResult;
+                        var migrationSettings = new Models.Migration.MigrationSettings(); // Convert UserMigrationSettings if needed
+                        var migrationResult = await MigrateUserAsync(user, migrationSettings, target);
                         
-                        results.Add(result);
+                        // Convert MigrationResult to UserMigrationResult
+                        var userResult = new UserMigrationResult
+                        {
+                            IsSuccess = migrationResult.IsSuccess,
+                            ErrorMessage = migrationResult.ErrorMessage,
+                            Errors = migrationResult.Errors,
+                            SourceUserPrincipalName = user.UserPrincipalName,
+                            TargetUserId = migrationResult.TargetUserId
+                        };
+                        
+                        results.Add(userResult);
 
                         var currentProcessed = Interlocked.Increment(ref processed);
-                        if (result.IsSuccess)
+                        if (userResult.IsSuccess)
                             Interlocked.Increment(ref successful);
                         else
                             Interlocked.Increment(ref failed);
@@ -436,14 +451,26 @@ namespace MandADiscoverySuite.MigrationProviders
                     if (!hasChanged)
                         continue;
 
-                    // Perform incremental update
-                    var result = await UpdateExistingUserAsync(user, settings, target, cancellationToken);
-                    results.Add(result);
+                    // Perform incremental update  
+                    var migrationSettings = new MandADiscoverySuite.Models.Migration.MigrationSettings();
+                    var migrationResult = await UpdateExistingUserAsync(user, migrationSettings, target, cancellationToken);
+                    
+                    // Convert MigrationResult to UserMigrationResult
+                    var userResult = new UserMigrationResult
+                    {
+                        IsSuccess = migrationResult.IsSuccess,
+                        ErrorMessage = migrationResult.ErrorMessage,
+                        Errors = migrationResult.Errors,
+                        SourceUserPrincipalName = user.UserPrincipalName,
+                        TargetUserId = migrationResult.TargetUserId
+                    };
+                    
+                    results.Add(userResult);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"Delta migration failed for user {user.UserPrincipalName}");
-                    results.Add(new MandADiscoverySuite.Migration.MigrationResult
+                    results.Add(new UserMigrationResult
                     {
                         SourceUserPrincipalName = user.UserPrincipalName,
                         IsSuccess = false,
@@ -525,7 +552,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 }
 
                 // Create the user
-                var createdUser = await graphClient.Users.Request().AddAsync(user);
+                var createdUser = await graphClient.Users.PostAsync(user);
 
                 result.TargetUserId = createdUser.Id;
                 result.TargetUserPrincipalName = createdUser.UserPrincipalName;
@@ -579,7 +606,7 @@ namespace MandADiscoverySuite.MigrationProviders
                     };
                 }
 
-                var createdInvitation = await graphClient.Invitations.Request().AddAsync(invitation);
+                var createdInvitation = await graphClient.Invitations.PostAsync(invitation);
 
                 result.InvitationId = createdInvitation.Id;
                 result.InvitedUserEmail = createdInvitation.InvitedUserEmailAddress;
@@ -622,7 +649,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 var graphClient = await GetGraphClientAsync(target.TenantId);
 
                 // Get current user state
-                var currentUser = await graphClient.Users[targetUserId].Request().GetAsync();
+                var currentUser = await graphClient.Users[targetUserId].GetAsync();
                 var updateUser = new User();
 
                 // Determine what attributes to update
@@ -654,7 +681,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
                 if (attributesToUpdate.Any())
                 {
-                    await graphClient.Users[targetUserId].Request().UpdateAsync(updateUser);
+                    await graphClient.Users[targetUserId].PatchAsync(updateUser);
                     result.UpdatedAttributes = attributesToUpdate.ToDictionary(k => k.Key, v => v.Value?.ToString() ?? "");
                 }
 
@@ -775,9 +802,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
                 // Check if this value exists
                 var existing = await graphClient.Users
-                    .Request()
-                    .Filter($"userPrincipalName eq '{candidateValue}' or mail eq '{candidateValue}'")
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => requestConfiguration.QueryParameters.Filter = $"userPrincipalName eq '{candidateValue}' or mail eq '{candidateValue}'");
 
                 if (!existing.Any())
                     return candidateValue;
@@ -947,7 +972,7 @@ namespace MandADiscoverySuite.MigrationProviders
                     }
                 };
 
-                await graphClient.Users[targetUserId].Request().UpdateAsync(user);
+                await graphClient.Users[targetUserId].PatchAsync(user);
 
                 result.Password = password;
                 result.IsTemporary = requirements.ForceChangeOnFirstLogin;
@@ -967,7 +992,7 @@ namespace MandADiscoverySuite.MigrationProviders
             return result;
         }
 
-        private async Task<LicenseAssignmentResult> AssignLicensesAsync(
+        private async Task<Services.Migration.LicenseAssignmentResult> AssignLicensesAsync(
             string targetUserId,
             UserData sourceUser,
             List<string> defaultSkus,
@@ -981,7 +1006,7 @@ namespace MandADiscoverySuite.MigrationProviders
                     targetUserId,
                     defaultSkus);
 
-                return new LicenseAssignmentResult
+                return new Services.Migration.LicenseAssignmentResult
                 {
                     UserId = targetUserId,
                     AssignedLicenses = result.AssignedSkus,
@@ -992,7 +1017,7 @@ namespace MandADiscoverySuite.MigrationProviders
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Failed to assign licenses to user {targetUserId}");
-                return new LicenseAssignmentResult
+                return new Services.Migration.LicenseAssignmentResult
                 {
                     UserId = targetUserId,
                     IsSuccess = false,
@@ -1112,11 +1137,9 @@ namespace MandADiscoverySuite.MigrationProviders
                 
                 // Find target user
                 var targetUsers = await graphClient.Users
-                    .Request()
-                    .Filter($"mail eq '{user.Mail}' or userPrincipalName eq '{user.UserPrincipalName}'")
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => requestConfiguration.QueryParameters.Filter = $"mail eq '{user.Mail}' or userPrincipalName eq '{user.UserPrincipalName}'");
 
-                var targetUser = targetUsers.FirstOrDefault();
+                var targetUser = targetUsers.Value?.FirstOrDefault();
                 if (targetUser == null)
                 {
                     result.ErrorMessage = "Target user not found for delta update";
@@ -1201,9 +1224,9 @@ namespace MandADiscoverySuite.MigrationProviders
                     if (!string.IsNullOrEmpty(user.UserPrincipalName))
                     {
                         var existingUsers = await graphClient.Users
-                            .Request()
-                            .Filter($"userPrincipalName eq '{user.UserPrincipalName}'")
-                            .GetAsync();
+                            .GetAsync(requestConfiguration => {
+                                requestConfiguration.QueryParameters.Filter = $"userPrincipalName eq '{user.UserPrincipalName}'";
+                            });
 
                         if (existingUsers.Any())
                         {
@@ -1226,9 +1249,9 @@ namespace MandADiscoverySuite.MigrationProviders
                     if (!string.IsNullOrEmpty(user.Mail))
                     {
                         var existingUsers = await graphClient.Users
-                            .Request()
-                            .Filter($"mail eq '{user.Mail}'")
-                            .GetAsync();
+                            .GetAsync(requestConfiguration => {
+                                requestConfiguration.QueryParameters.Filter = $"mail eq '{user.Mail}'";
+                            });
 
                         if (existingUsers.Any())
                         {

@@ -257,7 +257,10 @@ namespace MandADiscoverySuite.Services.Migration
             {
                 // Find the target user
                 var users = await _graphServiceClient.Users
-                    .Request()
+                    .GetAsync(requestConfiguration => {
+                        requestConfiguration.QueryParameters.Filter = $"userPrincipalName eq '{targetUserPrincipalName}'";
+                        requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "givenName", "surname", "jobTitle", "department", "companyName", "officeLocation", "businessPhones", "mobilePhone", "streetAddress", "city", "state", "postalCode", "country" };
+                    }, cancellationToken)
                     .Filter($"userPrincipalName eq '{targetUserPrincipalName}'")
                     .Select("id")
                     .GetAsync(cancellationToken);
@@ -280,7 +283,7 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 // Update the user
-                await _graphServiceClient.Users[targetUser.Id].Request().UpdateAsync(userUpdate, cancellationToken);
+                await _graphServiceClient.Users[targetUser.Id].PatchAsync(userUpdate, cancellationToken);
 
                 // Update extension attributes if any
                 if (extensionAttributes.Any())

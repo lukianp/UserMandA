@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Graph;
 using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.Migration
 {
@@ -105,7 +106,6 @@ namespace MandADiscoverySuite.Migration
             try
             {
                 var targetUser = await _graphClient.Users[user.UserPrincipalName]
-                    .Request()
                     .GetAsync();
 
                 if (targetUser == null)
@@ -129,7 +129,7 @@ namespace MandADiscoverySuite.Migration
                     });
                 }
             }
-            catch (ServiceException ex) when (ex.Error.Code == "Request_ResourceNotFound")
+            catch (ServiceException ex) when (ex.ResponseStatusCode == 404)
             {
                 issues.Add(new ValidationIssue
                 {
@@ -148,9 +148,7 @@ namespace MandADiscoverySuite.Migration
             try
             {
                 var targetUser = await _graphClient.Users[user.UserPrincipalName]
-                    .Request()
-                    .Select("assignedLicenses,licenseAssignmentStates")
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => requestConfiguration.QueryParameters.Select = new[] { "assignedLicenses", "licenseAssignmentStates" });
 
                 if (targetUser?.AssignedLicenses == null || !targetUser.AssignedLicenses.Any())
                 {
@@ -187,7 +185,7 @@ namespace MandADiscoverySuite.Migration
                 {
                     Severity = ValidationSeverity.Warning,
                     Category = "Licensing",
-                    Description = $"Could not validate licensing: {ex.Error.Message}",
+                    Description = $"Could not validate licensing: {ex.Message}",
                     RecommendedAction = "Manually verify user licensing in target tenant"
                 });
             }
@@ -200,9 +198,7 @@ namespace MandADiscoverySuite.Migration
             try
             {
                 var targetUser = await _graphClient.Users[user.UserPrincipalName]
-                    .Request()
-                    .Select("displayName,mail,userPrincipalName,jobTitle,department,officeLocation")
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => requestConfiguration.QueryParameters.Select = new[] { "displayName", "mail", "userPrincipalName", "jobTitle", "department", "officeLocation" });
 
                 // Validate display name matches
                 if (!string.Equals(targetUser?.DisplayName, user.DisplayName, StringComparison.OrdinalIgnoreCase))
@@ -234,7 +230,7 @@ namespace MandADiscoverySuite.Migration
                 {
                     Severity = ValidationSeverity.Warning,
                     Category = "Attributes",
-                    Description = $"Could not validate attributes: {ex.Error.Message}",
+                    Description = $"Could not validate attributes: {ex.Message}",
                     RecommendedAction = "Manually verify user attributes in target tenant"
                 });
             }
@@ -248,10 +244,9 @@ namespace MandADiscoverySuite.Migration
             {
                 var memberOf = await _graphClient.Users[user.UserPrincipalName]
                     .MemberOf
-                    .Request()
                     .GetAsync();
 
-                if (memberOf?.Count == 0)
+                if (memberOf?.Value?.Count == 0)
                 {
                     issues.Add(new ValidationIssue
                     {
@@ -268,7 +263,7 @@ namespace MandADiscoverySuite.Migration
                 {
                     Severity = ValidationSeverity.Warning,
                     Category = "Group Memberships", 
-                    Description = $"Could not validate group memberships: {ex.Error.Message}",
+                    Description = $"Could not validate group memberships: {ex.Message}",
                     RecommendedAction = "Manually verify group memberships in target tenant"
                 });
             }
@@ -281,9 +276,7 @@ namespace MandADiscoverySuite.Migration
             try
             {
                 var targetUser = await _graphClient.Users[user.UserPrincipalName]
-                    .Request()
-                    .Select("mail,mailNickname,proxyAddresses")
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => requestConfiguration.QueryParameters.Select = new[] { "mail", "mailNickname", "proxyAddresses" });
 
                 if (string.IsNullOrEmpty(targetUser?.Mail))
                 {
@@ -302,7 +295,7 @@ namespace MandADiscoverySuite.Migration
                 {
                     Severity = ValidationSeverity.Warning,
                     Category = "Mail Properties",
-                    Description = $"Could not validate mail properties: {ex.Error.Message}",
+                    Description = $"Could not validate mail properties: {ex.Message}",
                     RecommendedAction = "Manually verify mail configuration in target tenant"
                 });
             }
@@ -347,18 +340,17 @@ namespace MandADiscoverySuite.Migration
                 if (_graphClient == null)
                 {
                     errors.Add("Graph client not configured - cannot perform rollback");
-                    return RollbackResult.Failed("Rollback failed due to missing Graph client", errors);
+                    return RollbackResult.Failed("Rollback failed due to missing Graph client", string.Join("; ", errors));
                 }
 
                 // Disable the target account
-                var updateUser = new User
+                var updateUser = new Microsoft.Graph.Models.User
                 {
                     AccountEnabled = false
                 };
 
                 await _graphClient.Users[user.UserPrincipalName]
-                    .Request()
-                    .UpdateAsync(updateUser);
+                    .PatchAsync(updateUser);
 
                 progress?.Report(new ValidationProgress
                 {
@@ -369,16 +361,16 @@ namespace MandADiscoverySuite.Migration
 
                 // Remove from groups (optional - commented out to prevent accidental data loss)
                 /*
-                var memberOf = await _graphClient.Users[user.UserPrincipalName].MemberOf.Request().GetAsync();
+                var memberOf = await _graphClient.Users[user.UserPrincipalName].MemberOf.GetAsync();
                 foreach (var group in memberOf.OfType<Group>())
                 {
                     try
                     {
-                        await _graphClient.Groups[group.Id].Members[user.UserPrincipalName].Reference.Request().DeleteAsync();
+                        await _graphClient.Groups[group.Id].Members[user.UserPrincipalName].Ref.DeleteAsync();
                     }
                     catch (ServiceException ex)
                     {
-                        warnings.Add($"Could not remove user from group {group.DisplayName}: {ex.Error.Message}");
+                        warnings.Add($"Could not remove user from group {group.DisplayName}: {ex.Message}");
                     }
                 }
                 */
@@ -396,7 +388,7 @@ namespace MandADiscoverySuite.Migration
 
                 var result = new RollbackResult
                 {
-                    Success = true,
+                    IsSuccess = true,
                     Message = message
                 };
                 result.Warnings.AddRange(warnings);
@@ -404,13 +396,13 @@ namespace MandADiscoverySuite.Migration
             }
             catch (ServiceException ex)
             {
-                errors.Add($"Graph API error during rollback: {ex.Error.Message}");
-                return RollbackResult.Failed($"Rollback failed: {ex.Error.Message}", errors);
+                errors.Add($"Graph API error during rollback: {ex.Message}");
+                return RollbackResult.Failed($"Rollback failed: {ex.Message}", string.Join("; ", errors));
             }
             catch (Exception ex)
             {
                 errors.Add($"Unexpected error during rollback: {ex.Message}");
-                return RollbackResult.Failed($"Rollback failed: {ex.Message}", errors);
+                return RollbackResult.Failed($"Rollback failed: {ex.Message}", string.Join("; ", errors));
             }
         }
     }

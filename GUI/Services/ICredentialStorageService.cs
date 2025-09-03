@@ -77,6 +77,7 @@ namespace MandADiscoverySuite.Services
         public DateTime CreatedDate { get; set; }
         public DateTime LastAccessedDate { get; set; }
         public Dictionary<string, string> AdditionalProperties { get; set; } = new Dictionary<string, string>();
+        public string CredentialType { get; set; } = "Unknown";
         
         public bool IsDomainCredential => !string.IsNullOrEmpty(Domain);
         public bool IsAzureCredential => !string.IsNullOrEmpty(TenantId);

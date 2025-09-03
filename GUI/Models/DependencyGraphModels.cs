@@ -405,6 +405,11 @@ namespace MandADiscoverySuite.Models
         /// </summary>
         public Dictionary<string, List<string>> Dependencies { get; set; } = new Dictionary<string, List<string>>();
 
+        /// <summary>
+        /// List of circular dependencies found in the graph
+        /// </summary>
+        public List<string> CircularDependencies { get; set; } = new List<string>();
+
         protected virtual bool SetProperty<T>(ref T field, T value, [System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
         {
             if (Equals(field, value)) return false;

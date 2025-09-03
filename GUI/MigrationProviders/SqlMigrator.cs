@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.MigrationProviders
 {
@@ -16,7 +17,7 @@ namespace MandADiscoverySuite.MigrationProviders
     /// <summary>
     /// Implements SQL database migration.
     /// </summary>
-    public class SqlMigrator : ISqlMigrator
+    public class SqlMigrator : Migration.ISqlMigrator
     {
         private readonly ISqlTransferClient _client;
 
@@ -25,13 +26,13 @@ namespace MandADiscoverySuite.MigrationProviders
             _client = client;
         }
 
-        public async Task<MigrationResult> MigrateDatabaseAsync(DatabaseDto database, MigrationSettings settings, TargetContext target, IProgress<MigrationProgress> progress = null)
+        public async Task<MigrationResult> MigrateDatabaseAsync(DatabaseDto database, MigrationSettings settings, TargetContext target, IProgress<Migration.MigrationProgress> progress = null)
         {
             try
             {
-                progress?.Report(new MigrationProgress { Percentage = 0, Message = $"Restoring {database.Name}" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 0, Message = $"Restoring {database.Name}" });
                 await _client.RestoreAsync(database);
-                progress?.Report(new MigrationProgress { Percentage = 100, Message = $"Database {database.Name} restored" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 100, Message = $"Database {database.Name} restored" });
                 return MigrationResult.Succeeded();
             }
             catch (Exception ex)
@@ -40,16 +41,16 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<RollbackResult> RollbackDatabaseAsync(DatabaseDto database, TargetContext target, IProgress<MigrationProgress> progress = null)
+        public async Task<RollbackResult> RollbackDatabaseAsync(DatabaseDto database, TargetContext target, IProgress<Migration.MigrationProgress> progress = null)
         {
             try
             {
-                progress?.Report(new MigrationProgress { Percentage = 0, Message = $"Rolling back database {database.Name}" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 0, Message = $"Rolling back database {database.Name}" });
                 
                 // Simplified rollback - in practice this would drop the target database
                 await Task.Delay(2000); // Simulate rollback operation
 
-                progress?.Report(new MigrationProgress { Percentage = 100, Message = $"Database {database.Name} rollback completed" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 100, Message = $"Database {database.Name} rollback completed" });
                 return RollbackResult.Succeeded("Target database dropped - source database is primary");
             }
             catch (Exception ex)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace MandADiscoverySuite.Migration
 {
@@ -11,6 +12,7 @@ namespace MandADiscoverySuite.Migration
         void LogOperation(string operationType, string details, bool success = true);
         void LogError(string operationType, string error, Exception exception = null);
         void LogProgress(string operationType, int completed, int total);
+        void LogMigrationComplete(object migrationResult);
     }
     
     /// <summary>
@@ -32,6 +34,11 @@ namespace MandADiscoverySuite.Migration
         public void LogProgress(string operationType, int completed, int total)
         {
             System.Diagnostics.Debug.WriteLine($"[{DateTime.Now}] PROGRESS {operationType}: {completed}/{total}");
+        }
+
+        public void LogMigrationComplete(object migrationResult)
+        {
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now}] MIGRATION COMPLETE: {migrationResult}");
         }
     }
     /// <summary>
@@ -75,6 +82,7 @@ namespace MandADiscoverySuite.Migration
         public Dictionary<string, string> GroupMapping { get; set; } = new Dictionary<string, string>();
         public Dictionary<string, string> UserMapping { get; set; } = new Dictionary<string, string>();
         public Dictionary<string, string> DomainMapping { get; set; } = new Dictionary<string, string>();
+        public CancellationToken CancellationToken { get; set; } = CancellationToken.None;
 
         /// <summary>
         /// Default constructor initializes basic services

@@ -221,7 +221,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 // Check if group name is valid in target domain
                 if (string.IsNullOrWhiteSpace(item.Name))
                 {
-                    validationResult.Issues.Add(new ValidationIssue
+                    validationResult.Issues.Add(new Migration.ValidationIssue
                     {
                         Severity = ValidationSeverity.Error,
                         Message = "Group name cannot be empty",
@@ -234,7 +234,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 var reservedNames = new[] { "Domain Admins", "Enterprise Admins", "Schema Admins", "Administrators" };
                 if (reservedNames.Contains(item.Name, StringComparer.OrdinalIgnoreCase))
                 {
-                    validationResult.Issues.Add(new ValidationIssue
+                    validationResult.Issues.Add(new Migration.ValidationIssue
                     {
                         Severity = ValidationSeverity.Warning,
                         Message = $"Group name '{item.Name}' conflicts with built-in group",
@@ -250,7 +250,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 }
                 catch (ArgumentException)
                 {
-                    validationResult.Issues.Add(new ValidationIssue
+                    validationResult.Issues.Add(new Migration.ValidationIssue
                     {
                         Severity = ValidationSeverity.Error,
                         Message = $"Invalid SID format: {item.Sid}",
@@ -263,7 +263,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 var validScopes = new[] { "Universal", "Global", "DomainLocal" };
                 if (!validScopes.Contains(item.GroupScope, StringComparer.OrdinalIgnoreCase))
                 {
-                    validationResult.Issues.Add(new ValidationIssue
+                    validationResult.Issues.Add(new Migration.ValidationIssue
                     {
                         Severity = ValidationSeverity.Warning,
                         Message = $"Unknown group scope: {item.GroupScope}",
@@ -289,7 +289,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 
                 validationResult.Severity = ValidationSeverity.Critical;
                 validationResult.Message = ex.Message;
-                validationResult.Issues.Add(new ValidationIssue
+                validationResult.Issues.Add(new Migration.ValidationIssue
                 {
                     Severity = ValidationSeverity.Critical,
                     Message = ex.Message,

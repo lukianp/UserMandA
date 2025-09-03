@@ -562,7 +562,7 @@ namespace MandADiscoverySuite.Services.Migration
                     // Report progress
                     var completedUsers = result.SuccessfulAssignments + result.FailedAssignments;
                     var progressPercentage = (double)completedUsers / result.TotalUsers * 100;
-                    context.ReportProgress?.Invoke(new Migration.MigrationProgress
+                    context.ReportProgress?.Invoke(new MandADiscoverySuite.Migration.MigrationProgress
                     {
                         CurrentItem = "Bulk License Assignment",
                         Percentage = (int)progressPercentage,

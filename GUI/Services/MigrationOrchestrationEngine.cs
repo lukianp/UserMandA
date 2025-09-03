@@ -447,9 +447,9 @@ namespace MandADiscoverySuite.Services
         }
 
         // Supporting methods for orchestration
-        private async Task<ValidationResult> ValidateOrchestrationRequestAsync(OrchestrationRequest request)
+        private async Task<MandADiscoverySuite.Migration.ValidationResult> ValidateOrchestrationRequestAsync(OrchestrationRequest request)
         {
-            var result = new ValidationResult { IsSuccess = true };
+            var result = new MandADiscoverySuite.Migration.ValidationResult { IsSuccess = true };
 
             if (request.Migrations?.Any() != true)
             {

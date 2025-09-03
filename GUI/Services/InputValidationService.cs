@@ -40,9 +40,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates a company profile name
         /// </summary>
-        public ValidationResult ValidateCompanyName(string name)
+        public DiscoveryValidationResult ValidateCompanyName(string name)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -93,9 +93,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates a tenant ID
         /// </summary>
-        public ValidationResult ValidateTenantId(string tenantId)
+        public DiscoveryValidationResult ValidateTenantId(string tenantId)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(tenantId))
             {
@@ -120,9 +120,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates a domain controller name
         /// </summary>
-        public ValidationResult ValidateDomainController(string domainController)
+        public DiscoveryValidationResult ValidateDomainController(string domainController)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(domainController))
             {
@@ -172,9 +172,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates a file path
         /// </summary>
-        public ValidationResult ValidateFilePath(string filePath, bool mustExist = false)
+        public DiscoveryValidationResult ValidateFilePath(string filePath, bool mustExist = false)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
@@ -217,9 +217,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates a directory path
         /// </summary>
-        public ValidationResult ValidateDirectoryPath(string directoryPath, bool mustExist = false)
+        public DiscoveryValidationResult ValidateDirectoryPath(string directoryPath, bool mustExist = false)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(directoryPath))
             {
@@ -254,9 +254,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates a network range (CIDR notation)
         /// </summary>
-        public ValidationResult ValidateNetworkRange(string networkRange)
+        public DiscoveryValidationResult ValidateNetworkRange(string networkRange)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(networkRange))
             {
@@ -315,9 +315,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates a timeout value
         /// </summary>
-        public ValidationResult ValidateTimeout(string timeoutStr, int min = 1, int max = 3600)
+        public DiscoveryValidationResult ValidateTimeout(string timeoutStr, int min = 1, int max = 3600)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(timeoutStr))
             {
@@ -350,9 +350,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates a thread count
         /// </summary>
-        public ValidationResult ValidateThreadCount(string threadsStr, int min = 1, int max = 100)
+        public DiscoveryValidationResult ValidateThreadCount(string threadsStr, int min = 1, int max = 100)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(threadsStr))
             {
@@ -389,9 +389,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates search text input
         /// </summary>
-        public ValidationResult ValidateSearchText(string searchText, int maxLength = 100)
+        public DiscoveryValidationResult ValidateSearchText(string searchText, int maxLength = 100)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(searchText))
             {
@@ -423,9 +423,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates a description field
         /// </summary>
-        public ValidationResult ValidateDescription(string description, int maxLength = 500)
+        public DiscoveryValidationResult ValidateDescription(string description, int maxLength = 500)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(description))
             {
@@ -499,9 +499,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates input for potential security threats
         /// </summary>
-        public ValidationResult ValidateForSecurityThreats(string input)
+        public DiscoveryValidationResult ValidateForSecurityThreats(string input)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrEmpty(input))
             {
@@ -544,9 +544,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates that input doesn't contain malicious file paths
         /// </summary>
-        public ValidationResult ValidatePathSecurity(string path)
+        public DiscoveryValidationResult ValidatePathSecurity(string path)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -592,9 +592,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates an email address format
         /// </summary>
-        public static ValidationResult ValidateEmail(this InputValidationService service, string email, bool required = true)
+        public static DiscoveryValidationResult ValidateEmail(this InputValidationService service, string email, bool required = true)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(email))
             {
@@ -637,9 +637,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates a phone number
         /// </summary>
-        public static ValidationResult ValidatePhoneNumber(this InputValidationService service, string phoneNumber, bool required = false)
+        public static DiscoveryValidationResult ValidatePhoneNumber(this InputValidationService service, string phoneNumber, bool required = false)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(phoneNumber))
             {
@@ -696,9 +696,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates a person's name (first name, last name, etc.)
         /// </summary>
-        public static ValidationResult ValidateName(this InputValidationService service, string name, string fieldName = "Name", bool required = true)
+        public static DiscoveryValidationResult ValidateName(this InputValidationService service, string name, string fieldName = "Name", bool required = true)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -752,9 +752,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates a username or user principal name
         /// </summary>
-        public static ValidationResult ValidateUsername(this InputValidationService service, string username, bool required = true)
+        public static DiscoveryValidationResult ValidateUsername(this InputValidationService service, string username, bool required = true)
         {
-            var result = new ValidationResult();
+            var result = new DiscoveryValidationResult();
 
             if (string.IsNullOrWhiteSpace(username))
             {

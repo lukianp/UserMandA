@@ -488,6 +488,7 @@ namespace MandADiscoverySuite.Models
         Application,             // Application migration and deployment
         Database,                // Database migration and conversion
         SecurityGroup,           // Active Directory security group migration
+        GroupPolicy,             // Group Policy Object migration
         OrganizationalUnit,      // AD OU structure migration
         Certificate,             // Certificate store migration
         GPO,                     // Group Policy Object migration
@@ -498,7 +499,8 @@ namespace MandADiscoverySuite.Models
         MailEnabledSecurityGroup, // Mail-enabled security groups
         NetworkDrive,            // Network drive mapping migration
         PrintQueue,              // Printer queue migration
-        Registry                 // Registry settings migration
+        Registry,                // Registry settings migration
+        ACL                      // Access Control List migration
     }
 
     /// <summary>

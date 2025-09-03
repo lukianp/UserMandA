@@ -260,7 +260,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 // Check GPO name
                 if (string.IsNullOrWhiteSpace(item.DisplayName))
                 {
-                    validationResult.Issues.Add(new ValidationIssue
+                    validationResult.Issues.Add(new Migration.ValidationIssue
                     {
                         Severity = ValidationSeverity.Error,
                         Message = "GPO display name cannot be empty",
@@ -272,7 +272,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 // Validate GPO ID format
                 if (string.IsNullOrWhiteSpace(item.Id) || !Guid.TryParse(item.Id, out _))
                 {
-                    validationResult.Issues.Add(new ValidationIssue
+                    validationResult.Issues.Add(new Migration.ValidationIssue
                     {
                         Severity = ValidationSeverity.Error,
                         Message = "GPO ID must be a valid GUID",
@@ -287,7 +287,7 @@ namespace MandADiscoverySuite.MigrationProviders
                     if (!ouPath.StartsWith("OU=", StringComparison.OrdinalIgnoreCase) && 
                         !ouPath.StartsWith("DC=", StringComparison.OrdinalIgnoreCase))
                     {
-                        validationResult.Issues.Add(new ValidationIssue
+                        validationResult.Issues.Add(new Migration.ValidationIssue
                         {
                             Severity = ValidationSeverity.Warning,
                             Message = $"Potentially invalid OU path format: {ouPath}",
@@ -302,7 +302,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 {
                     if (string.IsNullOrWhiteSpace(principal))
                     {
-                        validationResult.Issues.Add(new ValidationIssue
+                        validationResult.Issues.Add(new Migration.ValidationIssue
                         {
                             Severity = ValidationSeverity.Warning,
                             Message = "Empty security principal in filtering list",
@@ -318,7 +318,7 @@ namespace MandADiscoverySuite.MigrationProviders
                     var unsupportedSettings = GetUnsupportedSettings(item.Settings);
                     foreach (var setting in unsupportedSettings)
                     {
-                        validationResult.Issues.Add(new ValidationIssue
+                        validationResult.Issues.Add(new Migration.ValidationIssue
                         {
                             Severity = ValidationSeverity.Warning,
                             Message = $"Setting may not be supported in target environment: {setting}",
@@ -349,12 +349,12 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<MandADiscoverySuite.Migration.RollbackResult> RollbackAsync(
+        public async Task<Services.Migration.RollbackResult> RollbackAsync(
             GpoMigrationResult result, 
             MandADiscoverySuite.Migration.MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
-            var rollbackResult = new MandADiscoverySuite.Migration.RollbackResult
+            var rollbackResult = new Services.Migration.RollbackResult
             {
                 RollbackAction = "DeleteGpo",
                 StartTime = DateTime.UtcNow,

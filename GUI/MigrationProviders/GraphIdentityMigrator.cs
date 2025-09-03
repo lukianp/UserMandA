@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.MigrationProviders
 {
@@ -28,13 +29,13 @@ namespace MandADiscoverySuite.MigrationProviders
             _client = client;
         }
 
-        public async Task<MigrationResult> MigrateUserAsync(UserDto user, MigrationSettings settings, TargetContext target, IProgress<MigrationProgress> progress = null)
+        public async Task<MigrationResult> MigrateUserAsync(UserDto user, MigrationSettings settings, TargetContext target, IProgress<Migration.MigrationProgress> progress = null)
         {
             try
             {
-                progress?.Report(new MigrationProgress { Percentage = 0, Message = $"Creating user {user.DisplayName}" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 0, Message = $"Creating user {user.DisplayName}" });
                 await _client.CreateUserAsync(user);
-                progress?.Report(new MigrationProgress { Percentage = 100, Message = $"User {user.DisplayName} created" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 100, Message = $"User {user.DisplayName} created" });
                 return MigrationResult.Succeeded();
             }
             catch (Exception ex)
@@ -43,16 +44,16 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<RollbackResult> RollbackUserAsync(UserDto user, TargetContext target, IProgress<MigrationProgress> progress = null)
+        public async Task<RollbackResult> RollbackUserAsync(UserDto user, TargetContext target, IProgress<Migration.MigrationProgress> progress = null)
         {
             try
             {
-                progress?.Report(new MigrationProgress { Percentage = 0, Message = $"Rolling back user {user.DisplayName}" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 0, Message = $"Rolling back user {user.DisplayName}" });
                 
                 // Simplified rollback - in practice this would disable/delete the target user account
                 await Task.Delay(500); // Simulate rollback operation
 
-                progress?.Report(new MigrationProgress { Percentage = 100, Message = $"User {user.DisplayName} rollback completed" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 100, Message = $"User {user.DisplayName} rollback completed" });
                 return RollbackResult.Succeeded("User account disabled in target tenant");
             }
             catch (Exception ex)

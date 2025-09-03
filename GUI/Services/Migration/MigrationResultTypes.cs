@@ -14,6 +14,8 @@ namespace MandADiscoverySuite.Services.Migration
         public int MembersAdded { get; set; }
         public int MembersFailed { get; set; }
         public List<string> MemberErrors { get; set; } = new List<string>();
+        public string SourceGroupSid { get; set; } = string.Empty;
+        public string ExecutedBy { get; set; } = string.Empty;
     }
 
     public class IdentityMigrationResult : MigrationResultBase
@@ -67,6 +69,22 @@ namespace MandADiscoverySuite.Services.Migration
         
         // Additional properties required by build errors
         public List<string> UnrestoredItems { get; set; } = new List<string>();
+        public string SourceGpoGuid { get; set; } = string.Empty;
+        public string SourceGpoId { get; set; } = string.Empty;
+        public string TargetGpoGuid { get; set; } = string.Empty;
+        public List<string> MigratedSettings { get; set; } = new List<string>();
+        public List<string> SkippedSettings { get; set; } = new List<string>();
+        public List<string> Warnings { get; set; } = new List<string>();
+        public DateTime MigrationDate { get; set; } = DateTime.Now;
+        public string ExecutedBy { get; set; } = string.Empty;
+        public bool GpoCreated { get; set; }
+        public bool SettingsReplicated { get; set; }
+        public GpoReplicationResult ReplicatedSettings { get; set; }
+        public List<string> UnsupportedSettings { get; set; } = new List<string>();
+        public bool OuLinksConfigured { get; set; }
+        public List<string> LinkedOUs { get; set; } = new List<string>();
+        public bool SecurityFilteringApplied { get; set; }
+        public bool WmiFiltersApplied { get; set; }
     }
     
     // Rollback result class for migration operations
@@ -82,6 +100,48 @@ namespace MandADiscoverySuite.Services.Migration
         
         // Additional properties required by build errors  
         public List<string> UnrestoredItems { get; set; } = new List<string>();
+        public string RollbackAction { get; set; } = string.Empty;
+        public List<string> Warnings { get; set; } = new List<string>();
+        public List<string> RestoredItems { get; set; } = new List<string>();
+        public bool DataRestored { get; set; }
+        public string ExecutedBy { get; set; } = string.Empty;
+        
+        // Factory methods required by build errors
+        public static RollbackResult Succeeded(string operationId, string reason = "")
+        {
+            return new RollbackResult
+            {
+                OperationId = operationId,
+                RollbackSuccessful = true,
+                IsSuccess = true,
+                RollbackReason = reason,
+                RollbackCompleted = DateTime.Now
+            };
+        }
+        
+        public static RollbackResult Failed(string operationId, string reason = "")
+        {
+            return new RollbackResult
+            {
+                OperationId = operationId,
+                RollbackSuccessful = false,
+                IsSuccess = false,
+                RollbackReason = reason,
+                RollbackCompleted = DateTime.Now
+            };
+        }
+        
+        public static RollbackResult Failed(string reason, List<string> errors)
+        {
+            return new RollbackResult
+            {
+                RollbackSuccessful = false,
+                IsSuccess = false,
+                RollbackReason = reason,
+                Errors = errors,
+                RollbackCompleted = DateTime.Now
+            };
+        }
     }
 
     public class AclMigrationResult : MigrationResultBase
@@ -96,6 +156,46 @@ namespace MandADiscoverySuite.Services.Migration
 
     // Validation and support result classes are now in Services.Migration namespace
 
+    // GPO-related result types
+    public class GpoReplicationResult
+    {
+        public bool Success { get; set; }
+        public bool IsSuccess { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
+        public List<string> PolicySettings { get; set; } = new List<string>();
+        public List<string> SkippedSettings { get; set; } = new List<string>();
+        public int ReplicatedSettingCount { get; set; }
+        public List<string> Warnings { get; set; } = new List<string>();
+    }
+
+    public class GpoSecurityFilterResult
+    {
+        public bool Success { get; set; }
+        public bool IsSuccess { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
+        public List<string> AppliedFilters { get; set; } = new List<string>();
+        public List<string> Warnings { get; set; } = new List<string>();
+    }
+
+    public class WmiFilterMigrationResult
+    {
+        public bool Success { get; set; }
+        public bool IsSuccess { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
+        public string FilterName { get; set; } = string.Empty;
+        public List<string> Warnings { get; set; } = new List<string>();
+    }
+
+    // GroupConflictResolutionResult defined below with full implementation
+
+    public class GpoBackupResult
+    {
+        public bool Success { get; set; }
+        public string BackupPath { get; set; } = string.Empty;
+        public string BackupLocation { get; set; } = string.Empty;
+        public string ErrorMessage { get; set; } = string.Empty;
+    }
+
     // Specific migration result classes for detailed operations
 
     public class SidMappingResult : MigrationResultBase
@@ -104,6 +204,11 @@ namespace MandADiscoverySuite.Services.Migration
         public string TargetSid { get; set; }
         public bool MappingSuccessful { get; set; }
         public string MappingMethod { get; set; }
+        
+        // Additional properties required by build errors
+        public string SessionId { get; set; } = string.Empty;
+        public List<string> Warnings { get; set; } = new List<string>();
+        public bool HistoryCreated { get; set; }
     }
 
     public class GroupMembershipResult : MigrationResultBase
@@ -111,6 +216,15 @@ namespace MandADiscoverySuite.Services.Migration
         public string UserId { get; set; }
         public List<string> AddedGroups { get; set; } = new List<string>();
         public List<string> FailedGroups { get; set; } = new List<string>();
+        
+        // Additional properties required by build errors
+        public string UserSid { get; set; } = string.Empty;
+        public List<string> SourceGroups { get; set; } = new List<string>();
+        public string SessionId { get; set; } = string.Empty;
+        public List<string> MigratedGroups { get; set; } = new List<string>();
+        public Dictionary<string, string> GroupMappings { get; set; } = new Dictionary<string, string>();
+        public List<string> UnmappedGroups { get; set; } = new List<string>();
+        public List<string> Warnings { get; set; } = new List<string>();
     }
 
     public class SimpleAttributeMappingResult : MigrationResultBase
@@ -119,6 +233,13 @@ namespace MandADiscoverySuite.Services.Migration
         public string SourceValue { get; set; }
         public string TargetValue { get; set; }
         public bool MappingApplied { get; set; }
+        
+        // Additional properties required by build errors
+        public string UserUpn { get; set; } = string.Empty;
+        public Dictionary<string, string> SourceAttributes { get; set; } = new Dictionary<string, string>();
+        public string SessionId { get; set; } = string.Empty;
+        public Dictionary<string, string> TargetAttributes { get; set; } = new Dictionary<string, string>();
+        public List<string> UnmappedAttributes { get; set; } = new List<string>();
     }
 
     public class DependencyValidationResult : MigrationResultBase
@@ -126,6 +247,11 @@ namespace MandADiscoverySuite.Services.Migration
         public List<string> Dependencies { get; set; } = new List<string>();
         public List<string> MissingDependencies { get; set; } = new List<string>();
         public bool AllDependenciesMet { get; set; }
+        
+        // Additional properties required by build errors
+        public string ItemId { get; set; } = string.Empty;
+        public string SessionId { get; set; } = string.Empty;
+        public bool CanProceed { get; set; }
     }
 
     // Exchange/Mail specific results
@@ -302,7 +428,7 @@ namespace MandADiscoverySuite.Services.Migration
         
         // Additional properties required by build errors
         public string CurrentItem { get; set; } = string.Empty;
-        public int Percentage => (int)PercentComplete;
+        public int Percentage { get; set; } = 0;
         public string Message { get; set; } = string.Empty;
     }
 
@@ -355,6 +481,7 @@ namespace MandADiscoverySuite.Services.Migration
         public double SuccessRate => TotalGpos > 0 ? (double)SuccessfulMigrations / TotalGpos * 100 : 0;
         public List<GpoMigrationResult> Results { get; set; } = new List<GpoMigrationResult>();
         public TimeSpan TotalDuration { get; set; }
+        public string OperationDetails { get; set; } = string.Empty;
     }
 
     public class GpoMigrationReport : MigrationResultBase
@@ -367,6 +494,8 @@ namespace MandADiscoverySuite.Services.Migration
         public Dictionary<string, int> SettingsMigrationSummary { get; set; } = new Dictionary<string, int>();
         public List<string> UnsupportedSettings { get; set; } = new List<string>();
         public List<string> MigrationWarnings { get; set; } = new List<string>();
+        public string ReportDetails { get; set; } = string.Empty;
+        public DateTime GeneratedDate { get; set; } = DateTime.Now;
     }
 
     // Group migration results

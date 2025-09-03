@@ -430,10 +430,10 @@ namespace MandADiscoverySuite.Services.Migration
             try
             {
                 var users = await _graphServiceClient.Users
-                    .Request()
-                    .Filter($"userPrincipalName eq '{targetUserPrincipalName}'")
-                    .Select("displayName,givenName,surname,jobTitle,department,companyName,officeLocation,businessPhones,mobilePhone,streetAddress,city,state,postalCode,country")
-                    .GetAsync(cancellationToken);
+                    .GetAsync(requestConfiguration => {
+                        requestConfiguration.QueryParameters.Filter = $"userPrincipalName eq '{targetUserPrincipalName}'";
+                        requestConfiguration.QueryParameters.Select = new[] { "displayName", "givenName", "surname", "jobTitle", "department", "companyName", "officeLocation", "businessPhones", "mobilePhone", "streetAddress", "city", "state", "postalCode", "country" };
+                    }, cancellationToken);
 
                 var user = users?.FirstOrDefault();
                 if (user == null) return null;
@@ -537,10 +537,10 @@ namespace MandADiscoverySuite.Services.Migration
 
                 // Apply the change via Graph API
                 var users = await _graphServiceClient.Users
-                    .Request()
-                    .Filter($"userPrincipalName eq '{syncConfig.TargetUserPrincipalName}'")
-                    .Select("id")
-                    .GetAsync(cancellationToken);
+                    .GetAsync(requestConfiguration => {
+                        requestConfiguration.QueryParameters.Filter = $"userPrincipalName eq '{syncConfig.TargetUserPrincipalName}'";
+                        requestConfiguration.QueryParameters.Select = new[] { "id" };
+                    }, cancellationToken);
 
                 var targetUser = users?.FirstOrDefault();
                 if (targetUser == null)
@@ -558,7 +558,7 @@ namespace MandADiscoverySuite.Services.Migration
                 MapSingleAttributeToUserObject(userUpdate, extensionAttributes, change.AttributeName, change.NewValue);
 
                 // Update the user
-                await _graphServiceClient.Users[targetUser.Id].Request().UpdateAsync(userUpdate, cancellationToken);
+                await _graphServiceClient.Users[targetUser.Id].PatchAsync(userUpdate, cancellationToken);
 
                 result.IsSuccess = true;
                 result.ConflictResolution = resolutionStrategy;

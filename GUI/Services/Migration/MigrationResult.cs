@@ -14,6 +14,8 @@ namespace MandADiscoverySuite.Services.Migration
         public DateTime EndTime { get; set; } = DateTime.Now;
         public string ErrorMessage { get; set; } = string.Empty;
         public string TargetId { get; set; } = string.Empty;
+        public string SourceId { get; set; } = string.Empty;
+        public string ExecutedBy { get; set; } = string.Empty;
         public List<string> Errors { get; set; } = new List<string>();
         public List<string> Warnings { get; set; } = new List<string>();
         public DateTime CompletedAt { get; set; } = DateTime.Now;
@@ -38,6 +40,16 @@ namespace MandADiscoverySuite.Services.Migration
         public string ErrorMessage { get; set; } = string.Empty;
         public List<string> Errors { get; set; } = new List<string>();
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
+        
+        // Additional properties for IdentityMigrator compatibility
+        public string SourceUserPrincipalName { get; set; } = string.Empty;
+        public string SessionId { get; set; } = string.Empty;
+        public string AttributeMapping { get; set; } = string.Empty;
+        public string StrategyUsed { get; set; } = string.Empty;
+        public string PasswordProvisioning { get; set; } = string.Empty;
+        public string LicenseAssignment { get; set; } = string.Empty;
+        public string MfaConfiguration { get; set; } = string.Empty;
+        public List<string> CreatedGroups { get; set; } = new List<string>();
     }
 
     /// <summary>

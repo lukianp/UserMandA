@@ -8,9 +8,20 @@ using MandADiscoverySuite.Migration;
 namespace MandADiscoverySuite.Services.Migration
 {
     /// <summary>
+    /// Base migration provider interface for common operations
+    /// </summary>
+    public interface IMigrationProvider
+    {
+        /// <summary>
+        /// Check if this provider supports the migration type and context
+        /// </summary>
+        Task<bool> SupportsAsync(MigrationType type, MigrationContext context, CancellationToken cancellationToken = default);
+    }
+
+    /// <summary>
     /// Core migration provider interface for type-safe migration operations
     /// </summary>
-    public interface IMigrationProvider<TItem, TResult> where TResult : MigrationResultBase
+    public interface IMigrationProvider<TItem, TResult> : IMigrationProvider where TResult : MigrationResultBase
     {
         /// <summary>
         /// Migrate an item from source to target environment
@@ -26,11 +37,6 @@ namespace MandADiscoverySuite.Services.Migration
         /// Rollback a completed migration
         /// </summary>
         Task<RollbackResult> RollbackAsync(TResult result, MigrationContext context, CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// Check if this provider supports the migration type and context
-        /// </summary>
-        Task<bool> SupportsAsync(MigrationType type, MigrationContext context, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Get estimated duration for migration

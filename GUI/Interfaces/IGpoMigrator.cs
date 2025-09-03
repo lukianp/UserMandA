@@ -86,32 +86,13 @@ namespace MandADiscoverySuite.Interfaces
             MigrationContext context);
     }
 
-    // Additional result types needed by the interface
-    public class GpoReplicationResult : MigrationResultBase
-    {
-        public string SourceGpoId { get; set; }
-        public string TargetGpoId { get; set; }
-        public string TargetOuPath { get; set; } = string.Empty;
-        public int SettingsReplicated { get; set; }
-        public List<string> ReplicationErrors { get; set; } = new List<string>();
-    }
+    // Result types moved to Services.Migration.MigrationResultTypes
 
-    public class WmiFilterMigrationResult : MigrationResultBase
-    {
-        public List<string> MigratedFilters { get; set; } = new List<string>();
-        public List<string> FailedFilters { get; set; } = new List<string>();
-    }
-
+    // Additional type not yet moved
     public class GpoCompatibilityResult : MigrationResultBase
     {
         public bool IsCompatible { get; set; }
         public List<string> CompatibilityIssues { get; set; } = new List<string>();
         public List<string> RequiredUpdates { get; set; } = new List<string>();
-    }
-
-    public class GpoSecurityFilterResult : MigrationResultBase
-    {
-        public List<string> MigratedFilters { get; set; } = new List<string>();
-        public List<string> FailedFilters { get; set; } = new List<string>();
     }
 }

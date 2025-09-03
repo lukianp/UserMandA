@@ -552,11 +552,11 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         /// <param name="profileName">Company profile name</param>
         /// <returns>Validation result</returns>
-        public async Task<ValidationResult> ValidateEnvironmentAsync(string profileName)
+        public async Task<DiscoveryValidationResult> ValidateEnvironmentAsync(string profileName)
         {
             await Task.CompletedTask; // Make it truly async
             
-            var result = new ValidationResult { IsSuccess = true };
+            var result = new DiscoveryValidationResult { IsSuccess = true };
             
             if (string.IsNullOrWhiteSpace(profileName))
             {

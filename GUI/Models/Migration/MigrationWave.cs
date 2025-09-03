@@ -71,6 +71,7 @@ namespace MandADiscoverySuite.Models.Migration
         public List<MailboxItem> Mailboxes { get; set; } = new List<MailboxItem>();
         public List<GroupItem> Groups { get; set; } = new List<GroupItem>();
         public List<FileShareItem> FileShares { get; set; } = new List<FileShareItem>();
+        public List<FileShareItem> Files { get; set; } = new List<FileShareItem>(); // Alias for FileShares
         public List<DatabaseItem> Databases { get; set; } = new List<DatabaseItem>();
         public List<object> CustomItems { get; set; } = new List<object>();
 
@@ -171,6 +172,7 @@ namespace MandADiscoverySuite.Models.Migration
         public string Name { get; set; }
         public string Description { get; set; }
         public string GroupType { get; set; }
+        public string Sid { get; set; } = string.Empty;
         public List<string> Members { get; set; } = new List<string>();
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
     }

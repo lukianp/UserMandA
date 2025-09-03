@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.Migration
 {
@@ -504,7 +505,7 @@ namespace MandADiscoverySuite.Migration
                 if (string.IsNullOrEmpty(_targetConnectionString))
                 {
                     errors.Add("Target connection string not configured - cannot perform rollback");
-                    return RollbackResult.Failed("Rollback failed due to missing connection string", errors);
+                    return RollbackResult.Failed("Rollback failed due to missing connection string", string.Join("; ", errors));
                 }
 
                 using var connection = new SqlConnection(_targetConnectionString);
@@ -532,7 +533,7 @@ namespace MandADiscoverySuite.Migration
 
                 var result = new RollbackResult
                 {
-                    Success = true,
+                    IsSuccess = true,
                     Message = "Database rollback completed successfully"
                 };
                 result.Warnings.AddRange(warnings);
@@ -541,12 +542,12 @@ namespace MandADiscoverySuite.Migration
             catch (SqlException ex)
             {
                 errors.Add($"SQL error during rollback: {ex.Message}");
-                return RollbackResult.Failed($"Database rollback failed: {ex.Message}", errors);
+                return RollbackResult.Failed($"Database rollback failed: {ex.Message}", string.Join("; ", errors));
             }
             catch (Exception ex)
             {
                 errors.Add($"Unexpected error during rollback: {ex.Message}");
-                return RollbackResult.Failed($"Database rollback failed: {ex.Message}", errors);
+                return RollbackResult.Failed($"Database rollback failed: {ex.Message}", string.Join("; ", errors));
             }
         }
     }

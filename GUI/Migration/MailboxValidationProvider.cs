@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Graph;
 using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.Migration
 {
@@ -106,9 +107,10 @@ namespace MandADiscoverySuite.Migration
             {
                 // Try to find the user by primary SMTP address
                 var users = await _graphClient.Users
-                    .Request()
-                    .Filter($"mail eq '{mailbox.PrimarySmtpAddress}' or proxyAddresses/any(x:x eq 'SMTP:{mailbox.PrimarySmtpAddress}')")
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Filter = $"mail eq '{mailbox.PrimarySmtpAddress}' or proxyAddresses/any(x:x eq 'SMTP:{mailbox.PrimarySmtpAddress}')";
+                    });
 
                 if (users?.Count == 0)
                 {
@@ -151,9 +153,10 @@ namespace MandADiscoverySuite.Migration
             {
                 // Find the user
                 var users = await _graphClient.Users
-                    .Request()
-                    .Filter($"mail eq '{mailbox.PrimarySmtpAddress}'")
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Filter = $"mail eq '{mailbox.PrimarySmtpAddress}'";
+                    });
 
                 var user = users?.FirstOrDefault();
                 if (user == null) return;
@@ -162,16 +165,18 @@ namespace MandADiscoverySuite.Migration
                 var inboxMessages = await _graphClient.Users[user.Id]
                     .MailFolders.Inbox
                     .Messages
-                    .Request()
-                    .Top(1) // Just to check if accessible
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Top = 1; // Just to check if accessible
+                    });
 
                 var sentMessages = await _graphClient.Users[user.Id]
                     .MailFolders.SentItems
                     .Messages
-                    .Request()
-                    .Top(1)
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Top = 1;
+                    });
 
                 // This is a basic check - in a real implementation you might compare
                 // actual message counts with source mailbox statistics
@@ -215,9 +220,10 @@ namespace MandADiscoverySuite.Migration
             try
             {
                 var users = await _graphClient.Users
-                    .Request()
-                    .Filter($"mail eq '{mailbox.PrimarySmtpAddress}'")
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Filter = $"mail eq '{mailbox.PrimarySmtpAddress}'";
+                    });
 
                 var user = users?.FirstOrDefault();
                 if (user == null) return;
@@ -225,7 +231,6 @@ namespace MandADiscoverySuite.Migration
                 // Check for standard mail folders
                 var mailFolders = await _graphClient.Users[user.Id]
                     .MailFolders
-                    .Request()
                     .GetAsync();
 
                 var expectedFolders = new[] { "Inbox", "SentItems", "DeletedItems", "Drafts" };

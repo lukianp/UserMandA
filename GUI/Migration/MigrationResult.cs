@@ -41,6 +41,18 @@ namespace MandADiscoverySuite.Migration
         /// Optional errors produced during migration.
         /// </summary>
         public List<string> Errors { get; } = new();
+        
+        // Additional properties for IdentityMigrator compatibility
+        public string SourceUserPrincipalName { get; set; } = string.Empty;
+        public bool IsSuccess { get; set; }
+        public string SessionId { get; set; } = string.Empty;
+        public string AttributeMapping { get; set; } = string.Empty;
+        public string StrategyUsed { get; set; } = string.Empty;
+        public string PasswordProvisioning { get; set; } = string.Empty;
+        public string LicenseAssignment { get; set; } = string.Empty;
+        public string MfaConfiguration { get; set; } = string.Empty;
+        public List<string> CreatedGroups { get; set; } = new List<string>();
+        public System.DateTime EndTime { get; set; } = System.DateTime.Now;
 
         /// <summary>
         /// Creates a successful migration result.

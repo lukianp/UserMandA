@@ -422,9 +422,10 @@ namespace MandADiscoverySuite.Services
                 {
                     // Organization read works with application permissions
                     var orgs = await _graphServiceClient.Organization
-                        .Request()
-                        .Top(1)
-                        .GetAsync();
+                        .GetAsync(requestConfiguration => 
+                        {
+                            requestConfiguration.QueryParameters.Top = 1;
+                        });
                     result.Details["AuthenticationTest"] = true;
                     result.Details["AuthenticatedUser"] = orgs?.FirstOrDefault()?.DisplayName ?? "App-Only";
                 }
@@ -438,9 +439,10 @@ namespace MandADiscoverySuite.Services
                 try
                 {
                     var users = await _graphServiceClient.Users
-                        .Request()
-                        .Top(1)
-                        .GetAsync();
+                        .GetAsync(requestConfiguration => 
+                        {
+                            requestConfiguration.QueryParameters.Top = 1;
+                        });
                     result.Details["UserReadPermission"] = true;
                 }
                 catch (Exception ex)
@@ -454,9 +456,10 @@ namespace MandADiscoverySuite.Services
                 {
                     // Validate permission by probing users collection (Mail.Send requires application permission)
                     var users = await _graphServiceClient.Users
-                        .Request()
-                        .Top(1)
-                        .GetAsync();
+                        .GetAsync(requestConfiguration => 
+                        {
+                            requestConfiguration.QueryParameters.Top = 1;
+                        });
                     result.Details["MailSendPermission"] = true;
                 }
                 catch (Exception ex)
@@ -620,22 +623,23 @@ namespace MandADiscoverySuite.Services
                 if (userIdentifier.Contains("@"))
                 {
                     // Email or UPN
-                    user = await _graphServiceClient.Users[userIdentifier].Request().GetAsync();
+                    user = await _graphServiceClient.Users[userIdentifier].GetAsync();
                 }
                 else
                 {
                     // Try as object ID or search by display name
                     try
                     {
-                        user = await _graphServiceClient.Users[userIdentifier].Request().GetAsync();
+                        user = await _graphServiceClient.Users[userIdentifier].GetAsync();
                     }
                     catch
                     {
                         // Search by display name
                         var users = await _graphServiceClient.Users
-                            .Request()
-                            .Filter($"displayName eq '{userIdentifier}'")
-                            .GetAsync();
+                            .GetAsync(requestConfiguration => 
+                            {
+                                requestConfiguration.QueryParameters.Filter = $"displayName eq '{userIdentifier}'";
+                            });
                         
                         user = users.FirstOrDefault();
                     }
@@ -763,9 +767,12 @@ namespace MandADiscoverySuite.Services
                 }
 
                 await _graphServiceClient.Users[sender]
-                    .SendMail(message, false)
-                    .Request()
-                    .PostAsync();
+                    .SendMail
+                    .PostAsync(new Microsoft.Graph.Users.Item.SendMail.SendMailPostRequestBody
+                    {
+                        Message = message,
+                        SaveToSentItems = false
+                    });
 
                 result.Success = true;
                 result.MessageId = Guid.NewGuid().ToString(); // Graph doesn't return message ID directly

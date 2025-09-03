@@ -11,6 +11,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.ViewModels
 {

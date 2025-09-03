@@ -476,9 +476,9 @@ namespace MandADiscoverySuite.Services
         }
 
         // Supporting methods for resource management
-        private ValidationResult ValidateResourceRequest(ResourceRequest request)
+        private MandADiscoverySuite.Migration.ValidationResult ValidateResourceRequest(ResourceRequest request)
         {
-            var result = new ValidationResult { IsSuccess = true };
+            var result = new MandADiscoverySuite.Migration.ValidationResult { IsSuccess = true };
 
             if (string.IsNullOrEmpty(request.ResourceType))
             {

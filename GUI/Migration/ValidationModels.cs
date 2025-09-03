@@ -84,6 +84,15 @@ namespace MandADiscoverySuite.Migration
         public bool RollbackInProgress { get; set; }
 
         /// <summary>
+        /// Properties required by GpoMigrator.
+        /// </summary>
+        public string ValidationType { get; set; } = string.Empty;
+        public string SessionId { get; set; } = string.Empty;
+        public string ExecutedBy { get; set; } = string.Empty;
+        public bool IsSuccess { get; set; }
+        public DateTime? EndTime { get; set; }
+
+        /// <summary>
         /// Creates a successful validation result.
         /// </summary>
         public static ValidationResult Success(object obj, string objectType, string objectName, string message = "Validation passed")
@@ -113,6 +122,20 @@ namespace MandADiscoverySuite.Migration
             };
             result.Issues.AddRange(issues);
             return result;
+        }
+
+        /// <summary>
+        /// Creates a failed validation result with error message.
+        /// </summary>
+        public static ValidationResult Failed(string message, string errors)
+        {
+            return new ValidationResult
+            {
+                Severity = ValidationSeverity.Error,
+                Message = message,
+                ErrorMessage = errors,
+                IsSuccess = false
+            };
         }
     }
 

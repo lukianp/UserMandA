@@ -251,7 +251,6 @@ namespace MandADiscoverySuite.MigrationProviders
                 });
 
                 var sourceDrive = await _graphClient.Users[oneDrive.UserPrincipalName].Drive
-                    .Request()
                     .GetAsync();
 
                 if (sourceDrive == null)
@@ -443,9 +442,10 @@ namespace MandADiscoverySuite.MigrationProviders
                 if (_graphClient != null)
                 {
                     var siteCollection = await _graphClient.Sites
-                        .Request()
-                        .Filter("siteCollection/hostname eq 'tenant.sharepoint.com'")
-                        .GetAsync();
+                        .GetAsync(requestConfiguration => 
+                        {
+                            requestConfiguration.QueryParameters.Filter = "siteCollection/hostname eq 'tenant.sharepoint.com'";
+                        });
 
                     var processedSites = 0;
                     var totalSites = siteCollection.Count;
@@ -518,10 +518,11 @@ namespace MandADiscoverySuite.MigrationProviders
                 });
 
                 var users = await _graphClient.Users
-                    .Request()
-                    .Filter("accountEnabled eq true")
-                    .Select("userPrincipalName,displayName")
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Filter = "accountEnabled eq true";
+                        requestConfiguration.QueryParameters.Select = new string[] { "userPrincipalName", "displayName" };
+                    });
 
                 var processedUsers = 0;
                 var totalUsers = users.Count;
@@ -531,7 +532,6 @@ namespace MandADiscoverySuite.MigrationProviders
                     try
                     {
                         var drive = await _graphClient.Users[user.UserPrincipalName].Drive
-                            .Request()
                             .GetAsync();
 
                         if (drive != null)

@@ -262,7 +262,10 @@ namespace MandADiscoverySuite.MigrationProviders
 
                 try
                 {
-                    var testMailbox = await _graphClient.Users.Request().Top(1).GetAsync();
+                    var testMailbox = await _graphClient.Users.GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Top = 1;
+                    });
                     connectivityPrereq.IsMet = true;
                     connectivityPrereq.ValidationMessage = "Successfully connected to Exchange Online";
                 }
@@ -378,10 +381,11 @@ namespace MandADiscoverySuite.MigrationProviders
             {
                 // Get all users and check their mail activity
                 var users = await _graphClient.Users
-                    .Request()
-                    .Filter($"createdDateTime ge {lastRunTimestamp:yyyy-MM-ddTHH:mm:ssZ} or " +
-                           $"lastPasswordChangeDateTime ge {lastRunTimestamp:yyyy-MM-ddTHH:mm:ssZ}")
-                    .GetAsync();
+                    .GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Filter = $"createdDateTime ge {lastRunTimestamp:yyyy-MM-ddTHH:mm:ssZ} or " +
+                               $"lastPasswordChangeDateTime ge {lastRunTimestamp:yyyy-MM-ddTHH:mm:ssZ}";
+                    });
 
                 foreach (var user in users)
                 {
@@ -390,8 +394,7 @@ namespace MandADiscoverySuite.MigrationProviders
                         // Check for mail delta using Graph API
                         try
                         {
-                            var mailDelta = await _graphClient.Users[user.Id].Messages.Delta()
-                                .Request()
+                            var mailDelta = await _graphClient.Users[user.Id].Messages.Delta
                                 .GetAsync();
 
                             if (mailDelta.Any())
@@ -563,8 +566,7 @@ namespace MandADiscoverySuite.MigrationProviders
                     }
 
                     // Get mail delta and copy to target
-                    var mailDelta = await _graphClient.Users[sourceUserId].Messages.Delta()
-                        .Request()
+                    var mailDelta = await _graphClient.Users[sourceUserId].Messages.Delta
                         .GetAsync();
 
                     var copiedCount = 0;

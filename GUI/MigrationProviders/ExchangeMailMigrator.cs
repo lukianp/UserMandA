@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.MigrationProviders
 {
@@ -16,7 +17,7 @@ namespace MandADiscoverySuite.MigrationProviders
     /// <summary>
     /// Implements mailbox migration using Exchange management interfaces.
     /// </summary>
-    public class ExchangeMailMigrator : IMailMigrator
+    public class ExchangeMailMigrator : Migration.IMailMigrator
     {
         private readonly IExchangeMailClient _client;
 
@@ -25,13 +26,13 @@ namespace MandADiscoverySuite.MigrationProviders
             _client = client;
         }
 
-        public async Task<MigrationResult> MigrateMailboxAsync(MailboxDto mailbox, MigrationSettings settings, TargetContext target, IProgress<MigrationProgress> progress = null)
+        public async Task<MigrationResult> MigrateMailboxAsync(MailboxDto mailbox, MigrationSettings settings, TargetContext target, IProgress<Migration.MigrationProgress> progress = null)
         {
             try
             {
-                progress?.Report(new MigrationProgress { Percentage = 0, Message = $"Moving mailbox {mailbox.PrimarySmtpAddress}" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 0, Message = $"Moving mailbox {mailbox.PrimarySmtpAddress}" });
                 await _client.MoveMailboxAsync(mailbox);
-                progress?.Report(new MigrationProgress { Percentage = 100, Message = $"Mailbox {mailbox.PrimarySmtpAddress} moved" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 100, Message = $"Mailbox {mailbox.PrimarySmtpAddress} moved" });
                 return MigrationResult.Succeeded();
             }
             catch (Exception ex)
@@ -40,16 +41,16 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<RollbackResult> RollbackMailboxAsync(MailboxDto mailbox, TargetContext target, IProgress<MigrationProgress> progress = null)
+        public async Task<RollbackResult> RollbackMailboxAsync(MailboxDto mailbox, TargetContext target, IProgress<Migration.MigrationProgress> progress = null)
         {
             try
             {
-                progress?.Report(new MigrationProgress { Percentage = 0, Message = $"Rolling back mailbox {mailbox.PrimarySmtpAddress}" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 0, Message = $"Rolling back mailbox {mailbox.PrimarySmtpAddress}" });
                 
                 // Simplified rollback - in practice this would cancel move requests and update mail routing
                 await Task.Delay(1000); // Simulate rollback operation
 
-                progress?.Report(new MigrationProgress { Percentage = 100, Message = $"Mailbox {mailbox.PrimarySmtpAddress} rollback completed" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 100, Message = $"Mailbox {mailbox.PrimarySmtpAddress} rollback completed" });
                 return RollbackResult.Succeeded("Mailbox rollback completed - manual verification required");
             }
             catch (Exception ex)

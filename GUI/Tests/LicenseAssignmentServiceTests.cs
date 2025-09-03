@@ -141,8 +141,8 @@ namespace MandADiscoverySuite.Tests
                 Id = Guid.NewGuid().ToString(),
                 OperationType = BulkLicenseOperationType.Assign,
                 UserIds = new List<string> { "user1@test.com", "user2@test.com" },
-                SkuIds = new List<string> { "sku-1" },
-                TotalUsers = 2
+                SkuIds = new List<string> { "sku-1" }
+                // TotalUsers is a computed property, no need to set
             };
 
             // Act

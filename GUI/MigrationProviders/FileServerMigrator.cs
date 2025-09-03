@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.MigrationProviders
 {
@@ -16,7 +17,7 @@ namespace MandADiscoverySuite.MigrationProviders
     /// <summary>
     /// Implements file migration using the provided transfer client.
     /// </summary>
-    public class FileServerMigrator : IFileMigrator
+    public class FileServerMigrator : Migration.IFileMigrator
     {
         private readonly IFileTransferClient _client;
 
@@ -25,13 +26,13 @@ namespace MandADiscoverySuite.MigrationProviders
             _client = client;
         }
 
-        public async Task<MigrationResult> MigrateFileAsync(FileItemDto file, MigrationSettings settings, TargetContext target, IProgress<MigrationProgress> progress = null)
+        public async Task<MigrationResult> MigrateFileAsync(FileItemDto file, MigrationSettings settings, TargetContext target, IProgress<Migration.MigrationProgress> progress = null)
         {
             try
             {
-                progress?.Report(new MigrationProgress { Percentage = 0, Message = $"Copying {file.SourcePath}" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 0, Message = $"Copying {file.SourcePath}" });
                 await _client.CopyAsync(file);
-                progress?.Report(new MigrationProgress { Percentage = 100, Message = $"Copied {file.SourcePath}" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 100, Message = $"Copied {file.SourcePath}" });
                 return MigrationResult.Succeeded();
             }
             catch (Exception ex)
@@ -40,11 +41,11 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<RollbackResult> RollbackFileAsync(FileItemDto file, TargetContext target, IProgress<MigrationProgress> progress = null)
+        public async Task<RollbackResult> RollbackFileAsync(FileItemDto file, TargetContext target, IProgress<Migration.MigrationProgress> progress = null)
         {
             try
             {
-                progress?.Report(new MigrationProgress { Percentage = 0, Message = $"Rolling back {file.TargetPath}" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 0, Message = $"Rolling back {file.TargetPath}" });
                 
                 // Simple rollback implementation - delete target file if it exists
                 if (System.IO.File.Exists(file.TargetPath))
@@ -56,7 +57,7 @@ namespace MandADiscoverySuite.MigrationProviders
                     System.IO.Directory.Delete(file.TargetPath, true);
                 }
 
-                progress?.Report(new MigrationProgress { Percentage = 100, Message = $"Rolled back {file.TargetPath}" });
+                progress?.Report(new Migration.MigrationProgress { Percentage = 100, Message = $"Rolled back {file.TargetPath}" });
                 return RollbackResult.Succeeded("File rollback completed successfully");
             }
             catch (Exception ex)

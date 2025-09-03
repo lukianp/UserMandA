@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.Migration
 {
@@ -179,7 +180,14 @@ namespace MandADiscoverySuite.Migration
                         PercentageComplete = (currentObject * 100) / totalObjects
                     });
 
-                    var result = await ValidateUserAsync(user, target, individualProgress);
+                    // Convert UserItem to UserDto
+                    var userDto = new UserDto
+                    {
+                        UserPrincipalName = user.UserPrincipalName,
+                        DisplayName = user.DisplayName,
+                        CustomAttributes = user.Properties
+                    };
+                    var result = await ValidateUserAsync(userDto, target, individualProgress);
                     results.Add(result);
                 }
 
@@ -196,7 +204,15 @@ namespace MandADiscoverySuite.Migration
                         PercentageComplete = (currentObject * 100) / totalObjects
                     });
 
-                    var result = await ValidateMailboxAsync(mailbox, target, individualProgress);
+                    // Convert MailboxItem to MailboxDto
+                    var mailboxDto = new MailboxDto
+                    {
+                        UserPrincipalName = mailbox.UserPrincipalName,
+                        PrimarySmtpAddress = mailbox.PrimarySmtpAddress,
+                        TotalSizeBytes = mailbox.SizeBytes,
+                        Properties = mailbox.Properties
+                    };
+                    var result = await ValidateMailboxAsync(mailboxDto, target, individualProgress);
                     results.Add(result);
                 }
 
@@ -213,7 +229,15 @@ namespace MandADiscoverySuite.Migration
                         PercentageComplete = (currentObject * 100) / totalObjects
                     });
 
-                    var result = await ValidateFilesAsync(file, target, individualProgress);
+                    // Convert FileShareItem to FileItemDto
+                    var fileDto = new FileItemDto
+                    {
+                        SourcePath = file.SourcePath,
+                        TargetPath = file.TargetPath,
+                        FileSize = file.SizeBytes,
+                        Metadata = file.Properties
+                    };
+                    var result = await ValidateFilesAsync(fileDto, target, individualProgress);
                     results.Add(result);
                 }
 
@@ -230,7 +254,16 @@ namespace MandADiscoverySuite.Migration
                         PercentageComplete = (currentObject * 100) / totalObjects
                     });
 
-                    var result = await ValidateSqlAsync(database, target, individualProgress);
+                    // Convert DatabaseItem to DatabaseDto
+                    var databaseDto = new DatabaseDto
+                    {
+                        Name = database.Name,
+                        SourceServer = database.SourceServer,
+                        TargetServer = database.TargetServer,
+                        SizeMB = database.SizeMB,
+                        CustomProperties = database.Properties
+                    };
+                    var result = await ValidateSqlAsync(databaseDto, target, individualProgress);
                     results.Add(result);
                 }
 
@@ -285,7 +318,7 @@ namespace MandADiscoverySuite.Migration
             }
             catch (Exception ex)
             {
-                return RollbackResult.Failed($"User rollback failed: {ex.Message}", new[] { ex.ToString() });
+                return RollbackResult.Failed($"User rollback failed: {ex.Message}", ex.ToString());
             }
         }
 
@@ -300,7 +333,7 @@ namespace MandADiscoverySuite.Migration
             }
             catch (Exception ex)
             {
-                return RollbackResult.Failed($"Mailbox rollback failed: {ex.Message}", new[] { ex.ToString() });
+                return RollbackResult.Failed($"Mailbox rollback failed: {ex.Message}", ex.ToString());
             }
         }
 
@@ -315,7 +348,7 @@ namespace MandADiscoverySuite.Migration
             }
             catch (Exception ex)
             {
-                return RollbackResult.Failed($"File rollback failed: {ex.Message}", new[] { ex.ToString() });
+                return RollbackResult.Failed($"File rollback failed: {ex.Message}", ex.ToString());
             }
         }
 
@@ -330,7 +363,7 @@ namespace MandADiscoverySuite.Migration
             }
             catch (Exception ex)
             {
-                return RollbackResult.Failed($"Database rollback failed: {ex.Message}", new[] { ex.ToString() });
+                return RollbackResult.Failed($"Database rollback failed: {ex.Message}", ex.ToString());
             }
         }
 
@@ -352,7 +385,7 @@ namespace MandADiscoverySuite.Migration
             }
             catch (Exception ex)
             {
-                return RollbackResult.Failed($"Rollback failed: {ex.Message}", new[] { ex.ToString() });
+                return RollbackResult.Failed($"Rollback failed: {ex.Message}", ex.ToString());
             }
         }
 

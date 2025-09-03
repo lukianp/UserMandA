@@ -64,7 +64,7 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         /// <param name="profileName">Company profile name</param>
         /// <returns>Validation result</returns>
-        Task<ValidationResult> ValidateEnvironmentAsync(string profileName);
+        Task<DiscoveryValidationResult> ValidateEnvironmentAsync(string profileName);
 
         /// <summary>
         /// Gets discovery results for a profile
@@ -118,7 +118,7 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Discovery validation result
     /// </summary>
-    public class ValidationResult
+    public class DiscoveryValidationResult
     {
         public bool IsValid { get; set; } = true;
         public bool IsSuccess { get; set; } = true;

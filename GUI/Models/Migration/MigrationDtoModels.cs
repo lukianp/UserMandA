@@ -24,13 +24,5 @@ namespace MandADiscoverySuite.Models.Migration
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
     }
 
-    public class GpoBackupResult
-    {
-        public string GpoId { get; set; }
-        public string GpoName { get; set; }
-        public string BackupPath { get; set; }
-        public bool BackupSuccessful { get; set; }
-        public DateTime BackupTimestamp { get; set; }
-        public List<string> Errors { get; set; } = new List<string>();
-    }
+    // GpoBackupResult moved to Services.Migration.MigrationResultTypes
 }

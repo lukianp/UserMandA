@@ -178,10 +178,11 @@ namespace MandADiscoverySuite.Services.Migration
             try
             {
                 var users = await _graphServiceClient.Users
-                    .Request()
-                    .Filter($"userPrincipalName eq '{userPrincipalName}'")
-                    .Select("id,userPrincipalName,displayName,accountEnabled")
-                    .GetAsync(cancellationToken);
+                    .GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Filter = $"userPrincipalName eq '{userPrincipalName}'";
+                        requestConfiguration.QueryParameters.Select = new string[] { "id", "userPrincipalName", "displayName", "accountEnabled" };
+                    }, cancellationToken);
 
                 var existingUser = users?.FirstOrDefault();
                 if (existingUser != null)
@@ -216,10 +217,11 @@ namespace MandADiscoverySuite.Services.Migration
             try
             {
                 var users = await _graphServiceClient.Users
-                    .Request()
-                    .Filter($"mail eq '{emailAddress}' or proxyAddresses/any(x:x eq 'SMTP:{emailAddress}')")
-                    .Select("id,userPrincipalName,displayName,mail")
-                    .GetAsync(cancellationToken);
+                    .GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Filter = $"mail eq '{emailAddress}' or proxyAddresses/any(x:x eq 'SMTP:{emailAddress}')";
+                        requestConfiguration.QueryParameters.Select = new string[] { "id", "userPrincipalName", "displayName", "mail" };
+                    }, cancellationToken);
 
                 var existingUser = users?.FirstOrDefault();
                 if (existingUser != null)
@@ -256,10 +258,11 @@ namespace MandADiscoverySuite.Services.Migration
             try
             {
                 var users = await _graphServiceClient.Users
-                    .Request()
-                    .Filter($"displayName eq '{displayName}'")
-                    .Select("id,userPrincipalName,displayName")
-                    .GetAsync(cancellationToken);
+                    .GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Filter = $"displayName eq '{displayName}'";
+                        requestConfiguration.QueryParameters.Select = new string[] { "id", "userPrincipalName", "displayName" };
+                    }, cancellationToken);
 
                 foreach (var existingUser in users?.ToList() ?? new List<Microsoft.Graph.User>())
                 {

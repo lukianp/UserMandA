@@ -296,7 +296,10 @@ namespace MandADiscoverySuite.MigrationProviders
 
                 try
                 {
-                    var testUser = await _graphClient.Users.Request().Top(1).GetAsync();
+                    var testUser = await _graphClient.Users.GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Top = 1;
+                    });
                     connectivityPrereq.IsMet = true;
                     connectivityPrereq.ValidationMessage = "Successfully connected to target tenant";
                 }
@@ -394,13 +397,13 @@ namespace MandADiscoverySuite.MigrationProviders
             try
             {
                 // Use Graph API delta queries to detect changes
-                var deltaQuery = _graphClient.Users.Delta()
-                    .Request()
-                    .Filter($"lastPasswordChangeDateTime ge {lastRunTimestamp:yyyy-MM-ddTHH:mm:ssZ} or " +
-                           $"createdDateTime ge {lastRunTimestamp:yyyy-MM-ddTHH:mm:ssZ} or " +
-                           $"lastSignInDateTime ge {lastRunTimestamp:yyyy-MM-ddTHH:mm:ssZ}");
-
-                var deltaUsers = await deltaQuery.GetAsync();
+                var deltaUsers = await _graphClient.Users.Delta
+                    .GetAsync(requestConfiguration => 
+                    {
+                        requestConfiguration.QueryParameters.Filter = $"lastPasswordChangeDateTime ge {lastRunTimestamp:yyyy-MM-ddTHH:mm:ssZ} or " +
+                               $"createdDateTime ge {lastRunTimestamp:yyyy-MM-ddTHH:mm:ssZ} or " +
+                               $"lastSignInDateTime ge {lastRunTimestamp:yyyy-MM-ddTHH:mm:ssZ}";
+                    });
 
                 foreach (var user in deltaUsers)
                 {
@@ -545,7 +548,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 }
             };
 
-            var createdUser = await _graphClient.Users.Request().AddAsync(newUser);
+            var createdUser = await _graphClient.Users.PostAsync(newUser);
             
             return MigrationResult.Success($"User {user.UserPrincipalName} created in target tenant");
         }
@@ -576,7 +579,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
             if (hasUpdates)
             {
-                await _graphClient.Users[user.UserPrincipalName].Request().UpdateAsync(userUpdate);
+                await _graphClient.Users[user.UserPrincipalName].PatchAsync(userUpdate);
                 return MigrationResult.Success($"User {user.UserPrincipalName} updated in target tenant");
             }
 
@@ -594,7 +597,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 AccountEnabled = false
             };
 
-            await _graphClient.Users[user.UserPrincipalName].Request().UpdateAsync(userUpdate);
+            await _graphClient.Users[user.UserPrincipalName].PatchAsync(userUpdate);
             
             return MigrationResult.Success($"User {user.UserPrincipalName} disabled in target tenant");
         }
