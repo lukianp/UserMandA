@@ -435,7 +435,7 @@ namespace MandADiscoverySuite.Services.Migration
                         requestConfiguration.QueryParameters.Select = new[] { "displayName", "givenName", "surname", "jobTitle", "department", "companyName", "officeLocation", "businessPhones", "mobilePhone", "streetAddress", "city", "state", "postalCode", "country" };
                     }, cancellationToken);
 
-                var user = users?.FirstOrDefault();
+                var user = users?.Value?.FirstOrDefault();
                 if (user == null) return null;
 
                 var attributes = new Dictionary<string, string>
@@ -558,7 +558,7 @@ namespace MandADiscoverySuite.Services.Migration
                 MapSingleAttributeToUserObject(userUpdate, extensionAttributes, change.AttributeName, change.NewValue);
 
                 // Update the user
-                await _graphServiceClient.Users[targetUser.Id].PatchAsync(userUpdate, cancellationToken);
+                await _graphServiceClient.Users[targetUser.Id].PatchAsync(userUpdate, null, cancellationToken);
 
                 result.IsSuccess = true;
                 result.ConflictResolution = resolutionStrategy;

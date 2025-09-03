@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Models.Identity;
 using MandADiscoverySuite.Models.Migration;
@@ -184,7 +185,7 @@ namespace MandADiscoverySuite.Services.Migration
                         requestConfiguration.QueryParameters.Select = new string[] { "id", "userPrincipalName", "displayName", "accountEnabled" };
                     }, cancellationToken);
 
-                var existingUser = users?.FirstOrDefault();
+                var existingUser = users?.Value?.FirstOrDefault();
                 if (existingUser != null)
                 {
                     return new UserConflict
@@ -223,7 +224,7 @@ namespace MandADiscoverySuite.Services.Migration
                         requestConfiguration.QueryParameters.Select = new string[] { "id", "userPrincipalName", "displayName", "mail" };
                     }, cancellationToken);
 
-                var existingUser = users?.FirstOrDefault();
+                var existingUser = users?.Value?.FirstOrDefault();
                 if (existingUser != null)
                 {
                     return new UserConflict
@@ -264,7 +265,7 @@ namespace MandADiscoverySuite.Services.Migration
                         requestConfiguration.QueryParameters.Select = new string[] { "id", "userPrincipalName", "displayName" };
                     }, cancellationToken);
 
-                foreach (var existingUser in users?.ToList() ?? new List<Microsoft.Graph.User>())
+                foreach (var existingUser in users?.Value?.ToList() ?? new List<Microsoft.Graph.Models.User>())
                 {
                     conflicts.Add(new UserConflict
                     {

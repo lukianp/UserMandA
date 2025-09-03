@@ -786,7 +786,7 @@ namespace MandADiscoverySuite.Services
             {
                 _logger.LogInformation($"Processing license assignments for wave {waveId} with {users.Count} users");
 
-                foreach (var user in users.Value ?? new List<Microsoft.Graph.Models.User>())
+                foreach (var user in users ?? new List<UserData>())
                 {
                     try
                     {
@@ -879,7 +879,7 @@ namespace MandADiscoverySuite.Services
                 var availableSkus = await GetAvailableLicenseSkusAsync(tenantId);
                 var skuLookup = availableSkus.ToDictionary(s => s.SkuId, s => s);
 
-                foreach (var user in users.Value ?? new List<Microsoft.Graph.Models.User>())
+                foreach (var user in users ?? new List<UserData>())
                 {
                     var requiredSkus = settings.AutoAssignLicenses
                         ? await ApplyLicenseMappingRulesAsync(user, settings.CustomMappingRules)
@@ -1031,7 +1031,7 @@ namespace MandADiscoverySuite.Services
                     var users = await graphClient.Users
                         .GetAsync(config => config.QueryParameters.Select = new string[] {"id","userPrincipalName","displayName","assignedLicenses","accountEnabled"});
 
-                    foreach (var user in users.Value ?? new List<Microsoft.Graph.Models.User>())
+                    foreach (var user in users ?? new List<UserData>())
                     {
                         var assignment = new UserLicenseAssignment
                         {
@@ -1114,7 +1114,7 @@ namespace MandADiscoverySuite.Services
                     }
                 });
 
-                foreach (var user in users.Value ?? new List<Microsoft.Graph.Models.User>())
+                foreach (var user in users ?? new List<UserData>())
                 {
                     // Check for users without usage location
                     if (string.IsNullOrEmpty(user.UsageLocation) && user.AssignedLicenses?.Any() == true)
