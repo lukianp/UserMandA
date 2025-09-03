@@ -1474,7 +1474,19 @@ namespace MandADiscoverySuite.ViewModels
                 // Get users from wave
                 var waveUsers = GeneratedItems
                     .Where(i => i.WaveId == wave.Id && i.Type == MigrationType.User)
-                    .Select(i => new UserData { UserPrincipalName = i.SourceIdentity, DisplayName = i.DisplayName })
+                    .Select(i => new UserData(
+                        i.DisplayName, // displayName
+                        i.SourceIdentity, // userPrincipalName
+                        null, // mail
+                        null, // givenName
+                        null, // surname
+                        false, // accountEnabled
+                        null, // department
+                        null, // companyName
+                        null, // jobTitle
+                        null, // createdDateTime
+                        null  // id
+                    ))
                     .ToList();
 
                 if (!waveUsers.Any())

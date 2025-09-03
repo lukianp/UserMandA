@@ -153,4 +153,22 @@ namespace MandADiscoverySuite.Models.Migration
         public bool IsInherited { get; set; }
     }
 
+    /// <summary>
+    /// Data Transfer Object for SharePoint sites in migration operations
+    /// </summary>
+    public class SharePointSiteDto
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public string Url { get; set; }
+        public string Template { get; set; }
+        public long StorageUsage { get; set; }
+        public DateTime Created { get; set; }
+        public DateTime LastModified { get; set; }
+        public string SiteOwner { get; set; }
+        public bool IsDeleted { get; set; }
+        public List<string> Admins { get; set; } = new List<string>();
+        public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
+    }
+
 }

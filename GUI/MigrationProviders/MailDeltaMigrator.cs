@@ -7,6 +7,7 @@ using System.Management.Automation;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Services.Migration;
+using MandADiscoverySuite.Models.Migration;
 using IMDRM = MandADiscoverySuite.Migration.IMailDeltaMigrator;
 
 namespace MandADiscoverySuite.MigrationProviders

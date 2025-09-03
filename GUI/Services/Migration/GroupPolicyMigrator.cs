@@ -93,18 +93,42 @@ namespace MandADiscoverySuite.Services.Migration
 
                 context.ReportProgress("GPO Migration", 100, "GPO migration completed");
 
+                // replicate settings
+                var replicationResult = new GpoReplicationResult
+                {
+                    PolicySettings = new Dictionary<string, object>(),
+                    SkippedSettings = settingsResult.SkippedSettings,
+                    MigrationDuration = DateTime.Now - result.StartTime,
+                    MigrationDetails = new Dictionary<string, object>(),
+                    SettingsReplicated = settingsResult.IsSuccess,
+                    ReplicatedSettingCount = settingsResult.MigratedSettings.Count
+                };
+
+                // Add migrated settings to policy settings
+                foreach (var setting in settingsResult.MigratedSettings)
+                {
+                    replicationResult.PolicySettings[setting] = true; // Assuming success
+                }
+
                 // Build comprehensive result
                 result.Result = new GpoMigrationResult
                 {
-                    SourceGpoGuid = item.GpoGuid,
-                    TargetGpoGuid = gpoCreationResult.TargetGpoGuid,
+                    SourceGpoId = item.GpoGuid,
+                    TargetGpoName = gpoCreationResult.TargetGpoName,
+                    SessionId = context.SessionId,
+                    ExecutedBy = context.UserPrincipalName,
+                    StartTime = DateTime.UtcNow,
                     GpoName = item.GpoName,
-                    IsSuccess = true,
-                    MigratedSettings = settingsResult.MigratedSettings,
-                    SkippedSettings = settingsResult.SkippedSettings,
-                    Warnings = settingsResult.Warnings,
-                    MigrationDate = DateTime.Now,
-                    MigrationDuration = DateTime.Now - result.StartTime,
+                    TargetGpoId = gpoCreationResult.TargetGpoGuid,
+                    SettingsReplicated = replicationResult.SettingsReplicated,
+                    ReplicatedSettings = replicationResult.PolicySettings,
+                    SkippedSettings = replicationResult.SkippedSettings,
+                    Warnings = new List<string>(settingsResult.Warnings),
+                    ReplicatedSettings = replicationResult,
+                    LinkedOUs = linkingResult?.LinkedOus ?? new List<string>(),
+                    OuLinksConfigured = linkingResult?.IsSuccess ?? false,
+                    SecurityFilteringApplied = securityResult?.IsSuccess ?? false,
+                    WmiFiltersApplied = false, // Set based on available logic
                     MigrationDetails = new Dictionary<string, object>
                     {
                         ["GpoCreation"] = gpoCreationResult,
@@ -216,7 +240,6 @@ namespace MandADiscoverySuite.Services.Migration
                     rollbackResult.Errors.AddRange(deleteResult.Errors);
                 }
 
-                rollbackResult.RollbackDate = DateTime.Now;
                 _logger.LogInformation($"GPO rollback completed for: {result.GpoName}");
                 context.AuditLogger?.LogRollback(context.SessionId, result.GpoName, "GPO migration rollback", rollbackResult.IsSuccess);
 

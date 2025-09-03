@@ -17,6 +17,9 @@ using MandADiscoverySuite.Models.Identity;
 using MandADiscoverySuite.Services.Migration;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Services.Audit;
+// Resolve ambiguity between custom AuditEvent and Microsoft.Graph.Models.AuditEvent
+using AuditEvent = MandADiscoverySuite.Services.Audit.AuditEvent;
+using GraphAuditEvent = Microsoft.Graph.Models.AuditEvent;
 
 namespace MandADiscoverySuite.MigrationProviders
 {
@@ -713,17 +716,15 @@ namespace MandADiscoverySuite.MigrationProviders
             MandADiscoverySuite.Models.Migration.MigrationSettings settings,
             TargetContext target)
         {
-            var resolvedUser = new UserData
-            {
-                UserPrincipalName = user.UserPrincipalName,
-                DisplayName = user.DisplayName,
-                Mail = user.Mail,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Department = user.Department,
-                JobTitle = user.JobTitle,
-                SamAccountName = user.SamAccountName
-            };
+            // Calculate resolved values for init-only properties
+            string resolvedDisplayName = user.DisplayName;
+            string resolvedUpn = user.UserPrincipalName;
+            string resolvedMail = user.Mail;
+            string resolvedGivenName = user.FirstName;
+            string resolvedSurname = user.LastName;
+            string resolvedDepartment = user.Department;
+            string resolvedCompanyName = user.Company ?? "";
+            string resolvedJobTitle = user.JobTitle;
 
             foreach (var conflict in conflicts)
             {
@@ -733,16 +734,31 @@ namespace MandADiscoverySuite.MigrationProviders
                 switch (conflict.ConflictType.ToLower())
                 {
                     case "userprincipalname":
-                        resolvedUser.UserPrincipalName = resolvedValue;
+                        resolvedUpn = resolvedValue;
                         break;
                     case "mail":
-                        resolvedUser.Mail = resolvedValue;
+                        resolvedMail = resolvedValue;
                         break;
                     case "displayname":
-                        resolvedUser.DisplayName = resolvedValue;
+                        resolvedDisplayName = resolvedValue;
                         break;
                 }
             }
+
+            var resolvedUser = new UserData(
+                resolvedDisplayName,
+                resolvedUpn,
+                resolvedMail,
+                resolvedGivenName,
+                resolvedSurname,
+                true,
+                resolvedDepartment,
+                resolvedCompanyName,
+                resolvedJobTitle,
+                (DateTimeOffset?)null,
+                null
+            );
+
 
             return resolvedUser;
         }
@@ -805,7 +821,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 var existing = await graphClient.Users
                     .GetAsync(requestConfiguration => requestConfiguration.QueryParameters.Filter = $"userPrincipalName eq '{candidateValue}' or mail eq '{candidateValue}'");
 
-                if (!existing.Any())
+                if (!existing.Value?.Any() == true)
                     return candidateValue;
 
                 increment++;
@@ -1180,18 +1196,16 @@ namespace MandADiscoverySuite.MigrationProviders
                 {
                     Action = AuditAction.UserMigration,
                     ObjectType = ObjectType.User,
-                    ObjectId = user.UserPrincipalName,
                     Status = result.IsSuccess ? AuditStatus.Success : AuditStatus.Failed,
                     StatusMessage = result.IsSuccess ? "User migration completed successfully" : result.ErrorMessage,
                     SessionId = migrationId,
-                    UserPrincipal = Environment.UserName,
                     Timestamp = DateTime.UtcNow,
                     Metadata = new Dictionary<string, string>
                     {
                         ["SourceUPN"] = user.UserPrincipalName ?? "",
                         ["TargetUPN"] = (result as MandADiscoverySuite.Migration.MigrationResult)?.TargetUserPrincipalName ?? "",
                         ["MigrationStrategy"] = (result as MandADiscoverySuite.Migration.MigrationResult)?.StrategyUsed.ToString() ?? "",
-                        ["Duration"] = result.ProcessingTime.ToString()
+                        ["Duration"] = (DateTime.Now - result.StartTime).TotalSeconds.ToString()
                     }
                 });
             }
