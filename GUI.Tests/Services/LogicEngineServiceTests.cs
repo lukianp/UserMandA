@@ -5,7 +5,10 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MandADiscoverySuite.Services;
+using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Models.Identity;
 
 namespace GUI.Tests.Services
 {

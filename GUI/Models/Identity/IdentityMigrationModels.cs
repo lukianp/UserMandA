@@ -912,15 +912,15 @@ namespace MandADiscoverySuite.Models.Identity
         public new string SourceUserPrincipalName { get; set; }
         public string TargetUserPrincipalName { get; set; }
         public string TargetUserId { get; set; }
-        public MigrationStrategy StrategyUsed { get; set; }
-        public AttributeMappingResult AttributeMapping { get; set; }
+        public new MigrationStrategy StrategyUsed { get; set; }
+        public new AttributeMappingResult AttributeMapping { get; set; }
         public ConflictResolutionResult ConflictResolution { get; set; }
-        public PasswordProvisioningResult PasswordProvisioning { get; set; }
+        public new PasswordProvisioningResult PasswordProvisioning { get; set; }
         public B2BInvitationResult B2BInvitation { get; set; }
         public UserSyncRegistrationResult SyncRegistration { get; set; }
-        public LicenseAssignmentResult LicenseAssignment { get; set; }
-        public List<MfaConfigurationResult> MfaConfiguration { get; set; } = new List<MfaConfigurationResult>();
-        public List<string> CreatedGroups { get; set; } = new List<string>();
+        public new LicenseAssignmentResult LicenseAssignment { get; set; }
+        public new List<MfaConfigurationResult> MfaConfiguration { get; set; } = new List<MfaConfigurationResult>();
+        public new List<string> CreatedGroups { get; set; } = new List<string>();
         public Dictionary<string, object> ExtendedProperties { get; set; } = new Dictionary<string, object>();
 
         // Calculated properties

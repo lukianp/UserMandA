@@ -25,7 +25,7 @@ namespace MandADiscoverySuite.Services
             logger ??= NullLogger<MigratorFactory>.Instance; // Placeholder
 
             // For Microsoft 365 targets use Graph-based migrator
-            return (IIdentityMigrator)new GraphIdentityMigrator(graphService, logger);
+            return new GraphIdentityMigrator(graphService, logger);
         }
 
         public IMailMigrator CreateMailMigrator(TargetProfile profile)

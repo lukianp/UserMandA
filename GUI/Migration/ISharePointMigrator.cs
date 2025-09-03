@@ -59,7 +59,7 @@ namespace MandADiscoverySuite.Migration
         public int MaxConcurrentMigrations { get; set; } = 5;
         public int VersionHistoryLimit { get; set; } = 10;
         public List<string> ExcludedFileTypes { get; set; } = new();
-        public long MaxFileSizeBytes { get; set; } = 15L * 1024 * 1024 * 1024; // 15GB limit for SharePoint Online
+        public new long MaxFileSizeBytes { get; set; } = 15L * 1024 * 1024 * 1024; // 15GB limit for SharePoint Online
         public bool PreserveTaxonomy { get; set; } = true;
         public bool MigrateWebParts { get; set; } = false;
         public SharePointMigrationMode MigrationMode { get; set; } = SharePointMigrationMode.FullMigration;

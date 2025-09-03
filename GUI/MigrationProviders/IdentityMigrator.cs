@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
-using Microsoft.Graph.Beta;
-using Microsoft.Graph.Beta.Models;
+using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using Microsoft.Identity.Client;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Models;
@@ -509,7 +509,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 var graphClient = await GetGraphClientAsync(target.TenantId);
 
                 // Create user object
-                var user = new Microsoft.Graph.Beta.Models.User
+                var user = new Microsoft.Graph.Models.User
                 {
                     UserPrincipalName = userData.UserPrincipalName,
                     DisplayName = userData.DisplayName,
@@ -525,7 +525,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 if (settings.GeneratePassword)
                 {
                     var password = await GenerateSecurePasswordAsync(settings.PasswordRequirements);
-                    user.PasswordProfile = new Microsoft.Graph.Beta.Models.PasswordProfile
+                    user.PasswordProfile = new Microsoft.Graph.Models.PasswordProfile
                     {
                         Password = password,
                         ForceChangePasswordNextSignIn = settings.PasswordRequirements.ForceChangeOnFirstLogin
@@ -654,7 +654,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
                 // Get current user state
                 var currentUser = await graphClient.Users[targetUserId].GetAsync();
-                var updateUser = new Microsoft.Graph.Beta.Models.User();
+                var updateUser = new Microsoft.Graph.Models.User();
 
                 // Determine what attributes to update
                 var attributesToUpdate = new Dictionary<string, object>();
@@ -1011,9 +1011,9 @@ namespace MandADiscoverySuite.MigrationProviders
                 var password = await GenerateSecurePasswordAsync(requirements);
                 var graphClient = await GetGraphClientAsync(target.TenantId);
 
-                var user = new Microsoft.Graph.Beta.Models.User
+                var user = new Microsoft.Graph.Models.User
                 {
-                    PasswordProfile = new Microsoft.Graph.Beta.Models.PasswordProfile
+                    PasswordProfile = new Microsoft.Graph.Models.PasswordProfile
                     {
                         Password = password,
                         ForceChangePasswordNextSignIn = requirements.ForceChangeOnFirstLogin

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Graph.Beta;
-using Microsoft.Graph.Beta.Models;
-using Microsoft.Identity.Client;
+using Microsoft.Graph;
+using Microsoft.Graph.Models;
+using Azure.Identity;
 using MandADiscoverySuite.Models;
 using System.Collections.Concurrent;
 
@@ -72,18 +72,14 @@ namespace MandADiscoverySuite.Services
                     throw new InvalidOperationException($"No Graph API credentials found for tenant {tenantId}");
                 }
 
-                var app = ConfidentialClientApplicationBuilder
-                    .Create(credentials.ClientId)
-                    .WithClientSecret(credentials.ClientSecret)
-                    .WithAuthority($"https://login.microsoftonline.com/{tenantId}")
-                    .Build();
-
-                var graphClient = new GraphServiceClient(app);
+                var credential = new ClientSecretCredential(tenantId, credentials.ClientId, credentials.ClientSecret);
+                var graphClient = new GraphServiceClient(credential);
 
                 // Test the connection
                 try
                 {
                     var organization = await graphClient.Organization.GetAsync();
+                    var tenantName = organization.Value?.FirstOrDefault()?.DisplayName;
                     _logger.LogInformation($"Successfully connected to tenant {tenantId}");
                 }
                 catch (Exception ex)
@@ -304,34 +300,36 @@ namespace MandADiscoverySuite.Services
                 
                 result.UserPrincipalName = user.UserPrincipalName;
 
-                // Prepare license assignment requests
-                var assignLicenses = new List<Microsoft.Graph.Models.AssignedLicense>();
-                
-                foreach (var skuId in skuIds)
+                // Execute license assignment using Microsoft Graph SDK method
+                // Prepare license assignment
+                var addLicenses = new List<AssignedLicense>();
+                if (skuIds != null && skuIds.Any())
                 {
-                    var assignedLicense = new Microsoft.Graph.Models.AssignedLicense
+                    foreach (var skuId in skuIds)
                     {
-                        SkuId = Guid.Parse(skuId)
-                    };
+                        var assignedLicense = new AssignedLicense
+                        {
+                            SkuId = Guid.Parse(skuId)
+                        };
 
-                    // Disable specified service plans
-                    if (disableServicePlans?.Any() == true)
-                    {
-                        assignedLicense.DisabledPlans = disableServicePlans.Select(Guid.Parse).ToList();
+                        if (disableServicePlans != null && disableServicePlans.Any())
+                        {
+                            assignedLicense.DisabledPlans = disableServicePlans.Select(p => (Guid?)Guid.Parse(p)).ToList();
+                        }
+
+                        addLicenses.Add(assignedLicense);
                     }
-
-                    assignLicenses.Add(assignedLicense);
                 }
 
-                // Create the license update request
-                var assignLicensePostRequestBody = new Microsoft.Graph.Beta.Models.AssignLicensePostRequestBody
-                {
-                    AddLicenses = assignLicenses,
-                    RemoveLicenses = new List<Guid?>()
-                };
+                var removeLicenses = new List<Guid?>();
 
-                // Execute the license assignment
-                await graphClient.Users[userId].AssignLicense.PostAsync(assignLicensePostRequestBody);
+                // Execute license assignment using Graph SDK
+                var requestBody = new Microsoft.Graph.Users.Item.AssignLicense.AssignLicensePostRequestBody
+                {
+                    AddLicenses = addLicenses,
+                    RemoveLicenses = removeLicenses
+                };
+                await graphClient.Users[userId].AssignLicense.PostAsync(requestBody);
 
                 result.IsSuccess = true;
                 result.AssignedSkus = skuIds;
@@ -381,11 +379,9 @@ namespace MandADiscoverySuite.Services
 
                 var removeLicenses = skuIds.Select(s => (Guid?)Guid.Parse(s)).ToList();
 
-                var assignLicensePostRequestBody = new AssignLicensePostRequestBody
-                {
-                    AddLicenses = new List<AssignedLicense>(),
-                    RemoveLicenses = removeLicenses
-                };
+                dynamic assignLicensePostRequestBody = new System.Dynamic.ExpandoObject();
+                assignLicensePostRequestBody.AddLicenses = new List<dynamic>();
+                assignLicensePostRequestBody.RemoveLicenses = removeLicenses;
 
                 await graphClient.Users[userId].AssignLicense.PostAsync(assignLicensePostRequestBody);
 
@@ -452,7 +448,7 @@ namespace MandADiscoverySuite.Services
 
                         if (disableServicePlans?.Any() == true)
                         {
-                            assignedLicense.DisabledPlans = disableServicePlans.Select(Guid.Parse).ToList();
+                            assignedLicense.DisabledPlans = disableServicePlans.Select(p => (Guid?)Guid.Parse(p)).ToList();
                         }
 
                         addLicenses.Add(assignedLicense);
@@ -465,11 +461,9 @@ namespace MandADiscoverySuite.Services
                     removeLicenses = removeSkuIds.Select(s => (Guid?)Guid.Parse(s)).ToList();
                 }
 
-                var assignLicensePostRequestBody = new AssignLicensePostRequestBody
-                {
-                    AddLicenses = addLicenses,
-                    RemoveLicenses = removeLicenses
-                };
+                dynamic assignLicensePostRequestBody = new System.Dynamic.ExpandoObject();
+                assignLicensePostRequestBody.AddLicenses = addLicenses;
+                assignLicensePostRequestBody.RemoveLicenses = removeLicenses;
 
                 await graphClient.Users[userId].AssignLicense.PostAsync(assignLicensePostRequestBody);
 
@@ -1298,11 +1292,10 @@ namespace MandADiscoverySuite.Services
                 // Get tenant information
                 try
                 {
-                    var organization = await graphClient.Organization.GetAsync();
-                    var org = organization.Value?.FirstOrDefault();
-                    if (org != null)
+                    var org = await graphClient.Organization.GetAsync();
+                    if (org != null && org.Value != null && org.Value.Any())
                     {
-                        result.TenantDisplayName = org.DisplayName;
+                        result.TenantDisplayName = org.Value.First().DisplayName;
                     }
                 }
                 catch (Exception ex)

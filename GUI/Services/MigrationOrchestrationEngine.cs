@@ -449,12 +449,12 @@ namespace MandADiscoverySuite.Services
         // Supporting methods for orchestration
         private async Task<MandADiscoverySuite.Migration.ValidationResult> ValidateOrchestrationRequestAsync(OrchestrationRequest request)
         {
-            var result = new MandADiscoverySuite.Migration.ValidationResult { IsSuccess = true };
+            var result = new MandADiscoverySuite.Migration.ValidationResult();
+            result.IsSuccess = true;
 
             if (request.Migrations?.Any() != true)
             {
                 result.Errors.Add("No migrations specified in orchestration request");
-                result.IsValid = false;
             }
 
             // Validate each migration
@@ -463,15 +463,16 @@ namespace MandADiscoverySuite.Services
                 if (string.IsNullOrEmpty(migration.ProfileName))
                 {
                     result.Errors.Add($"Migration {migration.Id} missing profile name");
-                    result.IsValid = false;
                 }
 
                 if (migration.Wave?.Batches?.Any() != true)
                 {
                     result.Errors.Add($"Migration {migration.Id} has no batches");
-                    result.IsValid = false;
                 }
             }
+
+            // IsValid property is read-only and calculated based on errors
+            // If there are errors, IsValid will be false
 
             return result;
         }

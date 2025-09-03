@@ -204,7 +204,17 @@ namespace MandADiscoverySuite.Migration
                             var groupItem = ConvertToGroupItem(ToGroupDto(g));
                             var context = CreateMigrationContext(target);
                             var result = await _groupMigrator.MigrateAsync(groupItem, context);
-                            return ConvertToMigrationResult<GroupMigrationResult>((MigrationResult<GroupMigrationResult>)result);
+                            var groupResult = result as GroupMigrationResult;
+                            if (groupResult == null) {
+                                return MigrationResult.Failed($"Invalid migration result type for group {g.Name}");
+                            }
+                            var migrationResult = new MigrationResult<GroupMigrationResult> {
+                                IsSuccess = groupResult.IsSuccess,
+                                Warnings = groupResult.Warnings,
+                                Errors = groupResult.Errors,
+                                Result = groupResult
+                            };
+                            return ConvertToMigrationResult<GroupMigrationResult>(migrationResult);
                         }
                     )).ToList();
                     results.AddRange(await Task.WhenAll(groupTasks));
@@ -234,7 +244,17 @@ namespace MandADiscoverySuite.Migration
                             var aclItem = ConvertToAclItem(ToAclDto(acl));
                             var context = CreateMigrationContext(target);
                             var result = await _aclMigrator.MigrateAsync(aclItem, context);
-                            return ConvertToMigrationResult<AclMigrationResult>(result);
+                            var aclResult = result as AclMigrationResult;
+                            if (aclResult == null) {
+                                return MigrationResult.Failed($"Invalid migration result type for ACL {acl.Path}");
+                            }
+                            var migrationResult = new MigrationResult<AclMigrationResult> {
+                                IsSuccess = aclResult.IsSuccess,
+                                Warnings = aclResult.Warnings,
+                                Errors = aclResult.Errors,
+                                Result = aclResult
+                            };
+                            return ConvertToMigrationResult<AclMigrationResult>(migrationResult);
                         }
                     )).ToList();
                     results.AddRange(await Task.WhenAll(aclTasks));
@@ -593,11 +613,10 @@ namespace MandADiscoverySuite.Migration
         /// </summary>
         private GroupItem ConvertToGroupItem(GroupDto groupDto)
         {
-            return new GroupItem
+            var groupItem = new GroupItem
             {
                 Name = groupDto.Name,
                 Sid = groupDto.Sid,
-                DistinguishedName = groupDto.DistinguishedName,
                 GroupScope = groupDto.GroupScope,
                 GroupType = groupDto.GroupType,
                 Description = $"Migrated group: {groupDto.Name}",
@@ -605,6 +624,14 @@ namespace MandADiscoverySuite.Migration
                 MemberOfSids = new List<string>(), // Would be populated from discovery data
                 CustomAttributes = new Dictionary<string, object>()
             };
+
+            // Store DN separately in properties since GroupItem doesn't have DistinguishedName property
+            if (!string.IsNullOrEmpty(groupDto.DistinguishedName))
+            {
+                groupItem.Properties["DistinguishedName"] = groupDto.DistinguishedName;
+            }
+
+            return groupItem;
         }
 
         /// <summary>
@@ -614,15 +641,15 @@ namespace MandADiscoverySuite.Migration
         {
             return new GroupPolicyItem
             {
-                Id = gpoDto.Id,
+                Id = gpoDto.GpoGuid, // replacing .Id with GpoGuid
                 DisplayName = gpoDto.DisplayName,
                 Name = gpoDto.DisplayName,
                 Domain = gpoDto.Domain,
                 Owner = _currentUserPrincipal,
-                LinkedOUs = new List<string>(), // Would be populated from discovery data
-                SecurityFiltering = new List<string>(), // Would be populated from discovery data
-                WmiFilters = new List<string>(), // Would be populated from discovery data
-                Settings = new Dictionary<string, object>(), // Would be populated from discovery data
+                LinkedOUs = gpoDto.LinkedOUs,
+                SecurityFiltering = gpoDto.SecurityFiltering,
+                WmiFilters = gpoDto.WmiFilters,
+                Settings = gpoDto.Settings,
                 CreationTime = DateTime.UtcNow,
                 ModificationTime = DateTime.UtcNow,
                 Version = 1,
@@ -814,7 +841,6 @@ namespace MandADiscoverySuite.Migration
                 GpoGuid = gpo.GpoGuid,
                 GpoName = gpo.GpoName,
                 DisplayName = gpo.DisplayName,
-                Name = gpo.DisplayName,
                 Description = gpo.Description,
                 Domain = gpo.Domain,
                 Owner = gpo.Owner,

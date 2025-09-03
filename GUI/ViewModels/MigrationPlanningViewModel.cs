@@ -23,7 +23,7 @@ namespace MandADiscoverySuite.ViewModels
         private readonly DiscoveryService _discoveryService;
         private readonly ProfileService _profileService;
         private readonly ModuleRegistryService _moduleRegistryService;
-        private readonly ILogger<MigrationPlanningViewModel> _logger;
+        private readonly ILogger<LicenseAssignmentService> _logger;
         private readonly ILicenseAssignmentService _licenseService;
         
         // Discovery Data Analysis
@@ -103,7 +103,7 @@ namespace MandADiscoverySuite.ViewModels
         #endregion
         
         #region Constructor
-        public MigrationPlanningViewModel(ILogger<MigrationPlanningViewModel> logger = null, ILicenseAssignmentService licenseService = null) : base(logger)
+        public MigrationPlanningViewModel(ILogger<LicenseAssignmentService> logger = null, ILicenseAssignmentService licenseService = null) : base(logger)
         {
             _logger = logger;
             _licenseService = licenseService ?? new LicenseAssignmentService(logger);
@@ -1419,7 +1419,6 @@ namespace MandADiscoverySuite.ViewModels
                 Conditions = new List<LicenseRuleCondition>(),
                 AssignSkuIds = new List<string>(),
                 RemoveSkuIds = new List<string>(),
-                CreatedAt = DateTime.Now,
                 LastModified = DateTime.Now
             };
 

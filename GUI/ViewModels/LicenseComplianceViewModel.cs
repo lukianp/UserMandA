@@ -21,7 +21,7 @@ namespace MandADiscoverySuite.ViewModels
     {
         #region Private Fields
         private readonly ILicenseAssignmentService _licenseService;
-        private readonly ILogger<LicenseComplianceViewModel> _logger;
+        private readonly ILogger<LicenseAssignmentService> _logger;
         
         // Target tenant selection
         private ObservableCollection<string> _availableTargetCompanies;
@@ -56,7 +56,7 @@ namespace MandADiscoverySuite.ViewModels
         #endregion
         
         #region Constructor
-        public LicenseComplianceViewModel(ILogger<LicenseComplianceViewModel> logger = null, 
+        public LicenseComplianceViewModel(ILogger<LicenseAssignmentService> logger = null,
             ILicenseAssignmentService licenseService = null) : base(logger)
         {
             _logger = logger;

@@ -72,7 +72,8 @@
       "Bash(Test-Path \"MandADiscoverySuite.exe\")",
       "Read(C:\\discoverydata\\ljpops/**)",
       "Bash(git checkout:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(start \"\" \"C:\\enterprisediscovery\\MandADiscoverySuite.exe\")"
     ],
     "deny": [],
     "ask": [],

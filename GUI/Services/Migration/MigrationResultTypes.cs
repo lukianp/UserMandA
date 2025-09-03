@@ -524,7 +524,7 @@ namespace MandADiscoverySuite.Services.Migration
         public int TotalConflicts { get; set; }
         public int ResolvedConflicts { get; set; }
         public int UnresolvedConflicts { get; set; }
-        public ConflictResolutionStrategy StrategyUsed { get; set; }
+        public new ConflictResolutionStrategy StrategyUsed { get; set; }
         public List<string> ResolutionActions { get; set; } = new List<string>();
     }
 
