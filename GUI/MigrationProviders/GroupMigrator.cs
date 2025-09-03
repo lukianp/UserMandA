@@ -364,7 +364,7 @@ namespace MandADiscoverySuite.MigrationProviders
             if (item is SecurityGroupItem securityGroupItem)
             {
                 var result = await MigrateAsync(securityGroupItem, context, cancellationToken);
-                return result; // Return the migration result directly for SecurityGroupItem
+                return result.Result; // Return the migration result directly for SecurityGroupItem
             }
             throw new ArgumentException($"Invalid item type. Expected GroupItem or SecurityGroupItem, got {item?.GetType()}");
         }
@@ -761,6 +761,48 @@ namespace MandADiscoverySuite.MigrationProviders
                 result.EndTime = DateTime.UtcNow;
 
                 return result;
+            }
+        }
+
+        /// <summary>
+        /// Helper method to get mapped SID with caching support
+        /// </summary>
+        private async Task<string> GetMappedSidAsync(string sourceSid, MigrationContext context)
+        {
+            if (string.IsNullOrEmpty(sourceSid))
+            {
+                _logger.LogWarning("Cannot map empty or null source SID");
+                return null;
+            }
+
+            try
+            {
+                // Check if mapping already exists in context
+                if (context.SidMapping.TryGetValue(sourceSid, out var targetSid))
+                {
+                    _logger.LogDebug("Found existing SID mapping from cache: {SourceSid} -> {TargetSid}", sourceSid, targetSid);
+                    return targetSid;
+                }
+
+                // Map using SID mapping service
+                var targetSidResult = await _sidMappingService.MapSidAsync(sourceSid, context.TargetDomain);
+                if (!string.IsNullOrEmpty(targetSidResult))
+                {
+                    // Cache the mapping in context for future use
+                    context.SidMapping[sourceSid] = targetSidResult;
+                    _logger.LogDebug("Mapped SID: {SourceSid} -> {TargetSid}", sourceSid, targetSidResult);
+                    return targetSidResult;
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to map SID {SourceSid}", sourceSid);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error mapping SID {SourceSid}", sourceSid);
+                return null;
             }
         }
 

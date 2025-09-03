@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using MandADiscoverySuite.Services.Migration;
+using MandADiscoverySuite.Services.Migration; // Added for GpoCompatibilityResult
 using MandADiscoverySuite.Models.Migration;
 using MandADiscoverySuite.Migration;
 
@@ -65,7 +65,7 @@ namespace MandADiscoverySuite.Interfaces
         /// <summary>
         /// Validate GPO compatibility with target domain
         /// </summary>
-        Task<GpoCompatibilityResult> ValidateGpoCompatibilityAsync(
+        Task<Services.Migration.GpoCompatibilityResult> ValidateGpoCompatibilityAsync(
             GroupPolicyItem gpo,
             string targetDomain);
 
@@ -87,12 +87,4 @@ namespace MandADiscoverySuite.Interfaces
     }
 
     // Result types moved to Services.Migration.MigrationResultTypes
-
-    // Additional type not yet moved
-    public class GpoCompatibilityResult : MigrationResultBase
-    {
-        public bool IsCompatible { get; set; }
-        public List<string> CompatibilityIssues { get; set; } = new List<string>();
-        public List<string> RequiredUpdates { get; set; } = new List<string>();
-    }
 }

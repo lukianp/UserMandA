@@ -285,8 +285,32 @@ namespace MandADiscoverySuite.Tests
             // Arrange
             var users = new List<UserData>
             {
-                new UserData("User 1", "user1@test.com", "user1@test.com", null, null, true, "user1", null, null, DateTimeOffset.Now),
-                new UserData("User 2", "user2@test.com", "user2@test.com", null, null, true, "user2", null, null, DateTimeOffset.Now)
+                new UserData(
+                    DisplayName: "User 1",
+                    UserPrincipalName: "user1@test.com",
+                    Mail: "user1@test.com",
+                    Department: null,
+                    JobTitle: null,
+                    AccountEnabled: true,
+                    SamAccountName: "user1",
+                    CompanyName: null,
+                    ManagerDisplayName: null,
+                    CreatedDateTime: DateTimeOffset.Now,
+                    UserSource: "Test"
+                ),
+                new UserData(
+                    DisplayName: "User 2",
+                    UserPrincipalName: "user2@test.com",
+                    Mail: "user2@test.com",
+                    Department: null,
+                    JobTitle: null,
+                    AccountEnabled: true,
+                    SamAccountName: "user2",
+                    CompanyName: null,
+                    ManagerDisplayName: null,
+                    CreatedDateTime: DateTimeOffset.Now,
+                    UserSource: "Test"
+                )
             };
 
             var waveLicenseSettings = new WaveLicenseSettings
@@ -313,7 +337,19 @@ namespace MandADiscoverySuite.Tests
             // Arrange
             var users = new List<UserData>
             {
-                new UserData("Test User", "user@test.com", "user@test.com", "Sales", null, true, "user", null, null, DateTimeOffset.Now)
+                new UserData(
+                    DisplayName: "Test User",
+                    UserPrincipalName: "user@test.com",
+                    Mail: "user@test.com",
+                    Department: "Sales",
+                    JobTitle: null,
+                    AccountEnabled: true,
+                    SamAccountName: "user",
+                    CompanyName: null,
+                    ManagerDisplayName: null,
+                    CreatedDateTime: DateTimeOffset.Now,
+                    UserSource: "Test"
+                )
             };
 
             var settings = new WaveLicenseSettings
@@ -455,8 +491,8 @@ namespace MandADiscoverySuite.Tests
                 Id = Guid.NewGuid().ToString(),
                 OperationType = BulkLicenseOperationType.Assign,
                 UserIds = userIds,
-                SkuIds = new List<string> { "test-sku" },
-                TotalUsers = userIds.Count
+                SkuIds = new List<string> { "test-sku" }
+                // TotalUsers is now read-only, calculated internally
             };
 
             var cancellationToken = new CancellationTokenSource(TimeSpan.FromMinutes(2)).Token;

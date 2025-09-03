@@ -48,7 +48,7 @@ namespace MandADiscoverySuite.MigrationProviders
     /// <summary>
     /// Implements Group Policy Object migration with settings replication and OU linking
     /// </summary>
-    public class GpoMigrator // : IGpoMigrator // Temporarily disabled due to missing interface methods
+    public class GpoMigrator // : IGpoMigrator - Interface method signatures need alignment
     {
         private readonly IGroupPolicyClient _gpClient;
         private readonly IWmiFilterClient _wmiClient;
@@ -135,10 +135,10 @@ namespace MandADiscoverySuite.MigrationProviders
                 if (settingsResult.IsSuccess)
                 {
                     migrationResult.SettingsReplicated = true;
-                    migrationResult.ReplicatedSettings = settingsResult.PolicySettings;
+                    migrationResult.ReplicatedSettings = settingsResult;
                     migrationResult.UnsupportedSettings = settingsResult.SkippedSettings;
-                    
-                    _logger.LogInformation("Replicated {SettingCount} settings for GPO {GpoName}", 
+
+                    _logger.LogInformation("Replicated {SettingCount} settings for GPO {GpoName}",
                         settingsResult.ReplicatedSettingCount, item.DisplayName);
                 }
                 else
@@ -606,14 +606,13 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<MandADiscoverySuite.Interfaces.GpoCompatibilityResult> ValidateGpoCompatibilityAsync(
-            List<GroupPolicyItem> groupPolicies, 
-            MandADiscoverySuite.Migration.MigrationContext context, 
+        public async Task<MandADiscoverySuite.Services.Migration.GpoCompatibilityResult> ValidateGpoCompatibilityAsync(
+            List<GroupPolicyItem> groupPolicies,
+            MandADiscoverySuite.Migration.MigrationContext context,
             CancellationToken cancellationToken = default)
         {
-            var result = new MandADiscoverySuite.Interfaces.GpoCompatibilityResult
+            var result = new MandADiscoverySuite.Services.Migration.GpoCompatibilityResult
             {
-                TotalGposAnalyzed = groupPolicies.Count,
                 StartTime = DateTime.UtcNow,
                 SessionId = context.SessionId,
                 ExecutedBy = context.UserPrincipalName
@@ -873,6 +872,48 @@ namespace MandADiscoverySuite.MigrationProviders
                 result.EndTime = DateTime.UtcNow;
 
                 return result;
+            }
+        }
+
+        /// <summary>
+        /// Helper method to get mapped SID with caching support
+        /// </summary>
+        private async Task<string> GetMappedSidAsync(string sourceSid, MandADiscoverySuite.Migration.MigrationContext context)
+        {
+            if (string.IsNullOrEmpty(sourceSid))
+            {
+                _logger.LogWarning("Cannot map empty or null source SID");
+                return null;
+            }
+
+            try
+            {
+                // Check if mapping already exists in context
+                if (context.SidMapping.TryGetValue(sourceSid, out var targetSid))
+                {
+                    _logger.LogDebug("Found existing SID mapping from cache: {SourceSid} -> {TargetSid}", sourceSid, targetSid);
+                    return targetSid;
+                }
+
+                // Map using SID mapping service
+                var targetSidResult = await _sidMappingService.MapSidAsync(sourceSid, context.TargetDomain);
+                if (!string.IsNullOrEmpty(targetSidResult))
+                {
+                    // Cache the mapping in context for future use
+                    context.SidMapping[sourceSid] = targetSidResult;
+                    _logger.LogDebug("Mapped SID: {SourceSid} -> {TargetSid}", sourceSid, targetSidResult);
+                    return targetSidResult;
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to map SID {SourceSid}", sourceSid);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error mapping SID {SourceSid}", sourceSid);
+                return null;
             }
         }
 

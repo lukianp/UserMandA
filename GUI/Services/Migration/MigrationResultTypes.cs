@@ -187,13 +187,14 @@ namespace MandADiscoverySuite.Services.Migration
     // GPO-related result types
     public class GpoReplicationResult : MigrationResultBase
     {
-        public List<string> PolicySettings { get; set; } = new List<string>();
+        public Dictionary<string, object> PolicySettings { get; set; } = new Dictionary<string, object>();
+        public List<string> SkippedSettings { get; set; } = new List<string>();
         public int ReplicatedSettingCount { get; set; }
         public string SourceGpoId { get; set; }
         public string TargetOuPath { get; set; }
-        public Dictionary<string, object> PolicySettingsDict { get; set; } = new Dictionary<string, object>();
         public TimeSpan MigrationDuration { get; set; }
         public Dictionary<string, object> MigrationDetails { get; set; } = new Dictionary<string, object>();
+        public bool SettingsReplicated { get; set; }
     }
 
     public class GpoSecurityFilterResult : MigrationResultBase
