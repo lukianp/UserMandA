@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Graph;
+using Microsoft.Graph.Beta;
+using Microsoft.Graph.Beta.Models;
 using MandADiscoverySuite.Models.Migration;
 using MandADiscoverySuite.Services.Migration;
 
@@ -344,7 +345,7 @@ namespace MandADiscoverySuite.Migration
                 }
 
                 // Disable the target account
-                var updateUser = new Microsoft.Graph.Models.User
+                var updateUser = new Microsoft.Graph.Beta.Models.User
                 {
                     AccountEnabled = false
                 };

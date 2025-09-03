@@ -8,6 +8,7 @@ using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Models.Migration;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Services;
+using MandADiscoverySuite.Services.Audit;
 
 namespace MandADiscoverySuite.Services.Migration
 {
@@ -20,17 +21,20 @@ namespace MandADiscoverySuite.Services.Migration
         private readonly PowerShellExecutionService _powerShellService;
         private readonly ILogicEngineService _logicEngineService;
         private readonly CredentialStorageService _credentialService;
+        private readonly IAuditService _auditService;
 
         public IdentityMigrator(
             ILogger<IdentityMigrator> logger,
             PowerShellExecutionService powerShellService,
             ILogicEngineService logicEngineService,
-            CredentialStorageService credentialService)
+            CredentialStorageService credentialService,
+            IAuditService auditService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _powerShellService = powerShellService ?? throw new ArgumentNullException(nameof(powerShellService));
             _logicEngineService = logicEngineService ?? throw new ArgumentNullException(nameof(logicEngineService));
             _credentialService = credentialService ?? throw new ArgumentNullException(nameof(credentialService));
+            _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         }
 
         /// <summary>
@@ -53,7 +57,21 @@ namespace MandADiscoverySuite.Services.Migration
             {
                 _logger.LogInformation($"Starting identity migration for user: {item.UserPrincipalName}");
                 context.ReportProgressUpdate("Identity Migration", 0, $"Starting migration for {item.UserPrincipalName}");
-                context.AuditLogger?.LogMigrationStart(context.SessionId, "User", item.UserPrincipalName, context.InitiatedBy);
+
+                var auditEvent = new AuditEvent
+                {
+                    UserPrincipalName = context.InitiatedBy,
+                    SessionId = context.SessionId,
+                    Action = AuditAction.Started,
+                    ObjectType = ObjectType.User,
+                    SourceObjectId = item.UserPrincipalName,
+                    SourceObjectName = item.DisplayName ?? item.UserPrincipalName,
+                    WaveId = context.SessionId, // Using session as wave for now
+                    SourceEnvironment = context.Source.Environment,
+                    TargetEnvironment = context.Target.Environment,
+                    Status = AuditStatus.InProgress
+                };
+                await _auditService.LogAuditEventAsync(auditEvent);
 
                 // Step 1: Validate user readiness
                 context.ReportProgressUpdate("Identity Migration", 10, "Validating user prerequisites");
@@ -122,7 +140,7 @@ namespace MandADiscoverySuite.Services.Migration
                         Category = "Account Status",
                         Description = "User account is disabled in source domain"
                     };
-                    result.Warnings.Add(validationIssue);
+                    result.Warnings.Add(validationIssue.Description);
                 }
 
                 // Build successful result
@@ -154,7 +172,24 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 context.ReportProgressUpdate("Identity Migration", 100, "Migration completed successfully");
-                context.AuditLogger?.LogMigrationComplete(context.SessionId, "User", item.UserPrincipalName, true);
+
+                var completeAuditEvent = new AuditEvent
+                {
+                    UserPrincipalName = context.InitiatedBy,
+                    SessionId = context.SessionId,
+                    Action = AuditAction.Completed,
+                    ObjectType = ObjectType.User,
+                    SourceObjectId = item.UserPrincipalName,
+                    SourceObjectName = item.DisplayName ?? item.UserPrincipalName,
+                    TargetObjectId = result.TargetId ?? targetUserUpn,
+                    TargetObjectName = result.Result?.TargetUserUpn ?? targetUserUpn,
+                    WaveId = context.SessionId,
+                    Duration = DateTime.Now - result.StartTime,
+                    SourceEnvironment = context.Source.Environment,
+                    TargetEnvironment = context.Target.Environment,
+                    Status = AuditStatus.Success
+                };
+                await _auditService.LogAuditEventAsync(completeAuditEvent);
 
                 _logger.LogInformation($"Identity migration completed successfully for user: {item.UserPrincipalName}");
 
@@ -172,7 +207,21 @@ namespace MandADiscoverySuite.Services.Migration
                 result.Errors.Add(ex.ToString());
                 result.EndTime = DateTime.Now;
 
-                context.AuditLogger?.LogMigrationComplete(context.SessionId, "User", item.UserPrincipalName, false, ex.Message);
+                var failedAuditEvent = new AuditEvent
+                {
+                    UserPrincipalName = context.InitiatedBy,
+                    SessionId = context.SessionId,
+                    Action = AuditAction.Failed,
+                    ObjectType = ObjectType.User,
+                    SourceObjectId = item.UserPrincipalName,
+                    SourceObjectName = item.DisplayName ?? item.UserPrincipalName,
+                    WaveId = context.SessionId,
+                    SourceEnvironment = context.Source.Environment,
+                    TargetEnvironment = context.Target.Environment,
+                    Status = AuditStatus.Failed,
+                    ErrorMessage = ex.Message
+                };
+                await _auditService.LogAuditEventAsync(failedAuditEvent);
                 _logger.LogError(ex, $"Identity migration failed for user: {item.UserPrincipalName}");
             }
 
@@ -266,7 +315,24 @@ namespace MandADiscoverySuite.Services.Migration
             try
             {
                 _logger.LogInformation($"Starting rollback for user: {result.TargetUserUpn}");
-                context.AuditLogger?.LogRollback(context.SessionId, result.TargetUserUpn, "Manual rollback requested", false);
+
+                var rollbackStartEvent = new AuditEvent
+                {
+                    UserPrincipalName = context.InitiatedBy,
+                    SessionId = context.SessionId,
+                    Action = AuditAction.Rolled_Back,
+                    ObjectType = ObjectType.User,
+                    SourceObjectId = result.SourceUserSid ?? result.TargetUserUpn,
+                    SourceObjectName = result.SourceUserSid ?? result.TargetUserUpn,
+                    TargetObjectId = result.TargetUserUpn,
+                    TargetObjectName = result.TargetUserUpn,
+                    WaveId = context.SessionId,
+                    SourceEnvironment = context.Source.Environment,
+                    TargetEnvironment = context.Target.Environment,
+                    Status = AuditStatus.InProgress,
+                    StatusMessage = "Manual rollback requested"
+                };
+                await _auditService.LogAuditEventAsync(rollbackStartEvent);
 
                 // Remove target user account if created
                 if (!string.IsNullOrEmpty(result.TargetUserUpn))
@@ -293,7 +359,23 @@ namespace MandADiscoverySuite.Services.Migration
                 rollbackResult.EndTime = DateTime.Now;
                 rollbackResult.DataRestored = rollbackResult.IsSuccess;
 
-                context.AuditLogger?.LogRollback(context.SessionId, result.TargetUserUpn, "Rollback completed", rollbackResult.IsSuccess);
+                var rollbackCompleteEvent = new AuditEvent
+                {
+                    UserPrincipalName = context.InitiatedBy,
+                    SessionId = context.SessionId,
+                    Action = AuditAction.Rolled_Back,
+                    ObjectType = ObjectType.User,
+                    SourceObjectId = result.SourceUserSid ?? result.TargetUserUpn,
+                    SourceObjectName = result.SourceUserSid ?? result.TargetUserUpn,
+                    TargetObjectId = result.TargetUserUpn,
+                    TargetObjectName = result.TargetUserUpn,
+                    WaveId = context.SessionId,
+                    SourceEnvironment = context.Source.Environment,
+                    TargetEnvironment = context.Target.Environment,
+                    Status = rollbackResult.IsSuccess ? AuditStatus.Success : AuditStatus.Failed,
+                    StatusMessage = "Rollback completed"
+                };
+                await _auditService.LogAuditEventAsync(rollbackCompleteEvent);
 
             }
             catch (Exception ex)

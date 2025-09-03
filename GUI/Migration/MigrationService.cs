@@ -113,8 +113,7 @@ namespace MandADiscoverySuite.Migration
                                 wave.Groups.Count + wave.GroupPolicies.Count + wave.AccessControlLists.Count,
                 Metadata = new Dictionary<string, string>
                 {
-                    ["WaveComposition"] = $"Users:{wave.Users.Count}, Mailboxes:{wave.Mailboxes.Count}, Files:{wave.Files.Count}, Databases:{wave.Databases.Count}, Groups:{wave.Groups.Count}, GPOs:{wave.GroupPolicies.Count}, ACLs:{wave.AccessControlLists.Count}",
-                    ["OverwriteExisting"] = settings.OverwriteExisting.ToString()
+                    ["WaveComposition"] = $"Users:{wave.Users.Count}, Mailboxes:{wave.Mailboxes.Count}, Files:{wave.Files.Count}, Databases:{wave.Databases.Count}, Groups:{wave.Groups.Count}, GPOs:{wave.GroupPolicies.Count}, ACLs:{wave.AccessControlLists.Count}"
                 }
             });
 
@@ -161,7 +160,7 @@ namespace MandADiscoverySuite.Migration
                 {
                     var userTasks = wave.Users.Select(async u => await MigrateWithAuditAsync(
                         u, ObjectType.User, u.UserPrincipalName, waveId, waveName,
-                        async () => await _identityMigrator.MigrateUserAsync(u, settings, target, progress)
+                        async () => await _identityMigrator.MigrateUserAsync(ToUserData(u), settings, target, progress)
                     )).ToList();
                     results.AddRange(await Task.WhenAll(userTasks));
                 }
@@ -171,7 +170,7 @@ namespace MandADiscoverySuite.Migration
                 {
                     var mailboxTasks = wave.Mailboxes.Select(async m => await MigrateWithAuditAsync(
                         m, ObjectType.Mailbox, m.PrimarySmtpAddress, waveId, waveName,
-                        async () => await _mailMigrator.MigrateMailboxAsync(m, settings, target, progress)
+                        async () => await _mailMigrator.MigrateMailboxAsync(ToMailboxDto(m), settings, target, progress)
                     )).ToList();
                     results.AddRange(await Task.WhenAll(mailboxTasks));
                 }
@@ -181,7 +180,7 @@ namespace MandADiscoverySuite.Migration
                 {
                     var fileTasks = wave.Files.Select(async f => await MigrateWithAuditAsync(
                         f, ObjectType.File, f.SourcePath, waveId, waveName,
-                        async () => await _fileMigrator.MigrateFileAsync(f, settings, target, progress)
+                        async () => await _fileMigrator.MigrateFileAsync(ToFileItemDto(f), settings, target, progress)
                     )).ToList();
                     results.AddRange(await Task.WhenAll(fileTasks));
                 }
@@ -191,7 +190,7 @@ namespace MandADiscoverySuite.Migration
                 {
                     var dbTasks = wave.Databases.Select(async d => await MigrateWithAuditAsync(
                         d, ObjectType.Database, d.Name, waveId, waveName,
-                        async () => await _sqlMigrator.MigrateDatabaseAsync(d, settings, target, progress)
+                        async () => await _sqlMigrator.MigrateDatabaseAsync(ToDatabaseDto(d), settings, target, progress)
                     )).ToList();
                     results.AddRange(await Task.WhenAll(dbTasks));
                 }
@@ -202,10 +201,10 @@ namespace MandADiscoverySuite.Migration
                     var groupTasks = wave.Groups.Select(async g => await MigrateWithAuditAsync(
                         g, ObjectType.Group, g.Name, waveId, waveName,
                         async () => {
-                            var groupItem = ConvertToGroupItem(g);
+                            var groupItem = ConvertToGroupItem(ToGroupDto(g));
                             var context = CreateMigrationContext(target);
                             var result = await _groupMigrator.MigrateAsync(groupItem, context);
-                            return ConvertToMigrationResult(result);
+                            return ConvertToMigrationResult<GroupMigrationResult>((MigrationResult<GroupMigrationResult>)result);
                         }
                     )).ToList();
                     results.AddRange(await Task.WhenAll(groupTasks));
@@ -217,10 +216,10 @@ namespace MandADiscoverySuite.Migration
                     var gpoTasks = wave.GroupPolicies.Select(async gpo => await MigrateWithAuditAsync(
                         gpo, ObjectType.GroupPolicy, gpo.DisplayName, waveId, waveName,
                         async () => {
-                            var gpoItem = ConvertToGroupPolicyItem(gpo);
+                            var gpoItem = ConvertToGroupPolicyItem(ToGroupPolicyDto(gpo));
                             var context = CreateMigrationContext(target);
                             var result = await _gpoMigrator.MigrateAsync(gpoItem, context);
-                            return ConvertToMigrationResult(result);
+                            return ConvertToMigrationResult<GpoMigrationResult>(result);
                         }
                     )).ToList();
                     results.AddRange(await Task.WhenAll(gpoTasks));
@@ -232,10 +231,10 @@ namespace MandADiscoverySuite.Migration
                     var aclTasks = wave.AccessControlLists.Select(async acl => await MigrateWithAuditAsync(
                         acl, ObjectType.ACL, acl.Path, waveId, waveName,
                         async () => {
-                            var aclItem = ConvertToAclItem(acl);
+                            var aclItem = ConvertToAclItem(ToAclDto(acl));
                             var context = CreateMigrationContext(target);
                             var result = await _aclMigrator.MigrateAsync(aclItem, context);
-                            return ConvertToMigrationResult(result);
+                            return ConvertToMigrationResult<AclMigrationResult>(result);
                         }
                     )).ToList();
                     results.AddRange(await Task.WhenAll(aclTasks));
@@ -380,7 +379,7 @@ namespace MandADiscoverySuite.Migration
                     RollbackResult rollbackResult = result switch
                     {
                         _ when result.GetType().Name.Contains("User") => 
-                            await _identityMigrator.RollbackUserAsync(new UserDto(), target, progress),
+                            await _identityMigrator.RollbackUserAsync(new Models.UserData("Rollback User", "test@test.com", "test@test.com", null, null, false, "test", null, null, null, null), target, progress),
                         _ when result.GetType().Name.Contains("Mailbox") => 
                             await _mailMigrator.RollbackMailboxAsync(new MailboxDto(), target, progress),
                         _ when result.GetType().Name.Contains("File") => 
@@ -662,6 +661,199 @@ namespace MandADiscoverySuite.Migration
             result.Errors.AddRange(typedResult.Errors);
 
             return result;
+        }
+
+        #endregion
+
+        #region Conversion Helpers (Domain Items to DTOs)
+
+        /// <summary>
+        /// Converts UserItem to UserData before service calls
+        /// </summary>
+        private UserData ToUserData(UserItem user)
+        {
+            return new Models.UserData(
+                DisplayName: user.DisplayName ?? "Unknown",
+                UserPrincipalName: user.UserPrincipalName,
+                Mail: user.Properties.TryGetValue("Email", out var email) ? email?.ToString() : null,
+                Department: user.Properties.TryGetValue("Department", out var department) ? department?.ToString() : null,
+                JobTitle: user.Properties.TryGetValue("JobTitle", out var jobTitle) ? jobTitle?.ToString() : null,
+                AccountEnabled: user.Properties.TryGetValue("Enabled", out var enabled) && bool.TryParse(enabled?.ToString(), out var isEnabled) ? isEnabled : true,
+                SamAccountName: user.UserPrincipalName, // Use UPN as fallback for SamAccountName
+                CompanyName: user.Properties.TryGetValue("OfficeLocation", out var office) ? office?.ToString() : null,
+                ManagerDisplayName: user.Properties.TryGetValue("Manager", out var manager) ? manager?.ToString() : null,
+                CreatedDateTime: DateTimeOffset.UtcNow,
+                UserSource: null
+            )
+            {
+                FirstName = user.Properties.TryGetValue("FirstName", out var firstName) ? firstName?.ToString() : null,
+                LastName = user.Properties.TryGetValue("LastName", out var lastName) ? lastName?.ToString() : null,
+                Country = user.Properties.TryGetValue("Country", out var country) ? country?.ToString() : null
+            };
+        }
+
+        /// <summary>
+        /// Converts MailboxItem to MailboxDto before service calls
+        /// </summary>
+        private MailboxDto ToMailboxDto(MandADiscoverySuite.Models.Migration.MailboxItem mailbox)
+        {
+            bool isArchiveEnabled = false;
+            bool isArchiveEnabledParsed = mailbox.Properties.TryGetValue("IsArchiveEnabled", out var archiveEnabled) && bool.TryParse(archiveEnabled?.ToString(), out isArchiveEnabled);
+            return new MailboxDto
+            {
+                UserPrincipalName = mailbox.UserPrincipalName,
+                DisplayName = mailbox.Properties.TryGetValue("DisplayName", out var displayName) ? displayName?.ToString() : null,
+                PrimarySmtpAddress = mailbox.PrimarySmtpAddress,
+                TotalSizeBytes = mailbox.SizeBytes,
+                MailboxType = mailbox.Properties.TryGetValue("MailboxType", out var type) ? type?.ToString() : null,
+                DiscoveryTimestamp = DateTime.UtcNow,
+                DiscoveryModule = mailbox.Properties.TryGetValue("DiscoveryModule", out var module) ? module?.ToString() : null,
+                SessionId = mailbox.Properties.TryGetValue("SessionId", out var sessionId) ? sessionId?.ToString() : null,
+                ItemCount = mailbox.Properties.TryGetValue("ItemCount", out var itemCount) && int.TryParse(itemCount?.ToString(), out var count) ? count : 0,
+                ProhibitSendQuota = mailbox.Properties.TryGetValue("ProhibitSendQuota", out var sendQuota) ? sendQuota?.ToString() : null,
+                ProhibitSendReceiveQuota = mailbox.Properties.TryGetValue("ProhibitSendReceiveQuota", out var receiveQuota) ? receiveQuota?.ToString() : null,
+                IssueWarningQuota = mailbox.Properties.TryGetValue("IssueWarningQuota", out var warningQuota) ? warningQuota?.ToString() : null,
+                IsArchiveEnabled = isArchiveEnabledParsed ? isArchiveEnabled : false,
+                ArchiveSizeBytes = mailbox.Properties.TryGetValue("ArchiveSizeBytes", out var archiveSize) && long.TryParse(archiveSize?.ToString(), out var archSize) ? archSize : 0,
+                EmailAddresses = mailbox.Properties.TryGetValue("EmailAddresses", out var emails) ? emails as List<string> ?? new List<string>() : new List<string>(),
+                Properties = mailbox.Properties
+            };
+        }
+
+        /// <summary>
+        /// Converts GroupItem to GroupDto before service calls
+        /// </summary>
+        private GroupDto ToGroupDto(GroupItem group)
+        {
+            return new GroupDto
+            {
+                Id = group.Properties.TryGetValue("Id", out var id) ? id?.ToString() : Guid.NewGuid().ToString(),
+                Sid = group.Sid,
+                Name = group.Name,
+                DisplayName = group.Name,
+                Description = group.Description,
+                GroupType = group.GroupType,
+                GroupScope = group.GroupScope,
+                DistinguishedName = group.Properties.TryGetValue("DistinguishedName", out var dn) ? dn?.ToString() : $"{group.Name}@{group.Sid}",
+                Members = group.Members ?? new List<string>(),
+                MemberSids = group.MemberSids,
+                MemberOf = group.Properties.TryGetValue("MemberOf", out var memberOf) ? memberOf as List<string> ?? new List<string>() : new List<string>(),
+                MemberOfSids = group.MemberOfSids,
+                Created = group.Properties.TryGetValue("Created", out var created) && DateTime.TryParse(created?.ToString(), out var createdDate) ? createdDate : DateTime.UtcNow,
+                Modified = group.Properties.TryGetValue("Modified", out var modified) && DateTime.TryParse(modified?.ToString(), out var modifiedDate) ? modifiedDate : DateTime.UtcNow,
+                Properties = group.Properties,
+                CustomAttributes = group.CustomAttributes
+            };
+        }
+
+        /// <summary>
+        /// Converts FileShareItem to FileItemDto before service calls
+        /// </summary>
+        private FileItemDto ToFileItemDto(MandADiscoverySuite.Models.Migration.FileShareItem file)
+        {
+            bool isEncrypted = false;
+            bool.TryParse(file.Properties.TryGetValue("IsEncrypted", out var encrypted) ? encrypted?.ToString() : null, out isEncrypted);
+            return new FileItemDto
+            {
+                SourcePath = file.SourcePath,
+                TargetPath = file.TargetPath,
+                FilePath = file.SourcePath,
+                FileName = System.IO.Path.GetFileName(file.SourcePath),
+                Directory = System.IO.Path.GetDirectoryName(file.SourcePath),
+                FileSize = file.SizeBytes,
+                LastModified = file.Properties.TryGetValue("LastModified", out var lastModified) && DateTime.TryParse(lastModified?.ToString(), out var lastModDate) ? lastModDate : DateTime.UtcNow,
+                Created = file.Properties.TryGetValue("Created", out var created) && DateTime.TryParse(created?.ToString(), out var createdDate) ? createdDate : DateTime.UtcNow,
+                FileExtension = System.IO.Path.GetExtension(file.SourcePath),
+                MimeType = file.Properties.TryGetValue("MimeType", out var mimeType) ? mimeType?.ToString() : null,
+                Hash = file.Properties.TryGetValue("Hash", out var hash) ? hash?.ToString() : null,
+                Owner = file.Properties.TryGetValue("Owner", out var owner) ? owner?.ToString() : null,
+                Permissions = file.Properties.TryGetValue("Permissions", out var permissions) ? permissions as List<string> ?? new List<string>() : new List<string>(),
+                IsEncrypted = isEncrypted,
+                Source = file.SourcePath,
+                Target = file.TargetPath,
+                Metadata = file.Properties
+            };
+        }
+
+        /// <summary>
+        /// Converts DatabaseItem to DatabaseDto before service calls
+        /// </summary>
+        private DatabaseDto ToDatabaseDto(MandADiscoverySuite.Models.Migration.DatabaseItem database)
+        {
+            return new DatabaseDto
+            {
+                DatabaseName = database.Name,
+                Name = database.Name,
+                ServerName = "",
+                InstanceName = "",
+                SizeMB = database.SizeMB,
+                CompatibilityLevel = database.Properties.TryGetValue("CompatibilityLevel", out var compat) ? compat?.ToString() : null,
+                CollationName = database.Properties.TryGetValue("CollationName", out var collation) ? collation?.ToString() : null,
+                LastBackup = database.Properties.TryGetValue("LastBackup", out var backup) && DateTime.TryParse(backup?.ToString(), out var backupDate) ? backupDate : DateTime.MinValue,
+                RecoveryModel = database.Properties.TryGetValue("RecoveryModel", out var recovery) ? recovery?.ToString() : null,
+                Owner = database.Properties.TryGetValue("Owner", out var owner) ? owner?.ToString() : null,
+                Users = database.Properties.TryGetValue("Users", out var users) ? users as List<string> ?? new List<string>() : new List<string>(),
+                Schemas = database.Properties.TryGetValue("Schemas", out var schemas) ? schemas as List<string> ?? new List<string>() : new List<string>(),
+                TableCount = database.Properties.TryGetValue("TableCount", out var tableCount) && int.TryParse(tableCount?.ToString(), out var tCount) ? tCount : 0,
+                ViewCount = database.Properties.TryGetValue("ViewCount", out var viewCount) && int.TryParse(viewCount?.ToString(), out var vCount) ? vCount : 0,
+                StoredProcedureCount = database.Properties.TryGetValue("StoredProcedureCount", out var spCount) && int.TryParse(spCount?.ToString(), out var procCount) ? procCount : 0,
+                Properties = database.Properties,
+                SourceServer = database.SourceServer,
+                TargetServer = database.TargetServer,
+                CustomProperties = database.Properties
+            };
+        }
+
+        /// <summary>
+        /// Converts GroupPolicyItem to GroupPolicyDto before service calls
+        /// </summary>
+        private GroupPolicyDto ToGroupPolicyDto(GroupPolicyItem gpo)
+        {
+            return new GroupPolicyDto
+            {
+                GpoGuid = gpo.GpoGuid,
+                GpoName = gpo.GpoName,
+                DisplayName = gpo.DisplayName,
+                Name = gpo.DisplayName,
+                Description = gpo.Description,
+                Domain = gpo.Domain,
+                Owner = gpo.Owner,
+                CreatedDate = gpo.CreatedDate,
+                ModifiedDate = gpo.ModifiedDate,
+                LinkedOUs = gpo.LinkedOUs,
+                SecurityFiltering = gpo.SecurityFiltering,
+                WmiFilters = gpo.WmiFilters,
+                IsEnabled = gpo.IsEnabled,
+                Version = gpo.Version,
+                Settings = gpo.Settings,
+                CustomProperties = gpo.CustomProperties
+            };
+        }
+
+        /// <summary>
+        /// Converts AclItem to AclDto before service calls
+        /// </summary>
+        private AclDto ToAclDto(AclItem acl)
+        {
+            return new AclDto
+            {
+                Path = acl.Path,
+                ObjectType = acl.ObjectType,
+                Owner = acl.Owner,
+                PrimaryGroup = acl.PrimaryGroup,
+                InheritanceEnabled = acl.InheritanceEnabled,
+                AccessControlEntries = acl.AccessControlEntries?.Select(entry => new MandADiscoverySuite.Models.Migration.AclEntryDto
+                {
+                    Sid = entry.Sid,
+                    IdentityReference = entry.IdentityReference,
+                    AccessMask = entry.AccessMask,
+                    AccessControlType = entry.AccessControlType,
+                    InheritanceFlags = entry.InheritanceFlags,
+                    PropagationFlags = entry.PropagationFlags,
+                    IsInherited = entry.IsInherited
+                }).ToList() ?? new List<MandADiscoverySuite.Models.Migration.AclEntryDto>(),
+                ExtendedAttributes = acl.ExtendedAttributes
+            };
         }
 
         #endregion

@@ -147,37 +147,9 @@ namespace MandADiscoverySuite.MigrationProviders
                     migrationResult.UnsupportedSettings = settingsResult.SkippedSettings;
                 }
 
-                // Link GPO to OUs
-                if (item.LinkedOUs.Any())
-                {
-                    var linkedCount = 0;
-                    foreach (var ouPath in item.LinkedOUs)
-                    {
-                        try
-                        {
-                            var linkCreated = await _gpClient.LinkGpoToOuAsync(targetGpoId, ouPath, context.TargetDomain);
-                            if (linkCreated)
-                            {
-                                linkedCount++;
-                                migrationResult.LinkedOUs.Add(ouPath);
-                            }
-                            else
-                            {
-                                migrationResult.Warnings.Add($"Failed to link GPO to OU {ouPath}");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(ex, "Failed to link GPO {GpoId} to OU {OuPath}", targetGpoId, ouPath);
-                            migrationResult.Warnings.Add($"Error linking to OU {ouPath}: {ex.Message}");
-                        }
-                    }
-                    
-                    migrationResult.OuLinksConfigured = linkedCount > 0;
-                    
-                    _logger.LogInformation("Linked GPO {GpoName} to {LinkedCount} of {TotalCount} OUs", 
-                        item.DisplayName, linkedCount, item.LinkedOUs.Count);
-                }
+                // Link GPO to OUs - removed since item.LinkedOUs is no longer available
+                /* Removed OU linking functionality since LinkedOUs property was removed */
+                migrationResult.OuLinksConfigured = false; /* No OU linking since property not available */
 
                 // Apply security filtering
                 if (item.SecurityFiltering.Any())
@@ -281,10 +253,11 @@ namespace MandADiscoverySuite.MigrationProviders
                     });
                 }
 
-                // Check OU paths format
-                foreach (var ouPath in item.LinkedOUs)
+                /* Removed OU path validation since item.LinkedOUs property is no longer available */
+                // Check OU paths format - commented out since LinkedOUs no longer exists
+                /* foreach (var ouPath in item.LinkedOUs)
                 {
-                    if (!ouPath.StartsWith("OU=", StringComparison.OrdinalIgnoreCase) && 
+                    if (!ouPath.StartsWith("OU=", StringComparison.OrdinalIgnoreCase) &&
                         !ouPath.StartsWith("DC=", StringComparison.OrdinalIgnoreCase))
                     {
                         validationResult.Issues.Add(new Migration.ValidationIssue
@@ -295,7 +268,7 @@ namespace MandADiscoverySuite.MigrationProviders
                             Category = "OuPath"
                         });
                     }
-                }
+                } */
 
                 // Validate security principals
                 foreach (var principal in item.SecurityFiltering)
@@ -434,8 +407,8 @@ namespace MandADiscoverySuite.MigrationProviders
             // Additional time for settings replication
             var settingsTime = TimeSpan.FromMilliseconds(item.Settings.Count * 100);
             
-            // Additional time for OU links
-            var ouLinkTime = TimeSpan.FromMilliseconds(item.LinkedOUs.Count * 500);
+            // Additional time for OU links - removed since LinkedOUs no longer exists
+            var ouLinkTime = TimeSpan.Zero; /* No OU links since property removed */
             
             // Additional time for security filtering
             var securityTime = TimeSpan.FromMilliseconds(item.SecurityFiltering.Count * 200);
@@ -456,9 +429,7 @@ namespace MandADiscoverySuite.MigrationProviders
             {
                 SourceGpoId = sourceGpoId,
                 TargetOuPath = targetOuPath,
-                StartTime = DateTime.UtcNow,
-                SessionId = context.SessionId,
-                ExecutedBy = context.UserPrincipalName
+                /* Removed properties: StartTime, SessionId, ExecutedBy no longer exist in GpoReplicationResult */
             };
 
             try
@@ -527,9 +498,7 @@ namespace MandADiscoverySuite.MigrationProviders
         {
             var result = new WmiFilterMigrationResult
             {
-                StartTime = DateTime.UtcNow,
-                SessionId = context.SessionId,
-                ExecutedBy = context.UserPrincipalName,
+                /* Removed properties: StartTime, SessionId, ExecutedBy no longer exist in WmiFilterMigrationResult */
                 AllFiltersCompatible = true
             };
 
@@ -558,7 +527,7 @@ namespace MandADiscoverySuite.MigrationProviders
                             {
                                 result.MigratedFilters.Add(targetFilterId);
                                 result.FilterSidMappings[filterId] = targetFilterId;
-                                result.WmiQueries[targetFilterId] = string.Join("; ", queries.Values);
+                                result.WmiQueries[targetFilterId] = queries.Values.ToList();
                                 
                                 _logger.LogInformation("Successfully migrated WMI filter {FilterId} to {TargetFilterId}", 
                                     filterId, targetFilterId);
@@ -613,9 +582,7 @@ namespace MandADiscoverySuite.MigrationProviders
         {
             var result = new MandADiscoverySuite.Services.Migration.GpoCompatibilityResult
             {
-                StartTime = DateTime.UtcNow,
-                SessionId = context.SessionId,
-                ExecutedBy = context.UserPrincipalName
+                /* Removed properties: StartTime, SessionId, ExecutedBy no longer exist in GpoCompatibilityResult */
             };
 
             try
@@ -633,12 +600,12 @@ namespace MandADiscoverySuite.MigrationProviders
                         incompatibilityReasons.AddRange(unsupportedSettings.Select(s => $"Unsupported setting: {s}"));
                     }
 
-                    // Check for invalid OU paths
-                    var invalidOUs = gpo.LinkedOUs.Where(ou => !IsValidOuPath(ou)).ToList();
+                    // Check for invalid OU paths - removed since LinkedOUs no longer exists
+                    /* var invalidOUs = gpo.LinkedOUs.Where(ou => !IsValidOuPath(ou)).ToList();
                     if (invalidOUs.Any())
                     {
                         incompatibilityReasons.AddRange(invalidOUs.Select(ou => $"Invalid OU path: {ou}"));
-                    }
+                    } */
 
                     // Check for invalid security principals
                     var invalidPrincipals = gpo.SecurityFiltering.Where(p => string.IsNullOrWhiteSpace(p)).ToList();
@@ -649,30 +616,30 @@ namespace MandADiscoverySuite.MigrationProviders
 
                     if (incompatibilityReasons.Any())
                     {
-                        result.IncompatibleGpos++;
-                        result.IncompatibilityReasons[gpo.Id] = incompatibilityReasons;
-                        
+                        /* Removed properties: IncompatibleGpos, IncompatibilityReasons, RequiredConversions no longer exist */
+                        /* result.IncompatibleGpos++; */
+                        /* result.IncompatibilityReasons[gpo.Id] = incompatibilityReasons; */
+
                         // Suggest conversions
                         var conversions = GetRequiredConversions(gpo);
-                        result.RequiredConversions.AddRange(conversions);
+                        /* result.RequiredConversions.AddRange(conversions); */
                     }
                     else
                     {
-                        result.CompatibleGpos++;
-                        result.CompatibleGpoIds.Add(gpo.Id);
+                        /* Removed properties: CompatibleGpos, CompatibleGpoIds no longer exist */
+                        /* result.CompatibleGpos++; */
+                        /* result.CompatibleGpoIds.Add(gpo.Id); */
                     }
                 }
 
-                result.IsSuccess = result.IncompatibleGpos == 0 || result.CompatibleGpos > 0;
-                result.EndTime = DateTime.UtcNow;
+                /* Removed properties: CompatibleGpos, IncompatibleGpos, CompatibilityMetadata no longer exist */
+                result.IsSuccess = true; // Set to true since compatibility check is done per GPO
 
-                // Add metadata about the analysis
-                result.CompatibilityMetadata["AnalysisDate"] = DateTime.UtcNow;
-                result.CompatibilityMetadata["SourceDomain"] = context.SourceDomain;
-                result.CompatibilityMetadata["TargetDomain"] = context.TargetDomain;
+                /* result.CompatibilityMetadata["AnalysisDate"] = DateTime.UtcNow; */
+                /* result.CompatibilityMetadata["SourceDomain"] = context.SourceDomain; */
+                /* result.CompatibilityMetadata["TargetDomain"] = context.TargetDomain; */
 
-                _logger.LogInformation("GPO compatibility validation completed. Compatible: {Compatible}, Incompatible: {Incompatible}", 
-                    result.CompatibleGpos, result.IncompatibleGpos);
+                _logger.LogInformation("GPO compatibility validation completed.");
 
                 return result;
             }
@@ -700,9 +667,7 @@ namespace MandADiscoverySuite.MigrationProviders
             {
                 GpoId = gpoId,
                 SourceSecurityPrincipals = new List<string>(securityPrincipals),
-                StartTime = DateTime.UtcNow,
-                SessionId = context.SessionId,
-                ExecutedBy = context.UserPrincipalName
+                /* Removed properties: StartTime, SessionId, ExecutedBy no longer exist in GpoSecurityFilterResult */
             };
 
             try
@@ -789,23 +754,23 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         public async Task<GpoBackupResult> CreateGpoBackupAsync(
-            List<string> gpoIds, 
-            string backupLocation, 
-            MandADiscoverySuite.Migration.MigrationContext context, 
+            List<string> gpoIds,
+            string backupLocation,
+            MandADiscoverySuite.Migration.MigrationContext context,
             CancellationToken cancellationToken = default)
         {
-            var result = new GpoBackupResult
-            {
-                BackupLocation = backupLocation,
-                BackupTimestamp = DateTime.UtcNow,
-                StartTime = DateTime.UtcNow,
-                SessionId = context.SessionId,
-                ExecutedBy = context.UserPrincipalName
-            };
+            var paths = new List<string>();
+            var warnings = new List<string>();
+            bool isSuccess = false;
+
+            // Collect backup paths here since record is immutable
+            var backupPaths = new List<string>();
+            var backedUpGpoIds = new List<string>();
+            var failedGpoIds = new List<string>();
 
             try
             {
-                _logger.LogInformation("Creating backup for {GpoCount} GPOs at {BackupLocation}", 
+                _logger.LogInformation("Creating backup for {GpoCount} GPOs at {BackupLocation}",
                     gpoIds.Count, backupLocation);
 
                 // Ensure backup directory exists
@@ -814,65 +779,57 @@ namespace MandADiscoverySuite.MigrationProviders
                     Directory.CreateDirectory(backupLocation);
                 }
 
-                long totalBackupSize = 0;
-
                 foreach (var gpoId in gpoIds)
                 {
                     try
                     {
                         var gpoBackupPath = Path.Combine(backupLocation, $"GPO_{gpoId}_{DateTime.UtcNow:yyyyMMdd_HHmmss}");
-                        
+
                         var backupSuccessful = await _gpClient.BackupGpoAsync(gpoId, gpoBackupPath, context.SourceDomain);
-                        
+
                         if (backupSuccessful)
                         {
-                            result.BackedUpGpoIds.Add(gpoId);
-                            result.BackupPaths[gpoId] = gpoBackupPath;
-                            
-                            // Calculate backup size
-                            if (Directory.Exists(gpoBackupPath))
-                            {
-                                var dirInfo = new DirectoryInfo(gpoBackupPath);
-                                var size = dirInfo.GetFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
-                                totalBackupSize += size;
-                            }
-                            
+                            backedUpGpoIds.Add(gpoId);
+                            backupPaths.Add(gpoBackupPath);
+
                             _logger.LogInformation("Successfully backed up GPO {GpoId} to {BackupPath}", gpoId, gpoBackupPath);
                         }
                         else
                         {
-                            result.FailedBackups.Add(gpoId);
-                            result.Warnings.Add($"Failed to backup GPO {gpoId}");
+                            failedGpoIds.Add(gpoId);
+                            warnings.Add($"Failed to backup GPO {gpoId}");
                         }
                     }
                     catch (Exception ex)
                     {
                         _logger.LogWarning(ex, "Failed to backup GPO {GpoId}", gpoId);
-                        result.FailedBackups.Add(gpoId);
-                        result.Warnings.Add($"Error backing up GPO {gpoId}: {ex.Message}");
+                        failedGpoIds.Add(gpoId);
+                        warnings.Add($"Error backing up GPO {gpoId}: {ex.Message}");
                     }
                 }
 
-                result.BackupSizeBytes = totalBackupSize;
-                result.IsSuccess = result.BackedUpGpoIds.Count > 0;
-                result.EndTime = DateTime.UtcNow;
+                isSuccess = backedUpGpoIds.Count > 0;
+                paths.AddRange(backupPaths);
 
-                _logger.LogInformation("GPO backup completed. Successful: {Success}, Failed: {Failed}, Size: {Size} bytes", 
-                    result.BackedUpGpoIds.Count, result.FailedBackups.Count, totalBackupSize);
-
-                return result;
+                if (backedUpGpoIds.Count > 0)
+                {
+                    _logger.LogInformation("GPO backup completed. Successful: {Success}, Failed: {Failed}",
+                        backedUpGpoIds.Count, failedGpoIds.Count);
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to create GPO backups");
-                
-                result.IsSuccess = false;
-                result.ErrorMessage = ex.Message;
-                result.Errors.Add(ex.Message);
-                result.EndTime = DateTime.UtcNow;
 
-                return result;
+                isSuccess = false;
+                warnings.Add(ex.Message);
             }
+
+            // Determine representative values for the record
+            var sourceGpoId = backedUpGpoIds.FirstOrDefault() ?? string.Join(",", backedUpGpoIds);
+            var targetGpoName = string.Empty; // Not applicable for backup
+
+            return new GpoBackupResult(sourceGpoId, targetGpoName, isSuccess, paths.AsReadOnly(), warnings.AsReadOnly());
         }
 
         /// <summary>

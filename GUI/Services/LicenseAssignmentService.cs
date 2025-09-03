@@ -4,7 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Graph;
+using Microsoft.Graph.Beta;
+using Microsoft.Graph.Beta.Models;
 using Microsoft.Identity.Client;
 using MandADiscoverySuite.Models;
 using System.Collections.Concurrent;
@@ -118,10 +119,11 @@ namespace MandADiscoverySuite.Services
 
                 var graphClient = await GetGraphClientAsync(tenantId);
                 var subscribedSkus = await graphClient.SubscribedSkus.GetAsync();
+                var skuItems = subscribedSkus.Value?.ToList() ?? new List<SubscribedSku>();
 
                 var skus = new List<LicenseSku>();
                 
-                foreach (var subscribedSku in subscribedSkus)
+                foreach (var subscribedSku in skuItems)
                 {
                     var sku = new LicenseSku
                     {
@@ -303,11 +305,11 @@ namespace MandADiscoverySuite.Services
                 result.UserPrincipalName = user.UserPrincipalName;
 
                 // Prepare license assignment requests
-                var assignLicenses = new List<AssignedLicense>();
+                var assignLicenses = new List<Microsoft.Graph.Models.AssignedLicense>();
                 
                 foreach (var skuId in skuIds)
                 {
-                    var assignedLicense = new AssignedLicense
+                    var assignedLicense = new Microsoft.Graph.Models.AssignedLicense
                     {
                         SkuId = Guid.Parse(skuId)
                     };
@@ -322,7 +324,7 @@ namespace MandADiscoverySuite.Services
                 }
 
                 // Create the license update request
-                var assignLicensePostRequestBody = new AssignLicensePostRequestBody
+                var assignLicensePostRequestBody = new Microsoft.Graph.Beta.Models.AssignLicensePostRequestBody
                 {
                     AddLicenses = assignLicenses,
                     RemoveLicenses = new List<Guid?>()
@@ -786,7 +788,7 @@ namespace MandADiscoverySuite.Services
             {
                 _logger.LogInformation($"Processing license assignments for wave {waveId} with {users.Count} users");
 
-                foreach (var user in users?.Value ?? new List<Microsoft.Graph.Models.User>())
+                foreach (var user in users ?? new List<UserData>())
                 {
                     try
                     {
@@ -879,7 +881,7 @@ namespace MandADiscoverySuite.Services
                 var availableSkus = await GetAvailableLicenseSkusAsync(tenantId);
                 var skuLookup = availableSkus.ToDictionary(s => s.SkuId, s => s);
 
-                foreach (var user in users?.Value ?? new List<Microsoft.Graph.Models.User>())
+                foreach (var user in users ?? new List<UserData>())
                 {
                     var requiredSkus = settings.AutoAssignLicenses
                         ? await ApplyLicenseMappingRulesAsync(user, settings.CustomMappingRules)

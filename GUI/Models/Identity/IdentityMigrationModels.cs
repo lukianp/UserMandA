@@ -316,7 +316,7 @@ namespace MandADiscoverySuite.Models.Identity
     /// </summary>
     public class UserSyncRegistrationResult : MigrationResultBase
     {
-        public string SourceUserPrincipalName { get; set; }
+        public new string SourceUserPrincipalName { get; set; }
         public string TargetUserPrincipalName { get; set; }
         public string SyncSchedule { get; set; }
         public DateTime NextSyncTime { get; set; }
@@ -909,7 +909,7 @@ namespace MandADiscoverySuite.Models.Identity
     /// </summary>
     public class UserMigrationResult : MigrationResultBase
     {
-        public string SourceUserPrincipalName { get; set; }
+        public new string SourceUserPrincipalName { get; set; }
         public string TargetUserPrincipalName { get; set; }
         public string TargetUserId { get; set; }
         public MigrationStrategy StrategyUsed { get; set; }

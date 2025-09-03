@@ -13,6 +13,7 @@ using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Services.Migration;
+using MandADiscoverySuite.Services.Audit;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -1510,29 +1511,30 @@ namespace MandADiscoverySuite.ViewModels
             {
                 SessionId = Guid.NewGuid().ToString(),
                 InitiatedBy = Environment.UserName,
-                Source = new SourceEnvironment
+                Source = new SourceContext
                 {
                     DomainName = GetSourceDomainFromProfile(),
-                    Type = "AzureAD"
+                    Environment = "AzureAD"
                 },
-                Target = new TargetEnvironment
+                Target = new TargetContext
                 {
                     DomainName = GetTargetDomainFromProfile(),
-                    Type = "AzureAD",
+                    Environment = "AzureAD",
                     Configuration = new Dictionary<string, object>()
                 },
-                AuditLogger = new AuditLogger(SimpleServiceLocator.Instance.GetService<ILogger<AuditLogger>>()), // Default audit logger
                 MaxConcurrentOperations = 3,
                 ContinueOnError = true,
                 OperationTimeout = TimeSpan.FromHours(2),
-                WorkingDirectory = @"C:\enterprisediscovery",
-                EnvironmentVariables = new Dictionary<string, object>
-                {
-                    ["Profile"] = SelectedProfile,
-                    ["ExecutionId"] = Guid.NewGuid().ToString(),
-                    ["StartTime"] = DateTime.Now
-                }
+                WorkingDirectory = @"C:\enterprisediscovery"
             };
+
+            // Add audit service injection
+            var auditService = SimpleServiceLocator.Instance.GetService<IAuditService>();
+            if (auditService != null)
+            {
+                // Add audit logging to properties or use appropriately
+                ctx.Properties["AuditService"] = auditService;
+            }
 
             try
             {

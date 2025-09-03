@@ -11,6 +11,7 @@ using MandADiscoverySuite.Services.Migration;
 using System.DirectoryServices;
 using System.Management.Automation;
 using System.IO;
+using MandADiscoverySuite.Services.Audit;
 
 namespace MandADiscoverySuite.Services.Migration
 {
@@ -23,10 +24,12 @@ namespace MandADiscoverySuite.Services.Migration
         private readonly ILogger<GroupPolicyMigrator> _logger;
         private readonly Dictionary<string, string> _gpoSettingMap;
         private readonly Dictionary<string, object> _migrationSettings;
+        private readonly IAuditService _auditService;
 
-        public GroupPolicyMigrator(ILogger<GroupPolicyMigrator> logger)
+        public GroupPolicyMigrator(ILogger<GroupPolicyMigrator> logger, IAuditService auditService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
             _gpoSettingMap = InitializeGpoSettingMapping();
             _migrationSettings = InitializeMigrationSettings();
         }
@@ -44,7 +47,7 @@ namespace MandADiscoverySuite.Services.Migration
             try
             {
                 _logger.LogInformation($"Starting GPO migration for: {item.GpoName}");
-                context.ReportProgress("GPO Migration", 0, $"Starting migration for {item.GpoName}");
+                context.ReportProgressUpdate("GPO Migration", 0, $"Starting migration for {item.GpoName}");
 
                 // Step 1: Validate GPO compatibility with target domain
                 var compatibilityResult = await ValidateGpoCompatibilityAsync(item, context, cancellationToken);
@@ -56,7 +59,7 @@ namespace MandADiscoverySuite.Services.Migration
                     return result;
                 }
 
-                context.ReportProgress("GPO Migration", 20, "GPO compatibility validated");
+                context.ReportProgressUpdate("GPO Migration", 20, "GPO compatibility validated");
 
                 // Step 2: Create target GPO structure
                 var gpoCreationResult = await CreateTargetGpoAsync(item, context, cancellationToken);
@@ -68,7 +71,7 @@ namespace MandADiscoverySuite.Services.Migration
                     return result;
                 }
 
-                context.ReportProgress("GPO Migration", 40, "Target GPO created");
+                context.ReportProgressUpdate("GPO Migration", 40, "Target GPO created");
 
                 // Step 3: Migrate GPO settings with translation
                 var settingsResult = await MigrateGpoSettingsAsync(item, gpoCreationResult.TargetGpoGuid, context, cancellationToken);
@@ -77,21 +80,21 @@ namespace MandADiscoverySuite.Services.Migration
                     result.Warnings.AddRange(settingsResult.Warnings);
                 }
 
-                context.ReportProgress("GPO Migration", 60, "GPO settings migrated");
+                context.ReportProgressUpdate("GPO Migration", 60, "GPO settings migrated");
 
                 // Step 4: Apply security filtering with SID mapping
                 var securityResult = await ApplySecurityFilteringAsync(gpoCreationResult.TargetGpoGuid, 
                     item.SecurityFiltering.Select(sf => context.GetMappedSid(sf)).ToList(), 
                     new List<string>(), context, cancellationToken);
                 
-                context.ReportProgress("GPO Migration", 80, "Security filtering applied");
+                context.ReportProgressUpdate("GPO Migration", 80, "Security filtering applied");
 
                 // Step 5: Create OU links
                 var linkingResult = await CreateOuLinksAsync(gpoCreationResult.TargetGpoGuid, 
                     item.LinkedOus.Select(ou => MapOuToTargetDomain(ou, context)).ToList(), 
                     context, cancellationToken);
 
-                context.ReportProgress("GPO Migration", 100, "GPO migration completed");
+                context.ReportProgressUpdate("GPO Migration", 100, "GPO migration completed");
 
                 // replicate settings
                 var replicationResult = new GpoReplicationResult
@@ -143,8 +146,26 @@ namespace MandADiscoverySuite.Services.Migration
                 result.EndTime = DateTime.Now;
 
                 _logger.LogInformation($"GPO migration completed successfully for: {item.GpoName}");
-                context.AuditLogger?.LogMigrationComplete(context.SessionId, "GPO", item.GpoName, true, 
-                    $"GPO migrated with {settingsResult.MigratedSettings.Count} settings");
+
+                var gpoCompleteEvent = new AuditEvent
+                {
+                    UserPrincipalName = context.InitiatedBy,
+                    SessionId = context.SessionId,
+                    Action = AuditAction.Completed,
+                    ObjectType = ObjectType.GroupPolicy,
+                    SourceObjectId = item.GpoGuid,
+                    SourceObjectName = item.GpoName,
+                    TargetObjectId = result.Result?.TargetGpoId,
+                    TargetObjectName = result.Result?.TargetGpoName,
+                    WaveId = context.SessionId,
+                    Duration = DateTime.Now - result.StartTime,
+                    SourceEnvironment = context.Source.Environment,
+                    TargetEnvironment = context.Target.Environment,
+                    Status = AuditStatus.Success,
+                    StatusMessage = $"GPO migrated with {settingsResult.MigratedSettings.Count} settings",
+                    ItemsProcessed = settingsResult.MigratedSettings?.Count
+                };
+                await _auditService.LogAuditEventAsync(gpoCompleteEvent);
 
                 return result;
             }
@@ -154,7 +175,23 @@ namespace MandADiscoverySuite.Services.Migration
                 result.IsSuccess = false;
                 result.Errors.Add($"GPO migration failed: {ex.Message}");
                 result.EndTime = DateTime.Now;
-                context.AuditLogger?.LogMigrationComplete(context.SessionId, "GPO", item.GpoName, false, ex.Message);
+
+                var gpoFailEvent = new AuditEvent
+                {
+                    UserPrincipalName = context.InitiatedBy,
+                    SessionId = context.SessionId,
+                    Action = AuditAction.Failed,
+                    ObjectType = ObjectType.GroupPolicy,
+                    SourceObjectId = item.GpoGuid,
+                    SourceObjectName = item.GpoName,
+                    WaveId = context.SessionId,
+                    Duration = DateTime.Now - result.StartTime,
+                    SourceEnvironment = context.Source.Environment,
+                    TargetEnvironment = context.Target.Environment,
+                    Status = AuditStatus.Failed,
+                    ErrorMessage = ex.Message
+                };
+                await _auditService.LogAuditEventAsync(gpoFailEvent);
                 return result;
             }
         }
@@ -241,7 +278,24 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 _logger.LogInformation($"GPO rollback completed for: {result.GpoName}");
-                context.AuditLogger?.LogRollback(context.SessionId, result.GpoName, "GPO migration rollback", rollbackResult.IsSuccess);
+
+                var gpoRollbackEvent = new AuditEvent
+                {
+                    UserPrincipalName = context.InitiatedBy,
+                    SessionId = context.SessionId,
+                    Action = AuditAction.Rolled_Back,
+                    ObjectType = ObjectType.GroupPolicy,
+                    SourceObjectId = result.SourceGpoId,
+                    SourceObjectName = result.GpoName,
+                    TargetObjectId = result.TargetGpoId,
+                    TargetObjectName = result.TargetGpoName ?? result.GpoName,
+                    WaveId = context.SessionId,
+                    SourceEnvironment = context.Source.Environment,
+                    TargetEnvironment = context.Target.Environment,
+                    Status = rollbackResult.IsSuccess ? AuditStatus.Success : AuditStatus.Failed,
+                    StatusMessage = "GPO migration rollback"
+                };
+                await _auditService.LogAuditEventAsync(gpoRollbackEvent);
 
                 return rollbackResult;
             }

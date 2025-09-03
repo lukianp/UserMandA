@@ -218,20 +218,7 @@ namespace MandADiscoverySuite.Services.Migration
 
     // GroupConflictResolutionResult defined below with full implementation
 
-    public class GpoBackupResult
-    {
-        public bool Success { get; set; }
-        public bool IsSuccess => Success;
-        public string BackupPath { get; set; } = string.Empty;
-        public string BackupLocation { get; set; } = string.Empty;
-        public string ErrorMessage { get; set; } = string.Empty;
-        public List<string> FailedBackups { get; set; } = new List<string>();
-        public List<string> Warnings { get; set; } = new List<string>();
-        public long BackupSizeBytes { get; set; }
-        public List<string> BackedUpGpoIds { get; set; } = new List<string>();
-        public DateTime EndTime { get; set; } = DateTime.Now;
-        public List<string> Errors { get; set; } = new List<string>();
-    }
+    public record GpoBackupResult(string SourceGpoId, string TargetGpoName, bool IsSuccess, IReadOnlyList<string> Paths, IReadOnlyList<string> Warnings);
 
     // Specific migration result classes for detailed operations
 
@@ -243,7 +230,7 @@ namespace MandADiscoverySuite.Services.Migration
         public string MappingMethod { get; set; }
         
         // Additional properties required by build errors
-        public string SessionId { get; set; } = string.Empty;
+        public new string SessionId { get; set; } = string.Empty;
         public new List<string> Warnings { get; set; } = new List<string>();
         public bool HistoryCreated { get; set; }
     }
@@ -257,7 +244,7 @@ namespace MandADiscoverySuite.Services.Migration
         // Additional properties required by build errors
         public string UserSid { get; set; } = string.Empty;
         public List<string> SourceGroups { get; set; } = new List<string>();
-        public string SessionId { get; set; } = string.Empty;
+        public new string SessionId { get; set; } = string.Empty;
         public List<string> MigratedGroups { get; set; } = new List<string>();
         public List<string> UnmappedGroups { get; set; } = new List<string>();
         public Dictionary<string, string> GroupMappings { get; set; } = new Dictionary<string, string>();
@@ -274,7 +261,7 @@ namespace MandADiscoverySuite.Services.Migration
         // Additional properties required by build errors
         public string UserUpn { get; set; } = string.Empty;
         public Dictionary<string, string> SourceAttributes { get; set; } = new Dictionary<string, string>();
-        public string SessionId { get; set; } = string.Empty;
+        public new string SessionId { get; set; } = string.Empty;
         public Dictionary<string, string> TargetAttributes { get; set; } = new Dictionary<string, string>();
         public List<string> UnmappedAttributes { get; set; } = new List<string>();
     }
@@ -287,7 +274,7 @@ namespace MandADiscoverySuite.Services.Migration
         
         // Additional properties required by build errors
         public string ItemId { get; set; } = string.Empty;
-        public string SessionId { get; set; } = string.Empty;
+        public new string SessionId { get; set; } = string.Empty;
         public bool CanProceed { get; set; }
     }
 

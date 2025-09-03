@@ -71,7 +71,7 @@ namespace MandADiscoverySuite.Tests.Audit
             var wave = new MigrationWave();
             wave.Users.Add(user);
 
-            var settings = new MigrationSettings { OverwriteExisting = false };
+            var settings = new MigrationSettings();
             var target = new TargetContext { TenantId = "test-tenant" };
 
             _mockIdentityMigrator
@@ -117,7 +117,7 @@ namespace MandADiscoverySuite.Tests.Audit
             var wave = new MigrationWave();
             wave.Users.Add(user);
 
-            var settings = new MigrationSettings { OverwriteExisting = false };
+            var settings = new MigrationSettings();
             var target = new TargetContext { TenantId = "test-tenant" };
 
             _mockIdentityMigrator
@@ -153,7 +153,7 @@ namespace MandADiscoverySuite.Tests.Audit
             var wave = new MigrationWave();
             wave.Users.Add(user);
 
-            var settings = new MigrationSettings { OverwriteExisting = false };
+            var settings = new MigrationSettings();
             var target = new TargetContext { TenantId = "test-tenant" };
 
             _mockIdentityMigrator
@@ -188,7 +188,7 @@ namespace MandADiscoverySuite.Tests.Audit
             wave.Files.Add(new FileItemDto { SourcePath = "\\\\server\\share\\file.txt" });
             wave.Databases.Add(new DatabaseDto { Name = "TestDatabase" });
 
-            var settings = new MigrationSettings { OverwriteExisting = false };
+            var settings = new MigrationSettings();
             var target = new TargetContext { TenantId = "test-tenant" };
 
             // Setup all migrators to succeed
@@ -244,7 +244,7 @@ namespace MandADiscoverySuite.Tests.Audit
             var wave = new MigrationWave();
             wave.Users.Add(user);
 
-            var settings = new MigrationSettings { OverwriteExisting = true };
+            var settings = new MigrationSettings();
             var target = new TargetContext { TenantId = "test-tenant" };
 
             _mockIdentityMigrator
@@ -274,8 +274,6 @@ namespace MandADiscoverySuite.Tests.Audit
             var waveStartEvent = eventsList.FirstOrDefault(e => e.Action == AuditAction.Started && e.ObjectType == ObjectType.Other);
             Assert.IsNotNull(waveStartEvent);
             Assert.IsTrue(waveStartEvent.Metadata.ContainsKey("WaveComposition"));
-            Assert.IsTrue(waveStartEvent.Metadata.ContainsKey("OverwriteExisting"));
-            Assert.AreEqual("True", waveStartEvent.Metadata["OverwriteExisting"]);
         }
 
         [TestMethod]
@@ -286,7 +284,7 @@ namespace MandADiscoverySuite.Tests.Audit
             var wave = new MigrationWave();
             wave.Users.Add(user);
 
-            var settings = new MigrationSettings { OverwriteExisting = false };
+            var settings = new MigrationSettings();
             var target = new TargetContext { TenantId = "test-tenant" };
 
             var migrationResult = MigrationResult.Succeeded();

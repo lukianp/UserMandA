@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Models.Migration;
 using MandADiscoverySuite.Services.Migration;
+using Microsoft.Extensions.Logging;
 
 namespace MandADiscoverySuite.MigrationProviders
 {
@@ -20,13 +21,15 @@ namespace MandADiscoverySuite.MigrationProviders
     /// <summary>
     /// Implements user migration via Microsoft Graph.
     /// </summary>
-    public class GraphIdentityMigrator // : IIdentityMigrator // Temporarily disabled due to complex interface
+    public class GraphIdentityMigrator : Migration.IIdentityMigrator
     {
         private readonly IGraphUserClient _client;
+        private readonly ILogger _logger;
 
-        public GraphIdentityMigrator(IGraphUserClient client)
+        public GraphIdentityMigrator(IGraphUserClient client, ILogger logger)
         {
             _client = client;
+            _logger = logger;
         }
 
         public async Task<MigrationResult> MigrateUserAsync(UserDto user, MigrationSettings settings, TargetContext target, IProgress<Migration.MigrationProgress> progress = null)

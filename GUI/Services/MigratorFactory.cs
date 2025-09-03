@@ -2,8 +2,11 @@ using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.MigrationProviders;
 using MandADiscoverySuite.Models;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MandADiscoverySuite.Services
 {
@@ -16,10 +19,13 @@ namespace MandADiscoverySuite.Services
 
         private MigratorFactory() { }
 
-        public IIdentityMigrator CreateIdentityMigrator(TargetProfile profile)
+        public IIdentityMigrator CreateIdentityMigrator(TargetProfile profile, IGraphUserClient graphService = null, ILogger logger = null)
         {
+            graphService ??= null; // Placeholder: inject from DI
+            logger ??= NullLogger<MigratorFactory>.Instance; // Placeholder
+
             // For Microsoft 365 targets use Graph-based migrator
-            return new GraphIdentityMigrator(null); // TODO: Implement proper client injection
+            return (IIdentityMigrator)new GraphIdentityMigrator(graphService, logger);
         }
 
         public IMailMigrator CreateMailMigrator(TargetProfile profile)
@@ -44,8 +50,11 @@ namespace MandADiscoverySuite.Services
             return new TargetContext
             {
                 TenantId = profile.TenantId,
-                ClientId = profile.ClientId,
-                AccessScopes = profile.Scopes?.ToArray() ?? Array.Empty<string>()
+                Configuration = new Dictionary<string, object>
+                {
+                    ["ClientId"] = profile.ClientId,
+                    ["AccessScopes"] = profile.Scopes?.ToArray() ?? Array.Empty<string>()
+                }
             };
         }
 

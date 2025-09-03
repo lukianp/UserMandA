@@ -324,7 +324,7 @@ namespace MandADiscoverySuite.Services
                             userStatus.Status = syncResult.IsSuccess ? "Synchronized" : "Failed";
                             userStatus.LastSyncTime = DateTime.UtcNow;
                             userStatus.NextSyncTime = DateTime.UtcNow.Add(syncJob.Settings.SyncInterval);
-                            userStatus.SyncedAttributes = syncResult.SyncedAttributes.Keys.ToList();
+                            userStatus.SyncedAttributes = syncResult.SyncedAttributes;
                             userStatus.SyncErrors = syncResult.FailedAttributes;
 
                             OnUserSyncStatusChanged(new UserSyncStatusEventArgs
@@ -617,11 +617,11 @@ namespace MandADiscoverySuite.Services
                 {
                     Action = AuditAction.UserSync,
                     ObjectType = ObjectType.User,
-                    ObjectId = syncJob.JobId,
+                    SourceObjectId = syncJob.JobId,
                     Status = syncJob.LastSyncResults?.IsSuccess == true ? AuditStatus.Success : AuditStatus.Failed,
                     StatusMessage = $"User sync job completed: {syncJob.LastSyncResults?.SuccessfulUsers} successful, {syncJob.LastSyncResults?.FailedUsers} failed",
                     SessionId = syncJob.JobId,
-                    UserPrincipal = Environment.UserName,
+                    UserPrincipalName = Environment.UserName,
                     Timestamp = DateTime.UtcNow,
                     ItemsProcessed = syncJob.LastSyncResults?.TotalUsers ?? 0,
                     Metadata = new Dictionary<string, string>

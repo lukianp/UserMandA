@@ -576,7 +576,7 @@ namespace MandADiscoverySuite.Services.Migration
         public List<MigrationItem> CompletedItems { get; set; } = new List<MigrationItem>();
         public List<MigrationItem> FailedItems { get; set; } = new List<MigrationItem>();
         public bool CriticalFailure { get; set; }
-        public List<string> Warnings { get; set; } = new List<string>();
+        public new List<string> Warnings { get; set; } = new List<string>();
     }
 
     /// <summary>
@@ -585,7 +585,7 @@ namespace MandADiscoverySuite.Services.Migration
     public class ItemExecutionResult : MigrationResultBase
     {
         public MigrationItem Item { get; set; }
-        public List<string> Warnings { get; set; } = new List<string>();
+        public new List<string> Warnings { get; set; } = new List<string>();
     }
 
     // Event argument classes

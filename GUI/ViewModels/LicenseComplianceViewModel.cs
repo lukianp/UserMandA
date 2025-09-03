@@ -634,8 +634,7 @@ namespace MandADiscoverySuite.ViewModels
                         Id = Guid.NewGuid().ToString(),
                         OperationType = BulkLicenseOperationType.Assign,
                         UserIds = SelectedUsers.Select(u => u.UserId).ToList(),
-                        SkuIds = BulkAssignSkuIds.ToList(),
-                        TotalUsers = SelectedUsers.Count
+                        SkuIds = BulkAssignSkuIds.ToList()
                     };
 
                     await _licenseService.ExecuteBulkLicenseOperationAsync(targetTenantId, operation);
@@ -683,8 +682,7 @@ namespace MandADiscoverySuite.ViewModels
                         Id = Guid.NewGuid().ToString(),
                         OperationType = BulkLicenseOperationType.Remove,
                         UserIds = SelectedUsers.Select(u => u.UserId).ToList(),
-                        SkuIds = allSkuIds,
-                        TotalUsers = SelectedUsers.Count
+                        SkuIds = allSkuIds
                     };
 
                     await _licenseService.ExecuteBulkLicenseOperationAsync(targetTenantId, operation);
