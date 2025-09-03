@@ -9,6 +9,8 @@ namespace MandADiscoverySuite.Services.Migration
     {
         public string GroupId { get; set; }
         public string GroupName { get; set; }
+        public string TargetGroupName { get; set; } = string.Empty;
+        public string TargetGroupId { get; set; } = string.Empty;
         public int MembersAdded { get; set; }
         public int MembersFailed { get; set; }
         public List<string> MemberErrors { get; set; } = new List<string>();
@@ -21,6 +23,11 @@ namespace MandADiscoverySuite.Services.Migration
         public bool AccountCreated { get; set; }
         public bool AttributesSynced { get; set; }
         public List<string> AssignedLicenses { get; set; } = new List<string>();
+        
+        // Additional properties required by build errors
+        public string TargetUserUpn { get; set; } = string.Empty;
+        public string SourceUserSid { get; set; } = string.Empty;
+        public List<string> UnrestoredItems { get; set; } = new List<string>();
     }
 
     public class MailMigrationResult : MigrationResultBase
@@ -53,13 +60,35 @@ namespace MandADiscoverySuite.Services.Migration
     {
         public string GpoId { get; set; }
         public string GpoName { get; set; }
+        public string TargetGpoId { get; set; } = string.Empty;
+        public string TargetGpoName { get; set; } = string.Empty;
         public int SettingsMigrated { get; set; }
         public bool LinkedToOu { get; set; }
+        
+        // Additional properties required by build errors
+        public List<string> UnrestoredItems { get; set; } = new List<string>();
+    }
+    
+    // Rollback result class for migration operations
+    public class RollbackResult : MigrationResultBase
+    {
+        public string OperationId { get; set; } = string.Empty;
+        public bool RollbackSuccessful { get; set; }
+        public List<string> RolledBackItems { get; set; } = new List<string>();
+        public List<string> FailedRollbacks { get; set; } = new List<string>();
+        public string RollbackReason { get; set; } = string.Empty;
+        public DateTime RollbackStarted { get; set; } = DateTime.Now;
+        public DateTime RollbackCompleted { get; set; }
+        
+        // Additional properties required by build errors  
+        public List<string> UnrestoredItems { get; set; } = new List<string>();
     }
 
     public class AclMigrationResult : MigrationResultBase
     {
         public string ResourcePath { get; set; }
+        public string SourcePath { get; set; }  // Alias for ResourcePath
+        public string TargetPath { get; set; } = string.Empty;
         public int AcesProcessed { get; set; }
         public int SidsTranslated { get; set; }
         public bool InheritancePreserved { get; set; }
@@ -270,6 +299,11 @@ namespace MandADiscoverySuite.Services.Migration
         public TimeSpan ElapsedTime { get; set; }
         public TimeSpan EstimatedTimeRemaining { get; set; }
         public List<string> RecentMessages { get; set; } = new List<string>();
+        
+        // Additional properties required by build errors
+        public string CurrentItem { get; set; } = string.Empty;
+        public int Percentage => (int)PercentComplete;
+        public string Message { get; set; } = string.Empty;
     }
 
     // T-037 specific result types

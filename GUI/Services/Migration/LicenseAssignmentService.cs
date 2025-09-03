@@ -42,7 +42,12 @@ namespace MandADiscoverySuite.Services.Migration
             try
             {
                 _logger.LogInformation($"Starting license assignment for user: {userPrincipalName}, Licenses: {string.Join(", ", requestedLicenses)}");
-                context.ReportProgress("License Assignment", 0, $"Starting license assignment for {userPrincipalName}");
+                context.ReportProgress?.Invoke(new Migration.MigrationProgress
+                {
+                    CurrentItem = "License Assignment",
+                    Percentage = 0,
+                    Message = $"Starting license assignment for {userPrincipalName}"
+                });
 
                 // Step 1: Validate license availability
                 var inventoryResult = await GetAvailableLicensesAsync(context, cancellationToken);
@@ -58,7 +63,12 @@ namespace MandADiscoverySuite.Services.Migration
                     }
                 }
 
-                context.ReportProgress("License Assignment", 25, "License availability validated");
+                context.ReportProgress?.Invoke(new Migration.MigrationProgress
+                {
+                    CurrentItem = "License Assignment",
+                    Percentage = 25,
+                    Message = "License availability validated"
+                });
 
                 // Step 2: Apply business rules validation
                 var availableLicenses = requestedLicenses.Except(result.FailedLicenses).ToList();
@@ -73,7 +83,12 @@ namespace MandADiscoverySuite.Services.Migration
                     result.Warnings.Add($"License {prohibited} prohibited by business rule: {businessRuleValidation.ViolationReasons.GetValueOrDefault(prohibited, "Policy violation")}");
                 }
 
-                context.ReportProgress("License Assignment", 50, "Business rules validated");
+                context.ReportProgress?.Invoke(new Migration.MigrationProgress
+                {
+                    CurrentItem = "License Assignment",
+                    Percentage = 50,
+                    Message = "Business rules validated"
+                });
 
                 // Step 3: Perform license assignments via Graph API
                 foreach (var license in allowedLicenses)
@@ -108,7 +123,12 @@ namespace MandADiscoverySuite.Services.Migration
                     }
                 }
 
-                context.ReportProgress("License Assignment", 100, "License assignment completed");
+                context.ReportProgress?.Invoke(new Migration.MigrationProgress
+                {
+                    CurrentItem = "License Assignment",
+                    Percentage = 100,
+                    Message = "License assignment completed"
+                });
 
                 result.IsSuccess = result.AssignedLicenses.Count > 0 && result.Errors.Count == 0;
 
@@ -269,7 +289,7 @@ namespace MandADiscoverySuite.Services.Migration
                 _logger.LogInformation("Retrieving license inventory from target tenant");
 
                 // In a real implementation, this would call Graph API to get subscribedSkus
-                // var skus = await _graphServiceClient.SubscribedSkus.Request().GetAsync();
+                // var skus = await _graphServiceClient.SubscribedSkus.GetAsync();
                 
                 // Simulate license inventory retrieval
                 await Task.Delay(1000, cancellationToken);
@@ -542,8 +562,12 @@ namespace MandADiscoverySuite.Services.Migration
                     // Report progress
                     var completedUsers = result.SuccessfulAssignments + result.FailedAssignments;
                     var progressPercentage = (double)completedUsers / result.TotalUsers * 100;
-                    context.ReportProgress("Bulk License Assignment", progressPercentage, 
-                        $"Processed {completedUsers}/{result.TotalUsers} users");
+                    context.ReportProgress?.Invoke(new Migration.MigrationProgress
+                    {
+                        CurrentItem = "Bulk License Assignment",
+                        Percentage = (int)progressPercentage,
+                        Message = $"Processed {completedUsers}/{result.TotalUsers} users"
+                    });
                 }
 
                 result.OperationEndTime = DateTime.Now;
@@ -768,10 +792,10 @@ namespace MandADiscoverySuite.Services.Migration
             try
             {
                 // In a real implementation, this would use Graph API to assign the license
-                // var user = await _graphServiceClient.Users[userPrincipalName].Request().GetAsync();
+                // var user = await _graphServiceClient.Users[userPrincipalName].GetAsync();
                 // var assignedLicenses = user.AssignedLicenses.ToList();
                 // assignedLicenses.Add(new AssignedLicense { SkuId = skuId });
-                // await _graphServiceClient.Users[userPrincipalName].Request().UpdateAsync(new User { AssignedLicenses = assignedLicenses });
+                // await _graphServiceClient.Users[userPrincipalName].PatchAsync(new User { AssignedLicenses = assignedLicenses });
 
                 // Simulate license assignment
                 await Task.Delay(500, cancellationToken);
@@ -819,7 +843,7 @@ namespace MandADiscoverySuite.Services.Migration
         private async Task<List<string>> GetUserCurrentLicensesAsync(string userPrincipalName, CancellationToken cancellationToken)
         {
             // In a real implementation, this would query Graph API for current licenses
-            // var user = await _graphServiceClient.Users[userPrincipalName].Request().Select("assignedLicenses").GetAsync();
+            // var user = await _graphServiceClient.Users[userPrincipalName].GetAsync(config => config.QueryParameters.Select = new string[] {"assignedLicenses"});
             
             // Simulate current license retrieval
             await Task.Delay(200, cancellationToken);

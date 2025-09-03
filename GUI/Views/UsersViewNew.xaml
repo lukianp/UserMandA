@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="1000"
-             Background="#FF0F1419">
+             Background="{DynamicResource SurfaceBrush}">
     
     <UserControl.Resources>
         <ResourceDictionary>
@@ -37,23 +37,23 @@
                       Margin="20,0,20,10">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border Background="#55FF0000" BorderBrush="#FF0000" BorderThickness="1" 
+                    <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
                             CornerRadius="4" Margin="0,0,0,8" Padding="8">
-                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="White" />
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}" />
                     </Border>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
         
         <!-- Error Banner -->
-        <Border Grid.Row="2" Background="#55FF0000" BorderBrush="#FF0000" BorderThickness="1" 
+        <Border Grid.Row="2" Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
                 CornerRadius="4" Margin="20,0,20,10" Padding="8"
                 Visibility="{Binding LastError, Converter={StaticResource NullToVisibility}}">
-            <TextBlock Text="{Binding LastError}" TextWrapping="Wrap" Foreground="White" />
+            <TextBlock Text="{Binding LastError}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}" />
         </Border>
         
         <!-- Loading Spinner -->
-        <Border Grid.Row="3" Background="#FF1E1E1E" 
+        <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}"
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
@@ -125,8 +125,8 @@
                                     ToolTip="Show detailed user information">
                                 <Button.Style>
                                     <Style TargetType="Button">
-                                        <Setter Property="Background" Value="#FF4299E1"/>
-                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource WhiteBrush}"/>
                                         <Setter Property="BorderThickness" Value="0"/>
                                         <Setter Property="Template">
                                             <Setter.Value>
@@ -139,10 +139,10 @@
                                                     </Border>
                                                     <ControlTemplate.Triggers>
                                                         <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter Property="Background" Value="#FF3182CE"/>
+                                                            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
                                                         </Trigger>
                                                         <Trigger Property="IsPressed" Value="True">
-                                                            <Setter Property="Background" Value="#FF2C5282"/>
+                                                            <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
                                                         </Trigger>
                                                     </ControlTemplate.Triggers>
                                                 </ControlTemplate>
@@ -160,10 +160,10 @@
                 <Style TargetType="DataGridRow">
                     <Style.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#F0F0F0"/>
+                            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#E0E0E0"/>
+                            <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
@@ -176,7 +176,7 @@
                    HorizontalAlignment="Center" 
                    VerticalAlignment="Center"
                    FontSize="16"
-                   Foreground="Gray"
+                   Foreground="{DynamicResource MutedForegroundBrush}"
                    Visibility="{Binding HasData, Converter={StaticResource InverseBoolToVisibility}}"/>
     </Grid>
 </UserControl>

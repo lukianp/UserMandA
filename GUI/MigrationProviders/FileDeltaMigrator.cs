@@ -76,7 +76,7 @@ namespace MandADiscoverySuite.MigrationProviders
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Failed to process file change for {FilePath}", change.Item.SourcePath);
-                        migrationResults.Add(new MigrationResultBase { IsSuccess = false, ErrorMessage = $"File change processing failed: {ex.Message}" });
+                        migrationResults.Add(new GenericMigrationResult("FileChangeProcessing") { IsSuccess = false, ErrorMessage = $"File change processing failed: {ex.Message}" });
                     }
 
                     var progressPercent = 30 + (i * 60) / Math.Max(1, changesList.Count);
@@ -504,13 +504,13 @@ namespace MandADiscoverySuite.MigrationProviders
                         return await MoveFileAsync(change.Item, settings, target);
                     
                     default:
-                        return new MigrationResultBase { IsSuccess = false, ErrorMessage = $"Unsupported change type: {change.ChangeType}" };
+                        return new GenericMigrationResult("UnsupportedChangeType") { IsSuccess = false, ErrorMessage = $"Unsupported change type: {change.ChangeType}" };
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to process file change for {File}", change.Item.SourcePath);
-                return new MigrationResultBase { IsSuccess = false, ErrorMessage = $"File processing failed: {ex.Message}" };
+                return new GenericMigrationResult("FileDeltaOperation") { IsSuccess = false, ErrorMessage = $"File processing failed: {ex.Message}" };
             }
         }
 
@@ -523,7 +523,7 @@ namespace MandADiscoverySuite.MigrationProviders
             {
                 if (!File.Exists(file.SourcePath))
                 {
-                    return new MigrationResultBase { IsSuccess = false, ErrorMessage = $"Source file not found: {file.SourcePath}" };
+                    return new GenericMigrationResult("FileDeltaOperation") { IsSuccess = false, ErrorMessage = $"Source file not found: {file.SourcePath}" };
                 }
 
                 // Ensure target directory exists
@@ -545,7 +545,7 @@ namespace MandADiscoverySuite.MigrationProviders
                         
                         if (sourceChecksum == targetChecksum)
                         {
-                            return new MigrationResultBase { IsSuccess = true, ErrorMessage = null };
+                            return new GenericMigrationResult("FileDeltaOperation") { IsSuccess = true, ErrorMessage = null };
                         }
                     }
                 }
@@ -561,12 +561,12 @@ namespace MandADiscoverySuite.MigrationProviders
                 targetInfo.LastWriteTime = sourceInfo.LastWriteTime;
                 targetInfo.LastAccessTime = sourceInfo.LastAccessTime;
 
-                return new MigrationResultBase { IsSuccess = true, ErrorMessage = null };
+                return new GenericMigrationResult("FileDeltaOperation") { IsSuccess = true, ErrorMessage = null };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to copy file {Source} to {Target}", file.SourcePath, file.TargetPath);
-                return new MigrationResultBase { IsSuccess = false, ErrorMessage = $"File copy failed: {ex.Message}" };
+                return new GenericMigrationResult("FileDeltaOperation") { IsSuccess = false, ErrorMessage = $"File copy failed: {ex.Message}" };
             }
         }
 
@@ -580,15 +580,15 @@ namespace MandADiscoverySuite.MigrationProviders
                 if (File.Exists(file.TargetPath))
                 {
                     File.Delete(file.TargetPath);
-                    return new MigrationResultBase { IsSuccess = true, ErrorMessage = null };
+                    return new GenericMigrationResult("FileDeltaOperation") { IsSuccess = true, ErrorMessage = null };
                 }
                 
-                return new MigrationResultBase { IsSuccess = true, ErrorMessage = null };
+                return new GenericMigrationResult("FileDeltaOperation") { IsSuccess = true, ErrorMessage = null };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to delete file {Target}", file.TargetPath);
-                return new MigrationResultBase { IsSuccess = false, ErrorMessage = $"File deletion failed: {ex.Message}" };
+                return new GenericMigrationResult("FileDeltaOperation") { IsSuccess = false, ErrorMessage = $"File deletion failed: {ex.Message}" };
             }
         }
 
@@ -603,12 +603,12 @@ namespace MandADiscoverySuite.MigrationProviders
                 // This is simplified for the example
                 await CopyFileAsync(file, settings, target);
                 
-                return new MigrationResultBase { IsSuccess = true, ErrorMessage = null };
+                return new GenericMigrationResult("FileDeltaOperation") { IsSuccess = true, ErrorMessage = null };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to move file {Source}", file.SourcePath);
-                return new MigrationResultBase { IsSuccess = false, ErrorMessage = $"File move failed: {ex.Message}" };
+                return new GenericMigrationResult("FileDeltaOperation") { IsSuccess = false, ErrorMessage = $"File move failed: {ex.Message}" };
             }
         }
 

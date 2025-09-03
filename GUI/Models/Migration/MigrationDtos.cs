@@ -22,6 +22,8 @@ namespace MandADiscoverySuite.Models.Migration
         public bool IsEncrypted { get; set; }
         public string Source { get; set; }
         public string Target { get; set; }
+        public string SourcePath { get; set; }  // Alias for FilePath
+        public string TargetPath { get; set; }  // Migration target path
         public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
     }
 
@@ -79,6 +81,7 @@ namespace MandADiscoverySuite.Models.Migration
     public class DatabaseDto
     {
         public string DatabaseName { get; set; }
+        public string Name { get; set; }  // Alias for DatabaseName
         public string ServerName { get; set; }
         public string InstanceName { get; set; }
         public long SizeMB { get; set; }

@@ -30,7 +30,7 @@ namespace MandADiscoverySuite.Interfaces
         /// <summary>
         /// Rollback a GPO migration
         /// </summary>
-        Task<RollbackResult> RollbackAsync(
+        Task<Services.Migration.RollbackResult> RollbackAsync(
             GroupPolicyItem gpo,
             MigrationContext context,
             IProgress<MandADiscoverySuite.Migration.MigrationProgress> progress = null);
@@ -91,6 +91,7 @@ namespace MandADiscoverySuite.Interfaces
     {
         public string SourceGpoId { get; set; }
         public string TargetGpoId { get; set; }
+        public string TargetOuPath { get; set; } = string.Empty;
         public int SettingsReplicated { get; set; }
         public List<string> ReplicationErrors { get; set; } = new List<string>();
     }

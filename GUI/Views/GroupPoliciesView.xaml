@@ -4,7 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             Background="#FF0F1419">
+             Background="{DynamicResource SurfaceBrush}">
     
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -21,18 +21,18 @@
             <TextBlock Text="Group Policies" 
                        FontSize="28" 
                        FontWeight="SemiBold"
-                       Foreground="#FFE2E8F0"/>
-            <TextBlock Text="Manage and view group policy information" 
-                       FontSize="14" 
-                       Foreground="#FFA0AEC0" 
+                       Foreground="{DynamicResource PrimaryTextBrush}"/>
+            <TextBlock Text="Manage and view group policy information"
+                       FontSize="14"
+                       Foreground="{DynamicResource MutedForegroundBrush}"
                        Margin="0,4,0,0"/>
         </StackPanel>
         
         <!-- Content -->
-        <Border Grid.Row="1" 
-                Background="#FF1A202C" 
-                BorderBrush="#FF2D3748" 
-                BorderThickness="1" 
+        <Border Grid.Row="1"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
                 CornerRadius="8">
             <Grid>
                 <!-- Loading Indicator -->
@@ -42,7 +42,7 @@
                     <TextBlock Text="⏳" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
                     <TextBlock Text="{Binding LoadingMessage}" 
                                FontSize="16" 
-                               Foreground="#FFA0AEC0" 
+                               Foreground="{DynamicResource MutedForegroundBrush}"
                                HorizontalAlignment="Center"/>
                 </StackPanel>
                 <!-- Data Grid -->
@@ -88,8 +88,8 @@
                                     <Button Content="View" 
                                             Command="{Binding DataContext.OpenPolicyDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
                                             CommandParameter="{Binding}" 
-                                            Background="#FF10B981" 
-                                            Foreground="White" 
+                                            Background="{DynamicResource SuccessBrush}"
+                                            Foreground="{DynamicResource WhiteBrush}"
                                             BorderThickness="0"
                                             Padding="8,4"/>
                                 </DataTemplate>
@@ -99,14 +99,14 @@
                     
                     <DataGrid.Resources>
                         <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="Background" Value="#FF2D3748"/>
-                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                            <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
                             <Setter Property="Padding" Value="12,8"/>
                         </Style>
                         <Style TargetType="DataGridRow">
                             <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
                         </Style>
                         <Style TargetType="DataGridCell">
                             <Setter Property="BorderThickness" Value="0"/>
@@ -132,15 +132,15 @@
                             </Style.Triggers>
                         </Style>
                     </StackPanel.Style>
-                    <TextBlock Text="📋" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="#FF6B7280"/>
-                    <TextBlock Text="No group policies found" 
-                               FontSize="18" 
-                               Foreground="#FF6B7280" 
-                               HorizontalAlignment="Center" 
+                    <TextBlock Text="📋" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="No group policies found"
+                               FontSize="18"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               HorizontalAlignment="Center"
                                Margin="0,0,0,8"/>
-                    <TextBlock Text="Group policies will appear here once discovery is run" 
-                               FontSize="14" 
-                               Foreground="#FF4B5563" 
+                    <TextBlock Text="Group policies will appear here once discovery is run"
+                               FontSize="14"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
                                HorizontalAlignment="Center"/>
                 </StackPanel>
             </Grid>

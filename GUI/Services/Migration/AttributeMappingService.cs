@@ -251,7 +251,7 @@ namespace MandADiscoverySuite.Services.Migration
             MigrationContext context,
             CancellationToken cancellationToken)
         {
-            var result = new MigrationResultBase { StartTime = DateTime.Now };
+            var result = new GenericMigrationResult("AttributeMapping") { StartTime = DateTime.Now };
 
             try
             {

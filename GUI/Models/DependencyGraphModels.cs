@@ -400,6 +400,11 @@ namespace MandADiscoverySuite.Models
             set => SetProperty(ref _metadata, value);
         }
 
+        /// <summary>
+        /// Dependencies dictionary for migration operations (key: item ID, value: list of dependency IDs)
+        /// </summary>
+        public Dictionary<string, List<string>> Dependencies { get; set; } = new Dictionary<string, List<string>>();
+
         protected virtual bool SetProperty<T>(ref T field, T value, [System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
         {
             if (Equals(field, value)) return false;

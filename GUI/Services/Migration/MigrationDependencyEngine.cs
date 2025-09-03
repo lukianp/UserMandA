@@ -726,9 +726,9 @@ namespace MandADiscoverySuite.Services.Migration
             if (context.Target?.Licensing != null)
             {
                 var userCount = graph.Dependencies.Keys.Count(k => k.StartsWith("User_"));
-                if (userCount > context.Target.Licensing.AvailableLicenses)
+                if (userCount > context.Target.Licensing.AvailableLicenses.Count)
                 {
-                    result.Errors.Add($"Insufficient licenses: {userCount} users to migrate but only {context.Target.Licensing.AvailableLicenses} licenses available");
+                    result.Errors.Add($"Insufficient licenses: {userCount} users to migrate but only {context.Target.Licensing.AvailableLicenses.Count} licenses available");
                 }
             }
         }

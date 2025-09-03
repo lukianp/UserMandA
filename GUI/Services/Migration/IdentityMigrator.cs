@@ -172,7 +172,7 @@ namespace MandADiscoverySuite.Services.Migration
         /// <summary>
         /// Validate user profile before migration
         /// </summary>
-        public async Task<ValidationResult> ValidateAsync(
+        public async Task<MandADiscoverySuite.Migration.ValidationResult> ValidateAsync(
             UserProfileItem item, 
             MigrationContext context, 
             CancellationToken cancellationToken = default)
@@ -596,7 +596,7 @@ namespace MandADiscoverySuite.Services.Migration
 
         private async Task<MigrationResultBase> CreateTargetUserAsync(UserProfileItem item, MigrationContext context, CancellationToken cancellationToken)
         {
-            var result = new MigrationResultBase { StartTime = DateTime.Now };
+            var result = new GenericMigrationResult("IdentityMigration") { StartTime = DateTime.Now };
 
             try
             {
@@ -799,7 +799,7 @@ namespace MandADiscoverySuite.Services.Migration
 
         private async Task<MigrationResultBase> AddUserToGroupAsync(string userSid, string groupName, MigrationContext context, CancellationToken cancellationToken)
         {
-            var result = new MigrationResultBase { StartTime = DateTime.Now };
+            var result = new GenericMigrationResult("IdentityMigration") { StartTime = DateTime.Now };
             try
             {
                 // Build PowerShell that connects to Graph and adds the user to the group
@@ -850,7 +850,7 @@ namespace MandADiscoverySuite.Services.Migration
 
         private async Task<MigrationResultBase> SetUserAttributeAsync(string userUpn, string attributeName, string value, MigrationContext context, CancellationToken cancellationToken)
         {
-            var result = new MigrationResultBase { StartTime = DateTime.Now };
+            var result = new GenericMigrationResult("IdentityMigration") { StartTime = DateTime.Now };
             try
             {
                 var tenantId = context?.Target?.Configuration?.ContainsKey("GraphTenantId") == true ? context.Target.Configuration["GraphTenantId"].ToString() : string.Empty;
@@ -908,7 +908,7 @@ namespace MandADiscoverySuite.Services.Migration
         {
             // Placeholder for user deletion logic
             await Task.CompletedTask;
-            return new MigrationResultBase { IsSuccess = true };
+            return new GenericMigrationResult("DeleteTargetUser") { IsSuccess = true };
         }
     }
 

@@ -73,6 +73,8 @@ namespace MandADiscoverySuite.Models.Migration
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string Path { get; set; } = string.Empty;
+        public string SourcePath { get; set; } = string.Empty;  // Source path for migration
+        public string TargetPath { get; set; } = string.Empty;  // Target path for migration
         public string ResourceType { get; set; } = string.Empty; // File, Directory, Share
         public List<AclEntry> AclEntries { get; set; } = new List<AclEntry>();
         public bool InheritanceEnabled { get; set; } = true;

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Models.Migration;
 using MandADiscoverySuite.Models.Identity;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.Migration
 {

@@ -20,6 +20,20 @@ namespace MandADiscoverySuite.Migration
     public class ValidationResult
     {
         /// <summary>
+        /// Start time of the validation operation.
+        /// </summary>
+        public DateTime StartTime { get; set; } = DateTime.Now;
+
+        /// <summary>
+        /// Main error message if validation failed.
+        /// </summary>
+        public string ErrorMessage { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Collection of validation errors.
+        /// </summary>
+        public List<string> Errors { get; set; } = new List<string>();
+        /// <summary>
         /// Unique identifier for the validation result.
         /// </summary>
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -133,55 +147,6 @@ namespace MandADiscoverySuite.Migration
         public string TechnicalDetails { get; set; } = string.Empty;
     }
 
-    /// <summary>
-    /// Represents the result of a rollback operation.
-    /// </summary>
-    public class RollbackResult
-    {
-        /// <summary>
-        /// Whether the rollback was successful.
-        /// </summary>
-        public bool Success { get; set; }
-
-        /// <summary>
-        /// Message describing the rollback result.
-        /// </summary>
-        public string Message { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Any errors that occurred during rollback.
-        /// </summary>
-        public List<string> Errors { get; } = new();
-
-        /// <summary>
-        /// Any warnings that occurred during rollback.
-        /// </summary>
-        public List<string> Warnings { get; } = new();
-
-        /// <summary>
-        /// When the rollback was performed.
-        /// </summary>
-        public DateTime RolledBackAt { get; set; } = DateTime.Now;
-
-        /// <summary>
-        /// Creates a successful rollback result.
-        /// </summary>
-        public static RollbackResult Succeeded(string message = "Rollback completed successfully")
-        {
-            return new RollbackResult { Success = true, Message = message };
-        }
-
-        /// <summary>
-        /// Creates a failed rollback result.
-        /// </summary>
-        public static RollbackResult Failed(string message, IEnumerable<string>? errors = null)
-        {
-            var result = new RollbackResult { Success = false, Message = message };
-            if (errors != null)
-                result.Errors.AddRange(errors);
-            return result;
-        }
-    }
 
     /// <summary>
     /// Progress information for validation operations.

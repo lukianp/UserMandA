@@ -114,7 +114,7 @@ namespace MandADiscoverySuite.Services.Migration
             MigrationContext context,
             CancellationToken cancellationToken = default)
         {
-            var result = new MigrationResultBase { StartTime = DateTime.Now };
+            var result = new GenericMigrationResult("UserSync") { StartTime = DateTime.Now };
 
             try
             {

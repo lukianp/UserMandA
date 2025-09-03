@@ -13,6 +13,26 @@ namespace MandADiscoverySuite.Migration
         public bool Success { get; set; }
 
         /// <summary>
+        /// Start time of the migration operation.
+        /// </summary>
+        public System.DateTime StartTime { get; set; } = System.DateTime.Now;
+
+        /// <summary>
+        /// Main error message if migration failed.
+        /// </summary>
+        public string ErrorMessage { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Target user ID for identity migrations.
+        /// </summary>
+        public string TargetUserId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Target user principal name for identity migrations.
+        /// </summary>
+        public string TargetUserPrincipalName { get; set; } = string.Empty;
+
+        /// <summary>
         /// Optional warnings produced during migration.
         /// </summary>
         public List<string> Warnings { get; } = new();

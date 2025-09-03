@@ -82,7 +82,7 @@ namespace MandADiscoverySuite.Services
                 // Test the connection
                 try
                 {
-                    var organization = await graphClient.Organization.Request().GetAsync();
+                    var organization = await graphClient.Organization.GetAsync();
                     _logger.LogInformation($"Successfully connected to tenant {tenantId}");
                 }
                 catch (Exception ex)
@@ -117,7 +117,7 @@ namespace MandADiscoverySuite.Services
                 }
 
                 var graphClient = await GetGraphClientAsync(tenantId);
-                var subscribedSkus = await graphClient.SubscribedSkus.Request().GetAsync();
+                var subscribedSkus = await graphClient.SubscribedSkus.GetAsync();
 
                 var skus = new List<LicenseSku>();
                 
@@ -233,9 +233,7 @@ namespace MandADiscoverySuite.Services
             {
                 var graphClient = await GetGraphClientAsync(tenantId);
                 var user = await graphClient.Users[userId]
-                    .Request()
-                    .Select("id,userPrincipalName,displayName,department,jobTitle,country,usageLocation,accountEnabled,assignedLicenses")
-                    .GetAsync();
+                    .GetAsync(config => config.QueryParameters.Select = new string[] {"id","userPrincipalName","displayName","department","jobTitle","country","usageLocation","accountEnabled","assignedLicenses"});
 
                 var assignment = new UserLicenseAssignment
                 {
@@ -300,9 +298,7 @@ namespace MandADiscoverySuite.Services
                 
                 // Get current user info
                 var user = await graphClient.Users[userId]
-                    .Request()
-                    .Select("userPrincipalName,assignedLicenses")
-                    .GetAsync();
+                    .GetAsync(config => config.QueryParameters.Select = new string[] {"userPrincipalName","assignedLicenses"});
                 
                 result.UserPrincipalName = user.UserPrincipalName;
 
@@ -333,7 +329,7 @@ namespace MandADiscoverySuite.Services
                 };
 
                 // Execute the license assignment
-                await graphClient.Users[userId].AssignLicense(assignLicensePostRequestBody).Request().PostAsync();
+                await graphClient.Users[userId].AssignLicense.PostAsync(assignLicensePostRequestBody);
 
                 result.IsSuccess = true;
                 result.AssignedSkus = skuIds;
@@ -377,9 +373,7 @@ namespace MandADiscoverySuite.Services
                 var graphClient = await GetGraphClientAsync(tenantId);
                 
                 var user = await graphClient.Users[userId]
-                    .Request()
-                    .Select("userPrincipalName")
-                    .GetAsync();
+                    .GetAsync(config => config.QueryParameters.Select = new string[] {"userPrincipalName"});
                 
                 result.UserPrincipalName = user.UserPrincipalName;
 
@@ -391,7 +385,7 @@ namespace MandADiscoverySuite.Services
                     RemoveLicenses = removeLicenses
                 };
 
-                await graphClient.Users[userId].AssignLicense(assignLicensePostRequestBody).Request().PostAsync();
+                await graphClient.Users[userId].AssignLicense.PostAsync(assignLicensePostRequestBody);
 
                 result.IsSuccess = true;
                 result.RemovedSkus = skuIds;
@@ -437,9 +431,7 @@ namespace MandADiscoverySuite.Services
                 var graphClient = await GetGraphClientAsync(tenantId);
                 
                 var user = await graphClient.Users[userId]
-                    .Request()
-                    .Select("userPrincipalName")
-                    .GetAsync();
+                    .GetAsync(config => config.QueryParameters.Select = new string[] {"userPrincipalName"});
                 
                 result.UserPrincipalName = user.UserPrincipalName;
 
@@ -477,7 +469,7 @@ namespace MandADiscoverySuite.Services
                     RemoveLicenses = removeLicenses
                 };
 
-                await graphClient.Users[userId].AssignLicense(assignLicensePostRequestBody).Request().PostAsync();
+                await graphClient.Users[userId].AssignLicense.PostAsync(assignLicensePostRequestBody);
 
                 result.IsSuccess = true;
                 result.AssignedSkus = assignSkuIds ?? new List<string>();
@@ -976,9 +968,7 @@ namespace MandADiscoverySuite.Services
                     {
                         // Get user's current licenses
                         var user = await sourceGraphClient.Users[userId]
-                            .Request()
-                            .Select("assignedLicenses")
-                            .GetAsync();
+                            .GetAsync(config => config.QueryParameters.Select = new string[] {"assignedLicenses"});
 
                         if (user.AssignedLicenses?.Any() == true)
                         {
@@ -1039,9 +1029,7 @@ namespace MandADiscoverySuite.Services
                 {
                     var graphClient = await GetGraphClientAsync(tenantId);
                     var users = await graphClient.Users
-                        .Request()
-                        .Select("id,userPrincipalName,displayName,assignedLicenses,accountEnabled")
-                        .GetAsync();
+                        .GetAsync(config => config.QueryParameters.Select = new string[] {"id","userPrincipalName","displayName","assignedLicenses","accountEnabled"});
 
                     foreach (var user in users)
                     {
@@ -1116,14 +1104,15 @@ namespace MandADiscoverySuite.Services
             try
             {
                 var graphClient = await GetGraphClientAsync(tenantId);
-                var userQuery = graphClient.Users.Request().Select("id,userPrincipalName,displayName,assignedLicenses,accountEnabled,usageLocation");
                 
-                if (userIds?.Any() == true)
+                var users = await graphClient.Users.GetAsync(config => 
                 {
-                    userQuery = userQuery.Filter($"id in ('{string.Join("','", userIds)}')");
-                }
-
-                var users = await userQuery.GetAsync();
+                    config.QueryParameters.Select = new string[] {"id","userPrincipalName","displayName","assignedLicenses","accountEnabled","usageLocation"};
+                    if (userIds?.Any() == true)
+                    {
+                        config.QueryParameters.Filter = $"id in ('{string.Join("','", userIds)}')";
+                    }
+                });
 
                 foreach (var user in users)
                 {
@@ -1284,10 +1273,10 @@ namespace MandADiscoverySuite.Services
                 // Test various endpoints
                 var endpoints = new Dictionary<string, Func<Task>>
                 {
-                    { "Organization", async () => await graphClient.Organization.Request().GetAsync() },
-                    { "Users", async () => await graphClient.Users.Request().Top(1).GetAsync() },
-                    { "SubscribedSkus", async () => await graphClient.SubscribedSkus.Request().GetAsync() },
-                    { "ServicePrincipals", async () => await graphClient.ServicePrincipals.Request().Top(1).GetAsync() }
+                    { "Organization", async () => await graphClient.Organization.GetAsync() },
+                    { "Users", async () => await graphClient.Users.GetAsync(config => config.QueryParameters.Top = 1) },
+                    { "SubscribedSkus", async () => await graphClient.SubscribedSkus.GetAsync() },
+                    { "ServicePrincipals", async () => await graphClient.ServicePrincipals.GetAsync(config => config.QueryParameters.Top = 1) }
                 };
 
                 foreach (var endpoint in endpoints)
@@ -1307,7 +1296,7 @@ namespace MandADiscoverySuite.Services
                 // Get tenant information
                 try
                 {
-                    var organization = await graphClient.Organization.Request().GetAsync();
+                    var organization = await graphClient.Organization.GetAsync();
                     var org = organization.FirstOrDefault();
                     if (org != null)
                     {
@@ -1352,19 +1341,17 @@ namespace MandADiscoverySuite.Services
 
                 // Get the current application's service principal
                 var servicePrincipals = await graphClient.ServicePrincipals
-                    .Request()
-                    .Filter("appRoles/any(r:r/id eq guid'00000000-0000-0000-0000-000000000000')")
-                    .GetAsync();
+                    .GetAsync(config => config.QueryParameters.Filter = "appRoles/any(r:r/id eq guid'00000000-0000-0000-0000-000000000000')");
 
                 // In a real implementation, you would check the actual permissions granted to the service principal
                 // For now, we'll do basic endpoint testing to infer permissions
 
                 var permissionTests = new Dictionary<string, Func<Task>>
                 {
-                    { "User.ReadWrite.All", async () => await graphClient.Users.Request().Top(1).GetAsync() },
-                    { "Directory.ReadWrite.All", async () => await graphClient.Users.Request().Top(1).GetAsync() },
-                    { "Organization.Read.All", async () => await graphClient.Organization.Request().GetAsync() },
-                    { "LicenseAssignment.ReadWrite.All", async () => await graphClient.SubscribedSkus.Request().GetAsync() }
+                    { "User.ReadWrite.All", async () => await graphClient.Users.GetAsync(config => config.QueryParameters.Top = 1) },
+                    { "Directory.ReadWrite.All", async () => await graphClient.Users.GetAsync(config => config.QueryParameters.Top = 1) },
+                    { "Organization.Read.All", async () => await graphClient.Organization.GetAsync() },
+                    { "LicenseAssignment.ReadWrite.All", async () => await graphClient.SubscribedSkus.GetAsync() }
                 };
 
                 foreach (var test in permissionTests)

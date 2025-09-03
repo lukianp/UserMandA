@@ -135,7 +135,7 @@ namespace MandADiscoverySuite.Services.Migration
             }
         }
 
-        public async Task<ValidationResult> ValidateAsync(GroupPolicyItem item, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<MandADiscoverySuite.Migration.ValidationResult> ValidateAsync(GroupPolicyItem item, MigrationContext context, CancellationToken cancellationToken = default)
         {
             var result = new ValidationResult { IsSuccess = true };
 

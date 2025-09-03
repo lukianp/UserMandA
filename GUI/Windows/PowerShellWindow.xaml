@@ -75,21 +75,21 @@
                    Margin="0,0,0,16"/>
         
         <!-- Script Info -->
-        <Border Grid.Row="1" Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,16">
             <StackPanel>
                 <TextBlock x:Name="ScriptName" Text="Script: DiscoveryCreateAppRegistration.ps1" 
-                           Foreground="#FF4299E1" FontSize="14" FontWeight="Medium" Margin="0,0,0,8"/>
+                           Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Medium" Margin="0,0,0,8"/>
                 <TextBlock x:Name="ScriptDescription" 
                            Text="Creates Azure AD app registration with comprehensive permissions for M&amp;A environment discovery"
-                           Foreground="#FFE2E8F0" FontSize="12" TextWrapping="Wrap"/>
+                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
         
         <!-- Output Area -->
-        <Border Grid.Row="2" Background="#FF1A202C" CornerRadius="8" BorderBrush="#FF4A5568" BorderThickness="1">
+        <Border Grid.Row="2" Background="{DynamicResource CardBrush}" CornerRadius="8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
             <ScrollViewer x:Name="OutputScrollViewer" VerticalScrollBarVisibility="Auto" Padding="12">
                 <TextBox x:Name="OutputText" FontFamily="Consolas" FontSize="12" 
-                         Foreground="#FFE2E8F0" TextWrapping="Wrap" 
+                         Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" 
                          Background="Transparent" BorderThickness="0"
                          IsReadOnly="True" 
                          SelectionBrush="#FF4299E1"
@@ -97,7 +97,7 @@
                          HorizontalScrollBarVisibility="Disabled"
                          KeyDown="OutputText_KeyDown">
                     <TextBox.ContextMenu>
-                        <ContextMenu Background="#FF2D3748" Foreground="#FFE2E8F0">
+                        <ContextMenu Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource SecondaryTextBrush}">
                             <MenuItem Header="Select All" Click="SelectAll_Click" InputGestureText="Ctrl+A"/>
                             <MenuItem Header="Copy" Click="CopySelected_Click" InputGestureText="Ctrl+C"/>
                             <MenuItem Header="Copy All Output" Click="CopyButton_Click" InputGestureText="Ctrl+Shift+C"/>
@@ -109,23 +109,23 @@
         
         <!-- Progress Bar -->
         <ProgressBar Grid.Row="3" x:Name="ExecutionProgress" Height="4" 
-                     Background="#FF2D3748" Foreground="#FF4299E1" 
+                     Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource AccentBrush}" 
                      Margin="0,12,0,12" Visibility="Collapsed"/>
         
         <!-- Action Buttons -->
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button x:Name="RunButton" Content="▶ Run Script" Style="{StaticResource ModernButtonStyle}" 
                     Click="RunButton_Click" Margin="0,0,12,0"
-                    Background="#FF48BB78"/>
+                    Background="{DynamicResource SuccessBrush}"/>
             <Button x:Name="StopButton" Content="⏹ Stop" Style="{StaticResource ModernButtonStyle}" 
                     Click="StopButton_Click" Margin="0,0,12,0" IsEnabled="False"
-                    Background="#FFF56565"/>
+                    Background="{DynamicResource ErrorBrush}"/>
             <Button x:Name="CopyButton" Content="📋 Copy Output" Style="{StaticResource ModernButtonStyle}" 
                     Click="CopyButton_Click" Margin="0,0,12,0"
                     Background="#FF4299E1"/>
             <Button x:Name="ClearButton" Content="🗑 Clear" Style="{StaticResource ModernButtonStyle}" 
                     Click="ClearButton_Click" Margin="0,0,12,0"
-                    Background="#FF718096"/>
+                    Background="{DynamicResource BorderBrush}"/>
             <Button x:Name="CloseButton" Content="✖ Close" Style="{StaticResource ModernButtonStyle}" 
                     Click="CloseButton_Click"
                     Background="#FF4A5568"/>

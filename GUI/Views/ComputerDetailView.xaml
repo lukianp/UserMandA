@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="900"
-             Background="#FF0F1419">
+             Background="{DynamicResource BackgroundBrush}">
     
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -27,18 +27,18 @@
                     <TextBlock Text="{Binding Computer.Name}" 
                                FontSize="28" 
                                FontWeight="SemiBold"
-                               Foreground="#FFE2E8F0"/>
+                               Foreground="{DynamicResource SecondaryTextBrush}"/>
                     <TextBlock Text="{Binding Computer.Type}" 
                                FontSize="16" 
-                               Foreground="#FFA0AEC0" 
+                               Foreground="{DynamicResource MutedForegroundBrush}" 
                                Margin="0,4,0,0"/>
                 </StackPanel>
                 
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button Content="🔄 Refresh" 
                             Command="{Binding RefreshCommand}"
-                            Background="#FF3182CE"
-                            Foreground="#FFFFFFFF"
+                            Background="{DynamicResource AccentBrush}"
+                            Foreground="{DynamicResource PrimaryTextBrush}"
                             BorderThickness="0"
                             Padding="12,8"
                             FontSize="14"
@@ -59,7 +59,7 @@
                                 </Setter>
                                 <Style.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#FF2C5CE6"/>
+                                        <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -68,8 +68,8 @@
                     
                     <Button Content="📄 Export" 
                             Command="{Binding ExportCommand}"
-                            Background="#FF4A5568"
-                            Foreground="#FFE2E8F0"
+                            Background="{DynamicResource BorderBrush}"
+                            Foreground="{DynamicResource SecondaryTextBrush}"
                             BorderThickness="0"
                             Padding="12,8"
                             FontSize="14">
@@ -89,7 +89,7 @@
                                 </Setter>
                                 <Style.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#FF5A6578"/>
+                                        <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -106,7 +106,7 @@
                 <TextBlock Text="⏳" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
                 <TextBlock Text="{Binding LoadingMessage}" 
                            FontSize="16" 
-                           Foreground="#FFA0AEC0" 
+                           Foreground="{DynamicResource MutedForegroundBrush}" 
                            HorizontalAlignment="Center"/>
             </StackPanel>
             
@@ -124,8 +124,8 @@
                 </StackPanel.Style>
                 
                 <!-- Computer Summary Card -->
-                <Border Background="#FF1A202C" 
-                        BorderBrush="#FF2D3748" 
+                <Border Background="{DynamicResource CardBrush}" 
+                        BorderBrush="{DynamicResource SurfaceBrush}" 
                         BorderThickness="1" 
                         CornerRadius="8"
                         Padding="24"
@@ -147,7 +147,7 @@
                                    Text="Computer Information" 
                                    FontSize="18" 
                                    FontWeight="SemiBold"
-                                   Foreground="#FFE2E8F0"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
                                    Margin="0,0,0,16"/>
                         
                         <!-- Left Column -->
@@ -157,8 +157,8 @@
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Name:" FontWeight="Medium" Foreground="#FFA0AEC0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Computer.Name}" Foreground="#FFE2E8F0"/>
+                                <TextBlock Grid.Column="0" Text="Name:" FontWeight="Medium" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Computer.Name}" Foreground="{DynamicResource SecondaryTextBrush}"/>
                             </Grid>
                             
                             <Grid Margin="0,0,0,12">
@@ -166,8 +166,8 @@
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Type:" FontWeight="Medium" Foreground="#FFA0AEC0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Computer.Type}" Foreground="#FFE2E8F0"/>
+                                <TextBlock Grid.Column="0" Text="Type:" FontWeight="Medium" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Computer.Type}" Foreground="{DynamicResource SecondaryTextBrush}"/>
                             </Grid>
                             
                             <Grid Margin="0,0,0,12">
@@ -175,8 +175,8 @@
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="IP Address:" FontWeight="Medium" Foreground="#FFA0AEC0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Computer.IPAddress}" Foreground="#FFE2E8F0"/>
+                                <TextBlock Grid.Column="0" Text="IP Address:" FontWeight="Medium" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Computer.IPAddress}" Foreground="{DynamicResource SecondaryTextBrush}"/>
                             </Grid>
                             
                             <Grid Margin="0,0,0,12">
@@ -184,8 +184,8 @@
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Status:" FontWeight="Medium" Foreground="#FFA0AEC0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Computer.Status}" Foreground="#FFE2E8F0"/>
+                                <TextBlock Grid.Column="0" Text="Status:" FontWeight="Medium" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Computer.Status}" Foreground="{DynamicResource SecondaryTextBrush}"/>
                             </Grid>
                             
                             <Grid Margin="0,0,0,12">
@@ -193,8 +193,8 @@
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Location:" FontWeight="Medium" Foreground="#FFA0AEC0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Computer.Location}" Foreground="#FFE2E8F0"/>
+                                <TextBlock Grid.Column="0" Text="Location:" FontWeight="Medium" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Computer.Location}" Foreground="{DynamicResource SecondaryTextBrush}"/>
                             </Grid>
                         </StackPanel>
                         
@@ -205,8 +205,8 @@
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="OS:" FontWeight="Medium" Foreground="#FFA0AEC0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Computer.OperatingSystem}" Foreground="#FFE2E8F0"/>
+                                <TextBlock Grid.Column="0" Text="OS:" FontWeight="Medium" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Computer.OperatingSystem}" Foreground="{DynamicResource SecondaryTextBrush}"/>
                             </Grid>
                             
                             <Grid Margin="0,0,0,12">
@@ -214,8 +214,8 @@
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Version:" FontWeight="Medium" Foreground="#FFA0AEC0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Computer.Version}" Foreground="#FFE2E8F0"/>
+                                <TextBlock Grid.Column="0" Text="Version:" FontWeight="Medium" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Computer.Version}" Foreground="{DynamicResource SecondaryTextBrush}"/>
                             </Grid>
                             
                             <Grid Margin="0,0,0,12">
@@ -223,8 +223,8 @@
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Manufacturer:" FontWeight="Medium" Foreground="#FFA0AEC0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Computer.Manufacturer}" Foreground="#FFE2E8F0"/>
+                                <TextBlock Grid.Column="0" Text="Manufacturer:" FontWeight="Medium" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Computer.Manufacturer}" Foreground="{DynamicResource SecondaryTextBrush}"/>
                             </Grid>
                             
                             <Grid Margin="0,0,0,12">
@@ -232,8 +232,8 @@
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Model:" FontWeight="Medium" Foreground="#FFA0AEC0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Computer.Model}" Foreground="#FFE2E8F0"/>
+                                <TextBlock Grid.Column="0" Text="Model:" FontWeight="Medium" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Computer.Model}" Foreground="{DynamicResource SecondaryTextBrush}"/>
                             </Grid>
                             
                             <Grid Margin="0,0,0,12">
@@ -241,8 +241,8 @@
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Last Seen:" FontWeight="Medium" Foreground="#FFA0AEC0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Computer.LastSeen}" Foreground="#FFE2E8F0"/>
+                                <TextBlock Grid.Column="0" Text="Last Seen:" FontWeight="Medium" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Computer.LastSeen}" Foreground="{DynamicResource SecondaryTextBrush}"/>
                             </Grid>
                         </StackPanel>
                     </Grid>
@@ -253,8 +253,8 @@
                            BorderThickness="0">
                     <TabControl.Resources>
                         <Style TargetType="TabItem">
-                            <Setter Property="Background" Value="#FF2D3748"/>
-                            <Setter Property="Foreground" Value="#FFA0AEC0"/>
+                            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
                             <Setter Property="BorderThickness" Value="0"/>
                             <Setter Property="Padding" Value="16,8"/>
                             <Setter Property="Margin" Value="0,0,1,0"/>
@@ -273,11 +273,11 @@
                             </Setter>
                             <Style.Triggers>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#FF1A202C"/>
-                                    <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                    <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#FF4A5568"/>
+                                    <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
@@ -285,8 +285,8 @@
                     
                     <!-- Assigned Users Tab -->
                     <TabItem Header="👥 Assigned Users">
-                        <Border Background="#FF1A202C" 
-                                BorderBrush="#FF2D3748" 
+                        <Border Background="{DynamicResource CardBrush}" 
+                                BorderBrush="{DynamicResource SurfaceBrush}" 
                                 BorderThickness="1,0,1,1"
                                 Padding="16">
                             <Grid>
@@ -298,7 +298,7 @@
                                 <TextBlock Grid.Row="0" 
                                            Text="{Binding AssignedUsers.Count, StringFormat='Found {0} assigned users'}" 
                                            FontSize="14" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{DynamicResource MutedForegroundBrush}" 
                                            Margin="0,0,0,12"
                                            Visibility="{Binding HasAssignedUsers, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                 
@@ -315,19 +315,19 @@
                                           Visibility="{Binding HasAssignedUsers, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <DataGrid.Resources>
                                         <Style TargetType="DataGridColumnHeader">
-                                            <Setter Property="Background" Value="#FF2D3748"/>
-                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                                             <Setter Property="FontWeight" Value="SemiBold"/>
                                             <Setter Property="Padding" Value="12,8"/>
-                                            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                                             <Setter Property="BorderThickness" Value="0,0,1,1"/>
                                         </Style>
                                         <Style TargetType="DataGridRow">
                                             <Setter Property="Background" Value="Transparent"/>
-                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                                             <Style.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#FF2D3748"/>
+                                                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                                                 </Trigger>
                                             </Style.Triggers>
                                         </Style>
@@ -360,10 +360,10 @@
                                             </Style.Triggers>
                                         </Style>
                                     </StackPanel.Style>
-                                    <TextBlock Text="👥" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="#FF6B7280"/>
+                                    <TextBlock Text="👥" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="{DynamicResource DisabledForegroundBrush}"/>
                                     <TextBlock Text="No assigned users found" 
                                                FontSize="16" 
-                                               Foreground="#FF6B7280" 
+                                               Foreground="{DynamicResource DisabledForegroundBrush}" 
                                                HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Grid>
@@ -372,8 +372,8 @@
                     
                     <!-- Installed Applications Tab -->
                     <TabItem Header="📦 Applications">
-                        <Border Background="#FF1A202C" 
-                                BorderBrush="#FF2D3748" 
+                        <Border Background="{DynamicResource CardBrush}" 
+                                BorderBrush="{DynamicResource SurfaceBrush}" 
                                 BorderThickness="1,0,1,1"
                                 Padding="16">
                             <Grid>
@@ -385,7 +385,7 @@
                                 <TextBlock Grid.Row="0" 
                                            Text="{Binding InstalledApplications.Count, StringFormat='Found {0} installed applications'}" 
                                            FontSize="14" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{DynamicResource MutedForegroundBrush}" 
                                            Margin="0,0,0,12"
                                            Visibility="{Binding HasInstalledApplications, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                 
@@ -402,19 +402,19 @@
                                           Visibility="{Binding HasInstalledApplications, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <DataGrid.Resources>
                                         <Style TargetType="DataGridColumnHeader">
-                                            <Setter Property="Background" Value="#FF2D3748"/>
-                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                                             <Setter Property="FontWeight" Value="SemiBold"/>
                                             <Setter Property="Padding" Value="12,8"/>
-                                            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                                             <Setter Property="BorderThickness" Value="0,0,1,1"/>
                                         </Style>
                                         <Style TargetType="DataGridRow">
                                             <Setter Property="Background" Value="Transparent"/>
-                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                                             <Style.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#FF2D3748"/>
+                                                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                                                 </Trigger>
                                             </Style.Triggers>
                                         </Style>
@@ -447,10 +447,10 @@
                                             </Style.Triggers>
                                         </Style>
                                     </StackPanel.Style>
-                                    <TextBlock Text="📦" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="#FF6B7280"/>
+                                    <TextBlock Text="📦" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="{DynamicResource DisabledForegroundBrush}"/>
                                     <TextBlock Text="No installed applications found" 
                                                FontSize="16" 
-                                               Foreground="#FF6B7280" 
+                                               Foreground="{DynamicResource DisabledForegroundBrush}" 
                                                HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Grid>
@@ -459,8 +459,8 @@
                     
                     <!-- Device Groups Tab -->
                     <TabItem Header="🏷️ Groups">
-                        <Border Background="#FF1A202C" 
-                                BorderBrush="#FF2D3748" 
+                        <Border Background="{DynamicResource CardBrush}" 
+                                BorderBrush="{DynamicResource SurfaceBrush}" 
                                 BorderThickness="1,0,1,1"
                                 Padding="16">
                             <Grid>
@@ -472,7 +472,7 @@
                                 <TextBlock Grid.Row="0" 
                                            Text="{Binding DeviceGroups.Count, StringFormat='Found {0} device groups'}" 
                                            FontSize="14" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{DynamicResource MutedForegroundBrush}" 
                                            Margin="0,0,0,12"
                                            Visibility="{Binding HasDeviceGroups, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                 
@@ -489,19 +489,19 @@
                                           Visibility="{Binding HasDeviceGroups, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <DataGrid.Resources>
                                         <Style TargetType="DataGridColumnHeader">
-                                            <Setter Property="Background" Value="#FF2D3748"/>
-                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                                             <Setter Property="FontWeight" Value="SemiBold"/>
                                             <Setter Property="Padding" Value="12,8"/>
-                                            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                                             <Setter Property="BorderThickness" Value="0,0,1,1"/>
                                         </Style>
                                         <Style TargetType="DataGridRow">
                                             <Setter Property="Background" Value="Transparent"/>
-                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                                             <Style.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#FF2D3748"/>
+                                                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                                                 </Trigger>
                                             </Style.Triggers>
                                         </Style>
@@ -533,10 +533,10 @@
                                             </Style.Triggers>
                                         </Style>
                                     </StackPanel.Style>
-                                    <TextBlock Text="🏷️" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="#FF6B7280"/>
+                                    <TextBlock Text="🏷️" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="{DynamicResource DisabledForegroundBrush}"/>
                                     <TextBlock Text="No device groups found" 
                                                FontSize="16" 
-                                               Foreground="#FF6B7280" 
+                                               Foreground="{DynamicResource DisabledForegroundBrush}" 
                                                HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Grid>
@@ -545,8 +545,8 @@
                     
                     <!-- GPOs Tab -->
                     <TabItem Header="🔐 Policies">
-                        <Border Background="#FF1A202C" 
-                                BorderBrush="#FF2D3748" 
+                        <Border Background="{DynamicResource CardBrush}" 
+                                BorderBrush="{DynamicResource SurfaceBrush}" 
                                 BorderThickness="1,0,1,1"
                                 Padding="16">
                             <Grid>
@@ -558,7 +558,7 @@
                                 <TextBlock Grid.Row="0" 
                                            Text="{Binding AppliedGpos.Count, StringFormat='Found {0} applied policies'}" 
                                            FontSize="14" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{DynamicResource MutedForegroundBrush}" 
                                            Margin="0,0,0,12"
                                            Visibility="{Binding HasAppliedGpos, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                 
@@ -575,19 +575,19 @@
                                           Visibility="{Binding HasAppliedGpos, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <DataGrid.Resources>
                                         <Style TargetType="DataGridColumnHeader">
-                                            <Setter Property="Background" Value="#FF2D3748"/>
-                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                                             <Setter Property="FontWeight" Value="SemiBold"/>
                                             <Setter Property="Padding" Value="12,8"/>
-                                            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                                             <Setter Property="BorderThickness" Value="0,0,1,1"/>
                                         </Style>
                                         <Style TargetType="DataGridRow">
                                             <Setter Property="Background" Value="Transparent"/>
-                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                                             <Style.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#FF2D3748"/>
+                                                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                                                 </Trigger>
                                             </Style.Triggers>
                                         </Style>
@@ -619,10 +619,10 @@
                                             </Style.Triggers>
                                         </Style>
                                     </StackPanel.Style>
-                                    <TextBlock Text="🔐" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="#FF6B7280"/>
+                                    <TextBlock Text="🔐" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="{DynamicResource DisabledForegroundBrush}"/>
                                     <TextBlock Text="No applied policies found" 
                                                FontSize="16" 
-                                               Foreground="#FF6B7280" 
+                                               Foreground="{DynamicResource DisabledForegroundBrush}" 
                                                HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Grid>
@@ -631,8 +631,8 @@
                     
                     <!-- Child Assets Tab -->
                     <TabItem Header="🖥️ Child Assets">
-                        <Border Background="#FF1A202C" 
-                                BorderBrush="#FF2D3748" 
+                        <Border Background="{DynamicResource CardBrush}" 
+                                BorderBrush="{DynamicResource SurfaceBrush}" 
                                 BorderThickness="1,0,1,1"
                                 Padding="16">
                             <Grid>
@@ -644,7 +644,7 @@
                                 <TextBlock Grid.Row="0" 
                                            Text="{Binding ChildAssets.Count, StringFormat='Found {0} child assets'}" 
                                            FontSize="14" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{DynamicResource MutedForegroundBrush}" 
                                            Margin="0,0,0,12"
                                            Visibility="{Binding HasChildAssets, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                 
@@ -661,19 +661,19 @@
                                           Visibility="{Binding HasChildAssets, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <DataGrid.Resources>
                                         <Style TargetType="DataGridColumnHeader">
-                                            <Setter Property="Background" Value="#FF2D3748"/>
-                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                                             <Setter Property="FontWeight" Value="SemiBold"/>
                                             <Setter Property="Padding" Value="12,8"/>
-                                            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                                             <Setter Property="BorderThickness" Value="0,0,1,1"/>
                                         </Style>
                                         <Style TargetType="DataGridRow">
                                             <Setter Property="Background" Value="Transparent"/>
-                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                                             <Style.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#FF2D3748"/>
+                                                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                                                 </Trigger>
                                             </Style.Triggers>
                                         </Style>
@@ -707,10 +707,10 @@
                                             </Style.Triggers>
                                         </Style>
                                     </StackPanel.Style>
-                                    <TextBlock Text="🖥️" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="#FF6B7280"/>
+                                    <TextBlock Text="🖥️" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="{DynamicResource DisabledForegroundBrush}"/>
                                     <TextBlock Text="No child assets found" 
                                                FontSize="16" 
-                                               Foreground="#FF6B7280" 
+                                               Foreground="{DynamicResource DisabledForegroundBrush}" 
                                                HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Grid>

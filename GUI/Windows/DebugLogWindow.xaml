@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Debug Log Viewer" Height="700" Width="1000"
         WindowStartupLocation="CenterOwner"
-        Background="#FF0F1419"
+        Background="{DynamicResource BackgroundBrush}"
         ResizeMode="CanResize">
     
     <Window.Resources>
@@ -61,41 +61,41 @@
         <!-- Header -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
             <TextBlock Text="Debug Log Viewer" 
-                       Foreground="#FFF7FAFC" FontSize="20" FontWeight="SemiBold"
+                       Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="SemiBold"
                        VerticalAlignment="Center" Margin="0,0,16,0"/>
-            <Border Background="#FF2D3748" CornerRadius="12" Padding="8,4">
+            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Padding="8,4">
                 <TextBlock x:Name="SessionInfo" Text="Session: Main" 
-                           Foreground="#FF4299E1" FontSize="12"/>
+                           Foreground="{DynamicResource AccentBrush}" FontSize="12"/>
             </Border>
         </StackPanel>
         
         <!-- Log Level Controls -->
-        <Border Grid.Row="1" Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,16">
             <StackPanel>
-                <TextBlock Text="Log Filtering" Foreground="#FFE2E8F0" FontSize="14" FontWeight="Medium" Margin="0,0,0,8"/>
+                <TextBlock Text="Log Filtering" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="14" FontWeight="Medium" Margin="0,0,0,8"/>
                 <StackPanel Orientation="Horizontal">
-                    <CheckBox x:Name="ShowVerbose" Content="Verbose" Foreground="#FFE2E8F0" 
+                    <CheckBox x:Name="ShowVerbose" Content="Verbose" Foreground="{DynamicResource SecondaryTextBrush}" 
                               IsChecked="{Binding ShowVerbose}" Margin="0,0,16,0"/>
-                    <CheckBox x:Name="ShowDebug" Content="Debug" Foreground="#FFE2E8F0" 
+                    <CheckBox x:Name="ShowDebug" Content="Debug" Foreground="{DynamicResource SecondaryTextBrush}" 
                               IsChecked="{Binding ShowDebug}" Margin="0,0,16,0"/>
-                    <CheckBox x:Name="ShowInfo" Content="Info" Foreground="#FFE2E8F0" 
+                    <CheckBox x:Name="ShowInfo" Content="Info" Foreground="{DynamicResource SecondaryTextBrush}" 
                               IsChecked="{Binding ShowInfo}" Margin="0,0,16,0"/>
-                    <CheckBox x:Name="ShowWarning" Content="Warning" Foreground="#FFED8936" 
+                    <CheckBox x:Name="ShowWarning" Content="Warning" Foreground="{DynamicResource WarningBrush}" 
                               IsChecked="{Binding ShowWarning}" Margin="0,0,16,0"/>
-                    <CheckBox x:Name="ShowError" Content="Error" Foreground="#FFF56565" 
+                    <CheckBox x:Name="ShowError" Content="Error" Foreground="{DynamicResource ErrorBrush}" 
                               IsChecked="{Binding ShowError}" Margin="0,0,16,0"/>
                     <Button Content="Clear" Command="{Binding ClearLogCommand}" Style="{StaticResource ModernButtonStyle}" 
-                            Background="#FF718096" Margin="16,0,0,0"/>
+                            Background="{DynamicResource BorderBrush}" Margin="16,0,0,0"/>
                 </StackPanel>
             </StackPanel>
         </Border>
         
         <!-- Log Display Area -->
-        <Border Grid.Row="2" Background="#FF1A202C" CornerRadius="8" BorderBrush="#FF4A5568" BorderThickness="1">
+        <Border Grid.Row="2" Background="{DynamicResource CardBrush}" CornerRadius="8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
             <ScrollViewer x:Name="LogScrollViewer" VerticalScrollBarVisibility="Auto" Padding="12">
                 <RichTextBox x:Name="LogTextBox" 
                            Background="Transparent" 
-                           Foreground="#FFE2E8F0" 
+                           Foreground="{DynamicResource SecondaryTextBrush}" 
                            FontFamily="Consolas" 
                            FontSize="12" 
                            BorderThickness="0"
@@ -105,14 +105,14 @@
         
         <!-- Status and Action Buttons -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <TextBlock x:Name="LogCount" Text="{Binding LogCount}" Foreground="#FFA0AEC0" 
+            <TextBlock x:Name="LogCount" Text="{Binding LogCount}" Foreground="{DynamicResource MutedForegroundBrush}" 
                        FontSize="12" VerticalAlignment="Center" Margin="0,0,16,0"/>
             <Button x:Name="ExportButton" Content="Export Log" Style="{StaticResource ModernButtonStyle}" 
                     Command="{Binding ExportLogCommand}" Margin="0,0,12,0"
-                    Background="#FF48BB78"/>
+                    Background="{DynamicResource SuccessBrush}"/>
             <Button x:Name="RefreshButton" Content="Refresh" Style="{StaticResource ModernButtonStyle}" 
                     Command="{Binding RefreshLogCommand}" Margin="0,0,12,0"
-                    Background="#FF4299E1"/>
+                    Background="{DynamicResource AccentBrush}"/>
             <Button x:Name="CloseButton" Content="Close" Style="{StaticResource ModernButtonStyle}" 
                     Command="{Binding CloseCommand}"
                     Background="#FF4A5568"/>

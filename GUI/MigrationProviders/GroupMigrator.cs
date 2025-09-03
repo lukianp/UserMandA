@@ -10,6 +10,7 @@ using MandADiscoverySuite.Services.Migration;
 using MandADiscoverySuite.Models.Migration;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Migration;
+using MigrationCore = MandADiscoverySuite.Migration;
 
 namespace MandADiscoverySuite.MigrationProviders
 {
@@ -199,17 +200,18 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<ValidationResult> ValidateAsync(
-            SecurityGroupItem item, 
-            MigrationContext context, 
+        public async Task<MandADiscoverySuite.Migration.ValidationResult> ValidateAsync(
+            SecurityGroupItem item,
+            MigrationContext context,
             CancellationToken cancellationToken = default)
         {
-            var validationResult = new ValidationResult
+            var validationResult = new MandADiscoverySuite.Migration.ValidationResult
             {
-                ValidationType = "GroupMigration",
-                StartTime = DateTime.UtcNow,
-                SessionId = context.SessionId,
-                ExecutedBy = context.UserPrincipalName
+                ValidatedObject = item,
+                ObjectType = "SecurityGroup",
+                ObjectName = item.Name,
+                Severity = ValidationSeverity.Success,
+                Message = "Group validation completed"
             };
 
             try
@@ -270,8 +272,11 @@ namespace MandADiscoverySuite.MigrationProviders
                     });
                 }
 
-                validationResult.IsSuccess = !validationResult.Issues.Any(i => i.Severity == ValidationSeverity.Error);
-                validationResult.EndTime = DateTime.UtcNow;
+                validationResult.Severity = validationResult.Issues.Any(i => i.Severity == ValidationSeverity.Error) 
+                    ? ValidationSeverity.Error 
+                    : validationResult.Issues.Any(i => i.Severity == ValidationSeverity.Warning) 
+                        ? ValidationSeverity.Warning 
+                        : ValidationSeverity.Success;
 
                 _logger.LogInformation("Group validation completed for {GroupName} with {IssueCount} issues", 
                     item.Name, validationResult.Issues.Count);
@@ -282,21 +287,26 @@ namespace MandADiscoverySuite.MigrationProviders
             {
                 _logger.LogError(ex, "Error validating group {GroupName}", item.Name);
                 
-                validationResult.IsSuccess = false;
-                validationResult.ErrorMessage = ex.Message;
-                validationResult.Errors.Add(ex.Message);
-                validationResult.EndTime = DateTime.UtcNow;
+                validationResult.Severity = ValidationSeverity.Critical;
+                validationResult.Message = ex.Message;
+                validationResult.Issues.Add(new ValidationIssue
+                {
+                    Severity = ValidationSeverity.Critical,
+                    Message = ex.Message,
+                    ItemId = item.Sid,
+                    Category = "Exception"
+                });
 
                 return validationResult;
             }
         }
 
-        public async Task<RollbackResult> RollbackAsync(
+        public async Task<Services.Migration.RollbackResult> RollbackAsync(
             GroupMigrationResult result, 
             MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
-            var rollbackResult = new RollbackResult
+            var rollbackResult = new Services.Migration.RollbackResult
             {
                 RollbackAction = "DeleteGroup",
                 StartTime = DateTime.UtcNow,
@@ -870,7 +880,7 @@ namespace MandADiscoverySuite.MigrationProviders
             };
         }
 
-        public async Task<GroupPolicyConflictResolutionResult> ResolveGroupConflictsAsync(List<Models.Migration.GroupConflict> conflicts, Models.Migration.ConflictResolutionStrategy strategy, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<GroupPolicyConflictResolutionResult> ResolveGroupConflictsAsync(List<Services.Migration.GroupConflict> conflicts, Services.Migration.ConflictResolutionStrategy strategy, MigrationContext context, CancellationToken cancellationToken = default)
         {
             // Convert GroupConflict to GroupItem for internal method
             var groups = conflicts.Select(c => new GroupItem 

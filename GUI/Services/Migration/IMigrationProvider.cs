@@ -20,7 +20,7 @@ namespace MandADiscoverySuite.Services.Migration
         /// <summary>
         /// Validate an item before migration
         /// </summary>
-        Task<ValidationResult> ValidateAsync(TItem item, MigrationContext context, CancellationToken cancellationToken = default);
+        Task<MandADiscoverySuite.Migration.ValidationResult> ValidateAsync(TItem item, MigrationContext context, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Rollback a completed migration

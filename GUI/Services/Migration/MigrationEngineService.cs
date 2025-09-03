@@ -17,7 +17,7 @@ namespace MandADiscoverySuite.Services.Migration
         private readonly ILogger<MigrationEngineService> _logger;
         private readonly MigrationDependencyEngine _dependencyEngine;
         private readonly IServiceProvider _serviceProvider;
-        private readonly Dictionary<MigrationType, IMigrationProvider<MigrationItem, object>> _providers;
+        private readonly Dictionary<MigrationType, IMigrationProvider<MigrationItem, MigrationResultBase>> _providers;
 
         public event EventHandler<MigrationProgressEventArgs> MigrationProgress;
         public event EventHandler<MigrationCompletedEventArgs> MigrationCompleted;
@@ -31,7 +31,7 @@ namespace MandADiscoverySuite.Services.Migration
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _dependencyEngine = dependencyEngine ?? throw new ArgumentNullException(nameof(dependencyEngine));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-            _providers = new Dictionary<MigrationType, IMigrationProvider<MigrationItem, object>>();
+            _providers = new Dictionary<MigrationType, IMigrationProvider<MigrationItem, MigrationResultBase>>();
             
             InitializeMigrationProviders();
         }
@@ -367,7 +367,7 @@ namespace MandADiscoverySuite.Services.Migration
         /// <summary>
         /// Get migration provider for a specific type
         /// </summary>
-        private IMigrationProvider<MigrationItem, object> GetMigrationProvider(MigrationType type)
+        private IMigrationProvider<MigrationItem, MigrationResultBase> GetMigrationProvider(MigrationType type)
         {
             if (_providers.TryGetValue(type, out var provider))
             {
@@ -576,6 +576,7 @@ namespace MandADiscoverySuite.Services.Migration
         public List<MigrationItem> CompletedItems { get; set; } = new List<MigrationItem>();
         public List<MigrationItem> FailedItems { get; set; } = new List<MigrationItem>();
         public bool CriticalFailure { get; set; }
+        public List<string> Warnings { get; set; } = new List<string>();
     }
 
     /// <summary>
@@ -584,6 +585,7 @@ namespace MandADiscoverySuite.Services.Migration
     public class ItemExecutionResult : MigrationResultBase
     {
         public MigrationItem Item { get; set; }
+        public List<string> Warnings { get; set; } = new List<string>();
     }
 
     // Event argument classes
@@ -667,19 +669,15 @@ namespace MandADiscoverySuite.Services.Migration
             };
         }
 
-        public async Task<ValidationResult> ValidateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<MandADiscoverySuite.Migration.ValidationResult> ValidateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
         {
             var userProfile = CreateUserProfileFromItem(item);
             return await _identityMigrator.ValidateAsync(userProfile, context, cancellationToken);
         }
 
-        public async Task<RollbackResult> RollbackAsync(object result, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<RollbackResult> RollbackAsync(IdentityMigrationResult result, MigrationContext context, CancellationToken cancellationToken = default)
         {
-            if (result is IdentityMigrationResult identityResult)
-            {
-                return await _identityMigrator.RollbackAsync(identityResult, context, cancellationToken);
-            }
-            return new RollbackResult { IsSuccess = false, ErrorMessage = "Invalid result type for rollback" };
+            return await _identityMigrator.RollbackAsync(result, context, cancellationToken);
         }
 
         public async Task<bool> SupportsAsync(MigrationType type, MigrationContext context, CancellationToken cancellationToken = default)
@@ -736,13 +734,13 @@ namespace MandADiscoverySuite.Services.Migration
             return new MigrationResult<MailMigrationResult> { IsSuccess = true, Result = new MailMigrationResult() };
         }
 
-        public async Task<ValidationResult> ValidateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<MandADiscoverySuite.Migration.ValidationResult> ValidateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
         {
             await Task.CompletedTask;
             return new ValidationResult { IsSuccess = true };
         }
 
-        public async Task<RollbackResult> RollbackAsync(object result, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<RollbackResult> RollbackAsync(MailMigrationResult result, MigrationContext context, CancellationToken cancellationToken = default)
         {
             await Task.CompletedTask;
             return new RollbackResult { IsSuccess = true };
@@ -775,13 +773,13 @@ namespace MandADiscoverySuite.Services.Migration
             return new MigrationResult<FileMigrationResult> { IsSuccess = true, Result = new FileMigrationResult() };
         }
 
-        public async Task<ValidationResult> ValidateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<MandADiscoverySuite.Migration.ValidationResult> ValidateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
         {
             await Task.CompletedTask;
             return new ValidationResult { IsSuccess = true };
         }
 
-        public async Task<RollbackResult> RollbackAsync(object result, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<RollbackResult> RollbackAsync(FileMigrationResult result, MigrationContext context, CancellationToken cancellationToken = default)
         {
             await Task.CompletedTask;
             return new RollbackResult { IsSuccess = true };
@@ -814,13 +812,13 @@ namespace MandADiscoverySuite.Services.Migration
             return new MigrationResult<SqlMigrationResult> { IsSuccess = true, Result = new SqlMigrationResult() };
         }
 
-        public async Task<ValidationResult> ValidateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<MandADiscoverySuite.Migration.ValidationResult> ValidateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
         {
             await Task.CompletedTask;
             return new ValidationResult { IsSuccess = true };
         }
 
-        public async Task<RollbackResult> RollbackAsync(object result, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<RollbackResult> RollbackAsync(SqlMigrationResult result, MigrationContext context, CancellationToken cancellationToken = default)
         {
             await Task.CompletedTask;
             return new RollbackResult { IsSuccess = true };
