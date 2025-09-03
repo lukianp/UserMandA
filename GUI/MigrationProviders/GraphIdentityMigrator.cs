@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Models.Migration;
@@ -16,7 +19,7 @@ namespace MandADiscoverySuite.MigrationProviders
     /// <summary>
     /// Implements user migration via Microsoft Graph.
     /// </summary>
-    public class GraphIdentityMigrator : IIdentityMigrator
+    public class GraphIdentityMigrator // : IIdentityMigrator // Temporarily disabled due to complex interface
     {
         private readonly IGraphUserClient _client;
 
@@ -57,5 +60,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 return RollbackResult.Failed($"User rollback failed: {ex.Message}");
             }
         }
+
+        // IIdentityMigrator implementation to be completed when interface types are available
     }
 }

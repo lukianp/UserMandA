@@ -95,4 +95,54 @@ namespace MandADiscoverySuite.Models.Migration
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
     }
 
+    /// <summary>
+    /// Data Transfer Object for Group Policy items in migration operations
+    /// </summary>
+    public class GroupPolicyDto
+    {
+        public string GpoGuid { get; set; }
+        public string GpoName { get; set; }
+        public string DisplayName { get; set; }
+        public string Description { get; set; }
+        public string Domain { get; set; }
+        public string Owner { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public DateTime ModifiedDate { get; set; }
+        public List<string> LinkedOUs { get; set; } = new List<string>();
+        public List<string> SecurityFiltering { get; set; } = new List<string>();
+        public List<string> WmiFilters { get; set; } = new List<string>();
+        public bool IsEnabled { get; set; }
+        public int Version { get; set; }
+        public Dictionary<string, object> Settings { get; set; } = new Dictionary<string, object>();
+        public Dictionary<string, object> CustomProperties { get; set; } = new Dictionary<string, object>();
+    }
+
+    /// <summary>
+    /// Data Transfer Object for ACL items in migration operations
+    /// </summary>
+    public class AclDto
+    {
+        public string Path { get; set; }
+        public string ObjectType { get; set; } // File, Directory, Registry, Share
+        public string Owner { get; set; }
+        public string PrimaryGroup { get; set; }
+        public bool InheritanceEnabled { get; set; }
+        public List<AclEntryDto> AccessControlEntries { get; set; } = new List<AclEntryDto>();
+        public Dictionary<string, object> ExtendedAttributes { get; set; } = new Dictionary<string, object>();
+    }
+
+    /// <summary>
+    /// Data Transfer Object for ACL entries
+    /// </summary>
+    public class AclEntryDto
+    {
+        public string Sid { get; set; }
+        public string IdentityReference { get; set; }
+        public string AccessMask { get; set; }
+        public string AccessControlType { get; set; } // Allow, Deny
+        public string InheritanceFlags { get; set; }
+        public string PropagationFlags { get; set; }
+        public bool IsInherited { get; set; }
+    }
+
 }

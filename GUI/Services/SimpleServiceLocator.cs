@@ -173,6 +173,15 @@ namespace MandADiscoverySuite.Services
                 RegisterService<TargetProfileService>(targetProfileService);
                 return (T)(object)targetProfileService;
             }
+
+            if (type == typeof(ICsvDataLoader) || type == typeof(CsvDataServiceNew))
+            {
+                var logger = _loggerFactory.CreateLogger<CsvDataServiceNew>();
+                var csvDataLoader = new CsvDataServiceNew(logger, "ljpops"); // Use default profile
+                RegisterService<ICsvDataLoader>(csvDataLoader);
+                RegisterService<CsvDataServiceNew>(csvDataLoader);
+                return (T)(object)csvDataLoader;
+            }
             
             // Try to create with parameterless constructor
             if (type.GetConstructor(Type.EmptyTypes) != null)

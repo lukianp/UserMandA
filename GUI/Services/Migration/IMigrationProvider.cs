@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Migration;
 
 namespace MandADiscoverySuite.Services.Migration
 {
     /// <summary>
     /// Core migration provider interface for type-safe migration operations
     /// </summary>
-    public interface IMigrationProvider<TItem, TResult>
+    public interface IMigrationProvider<TItem, TResult> where TResult : MigrationResultBase
     {
         /// <summary>
         /// Migrate an item from source to target environment

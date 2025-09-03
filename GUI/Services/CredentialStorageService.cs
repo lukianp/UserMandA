@@ -582,6 +582,61 @@ namespace MandADiscoverySuite.Services
             _disposed = true;
             _logger?.LogInformation("Credential storage service disposed");
         }
+
+        // Interface compatibility methods
+        public bool StoreDomainCredentials(string domain, string username, SecureString password)
+        {
+            return StoreDomainCredentials($"domain_{domain}", domain, username, password, CredentialType.DomainUser);
+        }
+
+        public bool StoreAzureCredentials(string tenantId, string clientId, string clientSecret, string[] scopes = null)
+        {
+            var scopeString = scopes != null ? string.Join(",", scopes) : "";
+            var secureSecret = new SecureString();
+            foreach (char c in clientSecret ?? "") secureSecret.AppendChar(c);
+            secureSecret.MakeReadOnly();
+            return StoreDomainCredentials($"azure_{tenantId}", clientId, clientId, secureSecret, CredentialType.ApiKey);
+        }
+
+        public StoredCredentials GetDomainCredentials(string domain)
+        {
+            return GetCredentials($"domain_{domain}");
+        }
+
+        public StoredCredentials GetAzureCredentials(string tenantId)
+        {
+            return GetCredentials($"azure_{tenantId}");
+        }
+
+        public async Task<StoredCredentials> GetCredentialsAsync(string key)
+        {
+            return await Task.FromResult(GetCredentials(key));
+        }
+
+        public async Task<bool> StoreCredentialsAsync(string key, StoredCredentials credentials)
+        {
+            return await Task.FromResult(StoreCredentials(key, credentials));
+        }
+
+        public bool RemoveCredentials(string key)
+        {
+            return DeleteCredentials(key);
+        }
+
+        public IEnumerable<string> ListCredentialKeys()
+        {
+            return GetAllCredentialKeys();
+        }
+
+        public bool HasCredentials(string key)
+        {
+            return CredentialExists(key);
+        }
+
+        public bool ClearAllCredentials()
+        {
+            return ClearAll();
+        }
     }
 
     #region Supporting Classes

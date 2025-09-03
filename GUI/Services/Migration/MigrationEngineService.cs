@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Migration;
 
 namespace MandADiscoverySuite.Services.Migration
 {
@@ -636,7 +637,7 @@ namespace MandADiscoverySuite.Services.Migration
     /// <summary>
     /// Adapter for identity migrator
     /// </summary>
-    public class IdentityMigratorAdapter : IMigrationProvider<MigrationItem, object>
+    public class IdentityMigratorAdapter : IMigrationProvider<MigrationItem, IdentityMigrationResult>
     {
         private readonly IIdentityMigrator _identityMigrator;
 
@@ -645,12 +646,12 @@ namespace MandADiscoverySuite.Services.Migration
             _identityMigrator = identityMigrator;
         }
 
-        public async Task<MigrationResult<object>> MigrateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<MigrationResult<IdentityMigrationResult>> MigrateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
         {
             var userProfile = CreateUserProfileFromItem(item);
             var result = await _identityMigrator.MigrateAsync(userProfile, context, cancellationToken);
             
-            return new MigrationResult<object>
+            return new MigrationResult<IdentityMigrationResult>
             {
                 Result = result.Result,
                 IsSuccess = result.IsSuccess,
@@ -719,7 +720,7 @@ namespace MandADiscoverySuite.Services.Migration
     }
 
     // Placeholder adapter classes for other migration types
-    public class MailMigratorAdapter : IMigrationProvider<MigrationItem, object>
+    public class MailMigratorAdapter : IMigrationProvider<MigrationItem, MailMigrationResult>
     {
         private readonly IMailMigrator _mailMigrator;
 
@@ -728,11 +729,11 @@ namespace MandADiscoverySuite.Services.Migration
             _mailMigrator = mailMigrator;
         }
 
-        public async Task<MigrationResult<object>> MigrateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<MigrationResult<MailMigrationResult>> MigrateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
         {
             // Implementation would convert MigrationItem to MailboxItem and call _mailMigrator
             await Task.CompletedTask;
-            return new MigrationResult<object> { IsSuccess = true, Result = new MailMigrationResult() };
+            return new MigrationResult<MailMigrationResult> { IsSuccess = true, Result = new MailMigrationResult() };
         }
 
         public async Task<ValidationResult> ValidateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
@@ -759,7 +760,7 @@ namespace MandADiscoverySuite.Services.Migration
         }
     }
 
-    public class FileMigratorAdapter : IMigrationProvider<MigrationItem, object>
+    public class FileMigratorAdapter : IMigrationProvider<MigrationItem, FileMigrationResult>
     {
         private readonly IFileMigrator _fileMigrator;
 
@@ -768,10 +769,10 @@ namespace MandADiscoverySuite.Services.Migration
             _fileMigrator = fileMigrator;
         }
 
-        public async Task<MigrationResult<object>> MigrateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<MigrationResult<FileMigrationResult>> MigrateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
         {
             await Task.CompletedTask;
-            return new MigrationResult<object> { IsSuccess = true, Result = new FileMigrationResult() };
+            return new MigrationResult<FileMigrationResult> { IsSuccess = true, Result = new FileMigrationResult() };
         }
 
         public async Task<ValidationResult> ValidateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
@@ -798,7 +799,7 @@ namespace MandADiscoverySuite.Services.Migration
         }
     }
 
-    public class SqlMigratorAdapter : IMigrationProvider<MigrationItem, object>
+    public class SqlMigratorAdapter : IMigrationProvider<MigrationItem, SqlMigrationResult>
     {
         private readonly ISqlMigrator _sqlMigrator;
 
@@ -807,10 +808,10 @@ namespace MandADiscoverySuite.Services.Migration
             _sqlMigrator = sqlMigrator;
         }
 
-        public async Task<MigrationResult<object>> MigrateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
+        public async Task<MigrationResult<SqlMigrationResult>> MigrateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
         {
             await Task.CompletedTask;
-            return new MigrationResult<object> { IsSuccess = true, Result = new SqlMigrationResult() };
+            return new MigrationResult<SqlMigrationResult> { IsSuccess = true, Result = new SqlMigrationResult() };
         }
 
         public async Task<ValidationResult> ValidateAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)

@@ -6,6 +6,7 @@ using System.Linq;
 using Microsoft.Graph;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Migration;
 
 namespace MandADiscoverySuite.Services.Migration
 {

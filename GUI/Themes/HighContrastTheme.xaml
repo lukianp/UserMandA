@@ -49,6 +49,8 @@
     <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFFFFFFF"/>
     <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FFCCCCCC"/>
     <SolidColorBrush x:Key="ButtonHoverBrush" Color="#FFFFFF33"/>
+    <SolidColorBrush x:Key="ButtonPressedBrush" Color="#FF404040"/>
+    <SolidColorBrush x:Key="InputFocusedBackgroundBrush" Color="#FFFFFF00"/>
     <SolidColorBrush x:Key="ValidBorderBrush" Color="#FF00FF00"/>
     <SolidColorBrush x:Key="InvalidBorderBrush" Color="#FFFF0000"/>
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using MandADiscoverySuite.Models.Migration;
 
 namespace MandADiscoverySuite.Migration
 {

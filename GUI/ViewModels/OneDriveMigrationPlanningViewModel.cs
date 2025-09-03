@@ -403,27 +403,77 @@ namespace MandADiscoverySuite.ViewModels
         
         private async Task LoadSampleDataAsync()
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
-                // Generate sample user drives
-                var sampleUsers = GenerateSampleUsers();
-                var sampleFileShares = GenerateSampleFileShares();
-                
-                Application.Current?.Dispatcher?.Invoke(() =>
+                try
                 {
-                    UserDrives.Clear();
-                    FileShares.Clear();
-                    
-                    foreach (var user in sampleUsers)
+                    // Load real OneDrive users from CSV instead of generating samples
+                    // Since there's no specific OneDrive data loader, load general users and infrastructure data
+                    var usersResult = await _csvDataService.LoadUsersAsync("ljpops");
+                    var fileServersResult = await _csvDataService.LoadFileServersAsync("ljpops");
+
+                    // Clear existing data
+                    Application.Current?.Dispatcher?.Invoke(() =>
                     {
-                        UserDrives.Add(user);
-                    }
-                    
-                    foreach (var share in sampleFileShares)
+                        UserDrives.Clear();
+                        FileShares.Clear();
+                    });
+
+                    if (usersResult.IsSuccess && usersResult.Data?.Count > 0)
                     {
-                        FileShares.Add(share);
+                        // Convert users to the expected format for the view
+                        Application.Current?.Dispatcher?.Invoke(() =>
+                        {
+                            foreach (var user in usersResult.Data.Take(25)) // Limit for performance
+                            {
+                                UserDrives.Add(new
+                                {
+                                    UserName = user.SamAccountName ?? user.UserPrincipalName,
+                                    DisplayName = user.DisplayName,
+                                    Email = user.Mail ?? user.UserPrincipalName,
+                                    Department = user.Department,
+                                    OneDriveUrl = user.UserPrincipalName != null ? $"https://contoso-my.sharepoint.com/personal/{user.UserPrincipalName.Replace("@", "_").Replace(".", "_")}" : "",
+                                    DataSizeGB = 1.5, // Default placeholder, in real scenario calculate from actual data
+                                    FileCount = 1000,
+                                    LastAccessed = user.CreatedDateTime ?? DateTime.Now,
+                                    HasIssues = false,
+                                    MigrationStatus = "Pending",
+                                    Priority = 2
+                                });
+                            }
+                        });
                     }
-                });
+
+                    if (fileServersResult.IsSuccess && fileServersResult.Data?.Count > 0)
+                    {
+                        // Convert file servers to file shares
+                        Application.Current?.Dispatcher?.Invoke(() =>
+                        {
+                            foreach (var server in fileServersResult.Data.Take(15))
+                            {
+                                FileShares.Add(new
+                                {
+                                    ShareName = server.ServerName,
+                                    ServerName = server.ServerName,
+                                    SharePath = $"\\\\{server.ServerName}\\",
+                                    DataSizeGB = server.TotalSizeGB,
+                                    FileCount = 10000, // Placeholder
+                                    UserCount = 10,
+                                    LastModified = DateTime.Now.AddDays(-7),
+                                    HasPermissionIssues = false,
+                                    MigrationTarget = "OneDrive for Business",
+                                    AnalysisStatus = "Pending"
+                                });
+                            }
+                        });
+                    }
+
+                    // If no data found, collections remain empty (no sample data fallback)
+                }
+                catch (Exception ex)
+                {
+                    ErrorMessage = $"Failed to load CSV data: {ex.Message}";
+                }
             });
         }
         

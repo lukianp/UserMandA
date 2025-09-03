@@ -49,6 +49,8 @@
     <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFF9FAFB"/> <!-- Primary text (same as ForegroundBrush) -->
     <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FFE5E7EB"/> <!-- Secondary text (same as SecondaryForegroundBrush) -->
     <SolidColorBrush x:Key="ButtonHoverBrush" Color="#FF60A5FA"/> <!-- Button hover (same as AccentHoverBrush) -->
+    <SolidColorBrush x:Key="ButtonPressedBrush" Color="#FF9CA3AF"/> <!-- Button pressed (same as PressedBrush) -->
+    <SolidColorBrush x:Key="InputFocusedBackgroundBrush" Color="#FF1E3A8A"/> <!-- Input focused background (same as SelectedBrush) -->
     <SolidColorBrush x:Key="ValidBorderBrush" Color="#FF10B981"/> <!-- Valid input border -->
     <SolidColorBrush x:Key="InvalidBorderBrush" Color="#FFEF4444"/> <!-- Invalid input border -->
 

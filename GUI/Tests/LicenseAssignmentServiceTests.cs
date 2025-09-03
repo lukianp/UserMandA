@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -510,6 +511,66 @@ namespace MandADiscoverySuite.Tests
         public void AddTestCredentials(string key, StoredCredentials credentials)
         {
             _credentials[key] = credentials;
+        }
+
+        // Missing interface methods
+        public bool StoreDomainCredentials(string domain, string username, SecureString password)
+        {
+            var credentials = new StoredCredentials
+            {
+                Key = domain,
+                Username = username,
+                Domain = domain,
+                CredentialType = "Domain"
+            };
+            _credentials[domain] = credentials;
+            return true;
+        }
+
+        public bool StoreAzureCredentials(string tenantId, string clientId, string clientSecret, string[] scopes = null)
+        {
+            var credentials = new StoredCredentials
+            {
+                Key = tenantId,
+                ClientId = clientId,
+                TenantId = tenantId,
+                CredentialType = "Azure"
+            };
+            _credentials[tenantId] = credentials;
+            return true;
+        }
+
+        public StoredCredentials GetDomainCredentials(string domain)
+        {
+            _credentials.TryGetValue(domain, out var creds);
+            return creds;
+        }
+
+        public StoredCredentials GetAzureCredentials(string tenantId)
+        {
+            _credentials.TryGetValue(tenantId, out var creds);
+            return creds;
+        }
+
+        public bool RemoveCredentials(string key)
+        {
+            return _credentials.Remove(key);
+        }
+
+        public IEnumerable<string> ListCredentialKeys()
+        {
+            return _credentials.Keys.ToList();
+        }
+
+        public bool HasCredentials(string key)
+        {
+            return _credentials.ContainsKey(key);
+        }
+
+        public bool ClearAllCredentials()
+        {
+            _credentials.Clear();
+            return true;
         }
     }
 

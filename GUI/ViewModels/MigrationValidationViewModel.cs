@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
 using MandADiscoverySuite.Migration;
+using MandADiscoverySuite.Models.Migration;
 
 namespace MandADiscoverySuite.ViewModels
 {

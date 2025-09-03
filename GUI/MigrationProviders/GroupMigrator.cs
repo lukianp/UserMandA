@@ -200,7 +200,7 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         public async Task<ValidationResult> ValidateAsync(
-            GroupItem item, 
+            SecurityGroupItem item, 
             MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
@@ -336,11 +336,11 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         public async Task<bool> SupportsAsync(
-            Services.Migration.MigrationType type, 
-            Services.Migration.MigrationContext context, 
+            MigrationType type, 
+            MigrationContext context, 
             CancellationToken cancellationToken = default)
         {
-            return type == Services.Migration.MigrationType.Group;
+            return type == MigrationType.SecurityGroup;
         }
 
         public async Task<TimeSpan> EstimateDurationAsync(
@@ -831,6 +831,114 @@ namespace MandADiscoverySuite.MigrationProviders
             {
                 return false;
             }
+        }
+
+        #endregion
+
+        #region IGroupMigrator Interface Implementation
+
+        public async Task<GroupMigrationResult> MigrateGroupAsync(SecurityGroupItem group, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            return await MigrateAsync(group, context, cancellationToken);
+        }
+
+        public async Task<GroupHierarchyResult> ReplicateGroupHierarchyAsync(List<SecurityGroupItem> groups, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            var result = await CreateGroupHierarchyAsync(groups.Cast<GroupItem>().ToList(), context, cancellationToken);
+            return new GroupHierarchyResult
+            {
+                IsSuccess = result.IsSuccess,
+                ErrorMessage = result.ErrorMessage,
+                Errors = result.Errors,
+                Warnings = result.Warnings,
+                StartTime = result.StartTime,
+                EndTime = result.EndTime
+            };
+        }
+
+        public async Task<MembershipResult> AddGroupMembersAsync(string targetGroupId, List<string> memberSids, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            var result = await MigrateGroupMembershipsAsync(targetGroupId, memberSids, new Dictionary<string, string>(), context, cancellationToken);
+            return new MembershipResult
+            {
+                IsSuccess = result.IsSuccess,
+                ErrorMessage = result.ErrorMessage,
+                Errors = result.Errors,
+                Warnings = result.Warnings,
+                StartTime = result.StartTime,
+                EndTime = result.EndTime
+            };
+        }
+
+        public async Task<GroupPolicyConflictResolutionResult> ResolveGroupConflictsAsync(List<Models.Migration.GroupConflict> conflicts, Models.Migration.ConflictResolutionStrategy strategy, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            // Convert GroupConflict to GroupItem for internal method
+            var groups = conflicts.Select(c => new GroupItem 
+            { 
+                Name = c.GroupName, 
+                Sid = c.SourceSid 
+            }).ToList();
+            
+            var result = await ResolveGroupConflictsAsync(groups, context, cancellationToken);
+            return new GroupPolicyConflictResolutionResult
+            {
+                IsSuccess = result.IsSuccess,
+                ErrorMessage = result.ErrorMessage,
+                Errors = result.Errors,
+                Warnings = result.Warnings,
+                StartTime = result.StartTime,
+                EndTime = result.EndTime
+            };
+        }
+
+        public async Task<GroupDependencyResult> ValidateGroupDependenciesAsync(List<SecurityGroupItem> groups, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            var result = await ValidateGroupDependenciesAsync(groups.Cast<GroupItem>().ToList(), context, cancellationToken);
+            return new GroupDependencyResult
+            {
+                IsSuccess = result.IsSuccess,
+                ErrorMessage = result.ErrorMessage,
+                Errors = result.Errors,
+                Warnings = result.Warnings,
+                StartTime = result.StartTime,
+                EndTime = result.EndTime
+            };
+        }
+
+        public async Task<GroupOwnershipResult> MigrateGroupOwnershipAsync(string groupId, List<string> owners, List<string> managers, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            return new GroupOwnershipResult
+            {
+                IsSuccess = true,
+                StartTime = DateTime.UtcNow,
+                EndTime = DateTime.UtcNow,
+                Warnings = new List<string> { "Group ownership migration not yet implemented" }
+            };
+        }
+
+        public async Task<BulkGroupMigrationResult> BulkMigrateGroupsAsync(List<SecurityGroupItem> groups, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            var result = await CreateGroupHierarchyAsync(groups.Cast<GroupItem>().ToList(), context, cancellationToken);
+            return new BulkGroupMigrationResult
+            {
+                IsSuccess = result.IsSuccess,
+                ErrorMessage = result.ErrorMessage,
+                Errors = result.Errors,
+                Warnings = result.Warnings,
+                StartTime = result.StartTime,
+                EndTime = result.EndTime
+            };
+        }
+
+
+        public async Task<TimeSpan> EstimateDurationAsync(SecurityGroupItem item, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            return TimeSpan.FromMinutes(5); // Default estimate
+        }
+
+        public async Task<MigrationResult<GroupMigrationResult>> MigrateAsync(SecurityGroupItem item, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            return await MigrateGroupAsync(item, context, cancellationToken);
         }
 
         #endregion

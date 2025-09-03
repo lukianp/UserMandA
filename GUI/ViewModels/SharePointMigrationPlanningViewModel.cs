@@ -21,6 +21,7 @@ namespace MandADiscoverySuite.ViewModels
     {
         private readonly MigrationDataService _migrationService;
         private readonly SharePointMigrationService _sharePointService;
+        private readonly ICsvDataLoader _csvDataLoader;
         private CancellationTokenSource _cancellationTokenSource;
 
         // Project Properties
@@ -78,9 +79,11 @@ namespace MandADiscoverySuite.ViewModels
         {
             _migrationService = new MigrationDataService();
             _sharePointService = new SharePointMigrationService();
+            _csvDataLoader = SimpleServiceLocator.Instance.GetService<ICsvDataLoader>();
             InitializeCollections();
             InitializeCommands();
-            GenerateSampleSharePointData(15);
+            // Removed GenerateSampleSharePointData call - will load from CSV if available
+            LoadSharePointDataAsync();
             RefreshStatistics();
         }
 
@@ -429,6 +432,33 @@ namespace MandADiscoverySuite.ViewModels
             PreFlightCheckCommand = new RelayCommand(async () => await RunPreFlightCheck());
         }
 
+        private async Task LoadSharePointDataAsync()
+        {
+            try
+            {
+                var migrationResult = await _csvDataLoader.LoadMigrationItemsAsync("ljpops");
+                if (migrationResult.IsSuccess && migrationResult.Data?.Count > 0)
+                {
+                    var sharePointItems = migrationResult.Data.Where(m => m.Type == MigrationType.SharePoint).ToList();
+                    foreach (var item in sharePointItems)
+                    {
+                        // Convert MigrationItem to appropriate format for SharePoint view
+                        Sites.Add(item);
+                    }
+                    StatusMessage = $"Loaded {sharePointItems.Count} SharePoint migration items from CSV";
+                }
+                else
+                {
+                    StatusMessage = "No SharePoint CSV data found - view will be empty until data is available";
+                    ErrorMessage = $"No SharePoint CSV data found at {ConfigurationService.Instance.DiscoveryDataRootPath}";
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Failed to load SharePoint data from CSV: {ex.Message}";
+            }
+        }
+
         private bool SiteFilter(object item)
         {
             if (!(item is MigrationItem site)) return false;
@@ -513,24 +543,24 @@ namespace MandADiscoverySuite.ViewModels
                     Sites.Add(site);
                 }
 
-                // If no sites were discovered (perhaps due to connectivity issues), generate sample data
+                // If no sites were discovered (perhaps due to connectivity issues), try to load from CSV
                 if (Sites.Count == 0)
                 {
-                    StatusMessage = "No sites discovered - generating sample data for demonstration";
-                    GenerateSampleSharePointData(10);
+                    StatusMessage = "No sites discovered - attempting to load from CSV...";
+                    await LoadSharePointDataAsync();
                 }
-                
+
                 DiscoveryProgress = 100;
-                StatusMessage = $"Discovered {Sites.Count} sites successfully";
+                StatusMessage = $"Discovery completed - {Sites.Count} sites available for migration";
                 RefreshStatistics();
             }
             catch (Exception ex)
             {
                 StatusMessage = $"Discovery failed: {ex.Message}";
-                
-                // Fallback to sample data for demonstration
-                GenerateSampleSharePointData(5);
-                StatusMessage += " - Using sample data for demonstration";
+
+                // Try to load from CSV as fallback instead of using sample data
+                StatusMessage += " - Attempting to load from CSV...";
+                await LoadSharePointDataAsync();
                 RefreshStatistics();
             }
             finally

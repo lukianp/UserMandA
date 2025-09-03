@@ -10,12 +10,14 @@ using System.Windows;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Migration;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace MandADiscoverySuite.ViewModels
 {
     public class ExchangeMigrationPlanningViewModelSimple : BaseViewModel
     {
         private readonly MigrationDataService _migrationService;
+        private readonly ICsvDataLoader _csvDataLoader;
         private CancellationTokenSource _cancellationTokenSource;
 
         // Project Properties
@@ -62,13 +64,43 @@ namespace MandADiscoverySuite.ViewModels
         public ExchangeMigrationPlanningViewModelSimple()
         {
             _migrationService = new MigrationDataService();
+            _csvDataLoader = SimpleServiceLocator.Instance.GetService<ICsvDataLoader>();
             InitializeCollections();
             InitializeCommands();
-            GenerateSampleData(25);
+            // Removed GenerateSampleData call - will load from CSV if available
+            LoadExchangeDataAsync();
             RefreshStatistics();
 
             // Load target profiles for selection
             _ = LoadTargetProfilesAsync();
+        }
+
+        private async Task LoadExchangeDataAsync()
+        {
+            try
+            {
+                var migrationResult = await _csvDataLoader.LoadMigrationItemsAsync("ljpops");
+                if (migrationResult.IsSuccess && migrationResult.Data?.Count > 0)
+                {
+                    var exchangeItems = migrationResult.Data.Where(m => m.Type == MigrationType.Mailbox).ToList();
+                    foreach (var item in exchangeItems)
+                    {
+                        // Convert MigrationItem to what this view expects
+                        item.Type = MigrationType.Mailbox;
+                        Mailboxes.Add(item);
+                    }
+                    StatusMessage = $"Loaded {exchangeItems.Count} Exchange mailboxes from CSV";
+                }
+                else
+                {
+                    StatusMessage = "No Exchange CSV data found - view will be empty";
+                    ErrorMessage = $"No Exchange CSV data found at {ConfigurationService.Instance.DiscoveryDataRootPath}";
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Failed to load Exchange data from CSV: {ex.Message}";
+            }
         }
 
         #region Properties
@@ -385,11 +417,11 @@ namespace MandADiscoverySuite.ViewModels
 
         private async Task ImportMailboxes()
         {
-            try 
+            try
             {
-                StatusMessage = "Importing mailboxes from Exchange...";
-                // In real implementation, this would call Exchange discovery services
-                GenerateSampleData(50);
+                StatusMessage = "Importing mailboxes from CSV...";
+                // Load from CSV instead of generating sample data
+                await LoadExchangeDataAsync();
                 StatusMessage = "Mailboxes imported successfully";
                 RefreshStatistics();
             }

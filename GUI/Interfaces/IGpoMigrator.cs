@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Services.Migration;
 using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Migration;
 
 namespace MandADiscoverySuite.Interfaces
 {
@@ -15,9 +16,9 @@ namespace MandADiscoverySuite.Interfaces
         /// Migrate a Group Policy Object from source to target domain
         /// </summary>
         Task<MigrationResult<GpoMigrationResult>> MigrateAsync(
-            Models.Migration.GroupPolicyItem gpo,
-            Services.Migration.MigrationContext context,
-            IProgress<Services.Migration.MigrationProgress> progress = null);
+            GroupPolicyItem gpo,
+            MigrationContext context,
+            IProgress<Migration.MigrationProgress> progress = null);
 
         /// <summary>
         /// Validate that a GPO can be migrated
@@ -32,7 +33,7 @@ namespace MandADiscoverySuite.Interfaces
         Task<RollbackResult> RollbackAsync(
             GroupPolicyItem gpo,
             MigrationContext context,
-            IProgress<MigrationProgress> progress = null);
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress> progress = null);
 
         /// <summary>
         /// Check if the migrator supports the given GPO type
@@ -51,7 +52,7 @@ namespace MandADiscoverySuite.Interfaces
             GroupPolicyItem sourceGpo,
             string targetDomain,
             MigrationContext context,
-            IProgress<MigrationProgress> progress = null);
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress> progress = null);
 
         /// <summary>
         /// Migrate WMI filters associated with GPOs
@@ -59,7 +60,7 @@ namespace MandADiscoverySuite.Interfaces
         Task<WmiFilterMigrationResult> MigrateWmiFiltersAsync(
             List<WmiFilterItem> wmiFilters,
             MigrationContext context,
-            IProgress<MigrationProgress> progress = null);
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress> progress = null);
 
         /// <summary>
         /// Validate GPO compatibility with target domain
@@ -74,7 +75,7 @@ namespace MandADiscoverySuite.Interfaces
         Task<GpoSecurityFilterResult> MigrateSecurityFilteringAsync(
             GroupPolicyItem gpo,
             MigrationContext context,
-            IProgress<MigrationProgress> progress = null);
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress> progress = null);
 
         /// <summary>
         /// Create backup of GPO before migration

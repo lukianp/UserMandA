@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Models;
 
 namespace MandADiscoverySuite.Services.Migration

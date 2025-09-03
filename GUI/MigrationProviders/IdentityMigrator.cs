@@ -132,11 +132,11 @@ namespace MandADiscoverySuite.MigrationProviders
 
         #region User Migration
 
-        public async Task<MigrationResult> MigrateUserAsync(
+        public async Task<MandADiscoverySuite.Migration.MigrationResult> MigrateUserAsync(
             UserData user,
-            MigrationSettings settings,
+            MandADiscoverySuite.Models.Migration.MigrationSettings settings,
             TargetContext target,
-            IProgress<MigrationProgress>? progress = null)
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null)
         {
             var migrationId = Guid.NewGuid().ToString();
             var startTime = DateTime.UtcNow;
@@ -154,7 +154,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 userSettings.Timeout = TimeSpan.FromMinutes(10);
             }
 
-            var result = new UserMigrationResult
+            var result = new MandADiscoverySuite.Migration.MigrationResult
             {
                 SourceUserPrincipalName = user.UserPrincipalName,
                 IsSuccess = false,
@@ -278,7 +278,7 @@ namespace MandADiscoverySuite.MigrationProviders
             return result;
         }
 
-        public async Task<RollbackResult> RollbackUserAsync(UserData user, TargetContext target, IProgress<MigrationProgress>? progress = null)
+        public async Task<RollbackResult> RollbackUserAsync(UserData user, TargetContext target, IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null)
         {
             var rollbackId = Guid.NewGuid().ToString();
             _logger.LogInformation($"Starting user rollback for {user.UserPrincipalName} (ID: {rollbackId})");
@@ -373,7 +373,7 @@ namespace MandADiscoverySuite.MigrationProviders
                     try
                     {
                         var migrationSettings = new MigrationSettings(); // Convert UserMigrationSettings if needed
-                        var result = await MigrateUserAsync(user, migrationSettings, target) as UserMigrationResult;
+                        var result = await MigrateUserAsync(user, migrationSettings, target) as MandADiscoverySuite.Migration.MigrationResult;
                         
                         results.Add(result);
 
@@ -443,7 +443,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"Delta migration failed for user {user.UserPrincipalName}");
-                    results.Add(new UserMigrationResult
+                    results.Add(new MandADiscoverySuite.Migration.MigrationResult
                     {
                         SourceUserPrincipalName = user.UserPrincipalName,
                         IsSuccess = false,
@@ -682,7 +682,7 @@ namespace MandADiscoverySuite.MigrationProviders
         private async Task<UserData> ResolveUserConflictsAsync(
             UserData user,
             IList<UserMigrationConflict> conflicts,
-            UserMigrationSettings settings,
+            MandADiscoverySuite.Models.Migration.MigrationSettings settings,
             TargetContext target)
         {
             var resolvedUser = new UserData
@@ -719,7 +719,7 @@ namespace MandADiscoverySuite.MigrationProviders
             return resolvedUser;
         }
 
-        private ConflictResolution DetermineAutomaticResolution(UserMigrationConflict conflict, ConflictResolutionStrategy strategy)
+        private ConflictResolution DetermineAutomaticResolution(UserMigrationConflict conflict, Models.Identity.ConflictResolutionStrategy strategy)
         {
             var resolution = new ConflictResolution
             {
@@ -884,7 +884,7 @@ namespace MandADiscoverySuite.MigrationProviders
         private async Task<UserAccountCreationResult> CreateOrInviteUserAsync(
             UserData user,
             AttributeMappingResult mappingResult,
-            UserMigrationSettings settings,
+            MandADiscoverySuite.Models.Migration.MigrationSettings settings,
             TargetContext target)
         {
             switch (settings.MigrationStrategy)
@@ -1092,14 +1092,14 @@ namespace MandADiscoverySuite.MigrationProviders
             return true;
         }
 
-        private async Task<UserMigrationResult> UpdateExistingUserAsync(
+        private async Task<MandADiscoverySuite.Migration.MigrationResult> UpdateExistingUserAsync(
             UserData user,
-            UserMigrationSettings settings,
+            MandADiscoverySuite.Models.Migration.MigrationSettings settings,
             TargetContext target,
             CancellationToken cancellationToken)
         {
             // Find existing user and perform incremental update
-            var result = new UserMigrationResult
+            var result = new MandADiscoverySuite.Migration.MigrationResult
             {
                 SourceUserPrincipalName = user.UserPrincipalName,
                 IsSuccess = false,
@@ -1148,7 +1148,7 @@ namespace MandADiscoverySuite.MigrationProviders
             return result;
         }
 
-        private async Task LogMigrationAuditAsync(UserData user, MigrationResult result, string migrationId)
+        private async Task LogMigrationAuditAsync(UserData user, MandADiscoverySuite.Migration.MigrationResult result, string migrationId)
         {
             try
             {
@@ -1165,8 +1165,8 @@ namespace MandADiscoverySuite.MigrationProviders
                     Metadata = new Dictionary<string, string>
                     {
                         ["SourceUPN"] = user.UserPrincipalName ?? "",
-                        ["TargetUPN"] = (result as UserMigrationResult)?.TargetUserPrincipalName ?? "",
-                        ["MigrationStrategy"] = (result as UserMigrationResult)?.StrategyUsed.ToString() ?? "",
+                        ["TargetUPN"] = (result as MandADiscoverySuite.Migration.MigrationResult)?.TargetUserPrincipalName ?? "",
+                        ["MigrationStrategy"] = (result as MandADiscoverySuite.Migration.MigrationResult)?.StrategyUsed.ToString() ?? "",
                         ["Duration"] = result.ProcessingTime.ToString()
                     }
                 });

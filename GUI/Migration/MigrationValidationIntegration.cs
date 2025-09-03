@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using MandADiscoverySuite.ViewModels;
+using MandADiscoverySuite.Models.Migration;
 using CommunityToolkit.Mvvm.Input;
 
 namespace MandADiscoverySuite.Migration

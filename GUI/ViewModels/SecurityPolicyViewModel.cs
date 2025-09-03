@@ -21,7 +21,7 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class SecurityPolicyViewModel : BaseViewModel
     {
-        private readonly CsvDataServiceNew _csvDataService;
+        private readonly ICsvDataLoader _csvDataLoader;
         private readonly ILogger<SecurityPolicyViewModel> _logger;
         
         // Tab Management
@@ -63,10 +63,8 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 _logger = logger;
-                // Create a compatible logger for CsvDataServiceNew
-                var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddDebug());
-                var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
-                _csvDataService = new CsvDataServiceNew(csvLogger);
+                // Use the injected ICsvDataLoader from the service locator
+                _csvDataLoader = SimpleServiceLocator.Instance.GetService<ICsvDataLoader>();
                 
                 InitializeCollections();
                 InitializeCollectionViews();
@@ -458,7 +456,7 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 IsGPOLoading = true;
-                var result = await _csvDataService.LoadGroupPoliciesAsync("ljpops");
+                var result = await _csvDataLoader.LoadGroupPoliciesAsync("ljpops");
                 
                 if (result.IsSuccess && result.Data != null)
                 {
@@ -502,7 +500,7 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 IsSecurityGroupsLoading = true;
-                var result = await _csvDataService.LoadGroupsAsync("ljpops");
+                var result = await _csvDataLoader.LoadGroupsAsync("ljpops");
                 
                 if (result.IsSuccess && result.Data != null)
                 {

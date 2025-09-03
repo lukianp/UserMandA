@@ -113,7 +113,7 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<IEnumerable<MandADiscoverySuite.Migration.MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto>>> DetectChangesAsync(
+        public async Task<IEnumerable<MandADiscoverySuite.Migration.ChangeDetectionResult<FileItemDto>>> DetectChangesAsync(
             DateTime lastRunTimestamp, 
             DeltaMigrationSettings settings)
         {

@@ -19,20 +19,22 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class ManagementViewModel : BaseViewModel
     {
+        private readonly ICsvDataLoader _csvDataLoader;
         private MigrationProject _currentProject;
         private ManagementDashboardViewModel _dashboardViewModel;
         private GanttViewModel _ganttViewModel;
         private WaveViewModel _waveViewModel;
         private object _selectedViewModel;
 
-        public ManagementViewModel(ILogger<ManagementViewModel> logger) : base(logger)
+        public ManagementViewModel(ILogger<ManagementViewModel> logger, ICsvDataLoader csvDataLoader = null) : base(logger)
         {
+            _csvDataLoader = csvDataLoader ?? SimpleServiceLocator.Instance.GetService<ICsvDataLoader>();
             InitializeProject();
             InitializeViewModels();
-            
+
             // Commands
             NavigateCommand = new RelayCommand<string>(ExecuteNavigate);
-            
+
             // Set default view
             SelectedViewModel = DashboardViewModel;
         }
@@ -99,54 +101,25 @@ namespace MandADiscoverySuite.ViewModels
                 // Clear existing data
                 Application.Current.Dispatcher.Invoke(() => Items.Clear());
                 
-                // Load management data from actual CSV data and discovery status
+                // Load management data from actual CSV data files via ICsvDataLoader
                 var configService = ConfigurationService.Instance;
                 var dataPath = configService.GetCompanyRawDataPath("ljpops");
                 var managementData = new List<object>();
-                
+
                 if (Directory.Exists(dataPath))
                 {
-                    // Load actual data based on discovery results
+                    // Load actual data based on discovery results using ICsvDataLoader
                     var csvFiles = Directory.GetFiles(dataPath, "*.csv");
-                    
-                    // Create management items based on discovered data
-                    foreach (var csvFile in csvFiles.Take(10)) // Limit to 10 for performance
+
+                    if (csvFiles.Length > 0)
                     {
-                        var fileName = Path.GetFileNameWithoutExtension(csvFile);
-                        var fileInfo = new FileInfo(csvFile);
-                        var itemCount = 0;
-                        
-                        try
-                        {
-                            // Quick count of lines in CSV (excluding header)
-                            var lines = File.ReadAllLines(csvFile);
-                            itemCount = Math.Max(0, lines.Length - 1);
-                        }
-                        catch
-                        {
-                            itemCount = 0;
-                        }
-                        
-                        var status = itemCount > 0 ? "Discovered" : "Empty";
-                        var progress = itemCount > 0 ? 100 : 0;
-                        
-                        managementData.Add(new { 
-                            Name = $"{fileName} Discovery", 
-                            Status = status, 
-                            Progress = progress,
-                            Items = itemCount,
-                            LastModified = fileInfo.LastWriteTime
-                        });
+                        // Use CsvDataLoader to load actual data (users, groups, etc.) and create summaries
+                        await LoadDiscoverySummariesAsync(managementData);
                     }
                 }
-                
-                // If no CSV data found, show default management items
-                if (managementData.Count == 0)
-                {
-                    managementData.Add(new { Name = "Discovery Phase", Status = "Pending", Progress = 0, Items = 0, LastModified = DateTime.Now });
-                    managementData.Add(new { Name = "Assessment Phase", Status = "Waiting", Progress = 0, Items = 0, LastModified = DateTime.Now });
-                    managementData.Add(new { Name = "Migration Planning", Status = "Not Started", Progress = 0, Items = 0, LastModified = DateTime.Now });
-                }
+
+                // If no CSV data found, leave management data empty (no fallback defaults)
+                // Empty collection will result in empty UI grid
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
@@ -169,6 +142,95 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         #endregion
+
+        /// <summary>
+        /// Load discovery data summaries using ICsvDataLoader
+        /// </summary>
+        private async Task LoadDiscoverySummariesAsync(List<object> managementData)
+        {
+            try
+            {
+                // Load summary data from various CSV sources
+                var userResult = await _csvDataLoader.LoadUsersAsync("ljpops");
+                var groupResult = await _csvDataLoader.LoadGroupsAsync("ljpops");
+                var infraResult = await _csvDataLoader.LoadInfrastructureAsync("ljpops");
+                var appResult = await _csvDataLoader.LoadApplicationsAsync("ljpops");
+                var migrationResult = await _csvDataLoader.LoadMigrationItemsAsync("ljpops");
+
+                // Create management dashboard items based on loaded data
+                if (userResult.IsSuccess && userResult.Data?.Count > 0)
+                {
+                    managementData.Add(new {
+                        Name = "User Discovery",
+                        Status = "Completed",
+                        Progress = 100,
+                        Items = userResult.Data.Count,
+                        LastModified = DateTime.Now
+                    });
+                }
+
+                if (groupResult.IsSuccess && groupResult.Data?.Count > 0)
+                {
+                    managementData.Add(new {
+                        Name = "Group Discovery",
+                        Status = "Completed",
+                        Progress = 100,
+                        Items = groupResult.Data.Count,
+                        LastModified = DateTime.Now
+                    });
+                }
+
+                if (infraResult.IsSuccess && infraResult.Data?.Count > 0)
+                {
+                    managementData.Add(new {
+                        Name = "Infrastructure Discovery",
+                        Status = "Completed",
+                        Progress = 100,
+                        Items = infraResult.Data.Count,
+                        LastModified = DateTime.Now
+                    });
+                }
+
+                if (appResult.IsSuccess && appResult.Data?.Count > 0)
+                {
+                    managementData.Add(new {
+                        Name = "Application Discovery",
+                        Status = "Completed",
+                        Progress = 100,
+                        Items = appResult.Data.Count,
+                        LastModified = DateTime.Now
+                    });
+                }
+
+                if (migrationResult.IsSuccess && migrationResult.Data?.Count > 0)
+                {
+                    managementData.Add(new {
+                        Name = "Migration Planning",
+                        Status = "In Progress",
+                        Progress = 50,
+                        Items = migrationResult.Data.Count,
+                        LastModified = DateTime.Now
+                    });
+                }
+
+                // Log any warnings from CSV loading
+                var allWarnings = userResult.HeaderWarnings
+                    .Concat(groupResult.HeaderWarnings)
+                    .Concat(infraResult.HeaderWarnings)
+                    .Concat(appResult.HeaderWarnings)
+                    .Concat(migrationResult.HeaderWarnings);
+
+                foreach (var warning in allWarnings)
+                {
+                    Logger?.LogWarning(warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Failed to load discovery summaries");
+                // Don't throw - let UI handle empty data gracefully
+            }
+        }
 
         #region Commands
 

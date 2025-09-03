@@ -14,8 +14,9 @@ namespace MandADiscoverySuite.Services
 {
     /// <summary>
     /// Enhanced CSV data service with enterprise-grade error handling and migration support
+    /// Implements ICsvDataLoader as the primary CSV loading service for the application
     /// </summary>
-    public class CsvDataServiceNew
+    public class CsvDataServiceNew : ICsvDataLoader
     {
         private readonly ILogger<CsvDataServiceNew> _logger;
         private readonly string _activeProfilePath;

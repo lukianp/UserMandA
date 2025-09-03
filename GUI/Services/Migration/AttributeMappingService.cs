@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Models.Identity;
+using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Migration;
 
 namespace MandADiscoverySuite.Services.Migration
 {
