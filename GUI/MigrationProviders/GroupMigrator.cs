@@ -260,8 +260,8 @@ namespace MandADiscoverySuite.MigrationProviders
                 }
 
                 // Check group scope compatibility
-                var validScopes = new[] { "Universal", "Global", "DomainLocal" };
-                if (!validScopes.Contains(item.GroupScope, StringComparer.OrdinalIgnoreCase))
+                var validScopesEnum = new[] { SecurityGroupScope.Universal, SecurityGroupScope.Global, SecurityGroupScope.DomainLocal };
+                if (!validScopesEnum.Contains(item.GroupScope))
                 {
                     validationResult.Issues.Add(new Migration.ValidationIssue
                     {
@@ -358,9 +358,15 @@ namespace MandADiscoverySuite.MigrationProviders
             if (item is GroupItem groupItem)
             {
                 var result = await MigrateAsync(groupItem, context, cancellationToken);
-                return result.Result;
+                // Return the actual migration result, not wrapped
+                return result.Result ?? throw new InvalidOperationException("Migration result is null");
             }
-            throw new ArgumentException($"Invalid item type. Expected GroupItem, got {item?.GetType()}");
+            if (item is SecurityGroupItem securityGroupItem)
+            {
+                var result = await MigrateAsync(securityGroupItem, context, cancellationToken);
+                return result; // Return the migration result directly for SecurityGroupItem
+            }
+            throw new ArgumentException($"Invalid item type. Expected GroupItem or SecurityGroupItem, got {item?.GetType()}");
         }
 
         public async Task<TimeSpan> EstimateDurationAsync(
@@ -859,7 +865,8 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<GroupMigrationResult> MigrateGroupAsync(SecurityGroupItem group, MigrationContext context, CancellationToken cancellationToken = default)
         {
-            return await MigrateAsync(group, context, cancellationToken);
+            var migrationResult = await MigrateAsync(group, context, cancellationToken);
+            return migrationResult.Result ?? throw new InvalidOperationException("Migration result is null");
         }
 
         public async Task<GroupHierarchyResult> ReplicateGroupHierarchyAsync(List<SecurityGroupItem> groups, MigrationContext context, CancellationToken cancellationToken = default)
@@ -958,7 +965,17 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public async Task<MigrationResult<GroupMigrationResult>> MigrateAsync(SecurityGroupItem item, MigrationContext context, CancellationToken cancellationToken = default)
         {
-            return await MigrateGroupAsync(item, context, cancellationToken);
+            var migrationResult = await MigrateGroupAsync(item, context, cancellationToken);
+            return new MigrationResult<GroupMigrationResult>
+            {
+                IsSuccess = migrationResult.IsSuccess,
+                StartTime = migrationResult.StartTime,
+                EndTime = migrationResult.EndTime,
+                ErrorMessage = migrationResult.ErrorMessage,
+                SessionId = migrationResult.SessionId,
+                ExecutedBy = migrationResult.ExecutedBy,
+                Result = migrationResult
+            };
         }
 
         #endregion

@@ -706,10 +706,4 @@ namespace MandADiscoverySuite.Services.Migration
 
     }
 
-    // Service-specific delta migrator interfaces
-    public interface IIdentityDeltaMigrator : IDeltaMigrator<UserDto, MigrationResultBase> { }
-    public interface IMailDeltaMigrator : IDeltaMigrator<MailboxDto, MigrationResultBase> { }  
-    public interface IFileDeltaMigrator : IDeltaMigrator<FileItemDto, MigrationResultBase> { }
-    public interface ISqlDeltaMigrator : IDeltaMigrator<DatabaseDto, MigrationResultBase> { }
-    public interface ISharePointDeltaMigrator : IDeltaMigrator<object, MigrationResultBase> { }
 }

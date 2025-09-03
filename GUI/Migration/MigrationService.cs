@@ -7,6 +7,22 @@ using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Services.Audit;
 using MandADiscoverySuite.Services.Migration;
 using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Models;
+// Fully qualify ambiguous migration types
+using MigrationWave = MandADiscoverySuite.Models.Migration.MigrationWave;
+using MigrationSettings = MandADiscoverySuite.Models.Migration.MigrationSettings;
+using GroupDto = MandADiscoverySuite.Models.Migration.GroupDto;
+using UserDto = MandADiscoverySuite.Models.Migration.UserDto;
+using MailboxDto = MandADiscoverySuite.Models.Migration.MailboxDto;
+using FileItemDto = MandADiscoverySuite.Models.Migration.FileItemDto;
+using DatabaseDto = MandADiscoverySuite.Models.Migration.DatabaseDto;
+using GroupPolicyDto = MandADiscoverySuite.Models.Migration.GroupPolicyDto;
+using AclDto = MandADiscoverySuite.Models.Migration.AclDto;
+using AclEntry = MandADiscoverySuite.Models.Migration.AclEntry;
+// Correct license service interface
+using ILicenseAssignmentService = MandADiscoverySuite.Services.ILicenseAssignmentService;
+// Add Services namespace for WaveLicenseProcessingResult
+using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite.Migration
 {
@@ -73,7 +89,7 @@ namespace MandADiscoverySuite.Migration
         /// <summary>
         /// Migrates all items in the provided wave using the injected migrators, including license assignment.
         /// </summary>
-        public async Task<IList<MigrationResult>> MigrateWaveAsync(MigrationWave wave, MigrationSettings settings, TargetContext target, IProgress<MigrationProgress>? progress = null, WaveLicenseSettings? licenseSettings = null)
+        public async Task<IList<MigrationResult>> MigrateWaveAsync(MandADiscoverySuite.Models.Migration.MigrationWave wave, MandADiscoverySuite.Models.Migration.MigrationSettings settings, TargetContext target, IProgress<MigrationProgress>? progress = null, MandADiscoverySuite.Models.WaveLicenseSettings? licenseSettings = null)
         {
             var waveId = Guid.NewGuid().ToString();
             var waveName = $"Wave-{DateTime.UtcNow:yyyyMMdd-HHmmss}";
@@ -110,13 +126,19 @@ namespace MandADiscoverySuite.Migration
                 {
                     progress?.Report(new MigrationProgress { Message = "Processing license assignments...", Percentage = 5 });
                     
-                    var userData = wave.Users.Select(u => new UserData 
-                    { 
-                        UserPrincipalName = u.UserPrincipalName, 
-                        DisplayName = u.DisplayName,
-                        Department = u.Department,
-                        JobTitle = u.JobTitle,
-                        Mail = u.Mail
+                    var userData = wave.Users.Select(u => new MandADiscoverySuite.Models.UserData(
+                        DisplayName: u.DisplayName ?? "Unknown",
+                        UserPrincipalName: u.UserPrincipalName,
+                        Mail: u.Properties.TryGetValue("Email", out var email) ? email?.ToString() : null,
+                        JobTitle: u.Properties.TryGetValue("JobTitle", out var title) ? title?.ToString() : null,
+                        Department: u.Properties.TryGetValue("Department", out var department) ? department?.ToString() : null,
+                        AccountEnabled: u.Properties.TryGetValue("Enabled", out var enabled) && bool.TryParse(enabled?.ToString(), out var isEnabled) ? isEnabled : true,
+                        SamAccountName: u.UserPrincipalName, // Use UPN as fallback for SamAccountName
+                        CompanyName: u.Properties.TryGetValue("OfficeLocation", out var office) ? office?.ToString() : null,
+                        ManagerDisplayName: u.Properties.TryGetValue("Manager", out var manager) ? manager?.ToString() : null,
+                        CreatedDateTime: DateTimeOffset.UtcNow)
+                    {
+                        // Set additional properties if they exist
                     }).ToList();
                     
                     try

@@ -307,6 +307,7 @@ namespace MandADiscoverySuite.Models.Identity
         public DateTime? InvitationAcceptedDate { get; set; }
         public string InvitationStatus { get; set; } = "Pending";
         public TimeSpan? InvitationExpiry { get; set; }
+        public bool InvitationSent => true; // Always true when invitation exists
         public bool IsExpired => InvitationExpiry.HasValue && DateTime.Now > InvitationSentDate.Add(InvitationExpiry.Value);
     }
 
@@ -1187,6 +1188,7 @@ namespace MandADiscoverySuite.Models.Identity
         public string SyncJobId { get; set; }
         public bool IsActive { get; set; }
         public List<string> LastSyncedAttributes { get; set; } = new List<string>();
+        public Dictionary<string, string> SyncedAttributes { get; set; } = new Dictionary<string, string>();
         public List<string> SyncErrors { get; set; } = new List<string>();
         public Dictionary<string, object> SyncMetadata { get; set; } = new Dictionary<string, object>();
 

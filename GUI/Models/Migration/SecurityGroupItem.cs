@@ -16,6 +16,7 @@ namespace MandADiscoverySuite.Models.Migration
         public string SamAccountName { get; set; } = string.Empty;
         public string Sid { get; set; } = string.Empty;
         public SecurityGroupScope Scope { get; set; } = SecurityGroupScope.DomainLocal;
+        public SecurityGroupScope GroupScope { get => Scope; set => Scope = value; } // Alias for compatibility
         public SecurityGroupType GroupType { get; set; } = SecurityGroupType.Security;
         
         // Members

@@ -4,11 +4,18 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using Microsoft.Identity.Client;
 using Azure.Identity;
 using MandADiscoverySuite.Models;
 using System.Text.Json;
 using System.Net.Http;
+
+// Aliases to resolve ambiguities with custom models
+using GraphUser = Microsoft.Graph.Models.User;
+using GraphMessage = Microsoft.Graph.Models.Message;
+using GraphOrganization = Microsoft.Graph.Models.Organization;
+using GraphAuditEvent = Microsoft.Graph.Models.AuditEvent;
 
 namespace MandADiscoverySuite.Services
 {
@@ -427,7 +434,7 @@ namespace MandADiscoverySuite.Services
                             requestConfiguration.QueryParameters.Top = 1;
                         });
                     result.Details["AuthenticationTest"] = true;
-                    result.Details["AuthenticatedUser"] = orgs?.FirstOrDefault()?.DisplayName ?? "App-Only";
+                    result.Details["AuthenticatedUser"] = orgs?.Value.FirstOrDefault()?.DisplayName ?? "App-Only";
                 }
                 catch (Exception ex)
                 {
@@ -617,7 +624,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                Microsoft.Graph.User user = null;
+                GraphUser user = null;
 
                 // Try different ways to find the user
                 if (userIdentifier.Contains("@"))
@@ -636,12 +643,12 @@ namespace MandADiscoverySuite.Services
                     {
                         // Search by display name
                         var users = await _graphServiceClient.Users
-                            .GetAsync(requestConfiguration => 
+                            .GetAsync(requestConfiguration =>
                             {
                                 requestConfiguration.QueryParameters.Filter = $"displayName eq '{userIdentifier}'";
                             });
-                        
-                        user = users.FirstOrDefault();
+
+                        user = users.Value.FirstOrDefault();
                     }
                 }
 

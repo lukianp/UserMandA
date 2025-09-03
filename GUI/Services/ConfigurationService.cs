@@ -312,6 +312,15 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public string TryResolvePrimaryDomain(string companyName)
         {
+            return TryResolveTenantId(companyName);
+        }
+
+        /// <summary>
+        /// Attempts to resolve tenant ID for a given company based on discovery data.
+        /// Falls back to companyName + ".com" if not found.
+        /// </summary>
+        public string TryResolveTenantId(string companyName)
+        {
             try
             {
                 var rawPath = GetCompanyRawDataPath(companyName);

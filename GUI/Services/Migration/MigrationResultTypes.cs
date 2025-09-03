@@ -11,11 +11,29 @@ namespace MandADiscoverySuite.Services.Migration
         public string GroupName { get; set; }
         public string TargetGroupName { get; set; } = string.Empty;
         public string TargetGroupId { get; set; } = string.Empty;
+        public string TargetGroupSid { get; set; } = string.Empty;
+        public string TargetDistinguishedName { get; set; } = string.Empty;
+        public bool GroupCreated { get; set; }
+        public bool MembershipsReplicatedFromSource { get; set; }
         public int MembersAdded { get; set; }
         public int MembersFailed { get; set; }
         public List<string> MemberErrors { get; set; } = new List<string>();
+        public List<string> MigratedMembers { get; set; } = new List<string>();
+        public List<string> UnmappedMembers { get; set; } = new List<string>();
+        public Dictionary<string, string> MemberSidMappings { get; set; } = new Dictionary<string, string>();
+        public bool NestedGroupsProcessed { get; set; }
+        public Dictionary<string, object> GroupAttributes { get; set; } = new Dictionary<string, object>();
         public string SourceGroupSid { get; set; } = string.Empty;
         public string ExecutedBy { get; set; } = string.Empty;
+
+        // Additional fields for comprehensive migration tracking
+        public Dictionary<string, string> GroupSidMappings { get; set; } = new Dictionary<string, string>();
+        public bool ConflictsResolved { get; set; }
+        public List<string> SkippedGroupSids { get; set; } = new List<string>();
+        public Dictionary<string, string> ResolutionDetails { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> ConflictResolutionMappings { get; set; } = new Dictionary<string, string>();
+        public int TotalConflicts { get; set; }
+        public int ResolvedConflicts { get; set; }
     }
 
     public class IdentityMigrationResult : MigrationResultBase
@@ -72,7 +90,7 @@ namespace MandADiscoverySuite.Services.Migration
         public string TargetGpoName { get; set; } = string.Empty;
         public int SettingsMigrated { get; set; }
         public bool LinkedToOu { get; set; }
-        
+
         // Additional properties required by build errors
         public List<string> UnrestoredItems { get; set; } = new List<string>();
         public string SourceGpoGuid { get; set; } = string.Empty;
@@ -91,6 +109,8 @@ namespace MandADiscoverySuite.Services.Migration
         public List<string> LinkedOUs { get; set; } = new List<string>();
         public bool SecurityFilteringApplied { get; set; }
         public bool WmiFiltersApplied { get; set; }
+        public TimeSpan MigrationDuration { get; set; }
+        public Dictionary<string, object> MigrationDetails { get; set; } = new Dictionary<string, object>();
     }
     
     // Rollback result class for migration operations
@@ -104,8 +124,9 @@ namespace MandADiscoverySuite.Services.Migration
         public DateTime RollbackStarted { get; set; } = DateTime.Now;
         public DateTime RollbackCompleted { get; set; }
         public DateTime RolledBackAt { get; set; } = DateTime.Now;
-        
-        // Additional properties required by build errors  
+        public DateTime RollbackDate => RolledBackAt;
+
+        // Additional properties required by build errors
         public List<string> UnrestoredItems { get; set; } = new List<string>();
         public string RollbackAction { get; set; } = string.Empty;
         public List<string> Warnings { get; set; } = new List<string>();
@@ -164,33 +185,34 @@ namespace MandADiscoverySuite.Services.Migration
     // Validation and support result classes are now in Services.Migration namespace
 
     // GPO-related result types
-    public class GpoReplicationResult
+    public class GpoReplicationResult : MigrationResultBase
     {
-        public bool Success { get; set; }
-        public bool IsSuccess { get; set; }
-        public string ErrorMessage { get; set; } = string.Empty;
         public List<string> PolicySettings { get; set; } = new List<string>();
-        public List<string> SkippedSettings { get; set; } = new List<string>();
         public int ReplicatedSettingCount { get; set; }
-        public List<string> Warnings { get; set; } = new List<string>();
+        public string SourceGpoId { get; set; }
+        public string TargetOuPath { get; set; }
+        public Dictionary<string, object> PolicySettingsDict { get; set; } = new Dictionary<string, object>();
+        public TimeSpan MigrationDuration { get; set; }
+        public Dictionary<string, object> MigrationDetails { get; set; } = new Dictionary<string, object>();
     }
 
-    public class GpoSecurityFilterResult
+    public class GpoSecurityFilterResult : MigrationResultBase
     {
-        public bool Success { get; set; }
-        public bool IsSuccess { get; set; }
-        public string ErrorMessage { get; set; } = string.Empty;
-        public List<string> AppliedFilters { get; set; } = new List<string>();
-        public List<string> Warnings { get; set; } = new List<string>();
+        public string GpoId { get; set; }
+        public List<string> SourceSecurityPrincipals { get; set; } = new List<string>();
+        public List<string> MigratedSecurityPrincipals { get; set; } = new List<string>();
+        public List<string> UnmappedPrincipals { get; set; } = new List<string>();
+        public bool SecurityFilteringEnabled { get; set; }
+        public Dictionary<string, string> PrincipalSidMappings { get; set; } = new Dictionary<string, string>();
     }
 
-    public class WmiFilterMigrationResult
+    public class WmiFilterMigrationResult : MigrationResultBase
     {
-        public bool Success { get; set; }
-        public bool IsSuccess { get; set; }
-        public string ErrorMessage { get; set; } = string.Empty;
-        public string FilterName { get; set; } = string.Empty;
-        public List<string> Warnings { get; set; } = new List<string>();
+        public List<string> MigratedFilters { get; set; } = new List<string>();
+        public List<string> SkippedFilters { get; set; } = new List<string>();
+        public Dictionary<string, string> FilterSidMappings { get; set; } = new Dictionary<string, string>();
+        public bool AllFiltersCompatible { get; set; }
+        public Dictionary<string, List<string>> WmiQueries { get; set; } = new Dictionary<string, List<string>>();
     }
 
     // GroupConflictResolutionResult defined below with full implementation
@@ -198,9 +220,16 @@ namespace MandADiscoverySuite.Services.Migration
     public class GpoBackupResult
     {
         public bool Success { get; set; }
+        public bool IsSuccess => Success;
         public string BackupPath { get; set; } = string.Empty;
         public string BackupLocation { get; set; } = string.Empty;
         public string ErrorMessage { get; set; } = string.Empty;
+        public List<string> FailedBackups { get; set; } = new List<string>();
+        public List<string> Warnings { get; set; } = new List<string>();
+        public long BackupSizeBytes { get; set; }
+        public List<string> BackedUpGpoIds { get; set; } = new List<string>();
+        public DateTime EndTime { get; set; } = DateTime.Now;
+        public List<string> Errors { get; set; } = new List<string>();
     }
 
     // Specific migration result classes for detailed operations
@@ -223,14 +252,14 @@ namespace MandADiscoverySuite.Services.Migration
         public string UserId { get; set; }
         public List<string> AddedGroups { get; set; } = new List<string>();
         public List<string> FailedGroups { get; set; } = new List<string>();
-        
+
         // Additional properties required by build errors
         public string UserSid { get; set; } = string.Empty;
         public List<string> SourceGroups { get; set; } = new List<string>();
         public string SessionId { get; set; } = string.Empty;
         public List<string> MigratedGroups { get; set; } = new List<string>();
-        public Dictionary<string, string> GroupMappings { get; set; } = new Dictionary<string, string>();
         public List<string> UnmappedGroups { get; set; } = new List<string>();
+        public Dictionary<string, string> GroupMappings { get; set; } = new Dictionary<string, string>();
         public List<string> Warnings { get; set; } = new List<string>();
     }
 
@@ -390,9 +419,16 @@ namespace MandADiscoverySuite.Services.Migration
     public class GroupMembershipMigrationResult : MigrationResultBase
     {
         public string GroupId { get; set; }
+        public string GroupSid { get; set; } = string.Empty;
         public List<string> MembersAdded { get; set; } = new List<string>();
         public List<string> MembersFailed { get; set; } = new List<string>();
+        public List<string> SourceMemberSids { get; set; } = new List<string>();
+        public List<string> MigratedMemberSids { get; set; } = new List<string>();
+        public List<string> UnmappedMemberSids { get; set; } = new List<string>();
+        public Dictionary<string, string> MemberSidMappings { get; set; } = new Dictionary<string, string>();
         public bool NestedGroupsProcessed { get; set; }
+        public bool NestedGroupsIncluded { get; set; }
+        public string ExecutedBy { get; set; }
     }
 
     public class GroupConflictResolutionResult : MigrationResultBase
@@ -401,7 +437,13 @@ namespace MandADiscoverySuite.Services.Migration
         public string ResolutionMethod { get; set; }
         public string NewGroupName { get; set; }
         public bool ConflictResolved { get; set; }
-        public List<string> RenamedGroups { get; set; } = new List<string>();
+        public Dictionary<string, string> RenamedGroups { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> ResolutionActions { get; set; } = new Dictionary<string, string>();
+        public List<string> ResolvedGroups { get; set; } = new List<string>();
+        public List<string> UnresolvedConflicts { get; set; } = new List<string>();
+        public int ConflictsIdentified { get; set; }
+        public int ConflictsResolved { get; set; }
+        public string ExecutedBy { get; set; }
     }
 
     public class GroupDependencyValidationResult : MigrationResultBase
@@ -410,6 +452,15 @@ namespace MandADiscoverySuite.Services.Migration
         public List<string> DependentGroups { get; set; } = new List<string>();
         public List<string> MissingDependencies { get; set; } = new List<string>();
         public bool DependenciesValid { get; set; }
+
+        // Additional properties required by build errors
+        public int TotalGroupsAnalyzed { get; set; }
+        public string ExecutedBy { get; set; }
+        public Dictionary<string, List<string>> DependencyMap { get; set; } = new Dictionary<string, List<string>>();
+        public List<string> CircularDependencies { get; set; } = new List<string>();
+        public List<string> OrphanedGroups { get; set; } = new List<string>();
+        public List<string> ValidatedGroups { get; set; } = new List<string>();
+        public bool MigrationSafetyConfirmed { get; set; }
     }
 
     public class ServiceAccountMigrationResult : MigrationResultBase
@@ -418,6 +469,14 @@ namespace MandADiscoverySuite.Services.Migration
         public bool AccountMigrated { get; set; }
         public bool ServiceUpdated { get; set; }
         public List<string> AffectedServices { get; set; } = new List<string>();
+
+        // Additional properties required by build errors
+        public string ExecutedBy { get; set; }
+        public List<string> MigratedServiceAccounts { get; set; } = new List<string>();
+        public Dictionary<string, string> ServiceAccountMappings { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, List<string>> ServicePrincipalNames { get; set; } = new Dictionary<string, List<string>>();
+        public List<string> SkippedServiceAccounts { get; set; } = new List<string>();
+        public bool ManagedServiceAccountsProcessed { get; set; }
     }
 
     // Migration context progress tracking
@@ -446,6 +505,7 @@ namespace MandADiscoverySuite.Services.Migration
         public string GpoGuid { get; set; }
         public List<string> LinkedOus { get; set; } = new List<string>();
         public List<string> FailedLinks { get; set; } = new List<string>();
+        public Dictionary<string, object> LinkingDetails { get; set; } = new Dictionary<string, object>();
     }
 
     public class SecurityFilteringResult : MigrationResultBase
@@ -510,10 +570,16 @@ namespace MandADiscoverySuite.Services.Migration
     public class GroupHierarchyResult : MigrationResultBase
     {
         public int TotalGroups { get; set; }
+        public int TotalGroupsProcessed { get; set; }
+        public int SuccessfullyMigrated { get; set; }
         public int ReplicatedGroups { get; set; }
         public int FailedGroups { get; set; }
         public List<string> CircularDependencies { get; set; } = new List<string>();
+        public List<string> SkippedGroupSids { get; set; } = new List<string>();
         public Dictionary<string, List<string>> HierarchyMap { get; set; } = new Dictionary<string, List<string>>();
+        public Dictionary<string, string> GroupSidMappings { get; set; } = new Dictionary<string, string>();
+        public string ExecutedBy { get; set; }
+        public List<string> MigratedGroupSids { get; set; } = new List<string>();
     }
 
     public class MembershipResult : MigrationResultBase
@@ -614,6 +680,10 @@ namespace MandADiscoverySuite.Services.Migration
         public string ConflictDescription { get; set; }
         public string RecommendedAction { get; set; }
         public Dictionary<string, object> ConflictDetails { get; set; } = new Dictionary<string, object>();
+
+        // Additional properties required by build errors
+        public string GroupName => SourceGroupSid; // Alias for compatibility
+        public string SourceSid => SourceGroupSid; // Alias for compatibility
     }
 
     public class AclConflict

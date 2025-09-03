@@ -3,7 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using MandADiscoverySuite.Models.Migration;
+
+// Aliases to avoid potential conflicts with custom models
+using GraphUser = Microsoft.Graph.Models.User;
+using GraphMailFolder = Microsoft.Graph.Models.MailFolder;
 using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.Migration
@@ -112,7 +117,7 @@ namespace MandADiscoverySuite.Migration
                         requestConfiguration.QueryParameters.Filter = $"mail eq '{mailbox.PrimarySmtpAddress}' or proxyAddresses/any(x:x eq 'SMTP:{mailbox.PrimarySmtpAddress}')";
                     });
 
-                if (users?.Count == 0)
+                if ((users?.Value?.Count ?? 0) == 0)
                 {
                     issues.Add(new ValidationIssue
                     {
@@ -122,7 +127,7 @@ namespace MandADiscoverySuite.Migration
                         RecommendedAction = "Verify the mailbox migration completed successfully"
                     });
                 }
-                else if (users?.Count > 1)
+                else if ((users?.Value?.Count ?? 0) > 1)
                 {
                     issues.Add(new ValidationIssue
                     {
@@ -163,17 +168,17 @@ namespace MandADiscoverySuite.Migration
 
                 // Get mailbox statistics by counting messages in key folders
                 var inboxMessages = await _graphClient.Users[user.Id]
-                    .MailFolders.Inbox
+                    .MailFolders["Inbox"]
                     .Messages
-                    .GetAsync(requestConfiguration => 
+                    .GetAsync(requestConfiguration =>
                     {
                         requestConfiguration.QueryParameters.Top = 1; // Just to check if accessible
                     });
 
                 var sentMessages = await _graphClient.Users[user.Id]
-                    .MailFolders.SentItems
+                    .MailFolders["SentItems"]
                     .Messages
-                    .GetAsync(requestConfiguration => 
+                    .GetAsync(requestConfiguration =>
                     {
                         requestConfiguration.QueryParameters.Top = 1;
                     });
@@ -234,7 +239,7 @@ namespace MandADiscoverySuite.Migration
                     .GetAsync();
 
                 var expectedFolders = new[] { "Inbox", "SentItems", "DeletedItems", "Drafts" };
-                var foundFolders = mailFolders?.Select(f => f.DisplayName).ToList() ?? new List<string>();
+                var foundFolders = mailFolders?.Value?.Select(f => f.DisplayName).ToList() ?? new List<string>();
 
                 foreach (var expectedFolder in expectedFolders)
                 {

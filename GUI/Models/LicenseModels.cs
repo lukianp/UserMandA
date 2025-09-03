@@ -341,6 +341,7 @@ namespace MandADiscoverySuite.Models
         public bool IsSuccess { get; set; }
         public string Operation { get; set; } // Assign, Remove, Update
         public List<string> AssignedSkus { get; set; } = new();
+        public List<string> AssignedLicenses => AssignedSkus; // Alias for compatibility
         public List<string> RemovedSkus { get; set; } = new();
         public List<string> FailedSkus { get; set; } = new();
         public List<string> Errors { get; set; } = new();

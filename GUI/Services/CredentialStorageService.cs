@@ -583,6 +583,202 @@ namespace MandADiscoverySuite.Services
             _logger?.LogInformation("Credential storage service disposed");
         }
 
+        #region ICredentialStorageService Implementation
+
+        /// <summary>
+        /// Store credentials synchronously
+        /// </summary>
+        public bool StoreCredentials(string key, StoredCredentials credentials)
+        {
+            try
+            {
+                if (credentials == null)
+                    return false;
+
+                lock (_lockObject)
+                {
+                    var encryptedCredentials = LoadCredentialsFromFile();
+                    var encryptedCredential = new EncryptedCredential
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        ProfileName = credentials.Key,
+                        Domain = credentials.Domain ?? key,
+                        Username = credentials.Username,
+                        Type = CredentialType.ApiKey,
+                        CreatedDate = credentials.CreatedDate,
+                        LastUsedDate = credentials.LastAccessedDate,
+                        EncryptedPassword = EncryptSecureString(credentials.Password),
+                        IsActive = true,
+                        AdditionalProperties = credentials.AdditionalProperties?.ToDictionary(x => x.Key, x => (object)x.Value) ?? new Dictionary<string, object>()
+                    };
+
+                    encryptedCredentials[key] = encryptedCredential;
+                    SaveCredentialsToFile(encryptedCredentials);
+
+                    _logger?.LogInformation($"Stored credentials for key: {key}");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Failed to store credentials for key {key}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve credentials synchronously
+        /// </summary>
+        public StoredCredentials GetCredentials(string key)
+        {
+            try
+            {
+                lock (_lockObject)
+                {
+                    var encryptedCredentials = LoadCredentialsFromFile();
+                    if (!encryptedCredentials.TryGetValue(key, out var encryptedCredential) ||
+                        !encryptedCredential.IsActive)
+                    {
+                        return null;
+                    }
+
+                    var password = DecryptToSecureString(encryptedCredential.EncryptedPassword);
+
+                    // Update last accessed date
+                    encryptedCredential.LastUsedDate = DateTime.Now;
+                    SaveCredentialsToFile(encryptedCredentials);
+
+                    var storedCredentials = new StoredCredentials
+                    {
+                        Key = key,
+                        Domain = encryptedCredential.Domain,
+                        Username = encryptedCredential.Username,
+                        Password = password,
+                        TenantId = encryptedCredential.AdditionalProperties.ContainsKey("TenantId") ?
+                                  encryptedCredential.AdditionalProperties["TenantId"] as string : null,
+                        ClientId = encryptedCredential.AdditionalProperties.ContainsKey("ClientId") ?
+                                  encryptedCredential.AdditionalProperties["ClientId"] as string : null,
+                        ClientSecret = encryptedCredential.AdditionalProperties.ContainsKey("ClientSecret") ?
+                                      encryptedCredential.AdditionalProperties["ClientSecret"] as string : null,
+                        Scopes = encryptedCredential.AdditionalProperties.ContainsKey("Scopes") ?
+                                encryptedCredential.AdditionalProperties["Scopes"] as string[] : null,
+                        CreatedDate = encryptedCredential.CreatedDate,
+                        LastAccessedDate = encryptedCredential.LastUsedDate,
+                        AdditionalProperties = encryptedCredential.AdditionalProperties?.ToDictionary(x => x.Key, x => x.Value?.ToString() ?? "") ?? new Dictionary<string, string>(),
+                        CredentialType = encryptedCredential.Type.ToString()
+                    };
+
+                    _logger?.LogInformation($"Retrieved credentials for key: {key}");
+                    return storedCredentials;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Failed to retrieve credentials for key {key}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Delete credentials synchronously
+        /// </summary>
+        public bool DeleteCredentials(string key)
+        {
+            try
+            {
+                lock (_lockObject)
+                {
+                    var encryptedCredentials = LoadCredentialsFromFile();
+                    if (encryptedCredentials.TryGetValue(key, out var credential))
+                    {
+                        credential.IsActive = false;
+                        credential.LastUsedDate = DateTime.Now;
+                        SaveCredentialsToFile(encryptedCredentials);
+
+                        _logger?.LogInformation($"Deleted credentials for key: {key}");
+                        return true;
+                    }
+
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Failed to delete credentials for key {key}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Check if credentials exist
+        /// </summary>
+        public bool CredentialExists(string key)
+        {
+            try
+            {
+                lock (_lockObject)
+                {
+                    var encryptedCredentials = LoadCredentialsFromFile();
+                    return encryptedCredentials.TryGetValue(key, out var credential) && credential.IsActive;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Failed to check credentials existence for key {key}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Get all credential keys
+        /// </summary>
+        public IEnumerable<string> GetAllCredentialKeys()
+        {
+            try
+            {
+                lock (_lockObject)
+                {
+                    var encryptedCredentials = LoadCredentialsFromFile();
+                    return encryptedCredentials.Where(x => x.Value.IsActive).Select(x => x.Key);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to retrieve credential keys");
+                return Array.Empty<string>();
+            }
+        }
+
+        /// <summary>
+        /// Clear all credentials
+        /// </summary>
+        public bool ClearAll()
+        {
+            try
+            {
+                lock (_lockObject)
+                {
+                    var encryptedCredentials = LoadCredentialsFromFile();
+                    foreach (var credential in encryptedCredentials.Values)
+                    {
+                        credential.IsActive = false;
+                        credential.LastUsedDate = DateTime.Now;
+                    }
+                    SaveCredentialsToFile(encryptedCredentials);
+
+                    _logger?.LogInformation("Cleared all stored credentials");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to clear all credentials");
+                return false;
+            }
+        }
+
+        #endregion ICredentialStorageService Implementation
+
         // Interface compatibility methods
         public bool StoreDomainCredentials(string domain, string username, SecureString password)
         {

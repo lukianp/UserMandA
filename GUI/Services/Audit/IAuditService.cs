@@ -16,6 +16,11 @@ namespace MandADiscoverySuite.Services.Audit
         Task<bool> LogAuditEventAsync(AuditEvent auditEvent);
 
         /// <summary>
+        /// Records an audit event for migration operations (alternative method name)
+        /// </summary>
+        Task<bool> LogAsync(AuditEvent auditEvent);
+
+        /// <summary>
         /// Retrieves audit events with filtering options
         /// </summary>
         Task<IEnumerable<AuditEvent>> GetAuditEventsAsync(AuditFilter filter = null);
@@ -66,6 +71,16 @@ namespace MandADiscoverySuite.Services.Audit
         /// User principal name who initiated the action
         /// </summary>
         public string UserPrincipalName { get; set; }
+
+        /// <summary>
+        /// Alternative user principal property (for compatibility)
+        /// </summary>
+        public string UserPrincipal => UserPrincipalName;
+
+        /// <summary>
+        /// Alternative object ID property (for compatibility)
+        /// </summary>
+        public string ObjectId => SourceObjectId ?? TargetObjectId;
 
         /// <summary>
         /// Authentication session ID for correlation
@@ -237,7 +252,8 @@ namespace MandADiscoverySuite.Services.Audit
         Rolled_Back,
         Validated,
         Skipped,
-        Cancelled
+        Cancelled,
+        UserSync
     }
 
     /// <summary>
@@ -276,7 +292,8 @@ namespace MandADiscoverySuite.Services.Audit
         Error,
         InProgress,
         Cancelled,
-        Skipped
+        Skipped,
+        Failed
     }
 
     /// <summary>

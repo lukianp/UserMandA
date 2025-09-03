@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Services.Migration;
 using MandADiscoverySuite.Models.Migration;
+using IFDM = MandADiscoverySuite.Migration.IFileDeltaMigrator;
 
 namespace MandADiscoverySuite.MigrationProviders
 {
@@ -15,7 +16,7 @@ namespace MandADiscoverySuite.MigrationProviders
     /// Concrete implementation of file delta migration for file systems.
     /// Handles file changes using timestamps, checksums, and NTFS change logs.
     /// </summary>
-    public class FileDeltaMigrator : IFileDeltaMigrator
+    public class FileDeltaMigrator : IFDM
     {
         private readonly ILogger<FileDeltaMigrator> _logger;
         private readonly Dictionary<string, FileSystemWatcher> _watchers = new();

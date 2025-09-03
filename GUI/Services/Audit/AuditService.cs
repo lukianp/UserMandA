@@ -140,6 +140,11 @@ namespace MandADiscoverySuite.Services.Audit
 
         public async Task<bool> LogAuditEventAsync(AuditEvent auditEvent)
         {
+            return await LogAsync(auditEvent);
+        }
+
+        public async Task<bool> LogAsync(AuditEvent auditEvent)
+        {
             if (auditEvent == null) 
                 throw new ArgumentNullException(nameof(auditEvent));
 

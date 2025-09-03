@@ -7,7 +7,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using MandADiscoverySuite.Models;
+
+// Alias to resolve ambiguity with custom User model
+using GraphUser = Microsoft.Graph.Models.User;
 using MandADiscoverySuite.Models.Identity;
 using MandADiscoverySuite.Models.Migration;
 using MandADiscoverySuite.Migration;
@@ -260,12 +264,9 @@ namespace MandADiscoverySuite.Services.Migration
                     .GetAsync(requestConfiguration => {
                         requestConfiguration.QueryParameters.Filter = $"userPrincipalName eq '{targetUserPrincipalName}'";
                         requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "givenName", "surname", "jobTitle", "department", "companyName", "officeLocation", "businessPhones", "mobilePhone", "streetAddress", "city", "state", "postalCode", "country" };
-                    }, cancellationToken)
-                    .Filter($"userPrincipalName eq '{targetUserPrincipalName}'")
-                    .Select("id")
-                    .GetAsync(cancellationToken);
+                    }, cancellationToken);
 
-                var targetUser = users?.FirstOrDefault();
+                var targetUser = users?.Value.FirstOrDefault();
                 if (targetUser == null)
                 {
                     result.IsSuccess = false;
@@ -274,7 +275,7 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 // Prepare user update object
-                var userUpdate = new Microsoft.Graph.User();
+                var userUpdate = new GraphUser();
                 var extensionAttributes = new Dictionary<string, object>();
 
                 foreach (var attribute in mappedAttributes)
@@ -283,7 +284,7 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 // Update the user
-                await _graphServiceClient.Users[targetUser.Id].PatchAsync(userUpdate, cancellationToken);
+                await _graphServiceClient.Users[targetUser.Id].PatchAsync(userUpdate, null);
 
                 // Update extension attributes if any
                 if (extensionAttributes.Any())

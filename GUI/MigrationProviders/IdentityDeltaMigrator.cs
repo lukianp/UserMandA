@@ -7,6 +7,7 @@ using Microsoft.Graph;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Services.Migration;
+using IIDM = MandADiscoverySuite.Migration.IIdentityDeltaMigrator;
 
 namespace MandADiscoverySuite.MigrationProviders
 {
@@ -14,7 +15,7 @@ namespace MandADiscoverySuite.MigrationProviders
     /// Concrete implementation of identity delta migration for Active Directory and Azure AD.
     /// Handles user account changes, group memberships, and permission updates.
     /// </summary>
-    public class IdentityDeltaMigrator : IIdentityDeltaMigrator
+    public class IdentityDeltaMigrator : IIDM
     {
         private readonly GraphServiceClient _graphClient;
         private readonly DirectoryEntry? _adConnection;

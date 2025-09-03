@@ -7,6 +7,7 @@ using System.Management.Automation;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Services.Migration;
+using IMDRM = MandADiscoverySuite.Migration.IMailDeltaMigrator;
 
 namespace MandADiscoverySuite.MigrationProviders
 {
@@ -14,7 +15,7 @@ namespace MandADiscoverySuite.MigrationProviders
     /// Concrete implementation of mail delta migration for Exchange Online.
     /// Handles mailbox changes, mail items, and incremental synchronization.
     /// </summary>
-    public class MailDeltaMigrator : IMailDeltaMigrator
+    public class MailDeltaMigrator : IMDRM
     {
         private readonly GraphServiceClient _graphClient;
         private readonly PowerShell? _exchangePowerShell;

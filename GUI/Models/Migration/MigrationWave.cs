@@ -175,8 +175,12 @@ namespace MandADiscoverySuite.Models.Migration
         public string Description { get; set; }
         public string GroupType { get; set; }
         public string Sid { get; set; } = string.Empty;
+        public string GroupScope { get; set; } = string.Empty;
         public List<string> Members { get; set; } = new List<string>();
+        public List<string> MemberSids { get; set; } = new List<string>();
+        public List<string> MemberOfSids { get; set; } = new List<string>();
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
+        public Dictionary<string, object> CustomAttributes { get; set; } = new Dictionary<string, object>();
     }
 
     public class FileShareItem
