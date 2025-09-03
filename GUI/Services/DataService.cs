@@ -102,7 +102,7 @@ namespace MandADiscoverySuite.Services
                 var groupTask = LoadGroupsAsync(profileName, false, cancellationToken);
                 var appTask = LoadApplicationsAsync(profileName, false, cancellationToken);
 
-                Task[] tasks = { userTask, infrastructureTask, groupTask, appTask };
+                Task[] tasks = new Task[] { userTask, infrastructureTask, groupTask, appTask };
                 await Task.WhenAll(tasks);
                 
                 var users = userTask.Result.ToList();
@@ -114,10 +114,10 @@ namespace MandADiscoverySuite.Services
                 {
                     ProfileName = profileName,
                     LastUpdated = DateTime.UtcNow,
-                    TotalUsers = users.Count(),
-                    TotalComputers = infrastructure.Count(),
-                    TotalGroups = groups.Count(),
-                    TotalApplications = applications.Count(),
+                    TotalUsers = users.Count,
+                    TotalComputers = infrastructure.Count,
+                    TotalGroups = groups.Count,
+                    TotalApplications = applications.Count,
                     UsersByDepartment = users
                         .Where(u => !string.IsNullOrEmpty(u.Department))
                         .GroupBy(u => u.Department)

@@ -353,6 +353,16 @@ namespace MandADiscoverySuite.MigrationProviders
             return type == MigrationType.SecurityGroup;
         }
 
+        public async Task<MigrationResultBase> MigrateAsync(object item, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            if (item is GroupItem groupItem)
+            {
+                var result = await MigrateAsync(groupItem, context, cancellationToken);
+                return result.Result;
+            }
+            throw new ArgumentException($"Invalid item type. Expected GroupItem, got {item?.GetType()}");
+        }
+
         public async Task<TimeSpan> EstimateDurationAsync(
             GroupItem item, 
             MigrationContext context, 

@@ -73,6 +73,8 @@ namespace MandADiscoverySuite.Models.Migration
         public List<FileShareItem> FileShares { get; set; } = new List<FileShareItem>();
         public List<FileShareItem> Files { get; set; } = new List<FileShareItem>(); // Alias for FileShares
         public List<DatabaseItem> Databases { get; set; } = new List<DatabaseItem>();
+        public List<GroupPolicyItem> GroupPolicies { get; set; } = new List<GroupPolicyItem>();
+        public List<AclItem> AccessControlLists { get; set; } = new List<AclItem>();
         public List<object> CustomItems { get; set; } = new List<object>();
 
         // Wave configuration
@@ -81,7 +83,7 @@ namespace MandADiscoverySuite.Models.Migration
         public List<string> Tags { get; set; } = new List<string>();
         
         // Progress tracking
-        public int TotalItems => Users.Count + Mailboxes.Count + Groups.Count + FileShares.Count + Databases.Count + CustomItems.Count;
+        public int TotalItems => Users.Count + Mailboxes.Count + Groups.Count + FileShares.Count + Databases.Count + GroupPolicies.Count + AccessControlLists.Count + CustomItems.Count;
         public int ProcessedItems { get; set; }
         public int SuccessfulItems { get; set; }
         public int FailedItems { get; set; }
@@ -193,4 +195,5 @@ namespace MandADiscoverySuite.Models.Migration
         public long SizeMB { get; set; }
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
     }
+
 }

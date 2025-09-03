@@ -33,12 +33,15 @@ namespace MandADiscoverySuite.Services.Migration
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime StartTime { get; set; } = DateTime.Now;
         public DateTime EndTime { get; set; } = DateTime.Now;
+        public TimeSpan Duration => EndTime - StartTime; // Calculated property
         public string Operation { get; set; } = string.Empty;
         public bool IsSuccess { get; set; }
         public bool Success => IsSuccess; // Implementing IMigrationResult
         public string Message { get; set; } = string.Empty;
         public string ErrorMessage { get; set; } = string.Empty;
         public List<string> Errors { get; set; } = new List<string>();
+        public List<string> Warnings { get; set; } = new List<string>(); // Added for compilation
+        public string TargetId { get; set; } = string.Empty; // Added for compilation
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
         
         // Additional properties for IdentityMigrator compatibility

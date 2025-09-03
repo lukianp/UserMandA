@@ -153,9 +153,9 @@ namespace MandADiscoverySuite.Services.Migration
                     result.Errors.Add($"Circular dependencies detected: {string.Join(", ", graph.CircularDependencies)}");
                     foreach (var circular in graph.CircularDependencies)
                     {
-                        result.Issues.Add(new ValidationIssue
+                        result.Issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                         {
-                            Severity = "Critical",
+                            Severity = ValidationSeverity.Critical,
                             Category = "Dependency",
                             ItemName = circular,
                             Description = "Circular dependency prevents migration",
@@ -705,7 +705,12 @@ namespace MandADiscoverySuite.Services.Migration
                 {
                     if (!graph.Dependencies.ContainsKey(dep))
                     {
-                        result.Warnings.Add($"External dependency detected: {dependency.Key} depends on {dep} which is not included in migration");
+                        result.Issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
+                        {
+                            Severity = ValidationSeverity.Warning,
+                            Category = "Dependency",
+                            Description = $"External dependency detected: {dependency.Key} depends on {dep} which is not included in migration"
+                        });
                     }
                 }
             }
@@ -751,7 +756,12 @@ namespace MandADiscoverySuite.Services.Migration
 
             if (estimatedDuration > context.OperationTimeout)
             {
-                result.Warnings.Add($"Estimated migration duration ({estimatedDuration}) exceeds configured timeout ({context.OperationTimeout})");
+                result.Issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
+                {
+                    Severity = ValidationSeverity.Warning,
+                    Category = "Performance",
+                    Description = $"Estimated migration duration ({estimatedDuration}) exceeds configured timeout ({context.OperationTimeout})"
+                });
             }
         }
     }

@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using Microsoft.Identity.Client;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Models;
@@ -505,7 +506,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 var graphClient = await GetGraphClientAsync(target.TenantId);
 
                 // Create user object
-                var user = new User
+                var user = new Microsoft.Graph.Models.User
                 {
                     UserPrincipalName = userData.UserPrincipalName,
                     DisplayName = userData.DisplayName,
@@ -521,7 +522,7 @@ namespace MandADiscoverySuite.MigrationProviders
                 if (settings.GeneratePassword)
                 {
                     var password = await GenerateSecurePasswordAsync(settings.PasswordRequirements);
-                    user.PasswordProfile = new PasswordProfile
+                    user.PasswordProfile = new Microsoft.Graph.Models.PasswordProfile
                     {
                         Password = password,
                         ForceChangePasswordNextSignIn = settings.PasswordRequirements.ForceChangeOnFirstLogin
@@ -650,7 +651,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
                 // Get current user state
                 var currentUser = await graphClient.Users[targetUserId].GetAsync();
-                var updateUser = new User();
+                var updateUser = new Microsoft.Graph.Models.User();
 
                 // Determine what attributes to update
                 var attributesToUpdate = new Dictionary<string, object>();
@@ -963,9 +964,9 @@ namespace MandADiscoverySuite.MigrationProviders
                 var password = await GenerateSecurePasswordAsync(requirements);
                 var graphClient = await GetGraphClientAsync(target.TenantId);
 
-                var user = new User
+                var user = new Microsoft.Graph.Models.User
                 {
-                    PasswordProfile = new PasswordProfile
+                    PasswordProfile = new Microsoft.Graph.Models.PasswordProfile
                     {
                         Password = password,
                         ForceChangePasswordNextSignIn = requirements.ForceChangeOnFirstLogin
@@ -1228,18 +1229,18 @@ namespace MandADiscoverySuite.MigrationProviders
                                 requestConfiguration.QueryParameters.Filter = $"userPrincipalName eq '{user.UserPrincipalName}'";
                             });
 
-                        if (existingUsers.Any())
+                        if (existingUsers.Value?.Any() == true)
                         {
                             conflicts.Add(new UserMigrationConflict
                             {
                                 SourceUserPrincipalName = user.UserPrincipalName,
                                 ConflictType = "UserPrincipalName",
                                 SourceValue = user.UserPrincipalName,
-                                ConflictingValue = existingUsers.First().UserPrincipalName,
+                                ConflictingValue = existingUsers.Value!.First().UserPrincipalName,
                                 Severity = "High",
                                 RecommendedAction = "Rename or use existing account",
                                 Description = "User principal name already exists in target tenant",
-                                ExistingUserId = existingUsers.First().Id,
+                                ExistingUserId = existingUsers.Value!.First().Id,
                                 ResolutionOptions = new List<string> { "Rename", "Use Existing", "Skip" }
                             });
                         }
@@ -1253,18 +1254,18 @@ namespace MandADiscoverySuite.MigrationProviders
                                 requestConfiguration.QueryParameters.Filter = $"mail eq '{user.Mail}'";
                             });
 
-                        if (existingUsers.Any())
+                        if (existingUsers.Value?.Any() == true)
                         {
                             conflicts.Add(new UserMigrationConflict
                             {
                                 SourceUserPrincipalName = user.UserPrincipalName,
                                 ConflictType = "Mail",
                                 SourceValue = user.Mail,
-                                ConflictingValue = existingUsers.First().Mail,
+                                ConflictingValue = existingUsers.Value!.First().Mail,
                                 Severity = "Medium",
                                 RecommendedAction = "Update email address",
                                 Description = "Email address already exists in target tenant",
-                                ExistingUserId = existingUsers.First().Id,
+                                ExistingUserId = existingUsers.Value!.First().Id,
                                 ResolutionOptions = new List<string> { "Rename", "Use Existing", "Skip" }
                             });
                         }

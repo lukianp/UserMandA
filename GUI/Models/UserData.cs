@@ -26,5 +26,11 @@ namespace MandADiscoverySuite.Models
         public bool IsSelected { get; set; } = false; // Mutable property for UI selection
         public string? Id => UserPrincipalName; // Use UPN as unique identifier
         public string? Domain { get; init; } = null; // Can be extracted from UPN
+        
+        // Additional properties for IdentityMigrator compatibility
+        public string? FirstName { get; init; } = null;
+        public string? LastName { get; init; } = null;
+        public string? Country { get; init; } = null;
+        public string? Company => CompanyName; // Map to existing CompanyName property
     };
 }

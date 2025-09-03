@@ -107,6 +107,16 @@ namespace MandADiscoverySuite.MigrationProviders
             return type == MigrationType.ACL;
         }
 
+        public async Task<MigrationResultBase> MigrateAsync(object item, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            if (item is AclMigrationItem aclItem)
+            {
+                var result = await MigrateAsync(aclItem, context, cancellationToken);
+                return result.Result;
+            }
+            throw new ArgumentException($"Invalid item type. Expected AclMigrationItem, got {item?.GetType()}");
+        }
+
         public async Task<TimeSpan> EstimateDurationAsync(
             AclMigrationItem item, 
             MigrationContext context, 

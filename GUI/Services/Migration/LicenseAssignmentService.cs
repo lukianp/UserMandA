@@ -42,7 +42,7 @@ namespace MandADiscoverySuite.Services.Migration
             try
             {
                 _logger.LogInformation($"Starting license assignment for user: {userPrincipalName}, Licenses: {string.Join(", ", requestedLicenses)}");
-                context.ReportProgress?.Invoke(new Migration.MigrationProgress
+                context.ReportProgress?.Invoke(new MandADiscoverySuite.Migration.MigrationProgress
                 {
                     CurrentItem = "License Assignment",
                     Percentage = 0,
@@ -63,7 +63,7 @@ namespace MandADiscoverySuite.Services.Migration
                     }
                 }
 
-                context.ReportProgress?.Invoke(new Migration.MigrationProgress
+                context.ReportProgress?.Invoke(new MandADiscoverySuite.Migration.MigrationProgress
                 {
                     CurrentItem = "License Assignment",
                     Percentage = 25,
@@ -83,7 +83,7 @@ namespace MandADiscoverySuite.Services.Migration
                     result.Warnings.Add($"License {prohibited} prohibited by business rule: {businessRuleValidation.ViolationReasons.GetValueOrDefault(prohibited, "Policy violation")}");
                 }
 
-                context.ReportProgress?.Invoke(new Migration.MigrationProgress
+                context.ReportProgress?.Invoke(new MandADiscoverySuite.Migration.MigrationProgress
                 {
                     CurrentItem = "License Assignment",
                     Percentage = 50,
@@ -123,7 +123,7 @@ namespace MandADiscoverySuite.Services.Migration
                     }
                 }
 
-                context.ReportProgress?.Invoke(new Migration.MigrationProgress
+                context.ReportProgress?.Invoke(new MandADiscoverySuite.Migration.MigrationProgress
                 {
                     CurrentItem = "License Assignment",
                     Percentage = 100,

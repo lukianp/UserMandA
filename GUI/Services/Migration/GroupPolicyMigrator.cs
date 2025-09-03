@@ -236,6 +236,16 @@ namespace MandADiscoverySuite.Services.Migration
             return type == MigrationType.GPO;
         }
 
+        public async Task<MigrationResultBase> MigrateAsync(object item, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            if (item is GroupPolicyItem gpoItem)
+            {
+                var result = await MigrateAsync(gpoItem, context, cancellationToken);
+                return result.Result;
+            }
+            throw new ArgumentException($"Invalid item type. Expected GroupPolicyItem, got {item?.GetType()}");
+        }
+
         public async Task<TimeSpan> EstimateDurationAsync(GroupPolicyItem item, MigrationContext context, CancellationToken cancellationToken = default)
         {
             // Base duration for GPO creation and structure

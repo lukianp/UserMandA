@@ -410,6 +410,62 @@ namespace MandADiscoverySuite.Models
         /// </summary>
         public List<string> CircularDependencies { get; set; } = new List<string>();
 
+        /// <summary>
+        /// Processing order for migration items (topological sort result)
+        /// </summary>
+        public List<string> ProcessingOrder { get; set; } = new List<string>();
+
+        /// <summary>
+        /// Gets the topological execution order for migration items
+        /// </summary>
+        public List<string> GetExecutionOrder()
+        {
+            var result = new List<string>();
+            var visited = new HashSet<string>();
+            var temp = new HashSet<string>();
+
+            // Perform topological sort using DFS
+            foreach (var node in Dependencies.Keys)
+            {
+                if (!visited.Contains(node))
+                {
+                    TopologicalSortDFS(node, visited, temp, result);
+                }
+            }
+
+            // Reverse to get correct order (items with no dependencies first)
+            result.Reverse();
+            return result;
+        }
+
+        private void TopologicalSortDFS(string node, HashSet<string> visited, HashSet<string> temp, List<string> result)
+        {
+            if (temp.Contains(node))
+            {
+                // Circular dependency detected
+                if (!CircularDependencies.Contains(node))
+                    CircularDependencies.Add(node);
+                return;
+            }
+            
+            if (visited.Contains(node))
+                return;
+
+            temp.Add(node);
+            
+            if (Dependencies.TryGetValue(node, out var dependencies))
+            {
+                foreach (var dep in dependencies)
+                {
+                    TopologicalSortDFS(dep, visited, temp, result);
+                }
+            }
+
+            temp.Remove(node);
+            visited.Add(node);
+            result.Add(node);
+        }
+
         protected virtual bool SetProperty<T>(ref T field, T value, [System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
         {
             if (Equals(field, value)) return false;

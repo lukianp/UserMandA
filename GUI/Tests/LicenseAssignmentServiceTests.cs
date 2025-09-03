@@ -214,12 +214,18 @@ namespace MandADiscoverySuite.Tests
         public async Task ApplyLicenseMappingRulesAsync_WithMatchingUser_ReturnsRecommendedSkus()
         {
             // Arrange
-            var user = new UserData
-            {
-                UserPrincipalName = "test@company.com",
-                Department = "IT",
-                JobTitle = "Developer"
-            };
+            var user = new UserData(
+                DisplayName: "Test User",
+                UserPrincipalName: "test@company.com",
+                Mail: "test@company.com", 
+                Department: "IT",
+                JobTitle: "Developer",
+                AccountEnabled: true,
+                SamAccountName: "test",
+                CompanyName: "Test Company",
+                ManagerDisplayName: null,
+                CreatedDateTime: DateTimeOffset.Now
+            );
 
             var rules = new List<LicenseMappingRule>
             {
@@ -279,8 +285,8 @@ namespace MandADiscoverySuite.Tests
             // Arrange
             var users = new List<UserData>
             {
-                new UserData { UserPrincipalName = "user1@test.com", DisplayName = "User 1" },
-                new UserData { UserPrincipalName = "user2@test.com", DisplayName = "User 2" }
+                new UserData("User 1", "user1@test.com", "user1@test.com", null, null, true, "user1", null, null, DateTimeOffset.Now),
+                new UserData("User 2", "user2@test.com", "user2@test.com", null, null, true, "user2", null, null, DateTimeOffset.Now)
             };
 
             var waveLicenseSettings = new WaveLicenseSettings
@@ -307,12 +313,7 @@ namespace MandADiscoverySuite.Tests
             // Arrange
             var users = new List<UserData>
             {
-                new UserData 
-                { 
-                    UserPrincipalName = "user@test.com", 
-                    DisplayName = "Test User",
-                    Department = "Sales"
-                }
+                new UserData("Test User", "user@test.com", "user@test.com", "Sales", null, true, "user", null, null, DateTimeOffset.Now)
             };
 
             var settings = new WaveLicenseSettings

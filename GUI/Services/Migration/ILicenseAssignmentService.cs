@@ -59,10 +59,12 @@ namespace MandADiscoverySuite.Services.Migration
     /// </summary>
     public class LicenseAssignmentResult
     {
+        public string UserId { get; set; } = string.Empty; // Added for IdentityMigrator compatibility
         public string UserPrincipalName { get; set; }
         public List<string> AssignedLicenses { get; set; } = new List<string>();
         public List<string> FailedLicenses { get; set; } = new List<string>();
         public bool IsSuccess { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty; // Added for IdentityMigrator compatibility
         public List<string> Errors { get; set; } = new List<string>();
         public List<string> Warnings { get; set; } = new List<string>();
         public DateTime AssignmentDate { get; set; } = DateTime.Now;

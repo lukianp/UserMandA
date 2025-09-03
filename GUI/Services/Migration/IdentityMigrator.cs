@@ -143,7 +143,7 @@ namespace MandADiscoverySuite.Services.Migration
                     context.AddSidMapping(GetUserSid(item), targetUserSid);
                 }
 
-                context.ReportProgress("Identity Migration", 100, "Migration completed successfully");
+                context.ReportProgressUpdate("Identity Migration", 100, "Migration completed successfully");
                 context.AuditLogger?.LogMigrationComplete(context.SessionId, "User", item.UserPrincipalName, true);
 
                 _logger.LogInformation($"Identity migration completed successfully for user: {item.UserPrincipalName}");
@@ -208,7 +208,7 @@ namespace MandADiscoverySuite.Services.Migration
                 var licenseValidation = await ValidateLicensingRequirementsAsync(item, context, cancellationToken);
                 if (!licenseValidation.IsValid)
                 {
-                    result.Errors.AddRange(licenseValidation.ValidationMessages);
+                    result.Errors.AddRange(licenseValidation.Issues.Select(i => i.Description));
                 }
 
                 // Validate dependencies
@@ -301,6 +301,19 @@ namespace MandADiscoverySuite.Services.Migration
         {
             await Task.CompletedTask; // Async compliance
             return type == MigrationType.User || type == MigrationType.UserProfile;
+        }
+
+        /// <summary>
+        /// Untyped migration method for base interface compliance
+        /// </summary>
+        public async Task<MigrationResultBase> MigrateAsync(object item, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            if (item is UserProfileItem userProfile)
+            {
+                var result = await MigrateAsync(userProfile, context, cancellationToken);
+                return result.Result;
+            }
+            throw new ArgumentException($"Invalid item type. Expected UserProfileItem, got {item?.GetType()}");
         }
 
         /// <summary>

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Migration;
 
 namespace MandADiscoverySuite.Services
 {
@@ -483,13 +484,13 @@ namespace MandADiscoverySuite.Services
             if (string.IsNullOrEmpty(request.ResourceType))
             {
                 result.Errors.Add("Resource type is required");
-                result.IsValid = false;
+                result.Severity = ValidationSeverity.Error;
             }
 
             if (request.RequestedCount <= 0)
             {
                 result.Errors.Add("Requested count must be greater than zero");
-                result.IsValid = false;
+                result.Severity = ValidationSeverity.Error;
             }
 
             return result;

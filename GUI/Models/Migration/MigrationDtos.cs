@@ -96,6 +96,11 @@ namespace MandADiscoverySuite.Models.Migration
         public int ViewCount { get; set; }
         public int StoredProcedureCount { get; set; }
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
+        
+        // Additional properties for migration operations
+        public string SourceServer { get; set; } = string.Empty;
+        public string TargetServer { get; set; } = string.Empty;
+        public Dictionary<string, object> CustomProperties { get; set; } = new Dictionary<string, object>();
     }
 
     /// <summary>

@@ -394,6 +394,7 @@ namespace MandADiscoverySuite.Services.Migration
         public string ResolutionMethod { get; set; }
         public string NewGroupName { get; set; }
         public bool ConflictResolved { get; set; }
+        public List<string> RenamedGroups { get; set; } = new List<string>();
     }
 
     public class GroupDependencyValidationResult : MigrationResultBase

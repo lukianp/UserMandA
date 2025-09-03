@@ -62,11 +62,11 @@ namespace MandADiscoverySuite.Services.Migration
                 _logger.LogInformation($"Collected {allItems.Count} migration items from {wave.Batches.Count} batches");
 
                 // Step 2: Build dependency graph
-                context.ReportProgress("Wave Execution", 10, "Building dependency graph");
+                context.ReportProgressUpdate("Wave Execution", 10, "Building dependency graph");
                 var dependencyGraph = await _dependencyEngine.BuildDependencyGraphAsync(allItems, context, cancellationToken);
                 
                 // Step 3: Validate dependencies
-                context.ReportProgress("Wave Execution", 20, "Validating dependencies");
+                context.ReportProgressUpdate("Wave Execution", 20, "Validating dependencies");
                 var validationResult = await _dependencyEngine.ValidateDependenciesAsync(dependencyGraph, context, cancellationToken);
                 if (!validationResult.IsValid)
                 {
@@ -77,7 +77,7 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 // Step 4: Order items into execution stages
-                context.ReportProgress("Wave Execution", 30, "Creating execution stages");
+                context.ReportProgressUpdate("Wave Execution", 30, "Creating execution stages");
                 var migrationStages = await _dependencyEngine.OrderMigrationStagesAsync(dependencyGraph, ConvertToBasicWave(wave), cancellationToken);
                 _logger.LogInformation($"Created {migrationStages.Count()} migration stages");
 
@@ -92,7 +92,7 @@ namespace MandADiscoverySuite.Services.Migration
                     cancellationToken.ThrowIfCancellationRequested();
 
                     var progressBase = 30 + (stageNumber * 60 / migrationStages.Count());
-                    context.ReportProgress("Wave Execution", progressBase, $"Executing stage {stageNumber} of {migrationStages.Count()}");
+                    context.ReportProgressUpdate("Wave Execution", progressBase, $"Executing stage {stageNumber} of {migrationStages.Count()}");
 
                     var stageResult = await ExecuteMigrationStageAsync(stage, context, cancellationToken);
                     
@@ -110,7 +110,7 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 // Step 6: Finalize wave execution
-                context.ReportProgress("Wave Execution", 95, "Finalizing wave execution");
+                context.ReportProgressUpdate("Wave Execution", 95, "Finalizing wave execution");
                 await FinalizeMigrationWaveAsync(wave, completedItems, failedItems, context, cancellationToken);
 
                 // Build final result
@@ -121,7 +121,7 @@ namespace MandADiscoverySuite.Services.Migration
                 result.FailedItems = failedItems.Count;
                 result.SuccessRate = allItems.Count > 0 ? (double)completedItems.Count / allItems.Count * 100 : 100;
 
-                context.ReportProgress("Wave Execution", 100, "Wave execution completed");
+                context.ReportProgressUpdate("Wave Execution", 100, "Wave execution completed");
                 context.AuditLogger?.LogMigrationComplete(context.SessionId, "Wave", wave.Name, result.IsSuccess);
 
                 _logger.LogInformation($"Migration wave completed: {wave.Name}. Success: {result.IsSuccess}, Completed: {completedItems.Count}, Failed: {failedItems.Count}");
@@ -685,6 +685,16 @@ namespace MandADiscoverySuite.Services.Migration
             return await _identityMigrator.SupportsAsync(type, context, cancellationToken);
         }
 
+        public async Task<MigrationResultBase> MigrateAsync(object item, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            if (item is MigrationItem migrationItem)
+            {
+                var result = await MigrateAsync(migrationItem, context, cancellationToken);
+                return result.Result;
+            }
+            throw new ArgumentException($"Invalid item type. Expected MigrationItem, got {item?.GetType()}");
+        }
+
         public async Task<TimeSpan> EstimateDurationAsync(MigrationItem item, MigrationContext context, CancellationToken cancellationToken = default)
         {
             var userProfile = CreateUserProfileFromItem(item);
@@ -756,6 +766,16 @@ namespace MandADiscoverySuite.Services.Migration
             await Task.CompletedTask;
             return TimeSpan.FromMinutes(15); // Default estimate
         }
+
+        public async Task<MigrationResultBase> MigrateAsync(object item, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            if (item is MigrationItem migrationItem)
+            {
+                var result = await MigrateAsync(migrationItem, context, cancellationToken);
+                return result.Result;
+            }
+            throw new ArgumentException($"Invalid item type. Expected MigrationItem, got {item?.GetType()}");
+        }
     }
 
     public class FileMigratorAdapter : IMigrationProvider<MigrationItem, FileMigrationResult>
@@ -795,6 +815,16 @@ namespace MandADiscoverySuite.Services.Migration
             await Task.CompletedTask;
             return TimeSpan.FromMinutes(30); // Default estimate
         }
+
+        public async Task<MigrationResultBase> MigrateAsync(object item, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            if (item is MigrationItem migrationItem)
+            {
+                var result = await MigrateAsync(migrationItem, context, cancellationToken);
+                return result.Result;
+            }
+            throw new ArgumentException($"Invalid item type. Expected MigrationItem, got {item?.GetType()}");
+        }
     }
 
     public class SqlMigratorAdapter : IMigrationProvider<MigrationItem, SqlMigrationResult>
@@ -833,6 +863,16 @@ namespace MandADiscoverySuite.Services.Migration
         {
             await Task.CompletedTask;
             return TimeSpan.FromHours(1); // Default estimate
+        }
+
+        public async Task<MigrationResultBase> MigrateAsync(object item, MigrationContext context, CancellationToken cancellationToken = default)
+        {
+            if (item is MigrationItem migrationItem)
+            {
+                var result = await MigrateAsync(migrationItem, context, cancellationToken);
+                return result.Result;
+            }
+            throw new ArgumentException($"Invalid item type. Expected MigrationItem, got {item?.GetType()}");
         }
     }
 }

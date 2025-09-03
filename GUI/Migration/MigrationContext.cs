@@ -13,6 +13,9 @@ namespace MandADiscoverySuite.Migration
         void LogError(string operationType, string error, Exception exception = null);
         void LogProgress(string operationType, int completed, int total);
         void LogMigrationComplete(object migrationResult);
+        void LogMigrationComplete(string sessionId, string migrationType, string itemName, bool success, string errorMessage = null);
+        void LogMigrationStart(string sessionId, string migrationType, string itemName, string initiatedBy);
+        void LogRollback(string sessionId, string migrationType, string itemName, bool success, string errorMessage = null);
     }
     
     /// <summary>
@@ -39,6 +42,29 @@ namespace MandADiscoverySuite.Migration
         public void LogMigrationComplete(object migrationResult)
         {
             System.Diagnostics.Debug.WriteLine($"[{DateTime.Now}] MIGRATION COMPLETE: {migrationResult}");
+        }
+
+        public void LogMigrationComplete(string sessionId, string migrationType, string itemName, bool success, string errorMessage = null)
+        {
+            var status = success ? "SUCCESS" : "FAILED";
+            var message = $"[{DateTime.Now}] MIGRATION COMPLETE: {migrationType} '{itemName}' - {status}";
+            if (!string.IsNullOrEmpty(errorMessage))
+                message += $" - Error: {errorMessage}";
+            System.Diagnostics.Debug.WriteLine(message);
+        }
+
+        public void LogMigrationStart(string sessionId, string migrationType, string itemName, string initiatedBy)
+        {
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now}] MIGRATION START: {migrationType} '{itemName}' initiated by {initiatedBy}");
+        }
+
+        public void LogRollback(string sessionId, string migrationType, string itemName, bool success, string errorMessage = null)
+        {
+            var status = success ? "SUCCESS" : "FAILED";
+            var message = $"[{DateTime.Now}] ROLLBACK: {migrationType} '{itemName}' - {status}";
+            if (!string.IsNullOrEmpty(errorMessage))
+                message += $" - Error: {errorMessage}";
+            System.Diagnostics.Debug.WriteLine(message);
         }
     }
     /// <summary>
@@ -136,6 +162,20 @@ namespace MandADiscoverySuite.Migration
             {
                 mappings[sourceSid] = targetSid;
             }
+        }
+
+        /// <summary>
+        /// Helper method to report progress with multiple parameters
+        /// </summary>
+        public void ReportProgressUpdate(string currentItem, int percentage, string message)
+        {
+            ReportProgress?.Invoke(new MigrationProgress
+            {
+                CurrentItem = currentItem,
+                Percentage = percentage,
+                Message = message,
+                LastUpdate = DateTime.Now
+            });
         }
     }
 

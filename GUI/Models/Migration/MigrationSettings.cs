@@ -57,6 +57,12 @@ namespace MandADiscoverySuite.Models.Migration
         // Custom settings for specific migration types
         public Dictionary<string, object> CustomSettings { get; set; } = new Dictionary<string, object>();
         
+        // Additional properties for IdentityMigrator compatibility
+        public string ConflictResolution { get; set; } = "Prompt";
+        public string MigrationStrategy { get; set; } = "Create";
+        public bool EnablePasswordProvisioning { get; set; } = false;
+        public string PasswordRequirements { get; set; } = "TempPassword";
+        
         // Scheduling
         public DateTime? ScheduledStart { get; set; }
         public List<TimeSpan> BlackoutWindows { get; set; } = new List<TimeSpan>();

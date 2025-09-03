@@ -16,6 +16,11 @@ namespace MandADiscoverySuite.Services.Migration
         /// Check if this provider supports the migration type and context
         /// </summary>
         Task<bool> SupportsAsync(MigrationType type, MigrationContext context, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Migrate an item from source to target environment (untyped)
+        /// </summary>
+        Task<MigrationResultBase> MigrateAsync(object item, MigrationContext context, CancellationToken cancellationToken = default);
     }
 
     /// <summary>

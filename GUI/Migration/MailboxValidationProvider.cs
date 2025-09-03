@@ -139,7 +139,7 @@ namespace MandADiscoverySuite.Migration
                 {
                     Severity = ValidationSeverity.Error,
                     Category = "Mailbox Existence",
-                    Description = $"Error checking mailbox existence: {ex.Error.Message}",
+                    Description = $"Error checking mailbox existence: {ex.Message}",
                     RecommendedAction = "Verify Graph API permissions and network connectivity"
                 });
             }
@@ -158,7 +158,7 @@ namespace MandADiscoverySuite.Migration
                         requestConfiguration.QueryParameters.Filter = $"mail eq '{mailbox.PrimarySmtpAddress}'";
                     });
 
-                var user = users?.FirstOrDefault();
+                var user = users?.Value?.FirstOrDefault();
                 if (user == null) return;
 
                 // Get mailbox statistics by counting messages in key folders
@@ -191,7 +191,7 @@ namespace MandADiscoverySuite.Migration
                     });
                 }
             }
-            catch (ServiceException ex) when (ex.Error.Code == "Forbidden" || ex.Error.Code == "Unauthorized")
+            catch (ServiceException ex) when (ex.ResponseHeaders?.Contains("403") == true || ex.ResponseHeaders?.Contains("401") == true || ex.Message.Contains("Forbidden") || ex.Message.Contains("Unauthorized"))
             {
                 issues.Add(new ValidationIssue
                 {
@@ -207,7 +207,7 @@ namespace MandADiscoverySuite.Migration
                 {
                     Severity = ValidationSeverity.Warning,
                     Category = "Mailbox Content",
-                    Description = $"Error validating mailbox content: {ex.Error.Message}",
+                    Description = $"Error validating mailbox content: {ex.Message}",
                     RecommendedAction = "Manually verify mailbox content completeness"
                 });
             }
@@ -225,7 +225,7 @@ namespace MandADiscoverySuite.Migration
                         requestConfiguration.QueryParameters.Filter = $"mail eq '{mailbox.PrimarySmtpAddress}'";
                     });
 
-                var user = users?.FirstOrDefault();
+                var user = users?.Value?.FirstOrDefault();
                 if (user == null) return;
 
                 // Check for standard mail folders
@@ -256,7 +256,7 @@ namespace MandADiscoverySuite.Migration
                 {
                     Severity = ValidationSeverity.Warning,
                     Category = "Folder Structure",
-                    Description = $"Error validating folder structure: {ex.Error.Message}",
+                    Description = $"Error validating folder structure: {ex.Message}",
                     RecommendedAction = "Manually verify mailbox folder structure"
                 });
             }
@@ -365,7 +365,7 @@ namespace MandADiscoverySuite.Migration
 
                 var result = new RollbackResult
                 {
-                    Success = true,
+                    IsSuccess = true,
                     Message = "Mailbox rollback initiated - manual verification required"
                 };
                 result.Warnings.AddRange(warnings);

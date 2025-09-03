@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace MandADiscoverySuite.Migration
 {
@@ -72,6 +73,16 @@ namespace MandADiscoverySuite.Migration
         /// When the validation was performed.
         /// </summary>
         public DateTime ValidatedAt { get; set; } = DateTime.Now;
+
+        /// <summary>
+        /// Whether the validation is considered successful overall.
+        /// </summary>
+        public bool IsValid => Severity == ValidationSeverity.Success || Severity == ValidationSeverity.Warning;
+
+        /// <summary>
+        /// Collection of validation warnings.
+        /// </summary>
+        public List<ValidationIssue> Warnings => Issues.Where(i => i.Severity == ValidationSeverity.Warning).ToList();
 
         /// <summary>
         /// Whether this object can be rolled back.
@@ -165,9 +176,28 @@ namespace MandADiscoverySuite.Migration
         public string RecommendedAction { get; set; } = string.Empty;
 
         /// <summary>
+        /// Name of the item that has this validation issue.
+        /// </summary>
+        public string ItemName { get; set; } = string.Empty;
+
+        /// <summary>
         /// Technical details about the issue.
         /// </summary>
         public string TechnicalDetails { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Message describing the issue (alias for Description for compatibility).
+        /// </summary>
+        public string Message 
+        { 
+            get => Description; 
+            set => Description = value; 
+        }
+
+        /// <summary>
+        /// ID of the item that has this issue.
+        /// </summary>
+        public string ItemId { get; set; } = string.Empty;
     }
 
 
