@@ -369,7 +369,7 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 result.IsSuccess = result.Errors.Count == 0;
-                result.FilteringDetails = new Dictionary<string, object>
+                result.Properties["FilteringDetails"] = new Dictionary<string, object>
                 {
                     ["totalFilters"] = filteredUsers.Count + filteredGroups.Count,
                     ["appliedFilters"] = result.AppliedFilters.Count,
@@ -425,7 +425,7 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 result.IsSuccess = result.Errors.Count == 0;
-                result.FilterDetails = new Dictionary<string, object>
+                result.Properties["FilterDetails"] = new Dictionary<string, object>
                 {
                     ["totalFilters"] = wmiFilters.Count,
                     ["migratedFilters"] = result.MigratedFilters.Count,
@@ -467,14 +467,11 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 // Check WMI filter compatibility
-                foreach (var wmiFilter in gpo.WmiFilters)
+                foreach (var wmiFilterId in gpo.WmiFilters)
                 {
-                    var wmiValidation = await ValidateWmiQueriesAsync(wmiFilter.Queries, context, cancellationToken);
-                    if (!wmiValidation.IsValid)
-                    {
-                        result.CompatibilityIssues.AddRange(wmiValidation.Issues.Select(issue => 
-                            $"WMI filter '{wmiFilter.Name}': {issue}"));
-                    }
+                    // Note: In a complete implementation, this would resolve the ID to a WmiFilterItem
+                    // For now, we'll add a placeholder validation
+                    result.CompatibilityIssues.Add($"WMI filter '{wmiFilterId}': Validation pending (requires WMI filter lookup)");
                 }
 
                 // Check security filtering SID compatibility
@@ -502,7 +499,7 @@ namespace MandADiscoverySuite.Services.Migration
                 }
 
                 result.IsCompatible = result.CompatibilityIssues.Count == 0;
-                result.CompatibilityDetails = new Dictionary<string, object>
+                result.Properties["CompatibilityDetails"] = new Dictionary<string, object>
                 {
                     ["totalSettings"] = gpo.Settings.Count,
                     ["supportedSettings"] = gpo.Settings.Count - result.UnsupportedSettings.Count,
@@ -590,7 +587,7 @@ namespace MandADiscoverySuite.Services.Migration
                     }
                 }
 
-                result.ResolutionDetails = new Dictionary<string, object>
+                result.Properties["ResolutionDetails"] = new Dictionary<string, object>
                 {
                     ["resolutionStrategy"] = strategy.ToString(),
                     ["resolutionDate"] = DateTime.Now,
@@ -665,7 +662,7 @@ namespace MandADiscoverySuite.Services.Migration
                     // Report progress
                     var completedGpos = result.SuccessfulMigrations + result.FailedMigrations;
                     var progressPercentage = (double)completedGpos / result.TotalGpos * 100;
-                    context.ReportProgress("Bulk GPO Migration", progressPercentage,
+                    context.ReportProgressUpdate("Bulk GPO Migration", progressPercentage,
                         $"Processed {completedGpos}/{result.TotalGpos} GPOs");
                 }
 

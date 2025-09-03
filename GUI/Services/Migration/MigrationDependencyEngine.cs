@@ -50,7 +50,8 @@ namespace MandADiscoverySuite.Services.Migration
                 await ProcessDatabaseDependencies(itemsByType, graph, context, cancellationToken);
 
                 // Calculate processing order using topological sort
-                graph.ProcessingOrder = PerformTopologicalSort(graph.Dependencies);
+                var topologicalOrder = PerformTopologicalSort(graph.Dependencies);
+                graph.ProcessingOrder = topologicalOrder.OrderBy(x => x.Value).Select(x => x.Key).ToList();
 
                 // Detect circular dependencies
                 graph.CircularDependencies = DetectCircularDependencies(graph.Dependencies);

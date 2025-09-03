@@ -542,7 +542,7 @@ namespace MandADiscoverySuite.Services.Migration
                         requestConfiguration.QueryParameters.Select = new[] { "id" };
                     }, cancellationToken);
 
-                var targetUser = users?.FirstOrDefault();
+                var targetUser = users?.Value?.FirstOrDefault();
                 if (targetUser == null)
                 {
                     result.IsSuccess = false;

@@ -194,7 +194,12 @@ namespace MandADiscoverySuite.Services.Migration
 
                 if (!item.IsEnabled)
                 {
-                    result.Warnings.Add("User account is disabled in source domain");
+                    result.Warnings.Add(new ValidationIssue 
+                    { 
+                        Severity = ValidationSeverity.Warning,
+                        Category = "Account Status",
+                        Description = "User account is disabled in source domain"
+                    });
                 }
 
                 // Check for conflicting target account
