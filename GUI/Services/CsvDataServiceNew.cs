@@ -41,8 +41,67 @@ namespace MandADiscoverySuite.Services
             _fileSemaphore?.Dispose();
         }
 
+        #region Generic CSV Loading
+
+        /// <summary>
+        /// Generic method to load any CSV file and return data as dynamic objects
+        /// </summary>
+        public async Task<List<dynamic>> LoadCsvDataAsync(string csvFilePath)
+        {
+            var results = new List<dynamic>();
+
+            if (!File.Exists(csvFilePath))
+            {
+                _logger?.LogWarning($"CSV file not found: {csvFilePath}");
+                return results;
+            }
+
+            try
+            {
+                using var reader = new StreamReader(csvFilePath, Encoding.UTF8, true, bufferSize: 65536);
+
+                // Read headers
+                var headerLine = await reader.ReadLineAsync();
+                if (string.IsNullOrEmpty(headerLine)) return results;
+
+                var headers = ParseCsvLine(headerLine);
+                var headerCount = headers.Length;
+
+                // Read data rows
+                while (!reader.EndOfStream)
+                {
+                    var line = await reader.ReadLineAsync();
+                    if (string.IsNullOrEmpty(line)) continue;
+
+                    var values = ParseCsvLine(line);
+                    if (values.Length < headerCount) continue;
+
+                    // Create dynamic object from headers and values
+                    var rowData = new Dictionary<string, object>();
+                    for (int i = 0; i < Math.Min(headers.Length, values.Length); i++)
+                    {
+                        var header = NormalizeHeader(headers[i]);
+                        var value = values[i]?.Trim();
+                        rowData[header] = value ?? string.Empty;
+                    }
+
+                    results.Add(rowData);
+                }
+
+                _logger?.LogDebug($"Loaded {results.Count} rows from CSV file: {Path.GetFileName(csvFilePath)}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error loading CSV data from {csvFilePath}");
+            }
+
+            return results;
+        }
+
+        #endregion
+
         #region Users Loading
-        
+
         public async Task<DataLoaderResult<UserData>> LoadUsersAsync(string profileName)
         {
             var sw = Stopwatch.StartNew();

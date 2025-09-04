@@ -755,16 +755,21 @@ namespace MandADiscoverySuite.ViewModels
                         var modules = await _moduleRegistryService.GetEnabledModulesAsync();
                         _logger?.LogInformation($"LoadDiscoveryModules: Found {modules.Count} enabled modules");
                         
-                        // Update UI on main thread
+                        // Update UI on main thread - convert module dict to ModuleInfo with command parameters
                         if (App.Current?.Dispatcher != null)
                         {
                             App.Current.Dispatcher.Invoke(() =>
                             {
-                                foreach (var module in modules)
+                                foreach (var kvp in await _moduleRegistryService.LoadRegistryAsync().ContinueWith(t => t.Result?.Modules ?? new Dictionary<string, ModuleInfo>()))
                                 {
-                                    DiscoveryModules.Add(module);
+                                    if (modules.Any(m => m.DisplayName == kvp.Value.DisplayName)) // Only add enabled modules
+                                    {
+                                        var moduleInfo = kvp.Value;
+                                        moduleInfo.CommandParameter = kvp.Key; // Set command parameter to module key
+                                        DiscoveryModules.Add(moduleInfo);
+                                    }
                                 }
-                                _logger?.LogInformation($"LoadDiscoveryModules: Added {DiscoveryModules.Count} modules to UI collection");
+                                _logger?.LogInformation($"LoadDiscoveryModules: Added {DiscoveryModules.Count} modules to UI collection with command parameters");
                             });
                         }
                         else
@@ -1317,19 +1322,27 @@ namespace MandADiscoverySuite.ViewModels
         {
             if (string.IsNullOrWhiteSpace(tabKey))
                 return;
-                
+
             try
             {
                 _logger?.LogInformation($"[MainViewModel] OpenTabAsync called with key: {tabKey}");
                 System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenTabAsync called with key: {tabKey}");
-                
-                // Use NavigationService to handle async navigation safely
+
+                // Check if this is a module discovery request; if so, use specialized handling
+                if (await IsDiscoveryModuleAsync(tabKey))
+                {
+                    _logger?.LogInformation($"[MainViewModel] Detected module discovery request for: {tabKey}");
+                    await OpenModuleTabAsync(tabKey);
+                    return;
+                }
+
+                // Use NavigationService to handle async navigation safely for non-module tabs
                 var success = await _navigationService.NavigateToTabAsync(tabKey, GetTabTitle(tabKey));
 
                 if (!success)
                 {
                     _logger?.LogWarning($"Failed to open tab: {tabKey}");
-                    
+
                     // Show user-friendly error on UI thread
                     if (System.Windows.Application.Current?.Dispatcher != null)
                     {
@@ -1351,7 +1364,7 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex)
             {
                 _logger?.LogError(ex, $"Error opening tab: {tabKey}");
-                
+
                 // Show error to user on UI thread
                 if (System.Windows.Application.Current?.Dispatcher != null)
                 {
@@ -1364,6 +1377,188 @@ namespace MandADiscoverySuite.ViewModels
                             System.Windows.MessageBoxImage.Error);
                     });
                 }
+            }
+        }
+
+        /// <summary>
+        /// Check if the tab key represents a discovery module request
+        /// </summary>
+        private async Task<bool> IsDiscoveryModuleAsync(string? tabKey)
+        {
+            if (string.IsNullOrWhiteSpace(tabKey))
+                return false;
+
+            try
+            {
+                // Check against loaded discovery modules using CommandParameter which contains the module key
+                var isModule = DiscoveryModules.Any(m =>
+                    m.CommandParameter?.Equals(tabKey, StringComparison.OrdinalIgnoreCase) == true ||
+                    m.DisplayName?.Equals(tabKey, StringComparison.Ordinal) == true);
+
+                _logger?.LogInformation($"IsDiscoveryModuleAsync: tabKey='{tabKey}' isModule={isModule}");
+                return isModule;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error checking if '{tabKey}' is a discovery module");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Open a tab for a discovery module with specialized handling
+        /// </summary>
+        private async Task OpenModuleTabAsync(string? moduleKey)
+        {
+            if (string.IsNullOrWhiteSpace(moduleKey))
+                return;
+
+            try
+            {
+                _logger?.LogInformation($"[MainViewModel] OpenModuleTabAsync called for module: {moduleKey}");
+
+                // Find the module info
+                var moduleInfo = DiscoveryModules.FirstOrDefault(m =>
+                    m.CommandParameter?.Equals(moduleKey, StringComparison.OrdinalIgnoreCase) == true ||
+                    m.DisplayName?.Equals(moduleKey, StringComparison.Ordinal) == true);
+
+                if (moduleInfo == null)
+                {
+                    _logger?.LogWarning($"Module not found: {moduleKey}");
+                    if (System.Windows.Application.Current?.Dispatcher != null)
+                    {
+                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            System.Windows.MessageBox.Show(
+                                $"Discovery module '{moduleKey}' not found.",
+                                "Module Not Found",
+                                System.Windows.MessageBoxButton.OK,
+                                System.Windows.MessageBoxImage.Warning);
+                        });
+                    }
+                    return;
+                }
+
+                // Create module tab content
+                var tabContent = await CreateModuleTabContentAsync(moduleInfo);
+                var tabTitle = $"{moduleInfo.DisplayName} 🔍";
+
+                // Use NavigationService to create the module tab
+                var success = await _navigationService.NavigateToTabAsync(moduleKey, tabTitle, tabContent);
+
+                if (!success)
+                {
+                    _logger?.LogError($"Failed to open module tab: {moduleKey}");
+                    if (System.Windows.Application.Current?.Dispatcher != null)
+                    {
+                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            System.Windows.MessageBox.Show(
+                                $"Unable to open module tab for {moduleInfo.DisplayName}. Please check the logs for details.",
+                                "Module Error",
+                                System.Windows.MessageBoxButton.OK,
+                                System.Windows.MessageBoxImage.Error);
+                        });
+                    }
+                }
+                else
+                {
+                    _logger?.LogInformation($"Successfully opened module tab: {moduleKey} ({moduleInfo.DisplayName})");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error opening module tab: {moduleKey}");
+                if (System.Windows.Application.Current?.Dispatcher != null)
+                {
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        System.Windows.MessageBox.Show(
+                            $"Error opening module tab: {ex.Message}",
+                            "Module Error",
+                            System.Windows.MessageBoxButton.OK,
+                            System.Windows.MessageBoxImage.Error);
+                    });
+                }
+            }
+        }
+
+        /// <summary>
+        /// Create tab content for a discovery module
+        /// </summary>
+        private async Task<object> CreateModuleTabContentAsync(ModuleInfo moduleInfo)
+        {
+            try
+            {
+                // For now, create a basic module view content
+                // This will be enhanced when we implement the base ModuleView/ViewModel classes
+
+                var moduleViewModel = new ModuleViewModel(moduleInfo, this, _logger);
+                var moduleView = new Views.ModuleView { DataContext = moduleViewModel };
+
+                _logger?.LogInformation($"Created module tab content for: {moduleInfo.DisplayName}");
+
+                // Load any available CSV data for this module
+                await LoadModuleDataAsync(moduleViewModel, moduleInfo);
+
+                return moduleView;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error creating module tab content for {moduleInfo.DisplayName}");
+                // Return a basic error content
+                return new System.Windows.Controls.TextBlock
+                {
+                    Text = $"Error loading module: {moduleInfo.DisplayName}\n{ex.Message}",
+                    FontSize = 14,
+                    Foreground = System.Windows.Media.Brushes.Red
+                };
+            }
+        }
+
+        /// <summary>
+        /// Load CSV data for a specific discovery module
+        /// </summary>
+        private async Task LoadModuleDataAsync(ModuleViewModel moduleViewModel, ModuleInfo moduleInfo)
+        {
+            try
+            {
+                var dataPath = Path.Combine(ConfigurationService.Instance.GetCompanyDataPath(CurrentProfileName), "Raw");
+                var csvFileName = $"{moduleInfo.DisplayName}.csv"; // Adjust based on actual CSV naming convention
+                var csvFilePath = Path.Combine(dataPath, csvFileName);
+
+                if (File.Exists(csvFilePath))
+                {
+                    // Use the CsvDataServiceNew to load the data
+                    var csvDataService = new CsvDataServiceNew();
+                    var data = await csvDataService.LoadCsvDataAsync(csvFilePath);
+
+                    if (data != null && data.Any())
+                    {
+                        moduleViewModel.Results.Clear();
+                        foreach (var item in data)
+                        {
+                            moduleViewModel.Results.Add(item);
+                        }
+                        moduleViewModel.StatusMessage = $"Loaded {data.Count} records from CSV";
+                        _logger?.LogInformation($"Loaded {data.Count} records for module {moduleInfo.DisplayName}");
+                    }
+                    else
+                    {
+                        moduleViewModel.StatusMessage = "No data loaded from CSV (file may be empty or invalid)";
+                        _logger?.LogWarning($"No data loaded for module {moduleInfo.DisplayName}");
+                    }
+                }
+                else
+                {
+                    moduleViewModel.StatusMessage = $"CSV data not found at: {csvFilePath}";
+                    _logger?.LogInformation($"CSV file not found for module {moduleInfo.DisplayName}: {csvFilePath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error loading module data for {moduleInfo.DisplayName}");
+                moduleViewModel.StatusMessage = $"Error loading data: {ex.Message}";
             }
         }
         

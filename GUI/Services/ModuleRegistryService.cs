@@ -390,6 +390,9 @@ namespace MandADiscoverySuite.Services
         public int Priority { get; set; }
         public bool Enabled { get; set; }
         public int Timeout { get; set; }
+
+        // Command parameter for navigation - will be set to the module key/ID
+        public string CommandParameter { get; set; }
     }
 
     public class ModuleValidationResult

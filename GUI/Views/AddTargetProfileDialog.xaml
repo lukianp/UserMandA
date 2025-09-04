@@ -7,15 +7,15 @@
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="#FF1A202C"
-        Foreground="#FFE2E8F0">
+        Background="{DynamicResource CardBrush}"
+        Foreground="{DynamicResource PrimaryTextBrush}">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         
         <Style x:Key="DialogButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FF4A5568"/>
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="Padding" Value="20,8"/>
             <Setter Property="Margin" Value="8,0"/>
@@ -30,10 +30,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF5A6C7D"/>
+                                <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#FF2D3748"/>
+                                <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -42,24 +42,24 @@
         </Style>
 
         <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource DialogButtonStyle}">
-            <Setter Property="Background" Value="#FF3182CE"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#FF4299E1"/>
+                    <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                 </Trigger>
                 <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="#FF2B6CB0"/>
+                    <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style x:Key="TextBoxStyle" TargetType="TextBox">
-            <Setter Property="Background" Value="#FF2D3748"/>
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
-            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
@@ -67,13 +67,13 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="4">
-                            <ScrollViewer x:Name="PART_ContentHost" 
+                            <ScrollViewer x:Name="PART_ContentHost"
                                         Margin="{TemplateBinding Padding}"
                                         VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsFocused" Value="True">
-                                <Setter Property="BorderBrush" Value="#FF3182CE"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -94,50 +94,50 @@
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,24">
             <TextBlock Text="Create Target Profile"
-                       FontSize="20"
-                       FontWeight="Bold"
-                       Foreground="#FFE2E8F0"/>
+                        FontSize="{DynamicResource FontSizeH2}"
+                        FontWeight="Bold"
+                        Foreground="{DynamicResource PrimaryTextBrush}"/>
             <TextBlock Text="Enter the target company name to create app registration and target profile"
-                       FontSize="14"
-                       Foreground="#FFA0AEC0"
-                       Margin="0,8,0,0"
-                       TextWrapping="Wrap"/>
+                        FontSize="{DynamicResource FontSizeBody}"
+                        Foreground="{DynamicResource SecondaryTextBrush}"
+                        Margin="0,8,0,0"
+                        TextWrapping="Wrap"/>
         </StackPanel>
 
         <!-- Company Name Input -->
         <StackPanel Grid.Row="1" Margin="0,0,0,24">
             <TextBlock Text="Target Company Name"
-                       FontSize="14"
-                       FontWeight="Medium"
-                       Foreground="#FFE2E8F0"
-                       Margin="0,0,0,8"/>
+                        FontSize="{DynamicResource FontSizeBody}"
+                        FontWeight="Medium"
+                        Foreground="{DynamicResource PrimaryTextBrush}"
+                        Margin="0,0,0,8"/>
             <TextBox x:Name="CompanyNameTextBox"
-                     Style="{StaticResource TextBoxStyle}"
-                     Text="{Binding CompanyName, UpdateSourceTrigger=PropertyChanged}"
-                     IsEnabled="{Binding IsNotBusy}"/>
+                      Style="{StaticResource TextBoxStyle}"
+                      Text="{Binding CompanyName, UpdateSourceTrigger=PropertyChanged}"
+                      IsEnabled="{Binding IsNotBusy}"/>
             <TextBlock Text="{Binding ValidationMessage}"
-                       FontSize="12"
-                       Foreground="#FFF56565"
-                       Margin="0,4,0,0"
-                       Visibility="{Binding HasValidationMessage, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        FontSize="{DynamicResource FontSizeBody}"
+                        Foreground="{DynamicResource ErrorBrush}"
+                        Margin="0,4,0,0"
+                        Visibility="{Binding HasValidationMessage, Converter={StaticResource BoolToVisibilityConverter}}"/>
         </StackPanel>
 
         <!-- Status Section -->
         <Border Grid.Row="2"
-                Background="#FF2D3748"
+                Background="{DynamicResource CardBrush}"
                 CornerRadius="4"
                 Padding="16"
                 Margin="0,0,0,16"
                 Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel>
                 <TextBlock Text="{Binding StatusMessage}"
-                           FontSize="14"
-                           Foreground="#FFE2E8F0"
-                           Margin="0,0,0,8"/>
+                            FontSize="{DynamicResource FontSizeBody}"
+                            Foreground="{DynamicResource PrimaryTextBrush}"
+                            Margin="0,0,0,8"/>
                 <ProgressBar IsIndeterminate="{Binding IsBusy}"
-                             Height="4"
-                             Background="#FF4A5568"
-                             Foreground="#FF3182CE"/>
+                              Height="4"
+                              Background="{DynamicResource BorderBrush}"
+                              Foreground="{DynamicResource AccentBrush}"/>
             </StackPanel>
         </Border>
 
@@ -146,12 +146,12 @@
                       VerticalScrollBarVisibility="Auto"
                       Visibility="{Binding ShowProgressDetails, Converter={StaticResource BoolToVisibilityConverter}}">
             <TextBlock Text="{Binding ProgressDetails}"
-                       FontFamily="Consolas"
-                       FontSize="12"
-                       Foreground="#FFA0AEC0"
-                       Background="#FF1A1A1A"
-                       Padding="12"
-                       TextWrapping="Wrap"/>
+                        FontFamily="Consolas"
+                        FontSize="{DynamicResource FontSizeBody}"
+                        Foreground="{DynamicResource SecondaryTextBrush}"
+                        Background="{DynamicResource CardBrush}"
+                        Padding="12"
+                        TextWrapping="Wrap"/>
         </ScrollViewer>
 
         <!-- Buttons -->

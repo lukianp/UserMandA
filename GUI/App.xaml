@@ -46,12 +46,23 @@
             <converters:ProgressToVisibilityConverter x:Key="ProgressToVisibilityConverter"/>
             
             <!-- Common Colors -->
-            <SolidColorBrush x:Key="PrimaryBrush" Color="#4CAF50"/>
-            <SolidColorBrush x:Key="SecondaryBrush" Color="#2196F3"/>
-            <SolidColorBrush x:Key="AccentBrush" Color="#FF9800"/>
+            <SolidColorBrush x:Key="PrimaryBrush" Color="#0066CC"/>
+            <SolidColorBrush x:Key="SecondaryBrush" Color="#2E2E2E"/>
+            <SolidColorBrush x:Key="AccentBrush" Color="#FF6B35"/>
             <SolidColorBrush x:Key="BackgroundBrush" Color="#F5F5F5"/>
             <SolidColorBrush x:Key="SurfaceBrush" Color="White"/>
             <SolidColorBrush x:Key="ForegroundBrush" Color="#333333"/>
+            <SolidColorBrush x:Key="SuccessBrush" Color="#28A745"/>
+            <SolidColorBrush x:Key="ErrorBrush" Color="#DC3545"/>
+            <SolidColorBrush x:Key="WarningBrush" Color="#FFC107"/>
+            <SolidColorBrush x:Key="PrimaryTextBrush" Color="#333333"/>
+            <SolidColorBrush x:Key="SecondaryTextBrush" Color="#4A5568"/>
+            <SolidColorBrush x:Key="BorderBrush" Color="#E2E8F0"/>
+            <SolidColorBrush x:Key="ButtonHoverBrush" Color="#F8F9FA"/>
+            <SolidColorBrush x:Key="InputBackgroundBrush" Color="White"/>
+            <SolidColorBrush x:Key="CardBrush" Color="White"/>
+            <SolidColorBrush x:Key="ValidBorderBrush" Color="#28A745"/>
+            <SolidColorBrush x:Key="InvalidBorderBrush" Color="#DC3545"/>
             
             <!-- Dark Theme Colors -->
             <SolidColorBrush x:Key="DarkBackgroundBrush" Color="#1E1E1E"/>
@@ -157,12 +168,17 @@
             <FontFamily x:Key="PrimaryFontFamily">Segoe UI</FontFamily>
             <FontFamily x:Key="MonospaceFontFamily">Consolas</FontFamily>
             
-            <!-- Standard font sizes -->
+            <!-- Font sizes matching plan -->
+            <sys:Double x:Key="FontSizeBody" xmlns:sys="clr-namespace:System;assembly=mscorlib">12</sys:Double>
+            <sys:Double x:Key="FontSizeH3" xmlns:sys="clr-namespace:System;assembly=mscorlib">14</sys:Double>
+            <sys:Double x:Key="FontSizeH2" xmlns:sys="clr-namespace:System;assembly=mscorlib">18</sys:Double>
+            <sys:Double x:Key="FontSizeH1" xmlns:sys="clr-namespace:System;assembly=mscorlib">24</sys:Double>
+            <!-- Legacy mappings -->
             <sys:Double x:Key="FontSizeXSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">10</sys:Double>
             <sys:Double x:Key="FontSizeSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">12</sys:Double>
             <sys:Double x:Key="FontSizeMedium" xmlns:sys="clr-namespace:System;assembly=mscorlib">14</sys:Double>
-            <sys:Double x:Key="FontSizeLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">16</sys:Double>
-            <sys:Double x:Key="FontSizeXLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">20</sys:Double>
+            <sys:Double x:Key="FontSizeLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">18</sys:Double>
+            <sys:Double x:Key="FontSizeXLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">24</sys:Double>
             
             <!-- Spacing dimensions -->
             <sys:Double x:Key="HorizontalSpacingSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">8</sys:Double>
