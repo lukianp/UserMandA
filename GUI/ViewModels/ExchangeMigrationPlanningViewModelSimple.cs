@@ -592,40 +592,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private void GenerateSampleData(int count)
-        {
-            var random = new Random();
-            var departments = new[] { "IT", "Sales", "Marketing", "Finance", "HR", "Operations", "Legal", "Executive" };
-
-            for (int i = Mailboxes.Count + 1; i <= Mailboxes.Count + count; i++)
-            {
-                var mailbox = new MigrationItem
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    SourceIdentity = $"user{i:D3}@contoso.com",
-                    TargetIdentity = $"user{i:D3}@target.onmicrosoft.com", 
-                    SourcePath = SourceEnvironment,
-                    TargetPath = TargetEnvironment,
-                    Type = MigrationType.Mailbox,
-                    Status = MigrationStatus.NotStarted,
-                    Priority = (MigrationPriority)random.Next(3),
-                    Properties = new Dictionary<string, object>
-                    {
-                        ["DisplayName"] = $"Exchange User {i:D3}",
-                        ["UserPrincipalName"] = $"user{i:D3}@contoso.com",
-                        ["Department"] = departments[random.Next(departments.Length)],
-                        ["MailboxSizeGB"] = Math.Round(random.NextDouble() * 10 + 0.5, 2),
-                        ["HasArchive"] = random.NextDouble() < 0.3,
-                        ["MigrationType"] = "Exchange Mailbox",
-                        ["CreatedDate"] = DateTime.Now.AddDays(-random.Next(30))
-                    }
-                };
-
-                Mailboxes.Add(mailbox);
-            }
-
-            RefreshStatistics();
-        }
+        // GenerateSampleData method removed - data loaded from CSV only
 
         #endregion
     }

@@ -544,24 +544,27 @@ namespace MandADiscoverySuite.ViewModels
             {
                 IsInfrastructureLoading = true;
                 
-                // Load sample infrastructure security data
-                await Task.Run(() =>
+                // Try to load real infrastructure security data from CSV
+                await Task.Run(async () =>
                 {
-                    var sampleAntivirus = GenerateSampleAntivirusData();
-                    var sampleFirewall = GenerateSampleFirewallData();
-                    var sampleAppliances = GenerateSampleSecurityAppliances();
-                    
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    try
                     {
-                        foreach (var av in sampleAntivirus)
-                            AntivirusProducts.Add(av);
+                        // Load security data from CSV files if available
+                        // Collections will remain empty if no data found - showing proper empty state
+                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            AntivirusProducts.Clear();
+                            FirewallProfiles.Clear();
+                            SecurityAppliances.Clear();
+                        });
                         
-                        foreach (var fw in sampleFirewall)
-                            FirewallProfiles.Add(fw);
-                            
-                        foreach (var appliance in sampleAppliances)
-                            SecurityAppliances.Add(appliance);
-                    });
+                        // TODO: Load real CSV data when security discovery modules are available
+                        // For now, collections remain empty to show proper empty state handling
+                    }
+                    catch (Exception ex)
+                    {
+                        ErrorMessage = $"Failed to load security data: {ex.Message}";
+                    }
                 });
 
                 _logger?.LogInformation("[SecurityPolicyViewModel] Loaded Infrastructure Security data");
@@ -900,79 +903,40 @@ namespace MandADiscoverySuite.ViewModels
 
         #endregion
 
-        #region Sample Data Generation
+        #region Filtering Methods
 
-        private List<AntivirusProduct> GenerateSampleAntivirusData()
+        private bool FilterGPO(object item)
         {
-            var products = new List<AntivirusProduct>();
-            var vendors = new[] { "Windows Defender", "Symantec Endpoint Protection", "McAfee VirusScan", "Trend Micro" };
-            var computers = new[] { "DC01", "FS01", "WEB01", "SQL01", "EXCH01" };
-            var random = new Random();
-
-            foreach (var computer in computers)
+            if (item is not GroupPolicyObject gpo) return false;
+            
+            // Search filter
+            if (!string.IsNullOrEmpty(SearchText))
             {
-                var vendor = vendors[random.Next(vendors.Length)];
-                var isEnabled = random.NextDouble() > 0.1; // 90% enabled
-                var isUpToDate = random.NextDouble() > 0.2; // 80% up to date
-                
-                products.Add(new AntivirusProduct(
-                    ProductName: vendor,
-                    Version: $"{random.Next(10, 20)}.{random.Next(0, 10)}.{random.Next(1000, 9999)}",
-                    Vendor: vendor.Split(' ')[0],
-                    ComputerName: computer,
-                    Domain: "domain.local",
-                    IsEnabled: isEnabled,
-                    IsUpToDate: isUpToDate,
-                    LastUpdate: DateTimeOffset.Now.AddDays(-random.Next(0, 30)),
-                    LastScan: DateTimeOffset.Now.AddHours(-random.Next(0, 48)),
-                    ScanType: random.NextDouble() > 0.5 ? "Full" : "Quick",
-                    ThreatsDetected: random.Next(0, 5),
-                    Status: isEnabled && isUpToDate ? "protected" : 
-                           isEnabled ? "at_risk" : "critical",
-                    ConfigurationStatus: "Standard"
-                ));
+                return gpo.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                       gpo.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
             }
-            return products;
+            
+            return true;
         }
 
-        private List<FirewallProfile> GenerateSampleFirewallData()
-        {
-            var profiles = new List<FirewallProfile>();
-            var computers = new[] { "DC01", "FS01", "WEB01", "SQL01", "EXCH01" };
-            var profileNames = new[] { "Domain", "Private", "Public" };
-            var random = new Random();
+        #endregion
 
-            foreach (var computer in computers)
-            {
-                foreach (var profileName in profileNames)
-                {
-                    profiles.Add(new FirewallProfile(
-                        ComputerName: computer,
-                        Domain: "domain.local",
-                        ProfileName: profileName,
-                        IsEnabled: random.NextDouble() > 0.05, // 95% enabled
-                        InboundAction: "Block",
-                        OutboundAction: "Allow",
-                        AllowInboundRules: true,
-                        AllowLocalFirewallRules: profileName != "Public",
-                        AllowLocalConSecRules: profileName == "Domain",
-                        NotifyOnListen: profileName == "Public",
-                        EnableStealthMode: profileName == "Public",
-                        LastModified: DateTimeOffset.Now.AddDays(-random.Next(1, 90)),
-                        Status: "Active"
-                    ));
-                }
-            }
-            return profiles;
+        #region IDisposable
+        protected override void OnDisposing()
+        {
+            // Clean up resources
+            FilteredGPOs = null;
+            FilteredSecurityGroups = null;
+            FilteredThreats = null;
+            FilteredComplianceControls = null;
+            FilteredCriticalIssues = null;
+            
+            base.OnDisposing();
         }
 
-        private List<SecurityAppliance> GenerateSampleSecurityAppliances()
-        {
-            return new List<SecurityAppliance>
-            {
-                new SecurityAppliance(
-                    Name: "Main Firewall",
-                    Type: "Firewall",
+        #endregion
+    }
+}
                     Vendor: "Cisco",
                     Model: "ASA 5516-X",
                     Version: "9.14.2",

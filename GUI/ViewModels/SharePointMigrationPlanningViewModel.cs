@@ -841,51 +841,7 @@ namespace MandADiscoverySuite.ViewModels
             EstimatedMigrationHours = Math.Max(1, (int)(TotalContentSizeGB / 10.0));
         }
 
-        private void GenerateSampleSharePointData(int count)
-        {
-            var random = new Random();
-            var siteTemplates = new[] { "Team Site", "Communication Site", "Project Site", "Department Site", "Archive Site" };
-            var departments = new[] { "Sales", "Marketing", "IT", "HR", "Finance", "Operations", "Legal", "R&D" };
-
-            for (int i = Sites.Count + 1; i <= Sites.Count + count; i++)
-            {
-                var site = new MigrationItem
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    SourceIdentity = $"https://sharepoint.company.com/sites/Site{i:D3}",
-                    TargetIdentity = $"https://tenant.sharepoint.com/sites/Site{i:D3}",
-                    SourcePath = SourceEnvironment,
-                    TargetPath = TargetEnvironment,
-                    Type = MigrationType.SharePoint,
-                    Status = MigrationStatus.NotStarted,
-                    Priority = (MigrationPriority)random.Next(3),
-                    Properties = new Dictionary<string, object>
-                    {
-                        ["SiteName"] = $"{departments[random.Next(departments.Length)]} {siteTemplates[random.Next(siteTemplates.Length)]}",
-                        ["Template"] = siteTemplates[random.Next(siteTemplates.Length)],
-                        ["Department"] = departments[random.Next(departments.Length)],
-                        ["SizeGB"] = Math.Round(random.NextDouble() * 100 + 0.5, 2),
-                        ["SubsiteCount"] = random.Next(0, 10),
-                        ["ListCount"] = random.Next(5, 50),
-                        ["FileCount"] = random.Next(1000, 100000),
-                        ["WorkflowCount"] = random.Next(0, 20),
-                        ["HasCustomizations"] = random.NextDouble() < 0.3,
-                        ["LastModified"] = DateTime.Now.AddDays(-random.Next(730)),
-                        ["CreatedDate"] = DateTime.Now.AddDays(-random.Next(1825))
-                    }
-                };
-
-                Sites.Add(site);
-            }
-
-            // Mark some sites as ready for migration
-            foreach (var site in Sites.Take(Sites.Count / 2))
-            {
-                site.Status = MigrationStatus.Ready;
-            }
-
-            RefreshStatistics();
-        }
+        // GenerateSampleSharePointData method removed - data loaded from CSV only
 
         #endregion
     }

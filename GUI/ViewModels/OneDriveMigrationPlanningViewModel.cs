@@ -76,7 +76,6 @@ namespace MandADiscoverySuite.ViewModels
         
         // Safety and Performance
         private static readonly int MAX_SAFE_TIMER_INTERVAL_MS = 30000;
-        private readonly int MAX_SAMPLE_DATA = 50;
         private Timer _refreshTimer;
         
         #endregion
@@ -385,8 +384,8 @@ namespace MandADiscoverySuite.ViewModels
                 IsLoading = true;
                 StatusMessage =("Loading OneDrive migration data...");
                 
-                // Load sample data for demonstration
-                await LoadSampleDataAsync();
+                // Load real CSV data instead of sample data
+                await LoadRealDataAsync();
                 
                 RefreshStatistics();
                 StatusMessage =("OneDrive migration data loaded successfully");
@@ -401,7 +400,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
         
-        private async Task LoadSampleDataAsync()
+        private async Task LoadRealDataAsync()
         {
             await Task.Run(async () =>
             {
@@ -477,71 +476,6 @@ namespace MandADiscoverySuite.ViewModels
             });
         }
         
-        private List<dynamic> GenerateSampleUsers()
-        {
-            var users = new List<dynamic>();
-            var random = new Random();
-            var departments = new[] { "IT", "Finance", "HR", "Marketing", "Sales", "Operations", "Legal" };
-            var firstNames = new[] { "John", "Jane", "Mike", "Sarah", "David", "Emma", "Chris", "Lisa" };
-            var lastNames = new[] { "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis" };
-            
-            for (int i = 0; i < Math.Min(MAX_SAMPLE_DATA, 25); i++)
-            {
-                var firstName = firstNames[random.Next(firstNames.Length)];
-                var lastName = lastNames[random.Next(lastNames.Length)];
-                var department = departments[random.Next(departments.Length)];
-                var dataSize = random.NextDouble() * 50; // 0-50 GB
-                
-                users.Add(new
-                {
-                    UserName = $"{firstName.ToLower()}.{lastName.ToLower()}",
-                    DisplayName = $"{firstName} {lastName}",
-                    Email = $"{firstName.ToLower()}.{lastName.ToLower()}@contoso.com",
-                    Department = department,
-                    OneDriveUrl = $"https://contoso-my.sharepoint.com/personal/{firstName.ToLower()}_{lastName.ToLower()}_contoso_com",
-                    DataSizeGB = Math.Round(dataSize, 2),
-                    FileCount = random.Next(100, 5000),
-                    LastAccessed = DateTime.Now.AddDays(-random.Next(1, 365)),
-                    HasIssues = random.NextDouble() < 0.2, // 20% chance of issues
-                    MigrationStatus = "Pending",
-                    Priority = random.Next(1, 4) // 1=High, 2=Normal, 3=Low
-                });
-            }
-            
-            return users;
-        }
-        
-        private List<dynamic> GenerateSampleFileShares()
-        {
-            var shares = new List<dynamic>();
-            var random = new Random();
-            var shareNames = new[] { "HR-Documents", "Finance-Reports", "Marketing-Assets", "IT-Software", "Legal-Contracts", "Operations-Manuals", "Sales-Presentations" };
-            var servers = new[] { "FS01", "FS02", "FS03", "FILESERVER01", "FILESERVER02" };
-            
-            for (int i = 0; i < Math.Min(MAX_SAMPLE_DATA / 3, 15); i++)
-            {
-                var shareName = shareNames[random.Next(shareNames.Length)];
-                var server = servers[random.Next(servers.Length)];
-                var dataSize = random.NextDouble() * 500; // 0-500 GB
-                
-                shares.Add(new
-                {
-                    ShareName = shareName,
-                    ServerName = server,
-                    SharePath = $"\\\\{server}\\{shareName}",
-                    DataSizeGB = Math.Round(dataSize, 2),
-                    FileCount = random.Next(1000, 50000),
-                    UserCount = random.Next(5, 50),
-                    LastModified = DateTime.Now.AddDays(-random.Next(1, 180)),
-                    HasPermissionIssues = random.NextDouble() < 0.3, // 30% chance of permission issues
-                    MigrationTarget = "OneDrive for Business",
-                    AnalysisStatus = "Pending"
-                });
-            }
-            
-            return shares;
-        }
-        
         private async Task DiscoverUsersAsync()
         {
             try
@@ -563,7 +497,7 @@ namespace MandADiscoverySuite.ViewModels
                 }
                 
                 // Refresh with new data
-                await LoadSampleDataAsync();
+                await LoadRealDataAsync();
                 RefreshStatistics();
                 
                 AnalysisStatusMessage = $"Discovered {TotalUsers} users with OneDrive accounts";

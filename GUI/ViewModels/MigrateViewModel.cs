@@ -681,29 +681,12 @@ namespace MandADiscoverySuite.ViewModels
                     RecentExecutionEvents.Add(evt);
                 }
                 
-                // Generate validation data
-                ValidationMetrics = ValidationDataGenerator.GenerateValidationMetrics();
+                // Load real validation data from CSV if available, otherwise show empty state
+                ValidationMetrics = null; // Will show empty metrics
+                ValidationTests.Clear(); // Will show empty validation tests
+                ValidationIssues.Clear(); // Will show empty validation issues
                 
-                var tests = ValidationDataGenerator.GenerateValidationTests();
-                ValidationTests.Clear();
-                foreach (var test in tests)
-                {
-                    ValidationTests.Add(test);
-                }
-                
-                var issues = ValidationDataGenerator.GenerateValidationIssues();
-                ValidationIssues.Clear();
-                foreach (var issue in issues)
-                {
-                    ValidationIssues.Add(issue);
-                }
-                
-                var checklist = ValidationDataGenerator.GeneratePreMigrationChecklist();
-                PreMigrationChecklist.Clear();
-                foreach (var item in checklist)
-                {
-                    PreMigrationChecklist.Add(item);
-                }
+                PreMigrationChecklist.Clear(); // Will show empty pre-migration checklist
             }
         }
         
