@@ -13,24 +13,21 @@ namespace MandADiscoverySuite.Views
         {
             InitializeComponent();
             
-            // Create a sample project for now - this would normally come from a service
-            var sampleProject = CreateSampleProject();
-            var viewModel = new GanttViewModel(sampleProject);
+            // Initialize with empty project - should be populated by dependency injection
+            var emptyProject = CreateEmptyProject();
+            var viewModel = new GanttViewModel(emptyProject);
             DataContext = viewModel;
         }
         
-        private MigrationProject CreateSampleProject()
+        private MigrationProject CreateEmptyProject()
         {
             var project = new MigrationProject
             {
-                ProjectName = "Sample Migration Project",
+                ProjectName = "No Project Loaded",
                 StartDate = System.DateTime.Today,
                 EndDate = System.DateTime.Today.AddDays(90),
-                OverallProgress = 25.0
+                OverallProgress = 0.0
             };
-            
-            // The MigrationProject already initializes phases in its constructor
-            // We can add additional phases or customize existing ones here if needed
             
             return project;
         }

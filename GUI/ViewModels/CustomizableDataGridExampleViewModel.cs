@@ -27,74 +27,8 @@ namespace MandADiscoverySuite.ViewModels
 
         private void InitializeSampleData()
         {
-            SampleData = new ObservableCollection<SampleUserData>
-            {
-                new SampleUserData
-                {
-                    DisplayName = "John Smith",
-                    Email = "john.smith@company.com",
-                    Department = "IT",
-                    JobTitle = "Software Developer",
-                    Manager = "Sarah Johnson",
-                    IsEnabled = true,
-                    LastLogon = DateTime.Now.AddDays(-1),
-                    UserPrincipalName = "john.smith@company.com",
-                    City = "New York",
-                    Country = "United States"
-                },
-                new SampleUserData
-                {
-                    DisplayName = "Sarah Johnson",
-                    Email = "sarah.johnson@company.com",
-                    Department = "IT",
-                    JobTitle = "IT Manager",
-                    Manager = "Michael Brown",
-                    IsEnabled = true,
-                    LastLogon = DateTime.Now.AddHours(-2),
-                    UserPrincipalName = "sarah.johnson@company.com",
-                    City = "New York",
-                    Country = "United States"
-                },
-                new SampleUserData
-                {
-                    DisplayName = "Michael Brown",
-                    Email = "michael.brown@company.com",
-                    Department = "Management",
-                    JobTitle = "CTO",
-                    Manager = "CEO",
-                    IsEnabled = true,
-                    LastLogon = DateTime.Now.AddDays(-0.5),
-                    UserPrincipalName = "michael.brown@company.com",
-                    City = "San Francisco",
-                    Country = "United States"
-                },
-                new SampleUserData
-                {
-                    DisplayName = "Emily Davis",
-                    Email = "emily.davis@company.com",
-                    Department = "Marketing",
-                    JobTitle = "Marketing Specialist",
-                    Manager = "David Wilson",
-                    IsEnabled = true,
-                    LastLogon = DateTime.Now.AddDays(-3),
-                    UserPrincipalName = "emily.davis@company.com",
-                    City = "Chicago",
-                    Country = "United States"
-                },
-                new SampleUserData
-                {
-                    DisplayName = "David Wilson",
-                    Email = "david.wilson@company.com",
-                    Department = "Marketing",
-                    JobTitle = "Marketing Manager",
-                    Manager = "Michael Brown",
-                    IsEnabled = false,
-                    LastLogon = DateTime.Now.AddDays(-10),
-                    UserPrincipalName = "david.wilson@company.com",
-                    City = "Los Angeles",
-                    Country = "United States"
-                }
-            };
+            // Initialize empty collection - data should be loaded from CSV sources
+            SampleData = new ObservableCollection<SampleUserData>();
         }
     }
 

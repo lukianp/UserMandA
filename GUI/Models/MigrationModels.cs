@@ -1429,7 +1429,7 @@ namespace MandADiscoverySuite.Models
         public static List<MigrationStream> GenerateActiveStreams(int count = 3)
         {
             var streams = new List<MigrationStream>();
-            var users = new[] { "john.doe@company.com", "jane.smith@company.com", "mike.johnson@company.com", "sarah.wilson@company.com" };
+            var users = new[] { "user1@domain.com", "user2@domain.com", "user3@domain.com", "user4@domain.com" };
             var types = new[] { "Mailbox", "FileShare", "User", "SecurityGroup" };
             var statuses = new[] { "Running", "Processing", "Transferring", "Validating" };
             
@@ -1584,7 +1584,7 @@ namespace MandADiscoverySuite.Models
                 "Certificate expiring within migration window"
             };
             
-            var users = new[] { "john.doe@company.com", "jane.smith@company.com", "admin@company.com", "test.user@company.com" };
+            var users = new[] { "user1@domain.com", "user2@domain.com", "admin@domain.com", "user4@domain.com" };
             
             var severityColors = new Dictionary<string, string>
             {

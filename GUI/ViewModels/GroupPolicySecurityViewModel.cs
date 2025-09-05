@@ -263,17 +263,8 @@ namespace MandADiscoverySuite.ViewModels
                 
                 ThreatIndicators.Clear();
                 
-                // Sample threat data
-                var sampleThreats = new[]
-                {
-                    new ThreatIndicator("Malware", "High", "External", "DESKTOP-ABC123", "Active", DateTimeOffset.Now.AddHours(-2), DateTimeOffset.Now.AddMinutes(-30), "Suspicious executable detected", "malware.exe", "T1204.002", "Quarantined", true),
-                    new ThreatIndicator("Phishing", "Medium", "Email", "user@company.com", "Investigating", DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddHours(-6), "Suspicious email with malicious link", "phishing-url.com", "T1566.002", "User notified", true),
-                    new ThreatIndicator("Privilege Escalation", "Critical", "DESKTOP-XYZ789", "Domain Controller", "Mitigated", DateTimeOffset.Now.AddDays(-3), DateTimeOffset.Now.AddDays(-2), "Unauthorized privilege escalation attempt", "mimikatz.exe", "T1134", "Account disabled", false),
-                    new ThreatIndicator("Data Exfiltration", "High", "SERVER-DB01", "External", "Resolved", DateTimeOffset.Now.AddDays(-5), DateTimeOffset.Now.AddDays(-4), "Large data transfer to external destination", "suspicious-transfer", "T1041", "Network blocked", false)
-                };
-                
-                foreach (var threat in sampleThreats)
-                    ThreatIndicators.Add(threat);
+                // Initialize empty collection - threat data should be loaded from security sources
+                // ThreatIndicators remains empty until real threat data is available
                     
                 StructuredLogger?.LogDebug(LogSourceName, new { threats = ThreatIndicators.Count }, "Loaded threat indicators");
             }

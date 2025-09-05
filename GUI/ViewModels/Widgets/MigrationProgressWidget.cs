@@ -138,9 +138,9 @@ namespace MandADiscoverySuite.ViewModels.Widgets
                     MigratedUsers += wave.CompletedItems;
                 }
 
-                // Mock system migration data
-                TotalSystems = 450;
-                MigratedSystems = 120;
+                // Initialize systems data - should be loaded from real data sources
+                TotalSystems = 0;
+                MigratedSystems = 0;
 
                 // Calculate overall progress
                 var totalItems = TotalUsers + TotalSystems;

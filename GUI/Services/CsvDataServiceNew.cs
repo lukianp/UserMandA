@@ -752,6 +752,112 @@ namespace MandADiscoverySuite.Services
 
         #endregion
 
+        #region Active Directory Discovery Loading
+
+        public async Task<DataLoaderResult<dynamic>> LoadActiveDirectoryDiscoveryAsync(string profileName)
+        {
+            var sw = Stopwatch.StartNew();
+            var warnings = new List<string>();
+            var results = new List<dynamic>();
+
+            var filePatterns = new[] { "*ActiveDirectoryDiscovery*.csv", "ActiveDirectoryDiscovery.csv" };
+            var expectedHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["DisplayName"] = null,
+                ["UserPrincipalName"] = null,
+                ["SamAccountName"] = null,
+                ["Mail"] = null,
+                ["Department"] = null,
+                ["JobTitle"] = null,
+                ["AccountEnabled"] = null,
+                ["Company"] = null,
+                ["Manager"] = null,
+                ["CreatedDateTime"] = null
+            };
+
+            var matchedFiles = new List<string>();
+            foreach (var pattern in filePatterns)
+            {
+                matchedFiles.AddRange(FindFiles(_activeProfilePath, pattern));
+                matchedFiles.AddRange(FindFiles(_secondaryPath, pattern));
+                matchedFiles.AddRange(FindFiles(_testDataPath, pattern));
+            }
+
+            foreach (var filePath in matchedFiles.Distinct())
+            {
+                try
+                {
+                    using var reader = new StreamReader(filePath, Encoding.UTF8, true, bufferSize: 65536);
+
+                    var headerLine = await reader.ReadLineAsync();
+                    if (string.IsNullOrEmpty(headerLine)) continue;
+
+                    var headers = ParseCsvLine(headerLine);
+                    var headerMap = BuildHeaderMap(headers, expectedHeaders, Path.GetFileName(filePath), warnings);
+
+                    var fileItems = new List<dynamic>();
+                    while (!reader.EndOfStream)
+                    {
+                        var line = await reader.ReadLineAsync();
+                        if (string.IsNullOrEmpty(line)) continue;
+
+                        var values = ParseCsvLine(line);
+                        if (values.Length < headers.Length) continue;
+
+                        var rowData = new Dictionary<string, object>();
+                        for (int i = 0; i < Math.Min(headers.Length, values.Length); i++)
+                        {
+                            var header = NormalizeHeader(headers[i]);
+                            var value = values[i]?.Trim();
+                            rowData[header] = value ?? string.Empty;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(rowData.GetValueOrDefault("displayname", "").ToString()) ||
+                            !string.IsNullOrWhiteSpace(rowData.GetValueOrDefault("userprincipalname", "").ToString()) ||
+                            !string.IsNullOrWhiteSpace(rowData.GetValueOrDefault("samaccountname", "").ToString()))
+                        {
+                            fileItems.Add(rowData);
+                        }
+                    }
+
+                    results.AddRange(fileItems);
+                    _logger?.LogDebug($"[CsvDataServiceNew] Loaded {fileItems.Count} Active Directory discovery items from {Path.GetFileName(filePath)}");
+                }
+                catch (Exception ex)
+                {
+                    warnings.Add($"[ActiveDirectoryDiscovery] File '{Path.GetFileName(filePath)}': Error reading file - {ex.Message}");
+                    _logger?.LogError(ex, $"[CsvDataServiceNew] Error loading Active Directory discovery from {filePath}");
+                }
+            }
+
+            // Validate required columns presence
+            var missingRequired = new List<string>();
+            if (results.Any())
+            {
+                var sampleRow = results.First();
+                foreach (var required in expectedHeaders.Keys.Where(k => k == "DisplayName" || k == "UserPrincipalName" || k == "SamAccountName"))
+                {
+                    if (!((IDictionary<string, object>)sampleRow).ContainsKey(NormalizeHeader(required)))
+                    {
+                        missingRequired.Add(required);
+                    }
+                }
+            }
+
+            if (missingRequired.Any())
+            {
+                var errorMsg = $"Missing required columns: {string.Join(", ", missingRequired)}";
+                warnings.Add($"[ActiveDirectoryDiscovery] Critical: {errorMsg}");
+                _logger?.LogError(errorMsg);
+            }
+
+            _logger?.LogInformation($"[CsvDataServiceNew] loader=ActiveDirectoryDiscovery patterns={string.Join(",", filePatterns)} matched={matchedFiles.Count} total={results.Count} ms={sw.ElapsedMilliseconds}");
+
+            return DataLoaderResult<dynamic>.Success(results, warnings);
+        }
+
+        #endregion
+
         #region Migration Data Loading
 
         /// <summary>

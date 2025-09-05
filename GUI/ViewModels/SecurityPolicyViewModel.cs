@@ -695,7 +695,7 @@ namespace MandADiscoverySuite.ViewModels
             return new SecurityGroup(
                 DisplayName: group.DisplayName,
                 GroupType: group.GroupType,
-                Domain: "contoso.com", // Default
+                Domain: "domain.local", // Default
                 MailEnabled: group.MailEnabled,
                 SecurityEnabled: group.SecurityEnabled,
                 Mail: group.Mail,
@@ -920,7 +920,7 @@ namespace MandADiscoverySuite.ViewModels
                     Version: $"{random.Next(10, 20)}.{random.Next(0, 10)}.{random.Next(1000, 9999)}",
                     Vendor: vendor.Split(' ')[0],
                     ComputerName: computer,
-                    Domain: "contoso.com",
+                    Domain: "domain.local",
                     IsEnabled: isEnabled,
                     IsUpToDate: isUpToDate,
                     LastUpdate: DateTimeOffset.Now.AddDays(-random.Next(0, 30)),
@@ -948,7 +948,7 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     profiles.Add(new FirewallProfile(
                         ComputerName: computer,
-                        Domain: "contoso.com",
+                        Domain: "domain.local",
                         ProfileName: profileName,
                         IsEnabled: random.NextDouble() > 0.05, // 95% enabled
                         InboundAction: "Block",

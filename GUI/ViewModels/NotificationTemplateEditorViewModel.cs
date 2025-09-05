@@ -521,7 +521,7 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 // TODO: Show test send dialog to get recipient email
-                var testRecipients = new List<string> { "test@example.com" }; // Placeholder
+                var testRecipients = new List<string>(); // Empty - should be provided by user input
                 
                 // Parse template type for sample data
                 if (!Enum.TryParse<NotificationTemplateType>(SelectedTemplate.Type, out var templateType))

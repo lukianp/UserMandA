@@ -35,6 +35,7 @@ namespace MandADiscoverySuite.Services
                 ["security-policy"] = () => new SecurityPolicyView(), // Direct access key
                 ["securitypolicy"] = () => new SecurityPolicyView(), // Alternative key
                 ["grouppolicysecurity"] = () => new GroupPolicySecurityView(), // Legacy security view
+                ["activedirectorydiscovery"] = () => new ActiveDirectoryDiscoveryView(),
                 // Removed duplicate "security groups" - use "groups" instead
                 ["waves"] = () => new WaveView(),
                 ["migrate"] = () => new MigrateView(),

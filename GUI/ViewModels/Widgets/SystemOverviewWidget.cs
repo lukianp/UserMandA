@@ -138,13 +138,12 @@ namespace MandADiscoverySuite.ViewModels.Widgets
         private async Task LoadMockData()
         {
             await Task.Delay(500);
-            TotalUsers = new Random().Next(1000, 5000);
-            TotalComputers = new Random().Next(500, 2000);
-            TotalGroups = new Random().Next(50, 200);
-            TotalApplications = new Random().Next(100, 500);
-            
-            var healthValues = new[] { "Excellent", "Good", "Warning", "Critical" };
-            HealthStatus = healthValues[new Random().Next(healthValues.Length)];
+            // Initialize with empty/zero values until real data is available
+            TotalUsers = 0;
+            TotalComputers = 0;
+            TotalGroups = 0;
+            TotalApplications = 0;
+            HealthStatus = "Unknown";
         }
     }
 }
