@@ -206,7 +206,7 @@ namespace MandADiscoverySuite.ViewModels
         #endregion
 
         #region Properties - Error Handling
-        public bool HasErrors
+        public new bool HasErrors
         {
             get => _hasErrors;
             set => SetProperty(ref _hasErrors, value);
@@ -218,7 +218,7 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _errorTitle, value);
         }
 
-        public string ErrorMessage
+        public new string ErrorMessage
         {
             get => _errorMessage;
             set => SetProperty(ref _errorMessage, value);
@@ -261,7 +261,7 @@ namespace MandADiscoverySuite.ViewModels
                 ProgressValue = 0.0;
                 ProcessingMessage = "Starting module...";
 
-                _logger?.LogInformation($"Running module: {DisplayName}");
+                _log?.LogInformation($"Running module: {DisplayName}");
 
                 // Call the abstract method that derived classes must implement
                 await ExecuteModuleAsync();
@@ -275,11 +275,11 @@ namespace MandADiscoverySuite.ViewModels
                 ProgressValue = 100.0;
                 ProcessingMessage = "Module execution completed";
 
-                _logger?.LogInformation($"Module {DisplayName} completed successfully");
+                _log?.LogInformation($"Module {DisplayName} completed successfully");
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, $"Error running module: {DisplayName}");
+                _log?.LogError(ex, $"Error running module: {DisplayName}");
 
                 StatusText = "Failed";
                 StatusColor = Colors.Red;
@@ -297,7 +297,7 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                _logger?.LogInformation($"Opening logs for module: {DisplayName}");
+                _log?.LogInformation($"Opening logs for module: {DisplayName}");
 
                 // TODO: Implement log viewing - could open a dedicated log window
                 // For now, just log the intention
@@ -305,7 +305,7 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, $"Error opening logs for module: {DisplayName}");
+                _log?.LogError(ex, $"Error opening logs for module: {DisplayName}");
             }
         }
 
@@ -316,7 +316,7 @@ namespace MandADiscoverySuite.ViewModels
                 if (_results.Count == 0)
                     return;
 
-                _logger?.LogInformation($"Exporting results for module: {DisplayName}");
+                _log?.LogInformation($"Exporting results for module: {DisplayName}");
 
                 // TODO: Implement export functionality
                 // Could use DataExportService or build CSV/XLSX export
@@ -325,7 +325,7 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, $"Error exporting results for module: {DisplayName}");
+                _log?.LogError(ex, $"Error exporting results for module: {DisplayName}");
                 ShowError("Export Failed", ex.Message);
             }
         }
@@ -361,11 +361,11 @@ namespace MandADiscoverySuite.ViewModels
                 OnPropertyChanged(nameof(ResultsCount));
                 OnPropertyChanged(nameof(HasResults));
 
-                _logger?.LogInformation($"Loaded {csvData.Count} records for module {DisplayName}");
+                _log?.LogInformation($"Loaded {csvData.Count} records for module {DisplayName}");
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, $"Error loading CSV data for module {DisplayName}");
+                _log?.LogError(ex, $"Error loading CSV data for module {DisplayName}");
                 ShowError("CSV Loading Failed", ex.Message);
             }
         }

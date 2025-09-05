@@ -1095,6 +1095,8 @@
                                 <TextBlock Text="DNS &amp; Domain Enumeration" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </StackPanel>
+                    </Button>
+                    
                     <!-- Dynamic Module Entries Under Discovery Section -->
                     <TextBlock Text="Discovery Modules" FontSize="11" FontWeight="SemiBold"
                                Foreground="{DynamicResource SecondaryTextBrush}" Margin="24,12,0,4"/>
@@ -1104,13 +1106,15 @@
                                 <Button Style="{StaticResource NavButtonStyle}"
                                         Command="{Binding DataContext.OpenTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                         CommandParameter="{Binding CommandParameter}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Icon}" FontSize="16" Margin="0,0,12,0"/>
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="Medium"/>
-                                            <TextBlock Text="{Binding Description}" FontSize="9" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        </StackPanel>
-                                    </StackPanel>
+                                    <Button.Content>
+                                         <StackPanel Orientation="Horizontal">
+                                                 <TextBlock Text="{Binding Icon}" FontSize="18" Margin="0,0,16,0"/>
+                                                 <StackPanel>
+                                                     <TextBlock Text="{Binding DisplayName}"/>
+                                                     <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                                 </StackPanel>
+                                             </StackPanel>
+                                    </Button.Content>
                                 </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

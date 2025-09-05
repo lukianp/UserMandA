@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -756,11 +757,14 @@ namespace MandADiscoverySuite.ViewModels
                         _logger?.LogInformation($"LoadDiscoveryModules: Found {modules.Count} enabled modules");
                         
                         // Update UI on main thread - convert module dict to ModuleInfo with command parameters
+                        var moduleRegistry = await _moduleRegistryService.LoadRegistryAsync();
+                        var moduleDict = moduleRegistry?.Modules ?? new Dictionary<string, ModuleInfo>();
+                        
                         if (App.Current?.Dispatcher != null)
                         {
                             App.Current.Dispatcher.Invoke(() =>
                             {
-                                foreach (var kvp in await _moduleRegistryService.LoadRegistryAsync().ContinueWith(t => t.Result?.Modules ?? new Dictionary<string, ModuleInfo>()))
+                                foreach (var kvp in moduleDict)
                                 {
                                     if (modules.Any(m => m.DisplayName == kvp.Value.DisplayName)) // Only add enabled modules
                                     {
@@ -1439,12 +1443,11 @@ namespace MandADiscoverySuite.ViewModels
                     return;
                 }
 
-                // Create module tab content
-                var tabContent = await CreateModuleTabContentAsync(moduleInfo);
+                // Create the module tab using the navigation service
                 var tabTitle = $"{moduleInfo.DisplayName} 🔍";
 
                 // Use NavigationService to create the module tab
-                var success = await _navigationService.NavigateToTabAsync(moduleKey, tabTitle, tabContent);
+                var success = await _navigationService.NavigateToTabAsync(moduleKey, tabTitle);
 
                 if (!success)
                 {
@@ -1493,7 +1496,7 @@ namespace MandADiscoverySuite.ViewModels
                 // For now, create a basic module view content
                 // This will be enhanced when we implement the base ModuleView/ViewModel classes
 
-                var moduleViewModel = new ModuleViewModel(moduleInfo, this, _logger);
+                var moduleViewModel = new BasicModuleViewModel(moduleInfo, this, _logger);
                 var moduleView = new Views.ModuleView { DataContext = moduleViewModel };
 
                 _logger?.LogInformation($"Created module tab content for: {moduleInfo.DisplayName}");
