@@ -102,11 +102,8 @@ namespace MandADiscoverySuite.ViewModels
                 }
             }
 
-            // If still no tasks, create some sample tasks
-            if (allTasks.Count == 0)
-            {
-                allTasks = CreateSampleTasks();
-            }
+            // If still no tasks, use empty list - UI will show empty state
+            // No sample data fallback needed
 
             // Calculate timeline bounds
             if (allTasks.Any())
@@ -223,53 +220,6 @@ namespace MandADiscoverySuite.ViewModels
             return fields.ToArray();
         }
 
-        /// <summary>
-        /// Creates sample tasks if no data is available
-        /// </summary>
-        private List<MigrationProjectTask> CreateSampleTasks()
-        {
-            return new List<MigrationProjectTask>
-            {
-                new MigrationProjectTask
-                {
-                    Id = 1,
-                    Name = "Project Setup",
-                    Description = "Initialize project and setup environment",
-                    Owner = "Project Manager",
-                    StartDate = DateTime.Today,
-                    EndDate = DateTime.Today.AddDays(5),
-                    Status = MigrationProjectTaskStatus.Completed,
-                    Progress = 100,
-                    IsCriticalPath = true
-                },
-                new MigrationProjectTask
-                {
-                    Id = 2,
-                    Name = "Requirements Analysis",
-                    Description = "Analyze requirements and dependencies",
-                    Owner = "Business Analyst",
-                    StartDate = DateTime.Today.AddDays(3),
-                    EndDate = DateTime.Today.AddDays(10),
-                    Status = MigrationProjectTaskStatus.InProgress,
-                    Progress = 60,
-                    IsCriticalPath = true,
-                    Dependencies = new List<int> { 1 }
-                },
-                new MigrationProjectTask
-                {
-                    Id = 3,
-                    Name = "System Design",
-                    Description = "Design system architecture",
-                    Owner = "System Architect",
-                    StartDate = DateTime.Today.AddDays(8),
-                    EndDate = DateTime.Today.AddDays(18),
-                    Status = MigrationProjectTaskStatus.NotStarted,
-                    Progress = 0,
-                    IsCriticalPath = true,
-                    Dependencies = new List<int> { 2 }
-                }
-            };
-        }
 
         /// <summary>
         /// Calculates the critical path using network analysis

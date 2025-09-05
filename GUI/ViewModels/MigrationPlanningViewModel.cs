@@ -1025,16 +1025,8 @@ namespace MandADiscoverySuite.ViewModels
                 
                 LoadAvailableProfiles();
                 
-                // Initialize with sample remapping rules
-                RemappingRules.Add(new GroupRemappingRule
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    Name = "Add Corp Prefix",
-                    SourcePattern = "G_",
-                    TargetPattern = "CORP_",
-                    Strategy = RemappingStrategy.AddPrefix,
-                    IsEnabled = true
-                });
+                // Initialize empty remapping rules collection
+                // Rules will be added by user or loaded from configuration
                 
                 HasData = true;
                 _logger?.LogInformation($"[{GetType().Name}] Load ok");

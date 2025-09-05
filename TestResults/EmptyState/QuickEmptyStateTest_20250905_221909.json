@@ -1,0 +1,36 @@
+﻿{
+    "Status":  "FAIL",
+    "Tests":  [
+                  {
+                      "Result":  "FAIL",
+                      "Name":  "BuildExists"
+                  },
+                  {
+                      "Result":  "PASS",
+                      "Name":  "EmptyProfile"
+                  },
+                  {
+                      "Result":  "SKIP",
+                      "Name":  "AppLaunch"
+                  },
+                  {
+                      "Result":  "PASS",
+                      "Name":  "ModuleLoad"
+                  },
+                  {
+                      "Result":  "PASS",
+                      "Name":  "EmptyData"
+                  }
+              ],
+    "StartTime":  {
+                      "value":  "\/Date(1757107149154)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "05 September 2025 22:19:09"
+                  },
+    "EndTime":  {
+                    "value":  "\/Date(1757107149306)\/",
+                    "DisplayHint":  2,
+                    "DateTime":  "05 September 2025 22:19:09"
+                },
+    "Duration":  0.15138759999999998
+}

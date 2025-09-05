@@ -226,23 +226,13 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 // Load infrastructure data from CSV - this would be from SecurityInfrastructureDiscovery module
-                // For now, generate sample data until the CSV integration is available
+                // TODO: Integrate with CSV discovery module when available
                 await Task.Delay(100); // Simulate async operation
                 
                 InfrastructureItems.Clear();
                 
-                // Sample data for infrastructure items
-                var sampleInfrastructure = new[]
-                {
-                    new SecurityInfrastructureItem("Windows Defender", "Antivirus", "Active", "4.18.2107.4", "All Endpoints", "Low", DateTimeOffset.Now, "Microsoft Windows Defender Antivirus", "Microsoft", "Up to date", "Real-time protection enabled"),
-                    new SecurityInfrastructureItem("Palo Alto Firewall", "Firewall", "Active", "10.2.3", "Network Perimeter", "Medium", DateTimeOffset.Now, "Next-generation firewall", "Palo Alto Networks", "Operational", "Threat prevention enabled"),
-                    new SecurityInfrastructureItem("Splunk SIEM", "SIEM", "Active", "8.2.6", "Security Operations Center", "Low", DateTimeOffset.Now, "Security Information and Event Management", "Splunk", "Healthy", "Log aggregation active"),
-                    new SecurityInfrastructureItem("CyberArk PAM", "Privileged Access", "Active", "12.6", "Data Center", "High", DateTimeOffset.Now, "Privileged Access Management", "CyberArk", "Operational", "Password vaulting enabled"),
-                    new SecurityInfrastructureItem("Veeam Backup", "Backup", "Active", "11.0", "Backup Infrastructure", "Medium", DateTimeOffset.Now, "Backup and recovery solution", "Veeam", "Healthy", "Daily backups running")
-                };
-                
-                foreach (var item in sampleInfrastructure)
-                    InfrastructureItems.Add(item);
+                // Data will be loaded from discovery modules
+                // No sample data fallback - UI will show empty state
                     
                 StructuredLogger?.LogDebug(LogSourceName, new { infrastructure = InfrastructureItems.Count }, "Loaded infrastructure items");
             }
@@ -280,23 +270,13 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 // Load compliance assessment data - this would be from ComplianceAssessmentFramework module
-                // For now, generate sample data
+                // TODO: Integrate with compliance assessment module when available
                 await Task.Delay(100); // Simulate async operation
                 
                 ComplianceItems.Clear();
                 
-                // Sample compliance data
-                var sampleCompliance = new[]
-                {
-                    new ComplianceItem("AC-2", "NIST", "Account Management", "Passed", "Medium", "IT Security", DateTimeOffset.Now.AddDays(30), "User account management controls", "Account policies configured", "Regular review required", 85.0, "Access Control"),
-                    new ComplianceItem("AC-3", "NIST", "Access Enforcement", "Failed", "High", "IT Security", DateTimeOffset.Now.AddDays(15), "Access control enforcement", "Missing controls identified", "Implement RBAC", 45.0, "Access Control"),
-                    new ComplianceItem("AU-2", "NIST", "Audit Events", "Passed", "Medium", "IT Operations", DateTimeOffset.Now.AddDays(60), "Audit event monitoring", "Logging configured", "Review log retention", 90.0, "Audit"),
-                    new ComplianceItem("SI-4", "NIST", "Information System Monitoring", "Partial", "High", "Security Team", DateTimeOffset.Now.AddDays(7), "System monitoring capabilities", "SIEM partially configured", "Complete SIEM deployment", 65.0, "System Integrity"),
-                    new ComplianceItem("RA-5", "NIST", "Vulnerability Scanning", "Passed", "Medium", "Security Team", DateTimeOffset.Now.AddDays(45), "Regular vulnerability assessments", "Scanning tools deployed", "Maintain scan schedule", 80.0, "Risk Assessment")
-                };
-                
-                foreach (var item in sampleCompliance)
-                    ComplianceItems.Add(item);
+                // Compliance data will be loaded from compliance modules
+                // No sample data fallback - UI will show empty state
                     
                 StructuredLogger?.LogDebug(LogSourceName, new { compliance = ComplianceItems.Count }, "Loaded compliance items");
             }

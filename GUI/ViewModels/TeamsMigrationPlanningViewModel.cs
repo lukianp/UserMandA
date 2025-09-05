@@ -403,7 +403,7 @@ namespace MandADiscoverySuite.ViewModels
             navigationService = SimpleServiceLocator.Instance.GetService<NavigationService>();
             InitializeCommands();
             InitializeCollections();
-            GenerateSampleData();
+            // Data will be loaded from CSV discovery files when available
         }
         #endregion
 
@@ -659,7 +659,7 @@ namespace MandADiscoverySuite.ViewModels
                 StatusMessage = "Refreshing Teams data...";
                 
                 await Task.Delay(1000);
-                GenerateSampleData();
+                // TODO: Reload data from CSV discovery files
                 
                 StatusMessage = "Data refreshed successfully";
             }
@@ -683,155 +683,10 @@ namespace MandADiscoverySuite.ViewModels
         }
         #endregion
 
-        #region Data Generation
-        private void GenerateSampleData()
-        {
-            GenerateTeamsData();
-            GenerateContentIssues();
-            UpdateStatistics();
-        }
-
-        private void GenerateTeamsData()
-        {
-            var random = new Random();
-            var departments = new[] { "Finance", "Marketing", "Engineering", "Sales", "HR", "Operations", "Legal", "IT" };
-            var teamTypes = new[] { "Public", "Private", "Org-wide" };
-            var teamPurposes = new[]
-            {
-                "Project collaboration", "Department communication", "Task management",
-                "Knowledge sharing", "Training and development", "Customer support",
-                "Executive communication", "Cross-functional projects"
-            };
-
-            TeamsData.Clear();
-            ChannelsData.Clear();
-
-            // Generate 20 realistic teams
-            for (int i = 1; i <= 20; i++)
-            {
-                var department = departments[random.Next(departments.Length)];
-                var teamType = teamTypes[random.Next(teamTypes.Length)];
-                var memberCount = random.Next(5, 150);
-                var channelCount = random.Next(3, 15);
-                var dataSizeGB = Math.Round(random.NextDouble() * 50 + 5, 2);
-
-                var team = new TeamsDiscoveryItem
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    DisplayName = $"{department} {(i <= 10 ? "Team" : "Project")} {i}",
-                    MailNickname = $"{department.ToLower()}team{i}",
-                    Description = $"{teamPurposes[random.Next(teamPurposes.Length)]} for {department} department",
-                    TeamType = teamType,
-                    Department = department,
-                    MemberCount = memberCount,
-                    ChannelCount = channelCount,
-                    DataSizeGB = dataSizeGB,
-                    CreatedDate = DateTime.Now.AddDays(-random.Next(30, 365)),
-                    LastActivityDate = DateTime.Now.AddDays(-random.Next(1, 30)),
-                    OwnerCount = random.Next(1, 5),
-                    GuestCount = random.Next(0, memberCount / 4),
-                    HasApps = random.NextDouble() > 0.3,
-                    HasCustomTabs = random.NextDouble() > 0.5,
-                    IsArchived = random.NextDouble() > 0.9,
-                    ComplianceState = random.NextDouble() > 0.8 ? "Compliant" : "Non-compliant"
-                };
-
-                TeamsData.Add(team);
-
-                // Generate channels for this team
-                GenerateChannelsForTeam(team, channelCount);
-            }
-        }
-
-        private void GenerateChannelsForTeam(TeamsDiscoveryItem team, int channelCount)
-        {
-            var random = new Random();
-            var channelNames = new[]
-            {
-                "General", "Announcements", "Project Updates", "Resources", "Discussion",
-                "Development", "Testing", "Documentation", "Planning", "Reviews",
-                "Training", "Support", "Archive", "External", "Private Discussion"
-            };
-
-            var channelTypes = new[] { "Standard", "Private", "Shared" };
-
-            for (int i = 0; i < channelCount; i++)
-            {
-                var channelType = i == 0 ? "Standard" : channelTypes[random.Next(channelTypes.Length)];
-                var messageCount = random.Next(50, 2000);
-                var fileCount = random.Next(10, 500);
-                var dataSizeGB = Math.Round(random.NextDouble() * 10 + 0.5, 2);
-
-                var channel = new ChannelDiscoveryItem
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    TeamId = team.Id,
-                    TeamName = team.DisplayName,
-                    DisplayName = i == 0 ? "General" : $"{channelNames[random.Next(channelNames.Length)]}",
-                    Description = $"Channel for {channelNames[random.Next(channelNames.Length)].ToLower()} activities",
-                    ChannelType = channelType,
-                    MessageCount = messageCount,
-                    FileCount = fileCount,
-                    DataSizeGB = dataSizeGB,
-                    CreatedDate = team.CreatedDate.AddDays(random.Next(0, 30)),
-                    LastActivityDate = DateTime.Now.AddDays(-random.Next(1, 15)),
-                    MemberCount = channelType == "Private" ? random.Next(3, team.MemberCount / 3) : team.MemberCount,
-                    HasTabs = random.NextDouble() > 0.4,
-                    HasApps = random.NextDouble() > 0.6,
-                    HasCustomConnectors = random.NextDouble() > 0.8,
-                    IsModerated = random.NextDouble() > 0.7
-                };
-
-                ChannelsData.Add(channel);
-            }
-        }
-
-        private void GenerateContentIssues()
-        {
-            var random = new Random();
-            var issueTypes = new[]
-            {
-                "Large file detected",
-                "Non-standard app installation",
-                "Complex tab configuration",
-                "External guest access detected",
-                "Compliance policy violation",
-                "Inactive team (no recent activity)",
-                "Duplicate content found",
-                "Missing team ownership"
-            };
-
-            var severities = new[] { "High", "Medium", "Low" };
-            var severityColors = new Dictionary<string, string>
-            {
-                { "High", "#FFEF4444" },
-                { "Medium", "#FFF59E0B" },
-                { "Low", "#FF3B82F6" }
-            };
-
-            ContentIssues.Clear();
-
-            for (int i = 0; i < random.Next(5, 12); i++)
-            {
-                var severity = severities[random.Next(severities.Length)];
-                var team = TeamsData[random.Next(TeamsData.Count)];
-
-                var issue = new ValidationIssue
-                {
-                    Category = "Teams",
-                    Severity = severity,
-                    SeverityColor = severityColors[severity],
-                    ItemName = team.DisplayName,
-                    Description = issueTypes[random.Next(issueTypes.Length)],
-                    RecommendedAction = "Review and resolve before migration"
-                };
-
-                ContentIssues.Add(issue);
-            }
-
-            TeamsWithIssues = ContentIssues.Count(i => i.Severity == "High");
-        }
-
+        #region Data Loading (CSV-based)
+        // Dummy data generation methods removed
+        // Data will be loaded from CSV files when Teams discovery modules are available
+        
         private void UpdateStatistics()
         {
             TotalTeams = TeamsData.Count;

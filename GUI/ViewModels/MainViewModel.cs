@@ -112,6 +112,12 @@ namespace MandADiscoverySuite.ViewModels
         
         // Logs commands
         public ICommand ShowLogsCommand { get; }
+
+        // New Discovery Views commands
+        public ICommand ShowTeamsDiscoveryCommand { get; }
+        public ICommand ShowDataLossPreventionDiscoveryCommand { get; }
+        public ICommand ShowWebServerConfigurationDiscoveryCommand { get; }
+        public ICommand ShowEnvironmentRiskAssessmentCommand { get; }
         
         // Report commands
         public ICommand GenerateReportCommand { get; }
@@ -477,6 +483,12 @@ namespace MandADiscoverySuite.ViewModels
             
             // Logs commands
             ShowLogsCommand = new AsyncRelayCommand(ShowLogsAsync);
+
+            // New Discovery Views commands
+            ShowTeamsDiscoveryCommand = new AsyncRelayCommand(ShowTeamsDiscoveryAsync);
+            ShowDataLossPreventionDiscoveryCommand = new AsyncRelayCommand(ShowDataLossPreventionDiscoveryAsync);
+            ShowWebServerConfigurationDiscoveryCommand = new AsyncRelayCommand(ShowWebServerConfigurationDiscoveryAsync);
+            ShowEnvironmentRiskAssessmentCommand = new AsyncRelayCommand(ShowEnvironmentRiskAssessmentAsync);
             
             // Report commands
             GenerateReportCommand = new AsyncRelayCommand<string>(GenerateReportAsync);
@@ -2970,6 +2982,27 @@ namespace MandADiscoverySuite.ViewModels
         private async Task CopySelectedUsersAsync() => await Task.CompletedTask;
         private async Task CopySelectedInfrastructureAsync() => await Task.CompletedTask;
         private async Task CopySelectedGroupsAsync() => await Task.CompletedTask;
+
+        // New Discovery Views command implementations
+        private async Task ShowTeamsDiscoveryAsync()
+        {
+            await _navigationService.NavigateToTabAsync("teamsdiscovery", "Teams Discovery");
+        }
+
+        private async Task ShowDataLossPreventionDiscoveryAsync()
+        {
+            await _navigationService.NavigateToTabAsync("datalosspreventiondiscovery", "Data Loss Prevention Discovery");
+        }
+
+        private async Task ShowWebServerConfigurationDiscoveryAsync()
+        {
+            await _navigationService.NavigateToTabAsync("webserverconfigurationdiscovery", "Web Server Configuration Discovery");
+        }
+
+        private async Task ShowEnvironmentRiskAssessmentAsync()
+        {
+            await _navigationService.NavigateToTabAsync("environmentriskassessment", "Environment Risk Assessment");
+        }
         
         // Methods referenced by code-behind
         public async Task PreInitializeCriticalViewsAsync()

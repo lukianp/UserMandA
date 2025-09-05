@@ -23,7 +23,7 @@ namespace MandADiscoverySuite.ViewModels
         public ProjectManagementViewModel()
         {
             InitializeCommands();
-            InitializeSampleProject();
+            InitializeEmptyProject();
         }
 
         #region Properties
@@ -194,8 +194,8 @@ namespace MandADiscoverySuite.ViewModels
                     }
                 }
                 
-                // For now, just use the sample project
-                InitializeSampleProject();
+                // Initialize empty project - data will be loaded from discovery
+                InitializeEmptyProject();
             }
             finally
             {
@@ -538,202 +538,22 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Helper Methods
 
-        private void InitializeSampleProject()
+        private void InitializeEmptyProject()
         {
+            // Create empty project - all data will be loaded from CSV discovery files
             var project = new IntegrationProject
             {
-                Name = "TechCorp Acquisition Integration",
-                CompanyName = "TechCorp Solutions",
-                StartDate = DateTime.Now.AddMonths(-2),
-                TargetEndDate = DateTime.Now.AddMonths(10),
-                Status = ProjectStatus.Active,
-                HealthScore = 87.5,
-                OverallProgress = 35.2
+                Name = "M&A Integration Project",
+                CompanyName = "Target Company",
+                StartDate = DateTime.Now,
+                TargetEndDate = DateTime.Now.AddMonths(12),
+                Status = ProjectStatus.Planning,
+                HealthScore = 0,
+                OverallProgress = 0
             };
 
-            CreateDefaultPhases(project);
-            CreateDefaultMilestones(project);
-            CreateSampleRisks(project);
-            CreateSampleStakeholders(project);
-
+            // Initialize empty collections - project data will be populated from discovery
             CurrentProject = project;
-        }
-
-        private void CreateDefaultPhases(IntegrationProject project)
-        {
-            var phases = new[]
-            {
-                new { Name = "Discovery & Assessment", Description = "Initial discovery and assessment of target environment", Months = 1 },
-                new { Name = "Service Transition", Description = "Transition critical services and establish connectivity", Months = 2 },
-                new { Name = "Design & Planning", Description = "Design target state architecture and create detailed plans", Months = 2 },
-                new { Name = "Implementation", Description = "Execute migration and integration activities", Months = 4 },
-                new { Name = "Testing & Validation", Description = "Comprehensive testing and validation of integrated systems", Months = 2 },
-                new { Name = "Go-Live & Support", Description = "Go-live activities and post-migration support", Months = 1 }
-            };
-
-            var startDate = project.StartDate;
-            for (int i = 0; i < phases.Length; i++)
-            {
-                var phase = new ProjectPhase
-                {
-                    Name = phases[i].Name,
-                    Description = phases[i].Description,
-                    StartDate = startDate,
-                    EndDate = startDate.AddMonths(phases[i].Months),
-                    Status = i == 0 ? PhaseStatus.Completed : i == 1 ? PhaseStatus.InProgress : PhaseStatus.NotStarted,
-                    Progress = i == 0 ? 100.0 : i == 1 ? 65.0 : 0.0,
-                    Order = i + 1
-                };
-
-                CreateSampleComponents(phase, i);
-                project.Phases.Add(phase);
-                startDate = startDate.AddMonths(phases[i].Months);
-            }
-        }
-
-        private void CreateSampleComponents(ProjectPhase phase, int phaseIndex)
-        {
-            string[,] componentData = {
-                // Discovery & Assessment
-                { "Infrastructure Assessment", "Domain & Certificate Analysis", "Application Inventory" },
-                // Service Transition  
-                { "Domain Trust Setup", "Certificate Management", "Network Connectivity" },
-                // Design & Planning
-                { "Target Architecture Design", "Migration Planning", "Security Framework" },
-                // Implementation
-                { "Active Directory Migration", "Exchange Migration", "SharePoint Migration" },
-                // Testing & Validation
-                { "Integration Testing", "Performance Validation", "Security Assessment" },
-                // Go-Live & Support
-                { "Cutover Activities", "User Training", "Support Transition" }
-            };
-
-            for (int i = 0; i < 3; i++)
-            {
-                var component = new ProjectComponent
-                {
-                    Name = componentData[phaseIndex, i],
-                    Description = $"Component for {componentData[phaseIndex, i]}",
-                    Status = phaseIndex == 0 ? ComponentStatus.Completed : 
-                             phaseIndex == 1 ? (i < 2 ? ComponentStatus.Completed : ComponentStatus.InProgress) : 
-                             ComponentStatus.NotStarted,
-                    Progress = phaseIndex == 0 ? 100.0 : 
-                              phaseIndex == 1 ? (i < 2 ? 100.0 : 45.0) : 
-                              0.0,
-                    Order = i + 1
-                };
-
-                CreateSampleTasks(component, phaseIndex, i);
-                phase.Components.Add(component);
-            }
-        }
-
-        private void CreateSampleTasks(ProjectComponent component, int phaseIndex, int componentIndex)
-        {
-            var taskTemplates = new[]
-            {
-                "Review current state configuration",
-                "Document findings and recommendations",
-                "Create implementation plan",
-                "Execute configuration changes", 
-                "Validate and test results"
-            };
-
-            for (int i = 0; i < taskTemplates.Length; i++)
-            {
-                var task = new ProjectTask
-                {
-                    Name = $"{taskTemplates[i]} - {component.Name}",
-                    Description = $"Task: {taskTemplates[i]} for component {component.Name}",
-                    Status = phaseIndex == 0 ? MandADiscoverySuite.Models.TaskStatus.Completed :
-                             phaseIndex == 1 && componentIndex < 2 ? MandADiscoverySuite.Models.TaskStatus.Completed :
-                             phaseIndex == 1 && componentIndex == 2 && i < 3 ? MandADiscoverySuite.Models.TaskStatus.Completed :
-                             phaseIndex == 1 && componentIndex == 2 && i == 3 ? MandADiscoverySuite.Models.TaskStatus.InProgress :
-                             MandADiscoverySuite.Models.TaskStatus.NotStarted,
-                    Priority = i < 2 ? TaskPriority.High : TaskPriority.Medium,
-                    AssignedTo = i % 3 == 0 ? "IT Team" : i % 3 == 1 ? "Business Team" : "PMO Team",
-                    DueDate = DateTime.Now.AddDays(i * 7 - (phaseIndex * 30)),
-                    CompletedDate = phaseIndex == 0 || (phaseIndex == 1 && componentIndex < 2) || 
-                                   (phaseIndex == 1 && componentIndex == 2 && i < 3) ? 
-                                   DateTime.Now.AddDays(-10 + i) : null
-                };
-
-                component.Tasks.Add(task);
-            }
-        }
-
-        private void CreateDefaultMilestones(IntegrationProject project)
-        {
-            var milestones = new[]
-            {
-                new { Name = "Discovery Complete", Date = 30, Status = MilestoneStatus.Achieved },
-                new { Name = "Domain Trust Established", Date = 60, Status = MilestoneStatus.Achieved },
-                new { Name = "Design Approval", Date = 120, Status = MilestoneStatus.InProgress },
-                new { Name = "Pilot Migration Complete", Date = 180, Status = MilestoneStatus.NotStarted },
-                new { Name = "Production Cutover", Date = 300, Status = MilestoneStatus.NotStarted }
-            };
-
-            foreach (var milestone in milestones)
-            {
-                project.Milestones.Add(new ProjectMilestone
-                {
-                    Name = milestone.Name,
-                    Description = $"Major milestone: {milestone.Name}",
-                    TargetDate = project.StartDate.AddDays(milestone.Date),
-                    Status = milestone.Status,
-                    ActualDate = milestone.Status == MilestoneStatus.Achieved ? 
-                                project.StartDate.AddDays(milestone.Date - 2) : null
-                });
-            }
-        }
-
-        private void CreateSampleRisks(IntegrationProject project)
-        {
-            var risks = new[]
-            {
-                new { Desc = "Legacy application compatibility issues", Cat = RiskCategory.Technical, L = 4, I = 4 },
-                new { Desc = "User resistance to new systems", Cat = RiskCategory.Business, L = 3, I = 3 },
-                new { Desc = "Network bandwidth limitations", Cat = RiskCategory.Technical, L = 2, I = 4 },
-                new { Desc = "Regulatory compliance gaps", Cat = RiskCategory.Legal, L = 2, I = 5 },
-                new { Desc = "Key personnel availability", Cat = RiskCategory.Operational, L = 3, I = 3 }
-            };
-
-            foreach (var risk in risks)
-            {
-                project.Risks.Add(new ProjectRisk
-                {
-                    Description = risk.Desc,
-                    Category = risk.Cat,
-                    Likelihood = risk.L,
-                    Impact = risk.I,
-                    Status = RiskStatus.Open,
-                    Owner = "Risk Manager",
-                    MitigationPlan = $"Mitigation plan for: {risk.Desc}"
-                });
-            }
-        }
-
-        private void CreateSampleStakeholders(IntegrationProject project)
-        {
-            var stakeholders = new[]
-            {
-                new { Name = "John Smith", Role = "Project Manager", Email = "john.smith@company.com", Dept = "PMO" },
-                new { Name = "Sarah Johnson", Role = "Technical Lead", Email = "sarah.johnson@company.com", Dept = "IT" },
-                new { Name = "Mike Davis", Role = "Business Lead", Email = "mike.davis@company.com", Dept = "Business" },
-                new { Name = "Lisa Chen", Role = "Security Lead", Email = "lisa.chen@company.com", Dept = "Security" }
-            };
-
-            foreach (var stakeholder in stakeholders)
-            {
-                project.Stakeholders.Add(new ProjectStakeholder
-                {
-                    Name = stakeholder.Name,
-                    Role = stakeholder.Role,
-                    Email = stakeholder.Email,
-                    Department = stakeholder.Dept,
-                    Phone = "+1 (555) 000-0000"
-                });
-            }
         }
 
         private void UpdateDashboardMetrics()

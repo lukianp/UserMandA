@@ -36,6 +36,10 @@ namespace MandADiscoverySuite.Services
                 ["securitypolicy"] = () => new SecurityPolicyView(), // Alternative key
                 ["grouppolicysecurity"] = () => new GroupPolicySecurityView(), // Legacy security view
                 ["activedirectorydiscovery"] = () => new ActiveDirectoryDiscoveryView(),
+                ["teamsdiscovery"] = () => new TeamsDiscoveryView(),
+                ["datalosspreventiondiscovery"] = () => new DataLossPreventionDiscoveryView(),
+                ["webserverconfigurationdiscovery"] = () => new WebServerConfigurationDiscoveryView(),
+                ["environmentriskassessment"] = () => new EnvironmentRiskAssessmentView(),
                 // Removed duplicate "security groups" - use "groups" instead
                 ["waves"] = () => new WaveView(),
                 ["migrate"] = () => new MigrateView(),
@@ -120,6 +124,10 @@ namespace MandADiscoverySuite.Services
                 ["Groups"] = () => new GroupsViewNew(),
                 ["Infrastructure"] = () => new InfrastructureViewNew(),
                 ["Discovery"] = () => new DiscoveryView(), // Discovery modules view (PascalCase)
+                ["TeamsDiscovery"] = () => new TeamsDiscoveryView(),
+                ["DataLossPreventionDiscovery"] = () => new DataLossPreventionDiscoveryView(),
+                ["WebServerConfigurationDiscovery"] = () => new WebServerConfigurationDiscoveryView(),
+                ["EnvironmentRiskAssessment"] = () => new EnvironmentRiskAssessmentView(),
             };
         }
 
