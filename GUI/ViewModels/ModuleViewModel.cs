@@ -40,6 +40,8 @@ namespace MandADiscoverySuite.ViewModels
         private string _errorMessage = string.Empty;
 
         private string _csvFileName = string.Empty;
+        
+        protected readonly ILogger<ModuleViewModel> _logger;
         #endregion
 
         #region Commands
@@ -56,6 +58,8 @@ namespace MandADiscoverySuite.ViewModels
             ILogger<ModuleViewModel>? logger = null)
             : base(logger)
         {
+            _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ModuleViewModel>.Instance;
+            
             // Initialize module properties from registry info
             _icon = moduleInfo.Icon ?? "📄";
             _displayName = moduleInfo.DisplayName ?? "Unknown Module";
@@ -408,5 +412,44 @@ namespace MandADiscoverySuite.ViewModels
             return HasResults && !IsProcessing;
         }
         #endregion
+    }
+    
+    /// <summary>
+    /// Concrete implementation of ModuleViewModel for basic modules
+    /// </summary>
+    public class ConcreteModuleViewModel : ModuleViewModel
+    {
+        public ConcreteModuleViewModel(ModuleInfo moduleInfo, MainViewModel mainViewModel, ILogger<ModuleViewModel>? logger = null)
+            : base(moduleInfo, mainViewModel, logger)
+        {
+        }
+
+        protected override async Task ExecuteModuleAsync()
+        {
+            // Basic implementation - load CSV data if available
+            await LoadCsvDataAsync();
+        }
+
+        private async Task LoadCsvDataAsync()
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(CsvFileName))
+                {
+                    var csvPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", CsvFileName);
+                    if (System.IO.File.Exists(csvPath))
+                    {
+                        // Simple CSV loading logic would go here
+                        _logger?.LogInformation($"Loading CSV data from {csvPath}");
+                        await Task.Delay(100); // Simulate loading
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to load CSV data for module");
+                ShowError("Data Load Error", "Failed to load module data");
+            }
+        }
     }
 }

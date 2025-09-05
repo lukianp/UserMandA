@@ -73,7 +73,8 @@
       "Read(C:\\discoverydata\\ljpops/**)",
       "Bash(git checkout:*)",
       "Bash(sed:*)",
-      "Bash(start \"\" \"C:\\enterprisediscovery\\MandADiscoverySuite.exe\")"
+      "Bash(start \"\" \"C:\\enterprisediscovery\\MandADiscoverySuite.exe\")",
+      "Bash(dotnet clean:*)"
     ],
     "deny": [],
     "ask": [],

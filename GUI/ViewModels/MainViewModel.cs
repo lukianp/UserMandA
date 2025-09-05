@@ -1496,7 +1496,10 @@ namespace MandADiscoverySuite.ViewModels
                 // For now, create a basic module view content
                 // This will be enhanced when we implement the base ModuleView/ViewModel classes
 
-                var moduleViewModel = new BasicModuleViewModel(moduleInfo, this, _logger);
+                // Create appropriate logger for ModuleViewModel
+                var loggerFactory = LoggerFactory.Create(builder => builder.AddDebug());
+                var moduleLogger = loggerFactory.CreateLogger<ModuleViewModel>();
+                var moduleViewModel = new ConcreteModuleViewModel(moduleInfo, this, moduleLogger);
                 var moduleView = new Views.ModuleView { DataContext = moduleViewModel };
 
                 _logger?.LogInformation($"Created module tab content for: {moduleInfo.DisplayName}");
@@ -1533,7 +1536,9 @@ namespace MandADiscoverySuite.ViewModels
                 if (File.Exists(csvFilePath))
                 {
                     // Use the CsvDataServiceNew to load the data
-                    var csvDataService = new CsvDataServiceNew();
+                    var loggerFactory = LoggerFactory.Create(builder => builder.AddDebug());
+                    var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
+                    var csvDataService = new CsvDataServiceNew(csvLogger);
                     var data = await csvDataService.LoadCsvDataAsync(csvFilePath);
 
                     if (data != null && data.Any())
