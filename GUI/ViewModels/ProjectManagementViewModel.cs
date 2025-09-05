@@ -149,8 +149,8 @@ namespace MandADiscoverySuite.ViewModels
                     OverallProgress = 0.0
                 };
 
-                CreateDefaultPhases(newProject);
-                CreateDefaultMilestones(newProject);
+                // CreateDefaultPhases(newProject);
+                // CreateDefaultMilestones(newProject);
                 
                 CurrentProject = newProject;
             }

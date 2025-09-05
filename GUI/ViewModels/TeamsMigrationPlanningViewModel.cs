@@ -470,8 +470,8 @@ namespace MandADiscoverySuite.ViewModels
                         DiscoveryStatusMessage = "Calculating statistics...";
                 }
                 
-                // Generate realistic Teams data
-                GenerateTeamsData();
+                // // Generate realistic Teams data
+                // GenerateTeamsData();
                 
                 DiscoveryStatusMessage = $"Discovery completed - Found {TotalTeams} teams with {TotalChannels} channels";
                 StatusMessage = "Teams discovery completed successfully";
@@ -518,8 +518,8 @@ namespace MandADiscoverySuite.ViewModels
                         AnalysisStatusMessage = "Generating recommendations...";
                 }
                 
-                // Generate content issues
-                GenerateContentIssues();
+                // // Generate content issues
+                // GenerateContentIssues();
                 
                 AnalysisStatusMessage = $"Analysis completed - Found {ContentIssues.Count} potential issues";
                 StatusMessage = "Content analysis completed successfully";

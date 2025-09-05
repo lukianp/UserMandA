@@ -43,10 +43,10 @@ namespace MandADiscoverySuite.Services
                 // Removed duplicate "security groups" - use "groups" instead
                 ["waves"] = () => new WaveView(),
                 ["migrate"] = () => new MigrateView(),
-                ["exchangemigration"] = () => new ExchangeMigrationPlanningViewSimple(),
-                ["exchange-migration"] = () => new ExchangeMigrationPlanningViewSimple(),
-                ["exchangeplanning"] = () => new ExchangeMigrationPlanningViewSimple(),
-                ["mailboxmigration"] = () => new ExchangeMigrationPlanningViewSimple(),
+                // ["exchangemigration"] = () => new ExchangeMigrationPlanningViewSimple(),
+                // ["exchange-migration"] = () => new ExchangeMigrationPlanningViewSimple(),
+                // ["exchangeplanning"] = () => new ExchangeMigrationPlanningViewSimple(),
+                // ["mailboxmigration"] = () => new ExchangeMigrationPlanningViewSimple(),
                 // TEMPORARILY DISABLED: SharePoint migration features excluded due to compilation issues
                 // ["sharepointmigration"] = () => new SharePointMigrationPlanningView(),
                 // ["sharepoint-migration"] = () => new SharePointMigrationPlanningView(),
@@ -92,9 +92,9 @@ namespace MandADiscoverySuite.Services
                 ["Applications"] = () => new ApplicationsViewNew(),
                 ["Waves"] = () => new WaveView(),
                 ["Migrate"] = () => new MigrateView(),
-                ["ExchangeMigration"] = () => new ExchangeMigrationPlanningViewSimple(),
-                ["ExchangePlanning"] = () => new ExchangeMigrationPlanningViewSimple(),
-                ["MailboxMigration"] = () => new ExchangeMigrationPlanningViewSimple(),
+                // ["ExchangeMigration"] = () => new ExchangeMigrationPlanningViewSimple(),
+                // ["ExchangePlanning"] = () => new ExchangeMigrationPlanningViewSimple(),
+                // ["MailboxMigration"] = () => new ExchangeMigrationPlanningViewSimple(),
                 // TEMPORARILY DISABLED: SharePoint migration features excluded due to compilation issues
                 // ["SharePointMigration"] = () => new SharePointMigrationPlanningView(),
                 // ["SharePointPlanning"] = () => new SharePointMigrationPlanningView(),

@@ -92,6 +92,8 @@
   <!-- Also exclude XAML files for excluded components -->
   <ItemGroup>
     <Page Remove="Views\SharePointMigrationPlanningView.xaml" />
+    <Page Remove="Views\ExchangeMigrationPlanningViewSimple.xaml" />
+    <Compile Remove="Views\ExchangeMigrationPlanningViewSimple.xaml.cs" />
   </ItemGroup>
 
 </Project>
