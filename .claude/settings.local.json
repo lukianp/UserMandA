@@ -76,7 +76,8 @@
       "Bash(start \"\" \"C:\\enterprisediscovery\\MandADiscoverySuite.exe\")",
       "Bash(dotnet clean:*)",
       "Bash(tree:*)",
-      "Bash(./build-gui.ps1)"
+      "Bash(./build-gui.ps1)",
+      "Bash(start .MandADiscoverySuite.exe)"
     ],
     "deny": [],
     "ask": [],

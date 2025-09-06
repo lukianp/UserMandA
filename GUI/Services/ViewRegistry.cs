@@ -37,6 +37,7 @@ namespace MandADiscoverySuite.Services
                 ["grouppolicysecurity"] = () => new GroupPolicySecurityView(), // Legacy security view
                 ["activedirectorydiscovery"] = () => new ActiveDirectoryDiscoveryView(),
                 ["teamsdiscovery"] = () => new TeamsDiscoveryView(),
+                ["azurediscovery"] = () => new AzureInfrastructureDiscoveryView(),
                 ["datalosspreventiondiscovery"] = () => new DataLossPreventionDiscoveryView(),
                 ["webserverconfigurationdiscovery"] = () => new WebServerConfigurationDiscoveryView(),
                 ["environmentriskassessment"] = () => new EnvironmentRiskAssessmentView(),
@@ -125,6 +126,7 @@ namespace MandADiscoverySuite.Services
                 ["Infrastructure"] = () => new InfrastructureViewNew(),
                 ["Discovery"] = () => new DiscoveryView(), // Discovery modules view (PascalCase)
                 ["TeamsDiscovery"] = () => new TeamsDiscoveryView(),
+                ["AzureDiscovery"] = () => new AzureInfrastructureDiscoveryView(),
                 ["DataLossPreventionDiscovery"] = () => new DataLossPreventionDiscoveryView(),
                 ["WebServerConfigurationDiscovery"] = () => new WebServerConfigurationDiscoveryView(),
                 ["EnvironmentRiskAssessment"] = () => new EnvironmentRiskAssessmentView(),

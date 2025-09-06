@@ -858,6 +858,38 @@ namespace MandADiscoverySuite.Services
 
         #endregion
 
+        #region Azure Discovery Loading
+
+        public async Task<List<dynamic>> LoadAzureDiscoveryAsync()
+        {
+            var sw = Stopwatch.StartNew();
+            var warnings = new List<string>();
+            var results = new List<dynamic>();
+
+            var csvPath = @"C:\discoverydata\ljpops\Raw\AzureDiscovery.csv";
+
+            try
+            {
+                var loadedData = await LoadCsvDataAsync(csvPath);
+                foreach (var item in loadedData)
+                {
+                    results.Add(item);
+                }
+
+                _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} Azure Discovery records from {csvPath} in {sw.ElapsedMilliseconds} ms");
+
+                return results;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error loading Azure Discovery data from {csvPath}");
+                throw;
+            }
+        }
+
+        #endregion
+
+
         #region Migration Data Loading
 
         /// <summary>

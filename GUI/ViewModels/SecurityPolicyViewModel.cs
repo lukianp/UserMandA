@@ -585,15 +585,14 @@ namespace MandADiscoverySuite.ViewModels
             {
                 IsThreatsLoading = true;
                 
-                // Load sample threat indicators
+                // Load real threat indicators from CSV data when available
                 await Task.Run(() =>
                 {
-                    var sampleThreats = GenerateSampleThreatIndicators();
-                    
+                    // Collections will remain empty if no CSV data is found - showing proper empty state
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        foreach (var threat in sampleThreats)
-                            ThreatIndicators.Add(threat);
+                        ThreatIndicators.Clear();
+                        // TODO: Load real CSV data when threat indicator discovery modules are available
                     });
                 });
 
@@ -615,15 +614,14 @@ namespace MandADiscoverySuite.ViewModels
             {
                 IsComplianceLoading = true;
                 
-                // Load sample compliance controls
+                // Load real compliance controls from CSV data when available
                 await Task.Run(() =>
                 {
-                    var sampleControls = GenerateSampleComplianceControls();
-                    
+                    // Collections will remain empty if no CSV data is found - showing proper empty state
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        foreach (var control in sampleControls)
-                            ComplianceControls.Add(control);
+                        ComplianceControls.Clear();
+                        // TODO: Load real CSV data when compliance discovery modules are available
                     });
                 });
 
@@ -643,15 +641,14 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                // Load sample critical issues
+                // Load real critical issues from CSV data when available
                 await Task.Run(() =>
                 {
-                    var sampleIssues = GenerateSampleCriticalIssues();
-                    
+                    // Collections will remain empty if no CSV data is found - showing proper empty state
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        foreach (var issue in sampleIssues)
-                            CriticalIssues.Add(issue);
+                        CriticalIssues.Clear();
+                        // TODO: Load real CSV data when critical issue discovery modules are available
                     });
                 });
 
@@ -905,6 +902,22 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Filtering Methods
 
+        private void RefreshFilters()
+        {
+            try
+            {
+                FilteredGPOs?.Refresh();
+                FilteredSecurityGroups?.Refresh();
+                FilteredThreats?.Refresh();
+                FilteredComplianceControls?.Refresh();
+                FilteredCriticalIssues?.Refresh();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[SecurityPolicyViewModel] Error refreshing filters");
+            }
+        }
+
         private bool FilterGPO(object item)
         {
             if (item is not GroupPolicyObject gpo) return false;
@@ -919,272 +932,6 @@ namespace MandADiscoverySuite.ViewModels
             return true;
         }
 
-        #endregion
-
-        #region IDisposable
-        protected override void OnDisposing()
-        {
-            // Clean up resources
-            FilteredGPOs = null;
-            FilteredSecurityGroups = null;
-            FilteredThreats = null;
-            FilteredComplianceControls = null;
-            FilteredCriticalIssues = null;
-            
-            base.OnDisposing();
-        }
-
-        #endregion
-    }
-}
-                    Vendor: "Cisco",
-                    Model: "ASA 5516-X",
-                    Version: "9.14.2",
-                    IPAddress: "192.168.1.1",
-                    Location: "Data Center",
-                    Status: "Online",
-                    LastSeen: DateTimeOffset.Now.AddMinutes(-5),
-                    ConfigurationStatus: "Configured",
-                    IsManaged: true,
-                    ManagementServer: "MGMT01",
-                    Policies: "Corporate Security Policy",
-                    AlertCount: 2,
-                    Health: "Healthy"
-                ),
-                new SecurityAppliance(
-                    Name: "IDS Sensor",
-                    Type: "IDS",
-                    Vendor: "Snort",
-                    Model: "Enterprise",
-                    Version: "3.1.45",
-                    IPAddress: "192.168.1.10",
-                    Location: "Data Center",
-                    Status: "Online",
-                    LastSeen: DateTimeOffset.Now.AddMinutes(-2),
-                    ConfigurationStatus: "Configured",
-                    IsManaged: true,
-                    ManagementServer: "MGMT01",
-                    Policies: "Intrusion Detection Policy",
-                    AlertCount: 15,
-                    Health: "Warning"
-                )
-            };
-        }
-
-        private List<SecurityThreatIndicator> GenerateSampleThreatIndicators()
-        {
-            return new List<SecurityThreatIndicator>
-            {
-                new SecurityThreatIndicator
-                {
-                    IndicatorType = "IP",
-                    Value = "192.168.100.50",
-                    ThreatType = "Malware C2",
-                    Severity = "High",
-                    Source = "Internal Network Monitoring",
-                    Campaign = "APT29",
-                    MitreTactic = "Command and Control",
-                    MitreTechnique = "T1071.001",
-                    Description = "Suspicious outbound connections to known C2 server",
-                    FirstSeen = DateTimeOffset.Now.AddHours(-6),
-                    LastSeen = DateTimeOffset.Now.AddMinutes(-15),
-                    ConfidenceScore = 85,
-                    IOCs = "IP: 192.168.100.50, Port: 443",
-                    RecommendedActions = "Block IP at firewall, investigate affected systems",
-                    Status = "Active",
-                    IsActive = true
-                },
-                new SecurityThreatIndicator
-                {
-                    IndicatorType = "Hash",
-                    Value = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-                    ThreatType = "Ransomware",
-                    Severity = "Critical",
-                    Source = "Antivirus Detection",
-                    Campaign = "Ryuk",
-                    MitreTactic = "Impact",
-                    MitreTechnique = "T1486",
-                    Description = "Ransomware executable detected on multiple systems",
-                    FirstSeen = DateTimeOffset.Now.AddDays(-2),
-                    LastSeen = DateTimeOffset.Now.AddHours(-1),
-                    ConfidenceScore = 95,
-                    IOCs = "Hash: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-                    RecommendedActions = "Isolate affected systems, run full antivirus scan",
-                    Status = "Under Investigation",
-                    IsActive = true
-                },
-                new SecurityThreatIndicator
-                {
-                    IndicatorType = "Domain",
-                    Value = "malicious-site.com",
-                    ThreatType = "Phishing",
-                    Severity = "Medium",
-                    Source = "Email Security Gateway",
-                    Campaign = "Generic Phishing",
-                    MitreTactic = "Initial Access",
-                    MitreTechnique = "T1566.002",
-                    Description = "Phishing domain used in email campaigns",
-                    FirstSeen = DateTimeOffset.Now.AddDays(-1),
-                    LastSeen = DateTimeOffset.Now.AddHours(-8),
-                    ConfidenceScore = 78,
-                    IOCs = "Domain: malicious-site.com",
-                    RecommendedActions = "Block domain at DNS level, user awareness training",
-                    Status = "Resolved",
-                    IsActive = false
-                }
-            };
-        }
-
-        private List<ComplianceControl> GenerateSampleComplianceControls()
-        {
-            return new List<ComplianceControl>
-            {
-                new ComplianceControl(
-                    ControlId: "ISO-A.9.1.1",
-                    ControlName: "Access Control Policy",
-                    Framework: "ISO27001",
-                    Category: "Access Control",
-                    Description: "An access control policy shall be established, documented and reviewed",
-                    Status: "Compliant",
-                    ImplementationStatus: "Implemented",
-                    Owner: "IT Security Team",
-                    Evidence: "Access Control Policy v2.1, Last Review: 2024-01-15",
-                    LastAssessed: DateTimeOffset.Now.AddDays(-30),
-                    NextReview: DateTimeOffset.Now.AddDays(60),
-                    Findings: "Policy is current and well-documented",
-                    Remediation: "None required",
-                    RiskRating: 2,
-                    IsCompliant: true
-                ),
-                new ComplianceControl(
-                    ControlId: "NIST-AC-2",
-                    ControlName: "Account Management",
-                    Framework: "NIST",
-                    Category: "Access Control",
-                    Description: "The organization manages information system accounts",
-                    Status: "Partially_Compliant",
-                    ImplementationStatus: "In Progress",
-                    Owner: "IT Security Team",
-                    Evidence: "Account management procedures documented",
-                    LastAssessed: DateTimeOffset.Now.AddDays(-15),
-                    NextReview: DateTimeOffset.Now.AddDays(30),
-                    Findings: "Missing automated account lifecycle management",
-                    Remediation: "Implement automated account provisioning/deprovisioning",
-                    RiskRating: 6,
-                    IsCompliant: false
-                ),
-                new ComplianceControl(
-                    ControlId: "SOC2-CC6.1",
-                    ControlName: "Logical and Physical Access Controls",
-                    Framework: "SOC2",
-                    Category: "Access Control",
-                    Description: "The entity implements logical access security software",
-                    Status: "Non_Compliant",
-                    ImplementationStatus: "Not Implemented",
-                    Owner: "IT Security Team",
-                    Evidence: "No evidence provided",
-                    LastAssessed: DateTimeOffset.Now.AddDays(-45),
-                    NextReview: DateTimeOffset.Now.AddDays(15),
-                    Findings: "Missing multi-factor authentication for privileged accounts",
-                    Remediation: "Deploy MFA solution for all privileged access",
-                    RiskRating: 8,
-                    IsCompliant: false
-                )
-            };
-        }
-
-        private List<CriticalIssue> GenerateSampleCriticalIssues()
-        {
-            return new List<CriticalIssue>
-            {
-                new CriticalIssue(
-                    IssueId: "SEC-2024-001",
-                    Title: "Unpatched Domain Controllers",
-                    Description: "Multiple domain controllers are missing critical security updates",
-                    Severity: "Critical",
-                    Category: "Vulnerability",
-                    AffectedSystem: "DC01, DC02",
-                    Owner: "Infrastructure Team",
-                    DetectedDate: DateTimeOffset.Now.AddDays(-5),
-                    DueDate: DateTimeOffset.Now.AddDays(2),
-                    Status: "In Progress",
-                    Recommendation: "Apply critical security patches during next maintenance window",
-                    BusinessImpact: "High risk of domain compromise",
-                    Priority: 1,
-                    IsEscalated: true
-                ),
-                new CriticalIssue(
-                    IssueId: "SEC-2024-002", 
-                    Title: "Privileged Account Without MFA",
-                    Description: "Service accounts with administrative privileges lack multi-factor authentication",
-                    Severity: "High",
-                    Category: "Access",
-                    AffectedSystem: "All Domain Systems",
-                    Owner: "Security Team",
-                    DetectedDate: DateTimeOffset.Now.AddDays(-3),
-                    DueDate: DateTimeOffset.Now.AddDays(7),
-                    Status: "Open",
-                    Recommendation: "Enable MFA for all privileged accounts or convert to managed service accounts",
-                    BusinessImpact: "Risk of credential compromise and lateral movement",
-                    Priority: 2,
-                    IsEscalated: false
-                ),
-                new CriticalIssue(
-                    IssueId: "SEC-2024-003",
-                    Title: "Weak Password Policy",
-                    Description: "Current password policy does not meet industry standards",
-                    Severity: "Medium",
-                    Category: "Configuration",
-                    AffectedSystem: "Active Directory",
-                    Owner: "Security Team",
-                    DetectedDate: DateTimeOffset.Now.AddDays(-10),
-                    DueDate: DateTimeOffset.Now.AddDays(14),
-                    Status: "Open",
-                    Recommendation: "Update password policy to require 14+ characters and complexity",
-                    BusinessImpact: "Increased risk of password-based attacks",
-                    Priority: 3,
-                    IsEscalated: false
-                )
-            };
-        }
-
-        #endregion
-
-        #region Filtering Methods
-
-        private bool FilterGPO(object item)
-        {
-            if (item is not GroupPolicyObject gpo) return false;
-            
-            // Search filter
-            if (!string.IsNullOrEmpty(SearchText))
-            {
-                var searchLower = SearchText.ToLower();
-                if (!gpo.Name?.ToLower().Contains(searchLower) == true && 
-                    !gpo.Description?.ToLower().Contains(searchLower) == true)
-                    return false;
-            }
-            
-            // Severity filter
-            if (SelectedSeverityFilter != "All" && gpo.RiskLevel != SelectedSeverityFilter)
-                return false;
-            
-            // Status filter
-            if (SelectedStatusFilter != "All" && gpo.Status != SelectedStatusFilter)
-                return false;
-            
-            // Enabled only filter
-            if (ShowEnabledOnly && !gpo.Enabled)
-                return false;
-            
-            // Recently modified filter
-            if (ShowRecentlyModified && gpo.ModifiedTime.HasValue && 
-                gpo.ModifiedTime.Value < DateTimeOffset.Now.AddDays(-7))
-                return false;
-            
-            return true;
-        }
-
         private bool FilterSecurityGroup(object item)
         {
             if (item is not SecurityGroup group) return false;
@@ -1192,15 +939,8 @@ namespace MandADiscoverySuite.ViewModels
             // Search filter
             if (!string.IsNullOrEmpty(SearchText))
             {
-                var searchLower = SearchText.ToLower();
-                if (!group.DisplayName?.ToLower().Contains(searchLower) == true && 
-                    !group.Description?.ToLower().Contains(searchLower) == true)
-                    return false;
+                return group.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
             }
-            
-            // Severity filter
-            if (SelectedSeverityFilter != "All" && group.RiskLevel != SelectedSeverityFilter)
-                return false;
             
             return true;
         }
@@ -1209,24 +949,17 @@ namespace MandADiscoverySuite.ViewModels
         {
             if (item is not SecurityThreatIndicator threat) return false;
             
-            // Search filter
+            // Search and severity filters
             if (!string.IsNullOrEmpty(SearchText))
             {
-                var searchLower = SearchText.ToLower();
-                if (!threat.Value?.ToLower().Contains(searchLower) == true && 
-                    !threat.Description?.ToLower().Contains(searchLower) == true)
-                    return false;
+                if (!threat.Description?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true &&
+                    !threat.Value?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true) return false;
             }
             
-            // Severity filter
-            if (SelectedSeverityFilter != "All" && threat.Severity != SelectedSeverityFilter)
-                return false;
-            
-            // Status filter
-            if (SelectedStatusFilter == "Active" && !threat.IsActive)
-                return false;
-            if (SelectedStatusFilter == "Inactive" && threat.IsActive)
-                return false;
+            if (SelectedSeverityFilter != "All")
+            {
+                if (threat.Severity != SelectedSeverityFilter) return false;
+            }
             
             return true;
         }
@@ -1238,10 +971,8 @@ namespace MandADiscoverySuite.ViewModels
             // Search filter
             if (!string.IsNullOrEmpty(SearchText))
             {
-                var searchLower = SearchText.ToLower();
-                if (!control.ControlName?.ToLower().Contains(searchLower) == true && 
-                    !control.Framework?.ToLower().Contains(searchLower) == true)
-                    return false;
+                return control.ControlName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true ||
+                       control.Description?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true;
             }
             
             return true;
@@ -1254,38 +985,21 @@ namespace MandADiscoverySuite.ViewModels
             // Search filter
             if (!string.IsNullOrEmpty(SearchText))
             {
-                var searchLower = SearchText.ToLower();
-                if (!issue.Title?.ToLower().Contains(searchLower) == true && 
-                    !issue.Description?.ToLower().Contains(searchLower) == true)
-                    return false;
+                return issue.Title.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
             }
-            
-            // Severity filter
-            if (SelectedSeverityFilter != "All" && issue.Severity != SelectedSeverityFilter)
-                return false;
             
             return true;
         }
 
-        private void RefreshFilters()
-        {
-            FilteredGPOs?.Refresh();
-            FilteredSecurityGroups?.Refresh();
-            FilteredThreats?.Refresh();
-            FilteredComplianceControls?.Refresh();
-            FilteredCriticalIssues?.Refresh();
-        }
-
         #endregion
 
-        #region Command Implementations
+        #region Command Execution Methods
 
         private void ExecuteNavigateTab(string tabName)
         {
             if (!string.IsNullOrEmpty(tabName))
             {
                 ActiveTab = tabName;
-                _logger?.LogDebug($"[SecurityPolicyViewModel] Navigated to tab: {tabName}");
             }
         }
 
@@ -1296,22 +1010,27 @@ namespace MandADiscoverySuite.ViewModels
             SelectedStatusFilter = "All";
             ShowEnabledOnly = false;
             ShowRecentlyModified = false;
-            
-            _logger?.LogDebug("[SecurityPolicyViewModel] Filters cleared");
         }
 
         private void ExecuteExportData(string dataType)
         {
-            // Implementation for data export
-            _logger?.LogInformation($"[SecurityPolicyViewModel] Export requested for: {dataType}");
+            try
+            {
+                // TODO: Implement data export functionality
+                _logger?.LogInformation($"[SecurityPolicyViewModel] Export requested for: {dataType}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"[SecurityPolicyViewModel] Error exporting {dataType}");
+            }
         }
 
         private void ExecuteShowGPODetails(GroupPolicyObject gpo)
         {
             if (gpo != null)
             {
-                _logger?.LogInformation($"[SecurityPolicyViewModel] GPO details requested for: {gpo.Name}");
-                // Implementation for showing GPO details
+                // TODO: Show GPO details dialog
+                _logger?.LogInformation($"[SecurityPolicyViewModel] Show details for GPO: {gpo.Name}");
             }
         }
 
@@ -1319,8 +1038,8 @@ namespace MandADiscoverySuite.ViewModels
         {
             if (group != null)
             {
-                _logger?.LogInformation($"[SecurityPolicyViewModel] Group details requested for: {group.DisplayName}");
-                // Implementation for showing group details
+                // TODO: Show group details dialog
+                _logger?.LogInformation($"[SecurityPolicyViewModel] Show details for group: {group.DisplayName}");
             }
         }
 
@@ -1328,8 +1047,8 @@ namespace MandADiscoverySuite.ViewModels
         {
             if (threat != null)
             {
-                _logger?.LogInformation($"[SecurityPolicyViewModel] Threat details requested for: {threat.Value}");
-                // Implementation for showing threat details
+                // TODO: Show threat details dialog
+                _logger?.LogInformation($"[SecurityPolicyViewModel] Show details for threat: {threat.Value ?? threat.Description}");
             }
         }
 
@@ -1337,21 +1056,37 @@ namespace MandADiscoverySuite.ViewModels
         {
             if (threat != null)
             {
-                _logger?.LogInformation($"[SecurityPolicyViewModel] Threat remediation requested for: {threat.Value}");
-                // Implementation for threat remediation
+                // TODO: Implement threat remediation workflow
+                _logger?.LogInformation($"[SecurityPolicyViewModel] Remediate threat: {threat.Value ?? threat.Description}");
             }
         }
 
         private void ExecuteGenerateReport(string reportType)
         {
-            _logger?.LogInformation($"[SecurityPolicyViewModel] Report generation requested: {reportType}");
-            // Implementation for report generation
+            try
+            {
+                // TODO: Implement report generation
+                _logger?.LogInformation($"[SecurityPolicyViewModel] Generate report: {reportType}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"[SecurityPolicyViewModel] Error generating report: {reportType}");
+            }
+        }
+
+        private new void RaiseAllLoadingProperties()
+        {
+            OnPropertyChanged(nameof(IsDashboardLoading));
+            OnPropertyChanged(nameof(IsGPOLoading));
+            OnPropertyChanged(nameof(IsSecurityGroupsLoading));
+            OnPropertyChanged(nameof(IsInfrastructureLoading));
+            OnPropertyChanged(nameof(IsThreatsLoading));
+            OnPropertyChanged(nameof(IsComplianceLoading));
         }
 
         #endregion
 
         #region IDisposable
-
         protected override void OnDisposing()
         {
             // Clean up resources
