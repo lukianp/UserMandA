@@ -38,9 +38,9 @@
     },
     "TeamsDiscovery": {
       "displayName": "Microsoft Teams Discovery",
-      "description": "Discover Teams, channels, and membership",
+      "description": "Discover Microsoft Teams, channels, and guests",
       "filePath": "Discovery/TeamsDiscovery.psm1",
-      "category": "Collaboration", 
+      "category": "Collaboration",
       "icon": "💬",
       "priority": 3,
       "enabled": true,

@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
 using Microsoft.Extensions.Logging;
@@ -12,21 +11,21 @@ using CommunityToolkit.Mvvm.Input;
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
-    /// ViewModel for Exchange Discovery module
+    /// ViewModel for AWS Cloud Infrastructure Discovery module
     /// </summary>
-    public class ExchangeDiscoveryViewModel : ModuleViewModel
+    public class AWSCloudInfrastructureDiscoveryViewModel : ModuleViewModel
     {
         private readonly CsvDataServiceNew _csvService;
 
         #region Constructor
 
-        public ExchangeDiscoveryViewModel(
+        public AWSCloudInfrastructureDiscoveryViewModel(
             ModuleInfo moduleInfo,
             MainViewModel mainViewModel,
-            ILogger<ExchangeDiscoveryViewModel> logger)
+            ILogger<AWSCloudInfrastructureDiscoveryViewModel> logger)
             : base(moduleInfo, mainViewModel, logger)
         {
-            _log?.LogInformation("Initializing ExchangeDiscoveryViewModel");
+            _log?.LogInformation("Initializing AWSCloudInfrastructureDiscoveryViewModel");
 
             // Get CSV service
             var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
@@ -39,25 +38,25 @@ namespace MandADiscoverySuite.ViewModels
         #region Properties
 
         // Summary card properties
-        private int _totalMailboxes;
-        public int TotalMailboxes
+        private int _totalInstances;
+        public int TotalInstances
         {
-            get => _totalMailboxes;
-            set => SetProperty(ref _totalMailboxes, value);
+            get => _totalInstances;
+            set => SetProperty(ref _totalInstances, value);
         }
 
-        private int _totalSharedMailboxes;
-        public int TotalSharedMailboxes
+        private int _totalBuckets;
+        public int TotalBuckets
         {
-            get => _totalSharedMailboxes;
-            set => SetProperty(ref _totalSharedMailboxes, value);
+            get => _totalBuckets;
+            set => SetProperty(ref _totalBuckets, value);
         }
 
-        private int _totalDistributionGroups;
-        public int TotalDistributionGroups
+        private int _totalRegions;
+        public int TotalRegions
         {
-            get => _totalDistributionGroups;
-            set => SetProperty(ref _totalDistributionGroups, value);
+            get => _totalRegions;
+            set => SetProperty(ref _totalRegions, value);
         }
 
         private DateTime _lastDiscoveryTime = DateTime.MinValue;
@@ -85,7 +84,6 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
-        public AsyncRelayCommand ViewLogsCommand => new AsyncRelayCommand(ViewLogsAsync);
 
         #endregion
 
@@ -95,14 +93,14 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                _log?.LogInformation("Executing Exchange Discovery module");
+                _log?.LogInformation("Executing AWS Cloud Infrastructure Discovery module");
 
                 // Load data from CSV
                 await LoadFromCsvAsync(new System.Collections.Generic.List<dynamic>());
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error executing Exchange Discovery");
+                _log?.LogError(ex, "Error executing AWS Cloud Infrastructure Discovery");
                 ShowError("Discovery Failed", ex.Message);
             }
         }
@@ -112,12 +110,20 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 IsProcessing = true;
-                ProcessingMessage = "Loading Exchange Discovery data...";
+                ProcessingMessage = "Loading AWS Cloud Infrastructure data...";
 
-                // Use CsvDataServiceNew.LoadExchangeDiscoveryAsync
-                var loadedCsvData = await _csvService.LoadExchangeDiscoveryAsync();
+                // Load from specific CSV path
+                var csvPath = @"C:\discoverydata\ljpops\Raw\AWSCloudInfrastructureDiscovery.csv";
+                var loadedCsvData = await _csvService.LoadCsvDataAsync(csvPath);
 
-                var result = DataLoaderResult<dynamic>.Success(loadedCsvData, new List<string>());
+                // Convert to dynamic list (similar to other loaders)
+                var results = new List<dynamic>();
+                foreach (var item in loadedCsvData)
+                {
+                    results.Add(item);
+                }
+
+                var result = DataLoaderResult<dynamic>.Success(results, new List<string>());
 
                 if (result.HeaderWarnings.Any())
                 {
@@ -142,15 +148,14 @@ namespace MandADiscoverySuite.ViewModels
                 CalculateSummaryStatistics(result.Data);
 
                 LastUpdated = DateTime.Now;
-                LastDiscoveryTime = DateTime.Now; // Set to current time as discovery time
                 OnPropertyChanged(nameof(ResultsCount));
                 OnPropertyChanged(nameof(HasResults));
 
-                _log?.LogInformation($"Loaded {result.Data.Count} Exchange Discovery records");
+                _log?.LogInformation($"Loaded {result.Data.Count} AWS Cloud Infrastructure records");
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error loading Exchange Discovery CSV data");
+                _log?.LogError(ex, "Error loading AWS Cloud Infrastructure CSV data");
                 ShowError("Data Load Failed", ex.Message);
             }
             finally
@@ -169,7 +174,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 IsProcessing = true;
                 StatusText = "Running Discovery";
-                ProcessingMessage = "Executing Exchange Discovery...";
+                ProcessingMessage = "Executing AWS Cloud Infrastructure Discovery...";
 
                 // Here you would implement the actual discovery logic
                 // For now, just simulate loading from CSV
@@ -179,7 +184,7 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error running Exchange Discovery");
+                _log?.LogError(ex, "Error running AWS Cloud Infrastructure Discovery");
                 ShowError("Discovery Error", ex.Message);
             }
             finally
@@ -212,7 +217,7 @@ namespace MandADiscoverySuite.ViewModels
                 }
 
                 // Implement export logic here
-                _log?.LogInformation("Exporting Exchange Discovery data");
+                _log?.LogInformation("Exporting AWS Cloud Infrastructure data");
                 await Task.CompletedTask; // Placeholder
             }
             catch (Exception ex)
@@ -222,45 +227,38 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task ViewLogsAsync()
-        {
-            try
-            {
-                // Implement view logs logic here
-                _log?.LogInformation("Viewing Exchange Discovery logs");
-                await Task.CompletedTask; // Placeholder
-            }
-            catch (Exception ex)
-            {
-                _log?.LogError(ex, "Error viewing logs");
-                ShowError("View Logs Failed", ex.Message);
-            }
-        }
-
         #endregion
 
         #region Helper Methods
 
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
-            TotalMailboxes = data.Count;
-            // Specific calculations based on Exchange data structure
-            // Assuming fields: mailboxname, primarysmtpaddress, mailboxtype, sizegb, lastlogin, status
-            TotalSharedMailboxes = data.Count(item =>
-            {
-                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("mailboxtype", out var mailboxTypeObj);
-                var type = mailboxTypeObj?.ToString()?.ToLowerInvariant();
-                return type?.Contains("shared") ?? false;
-            });
+            TotalInstances = 0;
+            TotalBuckets = 0;
+            TotalRegions = 0;
 
-            TotalDistributionGroups = data.Count(item =>
+            var regions = new HashSet<string>();
+
+            foreach (var item in data)
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("mailboxtype", out var mailboxTypeObj);
-                var type = mailboxTypeObj?.ToString()?.ToLowerInvariant();
-                return type?.Contains("distribution") ?? false;
-            });
+
+                // Count by service type
+                if (dict.TryGetValue("servicetype", out var serviceTypeObj))
+                {
+                    var serviceType = serviceTypeObj?.ToString().ToLower();
+                    if (serviceType == "ec2") TotalInstances++;
+                    else if (serviceType == "s3") TotalBuckets++;
+                }
+
+                // Count regions
+                if (dict.TryGetValue("region", out var regionObj))
+                {
+                    regions.Add(regionObj?.ToString() ?? "");
+                }
+            }
+
+            TotalRegions = regions.Count;
         }
 
         #endregion

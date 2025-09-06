@@ -1,4 +1,4 @@
-<UserControl x:Class="MandADiscoverySuite.Views.AzureDiscoveryView"
+<UserControl x:Class="MandADiscoverySuite.Views.NetworkInfrastructureDiscoveryView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -27,8 +27,8 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="20,20,20,10">
-            <TextBlock Text="Azure Discovery" FontSize="24" FontWeight="SemiBold"/>
-            <TextBlock Text="Discover and manage Azure resources and configurations"
+            <TextBlock Text="Network Infrastructure Discovery" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock Text="Discover and manage network devices and infrastructure"
                        FontSize="12" Foreground="Gray" Margin="0,4,0,0"/>
         </StackPanel>
 
@@ -58,24 +58,24 @@
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
                 <StackPanel>
-                    <TextBlock Text="Total Subscriptions" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalSubscriptions}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Total Switches" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalSwitches}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
                 <StackPanel>
-                    <TextBlock Text="Total Resource Groups" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalResourceGroups}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Total Routers" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalRouters}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
                 <StackPanel>
-                    <TextBlock Text="Total Virtual Machines" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalVirtualMachines}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TertiaryBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Total Firewalls" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalFirewalls}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TertiaryBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
@@ -146,33 +146,33 @@
                           Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}">
 
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Resource Name"
-                                            Binding="{Binding resourcename}"
-                                            Width="200"/>
+                        <DataGridTextColumn Header="Device Name"
+                                            Binding="{Binding device_name}"
+                                            Width="180"/>
 
-                        <DataGridTextColumn Header="Resource Type"
-                                            Binding="{Binding resourcetype}"
-                                            Width="150"/>
-
-                        <DataGridTextColumn Header="Resource Group"
-                                            Binding="{Binding resourcegroup}"
-                                            Width="150"/>
-
-                        <DataGridTextColumn Header="Region"
-                                            Binding="{Binding region}"
+                        <DataGridTextColumn Header="Device Type"
+                                            Binding="{Binding device_type}"
                                             Width="120"/>
 
-                        <DataGridTextColumn Header="Status"
-                                            Binding="{Binding status}"
+                        <DataGridTextColumn Header="IP Address"
+                                            Binding="{Binding ip_address}"
+                                            Width="140"/>
+
+                        <DataGridTextColumn Header="Operating System Version"
+                                            Binding="{Binding os_version}"
+                                            Width="180"/>
+
+                        <DataGridTextColumn Header="Model"
+                                            Binding="{Binding model}"
+                                            Width="120"/>
+
+                        <DataGridTextColumn Header="Uptime"
+                                            Binding="{Binding uptime}"
                                             Width="100"/>
 
-                        <DataGridTextColumn Header="Creation Date"
-                                            Binding="{Binding createddatetime}"
-                                            Width="120"/>
-
-                        <DataGridTextColumn Header="Tags"
-                                            Binding="{Binding tags}"
-                                            Width="200"/>
+                        <DataGridTextColumn Header="Location"
+                                            Binding="{Binding location}"
+                                            Width="150"/>
                     </DataGrid.Columns>
 
                     <DataGrid.RowStyle>
@@ -191,7 +191,7 @@
 
                 <!-- No Data Message -->
                 <TextBlock Grid.Column="0"
-                           Text="No Azure discovery data available"
+                           Text="No Network Infrastructure data available"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            FontSize="16"
@@ -200,7 +200,7 @@
 
                 <!-- Separator -->
                 <GridSplitter Grid.Column="1" Width="2" Background="{DynamicResource BorderBrush}"
-                             HorizontalAlignment="Center" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
+                              HorizontalAlignment="Center" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
 
                 <!-- Details Panel -->
                 <Border Grid.Column="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -210,29 +210,26 @@
                         <StackPanel Margin="16">
                             <TextBlock Text="Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
 
-                            <TextBlock Text="Resource Name:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.resourcename}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="Device Name:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.device_name}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
 
-                            <TextBlock Text="Resource Type:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.resourcetype}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="Device Type:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.device_type}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
 
-                            <TextBlock Text="Resource Group:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.resourcegroup}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="IP Address:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.ip_address}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
 
-                            <TextBlock Text="Region:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.region}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="Operating System Version:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.os_version}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
 
-                            <TextBlock Text="Status:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.status}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="Model:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.model}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
 
-                            <TextBlock Text="Creation Date:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.createddatetime}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="Uptime:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.uptime}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
 
-                            <TextBlock Text="Tags:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.tags}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Subscription:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.subscriptionname}" FontSize="14" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                            <TextBlock Text="Location:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.location}" FontSize="14" Margin="0,2,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>

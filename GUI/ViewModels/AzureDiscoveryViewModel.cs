@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -53,18 +52,18 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _totalResourceGroups, value);
         }
 
-        private int _totalVMs;
-        public int TotalVMs
+        private int _totalVirtualMachines;
+        public int TotalVirtualMachines
         {
-            get => _totalVMs;
-            set => SetProperty(ref _totalVMs, value);
+            get => _totalVirtualMachines;
+            set => SetProperty(ref _totalVirtualMachines, value);
         }
 
-        private DateTime _lastDiscovery = DateTime.MinValue;
-        public DateTime LastDiscovery
+        private DateTime _lastDiscoveryTime = DateTime.MinValue;
+        public DateTime LastDiscoveryTime
         {
-            get => _lastDiscovery;
-            set => SetProperty(ref _lastDiscovery, value);
+            get => _lastDiscoveryTime;
+            set => SetProperty(ref _lastDiscoveryTime, value);
         }
 
         // Data binding collections
@@ -85,7 +84,6 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
-        public new RelayCommand ViewLogsCommand => new RelayCommand(ViewLogs);
 
         #endregion
 
@@ -95,14 +93,14 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                _log?.LogInformation("Executing Azure Discovery module");
+                _log?.LogInformation("Executing Azure discovery module");
 
                 // Load data from CSV
                 await LoadFromCsvAsync(new System.Collections.Generic.List<dynamic>());
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error executing Azure Discovery");
+                _log?.LogError(ex, "Error executing Azure discovery");
                 ShowError("Discovery Failed", ex.Message);
             }
         }
@@ -112,36 +110,31 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 IsProcessing = true;
-                ProcessingMessage = "Loading Azure Discovery data...";
+                ProcessingMessage = "Loading Azure discovery data...";
 
-                var loadedCsvData = await _csvService.LoadAzureDiscoveryAsync();
-
-                // Convert to dynamic list (similar to other loaders)
-                var results = new List<dynamic>();
-                foreach (var item in loadedCsvData)
-                {
-                    results.Add(item);
-                }
+                // Load from specific CSV path using the service
+                var result = await _csvService.LoadAzureDiscoveryAsync();
 
                 // Update collections and summary statistics
                 SelectedResults.Clear();
-                foreach (var item in results)
+                foreach (var item in result)
                 {
                     SelectedResults.Add(item);
                 }
 
                 // Calculate summary statistics
-                CalculateSummaryStatistics(results);
+                CalculateSummaryStatistics(result);
 
                 LastUpdated = DateTime.Now;
+                LastDiscoveryTime = DateTime.Now; // Update last discovery time
                 OnPropertyChanged(nameof(ResultsCount));
                 OnPropertyChanged(nameof(HasResults));
 
-                _log?.LogInformation($"Loaded {results.Count} Azure Discovery records");
+                _log?.LogInformation($"Loaded {result.Count} Azure discovery records");
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error loading Azure Discovery CSV data");
+                _log?.LogError(ex, "Error loading Azure discovery CSV data");
                 ShowError("Data Load Failed", ex.Message);
             }
             finally
@@ -160,7 +153,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 IsProcessing = true;
                 StatusText = "Running Discovery";
-                ProcessingMessage = "Executing Azure Discovery...";
+                ProcessingMessage = "Executing Azure discovery...";
 
                 // Here you would implement the actual discovery logic
                 // For now, just simulate loading from CSV
@@ -170,7 +163,7 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error running Azure Discovery");
+                _log?.LogError(ex, "Error running Azure discovery");
                 ShowError("Discovery Error", ex.Message);
             }
             finally
@@ -203,7 +196,7 @@ namespace MandADiscoverySuite.ViewModels
                 }
 
                 // Implement export logic here
-                _log?.LogInformation("Exporting Azure Discovery data");
+                _log?.LogInformation("Exporting Azure discovery data");
                 await Task.CompletedTask; // Placeholder
             }
             catch (Exception ex)
@@ -213,49 +206,60 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private void ViewLogs()
-        {
-            try
-            {
-                _log?.LogInformation("Viewing Azure Discovery logs");
-                // Implement log viewing
-            }
-            catch (Exception ex)
-            {
-                _log?.LogError(ex, "Error viewing logs");
-                ShowError("Logs Error", ex.Message);
-            }
-        }
-
         #endregion
 
         #region Helper Methods
 
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
-            TotalSubscriptions = data.Select(item =>
+            var uniqueSubscriptions = new System.Collections.Generic.HashSet<string>();
+            var uniqueResourceGroups = new System.Collections.Generic.HashSet<string>();
+            var virtualMachineCount = 0;
+
+            foreach (var item in data)
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("subscriptionid", out var subscriptionIdObj);
-                return subscriptionIdObj?.ToString();
-            }).Distinct().Count();
 
-            TotalResourceGroups = data.Select(item =>
-            {
-                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("resourcegroup", out var resourceGroupObj);
-                return resourceGroupObj?.ToString();
-            }).Distinct().Count();
+                // Extract subscription
+                if (dict.TryGetValue("subscriptionname", out var subscriptionNameObj) ||
+                    dict.TryGetValue("subscription", out subscriptionNameObj) ||
+                    dict.TryGetValue("azure_subscription", out subscriptionNameObj))
+                {
+                    var subscriptionName = subscriptionNameObj?.ToString();
+                    if (!string.IsNullOrWhiteSpace(subscriptionName))
+                    {
+                        uniqueSubscriptions.Add(subscriptionName);
+                    }
+                }
 
-            TotalVMs = data.Count(item =>
-            {
-                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("resourcetype", out var resourceTypeObj);
-                return resourceTypeObj?.ToString()?.ToLower().Contains("virtual machine") ?? false;
-            });
+                // Extract resource group
+                if (dict.TryGetValue("resourcegroup", out var resourceGroupObj) ||
+                    dict.TryGetValue("resource_group", out resourceGroupObj) ||
+                    dict.TryGetValue("azure_resource_group", out resourceGroupObj))
+                {
+                    var resourceGroup = resourceGroupObj?.ToString();
+                    if (!string.IsNullOrWhiteSpace(resourceGroup))
+                    {
+                        uniqueResourceGroups.Add(resourceGroup);
+                    }
+                }
 
-            // Set LastDiscovery to current time since it's loaded now
-            LastDiscovery = DateTime.Now;
+                // Count virtual machines
+                if (dict.TryGetValue("resourcetype", out var resourceTypeObj) ||
+                    dict.TryGetValue("type", out resourceTypeObj))
+                {
+                    var resourceType = resourceTypeObj?.ToString();
+                    if (!string.IsNullOrWhiteSpace(resourceType) &&
+                        resourceType.Contains("Virtual Machine", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        virtualMachineCount++;
+                    }
+                }
+            }
+
+            TotalSubscriptions = uniqueSubscriptions.Count;
+            TotalResourceGroups = uniqueResourceGroups.Count;
+            TotalVirtualMachines = virtualMachineCount;
         }
 
         #endregion

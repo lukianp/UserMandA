@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
 using Microsoft.Extensions.Logging;
@@ -12,21 +11,21 @@ using CommunityToolkit.Mvvm.Input;
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
-    /// ViewModel for Exchange Discovery module
+    /// ViewModel for Conditional Access Policies Discovery module
     /// </summary>
-    public class ExchangeDiscoveryViewModel : ModuleViewModel
+    public class ConditionalAccessPoliciesDiscoveryViewModel : ModuleViewModel
     {
         private readonly CsvDataServiceNew _csvService;
 
         #region Constructor
 
-        public ExchangeDiscoveryViewModel(
+        public ConditionalAccessPoliciesDiscoveryViewModel(
             ModuleInfo moduleInfo,
             MainViewModel mainViewModel,
-            ILogger<ExchangeDiscoveryViewModel> logger)
+            ILogger<ConditionalAccessPoliciesDiscoveryViewModel> logger)
             : base(moduleInfo, mainViewModel, logger)
         {
-            _log?.LogInformation("Initializing ExchangeDiscoveryViewModel");
+            _log?.LogInformation("Initializing ConditionalAccessPoliciesDiscoveryViewModel");
 
             // Get CSV service
             var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
@@ -39,25 +38,25 @@ namespace MandADiscoverySuite.ViewModels
         #region Properties
 
         // Summary card properties
-        private int _totalMailboxes;
-        public int TotalMailboxes
+        private int _totalPolicies;
+        public int TotalPolicies
         {
-            get => _totalMailboxes;
-            set => SetProperty(ref _totalMailboxes, value);
+            get => _totalPolicies;
+            set => SetProperty(ref _totalPolicies, value);
         }
 
-        private int _totalSharedMailboxes;
-        public int TotalSharedMailboxes
+        private int _enabledPolicies;
+        public int EnabledPolicies
         {
-            get => _totalSharedMailboxes;
-            set => SetProperty(ref _totalSharedMailboxes, value);
+            get => _enabledPolicies;
+            set => SetProperty(ref _enabledPolicies, value);
         }
 
-        private int _totalDistributionGroups;
-        public int TotalDistributionGroups
+        private int _disabledPolicies;
+        public int DisabledPolicies
         {
-            get => _totalDistributionGroups;
-            set => SetProperty(ref _totalDistributionGroups, value);
+            get => _disabledPolicies;
+            set => SetProperty(ref _disabledPolicies, value);
         }
 
         private DateTime _lastDiscoveryTime = DateTime.MinValue;
@@ -85,7 +84,6 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
-        public AsyncRelayCommand ViewLogsCommand => new AsyncRelayCommand(ViewLogsAsync);
 
         #endregion
 
@@ -95,14 +93,14 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                _log?.LogInformation("Executing Exchange Discovery module");
+                _log?.LogInformation("Executing Conditional Access Policies Discovery module");
 
                 // Load data from CSV
                 await LoadFromCsvAsync(new System.Collections.Generic.List<dynamic>());
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error executing Exchange Discovery");
+                _log?.LogError(ex, "Error executing Conditional Access Policies Discovery");
                 ShowError("Discovery Failed", ex.Message);
             }
         }
@@ -112,12 +110,20 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 IsProcessing = true;
-                ProcessingMessage = "Loading Exchange Discovery data...";
+                ProcessingMessage = "Loading Conditional Access Policies data...";
 
-                // Use CsvDataServiceNew.LoadExchangeDiscoveryAsync
-                var loadedCsvData = await _csvService.LoadExchangeDiscoveryAsync();
+                // Load from specific CSV path
+                var csvPath = @"C:\discoverydata\ljpops\Raw\ConditionalAccessPoliciesDiscovery.csv";
+                var loadedCsvData = await _csvService.LoadCsvDataAsync(csvPath);
 
-                var result = DataLoaderResult<dynamic>.Success(loadedCsvData, new List<string>());
+                // Convert to dynamic list (similar to other loaders)
+                var results = new List<dynamic>();
+                foreach (var item in loadedCsvData)
+                {
+                    results.Add(item);
+                }
+
+                var result = DataLoaderResult<dynamic>.Success(results, new List<string>());
 
                 if (result.HeaderWarnings.Any())
                 {
@@ -142,15 +148,14 @@ namespace MandADiscoverySuite.ViewModels
                 CalculateSummaryStatistics(result.Data);
 
                 LastUpdated = DateTime.Now;
-                LastDiscoveryTime = DateTime.Now; // Set to current time as discovery time
                 OnPropertyChanged(nameof(ResultsCount));
                 OnPropertyChanged(nameof(HasResults));
 
-                _log?.LogInformation($"Loaded {result.Data.Count} Exchange Discovery records");
+                _log?.LogInformation($"Loaded {result.Data.Count} Conditional Access Policies records");
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error loading Exchange Discovery CSV data");
+                _log?.LogError(ex, "Error loading Conditional Access Policies CSV data");
                 ShowError("Data Load Failed", ex.Message);
             }
             finally
@@ -169,7 +174,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 IsProcessing = true;
                 StatusText = "Running Discovery";
-                ProcessingMessage = "Executing Exchange Discovery...";
+                ProcessingMessage = "Executing Conditional Access Policies Discovery...";
 
                 // Here you would implement the actual discovery logic
                 // For now, just simulate loading from CSV
@@ -179,7 +184,7 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error running Exchange Discovery");
+                _log?.LogError(ex, "Error running Conditional Access Policies Discovery");
                 ShowError("Discovery Error", ex.Message);
             }
             finally
@@ -212,7 +217,7 @@ namespace MandADiscoverySuite.ViewModels
                 }
 
                 // Implement export logic here
-                _log?.LogInformation("Exporting Exchange Discovery data");
+                _log?.LogInformation("Exporting Conditional Access Policies data");
                 await Task.CompletedTask; // Placeholder
             }
             catch (Exception ex)
@@ -222,45 +227,28 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task ViewLogsAsync()
-        {
-            try
-            {
-                // Implement view logs logic here
-                _log?.LogInformation("Viewing Exchange Discovery logs");
-                await Task.CompletedTask; // Placeholder
-            }
-            catch (Exception ex)
-            {
-                _log?.LogError(ex, "Error viewing logs");
-                ShowError("View Logs Failed", ex.Message);
-            }
-        }
-
         #endregion
 
         #region Helper Methods
 
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
-            TotalMailboxes = data.Count;
-            // Specific calculations based on Exchange data structure
-            // Assuming fields: mailboxname, primarysmtpaddress, mailboxtype, sizegb, lastlogin, status
-            TotalSharedMailboxes = data.Count(item =>
-            {
-                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("mailboxtype", out var mailboxTypeObj);
-                var type = mailboxTypeObj?.ToString()?.ToLowerInvariant();
-                return type?.Contains("shared") ?? false;
-            });
+            TotalPolicies = data.Count;
+            EnabledPolicies = 0;
+            DisabledPolicies = 0;
 
-            TotalDistributionGroups = data.Count(item =>
+            foreach (var item in data)
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("mailboxtype", out var mailboxTypeObj);
-                var type = mailboxTypeObj?.ToString()?.ToLowerInvariant();
-                return type?.Contains("distribution") ?? false;
-            });
+
+                // Count enabled/disabled policies
+                if (dict.TryGetValue("state", out var stateObj))
+                {
+                    var state = stateObj?.ToString().ToLower();
+                    if (state == "enabled") EnabledPolicies++;
+                    else if (state == "disabled") DisabledPolicies++;
+                }
+            }
         }
 
         #endregion

@@ -126,30 +126,10 @@ namespace MandADiscoverySuite.ViewModels
                 IsProcessing = true;
                 ProcessingMessage = "Loading Microsoft Teams data...";
 
-                // Load from specific CSV path
-                var csvPath = @"C:\discoverydata\ljpops\Raw\MicrosoftTeamsDiscovery.csv";
-                var loadedCsvData = await _csvService.LoadCsvDataAsync(csvPath);
-
-                // Convert to dynamic list
-                var results = new List<dynamic>();
-                foreach (var item in loadedCsvData)
-                {
-                    results.Add(item);
-                }
+                // Load Teams discovery data using the specific method
+                var results = await _csvService.LoadTeamsDiscoveryAsync();
 
                 var result = DataLoaderResult<dynamic>.Success(results, new List<string>());
-
-                if (result.HeaderWarnings.Any())
-                {
-                    // Set error message for red banner
-                    ErrorMessage = string.Join("; ", result.HeaderWarnings);
-                    HasErrors = true;
-                }
-                else
-                {
-                    HasErrors = false;
-                    ErrorMessage = string.Empty;
-                }
 
                 // Update collections and summary statistics
                 SelectedResults.Clear();
@@ -161,7 +141,9 @@ namespace MandADiscoverySuite.ViewModels
                 // Calculate summary statistics
                 CalculateSummaryStatistics(result.Data);
 
-                LastUpdated = DateTime.Now;
+                // Set last discovery to now
+                LastDiscovery = DateTime.Now;
+
                 OnPropertyChanged(nameof(ResultsCount));
                 OnPropertyChanged(nameof(HasResults));
 
@@ -169,7 +151,7 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error loading Microsoft Teams CSV data");
+                _log?.LogError(ex, "Error loading Microsoft Teams discovery data");
                 ShowError("Data Load Failed", ex.Message);
             }
             finally

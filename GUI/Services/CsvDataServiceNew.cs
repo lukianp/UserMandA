@@ -98,6 +98,34 @@ namespace MandADiscoverySuite.Services
             return results;
         }
 
+        /// <summary>
+        /// Load network infrastructure discovery data from CSV files
+        /// </summary>
+        public async Task<List<dynamic>> LoadNetworkInfrastructureDiscoveryAsync()
+        {
+            var results = new List<dynamic>();
+
+            var csvPath = @"C:\discoverydata\ljpops\Raw\NetworkInfrastructureDiscovery.csv";
+
+            try
+            {
+                var loadedData = await LoadCsvDataAsync(csvPath);
+                foreach (var item in loadedData)
+                {
+                    results.Add(item);
+                }
+
+                _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} Network Infrastructure Discovery records from {csvPath}");
+
+                return results;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error loading Network Infrastructure Discovery data from {csvPath}");
+                throw;
+            }
+        }
+
         #endregion
 
         #region Users Loading
@@ -912,6 +940,63 @@ namespace MandADiscoverySuite.Services
             catch (Exception ex)
             {
                 _logger?.LogError(ex, $"Error loading Microsoft Teams Discovery data from {csvPath}");
+                throw;
+            }
+        }
+
+        #endregion
+
+        #region Exchange Discovery Loading
+
+        public async Task<List<dynamic>> LoadExchangeDiscoveryAsync()
+        {
+            var results = new List<dynamic>();
+            var csvPath = @"C:\discoverydata\ljpops\Raw\ExchangeDiscovery.csv";
+
+            try
+            {
+                var loadedData = await LoadCsvDataAsync(csvPath);
+                foreach (var item in loadedData)
+                {
+                    results.Add(item);
+                }
+
+                _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} Exchange Discovery records from {csvPath}");
+
+                return results;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error loading Exchange Discovery data from {csvPath}");
+                throw;
+            }
+        }
+
+        #endregion
+
+        #region SharePoint Discovery Loading
+
+        public async Task<List<dynamic>> LoadSharePointDiscoveryAsync()
+        {
+            var results = new List<dynamic>();
+
+            var csvPath = @"C:\discoverydata\ljpops\Raw\SharePointDiscovery.csv";
+
+            try
+            {
+                var loadedData = await LoadCsvDataAsync(csvPath);
+                foreach (var item in loadedData)
+                {
+                    results.Add(item);
+                }
+
+                _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} SharePoint Discovery records from {csvPath}");
+
+                return results;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error loading SharePoint Discovery data from {csvPath}");
                 throw;
             }
         }

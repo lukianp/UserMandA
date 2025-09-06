@@ -38,10 +38,21 @@ namespace MandADiscoverySuite.Services
                 ["activedirectorydiscovery"] = () => new ActiveDirectoryDiscoveryView(),
                 ["teamsdiscovery"] = () => new TeamsDiscoveryView(),
                 ["microsoftteamsdiscovery"] = () => new MicrosoftTeamsDiscoveryView(),
+                ["MicrosoftTeamsDiscovery"] = () => new MicrosoftTeamsDiscoveryView(),
                 ["azurediscovery"] = () => new AzureInfrastructureDiscoveryView(),
+                ["AzureDiscovery"] = () => new AzureDiscoveryView(),
                 ["datalosspreventiondiscovery"] = () => new DataLossPreventionDiscoveryView(),
                 ["webserverconfigurationdiscovery"] = () => new WebServerConfigurationDiscoveryView(),
                 ["environmentriskassessment"] = () => new EnvironmentRiskAssessmentView(),
+                ["onedrivebusinessdiscovery"] = () => new OneDriveBusinessDiscoveryView(),
+                ["powerbidiscovery"] = () => new PowerBIDiscoveryView(),
+                ["environmentdetection"] = () => new EnvironmentDetectionView(),
+                ["awscloudinfrastructurediscovery"] = () => new AWSCloudInfrastructureDiscoveryView(),
+                ["conditionalaccesspoliciesdiscovery"] = () => new ConditionalAccessPoliciesDiscoveryView(),
+                ["exchangediscovery"] = () => new ExchangeDiscoveryView(),
+                ["networkinfrastructurediscovery"] = () => new NetworkInfrastructureDiscoveryView(),
+                ["NetworkInfrastructureDiscovery"] = () => new NetworkInfrastructureDiscoveryView(),
+                ["sharepointdiscovery"] = () => new SharePointDiscoveryView(),
                 // Removed duplicate "security groups" - use "groups" instead
                 ["waves"] = () => new WaveView(),
                 ["migrate"] = () => new MigrateView(),
@@ -127,10 +138,12 @@ namespace MandADiscoverySuite.Services
                 ["Infrastructure"] = () => new InfrastructureViewNew(),
                 ["Discovery"] = () => new DiscoveryView(), // Discovery modules view (PascalCase)
                 ["TeamsDiscovery"] = () => new TeamsDiscoveryView(),
-                ["AzureDiscovery"] = () => new AzureInfrastructureDiscoveryView(),
+                ["AzureDiscovery"] = () => new AzureDiscoveryView(),
                 ["DataLossPreventionDiscovery"] = () => new DataLossPreventionDiscoveryView(),
                 ["WebServerConfigurationDiscovery"] = () => new WebServerConfigurationDiscoveryView(),
                 ["EnvironmentRiskAssessment"] = () => new EnvironmentRiskAssessmentView(),
+                ["ExchangeDiscovery"] = () => new ExchangeDiscoveryView(),
+                ["SharePointDiscovery"] = () => new SharePointDiscoveryView(),
             };
         }
 

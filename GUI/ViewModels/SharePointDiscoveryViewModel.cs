@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
 using Microsoft.Extensions.Logging;
@@ -12,21 +11,21 @@ using CommunityToolkit.Mvvm.Input;
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
-    /// ViewModel for Exchange Discovery module
+    /// ViewModel for SharePoint Discovery module
     /// </summary>
-    public class ExchangeDiscoveryViewModel : ModuleViewModel
+    public class SharePointDiscoveryViewModel : ModuleViewModel
     {
         private readonly CsvDataServiceNew _csvService;
 
         #region Constructor
 
-        public ExchangeDiscoveryViewModel(
+        public SharePointDiscoveryViewModel(
             ModuleInfo moduleInfo,
             MainViewModel mainViewModel,
-            ILogger<ExchangeDiscoveryViewModel> logger)
+            ILogger<SharePointDiscoveryViewModel> logger)
             : base(moduleInfo, mainViewModel, logger)
         {
-            _log?.LogInformation("Initializing ExchangeDiscoveryViewModel");
+            _log?.LogInformation("Initializing SharePointDiscoveryViewModel");
 
             // Get CSV service
             var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
@@ -39,32 +38,32 @@ namespace MandADiscoverySuite.ViewModels
         #region Properties
 
         // Summary card properties
-        private int _totalMailboxes;
-        public int TotalMailboxes
+        private int _totalSiteCollections;
+        public int TotalSiteCollections
         {
-            get => _totalMailboxes;
-            set => SetProperty(ref _totalMailboxes, value);
+            get => _totalSiteCollections;
+            set => SetProperty(ref _totalSiteCollections, value);
         }
 
-        private int _totalSharedMailboxes;
-        public int TotalSharedMailboxes
+        private int _totalSites;
+        public int TotalSites
         {
-            get => _totalSharedMailboxes;
-            set => SetProperty(ref _totalSharedMailboxes, value);
+            get => _totalSites;
+            set => SetProperty(ref _totalSites, value);
         }
 
-        private int _totalDistributionGroups;
-        public int TotalDistributionGroups
+        private int _totalLists;
+        public int TotalLists
         {
-            get => _totalDistributionGroups;
-            set => SetProperty(ref _totalDistributionGroups, value);
+            get => _totalLists;
+            set => SetProperty(ref _totalLists, value);
         }
 
-        private DateTime _lastDiscoveryTime = DateTime.MinValue;
-        public DateTime LastDiscoveryTime
+        private DateTime _lastDiscovery = DateTime.MinValue;
+        public DateTime LastDiscovery
         {
-            get => _lastDiscoveryTime;
-            set => SetProperty(ref _lastDiscoveryTime, value);
+            get => _lastDiscovery;
+            set => SetProperty(ref _lastDiscovery, value);
         }
 
         // Data binding collections
@@ -74,7 +73,21 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    // Update selected item details for details panel
+                    UpdateSelectedItemDetails();
+                }
+            }
+        }
+
+        private ObservableCollection<KeyValuePair<string, string>> _selectedItemDetails = new ObservableCollection<KeyValuePair<string, string>>();
+        public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails
+        {
+            get => _selectedItemDetails;
+            set => SetProperty(ref _selectedItemDetails, value);
         }
 
         #endregion
@@ -85,7 +98,6 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
-        public AsyncRelayCommand ViewLogsCommand => new AsyncRelayCommand(ViewLogsAsync);
 
         #endregion
 
@@ -95,14 +107,14 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                _log?.LogInformation("Executing Exchange Discovery module");
+                _log?.LogInformation("Executing SharePoint discovery module");
 
                 // Load data from CSV
                 await LoadFromCsvAsync(new System.Collections.Generic.List<dynamic>());
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error executing Exchange Discovery");
+                _log?.LogError(ex, "Error executing SharePoint discovery");
                 ShowError("Discovery Failed", ex.Message);
             }
         }
@@ -112,12 +124,20 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 IsProcessing = true;
-                ProcessingMessage = "Loading Exchange Discovery data...";
+                ProcessingMessage = "Loading SharePoint data...";
 
-                // Use CsvDataServiceNew.LoadExchangeDiscoveryAsync
-                var loadedCsvData = await _csvService.LoadExchangeDiscoveryAsync();
+                // Load from specific CSV path
+                var csvPath = @"C:\discoverydata\ljpops\Raw\SharePointDiscovery.csv";
+                var loadedCsvData = await _csvService.LoadSharePointDiscoveryAsync();
 
-                var result = DataLoaderResult<dynamic>.Success(loadedCsvData, new List<string>());
+                // Convert to dynamic list
+                var results = new List<dynamic>();
+                foreach (var item in loadedCsvData)
+                {
+                    results.Add(item);
+                }
+
+                var result = DataLoaderResult<dynamic>.Success(results, new List<string>());
 
                 if (result.HeaderWarnings.Any())
                 {
@@ -142,15 +162,14 @@ namespace MandADiscoverySuite.ViewModels
                 CalculateSummaryStatistics(result.Data);
 
                 LastUpdated = DateTime.Now;
-                LastDiscoveryTime = DateTime.Now; // Set to current time as discovery time
                 OnPropertyChanged(nameof(ResultsCount));
                 OnPropertyChanged(nameof(HasResults));
 
-                _log?.LogInformation($"Loaded {result.Data.Count} Exchange Discovery records");
+                _log?.LogInformation($"Loaded {result.Data.Count} SharePoint records");
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error loading Exchange Discovery CSV data");
+                _log?.LogError(ex, "Error loading SharePoint CSV data");
                 ShowError("Data Load Failed", ex.Message);
             }
             finally
@@ -169,7 +188,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 IsProcessing = true;
                 StatusText = "Running Discovery";
-                ProcessingMessage = "Executing Exchange Discovery...";
+                ProcessingMessage = "Executing SharePoint discovery...";
 
                 // Here you would implement the actual discovery logic
                 // For now, just simulate loading from CSV
@@ -179,7 +198,7 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error running Exchange Discovery");
+                _log?.LogError(ex, "Error running SharePoint discovery");
                 ShowError("Discovery Error", ex.Message);
             }
             finally
@@ -212,7 +231,7 @@ namespace MandADiscoverySuite.ViewModels
                 }
 
                 // Implement export logic here
-                _log?.LogInformation("Exporting Exchange Discovery data");
+                _log?.LogInformation("Exporting SharePoint data");
                 await Task.CompletedTask; // Placeholder
             }
             catch (Exception ex)
@@ -222,45 +241,68 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task ViewLogsAsync()
-        {
-            try
-            {
-                // Implement view logs logic here
-                _log?.LogInformation("Viewing Exchange Discovery logs");
-                await Task.CompletedTask; // Placeholder
-            }
-            catch (Exception ex)
-            {
-                _log?.LogError(ex, "Error viewing logs");
-                ShowError("View Logs Failed", ex.Message);
-            }
-        }
-
         #endregion
 
         #region Helper Methods
 
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
-            TotalMailboxes = data.Count;
-            // Specific calculations based on Exchange data structure
-            // Assuming fields: mailboxname, primarysmtpaddress, mailboxtype, sizegb, lastlogin, status
-            TotalSharedMailboxes = data.Count(item =>
-            {
-                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("mailboxtype", out var mailboxTypeObj);
-                var type = mailboxTypeObj?.ToString()?.ToLowerInvariant();
-                return type?.Contains("shared") ?? false;
-            });
+            TotalSiteCollections = data.Count;
+            TotalSites = data.Count;
+            TotalLists = 0;
 
-            TotalDistributionGroups = data.Count(item =>
+            foreach (var item in data)
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("mailboxtype", out var mailboxTypeObj);
-                var type = mailboxTypeObj?.ToString()?.ToLowerInvariant();
-                return type?.Contains("distribution") ?? false;
-            });
+
+                // Count lists
+                if (dict.TryGetValue("listcount", out var listCountObj) ||
+                    dict.TryGetValue("ListCount", out listCountObj))
+                {
+                    if (int.TryParse(listCountObj?.ToString(), out var lists))
+                    {
+                        TotalLists += lists;
+                    }
+                }
+            }
+        }
+
+        private void UpdateSelectedItemDetails()
+        {
+            SelectedItemDetails.Clear();
+
+            if (SelectedItem == null) return;
+
+            var dict = (System.Collections.Generic.IDictionary<string, object>)SelectedItem;
+
+            // Site Details
+            dict.TryGetValue("sitename", out var siteNameObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Site Name", siteNameObj?.ToString() ?? ""));
+
+            dict.TryGetValue("url", out var urlObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("URL", urlObj?.ToString() ?? ""));
+
+            dict.TryGetValue("owner", out var ownerObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Owner", ownerObj?.ToString() ?? ""));
+
+            dict.TryGetValue("sitetemplate", out var siteTemplateObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Site Template", siteTemplateObj?.ToString() ?? ""));
+
+            dict.TryGetValue("storageused", out var storageUsedObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Storage Used", storageUsedObj?.ToString() ?? ""));
+
+            dict.TryGetValue("createddate", out var createdDateObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Created Date", createdDateObj?.ToString() ?? ""));
+
+            dict.TryGetValue("modifieddate", out var modifiedDateObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Modified Date", modifiedDateObj?.ToString() ?? ""));
+
+            // Additional Details
+            dict.TryGetValue("listcount", out var listCountObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("List Count", listCountObj?.ToString() ?? ""));
+
+            dict.TryGetValue("itemcount", out var itemCountObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Item Count", itemCountObj?.ToString() ?? ""));
         }
 
         #endregion

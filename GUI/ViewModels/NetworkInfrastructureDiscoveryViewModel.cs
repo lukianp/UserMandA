@@ -12,21 +12,21 @@ using CommunityToolkit.Mvvm.Input;
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
-    /// ViewModel for Exchange Discovery module
+    /// ViewModel for Network Infrastructure Discovery module
     /// </summary>
-    public class ExchangeDiscoveryViewModel : ModuleViewModel
+    public class NetworkInfrastructureDiscoveryViewModel : ModuleViewModel
     {
         private readonly CsvDataServiceNew _csvService;
 
         #region Constructor
 
-        public ExchangeDiscoveryViewModel(
+        public NetworkInfrastructureDiscoveryViewModel(
             ModuleInfo moduleInfo,
             MainViewModel mainViewModel,
-            ILogger<ExchangeDiscoveryViewModel> logger)
+            ILogger<NetworkInfrastructureDiscoveryViewModel> logger)
             : base(moduleInfo, mainViewModel, logger)
         {
-            _log?.LogInformation("Initializing ExchangeDiscoveryViewModel");
+            _log?.LogInformation("Initializing NetworkInfrastructureDiscoveryViewModel");
 
             // Get CSV service
             var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
@@ -39,25 +39,25 @@ namespace MandADiscoverySuite.ViewModels
         #region Properties
 
         // Summary card properties
-        private int _totalMailboxes;
-        public int TotalMailboxes
+        private int _totalSwitches;
+        public int TotalSwitches
         {
-            get => _totalMailboxes;
-            set => SetProperty(ref _totalMailboxes, value);
+            get => _totalSwitches;
+            set => SetProperty(ref _totalSwitches, value);
         }
 
-        private int _totalSharedMailboxes;
-        public int TotalSharedMailboxes
+        private int _totalRouters;
+        public int TotalRouters
         {
-            get => _totalSharedMailboxes;
-            set => SetProperty(ref _totalSharedMailboxes, value);
+            get => _totalRouters;
+            set => SetProperty(ref _totalRouters, value);
         }
 
-        private int _totalDistributionGroups;
-        public int TotalDistributionGroups
+        private int _totalFirewalls;
+        public int TotalFirewalls
         {
-            get => _totalDistributionGroups;
-            set => SetProperty(ref _totalDistributionGroups, value);
+            get => _totalFirewalls;
+            set => SetProperty(ref _totalFirewalls, value);
         }
 
         private DateTime _lastDiscoveryTime = DateTime.MinValue;
@@ -85,7 +85,6 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
-        public AsyncRelayCommand ViewLogsCommand => new AsyncRelayCommand(ViewLogsAsync);
 
         #endregion
 
@@ -95,14 +94,14 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                _log?.LogInformation("Executing Exchange Discovery module");
+                _log?.LogInformation("Executing Network Infrastructure discovery module");
 
                 // Load data from CSV
                 await LoadFromCsvAsync(new System.Collections.Generic.List<dynamic>());
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error executing Exchange Discovery");
+                _log?.LogError(ex, "Error executing Network Infrastructure discovery");
                 ShowError("Discovery Failed", ex.Message);
             }
         }
@@ -112,12 +111,19 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 IsProcessing = true;
-                ProcessingMessage = "Loading Exchange Discovery data...";
+                ProcessingMessage = "Loading Network Infrastructure data...";
 
-                // Use CsvDataServiceNew.LoadExchangeDiscoveryAsync
-                var loadedCsvData = await _csvService.LoadExchangeDiscoveryAsync();
+                // Load from specific CSV path using the dedicated method
+                var loadedCsvData = await _csvService.LoadNetworkInfrastructureDiscoveryAsync();
 
-                var result = DataLoaderResult<dynamic>.Success(loadedCsvData, new List<string>());
+                // Create dynamic list
+                var results = new List<dynamic>();
+                foreach (var item in loadedCsvData)
+                {
+                    results.Add(item);
+                }
+
+                var result = DataLoaderResult<dynamic>.Success(results, new List<string>());
 
                 if (result.HeaderWarnings.Any())
                 {
@@ -142,15 +148,14 @@ namespace MandADiscoverySuite.ViewModels
                 CalculateSummaryStatistics(result.Data);
 
                 LastUpdated = DateTime.Now;
-                LastDiscoveryTime = DateTime.Now; // Set to current time as discovery time
                 OnPropertyChanged(nameof(ResultsCount));
                 OnPropertyChanged(nameof(HasResults));
 
-                _log?.LogInformation($"Loaded {result.Data.Count} Exchange Discovery records");
+                _log?.LogInformation($"Loaded {result.Data.Count} Network Infrastructure records");
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error loading Exchange Discovery CSV data");
+                _log?.LogError(ex, "Error loading Network Infrastructure CSV data");
                 ShowError("Data Load Failed", ex.Message);
             }
             finally
@@ -169,7 +174,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 IsProcessing = true;
                 StatusText = "Running Discovery";
-                ProcessingMessage = "Executing Exchange Discovery...";
+                ProcessingMessage = "Executing Network Infrastructure discovery...";
 
                 // Here you would implement the actual discovery logic
                 // For now, just simulate loading from CSV
@@ -179,7 +184,7 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
-                _log?.LogError(ex, "Error running Exchange Discovery");
+                _log?.LogError(ex, "Error running Network Infrastructure discovery");
                 ShowError("Discovery Error", ex.Message);
             }
             finally
@@ -212,7 +217,7 @@ namespace MandADiscoverySuite.ViewModels
                 }
 
                 // Implement export logic here
-                _log?.LogInformation("Exporting Exchange Discovery data");
+                _log?.LogInformation("Exporting Network Infrastructure data");
                 await Task.CompletedTask; // Placeholder
             }
             catch (Exception ex)
@@ -222,45 +227,65 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task ViewLogsAsync()
-        {
-            try
-            {
-                // Implement view logs logic here
-                _log?.LogInformation("Viewing Exchange Discovery logs");
-                await Task.CompletedTask; // Placeholder
-            }
-            catch (Exception ex)
-            {
-                _log?.LogError(ex, "Error viewing logs");
-                ShowError("View Logs Failed", ex.Message);
-            }
-        }
-
         #endregion
 
         #region Helper Methods
 
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
-            TotalMailboxes = data.Count;
-            // Specific calculations based on Exchange data structure
-            // Assuming fields: mailboxname, primarysmtpaddress, mailboxtype, sizegb, lastlogin, status
-            TotalSharedMailboxes = data.Count(item =>
+            if (data == null || !data.Any())
             {
-                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("mailboxtype", out var mailboxTypeObj);
-                var type = mailboxTypeObj?.ToString()?.ToLowerInvariant();
-                return type?.Contains("shared") ?? false;
-            });
+                TotalSwitches = 0;
+                TotalRouters = 0;
+                TotalFirewalls = 0;
+                LastDiscoveryTime = DateTime.MinValue;
+                return;
+            }
 
-            TotalDistributionGroups = data.Count(item =>
+            // Count devices by type
+            TotalSwitches = CountDeviceType(data, "switch");
+            TotalRouters = CountDeviceType(data, "router");
+            TotalFirewalls = CountDeviceType(data, "firewall") + CountDeviceType(data, "fw");
+
+            // Set last discovery time (could be current time or from data)
+            LastDiscoveryTime = DateTime.Now;
+
+            // Optionally parse from data if lastseen column exists
+            var lastDiscovery = GetLastDiscoveryTimeFromData(data);
+            if (lastDiscovery.HasValue)
+            {
+                LastDiscoveryTime = lastDiscovery.Value;
+            }
+        }
+
+        private int CountDeviceType(System.Collections.Generic.List<dynamic> data, string deviceType)
+        {
+            return data.Count(item =>
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("mailboxtype", out var mailboxTypeObj);
-                var type = mailboxTypeObj?.ToString()?.ToLowerInvariant();
-                return type?.Contains("distribution") ?? false;
+                dict.TryGetValue("device_type", out var typeObj);
+                dict.TryGetValue("devicetype", out var typeObj2);
+
+                string type = (typeObj ?? typeObj2)?.ToString() ?? string.Empty;
+                return type.Contains(deviceType, StringComparison.OrdinalIgnoreCase);
             });
+        }
+
+        private DateTime? GetLastDiscoveryTimeFromData(System.Collections.Generic.List<dynamic> data)
+        {
+            // Try to find lastseen timestamp from data
+            foreach (var item in data)
+            {
+                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                if (dict.TryGetValue("lastseen", out var lastSeenObj) && lastSeenObj != null)
+                {
+                    if (DateTime.TryParse(lastSeenObj.ToString(), out var lastSeen))
+                    {
+                        return lastSeen;
+                    }
+                }
+            }
+            return null;
         }
 
         #endregion

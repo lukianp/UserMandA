@@ -120,7 +120,10 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ShowDataLossPreventionDiscoveryCommand { get; }
         public ICommand ShowWebServerConfigurationDiscoveryCommand { get; }
         public ICommand ShowEnvironmentRiskAssessmentCommand { get; }
-        
+        public ICommand ShowExchangeDiscoveryCommand { get; }
+        public ICommand ShowNetworkInfrastructureDiscoveryCommand { get; }
+        public ICommand ShowSharePointDiscoveryCommand { get; }
+
         // Report commands
         public ICommand GenerateReportCommand { get; }
         
@@ -493,7 +496,10 @@ namespace MandADiscoverySuite.ViewModels
             ShowDataLossPreventionDiscoveryCommand = new AsyncRelayCommand(ShowDataLossPreventionDiscoveryAsync);
             ShowWebServerConfigurationDiscoveryCommand = new AsyncRelayCommand(ShowWebServerConfigurationDiscoveryAsync);
             ShowEnvironmentRiskAssessmentCommand = new AsyncRelayCommand(ShowEnvironmentRiskAssessmentAsync);
-            
+            ShowExchangeDiscoveryCommand = new AsyncRelayCommand(ShowExchangeDiscoveryAsync);
+            ShowNetworkInfrastructureDiscoveryCommand = new AsyncRelayCommand(ShowNetworkInfrastructureDiscoveryAsync);
+            ShowSharePointDiscoveryCommand = new AsyncRelayCommand(ShowSharePointDiscoveryAsync);
+
             // Report commands
             GenerateReportCommand = new AsyncRelayCommand<string>(GenerateReportAsync);
             
@@ -3000,7 +3006,7 @@ namespace MandADiscoverySuite.ViewModels
 
         private async Task ShowAzureDiscoveryAsync()
         {
-            await _navigationService.NavigateToTabAsync("azurediscovery", "Azure Infrastructure Discovery");
+            await _navigationService.NavigateToTabAsync("AzureDiscovery", "Azure Discovery");
         }
 
         private async Task ShowDataLossPreventionDiscoveryAsync()
@@ -3016,6 +3022,21 @@ namespace MandADiscoverySuite.ViewModels
         private async Task ShowEnvironmentRiskAssessmentAsync()
         {
             await _navigationService.NavigateToTabAsync("environmentriskassessment", "Environment Risk Assessment");
+        }
+
+        private async Task ShowExchangeDiscoveryAsync()
+        {
+            await _navigationService.NavigateToTabAsync("exchangediscovery", "Exchange Discovery");
+        }
+
+        private async Task ShowNetworkInfrastructureDiscoveryAsync()
+        {
+            await _navigationService.NavigateToTabAsync("networkinfrastructurediscovery", "Network Infrastructure Discovery");
+        }
+
+        private async Task ShowSharePointDiscoveryAsync()
+        {
+            await _navigationService.NavigateToTabAsync("sharepointdiscovery", "SharePoint Discovery");
         }
         
         // Methods referenced by code-behind
