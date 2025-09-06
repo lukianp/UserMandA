@@ -889,6 +889,34 @@ namespace MandADiscoverySuite.Services
 
         #endregion
 
+        #region Microsoft Teams Discovery Loading
+
+        public async Task<List<dynamic>> LoadTeamsDiscoveryAsync()
+        {
+            var results = new List<dynamic>();
+
+            var csvPath = @"C:\discoverydata\ljpops\Raw\MicrosoftTeamsDiscovery.csv";
+
+            try
+            {
+                var loadedData = await LoadCsvDataAsync(csvPath);
+                foreach (var item in loadedData)
+                {
+                    results.Add(item);
+                }
+
+                _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} Microsoft Teams Discovery records from {csvPath}");
+
+                return results;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error loading Microsoft Teams Discovery data from {csvPath}");
+                throw;
+            }
+        }
+
+        #endregion
 
         #region Migration Data Loading
 

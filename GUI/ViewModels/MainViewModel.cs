@@ -115,6 +115,7 @@ namespace MandADiscoverySuite.ViewModels
 
         // New Discovery Views commands
         public ICommand ShowTeamsDiscoveryCommand { get; }
+        public ICommand ShowMicrosoftTeamsDiscoveryCommand { get; }
         public ICommand ShowAzureDiscoveryCommand { get; }
         public ICommand ShowDataLossPreventionDiscoveryCommand { get; }
         public ICommand ShowWebServerConfigurationDiscoveryCommand { get; }
@@ -487,6 +488,7 @@ namespace MandADiscoverySuite.ViewModels
 
             // New Discovery Views commands
             ShowTeamsDiscoveryCommand = new AsyncRelayCommand(ShowTeamsDiscoveryAsync);
+            ShowMicrosoftTeamsDiscoveryCommand = new AsyncRelayCommand(ShowMicrosoftTeamsDiscoveryAsync);
             ShowAzureDiscoveryCommand = new AsyncRelayCommand(ShowAzureDiscoveryAsync);
             ShowDataLossPreventionDiscoveryCommand = new AsyncRelayCommand(ShowDataLossPreventionDiscoveryAsync);
             ShowWebServerConfigurationDiscoveryCommand = new AsyncRelayCommand(ShowWebServerConfigurationDiscoveryAsync);
@@ -2989,6 +2991,11 @@ namespace MandADiscoverySuite.ViewModels
         private async Task ShowTeamsDiscoveryAsync()
         {
             await _navigationService.NavigateToTabAsync("teamsdiscovery", "Teams Discovery");
+        }
+
+        private async Task ShowMicrosoftTeamsDiscoveryAsync()
+        {
+            await _navigationService.NavigateToTabAsync("microsoftteamsdiscovery", "Microsoft Teams Discovery");
         }
 
         private async Task ShowAzureDiscoveryAsync()

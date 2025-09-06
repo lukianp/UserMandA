@@ -172,26 +172,7 @@ namespace MandADiscoverySuite.ViewModels
                 if (CurrentProject != null)
                 {
                     var existingTasks = CurrentProject.Phases.SelectMany(p => p.Components).SelectMany(c => c.Tasks).Any();
-                    if (!existingTasks && CurrentProject.Phases.Any())
-                    {
-                        var firstComponent = CurrentProject.Phases.First().Components.FirstOrDefault();
-                        if (firstComponent != null)
-                        {
-                            var sampleTasks = new[]
-                            {
-                                new ProjectTask { Name = "Project Planning", Status = TaskStatus.Completed },
-                                new ProjectTask { Name = "Requirements Analysis", Status = TaskStatus.Completed },
-                                new ProjectTask { Name = "Development Phase 1", Status = TaskStatus.InProgress },
-                                new ProjectTask { Name = "Testing Phase 1", Status = TaskStatus.NotStarted },
-                                new ProjectTask { Name = "Deployment", Status = TaskStatus.NotStarted }
-                            };
-                            
-                            foreach (var task in sampleTasks)
-                            {
-                                firstComponent.Tasks.Add(task);
-                            }
-                        }
-                    }
+                    // No sample tasks - data should come from discovery or user input only
                 }
                 
                 // Initialize empty project - data will be loaded from discovery

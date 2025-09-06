@@ -37,6 +37,7 @@ namespace MandADiscoverySuite.Services
                 ["grouppolicysecurity"] = () => new GroupPolicySecurityView(), // Legacy security view
                 ["activedirectorydiscovery"] = () => new ActiveDirectoryDiscoveryView(),
                 ["teamsdiscovery"] = () => new TeamsDiscoveryView(),
+                ["microsoftteamsdiscovery"] = () => new MicrosoftTeamsDiscoveryView(),
                 ["azurediscovery"] = () => new AzureInfrastructureDiscoveryView(),
                 ["datalosspreventiondiscovery"] = () => new DataLossPreventionDiscoveryView(),
                 ["webserverconfigurationdiscovery"] = () => new WebServerConfigurationDiscoveryView(),

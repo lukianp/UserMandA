@@ -54,7 +54,8 @@ Write-Host "=======================================" -ForegroundColor Green
 
 # Get script directory
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $ScriptDir
+$GUIDir = Join-Path (Split-Path $ScriptDir -Parent) "GUI"
+Set-Location $GUIDir
 
 # Check if .NET 6 SDK is installed
 Write-Host "Checking for .NET 6 SDK..." -ForegroundColor Yellow
