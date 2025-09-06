@@ -209,7 +209,7 @@
                             <TextBlock Text="{Binding SelectedItem.filecount}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
 
                             <TextBlock Text="Storage Used:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.storagesize, StringFormat='{/} GB'}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedItem.storagesize, StringFormat='{}{0} GB'}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
 
                             <TextBlock Text="Last Modified:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
                             <TextBlock Text="{Binding SelectedItem.lastmodified}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>

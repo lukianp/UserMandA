@@ -392,30 +392,8 @@ namespace MandADiscoverySuite.ViewModels
                 MigrationProjectWaves = new ObservableCollection<MigrationProjectWave>();
             }
 
-            // Initialize available users with ShareGate-inspired complexity data
-            AvailableUsers = new ObservableCollection<User>
-            {
-                CreateEnhancedUser(new User { Name = "John Smith", Role = "Project Manager", Department = "Executive" }),
-                CreateEnhancedUser(new User { Name = "Sarah Johnson", Role = "Technical Lead", Department = "IT" }),
-                CreateEnhancedUser(new User { Name = "Mike Chen", Role = "Business Analyst", Department = "Finance" }),
-                CreateEnhancedUser(new User { Name = "Lisa Davis", Role = "Change Management", Department = "HR" }),
-                CreateEnhancedUser(new User { Name = "Tom Wilson", Role = "System Administrator", Department = "IT" }),
-                CreateEnhancedUser(new User { Name = "Amy Rodriguez", Role = "Database Administrator", Department = "IT" }),
-                CreateEnhancedUser(new User { Name = "David Park", Role = "Identity Specialist", Department = "IT" }),
-                CreateEnhancedUser(new User { Name = "Jennifer Lee", Role = "Security Analyst", Department = "IT" }),
-                CreateEnhancedUser(new User { Name = "Chris Thompson", Role = "Application Developer", Department = "IT" }),
-                CreateEnhancedUser(new User { Name = "Maria Garcia", Role = "QA Engineer", Department = "IT" }),
-                CreateEnhancedUser(new User { Name = "Robert Brown", Role = "Network Administrator", Department = "IT" }),
-                CreateEnhancedUser(new User { Name = "Emily White", Role = "Data Analyst", Department = "Finance" }),
-                CreateEnhancedUser(new User { Name = "James Taylor", Role = "DevOps Engineer", Department = "IT" }),
-                CreateEnhancedUser(new User { Name = "Jessica Miller", Role = "User Training Specialist", Department = "HR" }),
-                CreateEnhancedUser(new User { Name = "Michael Davis", Role = "Infrastructure Architect", Department = "IT" }),
-                CreateEnhancedUser(new User { Name = "Rachel Green", Role = "Sales Manager", Department = "Sales" }),
-                CreateEnhancedUser(new User { Name = "Mark Johnson", Role = "Marketing Director", Department = "Marketing" }),
-                CreateEnhancedUser(new User { Name = "Nina Patel", Role = "Legal Counsel", Department = "Legal" }),
-                CreateEnhancedUser(new User { Name = "Alex Wang", Role = "Operations Manager", Department = "Operations" }),
-                CreateEnhancedUser(new User { Name = "Sophie Brown", Role = "Support Specialist", Department = "Support" })
-            };
+            // Initialize available users collection (will be populated from CSV data if available)
+            AvailableUsers = new ObservableCollection<User>();
 
             // Initialize filtered users
             UpdateFilteredUsers();

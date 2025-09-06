@@ -76,13 +76,23 @@ namespace MandADiscoverySuite.ViewModels
             FlattenedTasks.Clear();
             var allTasks = new List<MigrationProjectTask>();
 
-            // First try to load from CSV test data
+            // First try to load from CSV data in profile directory
             try
             {
-                var csvPath = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "TestData", "GanttTasks.csv");
-                if (System.IO.File.Exists(csvPath))
+                var profileName = "ljpops"; // TODO: Get from configuration/context
+                var possiblePaths = new[]
                 {
-                    allTasks = LoadTasksFromCsv(csvPath);
+                    System.IO.Path.Combine(@"C:\discoverydata", profileName, "Raw", "GanttTasks.csv"),
+                    System.IO.Path.Combine(@"C:\discoverydata\Profiles", profileName, "Raw", "GanttTasks.csv")
+                };
+
+                foreach (var csvPath in possiblePaths)
+                {
+                    if (System.IO.File.Exists(csvPath))
+                    {
+                        allTasks = LoadTasksFromCsv(csvPath);
+                        break;
+                    }
                 }
             }
             catch (Exception ex)

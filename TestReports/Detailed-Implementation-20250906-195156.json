@@ -1,0 +1,52 @@
+﻿{
+    "Timestamp":  "2025-09-06 19:51:55",
+    "Tasks":  {
+                  "DISCOVERY_MODULES":  {
+                                            "SharePoint":  {
+                                                               "Module":  false,
+                                                               "View":  true,
+                                                               "VM":  true
+                                                           },
+                                            "ActiveDirectory":  {
+                                                                    "Module":  false,
+                                                                    "Status":  "UI_READY",
+                                                                    "View":  true,
+                                                                    "VM":  true
+                                                                },
+                                            "Exchange":  {
+                                                             "Module":  false,
+                                                             "View":  true,
+                                                             "VM":  true
+                                                         },
+                                            "Teams":  {
+                                                          "Module":  false,
+                                                          "View":  true,
+                                                          "VM":  true
+                                                      },
+                                            "AzureInfrastructure":  {
+                                                                        "Module":  false,
+                                                                        "View":  true,
+                                                                        "VM":  true
+                                                                    }
+                                        },
+                  "T-036":  {
+                                "Status":  "MISSING"
+                            },
+                  "T-040":  {
+                                "Status":  "RELOCATED"
+                            },
+                  "INFRASTRUCTURE":  {
+                                         "Status":  "MISSING"
+                                     },
+                  "T-000":  {
+                                "Status":  "IMPLEMENTED",
+                                "Details":  {
+                                                "TargetProfile":  {
+                                                                      "Connection":  true,
+                                                                      "Scopes":  true,
+                                                                      "Credentials":  true
+                                                                  }
+                                            }
+                            }
+              }
+}

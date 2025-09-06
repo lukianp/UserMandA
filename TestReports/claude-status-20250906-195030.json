@@ -1,0 +1,31 @@
+﻿{
+    "status":  "PARTIAL",
+    "csv_validation":  {
+                           "record_count_delta":  0,
+                           "missing_columns":  [
+
+                                               ],
+                           "bad_types":  [
+
+                                         ],
+                           "checked_paths":  [
+                                                 "C:\\discoverydata\\ljpops\\RawData"
+                                             ]
+                       },
+    "functional_cases":  {
+                             "T040_SharePoint":  "PENDING",
+                             "T036_DeltaMigration":  "PENDING",
+                             "Infrastructure":  "TESTED",
+                             "T000_DualProfile":  "TESTED"
+                         },
+    "artifacts":  {
+                      "pass_rate":  53.06,
+                      "report_path":  "D:\\Scripts\\UserMandA\\TestReports\\Claude-Task-Validation-20250906-195030.json",
+                      "test_count":  49
+                  },
+    "suites":  {
+                   "pester_modules":  "PASS",
+                   "csharp_unit":  "FAIL",
+                   "functional_sim":  "PASS"
+               }
+}

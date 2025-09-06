@@ -21,7 +21,7 @@ namespace MandADiscoverySuite.Services
         private readonly ILogger<CsvDataServiceNew> _logger;
         private readonly string _activeProfilePath;
         private readonly string _secondaryPath;
-        private readonly string _testDataPath;
+        // Removed test data path - no longer needed after cleanup
         private readonly SemaphoreSlim _fileSemaphore;
         private readonly int _maxConcurrentFiles = 3;
         private readonly int _maxRetryAttempts = 3;
@@ -32,7 +32,7 @@ namespace MandADiscoverySuite.Services
             _logger = logger;
             _activeProfilePath = Path.Combine(ConfigurationService.Instance.DiscoveryDataRootPath, profileName, "Raw");
             _secondaryPath = Path.Combine(ConfigurationService.Instance.DiscoveryDataRootPath, "Profiles", profileName, "Raw");
-            _testDataPath = @"D:\Scripts\UserMandA\TestData";
+            // Test data path removed to eliminate dummy data
             _fileSemaphore = new SemaphoreSlim(_maxConcurrentFiles, _maxConcurrentFiles);
         }
 
@@ -105,25 +105,37 @@ namespace MandADiscoverySuite.Services
         {
             var results = new List<dynamic>();
 
-            var csvPath = @"C:\discoverydata\ljpops\Raw\NetworkInfrastructureDiscovery.csv";
-
-            try
+            // Use profile-based paths
+            var possiblePaths = new[]
             {
-                var loadedData = await LoadCsvDataAsync(csvPath);
-                foreach (var item in loadedData)
+                Path.Combine(_activeProfilePath, "NetworkInfrastructureDiscovery.csv"),
+                Path.Combine(_secondaryPath, "NetworkInfrastructureDiscovery.csv")
+            };
+
+            foreach (var csvPath in possiblePaths)
+            {
+                try
                 {
-                    results.Add(item);
+                    if (File.Exists(csvPath))
+                    {
+                        var loadedData = await LoadCsvDataAsync(csvPath);
+                        foreach (var item in loadedData)
+                        {
+                            results.Add(item);
+                        }
+
+                        _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} Network Infrastructure Discovery records from {csvPath}");
+                        return results;
+                    }
                 }
-
-                _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} Network Infrastructure Discovery records from {csvPath}");
-
-                return results;
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, $"Error loading Network Infrastructure Discovery data from {csvPath}");
+                }
             }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Error loading Network Infrastructure Discovery data from {csvPath}");
-                throw;
-            }
+
+            _logger?.LogInformation($"[CsvDataServiceNew] No Network Infrastructure Discovery data found in profile paths");
+            return results;
         }
 
         #endregion
@@ -156,7 +168,7 @@ namespace MandADiscoverySuite.Services
             {
                 matchedFiles.AddRange(FindFiles(_activeProfilePath, pattern));
                 matchedFiles.AddRange(FindFiles(_secondaryPath, pattern));
-                matchedFiles.AddRange(FindFiles(_testDataPath, pattern));
+                // Test data path removed to eliminate dummy data
             }
 
             foreach (var filePath in matchedFiles.Distinct())
@@ -259,7 +271,7 @@ namespace MandADiscoverySuite.Services
             {
                 matchedFiles.AddRange(FindFiles(_activeProfilePath, pattern));
                 matchedFiles.AddRange(FindFiles(_secondaryPath, pattern));
-                matchedFiles.AddRange(FindFiles(_testDataPath, pattern));
+                // Test data path removed to eliminate dummy data
             }
 
             foreach (var filePath in matchedFiles.Distinct())
@@ -361,7 +373,7 @@ namespace MandADiscoverySuite.Services
             {
                 matchedFiles.AddRange(FindFiles(_activeProfilePath, pattern));
                 matchedFiles.AddRange(FindFiles(_secondaryPath, pattern));
-                matchedFiles.AddRange(FindFiles(_testDataPath, pattern));
+                // Test data path removed to eliminate dummy data
             }
 
             foreach (var filePath in matchedFiles.Distinct())
@@ -452,7 +464,7 @@ namespace MandADiscoverySuite.Services
             {
                 matchedFiles.AddRange(FindFiles(_activeProfilePath, pattern));
                 matchedFiles.AddRange(FindFiles(_secondaryPath, pattern));
-                matchedFiles.AddRange(FindFiles(_testDataPath, pattern));
+                // Test data path removed to eliminate dummy data
             }
 
             foreach (var filePath in matchedFiles.Distinct())
@@ -539,7 +551,7 @@ namespace MandADiscoverySuite.Services
             {
                 matchedFiles.AddRange(FindFiles(_activeProfilePath, pattern));
                 matchedFiles.AddRange(FindFiles(_secondaryPath, pattern));
-                matchedFiles.AddRange(FindFiles(_testDataPath, pattern));
+                // Test data path removed to eliminate dummy data
             }
 
             foreach (var filePath in matchedFiles.Distinct())
@@ -626,7 +638,7 @@ namespace MandADiscoverySuite.Services
             {
                 matchedFiles.AddRange(FindFiles(_activeProfilePath, pattern));
                 matchedFiles.AddRange(FindFiles(_secondaryPath, pattern));
-                matchedFiles.AddRange(FindFiles(_testDataPath, pattern));
+                // Test data path removed to eliminate dummy data
             }
 
             foreach (var filePath in matchedFiles.Distinct())
@@ -716,7 +728,7 @@ namespace MandADiscoverySuite.Services
             {
                 matchedFiles.AddRange(FindFiles(_activeProfilePath, pattern));
                 matchedFiles.AddRange(FindFiles(_secondaryPath, pattern));
-                matchedFiles.AddRange(FindFiles(_testDataPath, pattern));
+                // Test data path removed to eliminate dummy data
             }
 
             foreach (var filePath in matchedFiles.Distinct())
@@ -808,7 +820,7 @@ namespace MandADiscoverySuite.Services
             {
                 matchedFiles.AddRange(FindFiles(_activeProfilePath, pattern));
                 matchedFiles.AddRange(FindFiles(_secondaryPath, pattern));
-                matchedFiles.AddRange(FindFiles(_testDataPath, pattern));
+                // Test data path removed to eliminate dummy data
             }
 
             foreach (var filePath in matchedFiles.Distinct())
@@ -894,25 +906,37 @@ namespace MandADiscoverySuite.Services
             var warnings = new List<string>();
             var results = new List<dynamic>();
 
-            var csvPath = @"C:\discoverydata\ljpops\Raw\AzureDiscovery.csv";
-
-            try
+            // Use profile-based paths
+            var possiblePaths = new[]
             {
-                var loadedData = await LoadCsvDataAsync(csvPath);
-                foreach (var item in loadedData)
+                Path.Combine(_activeProfilePath, "AzureDiscovery.csv"),
+                Path.Combine(_secondaryPath, "AzureDiscovery.csv")
+            };
+
+            foreach (var csvPath in possiblePaths)
+            {
+                try
                 {
-                    results.Add(item);
+                    if (File.Exists(csvPath))
+                    {
+                        var loadedData = await LoadCsvDataAsync(csvPath);
+                        foreach (var item in loadedData)
+                        {
+                            results.Add(item);
+                        }
+
+                        _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} Azure Discovery records from {csvPath} in {sw.ElapsedMilliseconds} ms");
+                        return results;
+                    }
                 }
-
-                _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} Azure Discovery records from {csvPath} in {sw.ElapsedMilliseconds} ms");
-
-                return results;
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, $"Error loading Azure Discovery data from {csvPath}");
+                }
             }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Error loading Azure Discovery data from {csvPath}");
-                throw;
-            }
+
+            _logger?.LogInformation($"[CsvDataServiceNew] No Azure Discovery data found in profile paths");
+            return results;
         }
 
         #endregion
@@ -923,25 +947,37 @@ namespace MandADiscoverySuite.Services
         {
             var results = new List<dynamic>();
 
-            var csvPath = @"C:\discoverydata\ljpops\Raw\MicrosoftTeamsDiscovery.csv";
-
-            try
+            // Use profile-based paths
+            var possiblePaths = new[]
             {
-                var loadedData = await LoadCsvDataAsync(csvPath);
-                foreach (var item in loadedData)
+                Path.Combine(_activeProfilePath, "MicrosoftTeamsDiscovery.csv"),
+                Path.Combine(_secondaryPath, "MicrosoftTeamsDiscovery.csv")
+            };
+
+            foreach (var csvPath in possiblePaths)
+            {
+                try
                 {
-                    results.Add(item);
+                    if (File.Exists(csvPath))
+                    {
+                        var loadedData = await LoadCsvDataAsync(csvPath);
+                        foreach (var item in loadedData)
+                        {
+                            results.Add(item);
+                        }
+
+                        _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} Microsoft Teams Discovery records from {csvPath}");
+                        return results;
+                    }
                 }
-
-                _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} Microsoft Teams Discovery records from {csvPath}");
-
-                return results;
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, $"Error loading Microsoft Teams Discovery data from {csvPath}");
+                }
             }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Error loading Microsoft Teams Discovery data from {csvPath}");
-                throw;
-            }
+
+            _logger?.LogInformation($"[CsvDataServiceNew] No Microsoft Teams Discovery data found in profile paths");
+            return results;
         }
 
         #endregion
@@ -951,25 +987,38 @@ namespace MandADiscoverySuite.Services
         public async Task<List<dynamic>> LoadExchangeDiscoveryAsync()
         {
             var results = new List<dynamic>();
-            var csvPath = @"C:\discoverydata\ljpops\Raw\ExchangeDiscovery.csv";
 
-            try
+            // Use profile-based paths
+            var possiblePaths = new[]
             {
-                var loadedData = await LoadCsvDataAsync(csvPath);
-                foreach (var item in loadedData)
+                Path.Combine(_activeProfilePath, "ExchangeDiscovery.csv"),
+                Path.Combine(_secondaryPath, "ExchangeDiscovery.csv")
+            };
+
+            foreach (var csvPath in possiblePaths)
+            {
+                try
                 {
-                    results.Add(item);
+                    if (File.Exists(csvPath))
+                    {
+                        var loadedData = await LoadCsvDataAsync(csvPath);
+                        foreach (var item in loadedData)
+                        {
+                            results.Add(item);
+                        }
+
+                        _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} Exchange Discovery records from {csvPath}");
+                        return results;
+                    }
                 }
-
-                _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} Exchange Discovery records from {csvPath}");
-
-                return results;
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, $"Error loading Exchange Discovery data from {csvPath}");
+                }
             }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Error loading Exchange Discovery data from {csvPath}");
-                throw;
-            }
+
+            _logger?.LogInformation($"[CsvDataServiceNew] No Exchange Discovery data found in profile paths");
+            return results;
         }
 
         #endregion
@@ -980,25 +1029,37 @@ namespace MandADiscoverySuite.Services
         {
             var results = new List<dynamic>();
 
-            var csvPath = @"C:\discoverydata\ljpops\Raw\SharePointDiscovery.csv";
-
-            try
+            // Use profile-based paths
+            var possiblePaths = new[]
             {
-                var loadedData = await LoadCsvDataAsync(csvPath);
-                foreach (var item in loadedData)
+                Path.Combine(_activeProfilePath, "SharePointDiscovery.csv"),
+                Path.Combine(_secondaryPath, "SharePointDiscovery.csv")
+            };
+
+            foreach (var csvPath in possiblePaths)
+            {
+                try
                 {
-                    results.Add(item);
+                    if (File.Exists(csvPath))
+                    {
+                        var loadedData = await LoadCsvDataAsync(csvPath);
+                        foreach (var item in loadedData)
+                        {
+                            results.Add(item);
+                        }
+
+                        _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} SharePoint Discovery records from {csvPath}");
+                        return results;
+                    }
                 }
-
-                _logger?.LogInformation($"[CsvDataServiceNew] Loaded {results.Count} SharePoint Discovery records from {csvPath}");
-
-                return results;
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, $"Error loading SharePoint Discovery data from {csvPath}");
+                }
             }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Error loading SharePoint Discovery data from {csvPath}");
-                throw;
-            }
+
+            _logger?.LogInformation($"[CsvDataServiceNew] No SharePoint Discovery data found in profile paths");
+            return results;
         }
 
         #endregion
@@ -1386,7 +1447,7 @@ namespace MandADiscoverySuite.Services
         private async Task<List<string>> FindFilesAsync(string[] filePatterns, CancellationToken cancellationToken)
         {
             var matchedFiles = new List<string>();
-            var searchPaths = new[] { _activeProfilePath, _secondaryPath, _testDataPath };
+            var searchPaths = new[] { _activeProfilePath, _secondaryPath };
 
             foreach (var path in searchPaths)
             {

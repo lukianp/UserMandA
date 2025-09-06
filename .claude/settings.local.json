@@ -77,7 +77,8 @@
       "Bash(dotnet clean:*)",
       "Bash(tree:*)",
       "Bash(./build-gui.ps1)",
-      "Bash(start .MandADiscoverySuite.exe)"
+      "Bash(start .MandADiscoverySuite.exe)",
+      "Bash(copy \"D:\\Scripts\\UserMandA\\GUI\\bin\\Release\\net6.0-windows\\*\" \"C:\\enterprisediscovery\"\")"
     ],
     "deny": [],
     "ask": [],
