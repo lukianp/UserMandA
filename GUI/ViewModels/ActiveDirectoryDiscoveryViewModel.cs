@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -66,6 +67,13 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _totalComputers, value);
         }
 
+        private int _totalOUs;
+        public int TotalOUs
+        {
+            get => _totalOUs;
+            set => SetProperty(ref _totalOUs, value);
+        }
+
         // Data binding collections
         public ObservableCollection<dynamic> SelectedResults { get; } = new ObservableCollection<dynamic>();
 
@@ -73,8 +81,14 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                SetProperty(ref _selectedItem, value);
+                UpdateSelectedItemDetails();
+            }
         }
+
+        public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails { get; } = new ObservableCollection<KeyValuePair<string, string>>();
 
         #endregion
 
@@ -128,11 +142,20 @@ namespace MandADiscoverySuite.ViewModels
                     ErrorMessage = string.Empty;
                 }
 
-                // Update collections and summary statistics
+                // Update collections - filter to show only users in DataGrid (for this view)
                 SelectedResults.Clear();
                 foreach (var item in result.Data)
                 {
-                    SelectedResults.Add(item);
+                    var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                    dict.TryGetValue("objecttype", out var objectTypeObj);
+
+                    var objectType = (objectTypeObj?.ToString() ?? "").ToLowerInvariant();
+
+                    // If no objecttype field or is user, add to SelectedResults
+                    if (string.IsNullOrEmpty(objectType) || objectType == "user")
+                    {
+                        SelectedResults.Add(item);
+                    }
                 }
 
                 // Calculate summary statistics
@@ -224,26 +247,89 @@ namespace MandADiscoverySuite.ViewModels
 
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
-            TotalUsers = data.Count(item =>
-            {
-                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("displayname", out var displayNameObj);
-                dict.TryGetValue("userprincipalname", out var userPrincipalNameObj);
-                dict.TryGetValue("samaccountname", out var samAccountNameObj);
-
-                var displayName = displayNameObj?.ToString() ?? "";
-                var userPrincipalName = userPrincipalNameObj?.ToString() ?? "";
-                var samAccountName = samAccountNameObj?.ToString() ?? "";
-
-                return !string.IsNullOrWhiteSpace(displayName) ||
-                       !string.IsNullOrWhiteSpace(userPrincipalName) ||
-                       !string.IsNullOrWhiteSpace(samAccountName);
-            });
-
-            // For now, Groups and Computers are not specifically tracked in this dataset
-            // In a real implementation, you might have separate datasets or categorize based on object types
+            TotalUsers = 0;
             TotalGroups = 0;
             TotalComputers = 0;
+            TotalOUs = 0;
+
+            foreach (var item in data)
+            {
+                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                dict.TryGetValue("objecttype", out var objectTypeObj);
+
+                var objectType = (objectTypeObj?.ToString() ?? "").ToLowerInvariant();
+
+                switch (objectType)
+                {
+                    case "user":
+                        TotalUsers++;
+                        break;
+                    case "group":
+                        TotalGroups++;
+                        break;
+                    case "computer":
+                        TotalComputers++;
+                        break;
+                    case "organizationalunit":
+                    case "ou":
+                        TotalOUs++;
+                        break;
+                }
+            }
+
+            // For backward compatibility, if no objecttype field, treat as users
+            if (TotalUsers == 0 && TotalGroups == 0 && TotalComputers == 0)
+            {
+                TotalUsers = data.Count(item =>
+                {
+                    var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                    dict.TryGetValue("displayname", out var displayNameObj);
+                    dict.TryGetValue("userprincipalname", out var userPrincipalNameObj);
+                    dict.TryGetValue("samaccountname", out var samAccountNameObj);
+
+                    var displayName = displayNameObj?.ToString() ?? "";
+                    var userPrincipalName = userPrincipalNameObj?.ToString() ?? "";
+                    var samAccountName = samAccountNameObj?.ToString() ?? "";
+
+                    return !string.IsNullOrWhiteSpace(displayName) ||
+                            !string.IsNullOrWhiteSpace(userPrincipalName) ||
+                            !string.IsNullOrWhiteSpace(samAccountName);
+                });
+            }
+        }
+
+        private void UpdateSelectedItemDetails()
+        {
+            SelectedItemDetails.Clear();
+
+            if (SelectedItem == null) return;
+
+            var dict = (System.Collections.Generic.IDictionary<string, object>)SelectedItem;
+
+            foreach (var kvp in dict)
+            {
+                if (kvp.Value != null)
+                {
+                    string displayName = kvp.Key switch
+                    {
+                        "displayname" => "Display Name",
+                        "userprincipalname" => "User Principal Name",
+                        "samaccountname" => "SAM Account Name",
+                        "mail" => "Email Address",
+                        "department" => "Department",
+                        "jobtitle" => "Job Title",
+                        "company" => "Company",
+                        "manager" => "Manager",
+                        "createddatetime" => "Created Date",
+                        "objecttype" => "Object Type",
+                        "distinguishedname" => "Distinguished Name",
+                        "description" => "Description",
+                        _ => kvp.Key
+                    };
+
+                    SelectedItemDetails.Add(new KeyValuePair<string, string>(displayName, kvp.Value.ToString()));
+                }
+            }
         }
 
         #endregion

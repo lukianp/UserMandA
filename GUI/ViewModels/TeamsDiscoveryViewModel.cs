@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -58,11 +59,11 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _totalChannels, value);
         }
 
-        private int _totalMembers;
-        public int TotalMembers
+        private int _totalGuests;
+        public int TotalGuests
         {
-            get => _totalMembers;
-            set => SetProperty(ref _totalMembers, value);
+            get => _totalGuests;
+            set => SetProperty(ref _totalGuests, value);
         }
 
         // Data binding collections
@@ -72,8 +73,53 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                SetProperty(ref _selectedItem, value);
+                UpdateSelectedItemDetails();
+            }
         }
+
+        private void UpdateSelectedItemDetails()
+        {
+            SelectedItemDetails.Clear();
+            if (SelectedItem is not IDictionary<string, object> selectedDict)
+                return;
+
+            foreach (var kvp in selectedDict)
+            {
+                // Format key for display
+                var displayKey = FormatPropertyName(kvp.Key);
+                var displayValue = kvp.Value?.ToString() ?? "N/A";
+
+                // Format dates
+                if (kvp.Key.Contains("date", StringComparison.OrdinalIgnoreCase) && kvp.Value is string dateStr)
+                {
+                    if (DateTime.TryParse(dateStr, out var date))
+                        displayValue = date.ToString("MMM dd, yyyy HH:mm:ss");
+                }
+
+                SelectedItemDetails.Add(new KeyValuePair<string, string>(displayKey, displayValue));
+            }
+        }
+
+        private string FormatPropertyName(string propertyName)
+        {
+            return propertyName switch
+            {
+                "teamname" => "Team Name",
+                "channelcount" => "Channel Count",
+                "membercount" => "Member Count",
+                "createddate" => "Created Date",
+                "visibility" => "Visibility",
+                "description" => "Description",
+                "owner" => "Owner",
+                _ => propertyName
+            };
+        }
+
+        private ObservableCollection<KeyValuePair<string, string>> _selectedItemDetails = new();
+        public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails => _selectedItemDetails;
 
         #endregion
 
@@ -232,20 +278,37 @@ namespace MandADiscoverySuite.ViewModels
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
             TotalTeams = data.Count;
-            // Calculate based on Teams data structure
-            TotalChannels = data.Count(item =>
-            {
-                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("type", out var typeObj);
-                return typeObj?.ToString().Contains("Channel") ?? false;
-            });
 
-            TotalMembers = data.Count(item =>
+            // Calculate channels and members/guests from the CSV data
+            var channelCount = 0;
+            var memberCount = 0;
+
+            foreach (var item in data)
             {
-                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("type", out var typeObj);
-                return typeObj?.ToString().Contains("Member") ?? false;
-            });
+                if (item is System.Collections.Generic.IDictionary<string, object> dict)
+                {
+                    // Count channels by looking at channelcount field (if it represents the number of channels per team)
+                    if (dict.TryGetValue("channelcount", out var channelCountObj))
+                    {
+                        if (int.TryParse(channelCountObj.ToString(), out var cc))
+                            channelCount += cc;
+                    }
+
+                    // Count members/guests
+                    if (dict.TryGetValue("membercount", out var memberCountObj))
+                    {
+                        if (int.TryParse(memberCountObj.ToString(), out var mc))
+                            memberCount += mc;
+                    }
+                }
+            }
+
+            TotalChannels = channelCount;
+            TotalGuests = memberCount;
+
+            // Set discovery time after loading
+            if (LastDiscoveryTime == DateTime.MinValue)
+                LastDiscoveryTime = DateTime.Now;
         }
 
         #endregion

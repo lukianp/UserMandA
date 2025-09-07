@@ -123,6 +123,7 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ShowExchangeDiscoveryCommand { get; }
         public ICommand ShowNetworkInfrastructureDiscoveryCommand { get; }
         public ICommand ShowSharePointDiscoveryCommand { get; }
+        public ICommand ShowActiveDirectoryDiscoveryCommand { get; }
 
         // Report commands
         public ICommand GenerateReportCommand { get; }
@@ -499,6 +500,7 @@ namespace MandADiscoverySuite.ViewModels
             ShowExchangeDiscoveryCommand = new AsyncRelayCommand(ShowExchangeDiscoveryAsync);
             ShowNetworkInfrastructureDiscoveryCommand = new AsyncRelayCommand(ShowNetworkInfrastructureDiscoveryAsync);
             ShowSharePointDiscoveryCommand = new AsyncRelayCommand(ShowSharePointDiscoveryAsync);
+            ShowActiveDirectoryDiscoveryCommand = new AsyncRelayCommand(ShowActiveDirectoryDiscoveryAsync);
 
             // Report commands
             GenerateReportCommand = new AsyncRelayCommand<string>(GenerateReportAsync);
@@ -3037,6 +3039,11 @@ namespace MandADiscoverySuite.ViewModels
         private async Task ShowSharePointDiscoveryAsync()
         {
             await _navigationService.NavigateToTabAsync("sharepointdiscovery", "SharePoint Discovery");
+        }
+
+        private async Task ShowActiveDirectoryDiscoveryAsync()
+        {
+            await _navigationService.NavigateToTabAsync("activedirectorydiscovery", "Active Directory Discovery");
         }
         
         // Methods referenced by code-behind

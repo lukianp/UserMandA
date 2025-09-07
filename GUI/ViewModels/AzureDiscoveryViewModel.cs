@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -73,7 +75,20 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    PopulateSelectedItemDetails();
+                }
+            }
+        }
+
+        private ObservableCollection<KeyValuePair<string, string>> _selectedItemDetails = new ObservableCollection<KeyValuePair<string, string>>();
+        public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails
+        {
+            get => _selectedItemDetails;
+            set => SetProperty(ref _selectedItemDetails, value);
         }
 
         #endregion
@@ -260,6 +275,20 @@ namespace MandADiscoverySuite.ViewModels
             TotalSubscriptions = uniqueSubscriptions.Count;
             TotalResourceGroups = uniqueResourceGroups.Count;
             TotalVirtualMachines = virtualMachineCount;
+        }
+
+        private void PopulateSelectedItemDetails()
+        {
+            SelectedItemDetails.Clear();
+            if (SelectedItem is System.Collections.Generic.IDictionary<string, object> dict)
+            {
+                foreach (var kvp in dict)
+                {
+                    string key = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(kvp.Key);
+                    string value = kvp.Value?.ToString() ?? string.Empty;
+                    SelectedItemDetails.Add(new KeyValuePair<string, string>(key, value));
+                }
+            }
         }
 
         #endregion

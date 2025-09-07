@@ -10,8 +10,10 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Resources/Converters.xaml"/>
-                <ResourceDictionary Source="../Resources/DataGridTheme.xaml"/>
+                <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="/Resources/Converters.xaml"/>
+                <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
+                <ResourceDictionary Source="/Themes/RefinedColorPalette.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -138,12 +140,11 @@
                       Background="Transparent">
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Mailbox Name" Binding="{Binding mailboxname}" Width="*" />
-                    <DataGridTextColumn Header="Primary SMTP Address" Binding="{Binding primarysmtpaddress}" Width="200" />
-                    <DataGridTextColumn Header="Mailbox Type" Binding="{Binding mailboxtype}" Width="150" />
-                    <DataGridTextColumn Header="Size (GB)" Binding="{Binding sizegb}" Width="100" />
-                    <DataGridTextColumn Header="Last Login" Binding="{Binding lastlogin, StringFormat=yyyy-MM-dd}" Width="120" />
-                    <DataGridTextColumn Header="Status" Binding="{Binding status}" Width="100" />
+                    <DataGridTextColumn Header="MailboxName" Binding="{Binding mailboxname}" Width="*" />
+                    <DataGridTextColumn Header="PrimarySMTP" Binding="{Binding primarysmtpaddress}" Width="200" />
+                    <DataGridTextColumn Header="MailboxType" Binding="{Binding mailboxtype}" Width="150" />
+                    <DataGridTextColumn Header="Size" Binding="{Binding sizegb}" Width="100" />
+                    <DataGridTextColumn Header="LastLogin" Binding="{Binding lastlogin, StringFormat=yyyy-MM-dd}" Width="120" />
                 </DataGrid.Columns>
             </DataGrid>
 

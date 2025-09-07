@@ -11,8 +11,10 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Resources/Converters.xaml"/>
-                <ResourceDictionary Source="../Resources/DataGridTheme.xaml"/>
+                <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="/Resources/Converters.xaml"/>
+                <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
+                <ResourceDictionary Source="/Themes/RefinedColorPalette.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -147,33 +149,25 @@
                           Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}">
 
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Device Name"
+                        <DataGridTextColumn Header="DeviceName"
                                             Binding="{Binding device_name}"
                                             Width="180"/>
 
-                        <DataGridTextColumn Header="Device Type"
+                        <DataGridTextColumn Header="Type"
                                             Binding="{Binding device_type}"
                                             Width="120"/>
 
-                        <DataGridTextColumn Header="IP Address"
+                        <DataGridTextColumn Header="IPAddress"
                                             Binding="{Binding ip_address}"
                                             Width="140"/>
 
-                        <DataGridTextColumn Header="Operating System Version"
+                        <DataGridTextColumn Header="OSVersion"
                                             Binding="{Binding os_version}"
                                             Width="180"/>
 
-                        <DataGridTextColumn Header="Model"
-                                            Binding="{Binding model}"
-                                            Width="120"/>
-
                         <DataGridTextColumn Header="Uptime"
                                             Binding="{Binding uptime}"
-                                            Width="100"/>
-
-                        <DataGridTextColumn Header="Location"
-                                            Binding="{Binding location}"
-                                            Width="150"/>
+                                            Width="120"/>
                     </DataGrid.Columns>
 
                     <DataGrid.RowStyle>

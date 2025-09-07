@@ -9,8 +9,10 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Resources/Converters.xaml"/>
-                <ResourceDictionary Source="../Resources/DataGridTheme.xaml"/>
+                <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="/Resources/Converters.xaml"/>
+                <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
+                <ResourceDictionary Source="/Themes/RefinedColorPalette.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -38,10 +40,10 @@
         <!-- Toolbar Section -->
         <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="10,0,10,10">
             <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Button Content="▶ Run Discovery" Command="{Binding RunDiscoveryCommand}" Margin="10"/>
-                <Button Content="🔄 Refresh Data" Command="{Binding RefreshDataCommand}" Margin="0,10,10,10"/>
-                <Button Content="📤 Export" Command="{Binding ExportCommand}" Margin="0,10,10,10"/>
-                <Button Content="📋 View Logs" Command="{Binding ViewLogsCommand}" Margin="0,10,10,10"/>
+                <Button Content="▶ Run Discovery" Command="{Binding RunDiscoveryCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="10"/>
+                <Button Content="🔄 Refresh Data" Command="{Binding RefreshDataCommand}" Style="{StaticResource OutlineButtonStyle}" Margin="0,10,10,10"/>
+                <Button Content="📤 Export" Command="{Binding ExportCommand}" Style="{StaticResource OutlineButtonStyle}" Margin="0,10,10,10"/>
+                <Button Content="📋 View Logs" Command="{Binding ViewLogsCommand}" Style="{StaticResource OutlineButtonStyle}" Margin="0,10,10,10"/>
             </WrapPanel>
         </Border>
 
@@ -65,14 +67,14 @@
                 <StackPanel>
                     <TextBlock Text="Total Guests" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
                     <TextBlock Text="👤" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding TotalGuests}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+TEST
                 </StackPanel>
             </Border>
             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
                 <StackPanel>
                     <TextBlock Text="Last Discovery" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
                     <TextBlock Text="📅" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding LastDiscovery, StringFormat='MMM dd, yyyy'}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='MMM dd, yyyy'}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
                     </StackPanel>
             </Border>
         </WrapPanel>
@@ -86,9 +88,9 @@
                     <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
                             CornerRadius="4" Margin="0,0,0,8" Padding="8">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="⚠" FontSize="16" Foreground="{DynamicResource WhiteBrush}"
+                            <TextBlock Text="⚠" FontSize="16" Foreground="{DynamicResource ErrorForegroundBrush}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}"
+                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorForegroundBrush}"
                                        VerticalAlignment="Center" />
                         </StackPanel>
                     </Border>
@@ -101,9 +103,9 @@
                 CornerRadius="4" Margin="10,0,10,10" Padding="8" Opacity="0.33"
                 Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibility}}">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="❌" FontSize="16" Foreground="{DynamicResource WhiteBrush}"
+                <TextBlock Text="❌" FontSize="16" Foreground="{DynamicResource ErrorForegroundBrush}"
                            VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}"
+                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorForegroundBrush}"
                            VerticalAlignment="Center" />
             </StackPanel>
         </Border>

@@ -74,8 +74,17 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    UpdateSelectedItemDetails();
+                }
+            }
         }
+
+        private ObservableCollection<KeyValuePair<string, string>> _selectedItemDetails = new();
+        public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails => _selectedItemDetails;
 
         #endregion
 
@@ -211,9 +220,31 @@ namespace MandADiscoverySuite.ViewModels
                     return;
                 }
 
-                // Implement export logic here
-                _log?.LogInformation("Exporting Exchange Discovery data");
-                await Task.CompletedTask; // Placeholder
+                // Basic export functionality - convert dynamic objects to CSV format
+                var csvLines = new List<string>();
+
+                // Add headers
+                if (SelectedResults.First() is System.Collections.Generic.IDictionary<string, object> sampleRow)
+                {
+                    var headers = string.Join(",", sampleRow.Keys.Select(h => $"\"{h}\""));
+                    csvLines.Add(headers);
+                }
+
+                // Add data rows
+                foreach (var item in SelectedResults)
+                {
+                    if (item is System.Collections.Generic.IDictionary<string, object> row)
+                    {
+                        var values = string.Join(",", row.Values.Select(v => $"\"{v?.ToString() ?? string.Empty}\""));
+                        csvLines.Add(values);
+                    }
+                }
+
+                var fileName = $"ExchangeDiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                System.IO.File.WriteAllLines(fileName, csvLines);
+
+                ShowInformation($"Data exported to {fileName}");
+                _log?.LogInformation("Successfully exported Exchange Discovery data");
             }
             catch (Exception ex)
             {
@@ -226,9 +257,9 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                // Implement view logs logic here
-                _log?.LogInformation("Viewing Exchange Discovery logs");
-                await Task.CompletedTask; // Placeholder
+                // Use ShowInformation to display a message about logs
+                ShowInformation("Exchange Discovery logs are available in the main Logs & Audit view. Navigate to the Logs tab to view detailed logs.");
+                _log?.LogInformation("User requested to view logs for Exchange Discovery");
             }
             catch (Exception ex)
             {
@@ -261,6 +292,28 @@ namespace MandADiscoverySuite.ViewModels
                 var type = mailboxTypeObj?.ToString()?.ToLowerInvariant();
                 return type?.Contains("distribution") ?? false;
             });
+        }
+
+        private void UpdateSelectedItemDetails()
+        {
+            SelectedItemDetails.Clear();
+
+            if (SelectedItem is System.Collections.Generic.IDictionary<string, object> dict)
+            {
+                // Add all properties as key-value pairs, excluding null/empty values
+                foreach (var kvp in dict)
+                {
+                    var value = kvp.Value?.ToString();
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        // Format the key for display (convert camelCase to Title Case)
+                        var formattedKey = System.Text.RegularExpressions.Regex.Replace(
+                            kvp.Key, @"([\w])([\w]+)", "$1$2").Trim();
+
+                        SelectedItemDetails.Add(new KeyValuePair<string, string>(formattedKey, value));
+                    }
+                }
+            }
         }
 
         #endregion

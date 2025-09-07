@@ -11,8 +11,10 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Resources/Converters.xaml"/>
-                <ResourceDictionary Source="../Resources/DataGridTheme.xaml"/>
+                <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="/Resources/Converters.xaml"/>
+                <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
+                <ResourceDictionary Source="/Themes/RefinedColorPalette.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -219,32 +221,34 @@
                         <StackPanel Margin="16">
                             <TextBlock Text="Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
 
-                            <TextBlock Text="Display Name:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.displayname}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <ListView ItemsSource="{Binding SelectedItemDetails}"
+                                      BorderThickness="0" Background="Transparent"
+                                      VerticalAlignment="Stretch">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" MinWidth="120"/>
+                                                <ColumnDefinition Width="10"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
 
-                            <TextBlock Text="User Principal Name:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.userprincipalname}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Key}"
+                                                       Grid.Column="0"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource MutedForegroundBrush}"
+                                                       VerticalAlignment="Top"/>
 
-                            <TextBlock Text="Email:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.mail}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Department:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.department}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Job Title:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.jobtitle}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Company:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.company}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Manager:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.manager}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Created Date:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.createddatetime}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="SAM Account:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.samaccountname}" FontSize="14" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Value}"
+                                                       Grid.Column="2"
+                                                       FontSize="14"
+                                                       TextWrapping="Wrap"
+                                                       HorizontalAlignment="Left"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>
